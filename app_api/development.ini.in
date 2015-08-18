@@ -31,7 +31,7 @@ sqlalchemy.url = postgresql://www-data:www-data@localhost:5432/c2corg
 [server:main]
 use = egg:waitress#main
 host = 0.0.0.0
-port = 6543
+port = {debug_port}
 
 ###
 # logging configuration
