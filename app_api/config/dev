@@ -1,0 +1,6 @@
+include Makefile
+
+export version = 0
+
+host = c2corgv6.demo-camptocamp.com
+internalurl = $(url)

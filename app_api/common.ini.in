@@ -1,0 +1,14 @@
+# common configuration between production.ini and development.ini
+
+[app:main]
+use = egg:app_api
+
+pyramid.default_locale_name = en
+
+version = {version}
+
+# elasticsearch.host = {elasticsearch_host}
+# elasticsearch.port = 9200
+# elasticsearch.index = c2corg
+
+logging.level = {logging_level}

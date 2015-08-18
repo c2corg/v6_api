@@ -1,0 +1,7 @@
+/app_api/.build
+/app_api/common.ini
+/app_api/apache/app-api.wsgi
+/app_api/apache/wsgi.conf
+/app_api/MANIFEST
+*.pyc
+*.egg-info

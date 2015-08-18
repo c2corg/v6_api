@@ -1,0 +1,12 @@
+export instanceid = main
+export base_url = /
+
+export version = $(shell git rev-parse --short HEAD)
+
+export elasticsearch_host = ...
+
+host = c2corgv6.demo-camptocamp.com
+url = http://$(host)
+internalurl = http://localhost
+
+export logging_level = WARNING
