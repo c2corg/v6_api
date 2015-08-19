@@ -10,4 +10,10 @@ host = c2corgv6.demo-camptocamp.com
 url = http://$(host)
 internalurl = http://localhost
 
+export db_host = localhost
+export db_port = 5432
+export db_user = www-data
+export db_password = www-data
+export db_name = c2corg
+
 export logging_level = WARNING

@@ -18,7 +18,7 @@ pyramid.includes =
 # disable version in dev mode
 version =
 
-sqlalchemy.url = postgresql://www-data:www-data@localhost:5432/c2corg
+sqlalchemy.url = postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}
 
 # By default, the toolbar only appears for clients from IP addresses
 # '127.0.0.1' and '::1'.
