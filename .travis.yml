@@ -1,0 +1,16 @@
+language: python
+
+python:
+- 2.7
+
+install:
+- make -f config/travis .build/dev-requirements.timestamp
+
+script:
+- make -f config/travis check
+
+after_success:
+- make -f config/travis install
+
+notifications:
+  email: false

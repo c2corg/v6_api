@@ -1,0 +1,4 @@
+include config/dev
+
+export instanceid = travis
+export base_url = /${instanceid}
