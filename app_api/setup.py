@@ -17,7 +17,10 @@ requires = [
     'transaction',
     'zope.sqlalchemy',
     'waitress',
-    'psycopg2'
+    'psycopg2',
+    'cornice',
+    'colander',
+    'ColanderAlchemy>=0.3.2',
     ]
 
 setup(name='app_api',
