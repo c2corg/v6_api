@@ -4,3 +4,4 @@ export debug_port = 6545
 export instanceid = alex
 export base_url = /${instanceid}
 export db_name = c2corg_alex
+export tests_db_name = c2corg_alex_tests

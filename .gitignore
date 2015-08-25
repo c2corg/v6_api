@@ -2,6 +2,7 @@
 /common.ini
 /development.ini
 /production.ini
+/test.ini
 /apache/app-api.wsgi
 /apache/wsgi.conf
 /MANIFEST

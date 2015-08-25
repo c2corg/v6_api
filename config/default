@@ -16,4 +16,11 @@ export db_user = www-data
 export db_password = www-data
 export db_name = c2corg
 
+# database to run the unit tests
+export tests_db_host = localhost
+export tests_db_port = 5432
+export tests_db_user = www-data
+export tests_db_password = www-data
+export tests_db_name = c2corg_tests
+
 export logging_level = WARNING

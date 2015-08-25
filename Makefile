@@ -15,7 +15,8 @@ help:
 	@echo
 	@echo "Main targets:"
 	@echo
-	@echo "- check			Perform a number of checks on the code"
+	@echo "- check			Perform a number of checks on the code (runs flake 8 and test)"
+	@echo "- test			Run the unit tests"
 	@echo "- clean			Remove generated files"
 	@echo "- cleanall		Remove all the build artefacts"
 	@echo "- install		Install and build the project"
@@ -27,7 +28,7 @@ help:
 	@echo "- flake8		Run flake8 checker on the Python code"
 
 .PHONY: check
-check: flake8
+check: flake8 test
 
 .PHONY: clean
 clean:
@@ -37,6 +38,10 @@ clean:
 .PHONY: cleanall
 cleanall: clean
 	rm -rf .build
+
+.PHONY: test
+test: .build/venv/bin/nosetests
+	.build/venv/bin/nosetests
 
 .PHONY: flake8
 flake8: .build/venv/bin/flake8
@@ -54,8 +59,10 @@ install-dev-egg: $(SITE_PACKAGES)/app_api.egg-link
 .PHONY: serve
 serve: install development.ini
 	.build/venv/bin/pserve --reload development.ini
-	
+
 .build/venv/bin/flake8: .build/dev-requirements.timestamp
+
+.build/venv/bin/nosetests: .build/dev-requirements.timestamp
 
 .build/dev-requirements.timestamp: .build/venv dev-requirements.txt
 	.build/venv/bin/pip install -r dev-requirements.txt

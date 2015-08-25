@@ -1,16 +1,21 @@
+sudo: false
 language: python
 
 python:
 - 2.7
 
+addons:
+  postgresql: "9.4"
+
 install:
 - make -f config/travis .build/dev-requirements.timestamp
+- make -f config/travis install
+
+before_script:
+- psql -f scripts/travis-db.sql -U postgres
 
 script:
 - make -f config/travis check
-
-after_success:
-- make -f config/travis install
 
 notifications:
   email: false
