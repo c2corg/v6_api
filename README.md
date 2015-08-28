@@ -4,12 +4,12 @@ API Application for v6
 Checkout
 --------
 
-    git clone https://github.com/c2corg/v6.git
+    git clone https://github.com/c2corg/v6_api.git
 
 Build
 -----
 
-    cd app_api
+    cd v6_api
     make -f config/{user} install
 
 Run the application
