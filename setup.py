@@ -21,6 +21,7 @@ requires = [
     'cornice',
     'colander',
     'ColanderAlchemy>=0.3.2',
+    'webtest',
     ]
 
 setup(name='app_api',
