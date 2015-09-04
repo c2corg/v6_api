@@ -1,0 +1,7 @@
+include config/dev
+
+export debug_port = 6543
+export instanceid = main
+export base_url = /${instanceid}
+export db_name = c2corg_main
+export tests_db_name = c2corg_main_tests

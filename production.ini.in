@@ -14,7 +14,7 @@ pyramid.default_locale_name = en
 pyramid.includes =
     pyramid_tm
 
-sqlalchemy.url = sqlite:///%(here)s/app_api.sqlite
+sqlalchemy.url = postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}
 
 [server:main]
 use = egg:waitress#main
