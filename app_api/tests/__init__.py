@@ -7,7 +7,7 @@ import unittest
 from webtest import TestApp
 
 from app_api import main
-from app_api.models import DBSession, Base
+from app_api.models import *  # noqa
 
 
 curdir = os.path.dirname(os.path.abspath(__file__))
@@ -21,24 +21,24 @@ def get_engine():
 
 def setup_package():
     # set up database
-    # all models, for which tables should be created, must be
-    # listed here:
-    from app_api.models import summit  # noqa
-
     engine = get_engine()
     DBSession.configure(bind=engine)
     Base.metadata.create_all(engine)
+
+# keep the database schema after a test run (useful for debugging)
+keep = False
 
 
 def teardown_package():
     # tear down database
     engine = get_engine()
-    Base.metadata.drop_all(engine)
+    if not keep:
+        Base.metadata.drop_all(engine)
 
 
 class BaseTestCase(unittest.TestCase):
     """The idea for unit tests is, that the database tables
-    are create only once per test run and every test case uses a
+    are created only once per test run and every test case uses a
     transaction which is rolled back at the end. This avoids that
     the database is set up and teared down after each test case.
 
@@ -69,5 +69,8 @@ class BaseTestCase(unittest.TestCase):
         # rollback - everything that happened with the Session above
         # (including calls to commit()) is rolled back.
         testing.tearDown()
-        self.trans.rollback()
+        if not keep:
+            self.trans.rollback()
+        else:
+            self.trans.commit()
         self.session.close()

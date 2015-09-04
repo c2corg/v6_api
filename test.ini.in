@@ -1,3 +1,4 @@
 [app:main]
 use = config:common.ini
 sqlalchemy.url = postgresql://{tests_db_user}:{tests_db_password}@{tests_db_host}:{tests_db_port}/{tests_db_name}
+sqlalchemy.echo = True

@@ -32,6 +32,7 @@ Create a database that will be used to run the tests:
     create database c2corg_{user}_tests owner "www-data";
     \c c2corg_{user}_tests
     create extension postgis;
+    create schema topoguide authorization "www-data";
     \q
 
 Then run the tests with:
@@ -45,3 +46,7 @@ Or with the `check` target, which runs `flake8` and `test`:
 To run a specific test:
 
     .build/venv/bin/nosetests app_api/tests/views/test_summit.py
+
+To see the debug output:
+
+    .build/venv/bin/nosetests -s
