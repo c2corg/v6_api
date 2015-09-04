@@ -44,5 +44,7 @@ setup(name='app_api',
       entry_points="""\
       [paste.app_factory]
       main = app_api:main
+      [console_scripts]
+      initialize_app_api_db = app_api.scripts.initializedb:main
       """,
       )

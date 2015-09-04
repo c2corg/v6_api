@@ -12,6 +12,17 @@ Build
     cd v6_api
     make -f config/{user} install
 
+To set up the database
+----------------------
+
+    psql
+    create database c2corg_{user} owner "www-data";
+    \c c2corg_{user}_tests
+    create extension postgis;
+    create schema topoguide authorization "www-data";
+    \q
+    .build/venv/bin/initialize_app_api_db development.ini
+
 Run the application
 -------------------
 
