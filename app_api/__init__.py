@@ -15,5 +15,5 @@ def main(global_config, **settings):
     Base.metadata.bind = engine
     config = Configurator(settings=settings)
     config.include('cornice')
-    config.scan()
+    config.scan(ignore='app_api.tests')
     return config.make_wsgi_app()
