@@ -10,6 +10,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
 
 from . import Base, schema
+from utils import copy_attributes
 
 quality_types = [
     'stub',
@@ -49,7 +50,14 @@ class Document(Base, _DocumentMixin):
     __tablename__ = 'documents'
     document_id = Column(Integer, primary_key=True)
 
+    # TODO constraint that there is at least one locale
     locales = relationship('DocumentLocale')
+
+    _ATTRIBUTES = ['document_id', 'protected', 'redirects_to', 'quality']
+
+    def to_archive(self, doc):
+        copy_attributes(self, doc, Document._ATTRIBUTES)
+        return doc
 
 
 class ArchiveDocument(Base, _DocumentMixin):
@@ -85,6 +93,12 @@ class _DocumentLocaleMixin(object):
 
 class DocumentLocale(Base, _DocumentLocaleMixin):
     __tablename__ = 'documents_i18n'
+
+    _ATTRIBUTES = ['document_id', 'culture', 'title', 'description']
+
+    def to_archive(self, locale):
+        copy_attributes(self, locale, DocumentLocale._ATTRIBUTES)
+        return locale
 
 
 class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):

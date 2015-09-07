@@ -10,6 +10,7 @@ from sqlalchemy import (
 from colanderalchemy import SQLAlchemySchemaNode
 
 from . import schema
+from utils import copy_attributes
 from document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale)
 
@@ -67,6 +68,24 @@ class Waypoint(_WaypointMixin, Document):
         Integer,
         ForeignKey(schema + '.documents.document_id'), primary_key=True)
 
+    _ATTRIBUTES = ['waypoint_type', 'elevation', 'maps_info']
+
+    def to_archive(self):
+        waypoint = ArchiveWaypoint()
+        super(Waypoint, self).to_archive(waypoint)
+        copy_attributes(self, waypoint, Waypoint._ATTRIBUTES)
+
+        return waypoint
+
+    def get_archive_locales(self):
+        locales = []
+
+        for locale in self.locales:
+            archive_local = locale.to_archive()
+            locales.append(archive_local)
+
+        return locales
+
 
 class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
     """
@@ -97,6 +116,15 @@ class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
     id = Column(
                 Integer,
                 ForeignKey(schema + '.documents_i18n.id'), primary_key=True)
+
+    _ATTRIBUTES = ['pedestrian_access']
+
+    def to_archive(self):
+        locale = ArchiveWaypointLocale()
+        super(WaypointLocale, self).to_archive(locale)
+        copy_attributes(self, locale, WaypointLocale._ATTRIBUTES)
+
+        return locale
 
 
 class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):

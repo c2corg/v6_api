@@ -6,11 +6,11 @@ from sqlalchemy import (
     DateTime,
     ForeignKey
     )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 import datetime
 
 from . import Base, schema
-from document import ArchiveDocument, ArchiveDocumentLocale
+from document import Document, ArchiveDocument, ArchiveDocumentLocale
 
 
 class HistoryMetaData(Base):
@@ -28,7 +28,13 @@ class DocumentVersion(Base):
     __tablename__ = 'documents_versions'
 
     id = Column(Integer, primary_key=True)
-    document_id = Column(Integer, nullable=False)
+    document_id = Column(
+        Integer, ForeignKey(schema + '.documents.document_id'),
+        nullable=False)
+    document = relationship(
+        Document, primaryjoin=document_id == Document.document_id,
+        backref=backref('versions', viewonly=True))
+
     culture = Column(String(2), nullable=False)  # TODO as fk
     version = Column(Integer, nullable=False)
     created_at = Column(
