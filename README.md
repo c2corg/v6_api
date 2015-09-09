@@ -1,5 +1,5 @@
-API Application for v6
-======================
+API Application for camptocamp.org v6
+=====================================
 
 Checkout
 --------
@@ -61,3 +61,13 @@ To run a specific test:
 To see the debug output:
 
     .build/venv/bin/nosetests -s
+
+Developer Tips
+--------------
+
+The API is mainly built using the following components:
+* Pyramid (Python framework) http://docs.pylonsproject.org/en/latest/
+* SQLAlchemy (ORM) http://docs.sqlalchemy.org/en/rel_1_0/
+* Cornice (REST framework) https://cornice.readthedocs.org/en/latest/
+* Colander (validating and deserializing data) http://docs.pylonsproject.org/projects/colander/en/latest/
+
