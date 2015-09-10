@@ -61,6 +61,10 @@ class BaseTestCase(unittest.TestCase):
         self.trans = connection.begin()
 
         # bind an individual Session to the connection
+        # Next line is needed to make several tests run in a row.
+        # See https://github.com/Pylons/webtest/issues/5
+        # FIXME Is there a better solution?
+        DBSession.remove()
         DBSession.configure(bind=connection)
         self.session = self.Session(bind=connection)
         Base.session = self.session
