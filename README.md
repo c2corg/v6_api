@@ -17,7 +17,7 @@ To set up the database
 
     psql
     create database c2corg_{user} owner "www-data";
-    \c c2corg_{user}_tests
+    \c c2corg_{user}
     create extension postgis;
     create schema topoguide authorization "www-data";
     \q
