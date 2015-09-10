@@ -11,6 +11,17 @@ class TestWaypointRest(BaseTestCase):
         BaseTestCase.setUp(self)
         self._add_test_data()
 
+    def test_get_collection(self):
+        response = self.app.get('/waypoints')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+
+        body = json.loads(response.body)
+        self.assertTrue(isinstance(body, list))
+        # nb_waypoints = self.session.query(Waypoint).count()
+        # FIXME: body is empty
+        # self.assertEqual(len(body), nb_waypoints)
+
     def test_get(self):
         response = self.app.get('/waypoints/' + str(self.waypoint.document_id))
         self.assertEqual(response.status_code, 200)

@@ -14,7 +14,12 @@ class WaypointRest(object):
         self.request = request
 
     def collection_get(self):
-        return {'waypoints': []}
+        waypoints = DBSession. \
+            query(Waypoint). \
+            options(joinedload(Waypoint.locales)). \
+            all()
+
+        return [to_json_dict(wp, schema_waypoint) for wp in waypoints]
 
     @view(validators=validate_id)
     def get(self):
