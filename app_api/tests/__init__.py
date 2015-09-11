@@ -22,7 +22,6 @@ def get_engine():
 def setup_package():
     # set up database
     engine = get_engine()
-    DBSession.configure(bind=engine)
     Base.metadata.create_all(engine)
 
 # keep the database schema after a test run (useful for debugging)
