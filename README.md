@@ -19,7 +19,7 @@ To set up the database
     create database c2corg_{user} owner "www-data";
     \c c2corg_{user}
     create extension postgis;
-    create schema topoguide authorization "www-data";
+    create schema guidebook authorization "www-data";
     \q
     .build/venv/bin/initialize_app_api_db development.ini
 
@@ -43,7 +43,7 @@ Create a database that will be used to run the tests:
     create database c2corg_{user}_tests owner "www-data";
     \c c2corg_{user}_tests
     create extension postgis;
-    create schema topoguide authorization "www-data";
+    create schema guidebook authorization "www-data";
     \q
 
 Then run the tests with:
