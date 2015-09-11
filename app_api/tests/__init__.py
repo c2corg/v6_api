@@ -66,7 +66,6 @@ class BaseTestCase(unittest.TestCase):
         DBSession.remove()
         DBSession.configure(bind=connection)
         self.session = self.Session(bind=connection)
-        Base.session = self.session
 
     def tearDown(self):  # noqa
         # rollback - everything that happened with the Session above
