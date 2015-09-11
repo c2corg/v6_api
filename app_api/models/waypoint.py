@@ -89,9 +89,6 @@ class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
 
 
 class _WaypointLocaleMixin(object):
-    waypoint_type = Column(
-        Enum(name='waypoint_type', inherit_schema=True, *waypoint_types))
-
     pedestrian_access = Column(String)
 
     __mapper_args__ = {
