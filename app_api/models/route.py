@@ -59,15 +59,6 @@ class Route(_RouteMixin, Document):
 
         return route
 
-    def get_archive_locales(self):
-        locales = []
-
-        for locale in self.locales:
-            archive_local = locale.to_archive()
-            locales.append(archive_local)
-
-        return locales
-
 
 class ArchiveRoute(_RouteMixin, ArchiveDocument):
     """

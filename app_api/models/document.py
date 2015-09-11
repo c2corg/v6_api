@@ -59,6 +59,9 @@ class Document(Base, _DocumentMixin):
         copy_attributes(self, doc, Document._ATTRIBUTES)
         return doc
 
+    def get_archive_locales(self):
+        return [locale.to_archive() for locale in self.locales]
+
 
 class ArchiveDocument(Base, _DocumentMixin):
     """
