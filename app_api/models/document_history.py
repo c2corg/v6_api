@@ -46,12 +46,12 @@ class DocumentVersion(Base):
     document_archive = relationship(
         ArchiveDocument, primaryjoin=document_archive_id == ArchiveDocument.id)
 
-    document_i18n_archive_id = Column(
-        Integer, ForeignKey(schema + '.documents_i18n_archives.id'),
+    document_locales_archive_id = Column(
+        Integer, ForeignKey(schema + '.documents_locales_archives.id'),
         nullable=False)
-    document_i18n_archive = relationship(
+    document_locales_archive = relationship(
         ArchiveDocumentLocale,
-        primaryjoin=document_i18n_archive_id == ArchiveDocumentLocale.id)
+        primaryjoin=document_locales_archive_id == ArchiveDocumentLocale.id)
 
     history_metadata_id = Column(
         Integer, ForeignKey(schema + '.history_metadata.id'), nullable=False)

@@ -82,11 +82,11 @@ class _RouteLocaleMixin(object):
 class RouteLocale(_RouteLocaleMixin, DocumentLocale):
     """
     """
-    __tablename__ = 'routes_i18n'
+    __tablename__ = 'routes_locales'
 
     id = Column(
                 Integer,
-                ForeignKey(schema + '.documents_i18n.id'), primary_key=True)
+                ForeignKey(schema + '.documents_locales.id'), primary_key=True)
 
     _ATTRIBUTES = ['gear']
 
@@ -101,11 +101,12 @@ class RouteLocale(_RouteLocaleMixin, DocumentLocale):
 class ArchiveRouteLocale(_RouteLocaleMixin, ArchiveDocumentLocale):
     """
     """
-    __tablename__ = 'routes_i18n_archives'
+    __tablename__ = 'routes_locales_archives'
 
     id = Column(
         Integer,
-        ForeignKey(schema + '.documents_i18n_archives.id'), primary_key=True)
+        ForeignKey(schema + '.documents_locales_archives.id'),
+        primary_key=True)
 
 
 schema_route_locale = SQLAlchemySchemaNode(

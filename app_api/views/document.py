@@ -20,7 +20,7 @@ class DocumentRest(object):
                 version=1,
                 nature='ft',
                 document_archive=archive,
-                document_i18n_archive=locale,
+                document_locales_archive=locale,
                 history_metadata=meta_data
             )
             versions.append(version)
