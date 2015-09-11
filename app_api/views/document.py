@@ -8,11 +8,6 @@ class DocumentRest(object):
         self.request = request
 
     def _create_new_version(self, document):
-        """
-        TODO This should be a generic function for all document types. Move
-        into a more generic namespace and make `to_archive` and
-        `get_archive_locales` abstract methods of `Document`.
-        """
         archive = document.to_archive()
         archive_locales = document.get_archive_locales()
 
