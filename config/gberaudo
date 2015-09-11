@@ -1,0 +1,7 @@
+include config/dev
+
+export debug_port = 6546
+export instanceid = gberaudo
+export base_url = /${instanceid}
+export db_name = c2corg_gberaudo
+export tests_db_name = c2corg_gberaudo_tests
