@@ -2,16 +2,13 @@ from cornice.resource import resource, view
 from sqlalchemy.orm import joinedload
 
 from app_api.models.waypoint import Waypoint, schema_waypoint
-from app_api.models.document_history import HistoryMetaData, DocumentVersion
 from app_api.models import DBSession
+from app_api.views.document import DocumentRest
 from . import validate_id, to_json_dict
 
 
 @resource(collection_path='/waypoints', path='/waypoints/{id}')
-class WaypointRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class WaypointRest(DocumentRest):
 
     def collection_get(self):
         waypoints = DBSession. \
@@ -43,32 +40,3 @@ class WaypointRest(object):
         self._create_new_version(waypoint)
 
         return to_json_dict(waypoint, schema_waypoint)
-
-    def _create_new_version(self, waypoint):
-        """
-        TODO This should be a generic function for all document types. Move
-        into a more generic namespace and make `to_archive` and
-        `get_archive_locales` abstract methods of `Document`.
-        """
-        archive_waypoint = waypoint.to_archive()
-        archive_locales = waypoint.get_archive_locales()
-
-        meta_data = HistoryMetaData(is_minor=False, comment='creation')
-        versions = []
-        for locale in archive_locales:
-            version = DocumentVersion(
-                document_id=waypoint.document_id,
-                culture=locale.culture,
-                version=1,
-                nature='ft',
-                document_archive=archive_waypoint,
-                document_i18n_archive=locale,
-                history_metadata=meta_data
-            )
-            versions.append(version)
-
-        DBSession.add(archive_waypoint)
-        DBSession.add_all(archive_locales)
-        DBSession.add(meta_data)
-        DBSession.add_all(versions)
-        DBSession.flush()
