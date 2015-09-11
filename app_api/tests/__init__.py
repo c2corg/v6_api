@@ -22,7 +22,6 @@ def get_engine():
 def setup_package():
     # set up database
     engine = get_engine()
-    DBSession.configure(bind=engine)
     Base.metadata.create_all(engine)
 
 # keep the database schema after a test run (useful for debugging)
@@ -60,14 +59,13 @@ class BaseTestCase(unittest.TestCase):
         # begin a non-ORM transaction
         self.trans = connection.begin()
 
-        # bind an individual Session to the connection
-        # Next line is needed to make several tests run in a row.
-        # See https://github.com/Pylons/webtest/issues/5
-        # FIXME Is there a better solution?
-        DBSession.remove()
+        # DBSession is the scoped session manager used in the views,
+        # reconfigure it to use this test's connection
         DBSession.configure(bind=connection)
+
+        # create a session bound the connection, this session is the one
+        # used in the test code
         self.session = self.Session(bind=connection)
-        Base.session = self.session
 
     def tearDown(self):  # noqa
         # rollback - everything that happened with the Session above
@@ -77,4 +75,5 @@ class BaseTestCase(unittest.TestCase):
             self.trans.rollback()
         else:
             self.trans.commit()
+        DBSession.remove()
         self.session.close()
