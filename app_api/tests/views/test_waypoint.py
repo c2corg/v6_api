@@ -111,7 +111,7 @@ class TestWaypointRest(BaseTestCase):
         self.assertEqual(archive_waypoint.waypoint_type, 'summit')
         self.assertEqual(archive_waypoint.elevation, 3779)
 
-        archive_locale = version.document_i18n_archive
+        archive_locale = version.document_locales_archive
         self.assertEqual(archive_locale.document_id, document_id)
         self.assertEqual(archive_locale.culture, 'en')
         self.assertEqual(archive_locale.title, 'Mont Pourri')

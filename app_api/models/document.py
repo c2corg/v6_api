@@ -95,7 +95,7 @@ class _DocumentLocaleMixin(object):
 
 
 class DocumentLocale(Base, _DocumentLocaleMixin):
-    __tablename__ = 'documents_i18n'
+    __tablename__ = 'documents_locales'
 
     _ATTRIBUTES = ['document_id', 'culture', 'title', 'description']
 
@@ -105,4 +105,4 @@ class DocumentLocale(Base, _DocumentLocaleMixin):
 
 
 class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
-    __tablename__ = 'documents_i18n_archives'
+    __tablename__ = 'documents_locales_archives'

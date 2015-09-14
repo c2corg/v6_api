@@ -7,7 +7,7 @@ from sqlalchemy.orm import (
 
 from zope.sqlalchemy import ZopeTransactionExtension
 
-schema = 'topoguide'
+schema = 'guidebook'
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 

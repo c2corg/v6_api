@@ -99,11 +99,11 @@ class _WaypointLocaleMixin(object):
 class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
     """
     """
-    __tablename__ = 'waypoints_i18n'
+    __tablename__ = 'waypoints_locales'
 
     id = Column(
                 Integer,
-                ForeignKey(schema + '.documents_i18n.id'), primary_key=True)
+                ForeignKey(schema + '.documents_locales.id'), primary_key=True)
 
     _ATTRIBUTES = ['pedestrian_access']
 
@@ -118,11 +118,12 @@ class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
 class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
     """
     """
-    __tablename__ = 'waypoints_i18n_archives'
+    __tablename__ = 'waypoints_locales_archives'
 
     id = Column(
         Integer,
-        ForeignKey(schema + '.documents_i18n_archives.id'), primary_key=True)
+        ForeignKey(schema + '.documents_locales_archives.id'),
+        primary_key=True)
 
 
 schema_waypoint_locale = SQLAlchemySchemaNode(
