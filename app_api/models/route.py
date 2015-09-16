@@ -13,20 +13,7 @@ from . import schema
 from utils import copy_attributes
 from document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale)
-
-# TODO: move to a common place for outings etc.
-activities = [
-    'skitouring',
-    'snow_ice_mixed',
-    'mountain_climbing',
-    'rock_climbing',
-    'ice_climbing',
-    'hiking',
-    'snowshoeing',
-    'paragliding',
-    'mountain_biking',
-    'via_ferrata'
-    ]
+from app_api.attributes import activities
 
 
 class _RouteMixin(object):
