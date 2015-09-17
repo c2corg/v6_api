@@ -14,7 +14,7 @@ class WaypointRest(DocumentRest):
         waypoints = DBSession. \
             query(Waypoint). \
             options(joinedload(Waypoint.locales)). \
-            all()
+            limit(30)
 
         return [to_json_dict(wp, schema_waypoint) for wp in waypoints]
 

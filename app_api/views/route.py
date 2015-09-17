@@ -14,7 +14,7 @@ class RouteRest(DocumentRest):
         routes = DBSession. \
             query(Route). \
             options(joinedload(Route.locales)). \
-            all()
+            limit(30)
 
         return [to_json_dict(wp, schema_route) for wp in routes]
 
