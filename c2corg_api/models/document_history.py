@@ -35,7 +35,9 @@ class DocumentVersion(Base):
         Document, primaryjoin=document_id == Document.document_id,
         backref=backref('versions', viewonly=True))
 
-    culture = Column(String(2), nullable=False)  # TODO as fk
+    culture = Column(
+        String(2), ForeignKey(schema + '.cultures.culture'),
+        nullable=False)
     version = Column(Integer, nullable=False)
     created_at = Column(
         DateTime, default=datetime.datetime.now, nullable=False)

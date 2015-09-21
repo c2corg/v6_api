@@ -89,7 +89,11 @@ class _DocumentLocaleMixin(object):
             Integer, ForeignKey(schema + '.documents.document_id'),
             nullable=False)
 
-    culture = Column(String(2), nullable=False)  # TODO as fk
+    @declared_attr
+    def culture(self):
+        return Column(
+            String(2), ForeignKey(schema + '.cultures.culture'),
+            nullable=False)
 
     title = Column(String(150), nullable=False)
     description = Column(String)
