@@ -8,7 +8,7 @@ from webtest import TestApp
 
 from c2corg_api import main
 from c2corg_api.models import *  # noqa
-
+from c2corg_api.scripts import initializedb
 
 curdir = os.path.dirname(os.path.abspath(__file__))
 configfile = os.path.realpath(os.path.join(curdir, '../../test.ini'))
@@ -22,7 +22,9 @@ def get_engine():
 def setup_package():
     # set up database
     engine = get_engine()
-    Base.metadata.create_all(engine)
+    DBSession.configure(bind=engine)
+    initializedb.setup_db(engine, DBSession)
+    DBSession.remove()
 
 # keep the database schema after a test run (useful for debugging)
 keep = False

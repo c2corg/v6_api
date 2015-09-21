@@ -21,6 +21,13 @@ quality_types = [
     ]
 
 
+class Culture(Base):
+    """The supported languages.
+    """
+    __tablename__ = 'cultures'
+    culture = Column(String(2), primary_key=True)
+
+
 class _DocumentMixin(object):
     """
     Contains the attributes that are common for `Document` and

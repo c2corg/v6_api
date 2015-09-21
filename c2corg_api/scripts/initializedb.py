@@ -1,5 +1,6 @@
 import os
 import sys
+import transaction
 
 from sqlalchemy import engine_from_config
 
@@ -28,4 +29,16 @@ def main(argv=sys.argv):
     setup_logging(config_uri)
     settings = get_appsettings(config_uri, options=options)
     engine = engine_from_config(settings, 'sqlalchemy.')
+    DBSession.configure(bind=engine)
+    setup_db(engine, DBSession)
+
+
+def setup_db(engine, session):
     Base.metadata.create_all(engine)
+
+    with transaction.manager:
+        # add default languages
+        session.add_all([
+            document.Culture(culture=lang) for lang in
+            ['ca', 'de', 'en', 'es', 'eu', 'fr', 'it']
+        ])
