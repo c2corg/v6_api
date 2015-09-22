@@ -13,37 +13,7 @@ from . import schema
 from utils import copy_attributes
 from document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale)
-
-waypoint_types = [
-    'summit',
-    'pass',
-    'lake',
-    'bisse',
-    'waterfall',
-    'cave',
-    'glacier',
-    'cliff',
-    'waterpoint',
-    'canyon',
-    'valley',
-    'locality',
-    'dam',
-    'webcam',
-    'weather_station',
-    'hut',
-    'gite',
-    'shelter',
-    'camp_site',
-    'base_camp',
-    'camping',
-    'access',
-    'crag',
-    'boulder',
-    'climbing',
-    'local_product',
-    'paragliding_takeoff',
-    'paragliding_landing'
-    ]
+from app_api.attributes import waypoint_types
 
 
 class _WaypointMixin(object):
