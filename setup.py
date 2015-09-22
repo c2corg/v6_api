@@ -20,6 +20,7 @@ requires = [
     'cornice',
     'colander',
     'ColanderAlchemy>=0.3.2',
+    'dogpile.cache',
     ]
 
 setup(name='app_api',

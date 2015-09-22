@@ -6,6 +6,8 @@ from .models import (
     Base,
     )
 
+from .ext import caching
+
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
@@ -15,5 +17,12 @@ def main(global_config, **settings):
     Base.metadata.bind = engine
     config = Configurator(settings=settings)
     config.include('cornice')
+
+    # dogpile.cache configuration
+    # TODO: get config from settings
+    # caching.init_region(settings["cache"])
+    caching.init_region({'backend': 'dogpile.cache.memory'})
+    caching.invalidate_region()
+
     config.scan(ignore='app_api.tests')
     return config.make_wsgi_app()
