@@ -1,4 +1,4 @@
-from app_api.models.waypoint import Waypoint, WaypointLocale
+from api.models.waypoint import Waypoint, WaypointLocale
 
 from .. import BaseTestCase
 

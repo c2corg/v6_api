@@ -13,7 +13,7 @@ from . import schema
 from utils import copy_attributes
 from document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale)
-from app_api.attributes import waypoint_types
+from api.attributes import waypoint_types
 
 
 class _WaypointMixin(object):

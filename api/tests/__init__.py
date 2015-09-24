@@ -6,8 +6,8 @@ from pyramid import testing
 import unittest
 from webtest import TestApp
 
-from app_api import main
-from app_api.models import *  # noqa
+from api import main
+from api.models import *  # noqa
 
 
 curdir = os.path.dirname(os.path.abspath(__file__))

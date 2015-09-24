@@ -13,7 +13,7 @@ from . import schema
 from utils import copy_attributes
 from document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale)
-from app_api.attributes import activities
+from api.attributes import activities
 
 
 class _RouteMixin(object):

@@ -1,7 +1,7 @@
 # common configuration between production.ini and development.ini
 
 [app:main]
-use = egg:app_api
+use = egg:api
 
 pyramid.default_locale_name = en
 

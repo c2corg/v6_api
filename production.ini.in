@@ -27,7 +27,7 @@ port = 6543
 ###
 
 [loggers]
-keys = root, app_api, sqlalchemy
+keys = root, api, sqlalchemy
 
 [handlers]
 keys = console
@@ -39,10 +39,10 @@ keys = generic
 level = WARN
 handlers = console
 
-[logger_app_api]
+[logger_api]
 level = WARN
 handlers =
-qualname = app_api
+qualname = api
 
 [logger_sqlalchemy]
 level = WARN

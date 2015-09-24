@@ -1,4 +1,4 @@
-from app_api.models.route import Route, RouteLocale
+from api.models.route import Route, RouteLocale
 
 from .. import BaseTestCase
 

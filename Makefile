@@ -45,7 +45,7 @@ test: .build/venv/bin/nosetests
 
 .PHONY: flake8
 flake8: .build/venv/bin/flake8
-	.build/venv/bin/flake8 app_api
+	.build/venv/bin/flake8 api
 
 .PHONY: install
 install: install-dev-egg template
@@ -54,7 +54,7 @@ install: install-dev-egg template
 template: $(TEMPLATE_FILES)
 
 .PHONY: install-dev-egg
-install-dev-egg: $(SITE_PACKAGES)/app_api.egg-link
+install-dev-egg: $(SITE_PACKAGES)/api.egg-link
 
 .PHONY: serve
 serve: install development.ini
@@ -72,7 +72,7 @@ serve: install development.ini
 	mkdir -p $(dir $@)
 	virtualenv --no-site-packages $@
 
-$(SITE_PACKAGES)/app_api.egg-link: .build/venv requirements.txt setup.py
+$(SITE_PACKAGES)/api.egg-link: .build/venv requirements.txt setup.py
 	.build/venv/bin/pip install -r requirements.txt
 
 development.ini production.ini: common.ini

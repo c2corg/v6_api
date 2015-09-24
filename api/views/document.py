@@ -1,5 +1,5 @@
-from app_api.models.document_history import HistoryMetaData, DocumentVersion
-from app_api.models import DBSession
+from api.models.document_history import HistoryMetaData, DocumentVersion
+from api.models import DBSession
 
 
 class DocumentRest(object):

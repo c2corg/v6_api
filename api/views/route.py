@@ -1,9 +1,9 @@
 from cornice.resource import resource, view
 from sqlalchemy.orm import joinedload
 
-from app_api.models.route import Route, schema_route
-from app_api.models import DBSession
-from app_api.views.document import DocumentRest
+from api.models.route import Route, schema_route
+from api.models import DBSession
+from api.views.document import DocumentRest
 from . import validate_id, to_json_dict
 
 

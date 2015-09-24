@@ -22,9 +22,9 @@ requires = [
     'ColanderAlchemy>=0.3.2',
     ]
 
-setup(name='app_api',
+setup(name='api',
       version='0.0',
-      description='app_api',
+      description='api',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
         "Programming Language :: Python",
@@ -39,12 +39,12 @@ setup(name='app_api',
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
-      test_suite='app_api',
+      test_suite='api',
       install_requires=requires,
       entry_points="""\
       [paste.app_factory]
-      main = app_api:main
+      main = api:main
       [console_scripts]
-      initialize_app_api_db = app_api.scripts.initializedb:main
+      initialize_api_db = api.scripts.initializedb:main
       """,
       )
