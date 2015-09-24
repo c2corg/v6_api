@@ -1,6 +1,6 @@
 from api.models.route import Route, RouteLocale
 
-from .. import BaseTestCase
+from api.tests import BaseTestCase
 
 
 class TestRoute(BaseTestCase):

@@ -1,6 +1,6 @@
 from api.models.waypoint import Waypoint, WaypointLocale
 
-from .. import BaseTestCase
+from api.tests import BaseTestCase
 
 
 class TestWaypoint(BaseTestCase):

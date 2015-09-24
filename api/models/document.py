@@ -9,7 +9,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
 
-from . import Base, schema
+from api.models import Base, schema
 from utils import copy_attributes
 
 quality_types = [

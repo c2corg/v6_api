@@ -4,7 +4,7 @@ from sqlalchemy.orm import joinedload
 from api.models.waypoint import Waypoint, schema_waypoint
 from api.models import DBSession
 from api.views.document import DocumentRest
-from . import validate_id, to_json_dict
+from api.views import validate_id, to_json_dict
 
 
 @resource(collection_path='/waypoints', path='/waypoints/{id}')
