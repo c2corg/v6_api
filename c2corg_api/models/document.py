@@ -8,6 +8,7 @@ from sqlalchemy import (
     )
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
+import abc
 
 from c2corg_api.models import Base, schema
 from utils import copy_attributes
@@ -62,7 +63,17 @@ class Document(Base, _DocumentMixin):
 
     _ATTRIBUTES = ['document_id', 'protected', 'redirects_to', 'quality']
 
+    @abc.abstractmethod
+    def to_archive(self):
+        """Create an `Archive*` instance with the same attributes.
+        This method is supposed to be implemented by child classes.
+        """
+        return
+
     def to_archive(self, doc):
+        """Copy the attributes of this document into a passed in
+        `Archive*` instance.
+        """
         copy_attributes(self, doc, Document._ATTRIBUTES)
         return doc
 
