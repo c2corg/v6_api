@@ -23,3 +23,4 @@ from c2corg_api.models import document  # noqa
 from c2corg_api.models import waypoint  # noqa
 from c2corg_api.models import route  # noqa
 from c2corg_api.models import document_history  # noqa
+from c2corg_api.models import image  # noqa
