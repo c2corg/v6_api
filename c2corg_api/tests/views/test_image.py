@@ -1,5 +1,3 @@
-import json
-
 from c2corg_api.models.image import Image, ImageLocale
 
 from .. import BaseTestCase
@@ -16,8 +14,8 @@ class TestImageRest(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, 'application/json')
 
-        body = json.loads(response.body)
-        self.assertTrue(isinstance(body, list))
+        body = response.json
+        self.assertIsInstance(body, list)
         nb_images = self.session.query(Image).count()
         self.assertEqual(len(body), nb_images)
 
@@ -26,7 +24,7 @@ class TestImageRest(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, 'application/json')
 
-        body = json.loads(response.body)
+        body = response.json
         self.assertFalse('id' in body)
         self.assertEqual(body.get('document_id'), self.image.document_id)
         self.assertEqual(
@@ -40,12 +38,11 @@ class TestImageRest(BaseTestCase):
         self.assertEqual(locale_en.get('title'), self.locale_en.title)
 
     def test_post_error(self):
-        body = {}
-        response = self.app.post(
-            '/images', params=json.dumps(body), expect_errors=True)
+        response = self.app.post_json(
+            '/images', {}, expect_errors=True)
         self.assertEqual(response.status_code, 400)
 
-        body = json.loads(response.body)
+        body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
@@ -61,12 +58,11 @@ class TestImageRest(BaseTestCase):
                 {'culture': 'en'}
             ]
         }
-        response = self.app.post(
-            '/images', params=json.dumps(body), expect_errors=True,
-            content_type='application/json')
+        response = self.app.post_json(
+            '/images', body, expect_errors=True)
         self.assertEqual(response.status_code, 400)
 
-        body = json.loads(response.body)
+        body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
@@ -81,12 +77,10 @@ class TestImageRest(BaseTestCase):
                 {'culture': 'en', 'title': 'Some nice loop'}
             ]
         }
-        response = self.app.post(
-            '/images', params=json.dumps(body),
-            content_type='application/json')
+        response = self.app.post_json('/images', body)
         self.assertEqual(response.status_code, 200)
 
-        body = json.loads(response.body)
+        body = response.json
         document_id = body.get('document_id')
         self.assertIsNotNone(document_id)
 
