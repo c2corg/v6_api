@@ -1,2 +1,2 @@
 include *.txt *.ini *.cfg *.md
-recursive-include app_api *.ico *.png *.css *.gif *.jpg *.pt *.txt *.mak *.mako *.js *.html *.xml
+recursive-include c2corg_api *.ico *.png *.css *.gif *.jpg *.pt *.txt *.mak *.mako *.js *.html *.xml

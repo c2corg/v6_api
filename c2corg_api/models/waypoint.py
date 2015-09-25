@@ -9,11 +9,11 @@ from sqlalchemy import (
 
 from colanderalchemy import SQLAlchemySchemaNode
 
-from . import schema
+from c2corg_api.models import schema
 from utils import copy_attributes
 from document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale)
-from app_api.attributes import waypoint_types
+from c2corg_api.attributes import waypoint_types
 
 
 class _WaypointMixin(object):

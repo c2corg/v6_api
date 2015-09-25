@@ -1,6 +1,6 @@
-from app_api.models.route import Route, RouteLocale
+from c2corg_api.models.route import Route, RouteLocale
 
-from .. import BaseTestCase
+from c2corg_api.tests import BaseTestCase
 
 
 class TestRoute(BaseTestCase):

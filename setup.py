@@ -22,9 +22,9 @@ requires = [
     'ColanderAlchemy>=0.3.2',
     ]
 
-setup(name='app_api',
+setup(name='c2corg_api',
       version='0.0',
-      description='app_api',
+      description='c2corg_api',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
         "Programming Language :: Python",
@@ -39,12 +39,12 @@ setup(name='app_api',
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
-      test_suite='app_api',
+      test_suite='c2corg_api',
       install_requires=requires,
       entry_points="""\
       [paste.app_factory]
-      main = app_api:main
+      main = c2corg_api:main
       [console_scripts]
-      initialize_app_api_db = app_api.scripts.initializedb:main
+      initialize_c2corg_api_db = c2corg_api.scripts.initializedb:main
       """,
       )

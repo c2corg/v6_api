@@ -1,10 +1,10 @@
 from cornice.resource import resource, view
 from sqlalchemy.orm import joinedload
 
-from app_api.models.waypoint import Waypoint, schema_waypoint
-from app_api.models import DBSession
-from app_api.views.document import DocumentRest
-from . import validate_id, to_json_dict
+from c2corg_api.models.waypoint import Waypoint, schema_waypoint
+from c2corg_api.models import DBSession
+from c2corg_api.views.document import DocumentRest
+from c2corg_api.views import validate_id, to_json_dict
 
 
 @resource(collection_path='/waypoints', path='/waypoints/{id}')

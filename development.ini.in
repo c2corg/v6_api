@@ -39,7 +39,7 @@ port = {debug_port}
 ###
 
 [loggers]
-keys = root, app_api, sqlalchemy
+keys = root, c2corg_api, sqlalchemy
 
 [handlers]
 keys = console
@@ -51,10 +51,10 @@ keys = generic
 level = INFO
 handlers = console
 
-[logger_app_api]
+[logger_c2corg_api]
 level = DEBUG
 handlers =
-qualname = app_api
+qualname = c2corg_api
 
 [logger_sqlalchemy]
 level = INFO
