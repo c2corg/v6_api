@@ -25,10 +25,10 @@ help:
 	@echo
 	@echo "Secondary targets:"
 	@echo
-	@echo "- flake8		Run flake8 checker on the Python code"
+	@echo "- lint			Run flake8 checker on the Python code"
 
 .PHONY: check
-check: flake8 test
+check: lint test
 
 .PHONY: clean
 clean:
@@ -43,7 +43,7 @@ cleanall: clean
 test: .build/venv/bin/nosetests
 	.build/venv/bin/nosetests
 
-.PHONY: flake8
+.PHONY: lint
 flake8: .build/venv/bin/flake8
 	.build/venv/bin/flake8 c2corg_api
 
