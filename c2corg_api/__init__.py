@@ -1,7 +1,7 @@
 from pyramid.config import Configurator
 from sqlalchemy import engine_from_config
 
-from api.models import (
+from c2corg_api.models import (
     DBSession,
     Base,
     )
@@ -15,5 +15,5 @@ def main(global_config, **settings):
     Base.metadata.bind = engine
     config = Configurator(settings=settings)
     config.include('cornice')
-    config.scan(ignore='api.tests')
+    config.scan(ignore='c2corg_api.tests')
     return config.make_wsgi_app()

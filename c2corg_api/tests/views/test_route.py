@@ -1,6 +1,6 @@
 import json
 
-from api.models.route import Route, RouteLocale
+from c2corg_api.models.route import Route, RouteLocale
 
 from .. import BaseTestCase
 

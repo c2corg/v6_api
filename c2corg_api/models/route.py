@@ -9,11 +9,11 @@ from sqlalchemy import (
 
 from colanderalchemy import SQLAlchemySchemaNode
 
-from api.models import schema
+from c2corg_api.models import schema
 from utils import copy_attributes
 from document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale)
-from api.attributes import activities
+from c2corg_api.attributes import activities
 
 
 class _RouteMixin(object):

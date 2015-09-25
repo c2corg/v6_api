@@ -1,10 +1,10 @@
 # wsgi application
-WSGIDaemonProcess api-{instanceid} python-path={site_packages}
+WSGIDaemonProcess c2corg_api-{instanceid} python-path={site_packages}
 
-WSGIScriptAlias {base_url} {base_dir}/apache/app-api.wsgi
+WSGIScriptAlias {base_url} {base_dir}/apache/app-c2corg_api.wsgi
 
 <Location {base_url}>
-  WSGIProcessGroup api-{instanceid}
+  WSGIProcessGroup c2corg_api-{instanceid}
   WSGIApplicationGroup %{{GLOBAL}}
 </Location>
 

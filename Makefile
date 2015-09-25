@@ -45,7 +45,7 @@ test: .build/venv/bin/nosetests
 
 .PHONY: flake8
 flake8: .build/venv/bin/flake8
-	.build/venv/bin/flake8 api
+	.build/venv/bin/flake8 c2corg_api
 
 .PHONY: install
 install: install-dev-egg template
@@ -54,7 +54,7 @@ install: install-dev-egg template
 template: $(TEMPLATE_FILES)
 
 .PHONY: install-dev-egg
-install-dev-egg: $(SITE_PACKAGES)/api.egg-link
+install-dev-egg: $(SITE_PACKAGES)/c2corg_api.egg-link
 
 .PHONY: serve
 serve: install development.ini
@@ -72,14 +72,14 @@ serve: install development.ini
 	mkdir -p $(dir $@)
 	virtualenv --no-site-packages $@
 
-$(SITE_PACKAGES)/api.egg-link: .build/venv requirements.txt setup.py
+$(SITE_PACKAGES)/c2corg_api.egg-link: .build/venv requirements.txt setup.py
 	.build/venv/bin/pip install -r requirements.txt
 
 development.ini production.ini: common.ini
 
-apache/app-api.wsgi: production.ini
+apache/app-c2corg_api.wsgi: production.ini
 
-apache/wsgi.conf: apache/app-api.wsgi
+apache/wsgi.conf: apache/app-c2corg_api.wsgi
 
 %: %.in $(CONFIG_MAKEFILE)
 	scripts/env_replace < $< > $@

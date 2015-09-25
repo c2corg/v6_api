@@ -3,7 +3,7 @@
 /development.ini
 /production.ini
 /test.ini
-/apache/app-api.wsgi
+/apache/app-c2corg_api.wsgi
 /apache/wsgi.conf
 /MANIFEST
 *.pyc

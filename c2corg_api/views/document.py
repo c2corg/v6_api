@@ -1,5 +1,5 @@
-from api.models.document_history import HistoryMetaData, DocumentVersion
-from api.models import DBSession
+from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
+from c2corg_api.models import DBSession
 
 
 class DocumentRest(object):

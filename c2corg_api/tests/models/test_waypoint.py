@@ -1,6 +1,6 @@
-from api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 
-from api.tests import BaseTestCase
+from c2corg_api.tests import BaseTestCase
 
 
 class TestWaypoint(BaseTestCase):

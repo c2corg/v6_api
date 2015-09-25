@@ -1,7 +1,7 @@
 # common configuration between production.ini and development.ini
 
 [app:main]
-use = egg:api
+use = egg:c2corg_api
 
 pyramid.default_locale_name = en
 

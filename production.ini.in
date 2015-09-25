@@ -27,7 +27,7 @@ port = 6543
 ###
 
 [loggers]
-keys = root, api, sqlalchemy
+keys = root, c2corg_api, sqlalchemy
 
 [handlers]
 keys = console
@@ -39,10 +39,10 @@ keys = generic
 level = WARN
 handlers = console
 
-[logger_api]
+[logger_c2corg_api]
 level = WARN
 handlers =
-qualname = api
+qualname = c2corg_api
 
 [logger_sqlalchemy]
 level = WARN

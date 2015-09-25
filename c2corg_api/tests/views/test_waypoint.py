@@ -1,6 +1,6 @@
 import json
 
-from api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 
 from .. import BaseTestCase
 

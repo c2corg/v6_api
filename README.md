@@ -21,7 +21,7 @@ To set up the database
     create extension postgis;
     create schema guidebook authorization "www-data";
     \q
-    .build/venv/bin/initialize_api_db development.ini
+    .build/venv/bin/initialize_c2corg_api_db development.ini
 
 Run the application
 -------------------
@@ -56,7 +56,7 @@ Or with the `check` target, which runs `flake8` and `test`:
 
 To run a specific test:
 
-    .build/venv/bin/nosetests api/tests/views/test_summit.py
+    .build/venv/bin/nosetests c2corg_api/tests/views/test_summit.py
 
 To see the debug output:
 
