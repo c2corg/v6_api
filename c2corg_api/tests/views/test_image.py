@@ -10,8 +10,7 @@ class TestImageRest(BaseTestCase):
         self._add_test_data()
 
     def test_get_collection(self):
-        response = self.app.get('/images')
-        self.assertEqual(response.status_code, 200)
+        response = self.app.get('/images', status=200)
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -20,8 +19,8 @@ class TestImageRest(BaseTestCase):
         self.assertEqual(len(body), nb_images)
 
     def test_get(self):
-        response = self.app.get('/images/' + str(self.image.document_id))
-        self.assertEqual(response.status_code, 200)
+        response = self.app.get('/images/' + str(self.image.document_id),
+                                status=200)
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -38,9 +37,8 @@ class TestImageRest(BaseTestCase):
         self.assertEqual(locale_en.get('title'), self.locale_en.title)
 
     def test_post_error(self):
-        response = self.app.post_json(
-            '/images', {}, expect_errors=True)
-        self.assertEqual(response.status_code, 400)
+        response = self.app.post_json('/images', {}, expect_errors=True,
+                                      status=400)
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -59,8 +57,7 @@ class TestImageRest(BaseTestCase):
             ]
         }
         response = self.app.post_json(
-            '/images', body, expect_errors=True)
-        self.assertEqual(response.status_code, 400)
+            '/images', body, expect_errors=True, status=400)
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -77,8 +74,7 @@ class TestImageRest(BaseTestCase):
                 {'culture': 'en', 'title': 'Some nice loop'}
             ]
         }
-        response = self.app.post_json('/images', body)
-        self.assertEqual(response.status_code, 200)
+        response = self.app.post_json('/images', body, status=200)
 
         body = response.json
         document_id = body.get('document_id')
