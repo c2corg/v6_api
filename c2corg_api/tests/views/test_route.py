@@ -70,7 +70,12 @@ class TestRouteRest(BaseTestRest):
             culture='en', title='Mont Blanc from the air', description='...',
             gear='paraglider')
 
+        self.locale_fr = RouteLocale(
+            culture='fr', title='Mont Blanc du ciel', description='...',
+            gear='paraglider')
+
         self.route.locales.append(self.locale_en)
+        self.route.locales.append(self.locale_fr)
 
         self.session.add(self.route)
         self.session.flush()

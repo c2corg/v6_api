@@ -1,7 +1,8 @@
 from cornice.resource import resource, view
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, contains_eager
 
 from c2corg_api.models.waypoint import Waypoint, schema_waypoint
+from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models import DBSession
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views import validate_id, to_json_dict
@@ -21,12 +22,22 @@ class WaypointRest(DocumentRest):
     @view(validators=validate_id)
     def get(self):
         id = self.request.validated['id']
+        culture = self.request.GET.get('l')
 
-        waypoint = DBSession. \
-            query(Waypoint). \
-            filter(Waypoint.document_id == id). \
-            options(joinedload(Waypoint.locales)). \
-            first()
+        if not culture:
+            waypoint = DBSession. \
+                query(Waypoint). \
+                filter(Waypoint.document_id == id). \
+                options(joinedload(Waypoint.locales)). \
+                first()
+        else:
+            waypoint = DBSession. \
+                query(Waypoint). \
+                join(Waypoint.locales). \
+                filter(Waypoint.document_id == id). \
+                options(contains_eager(Waypoint.locales)). \
+                filter(DocumentLocale.culture == culture). \
+                first()
 
         return to_json_dict(waypoint, schema_waypoint)
 

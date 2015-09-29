@@ -66,7 +66,11 @@ class TestImageRest(BaseTestRest):
         self.locale_en = ImageLocale(
             culture='en', title='Mont Blanc from the air', description='...')
 
+        self.locale_fr = ImageLocale(
+            culture='fr', title='Mont Blanc du ciel', description='...')
+
         self.image.locales.append(self.locale_en)
+        self.image.locales.append(self.locale_fr)
 
         self.session.add(self.image)
         self.session.flush()

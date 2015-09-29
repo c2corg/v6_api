@@ -35,7 +35,7 @@ class BaseTestRest(BaseTestCase):
         self.assertEqual(body.get('document_id'), reference.document_id)
 
         locales = body.get('locales')
-        self.assertEqual(len(locales), 1)
+        self.assertEqual(len(locales), 2)
         locale_en = locales[0]
         self.assertNotIn('id', locale_en)
         self.assertEqual(locale_en.get('culture'), self.locale_en.culture)
