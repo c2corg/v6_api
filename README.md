@@ -82,6 +82,7 @@ Or with the `check` target, which runs `flake8` and `test`:
 To run a specific test:
 
     .build/venv/bin/nosetests c2corg_api/tests/views/test_summit.py
+    .build/venv/bin/nosetests -s  c2corg_api/tests/views/test_waypoint.py:TestWaypointRest.test_get_lang
 
 To see the debug output:
 
