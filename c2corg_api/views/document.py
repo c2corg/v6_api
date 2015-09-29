@@ -11,14 +11,13 @@ class DocumentRest(object):
         archive = document.to_archive()
         archive_locales = document.get_archive_locales()
 
-        meta_data = HistoryMetaData(is_minor=False, comment='creation')
+        meta_data = HistoryMetaData(comment='creation')
         versions = []
         for locale in archive_locales:
             version = DocumentVersion(
                 document_id=document.document_id,
                 culture=locale.culture,
                 version=1,
-                nature='ft',
                 document_archive=archive,
                 document_locales_archive=locale,
                 history_metadata=meta_data

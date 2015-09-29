@@ -51,7 +51,6 @@ class TestRouteRest(BaseTestRest):
                  'gear': 'shoes'}
             ]
         }
-
         body, doc = self.post_success(body)
         version = doc.versions[0]
 
