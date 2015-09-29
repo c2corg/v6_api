@@ -9,6 +9,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
 import abc
+import uuid
 
 from c2corg_api.models import Base, schema
 from utils import copy_attributes
@@ -34,6 +35,7 @@ class _DocumentMixin(object):
     Contains the attributes that are common for `Document` and
     `ArchiveDocument`.
     """
+    version = Column(String(32), nullable=False)
     # move to metadata?
     protected = Column(Boolean)
     redirects_to = Column(Integer)
@@ -61,7 +63,13 @@ class Document(Base, _DocumentMixin):
     # TODO constraint that there is at least one locale
     locales = relationship('DocumentLocale')
 
-    _ATTRIBUTES = ['document_id', 'protected', 'redirects_to', 'quality']
+    __mapper_args__ = {
+            'version_id_col': _DocumentMixin.version,
+            'version_id_generator': lambda version: uuid.uuid4().hex
+    }
+
+    _ATTRIBUTES = \
+        ['document_id', 'version', 'protected', 'redirects_to', 'quality']
 
     @abc.abstractmethod
     def to_archive(self):
@@ -93,6 +101,7 @@ class ArchiveDocument(Base, _DocumentMixin):
 # Locales for documents
 class _DocumentLocaleMixin(object):
     id = Column(Integer, primary_key=True)
+    version = Column(String(32))
 
     @declared_attr
     def document_id(self):
@@ -119,7 +128,14 @@ class _DocumentLocaleMixin(object):
 class DocumentLocale(Base, _DocumentLocaleMixin):
     __tablename__ = 'documents_locales'
 
-    _ATTRIBUTES = ['document_id', 'culture', 'title', 'description']
+    __mapper_args__ = {
+        'polymorphic_identity': 'd',
+        'polymorphic_on': _DocumentLocaleMixin.type,
+        'version_id_col': _DocumentLocaleMixin.version,
+        'version_id_generator': lambda version: uuid.uuid4().hex
+    }
+
+    _ATTRIBUTES = ['document_id', 'version', 'culture', 'title', 'description']
 
     def to_archive(self, locale):
         copy_attributes(self, locale, DocumentLocale._ATTRIBUTES)
@@ -128,3 +144,8 @@ class DocumentLocale(Base, _DocumentLocaleMixin):
 
 class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
     __tablename__ = 'documents_locales_archives'
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'd',
+        'polymorphic_on': _DocumentLocaleMixin.type
+    }
