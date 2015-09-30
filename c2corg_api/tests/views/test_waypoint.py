@@ -159,6 +159,24 @@ class TestWaypointRest(BaseTestRest):
             expect_errors=True)
         self.assertEqual(response.status_code, 409)
 
+    def test_put_wrong_ids(self):
+        body = {
+            'document_id': self.waypoint.document_id,
+            'version': self.waypoint.version,
+            'waypoint_type': 'summit',
+            'elevation': 1234,
+            'locales': [
+                {'culture': 'en', 'title': 'Mont Granier', 'description': 'A.',
+                 'pedestrian_access': 'n', 'version': self.locale_en.version}
+            ]
+        }
+        response = self.app.put(
+            '/waypoints/' + str(self.waypoint.document_id + 1),
+            params=json.dumps(body),
+            content_type='application/json',
+            expect_errors=True)
+        self.assertEqual(response.status_code, 400)
+
     def test_put_success(self):
         body = {
             'document_id': self.waypoint.document_id,

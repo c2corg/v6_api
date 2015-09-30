@@ -1,6 +1,6 @@
 from cornice.resource import resource, view
 from sqlalchemy.orm import joinedload, contains_eager
-from pyramid.httpexceptions import HTTPConflict, HTTPNotFound
+from pyramid.httpexceptions import HTTPConflict, HTTPNotFound, HTTPBadRequest
 
 from c2corg_api.models.waypoint import Waypoint, schema_waypoint
 from c2corg_api.models.document import DocumentLocale
@@ -46,8 +46,7 @@ class WaypointRest(DocumentRest):
     def put(self):
         id = self.request.validated['id']
         waypoint_in = schema_waypoint.objectify(self.request.validated)
-
-        # TODO check that id == waypoint_in
+        self._check_document_id(id, waypoint_in.document_id)
         # TODO update-message as input (-> new colander schema)!
 
         waypoint = self._get_waypoint(id)
@@ -86,6 +85,14 @@ class WaypointRest(DocumentRest):
             raise HTTPNotFound('document not found')
 
         return waypoint
+
+    def _check_document_id(self, id, document_id):
+        """Checks that the id given in the URL ("/waypoints/{id}") matches
+        the document_id given in the request body.
+        """
+        if id != document_id:
+            raise HTTPBadRequest(
+                'id in the url does not match document_id in request body')
 
     def _check_versions(self, waypoint, waypoint_in):
         """Check that the passed-in document and all passed-in locales have
