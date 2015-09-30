@@ -81,7 +81,7 @@ class Document(Base, _DocumentMixin):
         """
         return
 
-    def to_archive(self, doc):
+    def _to_archive(self, doc):
         """Copy the attributes of this document into a passed in
         `Archive*` instance.
         """

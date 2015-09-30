@@ -100,4 +100,5 @@ class WaypointRest(DocumentRest):
             if locale:
                 if locale.version != locale_in.version:
                     raise HTTPConflict(
-                        'version of locale \'%s\' has changed' % locale.culture)
+                        'version of locale \'%s\' has changed'
+                        % locale.culture)

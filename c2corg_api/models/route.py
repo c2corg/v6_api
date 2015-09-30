@@ -41,7 +41,7 @@ class Route(_RouteMixin, Document):
 
     def to_archive(self):
         route = ArchiveRoute()
-        super(Route, self).to_archive(route)
+        super(Route, self)._to_archive(route)
         copy_attributes(self, route, Route._ATTRIBUTES)
 
         return route

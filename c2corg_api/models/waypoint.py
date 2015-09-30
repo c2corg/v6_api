@@ -42,7 +42,7 @@ class Waypoint(_WaypointMixin, Document):
 
     def to_archive(self):
         waypoint = ArchiveWaypoint()
-        super(Waypoint, self).to_archive(waypoint)
+        super(Waypoint, self)._to_archive(waypoint)
         copy_attributes(self, waypoint, Waypoint._ATTRIBUTES)
 
         return waypoint
@@ -58,6 +58,7 @@ class Waypoint(_WaypointMixin, Document):
                 locale.document_id = self.document_id
             else:
                 self.locales.append(locale_in)
+
 
 class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
     """
@@ -98,6 +99,7 @@ class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
     def update(self, other):
         super(WaypointLocale, self).update(other)
         copy_attributes(other, self, WaypointLocale._ATTRIBUTES)
+
 
 class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
     """

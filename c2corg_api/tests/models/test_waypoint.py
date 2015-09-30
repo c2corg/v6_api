@@ -4,6 +4,7 @@ from c2corg_api.tests import BaseTestCase
 
 from sqlalchemy.orm.exc import StaleDataError
 
+
 class TestWaypoint(BaseTestCase):
 
     def test_to_archive(self):
