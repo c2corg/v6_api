@@ -44,7 +44,7 @@ test: .build/venv/bin/nosetests
 	.build/venv/bin/nosetests
 
 .PHONY: lint
-flake8: .build/venv/bin/flake8
+lint: .build/venv/bin/flake8
 	.build/venv/bin/flake8 c2corg_api
 
 .PHONY: install
