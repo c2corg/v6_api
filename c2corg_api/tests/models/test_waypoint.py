@@ -91,3 +91,39 @@ class TestWaypoint(BaseTestCase):
         # then try to update the waypoint again with the old version
         waypoint1.elevation = 2345
         self.assertRaises(StaleDataError, self.session.merge, waypoint1)
+
+    def test_update(self):
+        waypoint_db = Waypoint(
+            document_id=1, waypoint_type='summit', elevation=2203,
+            version='123',
+            locales=[
+                WaypointLocale(
+                    id=2, culture='en', title='A', description='abc',
+                    version='345'),
+                WaypointLocale(
+                    id=3, culture='fr', title='B', description='bcd',
+                    version='678'),
+            ]
+        )
+        waypoint_in = Waypoint(
+            document_id=1, waypoint_type='summit', elevation=1234,
+            version='123',
+            locales=[
+                WaypointLocale(
+                    id=2, culture='en', title='C', description='abc',
+                    version='345'),
+                WaypointLocale(
+                    culture='es', title='D', description='efg'),
+            ]
+        )
+        waypoint_db.update(waypoint_in)
+        self.assertEqual(waypoint_db.elevation, waypoint_in.elevation)
+        self.assertEqual(len(waypoint_db.locales), 3)
+
+        locale_en = waypoint_db.get_locale('en')
+        locale_fr = waypoint_db.get_locale('fr')
+        locale_es = waypoint_db.get_locale('es')
+
+        self.assertEqual(locale_en.title, 'C')
+        self.assertEqual(locale_fr.title, 'B')
+        self.assertEqual(locale_es.title, 'D')

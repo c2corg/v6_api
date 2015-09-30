@@ -68,8 +68,11 @@ class Document(Base, _DocumentMixin):
             'version_id_generator': lambda version: uuid.uuid4().hex
     }
 
+    _ATTRIBUTES_WHITELISTED = \
+        ['document_id', 'version']
+
     _ATTRIBUTES = \
-        ['document_id', 'version', 'protected', 'redirects_to', 'quality']
+        _ATTRIBUTES_WHITELISTED + ['protected', 'redirects_to', 'quality']
 
     @abc.abstractmethod
     def to_archive(self):
@@ -87,6 +90,19 @@ class Document(Base, _DocumentMixin):
 
     def get_archive_locales(self):
         return [locale.to_archive() for locale in self.locales]
+
+    def update(self, other):
+        copy_attributes(other, self, Document._ATTRIBUTES_WHITELISTED)
+
+    def get_locale(self, culture):
+        """Get the locale with the given culture or `None` if no locale
+        is present.
+        """
+        l = [locale for locale in self.locales if locale.culture == culture]
+        if l:
+            return l[0]
+        else:
+            return None
 
 
 class ArchiveDocument(Base, _DocumentMixin):
@@ -140,6 +156,9 @@ class DocumentLocale(Base, _DocumentLocaleMixin):
     def to_archive(self, locale):
         copy_attributes(self, locale, DocumentLocale._ATTRIBUTES)
         return locale
+
+    def update(self, other):
+        copy_attributes(other, self, DocumentLocale._ATTRIBUTES)
 
 
 class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):

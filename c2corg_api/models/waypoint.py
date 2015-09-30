@@ -47,6 +47,17 @@ class Waypoint(_WaypointMixin, Document):
 
         return waypoint
 
+    def update(self, other):
+        super(Waypoint, self).update(other)
+        copy_attributes(other, self, Waypoint._ATTRIBUTES)
+
+        for locale_in in other.locales:
+            locale = self.get_locale(locale_in.culture)
+            if locale:
+                locale.update(locale_in)
+                locale.document_id = self.document_id
+            else:
+                self.locales.append(locale_in)
 
 class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
     """
@@ -84,6 +95,9 @@ class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
 
         return locale
 
+    def update(self, other):
+        super(WaypointLocale, self).update(other)
+        copy_attributes(other, self, WaypointLocale._ATTRIBUTES)
 
 class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
     """
@@ -99,9 +113,12 @@ class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
 schema_waypoint_locale = SQLAlchemySchemaNode(
     WaypointLocale,
     # whitelisted attributes
-    includes=['version', 'culture', 'title', 'description',
+    includes=['id', 'version', 'culture', 'title', 'description',
               'pedestrian_access'],
     overrides={
+        'id': {
+            'missing': None
+        },
         'version': {
             'missing': None
         }
