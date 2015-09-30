@@ -1,5 +1,6 @@
 from cornice.resource import resource, view
 from sqlalchemy.orm import joinedload, contains_eager
+from pyramid.httpexceptions import HTTPConflict, HTTPNotFound
 
 from c2corg_api.models.waypoint import Waypoint, schema_waypoint
 from c2corg_api.models.document import DocumentLocale
@@ -23,7 +24,49 @@ class WaypointRest(DocumentRest):
     def get(self):
         id = self.request.validated['id']
         culture = self.request.GET.get('l')
+        waypoint = self._get_waypoint(id, culture)
 
+        return to_json_dict(waypoint, schema_waypoint)
+
+    @view(schema=schema_waypoint)
+    def collection_post(self):
+        waypoint = schema_waypoint.objectify(self.request.validated)
+
+        # TODO additional validation: at least one culture, only one instance
+        # for each culture
+
+        DBSession.add(waypoint)
+        DBSession.flush()
+
+        self._create_new_version(waypoint)
+
+        return to_json_dict(waypoint, schema_waypoint)
+
+    @view(schema=schema_waypoint, validators=validate_id)
+    def put(self):
+        id = self.request.validated['id']
+        waypoint_in = schema_waypoint.objectify(self.request.validated)
+
+        # TODO check that id == waypoint_in
+        # TODO update-message as input (-> new colander schema)!
+
+        waypoint = self._get_waypoint(id)
+        self._check_versions(waypoint, waypoint_in)
+        waypoint.update(waypoint_in)
+
+        DBSession.merge(waypoint)
+        DBSession.flush()
+
+        self._update_version(waypoint, 'update')
+
+        return to_json_dict(waypoint, schema_waypoint)
+
+    def _get_waypoint(self, id, culture=None):
+        """Get a waypoint with either a single locale (if `culture is given)
+        or with all locales.
+        If no waypoint exists for the given id, a `HTTPNotFound` exception is
+        raised.
+        """
         if not culture:
             waypoint = DBSession. \
                 query(Waypoint). \
@@ -39,15 +82,22 @@ class WaypointRest(DocumentRest):
                 filter(DocumentLocale.culture == culture). \
                 first()
 
-        return to_json_dict(waypoint, schema_waypoint)
+        if not waypoint:
+            raise HTTPNotFound('document not found')
 
-    @view(schema=schema_waypoint)
-    def collection_post(self):
-        waypoint = schema_waypoint.objectify(self.request.validated)
+        return waypoint
 
-        DBSession.add(waypoint)
-        DBSession.flush()
-
-        self._create_new_version(waypoint)
-
-        return to_json_dict(waypoint, schema_waypoint)
+    def _check_versions(self, waypoint, waypoint_in):
+        """Check that the passed-in document and all passed-in locales have
+        the same version as the current document and locales in the database.
+        If not (that is the document has changed), a `HTTPConflict` exception
+        is raised.
+        """
+        if waypoint.version != waypoint_in.version:
+            raise HTTPConflict('version of document has changed')
+        for locale_in in waypoint_in.locales:
+            locale = waypoint.get_locale(locale_in.culture)
+            if locale:
+                if locale.version != locale_in.version:
+                    raise HTTPConflict(
+                        'version of locale \'%s\' has changed' % locale.culture)

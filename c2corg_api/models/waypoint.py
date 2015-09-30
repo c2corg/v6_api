@@ -113,12 +113,9 @@ class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
 schema_waypoint_locale = SQLAlchemySchemaNode(
     WaypointLocale,
     # whitelisted attributes
-    includes=['id', 'version', 'culture', 'title', 'description',
+    includes=['version', 'culture', 'title', 'description',
               'pedestrian_access'],
     overrides={
-        'id': {
-            'missing': None
-        },
         'version': {
             'missing': None
         }
