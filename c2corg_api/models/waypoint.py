@@ -12,7 +12,8 @@ from colanderalchemy import SQLAlchemySchemaNode
 from c2corg_api.models import schema
 from utils import copy_attributes
 from document import (
-    ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale)
+    ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
+    get_update_schema)
 from c2corg_api.attributes import waypoint_types
 
 
@@ -140,3 +141,5 @@ schema_waypoint = SQLAlchemySchemaNode(
             'children': [schema_waypoint_locale]
         }
     })
+
+schema_update_waypoint = get_update_schema(schema_waypoint)

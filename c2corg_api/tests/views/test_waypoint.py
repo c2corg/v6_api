@@ -106,14 +106,16 @@ class TestWaypointRest(BaseTestRest):
 
     def test_put_wrong_document_id(self):
         body = {
-            'document_id': '-9999',
-            'version': self.waypoint.version,
-            'waypoint_type': 'summit',
-            'elevation': 1234,
-            'locales': [
-                {'culture': 'en', 'title': 'Mont Granier',
-                 'description': '...', 'pedestrian_access': 'n'}
-            ]
+            'document': {
+                'document_id': '-9999',
+                'version': self.waypoint.version,
+                'waypoint_type': 'summit',
+                'elevation': 1234,
+                'locales': [
+                    {'culture': 'en', 'title': 'Mont Granier',
+                     'description': '...', 'pedestrian_access': 'n'}
+                ]
+            }
         }
         response = self.app.put(
             '/waypoints/' + '-9999' + '?l=en',
@@ -124,14 +126,16 @@ class TestWaypointRest(BaseTestRest):
 
     def test_put_wrong_document_version(self):
         body = {
-            'document_id': self.waypoint.document_id,
-            'version': 'some-old-version',
-            'waypoint_type': 'summit',
-            'elevation': 1234,
-            'locales': [
-                {'culture': 'en', 'title': 'Mont Granier',
-                 'description': '...', 'pedestrian_access': 'n'}
-            ]
+            'document': {
+                'document_id': self.waypoint.document_id,
+                'version': 'some-old-version',
+                'waypoint_type': 'summit',
+                'elevation': 1234,
+                'locales': [
+                    {'culture': 'en', 'title': 'Mont Granier',
+                     'description': '...', 'pedestrian_access': 'n'}
+                ]
+            }
         }
         response = self.app.put(
             '/waypoints/' + str(self.waypoint.document_id),
@@ -142,15 +146,17 @@ class TestWaypointRest(BaseTestRest):
 
     def test_put_wrong_locale_version(self):
         body = {
-            'document_id': self.waypoint.document_id,
-            'version': self.waypoint.version,
-            'waypoint_type': 'summit',
-            'elevation': 1234,
-            'locales': [
-                {'culture': 'en', 'title': 'Mont Granier',
-                 'description': '...', 'pedestrian_access': 'n',
-                 'version': 'some-old-version'}
-            ]
+            'document': {
+                'document_id': self.waypoint.document_id,
+                'version': self.waypoint.version,
+                'waypoint_type': 'summit',
+                'elevation': 1234,
+                'locales': [
+                    {'culture': 'en', 'title': 'Mont Granier',
+                     'description': '...', 'pedestrian_access': 'n',
+                     'version': 'some-old-version'}
+                ]
+            }
         }
         response = self.app.put(
             '/waypoints/' + str(self.waypoint.document_id),
@@ -161,14 +167,17 @@ class TestWaypointRest(BaseTestRest):
 
     def test_put_wrong_ids(self):
         body = {
-            'document_id': self.waypoint.document_id,
-            'version': self.waypoint.version,
-            'waypoint_type': 'summit',
-            'elevation': 1234,
-            'locales': [
-                {'culture': 'en', 'title': 'Mont Granier', 'description': 'A.',
-                 'pedestrian_access': 'n', 'version': self.locale_en.version}
-            ]
+            'document': {
+                'document_id': self.waypoint.document_id,
+                'version': self.waypoint.version,
+                'waypoint_type': 'summit',
+                'elevation': 1234,
+                'locales': [
+                    {'culture': 'en', 'title': 'Mont Granier',
+                     'description': 'A.', 'pedestrian_access': 'n',
+                     'version': self.locale_en.version}
+                ]
+            }
         }
         response = self.app.put(
             '/waypoints/' + str(self.waypoint.document_id + 1),
@@ -177,16 +186,31 @@ class TestWaypointRest(BaseTestRest):
             expect_errors=True)
         self.assertEqual(response.status_code, 400)
 
+    def test_put_no_document(self):
+        body = {
+            'message': '...'
+        }
+        response = self.app.put(
+            '/waypoints/' + str(self.waypoint.document_id),
+            params=json.dumps(body),
+            content_type='application/json',
+            expect_errors=True)
+        self.assertEqual(response.status_code, 400)
+
     def test_put_success(self):
         body = {
-            'document_id': self.waypoint.document_id,
-            'version': self.waypoint.version,
-            'waypoint_type': 'summit',
-            'elevation': 1234,
-            'locales': [
-                {'culture': 'en', 'title': 'Mont Granier', 'description': 'A.',
-                 'pedestrian_access': 'n', 'version': self.locale_en.version}
-            ]
+            'message': 'Changing elevation and access',
+            'document': {
+                'document_id': self.waypoint.document_id,
+                'version': self.waypoint.version,
+                'waypoint_type': 'summit',
+                'elevation': 1234,
+                'locales': [
+                    {'culture': 'en', 'title': 'Mont Granier',
+                     'description': 'A.', 'pedestrian_access': 'n',
+                     'version': self.locale_en.version}
+                ]
+            }
         }
         response = self.app.put(
             '/waypoints/' + str(self.waypoint.document_id),
@@ -219,7 +243,7 @@ class TestWaypointRest(BaseTestRest):
         self.assertEqual(version_en.version, 999)
 
         meta_data_en = version_en.history_metadata
-        self.assertEqual(meta_data_en.comment, 'update')
+        self.assertEqual(meta_data_en.comment, 'Changing elevation and access')
         self.assertIsNotNone(meta_data_en.written_at)
 
         archive_waypoint_en = version_en.document_archive

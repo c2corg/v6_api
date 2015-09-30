@@ -8,6 +8,7 @@ from sqlalchemy import (
     )
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
+from colander import MappingSchema, SchemaNode, String as ColanderString
 import abc
 import uuid
 
@@ -168,3 +169,14 @@ class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
         'polymorphic_identity': 'd',
         'polymorphic_on': _DocumentLocaleMixin.type
     }
+
+
+def get_update_schema(document_schema):
+    """Create a Colander schema for the update view which contains an update
+    message and the document.
+    """
+    class UpdateSchema(MappingSchema):
+        message = SchemaNode(ColanderString(), missing='')
+        document = document_schema.clone()
+
+    return UpdateSchema()

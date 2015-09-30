@@ -2,7 +2,8 @@ from cornice.resource import resource, view
 from sqlalchemy.orm import joinedload, contains_eager
 from pyramid.httpexceptions import HTTPConflict, HTTPNotFound, HTTPBadRequest
 
-from c2corg_api.models.waypoint import Waypoint, schema_waypoint
+from c2corg_api.models.waypoint import (
+    Waypoint, schema_waypoint, schema_update_waypoint)
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models import DBSession
 from c2corg_api.views.document import DocumentRest
@@ -42,12 +43,12 @@ class WaypointRest(DocumentRest):
 
         return to_json_dict(waypoint, schema_waypoint)
 
-    @view(schema=schema_waypoint, validators=validate_id)
+    @view(schema=schema_update_waypoint, validators=validate_id)
     def put(self):
         id = self.request.validated['id']
-        waypoint_in = schema_waypoint.objectify(self.request.validated)
+        waypoint_in = \
+            schema_waypoint.objectify(self.request.validated['document'])
         self._check_document_id(id, waypoint_in.document_id)
-        # TODO update-message as input (-> new colander schema)!
 
         waypoint = self._get_waypoint(id)
         self._check_versions(waypoint, waypoint_in)
@@ -56,7 +57,7 @@ class WaypointRest(DocumentRest):
         DBSession.merge(waypoint)
         DBSession.flush()
 
-        self._update_version(waypoint, 'update')
+        self._update_version(waypoint, self.request.validated['message'])
 
         return to_json_dict(waypoint, schema_waypoint)
 
