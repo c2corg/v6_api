@@ -20,6 +20,7 @@ requires = [
     'cornice',
     'colander',
     'ColanderAlchemy>=0.3.2',
+    'enum34',
     ]
 
 setup(name='c2corg_api',

@@ -4,7 +4,7 @@ from pyramid.httpexceptions import HTTPConflict, HTTPNotFound, HTTPBadRequest
 
 from c2corg_api.models.waypoint import (
     Waypoint, schema_waypoint, schema_update_waypoint)
-from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models.document import DocumentLocale, UpdateType
 from c2corg_api.models import DBSession
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views import validate_id, to_json_dict
@@ -52,12 +52,17 @@ class WaypointRest(DocumentRest):
 
         waypoint = self._get_waypoint(id)
         self._check_versions(waypoint, waypoint_in)
+        old_versions = waypoint.get_versions()
         waypoint.update(waypoint_in)
 
         DBSession.merge(waypoint)
         DBSession.flush()
 
-        self._update_version(waypoint, self.request.validated['message'])
+        (update_type, changed_langs) = \
+            self._check_update_type(waypoint, old_versions)
+        self._update_version(
+            waypoint, self.request.validated['message'], update_type,
+            changed_langs)
 
         return to_json_dict(waypoint, schema_waypoint)
 
@@ -110,3 +115,14 @@ class WaypointRest(DocumentRest):
                     raise HTTPConflict(
                         'version of locale \'%s\' has changed'
                         % locale.culture)
+
+    def _check_update_type(self, waypoint, old_versions):
+        """Get the update type (only figures have changed, only locales have
+        changed, both have changed or nothing).
+        """
+        (update_type, changed_langs) = waypoint.get_update_type(old_versions)
+        if update_type == UpdateType.NONE:
+            # nothing has changed, so no need to create a new version
+            raise HTTPBadRequest(
+                'trying do update the document with the same content')
+        return (update_type, changed_langs)

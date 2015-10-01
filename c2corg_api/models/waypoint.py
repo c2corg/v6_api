@@ -52,14 +52,6 @@ class Waypoint(_WaypointMixin, Document):
         super(Waypoint, self).update(other)
         copy_attributes(other, self, Waypoint._ATTRIBUTES)
 
-        for locale_in in other.locales:
-            locale = self.get_locale(locale_in.culture)
-            if locale:
-                locale.update(locale_in)
-                locale.document_id = self.document_id
-            else:
-                self.locales.append(locale_in)
-
 
 class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
     """

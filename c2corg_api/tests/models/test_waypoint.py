@@ -1,4 +1,5 @@
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.models.document import UpdateType
 
 from c2corg_api.tests import BaseTestCase
 
@@ -128,3 +129,94 @@ class TestWaypoint(BaseTestCase):
         self.assertEqual(locale_en.title, 'C')
         self.assertEqual(locale_fr.title, 'B')
         self.assertEqual(locale_es.title, 'D')
+
+    def test_get_update_type_figures_only(self):
+        waypoint = self._get_waypoint()
+        self.session.add(waypoint)
+        self.session.flush()
+
+        versions = waypoint.get_versions()
+
+        waypoint.elevation = 1234
+        self.session.merge(waypoint)
+        self.session.flush()
+
+        (type, changed_langs) = waypoint.get_update_type(versions)
+        self.assertEqual(type, UpdateType.FIGURES_ONLY)
+        self.assertEqual(changed_langs, [])
+
+    def test_get_update_type_lang_only(self):
+        waypoint = self._get_waypoint()
+        self.session.add(waypoint)
+        self.session.flush()
+
+        versions = waypoint.get_versions()
+
+        waypoint.get_locale('en').description = 'abcd'
+        self.session.merge(waypoint)
+        self.session.flush()
+
+        (type, changed_langs) = waypoint.get_update_type(versions)
+        self.assertEqual(type, UpdateType.LANG_ONLY)
+        self.assertEqual(changed_langs, ['en'])
+
+    def test_get_update_type_lang_only_new_lang(self):
+        waypoint = self._get_waypoint()
+        self.session.add(waypoint)
+        self.session.flush()
+
+        versions = waypoint.get_versions()
+
+        waypoint.locales.append(WaypointLocale(
+            culture='es', title='A', description='abc'))
+        self.session.merge(waypoint)
+        self.session.flush()
+
+        (type, changed_langs) = waypoint.get_update_type(versions)
+        self.assertEqual(type, UpdateType.LANG_ONLY)
+        self.assertEqual(changed_langs, ['es'])
+
+    def test_get_update_type_all(self):
+        waypoint = self._get_waypoint()
+        self.session.add(waypoint)
+        self.session.flush()
+
+        versions = waypoint.get_versions()
+
+        waypoint.elevation = 1234
+        waypoint.get_locale('en').description = 'abcd'
+        waypoint.locales.append(WaypointLocale(
+            culture='es', title='A', description='abc'))
+
+        self.session.merge(waypoint)
+        self.session.flush()
+
+        (type, changed_langs) = waypoint.get_update_type(versions)
+        self.assertEqual(type, UpdateType.ALL)
+        self.assertEqual(changed_langs, ['en', 'es'])
+
+    def test_get_update_type_none(self):
+        waypoint = self._get_waypoint()
+        self.session.add(waypoint)
+        self.session.flush()
+
+        versions = waypoint.get_versions()
+        self.session.merge(waypoint)
+        self.session.flush()
+
+        (type, changed_langs) = waypoint.get_update_type(versions)
+        self.assertEqual(type, UpdateType.NONE)
+        self.assertEqual(changed_langs, [])
+
+    def _get_waypoint(self):
+        return Waypoint(
+            waypoint_type='summit', elevation=2203,
+            locales=[
+                WaypointLocale(
+                    culture='en', title='A', description='abc',
+                    pedestrian_access='y'),
+                WaypointLocale(
+                    culture='fr', title='B', description='bcd',
+                    pedestrian_access='y')
+            ]
+        )

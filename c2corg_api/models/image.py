@@ -40,7 +40,7 @@ class Image(_ImageMixin, Document):
 
     def to_archive(self):
         image = ArchiveImage()
-        super(Image, self).to_archive(image)
+        super(Image, self)._to_archive(image)
         copy_attributes(self, image, Image._ATTRIBUTES)
 
         return image

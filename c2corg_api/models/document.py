@@ -11,6 +11,7 @@ from sqlalchemy.orm import relationship
 from colander import MappingSchema, SchemaNode, String as ColanderString
 import abc
 import uuid
+import enum
 
 from c2corg_api.models import Base, schema
 from utils import copy_attributes
@@ -22,6 +23,8 @@ quality_types = [
     'good',
     'excellent'
     ]
+
+UpdateType = enum.Enum('UpdateType', 'FIGURES_ONLY LANG_ONLY ALL NONE')
 
 
 class Culture(Base):
@@ -93,7 +96,57 @@ class Document(Base, _DocumentMixin):
         return [locale.to_archive() for locale in self.locales]
 
     def update(self, other):
+        """Copies the attributes from `other` to this document.
+        Also updates all locales.
+        """
         copy_attributes(other, self, Document._ATTRIBUTES_WHITELISTED)
+
+        for locale_in in other.locales:
+            locale = self.get_locale(locale_in.culture)
+            if locale:
+                locale.update(locale_in)
+                locale.document_id = self.document_id
+            else:
+                self.locales.append(locale_in)
+
+    def get_versions(self):
+        """Get the version hashs of this document and of all its locales.
+        """
+        return {
+            'document': self.version,
+            'locales': {
+                locale.culture: locale.version for locale in self.locales
+            }
+        }
+
+    def get_update_type(self, old_versions):
+        """Get the update type (only figures have changed, only locales have
+        changed, both have changed or nothing) and the languages that have
+        changed.
+        This is done by comparing the old version hashs (before flushing to
+        the database) with the current hashs. Because SQLAlchemy automatically
+        changes the hash, when something has changed, we can easily detect
+        what has changed.
+        """
+        figures_equal = self.version == old_versions['document']
+
+        changed_langs = []
+        locale_versions = old_versions['locales']
+        for locale in self.locales:
+            locale_version = locale_versions.get(locale.culture)
+
+            if not (locale_version and locale_version == locale.version):
+                # new locale or locale has changed
+                changed_langs.append(locale.culture)
+
+        if not figures_equal and changed_langs:
+            return (UpdateType.ALL, changed_langs)
+        elif not figures_equal:
+            return (UpdateType.FIGURES_ONLY, [])
+        elif changed_langs:
+            return (UpdateType.LANG_ONLY, changed_langs)
+        else:
+            return (UpdateType.NONE, [])
 
     def get_locale(self, culture):
         """Get the locale with the given culture or `None` if no locale
