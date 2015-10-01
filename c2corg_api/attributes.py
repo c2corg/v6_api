@@ -41,3 +41,5 @@ waypoint_types = [
     'paragliding_takeoff',
     'paragliding_landing'
 ]
+
+default_cultures = ['ca', 'de', 'en', 'es', 'eu', 'fr', 'it']

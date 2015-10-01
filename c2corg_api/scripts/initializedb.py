@@ -11,7 +11,8 @@ from pyramid.paster import (
 
 from pyramid.scripts.common import parse_vars
 
-from ..models import *  # noqa
+from c2corg_api.models import *  # noqa
+from c2corg_api.attributes import default_cultures
 
 
 def usage(argv):
@@ -39,6 +40,5 @@ def setup_db(engine, session):
     with transaction.manager:
         # add default languages
         session.add_all([
-            document.Culture(culture=lang) for lang in
-            ['ca', 'de', 'en', 'es', 'eu', 'fr', 'it']
+            document.Culture(culture=lang) for lang in default_cultures
         ])
