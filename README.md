@@ -35,6 +35,31 @@ Available actions may be listed using:
 
     make help
 
+Requests examples
+-----------------
+
+Get the list of waypoints:
+
+    GET http://localhost:6543/waypoints
+
+Get waypoint with id=1:
+
+    GET http://localhost:6543/waypoints/1
+
+Insert a waypoint:
+
+    curl -X POST -v \
+    -H "Content-Type: application/json" \
+    -d '{"waypoint_type": "summit", "elevation": 3779, "locales": [{"culture": "fr", "title": "Mont Pourri"}]}' \
+    http://localhost:6543/waypoints
+
+Updating a waypoint:
+
+    curl -X PUT -v \
+    -H "Content-Type: application/json" \
+    -d '{"message": "Comment about change", "document": {"elevation": 4633, "maps_info": null, "version": "fae1e03a38c344218db13cb224d839e7", "document_id": 1, "waypoint_type": "summit", "locales": [{"culture": "fr", "version": "ca9797ea19334fa3a99127bf00d39410", "title": "Mont Rose", "pedestrian_access": null, "description": null}]}}' \
+    http://localhost:6543/waypoints/1
+
 Run the tests
 --------------
 Create a database that will be used to run the tests:
