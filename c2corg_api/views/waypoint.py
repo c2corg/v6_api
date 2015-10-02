@@ -1,5 +1,6 @@
 from cornice.resource import resource, view
 from sqlalchemy.orm import joinedload, contains_eager
+from sqlalchemy.orm.exc import StaleDataError
 from pyramid.httpexceptions import HTTPConflict, HTTPNotFound, HTTPBadRequest
 
 from c2corg_api.models.waypoint import (
@@ -55,8 +56,10 @@ class WaypointRest(DocumentRest):
         old_versions = waypoint.get_versions()
         waypoint.update(waypoint_in)
 
-        DBSession.merge(waypoint)
-        DBSession.flush()
+        try:
+            DBSession.flush()
+        except StaleDataError:
+            raise HTTPConflict('concurrent modification')
 
         (update_type, changed_langs) = \
             self._check_update_type(waypoint, old_versions)
