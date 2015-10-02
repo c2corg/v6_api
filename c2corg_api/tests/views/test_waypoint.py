@@ -19,9 +19,9 @@ class TestWaypointRest(BaseTestRest):
 
     def test_get(self):
         body = self.get(self.waypoint)
-        self.assertIsNotNone(body.get('version'))
+        self.assertIsNotNone(body.get('version_hash'))
         locale_en = body.get('locales')[0]
-        self.assertIsNotNone(locale_en.get('version'))
+        self.assertIsNotNone(locale_en.get('version_hash'))
 
     def test_get_lang(self):
         response = self.app.get(
@@ -93,17 +93,18 @@ class TestWaypointRest(BaseTestRest):
             ]
         }
         body, doc = self.post_success(body)
-        self.assertIsNotNone(body.get('version'))
+        self.assertIsNotNone(body.get('version_hash'))
         version = doc.versions[0]
 
         archive_waypoint = version.document_archive
         self.assertEqual(archive_waypoint.waypoint_type, 'summit')
         self.assertEqual(archive_waypoint.elevation, 3779)
-        self.assertEqual(archive_waypoint.version, doc.version)
+        self.assertEqual(archive_waypoint.version_hash, doc.version_hash)
 
         archive_locale = version.document_locales_archive
         waypoint_locale_en = doc.locales[0]
-        self.assertEqual(archive_locale.version, waypoint_locale_en.version)
+        self.assertEqual(
+            archive_locale.version_hash, waypoint_locale_en.version_hash)
         self.assertEqual(archive_locale.culture, 'en')
         self.assertEqual(archive_locale.title, 'Mont Pourri')
         self.assertEqual(archive_locale.pedestrian_access, 'y')
@@ -112,7 +113,7 @@ class TestWaypointRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': '-9999',
-                'version': self.waypoint.version,
+                'version_hash': self.waypoint.version_hash,
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
@@ -132,7 +133,7 @@ class TestWaypointRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': self.waypoint.document_id,
-                'version': 'some-old-version',
+                'version_hash': 'some-old-version',
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
@@ -152,13 +153,13 @@ class TestWaypointRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': self.waypoint.document_id,
-                'version': self.waypoint.version,
+                'version_hash': self.waypoint.version_hash,
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
                      'description': '...', 'pedestrian_access': 'n',
-                     'version': 'some-old-version'}
+                     'version_hash': 'some-old-version'}
                 ]
             }
         }
@@ -176,13 +177,13 @@ class TestWaypointRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': self.waypoint.document_id,
-                'version': self.waypoint.version,
+                'version_hash': self.waypoint.version_hash,
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
                      'description': 'A.', 'pedestrian_access': 'n',
-                     'version': self.locale_en.version}
+                     'version_hash': self.locale_en.version_hash}
                 ]
             }
         }
@@ -211,13 +212,13 @@ class TestWaypointRest(BaseTestRest):
             'message': 'Changing elevation and access',
             'document': {
                 'document_id': self.waypoint.document_id,
-                'version': self.waypoint.version,
+                'version_hash': self.waypoint.version_hash,
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
                      'description': 'A.', 'pedestrian_access': 'n',
-                     'version': self.locale_en.version}
+                     'version_hash': self.locale_en.version_hash}
                 ]
             }
         }
@@ -229,7 +230,8 @@ class TestWaypointRest(BaseTestRest):
 
         body = json.loads(response.body)
         document_id = body.get('document_id')
-        self.assertNotEquals(body.get('version'), self.waypoint.version)
+        self.assertNotEquals(
+            body.get('version_hash'), self.waypoint.version_hash)
         self.assertEquals(body.get('document_id'), document_id)
 
         # check that the waypoint was updated correctly
@@ -270,11 +272,12 @@ class TestWaypointRest(BaseTestRest):
         self.assertEqual(archive_waypoint_en.document_id, document_id)
         self.assertEqual(archive_waypoint_en.waypoint_type, 'summit')
         self.assertEqual(archive_waypoint_en.elevation, 1234)
-        self.assertEqual(archive_waypoint_en.version, waypoint.version)
+        self.assertEqual(
+            archive_waypoint_en.version_hash, waypoint.version_hash)
 
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.document_id, document_id)
-        self.assertEqual(archive_locale.version, locale_en.version)
+        self.assertEqual(archive_locale.version_hash, locale_en.version_hash)
         self.assertEqual(archive_locale.culture, 'en')
         self.assertEqual(archive_locale.title, 'Mont Granier')
         self.assertEqual(archive_locale.pedestrian_access, 'n')
@@ -293,7 +296,8 @@ class TestWaypointRest(BaseTestRest):
 
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.document_id, document_id)
-        self.assertEqual(archive_locale.version, self.locale_fr.version)
+        self.assertEqual(
+            archive_locale.version_hash, self.locale_fr.version_hash)
         self.assertEqual(archive_locale.culture, 'fr')
         self.assertEqual(archive_locale.title, 'Mont Granier')
         self.assertEqual(archive_locale.pedestrian_access, 'ouai')
@@ -305,13 +309,13 @@ class TestWaypointRest(BaseTestRest):
             'message': 'Changing elevation',
             'document': {
                 'document_id': self.waypoint.document_id,
-                'version': self.waypoint.version,
+                'version_hash': self.waypoint.version_hash,
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
                      'description': '...', 'pedestrian_access': 'yep',
-                     'version': self.locale_en.version}
+                     'version_hash': self.locale_en.version_hash}
                 ]
             }
         }
@@ -323,7 +327,8 @@ class TestWaypointRest(BaseTestRest):
 
         body = json.loads(response.body)
         document_id = body.get('document_id')
-        self.assertNotEquals(body.get('version'), self.waypoint.version)
+        self.assertNotEquals(
+            body.get('version_hash'), self.waypoint.version_hash)
         self.assertEquals(body.get('document_id'), document_id)
 
         # check that the waypoint was updated correctly
@@ -376,13 +381,13 @@ class TestWaypointRest(BaseTestRest):
             'message': 'Changing access',
             'document': {
                 'document_id': self.waypoint.document_id,
-                'version': self.waypoint.version,
+                'version_hash': self.waypoint.version_hash,
                 'waypoint_type': 'summit',
                 'elevation': 2203,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
                      'description': '...', 'pedestrian_access': 'no',
-                     'version': self.locale_en.version}
+                     'version_hash': self.locale_en.version_hash}
                 ]
             }
         }
@@ -395,7 +400,7 @@ class TestWaypointRest(BaseTestRest):
         body = json.loads(response.body)
         document_id = body.get('document_id')
         # document version does not change!
-        self.assertEquals(body.get('version'), self.waypoint.version)
+        self.assertEquals(body.get('version_hash'), self.waypoint.version_hash)
         self.assertEquals(body.get('document_id'), document_id)
 
         # check that the waypoint was updated correctly
@@ -448,7 +453,7 @@ class TestWaypointRest(BaseTestRest):
             'message': 'Changing access',
             'document': {
                 'document_id': self.waypoint.document_id,
-                'version': self.waypoint.version,
+                'version_hash': self.waypoint.version_hash,
                 'waypoint_type': 'summit',
                 'elevation': 2203,
                 'locales': [
@@ -466,7 +471,7 @@ class TestWaypointRest(BaseTestRest):
         body = json.loads(response.body)
         document_id = body.get('document_id')
         # document version does not change!
-        self.assertEquals(body.get('version'), self.waypoint.version)
+        self.assertEquals(body.get('version_hash'), self.waypoint.version_hash)
         self.assertEquals(body.get('document_id'), document_id)
 
         # check that the waypoint was updated correctly

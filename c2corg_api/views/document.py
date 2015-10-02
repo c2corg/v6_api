@@ -68,7 +68,8 @@ class DocumentRest(object):
         else:
             # the document has not changed, load the previous archive version
             archive = DBSession.query(ArchiveDocument). \
-                filter(ArchiveDocument.version == document.version). \
+                filter(
+                    ArchiveDocument.version_hash == document.version_hash). \
                 one()
         return archive
 
@@ -88,6 +89,8 @@ class DocumentRest(object):
         else:
             # the locale has not changed, use the old archive version
             locale_archive = DBSession.query(ArchiveDocumentLocale). \
-                filter(ArchiveDocumentLocale.version == locale.version). \
+                filter(
+                    ArchiveDocumentLocale.version_hash ==
+                    locale.version_hash). \
                 one()
         return locale_archive

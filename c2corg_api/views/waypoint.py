@@ -109,12 +109,12 @@ class WaypointRest(DocumentRest):
         If not (that is the document has changed), a `HTTPConflict` exception
         is raised.
         """
-        if waypoint.version != waypoint_in.version:
+        if waypoint.version_hash != waypoint_in.version_hash:
             raise HTTPConflict('version of document has changed')
         for locale_in in waypoint_in.locales:
             locale = waypoint.get_locale(locale_in.culture)
             if locale:
-                if locale.version != locale_in.version:
+                if locale.version_hash != locale_in.version_hash:
                     raise HTTPConflict(
                         'version of locale \'%s\' has changed'
                         % locale.culture)
