@@ -1,52 +1,26 @@
 from c2corg_api.models.image import Image, ImageLocale
 
-from .. import BaseTestCase
+from c2corg_api.tests.views import BaseTestRest
 
 
-class TestImageRest(BaseTestCase):
+class TestImageRest(BaseTestRest):
 
     def setUp(self):  # noqa
-        BaseTestCase.setUp(self)
+        self.set_prefix_and_model("/images", Image)
+        BaseTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
-        response = self.app.get('/images', status=200)
-        self.assertEqual(response.content_type, 'application/json')
-
-        body = response.json
-        self.assertIsInstance(body, list)
-        nb_images = self.session.query(Image).count()
-        self.assertEqual(len(body), nb_images)
+        self.get_collection()
 
     def test_get(self):
-        response = self.app.get('/images/' + str(self.image.document_id),
-                                status=200)
-        self.assertEqual(response.content_type, 'application/json')
-
-        body = response.json
-        self.assertFalse('id' in body)
-        self.assertEqual(body.get('document_id'), self.image.document_id)
-        self.assertEqual(
-            body.get('activities'), self.image.activities)
-
-        locales = body.get('locales')
-        self.assertEqual(len(locales), 1)
-        locale_en = locales[0]
-        self.assertFalse('id' in locale_en)
-        self.assertEqual(locale_en.get('culture'), self.locale_en.culture)
-        self.assertEqual(locale_en.get('title'), self.locale_en.title)
+        self.get(self.image)
 
     def test_post_error(self):
-        response = self.app.post_json('/images', {}, expect_errors=True,
-                                      status=400)
-
-        body = response.json
-        self.assertEqual(body.get('status'), 'error')
+        body = self.post_error({})
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertEqual(
-            errors[0].get('description'), 'activities is missing')
-        self.assertEqual(errors[0].get('name'), 'activities')
+        self.assertMissing(errors[0], 'activities')
 
     def test_post_missing_title(self):
         body = {
@@ -74,34 +48,14 @@ class TestImageRest(BaseTestCase):
                 {'culture': 'en', 'title': 'Some nice loop'}
             ]
         }
-        response = self.app.post_json('/images', body, status=200)
-
-        body = response.json
-        document_id = body.get('document_id')
-        self.assertIsNotNone(document_id)
-
-        # check that the version was created correctly
-        image = self.session.query(Image).get(document_id)
-        versions = image.versions
-        self.assertEqual(len(versions), 1)
-        version = versions[0]
-
-        self.assertEqual(version.culture, 'en')
-        self.assertEqual(version.version, 1)
-        self.assertEqual(version.nature, 'ft')
-
-        meta_data = version.history_metadata
-        self.assertEqual(meta_data.is_minor, False)
-        self.assertEqual(meta_data.comment, 'creation')
-        self.assertIsNotNone(meta_data.written_at)
+        body, doc = self.post_success(body)
+        version = doc.versions[0]
 
         archive_image = version.document_archive
-        self.assertEqual(archive_image.document_id, document_id)
         self.assertEqual(archive_image.activities, 'hiking')
         self.assertEqual(archive_image.height, 750)
 
         archive_locale = version.document_locales_archive
-        self.assertEqual(archive_locale.document_id, document_id)
         self.assertEqual(archive_locale.culture, 'en')
         self.assertEqual(archive_locale.title, 'Some nice loop')
 
