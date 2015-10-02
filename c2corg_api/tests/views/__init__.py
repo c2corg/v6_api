@@ -67,7 +67,6 @@ class BaseTestRest(BaseTestCase):
 
         culture = body.get('locales')[0].get('culture')
         self.assertEqual(version.culture, culture)
-        self.assertEqual(version.version, 1)
 
         meta_data = version.history_metadata
         self.assertEqual(meta_data.comment, 'creation')

@@ -36,7 +36,6 @@ class DocumentVersion(Base):
     culture = Column(
         String(2), ForeignKey(schema + '.cultures.culture'),
         nullable=False)
-    version = Column(Integer, nullable=False)  # TODO remove and calculate?
 
     document_archive_id = Column(
         Integer, ForeignKey(schema + '.documents_archives.id'), nullable=False)

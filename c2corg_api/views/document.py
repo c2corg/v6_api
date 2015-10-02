@@ -19,7 +19,6 @@ class DocumentRest(object):
             version = DocumentVersion(
                 document_id=document.document_id,
                 culture=locale.culture,
-                version=1,
                 document_archive=archive,
                 document_locales_archive=locale,
                 history_metadata=meta_data
@@ -48,7 +47,6 @@ class DocumentRest(object):
             version = DocumentVersion(
                 document_id=document.document_id,
                 culture=locale.culture,
-                version=999,
                 document_archive=archive,
                 document_locales_archive=locale_archive,
                 history_metadata=meta_data
