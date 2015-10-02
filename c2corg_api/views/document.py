@@ -1,8 +1,9 @@
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, contains_eager
+from pyramid.httpexceptions import HTTPNotFound
 
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.document import (
-    UpdateType, ArchiveDocumentLocale, ArchiveDocument)
+    UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument)
 from c2corg_api.models import DBSession
 from c2corg_api.views import to_json_dict
 
@@ -19,6 +20,39 @@ class DocumentRest(object):
             limit(30)
 
         return [to_json_dict(doc, schema) for doc in documents]
+
+    def _get(self, clazz, schema):
+        id = self.request.validated['id']
+        culture = self.request.GET.get('l')
+        document = self._get_document(clazz, id, culture)
+
+        return to_json_dict(document, schema)
+
+    def _get_document(self, clazz, id, culture=None):
+        """Get a document with either a single locale (if `culture is given)
+        or with all locales.
+        If no document exists for the given id, a `HTTPNotFound` exception is
+        raised.
+        """
+        if not culture:
+            document = DBSession. \
+                query(clazz). \
+                filter(getattr(clazz, 'document_id') == id). \
+                options(joinedload(getattr(clazz, 'locales'))). \
+                first()
+        else:
+            document = DBSession. \
+                query(clazz). \
+                join(getattr(clazz, 'locales')). \
+                filter(getattr(clazz, 'document_id') == id). \
+                options(contains_eager(getattr(clazz, 'locales'))). \
+                filter(DocumentLocale.culture == culture). \
+                first()
+
+        if not document:
+            raise HTTPNotFound('document not found')
+
+        return document
 
     def _create_new_version(self, document):
         archive = document.to_archive()

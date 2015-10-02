@@ -1,5 +1,4 @@
 from cornice.resource import resource, view
-from sqlalchemy.orm import joinedload
 
 from c2corg_api.models.route import Route, schema_route
 from c2corg_api.models import DBSession
@@ -15,15 +14,7 @@ class RouteRest(DocumentRest):
 
     @view(validators=validate_id)
     def get(self):
-        id = self.request.validated['id']
-
-        route = DBSession. \
-            query(Route). \
-            filter(Route.document_id == id). \
-            options(joinedload(Route.locales)). \
-            first()
-
-        return to_json_dict(route, schema_route)
+        return self._get(Route, schema_route)
 
     @view(schema=schema_route)
     def collection_post(self):

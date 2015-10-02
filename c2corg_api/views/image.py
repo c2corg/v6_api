@@ -1,5 +1,4 @@
 from cornice.resource import resource, view
-from sqlalchemy.orm import joinedload
 
 from c2corg_api.models.image import Image, schema_image
 from c2corg_api.models import DBSession
@@ -15,15 +14,7 @@ class ImageRest(DocumentRest):
 
     @view(validators=validate_id)
     def get(self):
-        id = self.request.validated['id']
-
-        image = DBSession. \
-            query(Image). \
-            filter(Image.document_id == id). \
-            options(joinedload(Image.locales)). \
-            first()
-
-        return to_json_dict(image, schema_image)
+        return self._get(Image, schema_image)
 
     @view(schema=schema_image)
     def collection_post(self):

@@ -1,11 +1,10 @@
 from cornice.resource import resource, view
-from sqlalchemy.orm import joinedload, contains_eager
 from sqlalchemy.orm.exc import StaleDataError
-from pyramid.httpexceptions import HTTPConflict, HTTPNotFound, HTTPBadRequest
+from pyramid.httpexceptions import HTTPConflict, HTTPBadRequest
 
 from c2corg_api.models.waypoint import (
     Waypoint, schema_waypoint, schema_update_waypoint)
-from c2corg_api.models.document import DocumentLocale, UpdateType
+from c2corg_api.models.document import UpdateType
 from c2corg_api.models import DBSession
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views import validate_id, to_json_dict
@@ -19,11 +18,7 @@ class WaypointRest(DocumentRest):
 
     @view(validators=validate_id)
     def get(self):
-        id = self.request.validated['id']
-        culture = self.request.GET.get('l')
-        waypoint = self._get_waypoint(id, culture)
-
-        return to_json_dict(waypoint, schema_waypoint)
+        return self._get(Waypoint, schema_waypoint)
 
     @view(schema=schema_waypoint)
     def collection_post(self):
@@ -46,7 +41,7 @@ class WaypointRest(DocumentRest):
             schema_waypoint.objectify(self.request.validated['document'])
         self._check_document_id(id, waypoint_in.document_id)
 
-        waypoint = self._get_waypoint(id)
+        waypoint = self._get_document(Waypoint, id)
         self._check_versions(waypoint, waypoint_in)
         old_versions = waypoint.get_versions()
         waypoint.update(waypoint_in)
@@ -63,32 +58,6 @@ class WaypointRest(DocumentRest):
             changed_langs)
 
         return to_json_dict(waypoint, schema_waypoint)
-
-    def _get_waypoint(self, id, culture=None):
-        """Get a waypoint with either a single locale (if `culture is given)
-        or with all locales.
-        If no waypoint exists for the given id, a `HTTPNotFound` exception is
-        raised.
-        """
-        if not culture:
-            waypoint = DBSession. \
-                query(Waypoint). \
-                filter(Waypoint.document_id == id). \
-                options(joinedload(Waypoint.locales)). \
-                first()
-        else:
-            waypoint = DBSession. \
-                query(Waypoint). \
-                join(Waypoint.locales). \
-                filter(Waypoint.document_id == id). \
-                options(contains_eager(Waypoint.locales)). \
-                filter(DocumentLocale.culture == culture). \
-                first()
-
-        if not waypoint:
-            raise HTTPNotFound('document not found')
-
-        return waypoint
 
     def _check_document_id(self, id, document_id):
         """Checks that the id given in the URL ("/waypoints/{id}") matches
