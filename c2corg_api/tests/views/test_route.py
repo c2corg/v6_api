@@ -1,4 +1,5 @@
 from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseTestRest
 
@@ -18,6 +19,9 @@ class TestRouteRest(BaseTestRest):
         self.assertEqual(
             body.get('activities'), self.route.activities)
 
+    def test_get_lang(self):
+        self.get_lang(self.route)
+
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
@@ -32,15 +36,19 @@ class TestRouteRest(BaseTestRest):
                 {'culture': 'en'}
             ]
         }
-        response = self.app.post_json(
-            '/routes', body, expect_errors=True, status=400)
+        self.post_missing_title(body)
 
-        body = response.json
-        self.assertEqual(body.get('status'), 'error')
-        errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0].get('description'), 'Required')
-        self.assertEqual(errors[0].get('name'), 'locales.0.title')
+    def test_post_non_whitelisted_attribute(self):
+        body = {
+            'activities': 'hiking',
+            'height': 750,
+            'protected': True,
+            'locales': [
+                {'culture': 'en', 'title': 'Some nice loop',
+                 'gear': 'shoes'}
+            ]
+        }
+        self.post_non_whitelisted_attribute(body)
 
     def test_post_success(self):
         body = {
@@ -79,3 +87,5 @@ class TestRouteRest(BaseTestRest):
 
         self.session.add(self.route)
         self.session.flush()
+
+        DocumentRest(None)._create_new_version(self.route)

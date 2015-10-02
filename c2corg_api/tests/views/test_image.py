@@ -1,4 +1,5 @@
 from c2corg_api.models.image import Image, ImageLocale
+from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseTestRest
 
@@ -16,6 +17,9 @@ class TestImageRest(BaseTestRest):
     def test_get(self):
         self.get(self.image)
 
+    def test_get_lang(self):
+        self.get_lang(self.image)
+
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
@@ -30,15 +34,18 @@ class TestImageRest(BaseTestRest):
                 {'culture': 'en'}
             ]
         }
-        response = self.app.post_json(
-            '/images', body, expect_errors=True, status=400)
+        self.post_missing_title(body)
 
-        body = response.json
-        self.assertEqual(body.get('status'), 'error')
-        errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0].get('description'), 'Required')
-        self.assertEqual(errors[0].get('name'), 'locales.0.title')
+    def test_post_non_whitelisted_attribute(self):
+        body = {
+            'activities': 'hiking',
+            'height': 750,
+            'protected': True,
+            'locales': [
+                {'culture': 'en', 'title': 'Some nice loop'}
+            ]
+        }
+        self.post_non_whitelisted_attribute(body)
 
     def test_post_success(self):
         body = {
@@ -74,3 +81,5 @@ class TestImageRest(BaseTestRest):
 
         self.session.add(self.image)
         self.session.flush()
+
+        DocumentRest(None)._create_new_version(self.image)

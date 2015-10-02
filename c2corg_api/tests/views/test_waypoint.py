@@ -18,22 +18,10 @@ class TestWaypointRest(BaseTestRest):
         self.get_collection()
 
     def test_get(self):
-        body = self.get(self.waypoint)
-        self.assertIsNotNone(body.get('version_hash'))
-        locale_en = body.get('locales')[0]
-        self.assertIsNotNone(locale_en.get('version_hash'))
+        self.get(self.waypoint)
 
     def test_get_lang(self):
-        response = self.app.get(
-            '/waypoints/' + str(self.waypoint.document_id) + '?l=en')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content_type, 'application/json')
-
-        body = response.json
-        locales = body.get('locales')
-        self.assertEqual(len(locales), 1)
-        locale_en = locales[0]
-        self.assertEqual(locale_en.get('culture'), self.locale_en.culture)
+        self.get_lang(self.waypoint)
 
     def test_post_error(self):
         body = self.post_error({})
@@ -49,20 +37,9 @@ class TestWaypointRest(BaseTestRest):
                 {'culture': 'en'}
             ]
         }
-        response = self.app.post_json(
-            '/waypoints', body, expect_errors=True, status=400)
-
-        body = response.json
-        self.assertEqual(body.get('status'), 'error')
-        errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0].get('description'), 'Required')
-        self.assertEqual(errors[0].get('name'), 'locales.0.title')
+        self.post_missing_title(body)
 
     def test_post_non_whitelisted_attribute(self):
-        """`protected` is a non-whitelisted attribute, which is ignored when
-        given in a request.
-        """
         body = {
             'waypoint_type': 'summit',
             'elevation': 3779,
@@ -72,16 +49,7 @@ class TestWaypointRest(BaseTestRest):
                  'pedestrian_access': 'y'}
             ]
         }
-        response = self.app.post(
-            '/waypoints', params=json.dumps(body),
-            content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-
-        body = json.loads(response.body)
-        document_id = body.get('document_id')
-        waypoint = self.session.query(Waypoint).get(document_id)
-        # the value for `protected` was ignored
-        self.assertFalse(waypoint.protected)
+        self.post_non_whitelisted_attribute(body)
 
     def test_post_success(self):
         body = {
@@ -93,18 +61,13 @@ class TestWaypointRest(BaseTestRest):
             ]
         }
         body, doc = self.post_success(body)
-        self.assertIsNotNone(body.get('version_hash'))
         version = doc.versions[0]
 
         archive_waypoint = version.document_archive
         self.assertEqual(archive_waypoint.waypoint_type, 'summit')
         self.assertEqual(archive_waypoint.elevation, 3779)
-        self.assertEqual(archive_waypoint.version_hash, doc.version_hash)
 
         archive_locale = version.document_locales_archive
-        waypoint_locale_en = doc.locales[0]
-        self.assertEqual(
-            archive_locale.version_hash, waypoint_locale_en.version_hash)
         self.assertEqual(archive_locale.culture, 'en')
         self.assertEqual(archive_locale.title, 'Mont Pourri')
         self.assertEqual(archive_locale.pedestrian_access, 'y')
