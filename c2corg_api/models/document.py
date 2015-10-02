@@ -164,7 +164,12 @@ class ArchiveDocument(Base, _DocumentMixin):
     """
     __tablename__ = 'documents_archives'
     id = Column(Integer, primary_key=True)
-    document_id = Column(Integer, nullable=False)  # TODO as fk
+
+    @declared_attr
+    def document_id(self):
+        return Column(
+            Integer, ForeignKey(schema + '.documents.document_id'),
+            nullable=False)
 
 
 # Locales for documents
