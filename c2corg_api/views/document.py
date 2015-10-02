@@ -1,13 +1,24 @@
+from sqlalchemy.orm import joinedload
+
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.document import (
     UpdateType, ArchiveDocumentLocale, ArchiveDocument)
 from c2corg_api.models import DBSession
+from c2corg_api.views import to_json_dict
 
 
 class DocumentRest(object):
 
     def __init__(self, request):
         self.request = request
+
+    def _collection_get(self, clazz, schema):
+        documents = DBSession. \
+            query(clazz). \
+            options(joinedload(getattr(clazz, 'locales'))). \
+            limit(30)
+
+        return [to_json_dict(doc, schema) for doc in documents]
 
     def _create_new_version(self, document):
         archive = document.to_archive()

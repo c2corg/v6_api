@@ -11,12 +11,7 @@ from c2corg_api.views import validate_id, to_json_dict
 class RouteRest(DocumentRest):
 
     def collection_get(self):
-        routes = DBSession. \
-            query(Route). \
-            options(joinedload(Route.locales)). \
-            limit(30)
-
-        return [to_json_dict(wp, schema_route) for wp in routes]
+        return self._collection_get(Route, schema_route)
 
     @view(validators=validate_id)
     def get(self):

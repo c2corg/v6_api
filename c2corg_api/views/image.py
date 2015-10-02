@@ -11,12 +11,7 @@ from c2corg_api.views import validate_id, to_json_dict
 class ImageRest(DocumentRest):
 
     def collection_get(self):
-        images = DBSession. \
-            query(Image). \
-            options(joinedload(Image.locales)). \
-            limit(30)
-
-        return [to_json_dict(img, schema_image) for img in images]
+        return self._collection_get(Image, schema_image)
 
     @view(validators=validate_id)
     def get(self):

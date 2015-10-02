@@ -15,12 +15,7 @@ from c2corg_api.views import validate_id, to_json_dict
 class WaypointRest(DocumentRest):
 
     def collection_get(self):
-        waypoints = DBSession. \
-            query(Waypoint). \
-            options(joinedload(Waypoint.locales)). \
-            limit(30)
-
-        return [to_json_dict(wp, schema_waypoint) for wp in waypoints]
+        return self._collection_get(Waypoint, schema_waypoint)
 
     @view(validators=validate_id)
     def get(self):
