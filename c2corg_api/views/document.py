@@ -1,5 +1,6 @@
 from sqlalchemy.orm import joinedload, contains_eager
-from pyramid.httpexceptions import HTTPNotFound
+from sqlalchemy.orm.exc import StaleDataError
+from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, HTTPBadRequest
 
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.document import (
@@ -38,6 +39,30 @@ class DocumentRest(object):
         DBSession.flush()
 
         self._create_new_version(document)
+
+        return to_json_dict(document, schema)
+
+    def _put(self, clazz, schema):
+        id = self.request.validated['id']
+        document_in = \
+            schema.objectify(self.request.validated['document'])
+        self._check_document_id(id, document_in.document_id)
+
+        document = self._get_document(clazz, id)
+        self._check_versions(document, document_in)
+        old_versions = document.get_versions()
+        document.update(document_in)
+
+        try:
+            DBSession.flush()
+        except StaleDataError:
+            raise HTTPConflict('concurrent modification')
+
+        (update_type, changed_langs) = \
+            self._check_update_type(document, old_versions)
+        self._update_version(
+            document, self.request.validated['message'], update_type,
+            changed_langs)
 
         return to_json_dict(document, schema)
 
@@ -150,3 +175,38 @@ class DocumentRest(object):
                     locale.version_hash). \
                 one()
         return locale_archive
+
+    def _check_document_id(self, id, document_id):
+        """Checks that the id given in the URL ("/waypoints/{id}") matches
+        the document_id given in the request body.
+        """
+        if id != document_id:
+            raise HTTPBadRequest(
+                'id in the url does not match document_id in request body')
+
+    def _check_versions(self, document, document_in):
+        """Check that the passed-in document and all passed-in locales have
+        the same version as the current document and locales in the database.
+        If not (that is the document has changed), a `HTTPConflict` exception
+        is raised.
+        """
+        if document.version_hash != document_in.version_hash:
+            raise HTTPConflict('version of document has changed')
+        for locale_in in document_in.locales:
+            locale = document.get_locale(locale_in.culture)
+            if locale:
+                if locale.version_hash != locale_in.version_hash:
+                    raise HTTPConflict(
+                        'version of locale \'%s\' has changed'
+                        % locale.culture)
+
+    def _check_update_type(self, document, old_versions):
+        """Get the update type (only figures have changed, only locales have
+        changed, both have changed or nothing).
+        """
+        (update_type, changed_langs) = document.get_update_type(old_versions)
+        if update_type == UpdateType.NONE:
+            # nothing has changed, so no need to create a new version
+            raise HTTPBadRequest(
+                'trying do update the document with the same content')
+        return (update_type, changed_langs)

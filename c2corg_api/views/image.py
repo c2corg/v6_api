@@ -1,6 +1,6 @@
 from cornice.resource import resource, view
 
-from c2corg_api.models.image import Image, schema_image
+from c2corg_api.models.image import Image, schema_image, schema_update_image
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views import validate_id
 
@@ -18,3 +18,7 @@ class ImageRest(DocumentRest):
     @view(schema=schema_image)
     def collection_post(self):
         return self._collection_post(Image, schema_image)
+
+    @view(schema=schema_update_image, validators=validate_id)
+    def put(self):
+        return self._put(Image, schema_image)

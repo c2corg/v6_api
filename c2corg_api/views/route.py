@@ -1,6 +1,6 @@
 from cornice.resource import resource, view
 
-from c2corg_api.models.route import Route, schema_route
+from c2corg_api.models.route import Route, schema_route, schema_update_route
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views import validate_id
 
@@ -18,3 +18,7 @@ class RouteRest(DocumentRest):
     @view(schema=schema_route)
     def collection_post(self):
         return self._collection_post(Route, schema_route)
+
+    @view(schema=schema_update_route, validators=validate_id)
+    def put(self):
+        return self._put(Route, schema_route)

@@ -3,9 +3,12 @@ from c2corg_api.tests import BaseTestCase
 
 class BaseTestRest(BaseTestCase):
 
-    def set_prefix_and_model(self, prefix, model):
+    def set_prefix_and_model(
+            self, prefix, model, model_archive, model_archive_locale):
         self._prefix = prefix
         self._model = model
+        self._model_archive = model_archive
+        self._model_archive_locale = model_archive_locale
 
     def setUp(self):  # noqa
         BaseTestCase.setUp(self)
@@ -123,3 +126,298 @@ class BaseTestRest(BaseTestCase):
         self.assertEqual(archive_locale.document_id, document_id)
         self.assertEqual(archive_locale.culture, culture)
         return (body, doc)
+
+    def put_wrong_document_id(self, request_body):
+        self.app.put_json(
+            self._prefix + '/-9999', request_body, status=404)
+        # TODO check error in detail
+
+    def put_wrong_version(self, request_body, id):
+        self.app.put_json(
+            self._prefix + '/' + str(id), request_body, status=409)
+        # TODO check error in detail
+
+    def put_wrong_ids(self, request_body, id):
+        """The id given in the URL does not equal the document_id in the
+        request body.
+        """
+        self.app.put_json(
+            self._prefix + '/' + str(id + 1), request_body, status=400)
+        # TODO check error in detail
+
+    def put_put_no_document(self, id):
+        request_body = {
+            'message': '...'
+        }
+        self.app.put_json(
+            self._prefix + '/' + str(id), request_body, status=400)
+
+    def put_success_all(self, request_body, document):
+        """Test updating a document with changes to the figures and locales.
+        """
+        response = self.app.put_json(
+            self._prefix + '/' + str(document.document_id), request_body)
+
+        body = response.json
+        document_id = body.get('document_id')
+        self.assertNotEquals(
+            body.get('version_hash'), document.version_hash)
+        self.assertEquals(body.get('document_id'), document_id)
+
+        # check that the document was updated correctly
+        self.session.expire_all()
+        document = self.session.query(self._model).get(document_id)
+        self.assertEquals(len(document.locales), 2)
+        locale_en = document.get_locale('en')
+
+        # check that a new archive_document was created
+        archive_count = self.session.query(self._model_archive). \
+            filter(
+                getattr(self._model_archive, 'document_id') == document_id). \
+            count()
+        self.assertEqual(archive_count, 2)
+
+        # check that only one new archive_document_locale was created (only
+        # for 'en' not 'fr')
+        archive_locale_count = \
+            self.session.query(self._model_archive_locale). \
+            filter(
+                document_id == getattr(
+                    self._model_archive_locale, 'document_id')
+            ). \
+            count()
+        self.assertEqual(archive_locale_count, 3)
+
+        # check that new versions were created
+        versions = document.versions
+        self.assertEqual(len(versions), 4)
+
+        # version with culture 'en'
+        version_en = versions[2]
+
+        self.assertEqual(version_en.culture, 'en')
+
+        meta_data_en = version_en.history_metadata
+        self.assertEqual(meta_data_en.comment, 'Update')
+        self.assertIsNotNone(meta_data_en.written_at)
+
+        archive_document_en = version_en.document_archive
+        self.assertEqual(archive_document_en.document_id, document_id)
+        self.assertEqual(
+            archive_document_en.version_hash, document.version_hash)
+
+        archive_locale = version_en.document_locales_archive
+        self.assertEqual(archive_locale.document_id, document_id)
+        self.assertEqual(archive_locale.version_hash, locale_en.version_hash)
+        self.assertEqual(archive_locale.culture, 'en')
+
+        # version with culture 'fr'
+        version_fr = versions[3]
+
+        self.assertEqual(version_fr.culture, 'fr')
+
+        meta_data_fr = version_fr.history_metadata
+        self.assertIs(meta_data_en, meta_data_fr)
+
+        archive_document_fr = version_fr.document_archive
+        self.assertIs(archive_document_en, archive_document_fr)
+
+        archive_locale = version_fr.document_locales_archive
+        self.assertEqual(archive_locale.document_id, document_id)
+        self.assertEqual(
+            archive_locale.version_hash, self.locale_fr.version_hash)
+        self.assertEqual(archive_locale.culture, 'fr')
+
+        return (body, document)
+
+    def put_success_figures_only(self, request_body, document):
+        """Test updating a document with changes to the figures and locales.
+        """
+        response = self.app.put_json(
+            self._prefix + '/' + str(document.document_id), request_body)
+
+        body = response.json
+        document_id = body.get('document_id')
+        self.assertNotEquals(
+            body.get('version_hash'), document.version_hash)
+        self.assertEquals(body.get('document_id'), document_id)
+
+        # check that the document was updated correctly
+        self.session.expire_all()
+        document = self.session.query(self._model).get(document_id)
+        self.assertEquals(len(document.locales), 2)
+
+        # check that a new archive_document was created
+        archive_count = self.session.query(self._model_archive). \
+            filter(
+                getattr(self._model_archive, 'document_id') == document_id). \
+            count()
+        self.assertEqual(archive_count, 2)
+
+        # check that no new archive_document_locale was created
+        archive_locale_count = \
+            self.session.query(self._model_archive_locale). \
+            filter(
+                document_id == getattr(
+                    self._model_archive_locale, 'document_id')
+            ). \
+            count()
+        self.assertEqual(archive_locale_count, 2)
+
+        # check that new versions were created
+        versions = document.versions
+        self.assertEqual(len(versions), 4)
+
+        # version with culture 'en'
+        version_en = versions[2]
+
+        self.assertEqual(version_en.culture, 'en')
+
+        meta_data_en = version_en.history_metadata
+        self.assertEqual(meta_data_en.comment, 'Changing figures')
+        self.assertIsNotNone(meta_data_en.written_at)
+
+        # version with culture 'fr'
+        version_fr = versions[3]
+
+        self.assertEqual(version_fr.culture, 'fr')
+
+        meta_data_fr = version_fr.history_metadata
+        self.assertIs(meta_data_en, meta_data_fr)
+
+        archive_document_en = version_en.document_archive
+        archive_document_fr = version_fr.document_archive
+        self.assertIs(archive_document_en, archive_document_fr)
+
+        return (body, document)
+
+    def put_success_lang_only(self, request_body, document):
+        """Test updating a document with only changes to a locale.
+        """
+        response = self.app.put_json(
+            self._prefix + '/' + str(document.document_id), request_body)
+
+        body = response.json
+        document_id = body.get('document_id')
+        # document version does not change!
+        self.assertEquals(body.get('version_hash'), document.version_hash)
+        self.assertEquals(body.get('document_id'), document_id)
+
+        # check that the document was updated correctly
+        self.session.expire_all()
+        document = self.session.query(self._model).get(document_id)
+        self.assertEquals(len(document.locales), 2)
+
+        # check that no new archive_document was created
+        archive_count = self.session.query(self._model_archive). \
+            filter(
+                getattr(self._model_archive, 'document_id') == document_id). \
+            count()
+        self.assertEqual(archive_count, 1)
+
+        # check that one new archive_document_locale was created
+        archive_locale_count = \
+            self.session.query(self._model_archive_locale). \
+            filter(
+                document_id == getattr(
+                    self._model_archive_locale, 'document_id')
+            ). \
+            count()
+        self.assertEqual(archive_locale_count, 3)
+
+        # check that one new version was created
+        versions = document.versions
+        self.assertEqual(len(versions), 3)
+
+        # version with culture 'en'
+        version_en = versions[2]
+
+        self.assertEqual(version_en.culture, 'en')
+
+        meta_data_en = version_en.history_metadata
+        self.assertEqual(meta_data_en.comment, 'Changing lang')
+        self.assertIsNotNone(meta_data_en.written_at)
+
+        # version with culture 'fr'
+        version_fr = versions[1]
+
+        self.assertEqual(version_fr.culture, 'fr')
+
+        meta_data_fr = version_fr.history_metadata
+        self.assertIsNot(meta_data_en, meta_data_fr)
+
+        archive_waypoint_en = version_en.document_archive
+        archive_waypoint_fr = version_fr.document_archive
+        self.assertIs(archive_waypoint_en, archive_waypoint_fr)
+
+        return (body, document)
+
+    def put_success_new_lang(self, request_body, document):
+        """Test updating a document by adding a new locale.
+        """
+        response = self.app.put_json(
+            self._prefix + '/' + str(document.document_id), request_body)
+
+        body = response.json
+        document_id = body.get('document_id')
+        # document version does not change!
+        self.assertEquals(body.get('version_hash'), document.version_hash)
+        self.assertEquals(body.get('document_id'), document_id)
+
+        # check that the document was updated correctly
+        self.session.expire_all()
+        document = self.session.query(self._model).get(document_id)
+        self.assertEquals(len(document.locales), 3)
+
+        # check that no new archive_document was created
+        archive_count = self.session.query(self._model_archive). \
+            filter(
+                getattr(self._model_archive, 'document_id') == document_id). \
+            count()
+        self.assertEqual(archive_count, 1)
+
+        # check that one new archive_document_locale was created
+        archive_locale_count = \
+            self.session.query(self._model_archive_locale). \
+            filter(
+                document_id == getattr(
+                    self._model_archive_locale, 'document_id')
+            ). \
+            count()
+        self.assertEqual(archive_locale_count, 3)
+
+        # check that one new version was created
+        versions = document.versions
+        self.assertEqual(len(versions), 3)
+
+        # version with culture 'en'
+        version_en = versions[0]
+
+        self.assertEqual(version_en.culture, 'en')
+
+        meta_data_en = version_en.history_metadata
+
+        # version with culture 'fr'
+        version_fr = versions[1]
+
+        self.assertEqual(version_fr.culture, 'fr')
+
+        meta_data_fr = version_fr.history_metadata
+        self.assertIs(meta_data_en, meta_data_fr)
+
+        archive_document_en = version_en.document_archive
+        archive_document_fr = version_fr.document_archive
+        self.assertIs(archive_document_en, archive_document_fr)
+
+        # version with culture 'es'
+        version_es = versions[2]
+
+        self.assertEqual(version_es.culture, 'es')
+
+        meta_data_es = version_es.history_metadata
+        self.assertIsNot(meta_data_en, meta_data_es)
+
+        archive_document_es = version_es.document_archive
+        self.assertIs(archive_document_es, archive_document_fr)
+
+        return (body, document)

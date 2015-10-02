@@ -12,7 +12,8 @@ from colanderalchemy import SQLAlchemySchemaNode
 from c2corg_api.models import schema
 from utils import copy_attributes
 from document import (
-    ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale)
+    ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
+    get_update_schema)
 from c2corg_api.attributes import activities
 
 
@@ -45,6 +46,10 @@ class Route(_RouteMixin, Document):
         copy_attributes(self, route, Route._ATTRIBUTES)
 
         return route
+
+    def update(self, other):
+        super(Route, self).update(other)
+        copy_attributes(other, self, Route._ATTRIBUTES)
 
 
 class ArchiveRoute(_RouteMixin, ArchiveDocument):
@@ -84,6 +89,10 @@ class RouteLocale(_RouteLocaleMixin, DocumentLocale):
 
         return locale
 
+    def update(self, other):
+        super(RouteLocale, self).update(other)
+        copy_attributes(other, self, RouteLocale._ATTRIBUTES)
+
 
 class ArchiveRouteLocale(_RouteLocaleMixin, ArchiveDocumentLocale):
     """
@@ -99,18 +108,28 @@ class ArchiveRouteLocale(_RouteLocaleMixin, ArchiveDocumentLocale):
 schema_route_locale = SQLAlchemySchemaNode(
     RouteLocale,
     # whitelisted attributes
-    includes=['culture', 'title', 'description', 'gear'])
+    includes=['version_hash', 'culture', 'title', 'description', 'gear'],
+    overrides={
+        'version_hash': {
+            'missing': None
+        }
+    })
 
 schema_route = SQLAlchemySchemaNode(
     Route,
     # whitelisted attributes
     includes=[
-        'document_id', 'activities', 'height', 'locales'],
+        'document_id', 'version_hash', 'activities', 'height', 'locales'],
     overrides={
         'document_id': {
+            'missing': None
+        },
+        'version_hash': {
             'missing': None
         },
         'locales': {
             'children': [schema_route_locale]
         }
     })
+
+schema_update_route = get_update_schema(schema_route)
