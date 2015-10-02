@@ -9,6 +9,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
 from colander import MappingSchema, SchemaNode, String as ColanderString
+from itertools import ifilter
 import abc
 import uuid
 import enum
@@ -152,12 +153,9 @@ class Document(Base, _DocumentMixin):
         """Get the locale with the given culture or `None` if no locale
         is present.
         """
-        l = [locale for locale in self.locales if locale.culture == culture]
-        if l:
-            return l[0]
-        else:
-            return None
-
+        return next(
+            ifilter(lambda locale: locale.culture == culture, self.locales),
+            None)
 
 class ArchiveDocument(Base, _DocumentMixin):
     """

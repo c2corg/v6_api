@@ -56,7 +56,6 @@ class DocumentRest(object):
             locale_versions.append(version)
 
         DBSession.add(archive)
-#         DBSession.add_all(archive_locales)
         DBSession.add(meta_data)
         DBSession.add_all(locale_versions)
         DBSession.flush()
