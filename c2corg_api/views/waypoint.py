@@ -22,17 +22,7 @@ class WaypointRest(DocumentRest):
 
     @view(schema=schema_waypoint)
     def collection_post(self):
-        waypoint = schema_waypoint.objectify(self.request.validated)
-
-        # TODO additional validation: at least one culture, only one instance
-        # for each culture
-
-        DBSession.add(waypoint)
-        DBSession.flush()
-
-        self._create_new_version(waypoint)
-
-        return to_json_dict(waypoint, schema_waypoint)
+        return self._collection_post(Waypoint, schema_waypoint)
 
     @view(schema=schema_update_waypoint, validators=validate_id)
     def put(self):

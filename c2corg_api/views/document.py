@@ -28,6 +28,19 @@ class DocumentRest(object):
 
         return to_json_dict(document, schema)
 
+    def _collection_post(self, clazz, schema):
+        document = schema.objectify(self.request.validated)
+
+        # TODO additional validation: at least one culture, only one instance
+        # for each culture
+
+        DBSession.add(document)
+        DBSession.flush()
+
+        self._create_new_version(document)
+
+        return to_json_dict(document, schema)
+
     def _get_document(self, clazz, id, culture=None):
         """Get a document with either a single locale (if `culture is given)
         or with all locales.

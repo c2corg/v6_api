@@ -1,9 +1,8 @@
 from cornice.resource import resource, view
 
 from c2corg_api.models.image import Image, schema_image
-from c2corg_api.models import DBSession
 from c2corg_api.views.document import DocumentRest
-from c2corg_api.views import validate_id, to_json_dict
+from c2corg_api.views import validate_id
 
 
 @resource(collection_path='/images', path='/images/{id}')
@@ -18,11 +17,4 @@ class ImageRest(DocumentRest):
 
     @view(schema=schema_image)
     def collection_post(self):
-        image = schema_image.objectify(self.request.validated)
-
-        DBSession.add(image)
-        DBSession.flush()
-
-        self._create_new_version(image)
-
-        return to_json_dict(image, schema_image)
+        return self._collection_post(Image, schema_image)

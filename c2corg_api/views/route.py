@@ -1,9 +1,8 @@
 from cornice.resource import resource, view
 
 from c2corg_api.models.route import Route, schema_route
-from c2corg_api.models import DBSession
 from c2corg_api.views.document import DocumentRest
-from c2corg_api.views import validate_id, to_json_dict
+from c2corg_api.views import validate_id
 
 
 @resource(collection_path='/routes', path='/routes/{id}')
@@ -18,11 +17,4 @@ class RouteRest(DocumentRest):
 
     @view(schema=schema_route)
     def collection_post(self):
-        route = schema_route.objectify(self.request.validated)
-
-        DBSession.add(route)
-        DBSession.flush()
-
-        self._create_new_version(route)
-
-        return to_json_dict(route, schema_route)
+        return self._collection_post(Route, schema_route)
