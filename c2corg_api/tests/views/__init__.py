@@ -35,18 +35,19 @@ class BaseTestRest(BaseTestCase):
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
-        self.assertIsInstance(body, list)
+        documents = body['documents']
+        self.assertIsInstance(documents, list)
 
-        doc = body[0]
         if params is None:
+            doc = documents[0]
             available_cultures = doc.get('available_cultures')
             self.assertEqual(available_cultures, ['en', 'fr'])
 
         if limit is None:
             nb_docs = self.session.query(self._model).count()
-            self.assertEqual(len(body), nb_docs)
+            self.assertEqual(len(documents), nb_docs)
         else:
-            self.assertLessEqual(len(body), limit)
+            self.assertLessEqual(len(documents), limit)
 
         return body
 

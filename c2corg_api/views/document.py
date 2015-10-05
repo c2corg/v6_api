@@ -20,6 +20,7 @@ class DocumentRest(object):
     def _paginate_offset(self, clazz, schema, adapt_schema):
         offset = self.request.GET.get('offset')
         limit = self.request.GET.get('limit')
+        total = self.request.GET.get('total')
         offset = 0 if offset is None else int(offset)
         limit = 30 if limit is None else int(limit)
 
@@ -33,7 +34,7 @@ class DocumentRest(object):
             all()
         set_available_cultures(documents)
 
-        total = base_query.count()
+        total = base_query.count() if total is None else int(total)
 
         return {
             'documents': [
@@ -79,8 +80,7 @@ class DocumentRest(object):
             return self._paginate_offset(clazz, schema, adapt_schema)
 
     def _collection_get(self, clazz, schema, adapt_schema=None):
-        res = self._paginate(clazz, schema, adapt_schema)
-        return res['documents']
+        return self._paginate(clazz, schema, adapt_schema)
 
     def _get(self, clazz, schema, adapt_schema=None):
         id = self.request.validated['id']
