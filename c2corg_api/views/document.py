@@ -17,20 +17,70 @@ class DocumentRest(object):
     def __init__(self, request):
         self.request = request
 
-    def _collection_get(self, clazz, schema, adapt_schema=None):
-        documents = DBSession. \
-            query(clazz). \
+    def _paginate_offset(self, clazz, schema, adapt_schema):
+        offset = self.request.GET.get('offset')
+        limit = self.request.GET.get('limit')
+        offset = 0 if offset is None else int(offset)
+        limit = 30 if limit is None else int(limit)
+
+        base_query = DBSession. \
+            query(clazz)
+
+        documents = base_query. \
             options(joinedload(getattr(clazz, 'locales'))). \
-            limit(30). \
+            order_by(clazz.document_id). \
+            slice(offset, offset + limit). \
             all()
         set_available_cultures(documents)
 
-        return [
-            to_json_dict(
-                doc,
-                schema if not adapt_schema else adapt_schema(schema, doc)
-            ) for doc in documents
-        ]
+        total = base_query.count()
+
+        return {
+            'documents': [
+                to_json_dict(
+                    doc,
+                    schema if not adapt_schema else adapt_schema(schema, doc)
+                ) for doc in documents
+            ],
+            'total': total
+        }
+
+    def _paginate_after(self, clazz, schema, adapt_schema):
+        after = self.request.GET.get('after')
+        limit = self.request.GET.get('limit')
+        after_id = int(after)
+        limit = 30 if limit is None else int(limit)
+
+        base_query = DBSession. \
+            query(clazz)
+
+        documents = base_query. \
+            options(joinedload(getattr(clazz, 'locales'))). \
+            order_by(clazz.document_id). \
+            filter(clazz.document_id > after_id). \
+            limit(limit). \
+            all()
+        set_available_cultures(documents)
+
+        return {
+            'documents': [
+                to_json_dict(
+                    doc,
+                    schema if not adapt_schema else adapt_schema(schema, doc)
+                ) for doc in documents
+            ],
+            'total': -1
+        }
+
+    def _paginate(self, clazz, schema, adapt_schema):
+        if self.request.GET.get('after') is not None:
+            return self._paginate_after(clazz, schema, adapt_schema)
+        else:
+            return self._paginate_offset(clazz, schema, adapt_schema)
+
+    def _collection_get(self, clazz, schema, adapt_schema=None):
+        res = self._paginate(clazz, schema, adapt_schema)
+        return res['documents']
 
     def _get(self, clazz, schema, adapt_schema=None):
         id = self.request.validated['id']
