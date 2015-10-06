@@ -28,7 +28,7 @@ class DocumentRest(object):
 
         documents = base_query. \
             options(joinedload(getattr(clazz, 'locales'))). \
-            order_by(clazz.document_id). \
+            order_by(clazz.document_id.desc()). \
             slice(offset, offset + limit). \
             all()
         set_available_cultures(documents)
@@ -56,8 +56,8 @@ class DocumentRest(object):
 
         documents = base_query. \
             options(joinedload(getattr(clazz, 'locales'))). \
-            order_by(clazz.document_id). \
-            filter(clazz.document_id > after_id). \
+            order_by(clazz.document_id.desc()). \
+            filter(clazz.document_id < after_id). \
             limit(limit). \
             all()
         set_available_cultures(documents)

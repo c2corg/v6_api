@@ -47,18 +47,18 @@ class TestWaypointRest(BaseTestRest):
 
         self.assertResultsEqual(self.get_collection({
             'offset': 0,
-            'limit': 1}), [2203], 4)
+            'limit': 1}), [4], 4)
         self.assertResultsEqual(self.get_collection({
             'offset': 0,
-            'limit': 2}), [2203, 2], 4)
+            'limit': 2}), [4, 3], 4)
         self.assertResultsEqual(self.get_collection({
             'offset': 1,
-            'limit': 2}), [2, 3], 4)
+            'limit': 2}), [3, 2], 4)
 
         self.assertResultsEqual(self.get_collection({
             'total': 42,
             'after': self.waypoint3.document_id,
-            'limit': 1}), [4], -1)
+            'limit': 1}), [2], -1)
 
     def test_get(self):
         body = self.get(self.waypoint)
@@ -598,8 +598,15 @@ class TestWaypointRest(BaseTestRest):
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'))
         self.session.add(self.waypoint3)
-        self.session.add(Waypoint(
+        self.waypoint4 = Waypoint(
             waypoint_type='summit', elevation=4,
             geometry=DocumentGeometry(
-                geom='SRID=3857;POINT(635956 5723604)')))
+                geom='SRID=3857;POINT(635956 5723604)'))
+        self.waypoint4.locales.append(WaypointLocale(
+            culture='en', title='Mont Granier', description='...',
+            access='yep'))
+        self.waypoint4.locales.append(WaypointLocale(
+            culture='fr', title='Mont Granier', description='...',
+            access='ouai'))
+        self.session.add(self.waypoint4)
         self.session.flush()
