@@ -11,7 +11,8 @@ from colanderalchemy import SQLAlchemySchemaNode
 from c2corg_api.models import schema
 from utils import copy_attributes
 from document import (
-    ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale)
+    ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
+    get_update_schema)
 from c2corg_api.attributes import activities
 
 
@@ -40,10 +41,14 @@ class Image(_ImageMixin, Document):
 
     def to_archive(self):
         image = ArchiveImage()
-        super(Image, self).to_archive(image)
+        super(Image, self)._to_archive(image)
         copy_attributes(self, image, Image._ATTRIBUTES)
 
         return image
+
+    def update(self, other):
+        super(Image, self).update(other)
+        copy_attributes(other, self, Image._ATTRIBUTES)
 
 
 class ArchiveImage(_ImageMixin, ArchiveDocument):
@@ -81,6 +86,10 @@ class ImageLocale(_ImageLocaleMixin, DocumentLocale):
 
         return locale
 
+    def update(self, other):
+        super(ImageLocale, self).update(other)
+        copy_attributes(other, self, ImageLocale._ATTRIBUTES)
+
 
 class ArchiveImageLocale(_ImageLocaleMixin, ArchiveDocumentLocale):
     """
@@ -96,18 +105,28 @@ class ArchiveImageLocale(_ImageLocaleMixin, ArchiveDocumentLocale):
 schema_image_locale = SQLAlchemySchemaNode(
     ImageLocale,
     # whitelisted attributes
-    includes=['culture', 'title', 'description'])
+    includes=['version', 'culture', 'title', 'description'],
+    overrides={
+        'version': {
+            'missing': None
+        }
+    })
 
 schema_image = SQLAlchemySchemaNode(
     Image,
     # whitelisted attributes
     includes=[
-        'document_id', 'activities', 'height', 'locales'],
+        'document_id', 'version', 'activities', 'height', 'locales'],
     overrides={
         'document_id': {
+            'missing': None
+        },
+        'version': {
             'missing': None
         },
         'locales': {
             'children': [schema_image_locale]
         }
     })
+
+schema_update_image = get_update_schema(schema_image)

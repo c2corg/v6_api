@@ -8,7 +8,7 @@ from webtest import TestApp
 
 from c2corg_api import main
 from c2corg_api.models import *  # noqa
-
+from c2corg_api.scripts import initializedb
 
 curdir = os.path.dirname(os.path.abspath(__file__))
 configfile = os.path.realpath(os.path.join(curdir, '../../test.ini'))
@@ -22,7 +22,10 @@ def get_engine():
 def setup_package():
     # set up database
     engine = get_engine()
-    Base.metadata.create_all(engine)
+    DBSession.configure(bind=engine)
+#     Base.metadata.drop_all(engine)
+    initializedb.setup_db(engine, DBSession)
+    DBSession.remove()
 
 # keep the database schema after a test run (useful for debugging)
 keep = False
@@ -54,18 +57,18 @@ class BaseTestCase(unittest.TestCase):
         self.app = TestApp(self.app)
         self.config = testing.setUp()
 
-        connection = self.engine.connect()
+        self.connection = self.engine.connect()
 
         # begin a non-ORM transaction
-        self.trans = connection.begin()
+        self.trans = self.connection.begin()
 
         # DBSession is the scoped session manager used in the views,
         # reconfigure it to use this test's connection
-        DBSession.configure(bind=connection)
+        DBSession.configure(bind=self.connection)
 
         # create a session bound the connection, this session is the one
         # used in the test code
-        self.session = self.Session(bind=connection)
+        self.session = self.Session(bind=self.connection)
 
     def tearDown(self):  # noqa
         # rollback - everything that happened with the Session above
@@ -77,3 +80,4 @@ class BaseTestCase(unittest.TestCase):
             self.trans.commit()
         DBSession.remove()
         self.session.close()
+        self.connection.close()

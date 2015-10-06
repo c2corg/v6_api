@@ -12,7 +12,8 @@ from colanderalchemy import SQLAlchemySchemaNode
 from c2corg_api.models import schema
 from utils import copy_attributes
 from document import (
-    ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale)
+    ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
+    get_update_schema)
 from c2corg_api.attributes import waypoint_types
 
 
@@ -42,10 +43,14 @@ class Waypoint(_WaypointMixin, Document):
 
     def to_archive(self):
         waypoint = ArchiveWaypoint()
-        super(Waypoint, self).to_archive(waypoint)
+        super(Waypoint, self)._to_archive(waypoint)
         copy_attributes(self, waypoint, Waypoint._ATTRIBUTES)
 
         return waypoint
+
+    def update(self, other):
+        super(Waypoint, self).update(other)
+        copy_attributes(other, self, Waypoint._ATTRIBUTES)
 
 
 class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
@@ -84,6 +89,10 @@ class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
 
         return locale
 
+    def update(self, other):
+        super(WaypointLocale, self).update(other)
+        copy_attributes(other, self, WaypointLocale._ATTRIBUTES)
+
 
 class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
     """
@@ -99,18 +108,30 @@ class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
 schema_waypoint_locale = SQLAlchemySchemaNode(
     WaypointLocale,
     # whitelisted attributes
-    includes=['culture', 'title', 'description', 'pedestrian_access'])
+    includes=['version', 'culture', 'title', 'description',
+              'pedestrian_access'],
+    overrides={
+        'version': {
+            'missing': None
+        }
+    })
 
 schema_waypoint = SQLAlchemySchemaNode(
     Waypoint,
     # whitelisted attributes
     includes=[
-        'document_id', 'waypoint_type', 'elevation', 'maps_info', 'locales'],
+        'document_id', 'version', 'waypoint_type', 'elevation',
+        'maps_info', 'locales'],
     overrides={
         'document_id': {
+            'missing': None
+        },
+        'version': {
             'missing': None
         },
         'locales': {
             'children': [schema_waypoint_locale]
         }
     })
+
+schema_update_waypoint = get_update_schema(schema_waypoint)

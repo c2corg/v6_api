@@ -1,5 +1,6 @@
 import os
 import sys
+import transaction
 
 from sqlalchemy import engine_from_config
 
@@ -10,7 +11,8 @@ from pyramid.paster import (
 
 from pyramid.scripts.common import parse_vars
 
-from ..models import *  # noqa
+from c2corg_api.models import *  # noqa
+from c2corg_api.attributes import default_cultures
 
 
 def usage(argv):
@@ -28,4 +30,15 @@ def main(argv=sys.argv):
     setup_logging(config_uri)
     settings = get_appsettings(config_uri, options=options)
     engine = engine_from_config(settings, 'sqlalchemy.')
+    DBSession.configure(bind=engine)
+    setup_db(engine, DBSession)
+
+
+def setup_db(engine, session):
     Base.metadata.create_all(engine)
+
+    with transaction.manager:
+        # add default languages
+        session.add_all([
+            document.Culture(culture=lang) for lang in default_cultures
+        ])

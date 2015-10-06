@@ -1,42 +1,24 @@
 from cornice.resource import resource, view
-from sqlalchemy.orm import joinedload
 
-from c2corg_api.models.route import Route, schema_route
-from c2corg_api.models import DBSession
+from c2corg_api.models.route import Route, schema_route, schema_update_route
 from c2corg_api.views.document import DocumentRest
-from c2corg_api.views import validate_id, to_json_dict
+from c2corg_api.views import validate_id
 
 
 @resource(collection_path='/routes', path='/routes/{id}')
 class RouteRest(DocumentRest):
 
     def collection_get(self):
-        routes = DBSession. \
-            query(Route). \
-            options(joinedload(Route.locales)). \
-            limit(30)
-
-        return [to_json_dict(wp, schema_route) for wp in routes]
+        return self._collection_get(Route, schema_route)
 
     @view(validators=validate_id)
     def get(self):
-        id = self.request.validated['id']
-
-        route = DBSession. \
-            query(Route). \
-            filter(Route.document_id == id). \
-            options(joinedload(Route.locales)). \
-            first()
-
-        return to_json_dict(route, schema_route)
+        return self._get(Route, schema_route)
 
     @view(schema=schema_route)
     def collection_post(self):
-        route = schema_route.objectify(self.request.validated)
+        return self._collection_post(Route, schema_route)
 
-        DBSession.add(route)
-        DBSession.flush()
-
-        self._create_new_version(route)
-
-        return to_json_dict(route, schema_route)
+    @view(schema=schema_update_route, validators=validate_id)
+    def put(self):
+        return self._put(Route, schema_route)
