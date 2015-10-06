@@ -2,3 +2,4 @@ include config/dev
 
 export instanceid = travis
 export base_url = /${instanceid}
+export tests_db_name = c2corg_travis_tests

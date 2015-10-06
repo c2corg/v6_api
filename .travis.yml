@@ -12,7 +12,8 @@ install:
 - make -f config/travis install
 
 before_script:
-- psql -f scripts/travis-db.sql -U postgres
+- echo "create user \"www-data\" with password 'www-data;'" | psql -U postgres
+- PGUSER=postgres USER=travis scripts/create_user_db_test.sh
 
 script:
 - make -f config/travis check

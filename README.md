@@ -15,21 +15,15 @@ Build
 To set up the database
 ----------------------
 
-    psql
-    create database c2corg_{user} owner "www-data";
-    \c c2corg_{user}
-    create extension postgis;
-    create schema guidebook authorization "www-data";
-    \q
-    .build/venv/bin/initialize_c2corg_api_db development.ini
+    scripts/create_user_db.sh
 
 Run the application
 -------------------
 
-    make -f config/{user} serve
+    make -f config/$USER serve
 
 Open your browser at http://localhost:6543/ or http://localhost:6543/?debug (debug mode). Make sure you are
-using the port that is set in `config/{user}`.
+using the port that is set in `config/$USER`.
 
 Available actions may be listed using:
 
@@ -64,20 +58,15 @@ Run the tests
 --------------
 Create a database that will be used to run the tests:
 
-    psql
-    create database c2corg_{user}_tests owner "www-data";
-    \c c2corg_{user}_tests
-    create extension postgis;
-    create schema guidebook authorization "www-data";
-    \q
+    scripts/create_user_db_test.sh
 
 Then run the tests with:
 
-    make -f config/{user} test
+    make -f config/$USER test
     
 Or with the `check` target, which runs `flake8` and `test`:
 
-    make -f config/{user} check
+    make -f config/$USER check
 
 To run a specific test:
 
