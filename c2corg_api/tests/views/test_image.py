@@ -72,13 +72,13 @@ class TestImageRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': '-9999',
-                'version_hash': self.image.version_hash,
+                'version': self.image.version,
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -88,13 +88,13 @@ class TestImageRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': self.image.document_id,
-                'version_hash': 'some-old-version',
+                'version': -9999,
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -104,13 +104,13 @@ class TestImageRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': self.image.document_id,
-                'version_hash': self.image.version_hash,
+                'version': self.image.version,
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...',
-                     'version_hash': 'some-old-version'}
+                     'version': -9999}
                 ]
             }
         }
@@ -120,13 +120,13 @@ class TestImageRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': self.image.document_id,
-                'version_hash': self.image.version_hash,
+                'version': self.image.version,
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -140,13 +140,13 @@ class TestImageRest(BaseTestRest):
             'message': 'Update',
             'document': {
                 'document_id': self.image.document_id,
-                'version_hash': self.image.version_hash,
+                'version': self.image.version,
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': 'New description',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -176,13 +176,13 @@ class TestImageRest(BaseTestRest):
             'message': 'Changing figures',
             'document': {
                 'document_id': self.image.document_id,
-                'version_hash': self.image.version_hash,
+                'version': self.image.version,
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -195,13 +195,13 @@ class TestImageRest(BaseTestRest):
             'message': 'Changing lang',
             'document': {
                 'document_id': self.image.document_id,
-                'version_hash': self.image.version_hash,
+                'version': self.image.version,
                 'activities': 'paragliding',
                 'height': 2000,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': 'New description',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -217,7 +217,7 @@ class TestImageRest(BaseTestRest):
             'message': 'Adding lang',
             'document': {
                 'document_id': self.image.document_id,
-                'version_hash': self.image.version_hash,
+                'version': self.image.version,
                 'activities': 'paragliding',
                 'height': 2000,
                 'locales': [

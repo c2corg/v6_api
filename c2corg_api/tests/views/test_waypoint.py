@@ -75,7 +75,7 @@ class TestWaypointRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': '-9999',
-                'version_hash': self.waypoint.version_hash,
+                'version': self.waypoint.version,
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
@@ -90,7 +90,7 @@ class TestWaypointRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': self.waypoint.document_id,
-                'version_hash': 'some-old-version',
+                'version': -9999,
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
@@ -105,13 +105,13 @@ class TestWaypointRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': self.waypoint.document_id,
-                'version_hash': self.waypoint.version_hash,
+                'version': self.waypoint.version,
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
                      'description': '...', 'pedestrian_access': 'n',
-                     'version_hash': 'some-old-version'}
+                     'version': -9999}
                 ]
             }
         }
@@ -121,13 +121,13 @@ class TestWaypointRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': self.waypoint.document_id,
-                'version_hash': self.waypoint.version_hash,
+                'version': self.waypoint.version,
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
                      'description': 'A.', 'pedestrian_access': 'n',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -141,13 +141,13 @@ class TestWaypointRest(BaseTestRest):
             'message': 'Update',
             'document': {
                 'document_id': self.waypoint.document_id,
-                'version_hash': self.waypoint.version_hash,
+                'version': self.waypoint.version,
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
                      'description': 'A.', 'pedestrian_access': 'n',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -182,13 +182,13 @@ class TestWaypointRest(BaseTestRest):
             'message': 'Changing figures',
             'document': {
                 'document_id': self.waypoint.document_id,
-                'version_hash': self.waypoint.version_hash,
+                'version': self.waypoint.version,
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
                      'description': '...', 'pedestrian_access': 'yep',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -203,13 +203,13 @@ class TestWaypointRest(BaseTestRest):
             'message': 'Changing lang',
             'document': {
                 'document_id': self.waypoint.document_id,
-                'version_hash': self.waypoint.version_hash,
+                'version': self.waypoint.version,
                 'waypoint_type': 'summit',
                 'elevation': 2203,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
                      'description': '...', 'pedestrian_access': 'no',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -224,7 +224,7 @@ class TestWaypointRest(BaseTestRest):
             'message': 'Adding lang',
             'document': {
                 'document_id': self.waypoint.document_id,
-                'version_hash': self.waypoint.version_hash,
+                'version': self.waypoint.version,
                 'waypoint_type': 'summit',
                 'elevation': 2203,
                 'locales': [

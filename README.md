@@ -57,7 +57,7 @@ Updating a waypoint:
 
     curl -X PUT -v \
     -H "Content-Type: application/json" \
-    -d '{"message": "Comment about change", "document": {"elevation": 4633, "maps_info": null, "version": "fae1e03a38c344218db13cb224d839e7", "document_id": 1, "waypoint_type": "summit", "locales": [{"culture": "fr", "version": "ca9797ea19334fa3a99127bf00d39410", "title": "Mont Rose", "pedestrian_access": null, "description": null}]}}' \
+    -d '{"message": "Comment about change", "document": {"elevation": 4633, "maps_info": null, "version": 1, "document_id": 1, "waypoint_type": "summit", "locales": [{"culture": "fr", "version": 1, "title": "Mont Rose", "pedestrian_access": null, "description": null}]}}' \
     http://localhost:6543/waypoints/1
 
 Run the tests

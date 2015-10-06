@@ -76,13 +76,13 @@ class TestRouteRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': '-9999',
-                'version_hash': self.route.version_hash,
+                'version': self.route.version,
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -92,13 +92,13 @@ class TestRouteRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': self.route.document_id,
-                'version_hash': 'some-old-version',
+                'version': -9999,
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -108,13 +108,13 @@ class TestRouteRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': self.route.document_id,
-                'version_hash': self.route.version_hash,
+                'version': self.route.version,
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
-                     'version_hash': 'some-old-version'}
+                     'version': -9999}
                 ]
             }
         }
@@ -124,13 +124,13 @@ class TestRouteRest(BaseTestRest):
         body = {
             'document': {
                 'document_id': self.route.document_id,
-                'version_hash': self.route.version_hash,
+                'version': self.route.version,
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -144,13 +144,13 @@ class TestRouteRest(BaseTestRest):
             'message': 'Update',
             'document': {
                 'document_id': self.route.document_id,
-                'version_hash': self.route.version_hash,
+                'version': self.route.version,
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -183,13 +183,13 @@ class TestRouteRest(BaseTestRest):
             'message': 'Changing figures',
             'document': {
                 'document_id': self.route.document_id,
-                'version_hash': self.route.version_hash,
+                'version': self.route.version,
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'paraglider',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -202,13 +202,13 @@ class TestRouteRest(BaseTestRest):
             'message': 'Changing lang',
             'document': {
                 'document_id': self.route.document_id,
-                'version_hash': self.route.version_hash,
+                'version': self.route.version,
                 'activities': 'paragliding',
                 'height': 2000,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
-                     'version_hash': self.locale_en.version_hash}
+                     'version': self.locale_en.version}
                 ]
             }
         }
@@ -223,7 +223,7 @@ class TestRouteRest(BaseTestRest):
             'message': 'Adding lang',
             'document': {
                 'document_id': self.route.document_id,
-                'version_hash': self.route.version_hash,
+                'version': self.route.version,
                 'activities': 'paragliding',
                 'height': 2000,
                 'locales': [

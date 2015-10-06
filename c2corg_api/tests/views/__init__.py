@@ -36,13 +36,13 @@ class BaseTestRest(BaseTestCase):
         body = response.json
         self.assertNotIn('id', body)
         self.assertEqual(body.get('document_id'), reference.document_id)
-        self.assertIsNotNone(body.get('version_hash'))
+        self.assertIsNotNone(body.get('version'))
 
         locales = body.get('locales')
         self.assertEqual(len(locales), 2)
         locale_en = locales[0]
         self.assertNotIn('id', locale_en)
-        self.assertIsNotNone(locale_en.get('version_hash'))
+        self.assertIsNotNone(locale_en.get('version'))
         self.assertEqual(locale_en.get('culture'), self.locale_en.culture)
         self.assertEqual(locale_en.get('title'), self.locale_en.title)
         return body
@@ -99,7 +99,7 @@ class BaseTestRest(BaseTestCase):
 
         body = response.json
         document_id = body.get('document_id')
-        self.assertIsNotNone(body.get('version_hash'))
+        self.assertIsNotNone(body.get('version'))
         self.assertIsNotNone(document_id)
 
         # check that the version was created correctly
@@ -117,12 +117,12 @@ class BaseTestRest(BaseTestCase):
 
         archive_doc = version.document_archive
         self.assertEqual(archive_doc.document_id, document_id)
-        self.assertEqual(archive_doc.version_hash, doc.version_hash)
+        self.assertEqual(archive_doc.version, doc.version)
 
         archive_locale = version.document_locales_archive
         waypoint_locale_en = doc.locales[0]
         self.assertEqual(
-            archive_locale.version_hash, waypoint_locale_en.version_hash)
+            archive_locale.version, waypoint_locale_en.version)
         self.assertEqual(archive_locale.document_id, document_id)
         self.assertEqual(archive_locale.culture, culture)
         return (body, doc)
@@ -161,7 +161,7 @@ class BaseTestRest(BaseTestCase):
         body = response.json
         document_id = body.get('document_id')
         self.assertNotEquals(
-            body.get('version_hash'), document.version_hash)
+            body.get('version'), document.version)
         self.assertEquals(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
@@ -204,11 +204,11 @@ class BaseTestRest(BaseTestCase):
         archive_document_en = version_en.document_archive
         self.assertEqual(archive_document_en.document_id, document_id)
         self.assertEqual(
-            archive_document_en.version_hash, document.version_hash)
+            archive_document_en.version, document.version)
 
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.document_id, document_id)
-        self.assertEqual(archive_locale.version_hash, locale_en.version_hash)
+        self.assertEqual(archive_locale.version, locale_en.version)
         self.assertEqual(archive_locale.culture, 'en')
 
         # version with culture 'fr'
@@ -225,7 +225,7 @@ class BaseTestRest(BaseTestCase):
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.document_id, document_id)
         self.assertEqual(
-            archive_locale.version_hash, self.locale_fr.version_hash)
+            archive_locale.version, self.locale_fr.version)
         self.assertEqual(archive_locale.culture, 'fr')
 
         return (body, document)
@@ -239,7 +239,7 @@ class BaseTestRest(BaseTestCase):
         body = response.json
         document_id = body.get('document_id')
         self.assertNotEquals(
-            body.get('version_hash'), document.version_hash)
+            body.get('version'), document.version)
         self.assertEquals(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
@@ -300,7 +300,7 @@ class BaseTestRest(BaseTestCase):
         body = response.json
         document_id = body.get('document_id')
         # document version does not change!
-        self.assertEquals(body.get('version_hash'), document.version_hash)
+        self.assertEquals(body.get('version'), document.version)
         self.assertEquals(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
@@ -361,7 +361,7 @@ class BaseTestRest(BaseTestCase):
         body = response.json
         document_id = body.get('document_id')
         # document version does not change!
-        self.assertEquals(body.get('version_hash'), document.version_hash)
+        self.assertEquals(body.get('version'), document.version)
         self.assertEquals(body.get('document_id'), document_id)
 
         # check that the document was updated correctly

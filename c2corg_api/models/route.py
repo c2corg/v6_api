@@ -108,9 +108,9 @@ class ArchiveRouteLocale(_RouteLocaleMixin, ArchiveDocumentLocale):
 schema_route_locale = SQLAlchemySchemaNode(
     RouteLocale,
     # whitelisted attributes
-    includes=['version_hash', 'culture', 'title', 'description', 'gear'],
+    includes=['version', 'culture', 'title', 'description', 'gear'],
     overrides={
-        'version_hash': {
+        'version': {
             'missing': None
         }
     })
@@ -119,12 +119,12 @@ schema_route = SQLAlchemySchemaNode(
     Route,
     # whitelisted attributes
     includes=[
-        'document_id', 'version_hash', 'activities', 'height', 'locales'],
+        'document_id', 'version', 'activities', 'height', 'locales'],
     overrides={
         'document_id': {
             'missing': None
         },
-        'version_hash': {
+        'version': {
             'missing': None
         },
         'locales': {

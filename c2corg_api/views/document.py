@@ -150,7 +150,8 @@ class DocumentRest(object):
             # the document has not changed, load the previous archive version
             archive = DBSession.query(ArchiveDocument). \
                 filter(
-                    ArchiveDocument.version_hash == document.version_hash). \
+                    ArchiveDocument.version == document.version,
+                    ArchiveDocument.document_id == document.document_id). \
                 one()
         return archive
 
@@ -171,8 +172,9 @@ class DocumentRest(object):
             # the locale has not changed, use the old archive version
             locale_archive = DBSession.query(ArchiveDocumentLocale). \
                 filter(
-                    ArchiveDocumentLocale.version_hash ==
-                    locale.version_hash). \
+                    ArchiveDocumentLocale.version == locale.version,
+                    ArchiveDocumentLocale.document_id == locale.document_id,
+                    ArchiveDocumentLocale.culture == locale.culture). \
                 one()
         return locale_archive
 
@@ -190,12 +192,12 @@ class DocumentRest(object):
         If not (that is the document has changed), a `HTTPConflict` exception
         is raised.
         """
-        if document.version_hash != document_in.version_hash:
+        if document.version != document_in.version:
             raise HTTPConflict('version of document has changed')
         for locale_in in document_in.locales:
             locale = document.get_locale(locale_in.culture)
             if locale:
-                if locale.version_hash != locale_in.version_hash:
+                if locale.version != locale_in.version:
                     raise HTTPConflict(
                         'version of locale \'%s\' has changed'
                         % locale.culture)

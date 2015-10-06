@@ -49,7 +49,7 @@ class TestWaypoint(BaseTestCase):
         self.session.add(waypoint)
         self.session.flush()
 
-        version1 = waypoint.version_hash
+        version1 = waypoint.version
         self.assertIsNotNone(version1)
 
         # make a change to the waypoint and check that the version changes
@@ -57,7 +57,7 @@ class TestWaypoint(BaseTestCase):
         waypoint.elevation = 1234
         self.session.merge(waypoint)
         self.session.flush()
-        version2 = waypoint.version_hash
+        version2 = waypoint.version
         self.assertNotEqual(version1, version2)
 
     def test_version_concurrent_edit(self):
@@ -76,7 +76,7 @@ class TestWaypoint(BaseTestCase):
         self.session.add(waypoint1)
         self.session.flush()
         self.session.expunge(waypoint1)
-        version1 = waypoint1.version_hash
+        version1 = waypoint1.version
         self.assertIsNotNone(version1)
 
         # change the waypoint
@@ -84,10 +84,10 @@ class TestWaypoint(BaseTestCase):
         waypoint2.elevation = 1234
         self.session.merge(waypoint2)
         self.session.flush()
-        version2 = waypoint2.version_hash
+        version2 = waypoint2.version
         self.assertNotEqual(version1, version2)
 
-        self.assertNotEqual(waypoint1.version_hash, waypoint2.version_hash)
+        self.assertNotEqual(waypoint1.version, waypoint2.version)
         self.assertNotEqual(waypoint1.elevation, waypoint2.elevation)
 
         # then try to update the waypoint again with the old version
@@ -97,23 +97,23 @@ class TestWaypoint(BaseTestCase):
     def test_update(self):
         waypoint_db = Waypoint(
             document_id=1, waypoint_type='summit', elevation=2203,
-            version_hash='123',
+            version=123,
             locales=[
                 WaypointLocale(
                     id=2, culture='en', title='A', description='abc',
-                    version_hash='345'),
+                    version=345),
                 WaypointLocale(
                     id=3, culture='fr', title='B', description='bcd',
-                    version_hash='678'),
+                    version=678),
             ]
         )
         waypoint_in = Waypoint(
             document_id=1, waypoint_type='summit', elevation=1234,
-            version_hash='123',
+            version=123,
             locales=[
                 WaypointLocale(
                     id=2, culture='en', title='C', description='abc',
-                    version_hash='345'),
+                    version=345),
                 WaypointLocale(
                     culture='es', title='D', description='efg'),
             ]

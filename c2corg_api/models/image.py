@@ -105,9 +105,9 @@ class ArchiveImageLocale(_ImageLocaleMixin, ArchiveDocumentLocale):
 schema_image_locale = SQLAlchemySchemaNode(
     ImageLocale,
     # whitelisted attributes
-    includes=['version_hash', 'culture', 'title', 'description'],
+    includes=['version', 'culture', 'title', 'description'],
     overrides={
-        'version_hash': {
+        'version': {
             'missing': None
         }
     })
@@ -116,12 +116,12 @@ schema_image = SQLAlchemySchemaNode(
     Image,
     # whitelisted attributes
     includes=[
-        'document_id', 'version_hash', 'activities', 'height', 'locales'],
+        'document_id', 'version', 'activities', 'height', 'locales'],
     overrides={
         'document_id': {
             'missing': None
         },
-        'version_hash': {
+        'version': {
             'missing': None
         },
         'locales': {

@@ -11,7 +11,6 @@ from sqlalchemy.orm import relationship
 from colander import MappingSchema, SchemaNode, String as ColanderString
 from itertools import ifilter
 import abc
-import uuid
 import enum
 
 from c2corg_api.models import Base, schema
@@ -40,7 +39,7 @@ class _DocumentMixin(object):
     Contains the attributes that are common for `Document` and
     `ArchiveDocument`.
     """
-    version_hash = Column(String(32), nullable=False)
+    version = Column(Integer, nullable=False)
     # move to metadata?
     protected = Column(Boolean)
     redirects_to = Column(Integer)
@@ -69,12 +68,11 @@ class Document(Base, _DocumentMixin):
     locales = relationship('DocumentLocale')
 
     __mapper_args__ = {
-            'version_id_col': _DocumentMixin.version_hash,
-            'version_id_generator': lambda version: uuid.uuid4().hex
+            'version_id_col': _DocumentMixin.version
     }
 
     _ATTRIBUTES_WHITELISTED = \
-        ['document_id', 'version_hash']
+        ['document_id', 'version']
 
     _ATTRIBUTES = \
         _ATTRIBUTES_WHITELISTED + ['protected', 'redirects_to', 'quality']
@@ -114,9 +112,9 @@ class Document(Base, _DocumentMixin):
         """Get the version hashs of this document and of all its locales.
         """
         return {
-            'document': self.version_hash,
+            'document': self.version,
             'locales': {
-                locale.culture: locale.version_hash for locale in self.locales
+                locale.culture: locale.version for locale in self.locales
             }
         }
 
@@ -129,14 +127,14 @@ class Document(Base, _DocumentMixin):
         changes the hash, when something has changed, we can easily detect
         what has changed.
         """
-        figures_equal = self.version_hash == old_versions['document']
+        figures_equal = self.version == old_versions['document']
 
         changed_langs = []
         locale_versions = old_versions['locales']
         for locale in self.locales:
             locale_version = locale_versions.get(locale.culture)
 
-            if not (locale_version and locale_version == locale.version_hash):
+            if not (locale_version and locale_version == locale.version):
                 # new locale or locale has changed
                 changed_langs.append(locale.culture)
 
@@ -175,7 +173,7 @@ class ArchiveDocument(Base, _DocumentMixin):
 # Locales for documents
 class _DocumentLocaleMixin(object):
     id = Column(Integer, primary_key=True)
-    version_hash = Column(String(32))
+    version = Column(Integer, nullable=False)
 
     @declared_attr
     def document_id(self):
@@ -205,12 +203,11 @@ class DocumentLocale(Base, _DocumentLocaleMixin):
     __mapper_args__ = {
         'polymorphic_identity': 'd',
         'polymorphic_on': _DocumentLocaleMixin.type,
-        'version_id_col': _DocumentLocaleMixin.version_hash,
-        'version_id_generator': lambda version: uuid.uuid4().hex
+        'version_id_col': _DocumentLocaleMixin.version
     }
 
     _ATTRIBUTES = \
-        ['document_id', 'version_hash', 'culture', 'title', 'description']
+        ['document_id', 'version', 'culture', 'title', 'description']
 
     def to_archive(self, locale):
         copy_attributes(self, locale, DocumentLocale._ATTRIBUTES)
