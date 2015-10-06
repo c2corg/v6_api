@@ -17,6 +17,10 @@ To set up the database
 
     scripts/create_user_db.sh
 
+If you want to specify a specific string as user, you can instead use:
+
+    USER=something scripts/create_user_db.sh
+
 Run the application
 -------------------
 
@@ -59,6 +63,10 @@ Run the tests
 Create a database that will be used to run the tests:
 
     scripts/create_user_db_test.sh
+
+If you want to specify a specific string as user you can instead enter:
+
+   USER=something scripts/create_user_db_test.sh
 
 Then run the tests with:
 
