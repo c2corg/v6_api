@@ -48,9 +48,14 @@ class DocumentRest(object):
             schema.objectify(self.request.validated['document'])
         self._check_document_id(id, document_in.document_id)
 
+        # get the current version of the document
         document = self._get_document(clazz, id)
         self._check_versions(document, document_in)
+
+        # remember the current version numbers of the document
         old_versions = document.get_versions()
+
+        # update the document with the input document
         document.update(document_in)
 
         try:
@@ -58,6 +63,10 @@ class DocumentRest(object):
         except StaleDataError:
             raise HTTPConflict('concurrent modification')
 
+        # when flushing the session, SQLAlchemy automatically updates the
+        # version numbers in case attributes have changed. by comparing with
+        # the old version numbers, we can check if only figures or only locales
+        # have changed.
         (update_type, changed_langs) = \
             self._check_update_type(document, old_versions)
         self._update_version(
