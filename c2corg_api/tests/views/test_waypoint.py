@@ -38,6 +38,8 @@ class TestWaypointRest(BaseTestRest):
         self.assertEqual(actual_total, total)
 
     def test_get_collection_paginated(self):
+        self.app.get("/waypoints?offset=invalid", status=400)
+
         self.assertResultsEqual(self.get_collection({
             'total': 42,
             'offset': 0,

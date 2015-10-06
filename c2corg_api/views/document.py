@@ -18,11 +18,10 @@ class DocumentRest(object):
         self.request = request
 
     def _paginate_offset(self, clazz, schema, adapt_schema):
-        offset = self.request.GET.get('offset')
-        limit = self.request.GET.get('limit')
-        total = self.request.GET.get('total')
-        offset = 0 if offset is None else int(offset)
-        limit = 30 if limit is None else int(limit)
+        validated = self.request.validated
+        offset = validated['offset'] if 'offset' in validated else 0
+        limit = validated['limit'] if 'limit' in validated else 30
+        total = validated['total'] if 'total' in validated else None
 
         base_query = DBSession. \
             query(clazz)
@@ -34,7 +33,7 @@ class DocumentRest(object):
             all()
         set_available_cultures(documents)
 
-        total = base_query.count() if total is None else int(total)
+        total = base_query.count() if total is None else total
 
         return {
             'documents': [
@@ -47,8 +46,8 @@ class DocumentRest(object):
         }
 
     def _paginate_after(self, clazz, schema, adapt_schema):
-        after = self.request.GET.get('after')
-        limit = self.request.GET.get('limit')
+        after = self.request.validated['after']
+        limit = self.request.validated['limit']
         after_id = int(after)
         limit = 30 if limit is None else int(limit)
 
@@ -74,7 +73,7 @@ class DocumentRest(object):
         }
 
     def _paginate(self, clazz, schema, adapt_schema):
-        if self.request.GET.get('after') is not None:
+        if 'after' in self.request.validated:
             return self._paginate_after(clazz, schema, adapt_schema)
         else:
             return self._paginate_offset(clazz, schema, adapt_schema)
