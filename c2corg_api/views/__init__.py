@@ -1,6 +1,32 @@
 import collections
 import datetime
 from colander import null
+from pyramid.httpexceptions import HTTPError, HTTPNotFound
+from pyramid.view import view_config
+from cornice import Errors
+from cornice.util import json_error
+
+
+@view_config(context=HTTPNotFound)
+@view_config(context=HTTPError)
+def http_error_handler(exc, request):
+    """In case of a HTTP error, return the error details as JSON, e.g.:
+
+        {
+            "status": "error",
+            "errors": [
+                {
+                    "location": "request",
+                    "name": "Not Found",
+                    "description": "document not found"
+                }
+            ]
+        }
+    """
+    errors = Errors(request, exc.code)
+    errors.add('request', exc.title, exc.detail)
+
+    return json_error(errors)
 
 
 def to_json_dict(obj, schema):

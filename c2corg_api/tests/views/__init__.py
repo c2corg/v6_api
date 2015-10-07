@@ -128,29 +128,39 @@ class BaseTestRest(BaseTestCase):
         return (body, doc)
 
     def put_wrong_document_id(self, request_body):
-        self.app.put_json(
+        response = self.app.put_json(
             self._prefix + '/-9999', request_body, status=404)
-        # TODO check error in detail
+        body = response.json
+        self.assertEqual(body['status'], 'error')
+        self.assertEqual(body['errors'][0]['name'], 'Not Found')
 
     def put_wrong_version(self, request_body, id):
-        self.app.put_json(
+        response = self.app.put_json(
             self._prefix + '/' + str(id), request_body, status=409)
-        # TODO check error in detail
+        body = response.json
+        self.assertEqual(body['status'], 'error')
+        self.assertEqual(body['errors'][0]['name'], 'Conflict')
 
     def put_wrong_ids(self, request_body, id):
         """The id given in the URL does not equal the document_id in the
         request body.
         """
-        self.app.put_json(
+        response = self.app.put_json(
             self._prefix + '/' + str(id + 1), request_body, status=400)
-        # TODO check error in detail
+        body = response.json
+        self.assertEqual(body['status'], 'error')
+        self.assertEqual(body['errors'][0]['name'], 'Bad Request')
 
     def put_put_no_document(self, id):
         request_body = {
             'message': '...'
         }
-        self.app.put_json(
+        response = self.app.put_json(
             self._prefix + '/' + str(id), request_body, status=400)
+        body = response.json
+        self.assertEqual(body['status'], 'error')
+        self.assertEqual(
+            body['errors'][0]['description'], 'document is missing')
 
     def put_success_all(self, request_body, document):
         """Test updating a document with changes to the figures and locales.
