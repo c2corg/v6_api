@@ -17,7 +17,7 @@ requires = [
     'zope.sqlalchemy',
     'waitress',
     'psycopg2',
-    'cornice',
+    'cornice>=1.1.0',
     'colander',
     'ColanderAlchemy>=0.3.2',
     'enum34',
