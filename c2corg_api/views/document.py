@@ -31,6 +31,7 @@ class DocumentRest(object):
 
     def _collection_post(self, clazz, schema):
         document = schema.objectify(self.request.validated)
+        document.reset_id_and_version()
 
         # TODO additional validation: at least one culture, only one instance
         # for each culture

@@ -52,14 +52,23 @@ class TestWaypointRest(BaseTestRest):
 
     def test_post_success(self):
         body = {
+            'document_id': 1234,
+            'version': 2345,
             'waypoint_type': 'summit',
             'elevation': 3779,
             'locales': [
-                {'culture': 'en', 'title': 'Mont Pourri',
+                {'id': 3456, 'version': 4567,
+                 'culture': 'en', 'title': 'Mont Pourri',
                  'pedestrian_access': 'y'}
             ]
         }
         body, doc = self.post_success(body)
+
+        # test that document_id and version was reset
+        self.assertNotEqual(body.get('document_id'), 1234)
+        self.assertNotEqual(body.get('version'), 2345)
+        self.assertNotEqual(body.get('locales')[0].get('document_id'), 3456)
+        self.assertNotEqual(body.get('locales')[0].get('version'), 4567)
         version = doc.versions[0]
 
         archive_waypoint = version.document_archive
@@ -228,7 +237,8 @@ class TestWaypointRest(BaseTestRest):
                 'waypoint_type': 'summit',
                 'elevation': 2203,
                 'locales': [
-                    {'culture': 'es', 'title': 'Mont Granier',
+                    {'id': 1234, 'version': 2345,
+                     'culture': 'es', 'title': 'Mont Granier',
                      'description': '...', 'pedestrian_access': 'si'}
                 ]
             }
@@ -236,6 +246,8 @@ class TestWaypointRest(BaseTestRest):
         (body, waypoint) = self.put_success_new_lang(body, self.waypoint)
 
         self.assertEquals(waypoint.get_locale('es').pedestrian_access, 'si')
+        self.assertNotEqual(waypoint.get_locale('es').version, 2345)
+        self.assertNotEqual(waypoint.get_locale('es').id, 1234)
 
     def _add_test_data(self):
         self.waypoint = Waypoint(

@@ -155,6 +155,12 @@ class Document(Base, _DocumentMixin):
             ifilter(lambda locale: locale.culture == culture, self.locales),
             None)
 
+    def reset_id_and_version(self):
+        self.document_id = None
+        self.version = None
+        for locale in self.locales:
+            locale.version = None
+
 
 class ArchiveDocument(Base, _DocumentMixin):
     """
