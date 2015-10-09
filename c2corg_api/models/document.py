@@ -39,7 +39,7 @@ class _DocumentMixin(object):
     Contains the attributes that are common for `Document` and
     `ArchiveDocument`.
     """
-    version = Column(Integer, nullable=False)
+    version = Column(Integer, nullable=False, default=1)
     # move to metadata?
     protected = Column(Boolean)
     redirects_to = Column(Integer)
@@ -179,7 +179,7 @@ class ArchiveDocument(Base, _DocumentMixin):
 # Locales for documents
 class _DocumentLocaleMixin(object):
     id = Column(Integer, primary_key=True)
-    version = Column(Integer, nullable=False)
+    version = Column(Integer, nullable=False, default=1)
 
     @declared_attr
     def document_id(self):
