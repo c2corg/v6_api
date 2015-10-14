@@ -1,5 +1,10 @@
+import json
+from shapely.geometry import shape, Point
+
 from c2corg_api.models.waypoint import (
     Waypoint, WaypointLocale, ArchiveWaypoint, ArchiveWaypointLocale)
+from c2corg_api.models.document import (
+    DocumentGeometry, ArchiveDocumentGeometry)
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseTestRest
@@ -17,7 +22,8 @@ class TestWaypointRest(BaseTestRest):
         self.get_collection()
 
     def test_get(self):
-        self.get(self.waypoint)
+        body = self.get(self.waypoint)
+        self._assert_geometry(body)
 
     def test_get_lang(self):
         self.get_lang(self.waypoint)
@@ -54,6 +60,10 @@ class TestWaypointRest(BaseTestRest):
         body = {
             'document_id': 1234,
             'version': 2345,
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
+            },
             'waypoint_type': 'summit',
             'elevation': 3779,
             'locales': [
@@ -63,12 +73,15 @@ class TestWaypointRest(BaseTestRest):
             ]
         }
         body, doc = self.post_success(body)
+        self._assert_geometry(body)
 
         # test that document_id and version was reset
         self.assertNotEqual(body.get('document_id'), 1234)
-        self.assertNotEqual(body.get('version'), 2345)
-        self.assertNotEqual(body.get('locales')[0].get('document_id'), 3456)
-        self.assertNotEqual(body.get('locales')[0].get('version'), 4567)
+        self.assertEqual(body.get('version'), 1)
+        self.assertNotEqual(doc.locales[0].id, 3456)
+        self.assertEqual(body.get('locales')[0].get('version'), 1)
+        self.assertNotEqual(doc.geometry.id, 5678)
+        self.assertEqual(doc.geometry.version, 1)
         version = doc.versions[0]
 
         archive_waypoint = version.document_archive
@@ -79,6 +92,10 @@ class TestWaypointRest(BaseTestRest):
         self.assertEqual(archive_locale.culture, 'en')
         self.assertEqual(archive_locale.title, 'Mont Pourri')
         self.assertEqual(archive_locale.pedestrian_access, 'y')
+
+        archive_geometry = version.document_geometry_archive
+        self.assertEqual(archive_geometry.version, doc.geometry.version)
+        self.assertIsNotNone(archive_geometry.geom)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -157,7 +174,11 @@ class TestWaypointRest(BaseTestRest):
                     {'culture': 'en', 'title': 'Mont Granier',
                      'description': 'A.', 'pedestrian_access': 'n',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'geometry': {
+                    'version': self.waypoint.geometry.version,
+                    'geom': '{"type": "Point", "coordinates": [1, 2]}'
+                }
             }
         }
         (body, waypoint) = self.put_success_all(body, self.waypoint)
@@ -177,6 +198,78 @@ class TestWaypointRest(BaseTestRest):
         archive_document_en = version_en.document_archive
         self.assertEqual(archive_document_en.waypoint_type, 'summit')
         self.assertEqual(archive_document_en.elevation, 1234)
+
+        archive_geometry_en = version_en.document_geometry_archive
+        self.assertEqual(archive_geometry_en.version, 2)
+
+        # version with culture 'fr'
+        version_fr = versions[3]
+        archive_locale = version_fr.document_locales_archive
+        self.assertEqual(archive_locale.title, 'Mont Granier')
+        self.assertEqual(archive_locale.pedestrian_access, 'ouai')
+
+    def test_put_success_figures_and_lang_only(self):
+        body_put = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.waypoint.document_id,
+                'version': self.waypoint.version,
+                'waypoint_type': 'summit',
+                'elevation': 1234,
+                'locales': [
+                    {'culture': 'en', 'title': 'Mont Granier',
+                     'description': 'A.', 'pedestrian_access': 'n',
+                     'version': self.locale_en.version}
+                ]
+            }
+        }
+        (body, waypoint) = self.put_success_all(body_put, self.waypoint)
+        document_id = body.get('document_id')
+        self.assertEquals(body.get('version'), 2)
+
+        self.session.expire_all()
+        # check that a new archive_document was created
+        archive_count = self.session.query(self._model_archive). \
+            filter(
+                getattr(self._model_archive, 'document_id') == document_id). \
+            count()
+        self.assertEqual(archive_count, 2)
+
+        # check that a new archive_document_locale was created
+        archive_locale_count = \
+            self.session.query(self._model_archive_locale). \
+            filter(
+                document_id == getattr(
+                    self._model_archive_locale, 'document_id')
+            ). \
+            count()
+        self.assertEqual(archive_locale_count, 3)
+
+        # check that a new archive_document_geometry was created
+        archive_geometry_count = \
+            self.session.query(ArchiveDocumentGeometry). \
+            filter(document_id == ArchiveDocumentGeometry.document_id). \
+            count()
+        self.assertEqual(archive_geometry_count, 1)
+
+        self.assertEquals(waypoint.elevation, 1234)
+        locale_en = waypoint.get_locale('en')
+        self.assertEquals(locale_en.description, 'A.')
+        self.assertEquals(locale_en.pedestrian_access, 'n')
+
+        # version with culture 'en'
+        versions = waypoint.versions
+        version_en = versions[2]
+        archive_locale = version_en.document_locales_archive
+        self.assertEqual(archive_locale.title, 'Mont Granier')
+        self.assertEqual(archive_locale.pedestrian_access, 'n')
+
+        archive_document_en = version_en.document_archive
+        self.assertEqual(archive_document_en.waypoint_type, 'summit')
+        self.assertEqual(archive_document_en.elevation, 1234)
+
+        archive_geometry_en = version_en.document_geometry_archive
+        self.assertEqual(archive_geometry_en.version, 1)
 
         # version with culture 'fr'
         version_fr = versions[3]
@@ -249,6 +342,95 @@ class TestWaypointRest(BaseTestRest):
         self.assertNotEqual(waypoint.get_locale('es').version, 2345)
         self.assertNotEqual(waypoint.get_locale('es').id, 1234)
 
+    def test_put_add_geometry(self):
+        """Tests adding a geometry to a waypoint without geometry.
+        """
+        # first create a waypoint with no geometry
+        body_post = {
+            'waypoint_type': 'summit',
+            'elevation': 3779,
+            'locales': [
+                {'culture': 'en', 'title': 'Mont Pourri',
+                 'pedestrian_access': 'y'}
+            ]
+        }
+        body, doc = self.post_success(body_post)
+
+        # then add a geometry to the waypoint
+        body_put = {
+            'message': 'Adding geom',
+            'document': {
+                'document_id': doc.document_id,
+                'version': doc.version,
+                'geometry': {
+                    'geom':
+                        '{"type": "Point", "coordinates": [635956, 5723604]}'
+                },
+                'waypoint_type': 'summit',
+                'elevation': 3779,
+                'locales': []
+            }
+        }
+        response = self.app.put_json(
+            self._prefix + '/' + str(doc.document_id), body_put)
+        body = response.json
+        document_id = body.get('document_id')
+        self.assertEquals(
+            body.get('version'), body_put.get('document').get('version'))
+
+        # check that no new archive_document was created
+        self.session.expire_all()
+        document = self.session.query(self._model).get(document_id)
+
+        # check that a new archive_document was created
+        archive_count = self.session.query(self._model_archive). \
+            filter(
+                getattr(self._model_archive, 'document_id') == document_id). \
+            count()
+        self.assertEqual(archive_count, 1)
+
+        # check that no new archive_document_locale was created
+        archive_locale_count = \
+            self.session.query(self._model_archive_locale). \
+            filter(
+                document_id == getattr(
+                    self._model_archive_locale, 'document_id')
+            ). \
+            count()
+        self.assertEqual(archive_locale_count, 1)
+
+        # check that a new archive_document_geometry was created
+        archive_locale_count = \
+            self.session.query(ArchiveDocumentGeometry). \
+            filter(document_id == ArchiveDocumentGeometry.document_id). \
+            count()
+        self.assertEqual(archive_locale_count, 1)
+
+        # check that new versions were created
+        versions = document.versions
+        self.assertEqual(len(versions), 2)
+
+        # version with culture 'en'
+        version_en = versions[1]
+
+        self.assertEqual(version_en.culture, 'en')
+
+        meta_data_en = version_en.history_metadata
+        self.assertEqual(meta_data_en.comment, 'Adding geom')
+        self.assertIsNotNone(meta_data_en.written_at)
+
+    def _assert_geometry(self, body):
+        self.assertIsNotNone(body.get('geometry'))
+        geometry = body.get('geometry')
+        self.assertIsNotNone(geometry.get('version'))
+        self.assertIsNotNone(geometry.get('geom'))
+
+        geom = geometry.get('geom')
+        point = shape(json.loads(geom))
+        self.assertIsInstance(point, Point)
+        self.assertAlmostEqual(point.x, 635956)
+        self.assertAlmostEqual(point.y, 5723604)
+
     def _add_test_data(self):
         self.waypoint = Waypoint(
             waypoint_type='summit', elevation=2203)
@@ -263,6 +445,9 @@ class TestWaypointRest(BaseTestRest):
 
         self.waypoint.locales.append(self.locale_en)
         self.waypoint.locales.append(self.locale_fr)
+
+        self.waypoint.geometry = DocumentGeometry(
+            geom='SRID=3857;POINT(635956 5723604)')
 
         self.session.add(self.waypoint)
         self.session.flush()
