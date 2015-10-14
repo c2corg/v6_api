@@ -9,7 +9,8 @@ from sqlalchemy.orm import relationship, backref
 import datetime
 
 from c2corg_api.models import Base, schema
-from document import Document, ArchiveDocument, ArchiveDocumentLocale
+from document import (
+    Document, ArchiveDocument, ArchiveDocumentLocale, ArchiveDocumentGeometry)
 
 
 class HistoryMetaData(Base):
@@ -48,6 +49,12 @@ class DocumentVersion(Base):
     document_locales_archive = relationship(
         ArchiveDocumentLocale,
         primaryjoin=document_locales_archive_id == ArchiveDocumentLocale.id)
+
+    document_geometry_archive_id = Column(
+        Integer, ForeignKey(schema + '.documents_geometries_archives.id'))
+    document_geometry_archive = relationship(
+        ArchiveDocumentGeometry,
+        primaryjoin=document_geometry_archive_id == ArchiveDocumentGeometry.id)
 
     history_metadata_id = Column(
         Integer, ForeignKey(schema + '.history_metadata.id'), nullable=False)
