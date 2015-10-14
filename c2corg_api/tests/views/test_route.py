@@ -1,5 +1,9 @@
+import json
+from shapely.geometry import shape, LineString
+
 from c2corg_api.models.route import (
     Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale)
+from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseTestRest
@@ -20,6 +24,7 @@ class TestRouteRest(BaseTestRest):
         body = self.get(self.route)
         self.assertEqual(
             body.get('activities'), self.route.activities)
+        self._assert_geometry(body)
 
     def test_get_lang(self):
         self.get_lang(self.route)
@@ -56,12 +61,19 @@ class TestRouteRest(BaseTestRest):
         body = {
             'activities': 'hiking',
             'height': 750,
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom': '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635966, 5723644]]}'
+            },
             'locales': [
                 {'culture': 'en', 'title': 'Some nice loop',
                  'gear': 'shoes'}
             ]
         }
         body, doc = self.post_success(body)
+        self._assert_geometry(body)
+
         version = doc.versions[0]
 
         archive_route = version.document_archive
@@ -71,6 +83,10 @@ class TestRouteRest(BaseTestRest):
         archive_locale = version.document_locales_archive
         self.assertEqual(archive_locale.culture, 'en')
         self.assertEqual(archive_locale.title, 'Some nice loop')
+
+        archive_geometry = version.document_geometry_archive
+        self.assertEqual(archive_geometry.version, doc.geometry.version)
+        self.assertIsNotNone(archive_geometry.geom)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -151,7 +167,12 @@ class TestRouteRest(BaseTestRest):
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'geometry': {
+                    'version': self.route.geometry.version,
+                    'geom': '{"type": "LineString", "coordinates": ' +
+                            '[[635956, 5723604], [635976, 5723654]]}'
+                }
             }
         }
         (body, route) = self.put_success_all(body, self.route)
@@ -171,6 +192,9 @@ class TestRouteRest(BaseTestRest):
         archive_document_en = version_en.document_archive
         self.assertEqual(archive_document_en.activities, 'paragliding')
         self.assertEqual(archive_document_en.height, 1500)
+
+        archive_geometry_en = version_en.document_geometry_archive
+        self.assertEqual(archive_geometry_en.version, 2)
 
         # version with culture 'fr'
         version_fr = versions[3]
@@ -236,6 +260,20 @@ class TestRouteRest(BaseTestRest):
 
         self.assertEquals(route.get_locale('es').gear, 'si')
 
+    def _assert_geometry(self, body):
+        self.assertIsNotNone(body.get('geometry'))
+        geometry = body.get('geometry')
+        self.assertIsNotNone(geometry.get('version'))
+        self.assertIsNotNone(geometry.get('geom'))
+
+        geom = geometry.get('geom')
+        line = shape(json.loads(geom))
+        self.assertIsInstance(line, LineString)
+        self.assertAlmostEqual(line.coords[0][0], 635956)
+        self.assertAlmostEqual(line.coords[0][1], 5723604)
+        self.assertAlmostEqual(line.coords[1][0], 635966)
+        self.assertAlmostEqual(line.coords[1][1], 5723644)
+
     def _add_test_data(self):
         self.route = Route(
             activities='paragliding', height=2000)
@@ -250,6 +288,9 @@ class TestRouteRest(BaseTestRest):
 
         self.route.locales.append(self.locale_en)
         self.route.locales.append(self.locale_fr)
+
+        self.route.geometry = DocumentGeometry(
+            geom='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)')
 
         self.session.add(self.route)
         self.session.flush()

@@ -8,12 +8,14 @@ from sqlalchemy import (
     )
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
-from colander import MappingSchema, SchemaNode, String as ColanderString
+from geoalchemy2 import Geometry
+from colander import MappingSchema, SchemaNode, String as ColanderString, null
 from itertools import ifilter
 import abc
 import enum
 
 from c2corg_api.models import Base, schema
+from c2corg_api.ext import colander_ext
 from utils import copy_attributes
 
 quality_types = [
@@ -24,7 +26,8 @@ quality_types = [
     'excellent'
     ]
 
-UpdateType = enum.Enum('UpdateType', 'FIGURES_ONLY LANG_ONLY ALL NONE')
+UpdateType = enum.Enum(
+    'UpdateType', 'FIGURES LANG GEOM')
 
 
 class Culture(Base):
@@ -66,6 +69,7 @@ class Document(Base, _DocumentMixin):
 
     # TODO constraint that there is at least one locale
     locales = relationship('DocumentLocale')
+    geometry = relationship('DocumentGeometry', uselist=False)
 
     __mapper_args__ = {
             'version_id_col': _DocumentMixin.version
@@ -94,6 +98,9 @@ class Document(Base, _DocumentMixin):
     def get_archive_locales(self):
         return [locale.to_archive() for locale in self.locales]
 
+    def get_archive_geometry(self):
+        return self.geometry.to_archive() if self.geometry else None
+
     def update(self, other):
         """Copies the attributes from `other` to this document.
         Also updates all locales.
@@ -108,6 +115,13 @@ class Document(Base, _DocumentMixin):
             else:
                 self.locales.append(locale_in)
 
+        if other.geometry:
+            if self.geometry:
+                self.geometry.update(other.geometry)
+            else:
+                self.geometry = other.geometry
+            self.geometry.document_id = self.document_id
+
     def get_versions(self):
         """Get the version hashs of this document and of all its locales.
         """
@@ -115,19 +129,22 @@ class Document(Base, _DocumentMixin):
             'document': self.version,
             'locales': {
                 locale.culture: locale.version for locale in self.locales
-            }
+            },
+            'geometry': self.geometry.version if self.geometry else None
         }
 
     def get_update_type(self, old_versions):
-        """Get the update type (only figures have changed, only locales have
-        changed, both have changed or nothing) and the languages that have
-        changed.
+        """Get the update types (figures have changed, locales have
+        changed, geometry has changed, or nothing has changed) and
+        the languages that have changed.
         This is done by comparing the old version hashs (before flushing to
         the database) with the current hashs. Because SQLAlchemy automatically
         changes the hash, when something has changed, we can easily detect
         what has changed.
         """
         figures_equal = self.version == old_versions['document']
+        geom_equal = self.geometry.version == old_versions['geometry'] if \
+            self.geometry else old_versions['geometry'] is None
 
         changed_langs = []
         locale_versions = old_versions['locales']
@@ -138,14 +155,15 @@ class Document(Base, _DocumentMixin):
                 # new locale or locale has changed
                 changed_langs.append(locale.culture)
 
-        if not figures_equal and changed_langs:
-            return (UpdateType.ALL, changed_langs)
-        elif not figures_equal:
-            return (UpdateType.FIGURES_ONLY, [])
-        elif changed_langs:
-            return (UpdateType.LANG_ONLY, changed_langs)
-        else:
-            return (UpdateType.NONE, [])
+        update_types = []
+        if not figures_equal:
+            update_types.append(UpdateType.FIGURES)
+        if not geom_equal:
+            update_types.append(UpdateType.GEOM)
+        if changed_langs:
+            update_types.append(UpdateType.LANG)
+
+        return (update_types, changed_langs)
 
     def get_locale(self, culture):
         """Get the locale with the given culture or `None` if no locale
@@ -154,12 +172,6 @@ class Document(Base, _DocumentMixin):
         return next(
             ifilter(lambda locale: locale.culture == culture, self.locales),
             None)
-
-    def reset_id_and_version(self):
-        self.document_id = None
-        self.version = None
-        for locale in self.locales:
-            locale.version = None
 
 
 class ArchiveDocument(Base, _DocumentMixin):
@@ -230,6 +242,66 @@ class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
         'polymorphic_identity': 'd',
         'polymorphic_on': _DocumentLocaleMixin.type
     }
+
+
+class _DocumentGeometryMixin(object):
+    id = Column(Integer, primary_key=True)
+    version = Column(Integer, nullable=False)
+
+    @declared_attr
+    def document_id(self):
+        return Column(
+            Integer, ForeignKey(schema + '.documents.document_id'),
+            nullable=False)
+
+    @declared_attr
+    def geom(self):
+        return Column(
+            Geometry(geometry_type='GEOMETRY', srid=3857, management=True),
+            info={
+                'colanderalchemy': {
+                    'typ': colander_ext.Geometry('GEOMETRY', srid=3857)
+                }
+            }
+        )
+
+
+class DocumentGeometry(Base, _DocumentGeometryMixin):
+    __tablename__ = 'documents_geometries'
+
+    __colanderalchemy_config__ = {
+        'missing': null
+    }
+
+    __mapper_args__ = {
+        'version_id_col': _DocumentGeometryMixin.version
+    }
+
+    _ATTRIBUTES = \
+        ['document_id', 'version', 'geom']
+
+    def to_archive(self):
+        geometry = ArchiveDocumentGeometry()
+        copy_attributes(self, geometry, DocumentGeometry._ATTRIBUTES)
+        return geometry
+
+    def update(self, other):
+        copy_attributes(other, self, DocumentGeometry._ATTRIBUTES)
+
+
+class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
+    __tablename__ = 'documents_geometries_archives'
+
+
+geometry_schema_overrides = {
+    # whitelisted attributes
+    'includes': ['version', 'geom'],
+    'overrides': {
+        'version': {
+            'missing': None
+        }
+    }
+}
 
 
 def get_update_schema(document_schema):

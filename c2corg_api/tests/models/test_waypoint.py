@@ -1,9 +1,11 @@
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.models.document import UpdateType
+from c2corg_api.models.document import UpdateType, DocumentGeometry
 
 from c2corg_api.tests import BaseTestCase
 
 from sqlalchemy.orm.exc import StaleDataError
+from shapely.geometry import Point
+from geoalchemy2.shape import from_shape
 
 
 class TestWaypoint(BaseTestCase):
@@ -16,7 +18,9 @@ class TestWaypoint(BaseTestCase):
                     id=2, culture='en', title='A', description='abc'),
                 WaypointLocale(
                     id=3, culture='fr', title='B', description='bcd'),
-            ]
+            ],
+            geometry=DocumentGeometry(
+                id=1, geom=from_shape(Point(1, 1), srid=3857))
         )
 
         waypoint_archive = waypoint.to_archive()
@@ -37,6 +41,10 @@ class TestWaypoint(BaseTestCase):
         self.assertEqual(locale_archive.culture, locale.culture)
         self.assertEqual(locale_archive.title, locale.title)
         self.assertEqual(locale_archive.description, locale.description)
+
+        archive_geometry = waypoint.get_archive_geometry()
+        self.assertIsNone(archive_geometry.id)
+        self.assertIsNotNone(archive_geometry.geom)
 
     def test_version_is_incremented(self):
         waypoint = Waypoint(
@@ -105,7 +113,10 @@ class TestWaypoint(BaseTestCase):
                 WaypointLocale(
                     id=3, culture='fr', title='B', description='bcd',
                     version=678),
-            ]
+            ],
+            geometry=DocumentGeometry(
+                id=4, geom='SRID=3857;POINT(1 2)'
+            )
         )
         waypoint_in = Waypoint(
             document_id=1, waypoint_type='summit', elevation=1234,
@@ -116,7 +127,8 @@ class TestWaypoint(BaseTestCase):
                     version=345),
                 WaypointLocale(
                     culture='es', title='D', description='efg'),
-            ]
+            ],
+            geometry=DocumentGeometry(geom='SRID=3857;POINT(3 4)')
         )
         waypoint_db.update(waypoint_in)
         self.assertEqual(waypoint_db.elevation, waypoint_in.elevation)
@@ -130,6 +142,8 @@ class TestWaypoint(BaseTestCase):
         self.assertEqual(locale_fr.title, 'B')
         self.assertEqual(locale_es.title, 'D')
 
+        self.assertEqual(waypoint_db.geometry.geom, 'SRID=3857;POINT(3 4)')
+
     def test_get_update_type_figures_only(self):
         waypoint = self._get_waypoint()
         self.session.add(waypoint)
@@ -141,8 +155,23 @@ class TestWaypoint(BaseTestCase):
         self.session.merge(waypoint)
         self.session.flush()
 
-        (type, changed_langs) = waypoint.get_update_type(versions)
-        self.assertEqual(type, UpdateType.FIGURES_ONLY)
+        (types, changed_langs) = waypoint.get_update_type(versions)
+        self.assertIn(UpdateType.FIGURES, types)
+        self.assertEqual(changed_langs, [])
+
+    def test_get_update_type_geom_only(self):
+        waypoint = self._get_waypoint()
+        self.session.add(waypoint)
+        self.session.flush()
+
+        versions = waypoint.get_versions()
+
+        waypoint.geometry.geom = 'SRID=3857;POINT(3 4)'
+        self.session.merge(waypoint)
+        self.session.flush()
+
+        (types, changed_langs) = waypoint.get_update_type(versions)
+        self.assertIn(UpdateType.GEOM, types)
         self.assertEqual(changed_langs, [])
 
     def test_get_update_type_lang_only(self):
@@ -156,8 +185,8 @@ class TestWaypoint(BaseTestCase):
         self.session.merge(waypoint)
         self.session.flush()
 
-        (type, changed_langs) = waypoint.get_update_type(versions)
-        self.assertEqual(type, UpdateType.LANG_ONLY)
+        (types, changed_langs) = waypoint.get_update_type(versions)
+        self.assertIn(UpdateType.LANG, types)
         self.assertEqual(changed_langs, ['en'])
 
     def test_get_update_type_lang_only_new_lang(self):
@@ -172,8 +201,8 @@ class TestWaypoint(BaseTestCase):
         self.session.merge(waypoint)
         self.session.flush()
 
-        (type, changed_langs) = waypoint.get_update_type(versions)
-        self.assertEqual(type, UpdateType.LANG_ONLY)
+        (types, changed_langs) = waypoint.get_update_type(versions)
+        self.assertIn(UpdateType.LANG, types)
         self.assertEqual(changed_langs, ['es'])
 
     def test_get_update_type_all(self):
@@ -191,8 +220,10 @@ class TestWaypoint(BaseTestCase):
         self.session.merge(waypoint)
         self.session.flush()
 
-        (type, changed_langs) = waypoint.get_update_type(versions)
-        self.assertEqual(type, UpdateType.ALL)
+        (types, changed_langs) = waypoint.get_update_type(versions)
+        self.assertIn(UpdateType.LANG, types)
+        self.assertIn(UpdateType.FIGURES, types)
+        self.assertNotIn(UpdateType.GEOM, types)
         self.assertEqual(changed_langs, ['en', 'es'])
 
     def test_get_update_type_none(self):
@@ -204,9 +235,16 @@ class TestWaypoint(BaseTestCase):
         self.session.merge(waypoint)
         self.session.flush()
 
-        (type, changed_langs) = waypoint.get_update_type(versions)
-        self.assertEqual(type, UpdateType.NONE)
+        (types, changed_langs) = waypoint.get_update_type(versions)
+        self.assertEqual(types, [])
         self.assertEqual(changed_langs, [])
+
+    def test_save_geometry(self):
+        waypoint = self._get_waypoint()
+        waypoint.geometry = DocumentGeometry(
+            geom='SRID=3857;POINT(635956.075332665 5723604.677994)')
+        self.session.add(waypoint)
+        self.session.flush()
 
     def _get_waypoint(self):
         return Waypoint(
@@ -218,5 +256,7 @@ class TestWaypoint(BaseTestCase):
                 WaypointLocale(
                     culture='fr', title='B', description='bcd',
                     pedestrian_access='y')
-            ]
+            ],
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956.075332665 5723604.677994)')
         )

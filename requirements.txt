@@ -1,4 +1,7 @@
 --index-url http://pypi.camptocamp.net/pypi
 -e git+https://github.com/camptocamp/pyramid_closure#egg=pyramid_closure
 
+# needed for ColanderAlchemy: https://github.com/stefanofontanelli/ColanderAlchemy/pull/90
+git+https://github.com/tsauerwein/ColanderAlchemy.git@objectify-none
+
 -e .

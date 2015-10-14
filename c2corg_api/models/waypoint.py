@@ -13,7 +13,7 @@ from c2corg_api.models import schema
 from utils import copy_attributes
 from document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
-    get_update_schema)
+    get_update_schema, geometry_schema_overrides)
 from c2corg_api.attributes import waypoint_types
 
 
@@ -116,12 +116,13 @@ schema_waypoint_locale = SQLAlchemySchemaNode(
         }
     })
 
+
 schema_waypoint = SQLAlchemySchemaNode(
     Waypoint,
     # whitelisted attributes
     includes=[
         'document_id', 'version', 'waypoint_type', 'elevation',
-        'maps_info', 'locales'],
+        'maps_info', 'locales', 'geometry'],
     overrides={
         'document_id': {
             'missing': None
@@ -131,7 +132,8 @@ schema_waypoint = SQLAlchemySchemaNode(
         },
         'locales': {
             'children': [schema_waypoint_locale]
-        }
+        },
+        'geometry': geometry_schema_overrides
     })
 
 schema_update_waypoint = get_update_schema(schema_waypoint)

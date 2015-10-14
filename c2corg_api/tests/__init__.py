@@ -23,7 +23,7 @@ def setup_package():
     # set up database
     engine = get_engine()
     DBSession.configure(bind=engine)
-#     Base.metadata.drop_all(engine)
+    Base.metadata.drop_all(engine)
     initializedb.setup_db(engine, DBSession)
     DBSession.remove()
 

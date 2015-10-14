@@ -21,6 +21,9 @@ requires = [
     'colander',
     'ColanderAlchemy>=0.3.2',
     'enum34',
+    'geoalchemy2',
+    'shapely',
+    'pyproj',
     ]
 
 setup(name='c2corg_api',

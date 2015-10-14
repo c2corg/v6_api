@@ -4,7 +4,8 @@ from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, HTTPBadRequest
 
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.document import (
-    UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument)
+    UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
+    ArchiveDocumentGeometry)
 from c2corg_api.models import DBSession
 from c2corg_api.views import to_json_dict
 
@@ -31,10 +32,10 @@ class DocumentRest(object):
 
     def _collection_post(self, clazz, schema):
         document = schema.objectify(self.request.validated)
-        document.reset_id_and_version()
+        document.document_id = None
 
         # TODO additional validation: at least one culture, only one instance
-        # for each culture
+        # for each culture, geometry
 
         DBSession.add(document)
         DBSession.flush()
@@ -82,6 +83,7 @@ class DocumentRest(object):
         If no document exists for the given id, a `HTTPNotFound` exception is
         raised.
         """
+        # TODO eager load geometry?
         if not culture:
             document = DBSession. \
                 query(clazz). \
@@ -105,6 +107,7 @@ class DocumentRest(object):
     def _create_new_version(self, document):
         archive = document.to_archive()
         archive_locales = document.get_archive_locales()
+        archive_geometry = document.get_archive_geometry()
 
         meta_data = HistoryMetaData(comment='creation')
         versions = []
@@ -114,6 +117,7 @@ class DocumentRest(object):
                 culture=locale.culture,
                 document_archive=archive,
                 document_locales_archive=locale,
+                document_geometry_archive=archive_geometry,
                 history_metadata=meta_data
             )
             versions.append(version)
@@ -124,14 +128,16 @@ class DocumentRest(object):
         DBSession.add_all(versions)
         DBSession.flush()
 
-    def _update_version(self, document, comment, update_type, changed_langs):
-        assert update_type != UpdateType.NONE
+    def _update_version(self, document, comment, update_types, changed_langs):
+        assert update_types
 
         meta_data = HistoryMetaData(comment=comment)
-        archive = self._get_document_archive(document, update_type)
+        archive = self._get_document_archive(document, update_types)
+        geometry_archive = \
+            self._get_geometry_archive(document, update_types)
 
         cultures = \
-            self._get_cultures_to_update(document, update_type, changed_langs)
+            self._get_cultures_to_update(document, update_types, changed_langs)
         locale_versions = []
         for culture in cultures:
             locale = document.get_locale(culture)
@@ -141,6 +147,7 @@ class DocumentRest(object):
                 document_id=document.document_id,
                 culture=locale.culture,
                 document_archive=archive,
+                document_geometry_archive=geometry_archive,
                 document_locales_archive=locale_archive,
                 history_metadata=meta_data
             )
@@ -151,9 +158,8 @@ class DocumentRest(object):
         DBSession.add_all(locale_versions)
         DBSession.flush()
 
-    def _get_document_archive(self, document, update_type):
-        if (update_type == UpdateType.FIGURES_ONLY or
-                update_type == UpdateType.ALL):
+    def _get_document_archive(self, document, update_types):
+        if (UpdateType.FIGURES in update_types):
             # the document has changed, create a new archive version
             archive = document.to_archive()
         else:
@@ -165,13 +171,32 @@ class DocumentRest(object):
                 one()
         return archive
 
-    def _get_cultures_to_update(self, document, update_type, changed_langs):
-        if update_type == UpdateType.LANG_ONLY:
-            # if the figures have no been changed, only update the locales that
-            # have been changed
+    def _get_geometry_archive(self, document, update_types):
+        if not document.geometry:
+            return None
+        elif (UpdateType.GEOM in update_types):
+            # the geometry has changed, create a new archive version
+            archive = document.geometry.to_archive()
+        else:
+            # the geometry has not changed, load the previous archive version
+            archive = DBSession.query(ArchiveDocumentGeometry). \
+                filter(
+                    ArchiveDocumentGeometry.version ==
+                    document.geometry.version,
+                    ArchiveDocumentGeometry.document_id ==
+                    document.document_id
+                ). \
+                one()
+        return archive
+
+    def _get_cultures_to_update(self, document, update_types, changed_langs):
+        if UpdateType.GEOM not in update_types and \
+                UpdateType.FIGURES not in update_types:
+            # if the figures or geometry have no been changed, only update the
+            # locales that have been changed
             return changed_langs
         else:
-            # if the figures have been changed, update all locales
+            # if the figures or geometry have been changed, update all locales
             return [locale.culture for locale in document.locales]
 
     def _get_locale_archive(self, locale, changed_langs):
@@ -197,8 +222,9 @@ class DocumentRest(object):
                 'id in the url does not match document_id in request body')
 
     def _check_versions(self, document, document_in):
-        """Check that the passed-in document and all passed-in locales have
-        the same version as the current document and locales in the database.
+        """Check that the passed-in document, geometry and all passed-in
+        locales have the same version as the current document, geometry and
+        locales in the database.
         If not (that is the document has changed), a `HTTPConflict` exception
         is raised.
         """
@@ -211,14 +237,16 @@ class DocumentRest(object):
                     raise HTTPConflict(
                         'version of locale \'%s\' has changed'
                         % locale.culture)
+        if document.geometry and document_in.geometry:
+            if document.geometry.version != document_in.geometry.version:
+                raise HTTPConflict('version of geometry has changed')
 
     def _check_update_type(self, document, old_versions):
-        """Get the update type (only figures have changed, only locales have
-        changed, both have changed or nothing).
+        """Get the update types (figures, locales, geometry have changed?).
         """
-        (update_type, changed_langs) = document.get_update_type(old_versions)
-        if update_type == UpdateType.NONE:
+        (update_types, changed_langs) = document.get_update_type(old_versions)
+        if not update_types:
             # nothing has changed, so no need to create a new version
             raise HTTPBadRequest(
                 'trying do update the document with the same content')
-        return (update_type, changed_langs)
+        return (update_types, changed_langs)

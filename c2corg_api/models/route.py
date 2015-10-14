@@ -13,7 +13,7 @@ from c2corg_api.models import schema
 from utils import copy_attributes
 from document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
-    get_update_schema)
+    get_update_schema, geometry_schema_overrides)
 from c2corg_api.attributes import activities
 
 
@@ -119,7 +119,8 @@ schema_route = SQLAlchemySchemaNode(
     Route,
     # whitelisted attributes
     includes=[
-        'document_id', 'version', 'activities', 'height', 'locales'],
+        'document_id', 'version', 'activities', 'height', 'locales',
+        'geometry'],
     overrides={
         'document_id': {
             'missing': None
@@ -129,7 +130,8 @@ schema_route = SQLAlchemySchemaNode(
         },
         'locales': {
             'children': [schema_route_locale]
-        }
+        },
+        'geometry': geometry_schema_overrides
     })
 
 schema_update_route = get_update_schema(schema_route)
