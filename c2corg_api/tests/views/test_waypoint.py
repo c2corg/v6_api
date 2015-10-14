@@ -56,6 +56,9 @@ class TestWaypointRest(BaseTestRest):
         }
         self.post_non_whitelisted_attribute(body)
 
+    def test_post_missing_content_type(self):
+        self.post_missing_content_type({})
+
     def test_post_success(self):
         body = {
             'document_id': 1234,

@@ -1,3 +1,5 @@
+import json
+
 from c2corg_api.tests import BaseTestCase
 
 
@@ -93,6 +95,18 @@ class BaseTestRest(BaseTestCase):
         # the value for `protected` was ignored
         self.assertFalse(document.protected)
         return (body, document)
+
+    def post_missing_content_type(self, request_body):
+        response = self.app.post(
+            self._prefix, params=json.dumps(request_body), status=415)
+
+        body = response.json
+        self.assertEqual(body.get('status'), 'error')
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].get('location'), 'header')
+        self.assertEqual(errors[0].get('name'), 'Content-Type')
+        return body
 
     def post_success(self, request_body):
         response = self.app.post_json(self._prefix, request_body, status=200)

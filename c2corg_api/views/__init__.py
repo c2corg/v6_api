@@ -4,7 +4,8 @@ from colander import null
 from pyramid.httpexceptions import HTTPError, HTTPNotFound
 from pyramid.view import view_config
 from cornice import Errors
-from cornice.util import json_error
+from cornice.util import json_error, _JSONError
+from cornice.resource import view
 from geoalchemy2 import WKBElement
 from geoalchemy2.shape import to_shape
 from shapely.geometry import mapping
@@ -27,10 +28,21 @@ def http_error_handler(exc, request):
             ]
         }
     """
+    if isinstance(exc, _JSONError):
+        # if it is an error from Cornice, just return it
+        return exc
+
     errors = Errors(request, exc.code)
     errors.add('request', exc.title, exc.detail)
 
     return json_error(errors)
+
+
+def json_view(**kw):
+    """ A Cornice view that expects 'application/json' as content-type.
+    """
+    kw['content_type'] = 'application/json'
+    return view(**kw)
 
 
 def to_json_dict(obj, schema):
