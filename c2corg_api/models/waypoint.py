@@ -6,10 +6,13 @@ from sqlalchemy import (
     ForeignKey,
     Enum
     )
+from geoalchemy2 import Geometry
 
 from colanderalchemy import SQLAlchemySchemaNode
 
 from c2corg_api.models import schema
+from c2corg_api.ext import colander_ext
+
 from utils import copy_attributes
 from document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
@@ -24,6 +27,15 @@ class _WaypointMixin(object):
 
     elevation = Column(SmallInteger)
     maps_info = Column(String(300))
+    geom = Column(
+        Geometry(geometry_type='POINT', srid=3857, management=True), info={
+            'colanderalchemy': {
+                'typ': colander_ext.Geometry(
+                    'POINT', srid=3857, map_srid=4326
+                )
+            }
+        }
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': 'w'
@@ -39,7 +51,7 @@ class Waypoint(_WaypointMixin, Document):
         Integer,
         ForeignKey(schema + '.documents.document_id'), primary_key=True)
 
-    _ATTRIBUTES = ['waypoint_type', 'elevation', 'maps_info']
+    _ATTRIBUTES = ['waypoint_type', 'elevation', 'maps_info', 'geom']
 
     def to_archive(self):
         waypoint = ArchiveWaypoint()
@@ -121,7 +133,7 @@ schema_waypoint = SQLAlchemySchemaNode(
     # whitelisted attributes
     includes=[
         'document_id', 'version', 'waypoint_type', 'elevation',
-        'maps_info', 'locales'],
+        'maps_info', 'locales', 'geom'],
     overrides={
         'document_id': {
             'missing': None
