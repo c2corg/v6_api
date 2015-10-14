@@ -48,7 +48,7 @@ Insert a waypoint:
 
     curl -X POST -v \
     -H "Content-Type: application/json" \
-    -d '{"waypoint_type": "summit", "elevation": 3779, "locales": [{"culture": "fr", "title": "Mont Pourri"}]}' \
+    -d '{"waypoint_type": "summit", "elevation": 3779, "geometry": {"geom": "{\"type\": \"Point\", \"coordinates\": [635956, 5723604]}"},"locales": [{"culture": "fr", "title": "Mont Pourri"}]}' \
     http://localhost:6543/waypoints
 
 Updating a waypoint:

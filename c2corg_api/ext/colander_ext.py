@@ -1,4 +1,4 @@
-# Inspired from c2cgeoform colander extension
+# Inspired from the c2cgeoform colander extension
 # https://github.com/camptocamp/c2cgeoform/blob/master/c2cgeoform/ext/
 
 from colander import (null, Invalid, SchemaType)
