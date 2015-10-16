@@ -252,10 +252,10 @@ class TestWaypoint(BaseTestCase):
             locales=[
                 WaypointLocale(
                     culture='en', title='A', description='abc',
-                    pedestrian_access='y'),
+                    access='y'),
                 WaypointLocale(
                     culture='fr', title='B', description='bcd',
-                    pedestrian_access='y')
+                    access='y')
             ],
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956.075332665 5723604.677994)')
