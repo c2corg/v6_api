@@ -3,8 +3,7 @@ from sqlalchemy import (
     Integer,
     SmallInteger,
     String,
-    ForeignKey,
-    Enum
+    ForeignKey
     )
 
 from colanderalchemy import SQLAlchemySchemaNode
@@ -14,13 +13,11 @@ from utils import copy_attributes
 from document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
     get_update_schema, geometry_schema_overrides)
-from c2corg_api.attributes import activities
+from c2corg_api.models import enums
 
 
 class _RouteMixin(object):
-    activities = Column(
-        Enum(name='activities', inherit_schema=True, *activities),
-        nullable=False)
+    activities = Column(enums.activity_type, nullable=False)
 
     height = Column(SmallInteger)
 

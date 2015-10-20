@@ -69,6 +69,7 @@ class TestWaypointRest(BaseTestRest):
             },
             'waypoint_type': 'summit',
             'elevation': 3779,
+            'activities': ['skitouring', 'hiking'],
             'locales': [
                 {'id': 3456, 'version': 4567,
                  'culture': 'en', 'title': 'Mont Pourri',
@@ -81,6 +82,7 @@ class TestWaypointRest(BaseTestRest):
         # test that document_id and version was reset
         self.assertNotEqual(body.get('document_id'), 1234)
         self.assertEqual(body.get('version'), 1)
+        self.assertEqual(doc.activities, ['skitouring', 'hiking'])
         self.assertNotEqual(doc.locales[0].id, 3456)
         self.assertEqual(body.get('locales')[0].get('version'), 1)
         self.assertNotEqual(doc.geometry.id, 5678)

@@ -35,7 +35,7 @@ def main(argv=sys.argv):
 
 
 def setup_db(engine, session):
-    Base.metadata.create_all(engine)
+    Base.metadata.create_all(engine, checkfirst=True)
 
     with transaction.manager:
         # add default languages
