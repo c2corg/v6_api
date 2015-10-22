@@ -2,7 +2,8 @@ from cornice.resource import resource, view
 
 from c2corg_api.models.image import Image, schema_image, schema_update_image
 from c2corg_api.views.document import DocumentRest
-from c2corg_api.views import validate_id, json_view
+from c2corg_api.views import json_view
+from c2corg_api.views.validation import validate_id
 
 
 @resource(collection_path='/images', path='/images/{id}')
