@@ -5,7 +5,7 @@ from c2corg_api.models.route import Route, schema_route, schema_update_route
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, make_schema_adaptor
-from c2corg_api.views import json_view
+from c2corg_api.views import json_view, cors_policy
 from c2corg_api.views.validation import validate_id
 from c2corg_common.fields_route import fields_route
 
@@ -30,7 +30,8 @@ listing_schema_adaptor = make_schema_adaptor(
     adapt_schema_for_type, 'route_type', 'listing')
 
 
-@resource(collection_path='/routes', path='/routes/{id}')
+@resource(collection_path='/routes', path='/routes/{id}',
+          cors_policy=cors_policy)
 class RouteRest(DocumentRest):
 
     def collection_get(self):
