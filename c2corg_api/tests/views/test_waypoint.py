@@ -80,6 +80,18 @@ class TestWaypointRest(BaseTestRest):
         }
         self.post_missing_locales(body)
 
+    def test_post_same_locale_twice(self):
+        body = {
+            'waypoint_type': 'summit',
+            'elevation': 3200,
+            'geometry': {'geom': '{"type": "Point", "coordinates": [1, 1]}'},
+            'locales': [
+                {'culture': 'en', 'title': 'Mont Pourri', 'access': 'y'},
+                {'culture': 'en', 'title': 'Mont Pourri', 'access': 'y'}
+            ]
+        }
+        self.post_same_locale_twice(body)
+
     def test_post_missing_elevation(self):
         body = {
             'waypoint_type': 'summit',
@@ -355,11 +367,7 @@ class TestWaypointRest(BaseTestRest):
                 'version': self.waypoint.version,
                 'waypoint_type': 'summit',
                 'elevation': 1234,
-                'locales': [
-                    {'culture': 'en', 'title': 'Mont Granier',
-                     'description': '...', 'access': 'yep',
-                     'version': self.locale_en.version}
-                ]
+                'locales': []
             }
         }
         (body, waypoint) = self.put_success_figures_only(body, self.waypoint)

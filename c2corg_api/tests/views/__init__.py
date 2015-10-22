@@ -119,12 +119,24 @@ class BaseTestRest(BaseTestCase):
         self.assertEqual(errors[0].get('name'), 'locales')
         return body
 
+    def post_same_locale_twice(self, request_body):
+        response = self.app.post_json(self._prefix, request_body,
+                                      expect_errors=True, status=400)
+
+        body = response.json
+        self.assertEqual(body.get('status'), 'error')
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(
+            errors[0].get('description'), 'culture "en" is given twice')
+        self.assertEqual(errors[0].get('name'), 'locales')
+        return body
+
     def post_missing_elevation(self, request_body):
         response = self.app.post_json(self._prefix, request_body,
                                       expect_errors=True, status=400)
 
         body = response.json
-        print(body)
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)

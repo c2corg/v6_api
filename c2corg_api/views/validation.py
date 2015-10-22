@@ -21,7 +21,6 @@ def check_required_fields(document, fields, request, updating):
     """
 
     for field in fields:
-        print(field)
         if '.' not in field:
             if updating and field in ['geometry', 'locales']:
                 # when updating geometry and locales may be empty
@@ -40,3 +39,19 @@ def check_required_fields(document, fields, request, updating):
                 if attr:
                     if is_missing(attr.get(field_parts[1])):
                         request.errors.add('body', field, 'Required')
+
+
+def check_duplicate_locales(document, request):
+    """Check that there is only one entry for each culture.
+    """
+    locales = document.get('locales')
+    if locales:
+        cultures = set()
+        for locale in locales:
+            culture = locale.get('culture')
+            if culture in cultures:
+                request.errors.add(
+                    'body', 'locales',
+                    'culture "%s" is given twice' % (culture))
+                return
+            cultures.add(culture)

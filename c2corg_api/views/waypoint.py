@@ -4,7 +4,8 @@ from c2corg_api.models.waypoint import (
     Waypoint, schema_waypoint, schema_update_waypoint)
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views import json_view
-from c2corg_api.views.validation import validate_id, check_required_fields
+from c2corg_api.views.validation import (
+    validate_id, check_required_fields, check_duplicate_locales)
 from c2corg_api.fields_waypoint import fields_waypoint
 
 
@@ -52,3 +53,4 @@ def validate_waypoint(waypoint, request, updating):
 
     fields = fields_waypoint.get(waypoint_type)
     check_required_fields(waypoint, fields['required'], request, updating)
+    check_duplicate_locales(waypoint, request)

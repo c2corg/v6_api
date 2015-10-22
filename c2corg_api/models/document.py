@@ -67,7 +67,6 @@ class Document(Base, _DocumentMixin):
     __tablename__ = 'documents'
     document_id = Column(Integer, primary_key=True)
 
-    # TODO constraint that there is at least one locale
     locales = relationship('DocumentLocale')
     geometry = relationship('DocumentGeometry', uselist=False)
 

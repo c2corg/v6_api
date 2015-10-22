@@ -34,9 +34,6 @@ class DocumentRest(object):
         document = schema.objectify(self.request.validated)
         document.document_id = None
 
-        # TODO additional validation: at least one culture, only one instance
-        # for each culture, geometry
-
         DBSession.add(document)
         DBSession.flush()
 
