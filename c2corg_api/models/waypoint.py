@@ -148,7 +148,7 @@ class _WaypointMixin(object):
     heating_unstaffed = Column(Boolean)
 
     # styles d'escalade (climbing_outdoor/indoor)
-    climbing_style = Column(ArrayOfEnum(enums.climbing_style))
+    climbing_styles = Column(ArrayOfEnum(enums.climbing_style))
 
     # duree de l'approche (randkluft, cliff, climbing_outdoor)
     access_time = Column(enums.access_time_type)
