@@ -26,36 +26,29 @@ class _WaypointMixin(object):
     # type de WP
     waypoint_type = Column(enums.waypoint_type, nullable=False)
 
+    # activite (all types)
+    activities = Column(ArrayOfEnum(enums.activity_type))
+
     # altitude
     elevation = Column(SmallInteger)
-
-    # proeminence/hauteur de culminance (summit)
-    prominence = Column(SmallInteger)
-
-    # longeur (lac, paragliding_takeoff/landing)
-    length = Column(SmallInteger)
-
-    # hauteur median (climbing_outdoor/indoor)
-    height_median = Column(SmallInteger)
 
     # altitude min. (access)
     elevation_min = Column(SmallInteger)
 
-    # nombre de voies (climbing_outdoor/indoor)
-    routes_quantity = Column(SmallInteger)
-
-    # nb places hors gardiennage
-    # (gite, camping refuge, abri, bivouac, base_camp)
-    capacity = Column(SmallInteger)
-
-    # pente (lac, paragliding_takeoff/landing)
-    slope = Column(SmallInteger)
+    # proeminence/hauteur de culminance (summit)
+    prominence = Column(SmallInteger)
 
     # hauteur max. (climbing_outdoor/indoor)
     height_max = Column(SmallInteger)
 
-    # nb places en gardiennage (gite, camping refuge)
-    capacity_staffed = Column(SmallInteger)
+    # hauteur median (climbing_outdoor/indoor)
+    height_median = Column(SmallInteger)
+
+    # hauteur min (climbing_outdoor/indoor)
+    height_min = Column(SmallInteger)
+
+    # nombre de voies (climbing_outdoor/indoor)
+    routes_quantity = Column(SmallInteger)
 
     # type de site (climbing_outdoor)
     climbing_outdoor_types = Column(ArrayOfEnum(enums.climbing_outdoor_type))
@@ -63,49 +56,57 @@ class _WaypointMixin(object):
     # type de site (climbing_indoor)
     climbing_indoor_types = Column(ArrayOfEnum(enums.climbing_indoor_type))
 
-    # type de transport en commun (access)
-    public_transportation_types = Column(ArrayOfEnum(
-        enums.public_transportation_type))
+    # cotation max (climbing_outdoor/indoor)
+    climbing_rating_max = Column(enums.climbing_rating)
 
-    # type de produits locaux (local_product)
-    product_types = Column(ArrayOfEnum(enums.product_type))
+    # cotation min (climbing_outdoor/indoor)
+    climbing_rating_min = Column(enums.climbing_rating)
 
-    # type de produits locaux (paragliding_takeoff/landing)
-    ground_types = Column(ArrayOfEnum(enums.ground_type))
+    # cotation median (climbing_outdoor/indoor)
+    climbing_rating_median = Column(enums.climbing_rating)
 
-    # type de produits locaux (paragliding_takeoff/landing)
-    weather_station_types = Column(ArrayOfEnum(enums.weather_station_type))
+    # qualite de l'equipement (climbing_outdoor)
+    equipment_ratings = Column(ArrayOfEnum(enums.equipment_rating))
 
-    # pluie (climbing_outdoor/indoor)
-    rain_proof = Column(enums.rain_proof_type)
-
-    # accessibilite en transports en commun (access)
-    public_transportation_rating = Column(enums.public_transportation_rating)
-
-    # cotation deco/attero (paragliding_takeoff/landing)
-    paragliding_rating = Column(enums.paragliding_rating)
+    # styles d'escalade (climbing_outdoor/indoor)
+    climbing_styles = Column(ArrayOfEnum(enums.climbing_style))
 
     # enfants (climbing_outdoor/indoor)
     children_proof = Column(enums.children_proof_type)
 
-    # deneigement (access)
-    snow_clearance_rating = Column(enums.snow_clearance_rating)
-
-    # exposition (paragliding_takeoff/landing)
-    exposition_rating = Column(enums.exposition_rating)
-
-    # activite (all types)
-    activities = Column(ArrayOfEnum(enums.activity_type))
-
-    # type de rocher (summit, waterfall, cave, pit, cliff,
-    # climbing_outdoor/indoor)
-    rock_types = Column(ArrayOfEnum(enums.rock_type))
+    # pluie (climbing_outdoor/indoor)
+    rain_proof = Column(enums.rain_proof_type)
 
     # orientation (climbing_outdoor/indoor, paragliding_takeoff/landing)
     orientation = Column(ArrayOfEnum(enums.orientation_type))
 
     # meilleurs periodes (climbing_outdoor/indoor, paragliding_takeoff/landing)
     best_periods = Column(ArrayOfEnum(enums.month_type))
+
+    # type de produits locaux (local_product)
+    product_types = Column(ArrayOfEnum(enums.product_type))
+
+    # longueur (lac, paragliding_takeoff/landing)
+    length = Column(SmallInteger)
+
+    # pente (paragliding_takeoff/landing)
+    slope = Column(SmallInteger)
+
+    # nature du sol (paragliding_takeoff/landing)
+    ground_types = Column(ArrayOfEnum(enums.ground_type))
+
+    # cotation deco/attero (paragliding_takeoff/landing)
+    paragliding_rating = Column(enums.paragliding_rating)
+
+    # exposition (paragliding_takeoff/landing)
+    exposition_rating = Column(enums.exposition_rating)
+
+    # type de rocher (summit, waterfall, cave, pit, cliff,
+    # climbing_outdoor/indoor)
+    rock_types = Column(ArrayOfEnum(enums.rock_type))
+
+    # grandeurs mesurees (weatherstation)
+    weather_station_types = Column(ArrayOfEnum(enums.weather_station_type))
 
     # url (climbing_outdoor/indoor, gite, camp_site, hut, base_camp,
     # local_product, sport_shop, paragliding_takeoff/landing, weather_station,
@@ -120,20 +121,30 @@ class _WaypointMixin(object):
     # sport_shop)
     phone = Column(String(50))
 
+    # type de transport en commun (access)
+    public_transportation_types = Column(ArrayOfEnum(
+        enums.public_transportation_type))
+
+    # accessibilite en transports en commun (access)
+    public_transportation_rating = Column(enums.public_transportation_rating)
+
+    # deneigement (access)
+    snow_clearance_rating = Column(enums.snow_clearance_rating)
+
     # servi par des remontees mecaniques (access)
     lift_access = Column(Boolean)
 
     # wc (base_camp, access)
     toilet = Column(Boolean)
 
+    # parking payant (access)
+    parking_fee = Column(enums.parking_fee_type)
+
     # telephone gardien/gerant (gite, camp_site, hut)
     phone_custodian = Column(String(50))
 
     # gardiennage (gite, camp_site, hut, abri, bivouac, base_camp)
     custodianship = Column(enums.custodianship_type)
-
-    # parking payant (access)
-    parking_fee = Column(enums.parking_fee_type)
 
     # matelas hors gardiennage (hut, abri, bivouac, base_camp)
     matress_unstaffed = Column(Boolean)
@@ -147,26 +158,15 @@ class _WaypointMixin(object):
     # chauffage hors gardiennage (hut, abri)
     heating_unstaffed = Column(Boolean)
 
-    # styles d'escalade (climbing_outdoor/indoor)
-    climbing_styles = Column(ArrayOfEnum(enums.climbing_style))
-
     # duree de l'approche (randkluft, cliff, climbing_outdoor)
     access_time = Column(enums.access_time_type)
 
-    # cotation max (climbing_outdoor/indoor)
-    climbing_rating_max = Column(enums.climbing_rating)
+    # nb places hors gardiennage
+    # (gite, camping refuge, abri, bivouac, base_camp)
+    capacity = Column(SmallInteger)
 
-    # cotation min (climbing_outdoor/indoor)
-    climbing_rating_min = Column(enums.climbing_rating)
-
-    # cotation median (climbing_outdoor/indoor)
-    climbing_rating_median = Column(enums.climbing_rating)
-
-    # hauteur min (climbing_outdoor/indoor)
-    height_min = Column(SmallInteger)
-
-    # qualite de l'equipement (climbing_outdoor)
-    equipment_ratings = Column(ArrayOfEnum(enums.equipment_rating))
+    # nb places en gardiennage (gite, camping refuge)
+    capacity_staffed = Column(SmallInteger)
 
 
 attributes = [
