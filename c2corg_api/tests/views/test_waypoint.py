@@ -113,7 +113,9 @@ class TestWaypointRest(BaseTestRest):
             'version': 2345,
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
+                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
+                'geom_detail':
+                    '{"type": "Point", "coordinates": [635956, 5723604]}'
             },
             'waypoint_type': 'summit',
             'elevation': 3779,
@@ -125,7 +127,8 @@ class TestWaypointRest(BaseTestRest):
             ]
         }
         body, doc = self.post_success(body)
-        self._assert_geometry(body)
+        self._assert_geometry(body, 'geom')
+        self._assert_geometry(body, 'geom_detail')
 
         # test that document_id and version was reset
         self.assertNotEqual(body.get('document_id'), 1234)
@@ -149,6 +152,7 @@ class TestWaypointRest(BaseTestRest):
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
         self.assertIsNotNone(archive_geometry.geom)
+        self.assertIsNotNone(archive_geometry.geom_detail)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -484,13 +488,13 @@ class TestWaypointRest(BaseTestRest):
         self.assertEqual(meta_data_en.comment, 'Adding geom')
         self.assertIsNotNone(meta_data_en.written_at)
 
-    def _assert_geometry(self, body):
+    def _assert_geometry(self, body, field='geom'):
         self.assertIsNotNone(body.get('geometry'))
         geometry = body.get('geometry')
         self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom'))
+        self.assertIsNotNone(geometry.get(field))
 
-        geom = geometry.get('geom')
+        geom = geometry.get(field)
         point = shape(json.loads(geom))
         self.assertIsInstance(point, Point)
         self.assertAlmostEqual(point.x, 635956)
