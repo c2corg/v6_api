@@ -169,6 +169,23 @@ class _WaypointMixin(object):
     equipment_ratings = Column(ArrayOfEnum(enums.equipment_rating))
 
 
+attributes = [
+    'waypoint_type', 'elevation', 'prominence', 'length', 'height_median',
+    'elevation_min', 'routes_quantity', 'capacity', 'slope', 'height_max',
+    'capacity_staffed', 'climbing_outdoor_types', 'climbing_indoor_types',
+    'public_transportation_types', 'product_types', 'ground_types',
+    'weather_station_types', 'rain_proof', 'public_transportation_rating',
+    'paragliding_rating', 'children_proof', 'snow_clearance_rating',
+    'exposition_rating', 'activities', 'rock_types', 'orientation',
+    'best_periods', 'url', 'maps_info', 'phone', 'lift_access', 'toilet',
+    'phone_custodian', 'custodianship', 'parking_fee', 'matress_unstaffed',
+    'blanket_unstaffed', 'gas_unstaffed', 'heating_unstaffed',
+    'climbing_styles', 'access_time', 'climbing_rating_max',
+    'climbing_rating_min', 'climbing_rating_median', 'height_min',
+    'equipment_ratings'
+]
+
+
 class Waypoint(_WaypointMixin, Document):
     """
     """
@@ -178,18 +195,16 @@ class Waypoint(_WaypointMixin, Document):
         Integer,
         ForeignKey(schema + '.documents.document_id'), primary_key=True)
 
-    _ATTRIBUTES = ['waypoint_type', 'elevation', 'maps_info']
-
     def to_archive(self):
         waypoint = ArchiveWaypoint()
         super(Waypoint, self)._to_archive(waypoint)
-        copy_attributes(self, waypoint, Waypoint._ATTRIBUTES)
+        copy_attributes(self, waypoint, attributes)
 
         return waypoint
 
     def update(self, other):
         super(Waypoint, self).update(other)
-        copy_attributes(other, self, Waypoint._ATTRIBUTES)
+        copy_attributes(other, self, attributes)
 
 
 class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
@@ -221,6 +236,11 @@ class _WaypointLocaleMixin(object):
     access_period = Column(String)
 
 
+attributes_locales = [
+    'summary', 'access', 'access_period'
+]
+
+
 class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
     """
     """
@@ -230,18 +250,16 @@ class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
                 Integer,
                 ForeignKey(schema + '.documents_locales.id'), primary_key=True)
 
-    _ATTRIBUTES = ['access']
-
     def to_archive(self):
         locale = ArchiveWaypointLocale()
         super(WaypointLocale, self).to_archive(locale)
-        copy_attributes(self, locale, WaypointLocale._ATTRIBUTES)
+        copy_attributes(self, locale, attributes_locales)
 
         return locale
 
     def update(self, other):
         super(WaypointLocale, self).update(other)
-        copy_attributes(other, self, WaypointLocale._ATTRIBUTES)
+        copy_attributes(other, self, attributes_locales)
 
 
 class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
@@ -258,8 +276,8 @@ class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
 schema_waypoint_locale = SQLAlchemySchemaNode(
     WaypointLocale,
     # whitelisted attributes
-    includes=['version', 'culture', 'title', 'description',
-              'access'],
+    includes=[
+        'version', 'culture', 'title', 'description'] + attributes_locales,
     overrides={
         'version': {
             'missing': None
@@ -270,9 +288,7 @@ schema_waypoint_locale = SQLAlchemySchemaNode(
 schema_waypoint = SQLAlchemySchemaNode(
     Waypoint,
     # whitelisted attributes
-    includes=[
-        'document_id', 'version', 'waypoint_type', 'elevation',
-        'maps_info', 'locales', 'geometry', 'activities'],
+    includes=['document_id', 'version', 'locales', 'geometry'] + attributes,
     overrides={
         'document_id': {
             'missing': None
