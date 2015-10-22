@@ -67,7 +67,6 @@ class Document(Base, _DocumentMixin):
     __tablename__ = 'documents'
     document_id = Column(Integer, primary_key=True)
 
-    # TODO constraint that there is at least one locale
     locales = relationship('DocumentLocale')
     geometry = relationship('DocumentGeometry', uselist=False)
 
@@ -265,6 +264,17 @@ class _DocumentGeometryMixin(object):
             }
         )
 
+    @declared_attr
+    def geom_detail(self):
+        return Column(
+            Geometry(geometry_type='GEOMETRY', srid=3857, management=True),
+            info={
+                'colanderalchemy': {
+                    'typ': colander_ext.Geometry('GEOMETRY', srid=3857)
+                }
+            }
+        )
+
 
 class DocumentGeometry(Base, _DocumentGeometryMixin):
     __tablename__ = 'documents_geometries'
@@ -278,7 +288,7 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
     }
 
     _ATTRIBUTES = \
-        ['document_id', 'version', 'geom']
+        ['document_id', 'version', 'geom', 'geom_detail']
 
     def to_archive(self):
         geometry = ArchiveDocumentGeometry()
@@ -295,7 +305,7 @@ class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
 
 geometry_schema_overrides = {
     # whitelisted attributes
-    'includes': ['version', 'geom'],
+    'includes': ['version', 'geom', 'geom_detail'],
     'overrides': {
         'version': {
             'missing': None

@@ -38,20 +38,80 @@ class TestWaypointRest(BaseTestRest):
         body = {
             'waypoint_type': 'summit',
             'elevation': 3200,
+            'geometry': {'geom': '{"type": "Point", "coordinates": [1, 1]}'},
             'locales': [
                 {'culture': 'en'}
             ]
         }
-        self.post_missing_title(body)
+        body = self.post_missing_title(body)
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 2)
+        self.assertRequired(errors[1], 'locales')
+
+    def test_post_missing_geometry(self):
+        body = {
+            'waypoint_type': 'summit',
+            'elevation': 3200,
+            'locales': [
+                {'culture': 'en', 'title': 'Mont Pourri',
+                 'access': 'y'}
+            ]
+        }
+        self.post_missing_geometry(body)
+
+    def test_post_missing_geom(self):
+        body = {
+            'waypoint_type': 'summit',
+            'elevation': 3200,
+            'geometry': {},
+            'locales': [
+                {'culture': 'en', 'title': 'Mont Pourri',
+                 'access': 'y'}
+            ]
+        }
+        self.post_missing_geom(body)
+
+    def test_post_missing_locales(self):
+        body = {
+            'waypoint_type': 'summit',
+            'elevation': 3200,
+            'geometry': {'geom': '{"type": "Point", "coordinates": [1, 1]}'},
+            'locales': []
+        }
+        self.post_missing_locales(body)
+
+    def test_post_same_locale_twice(self):
+        body = {
+            'waypoint_type': 'summit',
+            'elevation': 3200,
+            'geometry': {'geom': '{"type": "Point", "coordinates": [1, 1]}'},
+            'locales': [
+                {'culture': 'en', 'title': 'Mont Pourri', 'access': 'y'},
+                {'culture': 'en', 'title': 'Mont Pourri', 'access': 'y'}
+            ]
+        }
+        self.post_same_locale_twice(body)
+
+    def test_post_missing_elevation(self):
+        body = {
+            'waypoint_type': 'summit',
+            'geometry': {'geom': '{"type": "Point", "coordinates": [1, 1]}'},
+            'locales': [
+                {'culture': 'en', 'title': 'Mont Pourri',
+                 'access': 'y'}
+            ]
+        }
+        self.post_missing_elevation(body)
 
     def test_post_non_whitelisted_attribute(self):
         body = {
             'waypoint_type': 'summit',
             'elevation': 3779,
+            'geometry': {'geom': '{"type": "Point", "coordinates": [1, 1]}'},
             'protected': True,
             'locales': [
                 {'culture': 'en', 'title': 'Mont Pourri',
-                 'pedestrian_access': 'y'}
+                 'access': 'y'}
             ]
         }
         self.post_non_whitelisted_attribute(body)
@@ -65,22 +125,27 @@ class TestWaypointRest(BaseTestRest):
             'version': 2345,
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
+                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
+                'geom_detail':
+                    '{"type": "Point", "coordinates": [635956, 5723604]}'
             },
             'waypoint_type': 'summit',
             'elevation': 3779,
+            'activities': ['skitouring', 'hiking'],
             'locales': [
                 {'id': 3456, 'version': 4567,
                  'culture': 'en', 'title': 'Mont Pourri',
-                 'pedestrian_access': 'y'}
+                 'access': 'y'}
             ]
         }
         body, doc = self.post_success(body)
-        self._assert_geometry(body)
+        self._assert_geometry(body, 'geom')
+        self._assert_geometry(body, 'geom_detail')
 
         # test that document_id and version was reset
         self.assertNotEqual(body.get('document_id'), 1234)
         self.assertEqual(body.get('version'), 1)
+        self.assertEqual(doc.activities, ['skitouring', 'hiking'])
         self.assertNotEqual(doc.locales[0].id, 3456)
         self.assertEqual(body.get('locales')[0].get('version'), 1)
         self.assertNotEqual(doc.geometry.id, 5678)
@@ -94,11 +159,12 @@ class TestWaypointRest(BaseTestRest):
         archive_locale = version.document_locales_archive
         self.assertEqual(archive_locale.culture, 'en')
         self.assertEqual(archive_locale.title, 'Mont Pourri')
-        self.assertEqual(archive_locale.pedestrian_access, 'y')
+        self.assertEqual(archive_locale.access, 'y')
 
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
         self.assertIsNotNone(archive_geometry.geom)
+        self.assertIsNotNone(archive_geometry.geom_detail)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -109,7 +175,7 @@ class TestWaypointRest(BaseTestRest):
                 'elevation': 1234,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
-                     'description': '...', 'pedestrian_access': 'n'}
+                     'description': '...', 'access': 'n'}
                 ]
             }
         }
@@ -124,7 +190,7 @@ class TestWaypointRest(BaseTestRest):
                 'elevation': 1234,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
-                     'description': '...', 'pedestrian_access': 'n'}
+                     'description': '...', 'access': 'n'}
                 ]
             }
         }
@@ -139,7 +205,7 @@ class TestWaypointRest(BaseTestRest):
                 'elevation': 1234,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
-                     'description': '...', 'pedestrian_access': 'n',
+                     'description': '...', 'access': 'n',
                      'version': -9999}
                 ]
             }
@@ -155,7 +221,7 @@ class TestWaypointRest(BaseTestRest):
                 'elevation': 1234,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
-                     'description': 'A.', 'pedestrian_access': 'n',
+                     'description': 'A.', 'access': 'n',
                      'version': self.locale_en.version}
                 ]
             }
@@ -164,6 +230,17 @@ class TestWaypointRest(BaseTestRest):
 
     def test_put_no_document(self):
         self.put_put_no_document(self.waypoint.document_id)
+
+    def test_put_missing_elevation(self):
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.waypoint.document_id,
+                'version': self.waypoint.version,
+                'waypoint_type': 'summit'
+            }
+        }
+        self.put_missing_elevation(body, self.waypoint)
 
     def test_put_success_all(self):
         body = {
@@ -175,7 +252,7 @@ class TestWaypointRest(BaseTestRest):
                 'elevation': 1234,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
-                     'description': 'A.', 'pedestrian_access': 'n',
+                     'description': 'A.', 'access': 'n',
                      'version': self.locale_en.version}
                 ],
                 'geometry': {
@@ -189,14 +266,14 @@ class TestWaypointRest(BaseTestRest):
         self.assertEquals(waypoint.elevation, 1234)
         locale_en = waypoint.get_locale('en')
         self.assertEquals(locale_en.description, 'A.')
-        self.assertEquals(locale_en.pedestrian_access, 'n')
+        self.assertEquals(locale_en.access, 'n')
 
         # version with culture 'en'
         versions = waypoint.versions
         version_en = versions[2]
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Granier')
-        self.assertEqual(archive_locale.pedestrian_access, 'n')
+        self.assertEqual(archive_locale.access, 'n')
 
         archive_document_en = version_en.document_archive
         self.assertEqual(archive_document_en.waypoint_type, 'summit')
@@ -209,7 +286,7 @@ class TestWaypointRest(BaseTestRest):
         version_fr = versions[3]
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Granier')
-        self.assertEqual(archive_locale.pedestrian_access, 'ouai')
+        self.assertEqual(archive_locale.access, 'ouai')
 
     def test_put_success_figures_and_lang_only(self):
         body_put = {
@@ -221,7 +298,7 @@ class TestWaypointRest(BaseTestRest):
                 'elevation': 1234,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
-                     'description': 'A.', 'pedestrian_access': 'n',
+                     'description': 'A.', 'access': 'n',
                      'version': self.locale_en.version}
                 ]
             }
@@ -258,14 +335,14 @@ class TestWaypointRest(BaseTestRest):
         self.assertEquals(waypoint.elevation, 1234)
         locale_en = waypoint.get_locale('en')
         self.assertEquals(locale_en.description, 'A.')
-        self.assertEquals(locale_en.pedestrian_access, 'n')
+        self.assertEquals(locale_en.access, 'n')
 
         # version with culture 'en'
         versions = waypoint.versions
         version_en = versions[2]
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Granier')
-        self.assertEqual(archive_locale.pedestrian_access, 'n')
+        self.assertEqual(archive_locale.access, 'n')
 
         archive_document_en = version_en.document_archive
         self.assertEqual(archive_document_en.waypoint_type, 'summit')
@@ -278,7 +355,7 @@ class TestWaypointRest(BaseTestRest):
         version_fr = versions[3]
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Granier')
-        self.assertEqual(archive_locale.pedestrian_access, 'ouai')
+        self.assertEqual(archive_locale.access, 'ouai')
 
     def test_put_success_figures_only(self):
         """Test updating a document with only changes to the figures.
@@ -290,11 +367,7 @@ class TestWaypointRest(BaseTestRest):
                 'version': self.waypoint.version,
                 'waypoint_type': 'summit',
                 'elevation': 1234,
-                'locales': [
-                    {'culture': 'en', 'title': 'Mont Granier',
-                     'description': '...', 'pedestrian_access': 'yep',
-                     'version': self.locale_en.version}
-                ]
+                'locales': []
             }
         }
         (body, waypoint) = self.put_success_figures_only(body, self.waypoint)
@@ -313,14 +386,14 @@ class TestWaypointRest(BaseTestRest):
                 'elevation': 2203,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Granier',
-                     'description': '...', 'pedestrian_access': 'no',
+                     'description': '...', 'access': 'no',
                      'version': self.locale_en.version}
                 ]
             }
         }
         (body, waypoint) = self.put_success_lang_only(body, self.waypoint)
 
-        self.assertEquals(waypoint.get_locale('en').pedestrian_access, 'no')
+        self.assertEquals(waypoint.get_locale('en').access, 'no')
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale.
@@ -335,13 +408,13 @@ class TestWaypointRest(BaseTestRest):
                 'locales': [
                     {'id': 1234, 'version': 2345,
                      'culture': 'es', 'title': 'Mont Granier',
-                     'description': '...', 'pedestrian_access': 'si'}
+                     'description': '...', 'access': 'si'}
                 ]
             }
         }
         (body, waypoint) = self.put_success_new_lang(body, self.waypoint)
 
-        self.assertEquals(waypoint.get_locale('es').pedestrian_access, 'si')
+        self.assertEquals(waypoint.get_locale('es').access, 'si')
         self.assertNotEqual(waypoint.get_locale('es').version, 2345)
         self.assertNotEqual(waypoint.get_locale('es').id, 1234)
 
@@ -349,22 +422,23 @@ class TestWaypointRest(BaseTestRest):
         """Tests adding a geometry to a waypoint without geometry.
         """
         # first create a waypoint with no geometry
-        body_post = {
-            'waypoint_type': 'summit',
-            'elevation': 3779,
-            'locales': [
-                {'culture': 'en', 'title': 'Mont Pourri',
-                 'pedestrian_access': 'y'}
-            ]
-        }
-        body, doc = self.post_success(body_post)
+        waypoint = Waypoint(
+            waypoint_type='summit', elevation=3779)
+
+        locale_en = WaypointLocale(
+            culture='en', title='Mont Pourri', access='y')
+        waypoint.locales.append(locale_en)
+
+        self.session.add(waypoint)
+        self.session.flush()
+        DocumentRest(None)._create_new_version(waypoint)
 
         # then add a geometry to the waypoint
         body_put = {
             'message': 'Adding geom',
             'document': {
-                'document_id': doc.document_id,
-                'version': doc.version,
+                'document_id': waypoint.document_id,
+                'version': waypoint.version,
                 'geometry': {
                     'geom':
                         '{"type": "Point", "coordinates": [635956, 5723604]}'
@@ -375,7 +449,7 @@ class TestWaypointRest(BaseTestRest):
             }
         }
         response = self.app.put_json(
-            self._prefix + '/' + str(doc.document_id), body_put)
+            self._prefix + '/' + str(waypoint.document_id), body_put)
         body = response.json
         document_id = body.get('document_id')
         self.assertEquals(
@@ -422,13 +496,13 @@ class TestWaypointRest(BaseTestRest):
         self.assertEqual(meta_data_en.comment, 'Adding geom')
         self.assertIsNotNone(meta_data_en.written_at)
 
-    def _assert_geometry(self, body):
+    def _assert_geometry(self, body, field='geom'):
         self.assertIsNotNone(body.get('geometry'))
         geometry = body.get('geometry')
         self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom'))
+        self.assertIsNotNone(geometry.get(field))
 
-        geom = geometry.get('geom')
+        geom = geometry.get(field)
         point = shape(json.loads(geom))
         self.assertIsInstance(point, Point)
         self.assertAlmostEqual(point.x, 635956)
@@ -440,11 +514,11 @@ class TestWaypointRest(BaseTestRest):
 
         self.locale_en = WaypointLocale(
             culture='en', title='Mont Granier', description='...',
-            pedestrian_access='yep')
+            access='yep')
 
         self.locale_fr = WaypointLocale(
             culture='fr', title='Mont Granier', description='...',
-            pedestrian_access='ouai')
+            access='ouai')
 
         self.waypoint.locales.append(self.locale_en)
         self.waypoint.locales.append(self.locale_fr)

@@ -19,6 +19,10 @@ class BaseTestRest(BaseTestCase):
         self.assertEqual(error.get('description'), key + ' is missing')
         self.assertEqual(error.get('name'), key)
 
+    def assertRequired(self, error, key):  # noqa
+        self.assertEqual(error.get('description'), 'Required')
+        self.assertEqual(error.get('name'), key)
+
     def get_collection(self):
         response = self.app.get(self._prefix, status=200)
         self.assertEqual(response.content_type, 'application/json')
@@ -78,9 +82,66 @@ class BaseTestRest(BaseTestCase):
         body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
+        self.assertRequired(errors[0], 'locales.0.title')
+        return body
+
+    def post_missing_geometry(self, request_body):
+        response = self.app.post_json(self._prefix, request_body,
+                                      expect_errors=True, status=400)
+
+        body = response.json
+        self.assertEqual(body.get('status'), 'error')
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertRequired(errors[0], 'geometry')
+        return body
+
+    def post_missing_geom(self, request_body):
+        response = self.app.post_json(self._prefix, request_body,
+                                      expect_errors=True, status=400)
+
+        body = response.json
+        self.assertEqual(body.get('status'), 'error')
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertRequired(errors[0], 'geometry.geom')
+        return body
+
+    def post_missing_locales(self, request_body):
+        response = self.app.post_json(self._prefix, request_body,
+                                      expect_errors=True, status=400)
+
+        body = response.json
+        self.assertEqual(body.get('status'), 'error')
+        errors = body.get('errors')
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].get('description'), 'Required')
-        self.assertEqual(errors[0].get('name'), 'locales.0.title')
+        self.assertEqual(errors[0].get('name'), 'locales')
+        return body
+
+    def post_same_locale_twice(self, request_body):
+        response = self.app.post_json(self._prefix, request_body,
+                                      expect_errors=True, status=400)
+
+        body = response.json
+        self.assertEqual(body.get('status'), 'error')
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(
+            errors[0].get('description'), 'culture "en" is given twice')
+        self.assertEqual(errors[0].get('name'), 'locales')
+        return body
+
+    def post_missing_elevation(self, request_body):
+        response = self.app.post_json(self._prefix, request_body,
+                                      expect_errors=True, status=400)
+
+        body = response.json
+        self.assertEqual(body.get('status'), 'error')
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].get('description'), 'Required')
+        self.assertEqual(errors[0].get('name'), 'elevation')
         return body
 
     def post_non_whitelisted_attribute(self, request_body):
@@ -175,6 +236,17 @@ class BaseTestRest(BaseTestCase):
         self.assertEqual(body['status'], 'error')
         self.assertEqual(
             body['errors'][0]['description'], 'document is missing')
+
+    def put_missing_elevation(self, request_body, document):
+        response = self.app.put_json(
+            self._prefix + '/' + str(document.document_id), request_body,
+            status=400)
+
+        body = response.json
+        self.assertEqual(body.get('status'), 'error')
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertRequired(errors[0], 'elevation')
 
     def put_success_all(self, request_body, document):
         """Test updating a document with changes to the figures and locales.
