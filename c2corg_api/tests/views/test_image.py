@@ -34,14 +34,16 @@ class TestImageRest(BaseTestRest):
         self.assertMissing(errors[0], 'activities')
 
     def test_post_missing_title(self):
-        body = {
+        body_post = {
             'activities': 'skitouring',
             'height': 1200,
             'locales': [
                 {'culture': 'en'}
             ]
         }
-        self.post_missing_title(body)
+        body = self.post_missing_title(body_post)
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
 
     def test_post_non_whitelisted_attribute(self):
         body = {

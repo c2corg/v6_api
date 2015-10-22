@@ -38,16 +38,64 @@ class TestWaypointRest(BaseTestRest):
         body = {
             'waypoint_type': 'summit',
             'elevation': 3200,
+            'geometry': {'geom': '{"type": "Point", "coordinates": [1, 1]}'},
             'locales': [
                 {'culture': 'en'}
             ]
         }
-        self.post_missing_title(body)
+        body = self.post_missing_title(body)
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 2)
+        self.assertRequired(errors[1], 'locales')
+
+    def test_post_missing_geometry(self):
+        body = {
+            'waypoint_type': 'summit',
+            'elevation': 3200,
+            'locales': [
+                {'culture': 'en', 'title': 'Mont Pourri',
+                 'access': 'y'}
+            ]
+        }
+        self.post_missing_geometry(body)
+
+    def test_post_missing_geom(self):
+        body = {
+            'waypoint_type': 'summit',
+            'elevation': 3200,
+            'geometry': {},
+            'locales': [
+                {'culture': 'en', 'title': 'Mont Pourri',
+                 'access': 'y'}
+            ]
+        }
+        self.post_missing_geom(body)
+
+    def test_post_missing_locales(self):
+        body = {
+            'waypoint_type': 'summit',
+            'elevation': 3200,
+            'geometry': {'geom': '{"type": "Point", "coordinates": [1, 1]}'},
+            'locales': []
+        }
+        self.post_missing_locales(body)
+
+    def test_post_missing_elevation(self):
+        body = {
+            'waypoint_type': 'summit',
+            'geometry': {'geom': '{"type": "Point", "coordinates": [1, 1]}'},
+            'locales': [
+                {'culture': 'en', 'title': 'Mont Pourri',
+                 'access': 'y'}
+            ]
+        }
+        self.post_missing_elevation(body)
 
     def test_post_non_whitelisted_attribute(self):
         body = {
             'waypoint_type': 'summit',
             'elevation': 3779,
+            'geometry': {'geom': '{"type": "Point", "coordinates": [1, 1]}'},
             'protected': True,
             'locales': [
                 {'culture': 'en', 'title': 'Mont Pourri',
@@ -166,6 +214,17 @@ class TestWaypointRest(BaseTestRest):
 
     def test_put_no_document(self):
         self.put_put_no_document(self.waypoint.document_id)
+
+    def test_put_missing_elevation(self):
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.waypoint.document_id,
+                'version': self.waypoint.version,
+                'waypoint_type': 'summit'
+            }
+        }
+        self.put_missing_elevation(body, self.waypoint)
 
     def test_put_success_all(self):
         body = {
@@ -351,22 +410,23 @@ class TestWaypointRest(BaseTestRest):
         """Tests adding a geometry to a waypoint without geometry.
         """
         # first create a waypoint with no geometry
-        body_post = {
-            'waypoint_type': 'summit',
-            'elevation': 3779,
-            'locales': [
-                {'culture': 'en', 'title': 'Mont Pourri',
-                 'access': 'y'}
-            ]
-        }
-        body, doc = self.post_success(body_post)
+        waypoint = Waypoint(
+            waypoint_type='summit', elevation=3779)
+
+        locale_en = WaypointLocale(
+            culture='en', title='Mont Pourri', access='y')
+        waypoint.locales.append(locale_en)
+
+        self.session.add(waypoint)
+        self.session.flush()
+        DocumentRest(None)._create_new_version(waypoint)
 
         # then add a geometry to the waypoint
         body_put = {
             'message': 'Adding geom',
             'document': {
-                'document_id': doc.document_id,
-                'version': doc.version,
+                'document_id': waypoint.document_id,
+                'version': waypoint.version,
                 'geometry': {
                     'geom':
                         '{"type": "Point", "coordinates": [635956, 5723604]}'
@@ -377,7 +437,7 @@ class TestWaypointRest(BaseTestRest):
             }
         }
         response = self.app.put_json(
-            self._prefix + '/' + str(doc.document_id), body_put)
+            self._prefix + '/' + str(waypoint.document_id), body_put)
         body = response.json
         document_id = body.get('document_id')
         self.assertEquals(
