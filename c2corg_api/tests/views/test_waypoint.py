@@ -21,11 +21,13 @@ class TestWaypointRest(BaseTestRest):
     def test_get_collection(self):
         body = self.get_collection()
         doc = body[0]
+        self.assertIn('waypoint_type', doc)
         self.assertNotIn('routes_quantity', doc)
 
     def test_get(self):
         body = self.get(self.waypoint)
         self._assert_geometry(body)
+        self.assertIn('waypoint_type', body)
         self.assertNotIn('routes_quantity', body)
 
     def test_get_lang(self):
