@@ -4,17 +4,19 @@ from sqlalchemy import (
     Boolean,
     String,
     ForeignKey,
-    Enum
+    Enum,
+    func
     )
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects import postgresql
 from geoalchemy2 import Geometry
 from colander import MappingSchema, SchemaNode, String as ColanderString, null
 from itertools import ifilter
 import abc
 import enum
 
-from c2corg_api.models import Base, schema
+from c2corg_api.models import Base, schema, DBSession
 from c2corg_api.ext import colander_ext
 from utils import copy_attributes
 
@@ -69,6 +71,8 @@ class Document(Base, _DocumentMixin):
 
     locales = relationship('DocumentLocale')
     geometry = relationship('DocumentGeometry', uselist=False)
+
+    available_cultures = None
 
     __mapper_args__ = {
             'version_id_col': _DocumentMixin.version
@@ -323,3 +327,25 @@ def get_update_schema(document_schema):
         document = document_schema.clone()
 
     return UpdateSchema()
+
+
+def set_available_cultures(documents):
+    """Load and set the available cultures for the given documents.
+    """
+    document_ids = [doc.document_id for doc in documents]
+    documents_for_id = {doc.document_id: doc for doc in documents}
+
+    # aggregate the cultures per document into an array
+    culture_agg = func.array_agg(
+        DocumentLocale.culture,
+        type_=postgresql.ARRAY(String)).label('cultures')
+
+    cultures_per_doc = DBSession.query(
+        DocumentLocale.document_id, culture_agg). \
+        filter(DocumentLocale.document_id.in_(document_ids)). \
+        group_by(DocumentLocale.document_id). \
+        all()
+
+    for document_id, cultures in cultures_per_doc:
+        document = documents_for_id.get(document_id)
+        document.available_cultures = cultures

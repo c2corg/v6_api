@@ -1,11 +1,11 @@
-from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.models.document import UpdateType, DocumentGeometry
-
-from c2corg_api.tests import BaseTestCase
-
 from sqlalchemy.orm.exc import StaleDataError
 from shapely.geometry import Point
 from geoalchemy2.shape import from_shape
+
+from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.models.document import (
+    UpdateType, DocumentGeometry, set_available_cultures)
+from c2corg_api.tests import BaseTestCase
 
 
 class TestWaypoint(BaseTestCase):
@@ -245,6 +245,16 @@ class TestWaypoint(BaseTestCase):
             geom='SRID=3857;POINT(635956.075332665 5723604.677994)')
         self.session.add(waypoint)
         self.session.flush()
+
+    def test_set_available_cultures(self):
+        waypoint = self._get_waypoint()
+        waypoint.geometry = DocumentGeometry(
+            geom='SRID=3857;POINT(635956.075332665 5723604.677994)')
+        self.session.add(waypoint)
+        self.session.flush()
+
+        set_available_cultures([waypoint])
+        self.assertEqual(waypoint.available_cultures, ['en', 'fr'])
 
     def _get_waypoint(self):
         return Waypoint(
