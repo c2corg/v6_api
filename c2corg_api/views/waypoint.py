@@ -2,6 +2,7 @@ from cornice.resource import resource, view
 
 from c2corg_api.models.waypoint import (
     Waypoint, schema_waypoint, schema_update_waypoint)
+from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views import json_view
 from c2corg_api.views.validation import (
@@ -21,6 +22,13 @@ def validate_waypoint_update(request):
         validate_waypoint(waypoint, request, updating=True)
 
 
+def adapt_schema(base_schema, waypoint):
+    waypoint_type = waypoint.waypoint_type
+    fields = fields_waypoint.get(waypoint_type).get('fields')
+    # TODO cache this schema (per waypoint_type)?
+    return restrict_schema(base_schema, fields)
+
+
 @resource(collection_path='/waypoints', path='/waypoints/{id}')
 class WaypointRest(DocumentRest):
 
@@ -29,7 +37,7 @@ class WaypointRest(DocumentRest):
 
     @view(validators=validate_id)
     def get(self):
-        return self._get(Waypoint, schema_waypoint)
+        return self._get(Waypoint, schema_waypoint, adapt_schema)
 
     @json_view(schema=schema_waypoint, validators=validate_waypoint_create)
     def collection_post(self):

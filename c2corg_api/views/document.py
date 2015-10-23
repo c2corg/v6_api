@@ -5,7 +5,7 @@ from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, HTTPBadRequest
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
-    ArchiveDocumentGeometry)
+    ArchiveDocumentGeometry, set_available_cultures)
 from c2corg_api.models import DBSession
 from c2corg_api.views import to_json_dict
 
@@ -20,13 +20,18 @@ class DocumentRest(object):
             query(clazz). \
             options(joinedload(getattr(clazz, 'locales'))). \
             limit(30)
+        set_available_cultures(documents)
 
         return [to_json_dict(doc, schema) for doc in documents]
 
-    def _get(self, clazz, schema):
+    def _get(self, clazz, schema, adapt_schema=None):
         id = self.request.validated['id']
         culture = self.request.GET.get('l')
         document = self._get_document(clazz, id, culture)
+        set_available_cultures([document])
+
+        if adapt_schema:
+            schema = adapt_schema(schema, document)
 
         return to_json_dict(document, schema)
 

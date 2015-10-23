@@ -24,6 +24,7 @@ class TestWaypointRest(BaseTestRest):
     def test_get(self):
         body = self.get(self.waypoint)
         self._assert_geometry(body)
+        self.assertNotIn('routes_quantity', body)
 
     def test_get_lang(self):
         self.get_lang(self.waypoint)
