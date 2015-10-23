@@ -13,7 +13,7 @@ from utils import copy_attributes
 from document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
     get_update_schema, geometry_schema_overrides)
-from c2corg_api.attributes import activities
+from c2corg_common.attributes import activities
 
 
 class _ImageMixin(object):

@@ -1,7 +1,7 @@
 from sqlalchemy import Enum
 
 from c2corg_api.models import Base, schema
-from c2corg_api import attributes
+from c2corg_common import attributes
 
 
 def enum(name, types):

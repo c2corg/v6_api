@@ -8,7 +8,7 @@ from c2corg_api.views.document import DocumentRest
 from c2corg_api.views import json_view
 from c2corg_api.views.validation import (
     validate_id, check_required_fields, check_duplicate_locales)
-from c2corg_api.fields_waypoint import fields_waypoint
+from c2corg_common.fields_waypoint import fields_waypoint
 
 
 def validate_waypoint_create(request):

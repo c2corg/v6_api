@@ -1,7 +1,7 @@
 import unittest
 
-from c2corg_api.fields_waypoint import fields_waypoint
-from c2corg_api.attributes import waypoint_types
+from c2corg_common.fields_waypoint import fields_waypoint
+from c2corg_common.attributes import waypoint_types
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.document import DocumentGeometry
 
