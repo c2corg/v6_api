@@ -1,6 +1,6 @@
 import unittest
 
-from c2corg_api.fields_waypoint import fields_waypoint
+from c2corg_common.fields_waypoint import fields_waypoint
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.waypoint import schema_waypoint
 

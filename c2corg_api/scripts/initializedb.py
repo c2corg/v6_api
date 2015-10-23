@@ -12,7 +12,7 @@ from pyramid.paster import (
 from pyramid.scripts.common import parse_vars
 
 from c2corg_api.models import *  # noqa
-from c2corg_api.attributes import default_cultures
+from c2corg_common.attributes import default_cultures
 
 
 def usage(argv):
