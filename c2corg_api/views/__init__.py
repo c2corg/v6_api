@@ -46,7 +46,15 @@ def json_view(**kw):
 
 
 def to_json_dict(obj, schema):
-    return serialize(schema.dictify(obj))
+    obj_dict = schema.dictify(obj)
+
+    # manually copy `available_cultures` (it would be cleaner to add the
+    # field to the schema, but ColanderAlchemy doesn't like it because it's
+    # not a real column)
+    if hasattr(obj, 'available_cultures'):
+        obj_dict['available_cultures'] = getattr(obj, 'available_cultures')
+
+    return serialize(obj_dict)
 
 
 def serialize(data):

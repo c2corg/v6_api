@@ -51,6 +51,9 @@ class BaseTestRest(BaseTestCase):
         self.assertIsNotNone(locale_en.get('version'))
         self.assertEqual(locale_en.get('culture'), self.locale_en.culture)
         self.assertEqual(locale_en.get('title'), self.locale_en.title)
+
+        available_cultures = body.get('available_cultures')
+        self.assertEqual(available_cultures, ['en', 'fr'])
         return body
 
     def get_lang(self, reference):

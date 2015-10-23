@@ -24,6 +24,7 @@ requires = [
     'geoalchemy2',
     'shapely',
     'pyproj',
+    'functools32',
     ]
 
 setup(name='c2corg_api',
