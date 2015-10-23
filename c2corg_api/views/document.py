@@ -15,14 +15,19 @@ class DocumentRest(object):
     def __init__(self, request):
         self.request = request
 
-    def _collection_get(self, clazz, schema):
+    def _collection_get(self, clazz, schema, adapt_schema=None):
         documents = DBSession. \
             query(clazz). \
             options(joinedload(getattr(clazz, 'locales'))). \
             limit(30)
         set_available_cultures(documents)
 
-        return [to_json_dict(doc, schema) for doc in documents]
+        return [
+            to_json_dict(
+                doc,
+                schema if not adapt_schema else adapt_schema(schema, doc)
+            ) for doc in documents
+        ]
 
     def _get(self, clazz, schema, adapt_schema=None):
         id = self.request.validated['id']

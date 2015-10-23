@@ -1,4 +1,5 @@
 from cornice.resource import resource, view
+from functools32 import lru_cache
 
 from c2corg_api.models.waypoint import (
     Waypoint, schema_waypoint, schema_update_waypoint)
@@ -22,18 +23,25 @@ def validate_waypoint_update(request):
         validate_waypoint(waypoint, request, updating=True)
 
 
-def adapt_schema(base_schema, waypoint):
-    waypoint_type = waypoint.waypoint_type
+@lru_cache(maxsize=None)
+def adapt_schema_for_type(waypoint_type):
+    """Get the schema for a waypoint type.
+    The schemas are cached.
+    """
     fields = fields_waypoint.get(waypoint_type).get('fields')
-    # TODO cache this schema (per waypoint_type)?
-    return restrict_schema(base_schema, fields)
+    return restrict_schema(schema_waypoint, fields)
+
+
+def adapt_schema(_base_schema, waypoint):
+    waypoint_type = waypoint.waypoint_type
+    return adapt_schema_for_type(waypoint_type)
 
 
 @resource(collection_path='/waypoints', path='/waypoints/{id}')
 class WaypointRest(DocumentRest):
 
     def collection_get(self):
-        return self._collection_get(Waypoint, schema_waypoint)
+        return self._collection_get(Waypoint, schema_waypoint, adapt_schema)
 
     @view(validators=validate_id)
     def get(self):
