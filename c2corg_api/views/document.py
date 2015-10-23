@@ -19,7 +19,8 @@ class DocumentRest(object):
         documents = DBSession. \
             query(clazz). \
             options(joinedload(getattr(clazz, 'locales'))). \
-            limit(30)
+            limit(30). \
+            all()
         set_available_cultures(documents)
 
         return [

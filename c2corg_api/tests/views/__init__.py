@@ -31,6 +31,9 @@ class BaseTestRest(BaseTestCase):
         self.assertIsInstance(body, list)
         nb_docs = self.session.query(self._model).count()
         self.assertEqual(len(body), nb_docs)
+        doc = body[0]
+        available_cultures = doc.get('available_cultures')
+        self.assertEqual(available_cultures, ['en', 'fr'])
         return body
 
     def get(self, reference):

@@ -13,8 +13,9 @@ def restrict_schema(base_schema, all_fields):
     children = []
     for node in schema.children:
         if node.name == 'geometry':
-            children.append(node)
-            filter_node(node, geom_fields, default_fields_geometry)
+            if geom_fields:
+                children.append(node)
+                filter_node(node, geom_fields, default_fields_geometry)
         elif node.name == 'locales':
             children.append(node)
             locale_node = node.children[0]

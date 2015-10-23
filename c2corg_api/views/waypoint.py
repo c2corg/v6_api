@@ -26,22 +26,35 @@ def validate_waypoint_update(request):
 @lru_cache(maxsize=None)
 def adapt_schema_for_type(waypoint_type):
     """Get the schema for a waypoint type.
-    The schemas are cached.
+    All schemas are cached using memoization with @lru_cache.
     """
     fields = fields_waypoint.get(waypoint_type).get('fields')
     return restrict_schema(schema_waypoint, fields)
 
 
+@lru_cache(maxsize=None)
+def adapt_listing_schema_for_type(waypoint_type):
+    """Get the listing schema for a waypoint type.
+    All schemas are cached using memoization with @lru_cache.
+    """
+    fields = fields_waypoint.get(waypoint_type).get('listing')
+    return restrict_schema(schema_waypoint, fields)
+
+
 def adapt_schema(_base_schema, waypoint):
-    waypoint_type = waypoint.waypoint_type
-    return adapt_schema_for_type(waypoint_type)
+    return adapt_schema_for_type(waypoint.waypoint_type)
+
+
+def adapt_listing_schema(_base_schema, waypoint):
+    return adapt_listing_schema_for_type(waypoint.waypoint_type)
 
 
 @resource(collection_path='/waypoints', path='/waypoints/{id}')
 class WaypointRest(DocumentRest):
 
     def collection_get(self):
-        return self._collection_get(Waypoint, schema_waypoint, adapt_schema)
+        return self._collection_get(
+            Waypoint, schema_waypoint, adapt_listing_schema)
 
     @view(validators=validate_id)
     def get(self):
