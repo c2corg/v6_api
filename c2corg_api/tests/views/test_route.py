@@ -33,12 +33,13 @@ class TestRouteRest(BaseTestRest):
         body = self.post_error({})
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertMissing(errors[0], 'activities')
+        self.assertMissing(errors[0], 'route_type')
 
     def test_post_missing_title(self):
         body_post = {
-            'activities': 'skitouring',
-            'height': 1200,
+            'route_type': 'ski',
+            'activities': ['skitouring'],
+            'elevation_max': 1200,
             'locales': [
                 {'culture': 'en'}
             ]
@@ -49,8 +50,9 @@ class TestRouteRest(BaseTestRest):
 
     def test_post_non_whitelisted_attribute(self):
         body = {
-            'activities': 'hiking',
-            'height': 750,
+            'route_type': 'hiking',
+            'activities': ['hiking'],
+            'elevation_max': 750,
             'protected': True,
             'locales': [
                 {'culture': 'en', 'title': 'Some nice loop',
@@ -64,8 +66,9 @@ class TestRouteRest(BaseTestRest):
 
     def test_post_success(self):
         body = {
-            'activities': 'hiking',
-            'height': 750,
+            'route_type': 'hiking',
+            'activities': ['hiking'],
+            'elevation_max': 750,
             'geometry': {
                 'id': 5678, 'version': 6789,
                 'geom': '{"type": "LineString", "coordinates": ' +
@@ -82,8 +85,8 @@ class TestRouteRest(BaseTestRest):
         version = doc.versions[0]
 
         archive_route = version.document_archive
-        self.assertEqual(archive_route.activities, 'hiking')
-        self.assertEqual(archive_route.height, 750)
+        self.assertEqual(archive_route.activities, ['hiking'])
+        self.assertEqual(archive_route.elevation_max, 750)
 
         archive_locale = version.document_locales_archive
         self.assertEqual(archive_locale.culture, 'en')
@@ -98,8 +101,9 @@ class TestRouteRest(BaseTestRest):
             'document': {
                 'document_id': '-9999',
                 'version': self.route.version,
-                'activities': 'paragliding',
-                'height': 1500,
+                'route_type': 'hiking',
+                'activities': ['paragliding'],
+                'elevation_max': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
@@ -114,8 +118,9 @@ class TestRouteRest(BaseTestRest):
             'document': {
                 'document_id': self.route.document_id,
                 'version': -9999,
-                'activities': 'paragliding',
-                'height': 1500,
+                'route_type': 'hiking',
+                'activities': ['paragliding'],
+                'elevation_max': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
@@ -130,8 +135,9 @@ class TestRouteRest(BaseTestRest):
             'document': {
                 'document_id': self.route.document_id,
                 'version': self.route.version,
-                'activities': 'paragliding',
-                'height': 1500,
+                'route_type': 'hiking',
+                'activities': ['paragliding'],
+                'elevation_max': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
@@ -146,8 +152,9 @@ class TestRouteRest(BaseTestRest):
             'document': {
                 'document_id': self.route.document_id,
                 'version': self.route.version,
-                'activities': 'paragliding',
-                'height': 1500,
+                'route_type': 'hiking',
+                'activities': ['paragliding'],
+                'elevation_max': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
@@ -166,8 +173,9 @@ class TestRouteRest(BaseTestRest):
             'document': {
                 'document_id': self.route.document_id,
                 'version': self.route.version,
-                'activities': 'paragliding',
-                'height': 1500,
+                'route_type': 'hiking',
+                'activities': ['paragliding'],
+                'elevation_max': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
@@ -182,7 +190,7 @@ class TestRouteRest(BaseTestRest):
         }
         (body, route) = self.put_success_all(body, self.route)
 
-        self.assertEquals(route.height, 1500)
+        self.assertEquals(route.elevation_max, 1500)
         locale_en = route.get_locale('en')
         self.assertEquals(locale_en.description, '...')
         self.assertEquals(locale_en.gear, 'none')
@@ -195,8 +203,8 @@ class TestRouteRest(BaseTestRest):
         self.assertEqual(archive_locale.gear, 'none')
 
         archive_document_en = version_en.document_archive
-        self.assertEqual(archive_document_en.activities, 'paragliding')
-        self.assertEqual(archive_document_en.height, 1500)
+        self.assertEqual(archive_document_en.activities, ['paragliding'])
+        self.assertEqual(archive_document_en.elevation_max, 1500)
 
         archive_geometry_en = version_en.document_geometry_archive
         self.assertEqual(archive_geometry_en.version, 2)
@@ -213,8 +221,9 @@ class TestRouteRest(BaseTestRest):
             'document': {
                 'document_id': self.route.document_id,
                 'version': self.route.version,
-                'activities': 'paragliding',
-                'height': 1500,
+                'route_type': 'hiking',
+                'activities': ['paragliding'],
+                'elevation_max': 1500,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'paraglider',
@@ -224,7 +233,7 @@ class TestRouteRest(BaseTestRest):
         }
         (body, route) = self.put_success_figures_only(body, self.route)
 
-        self.assertEquals(route.height, 1500)
+        self.assertEquals(route.elevation_max, 1500)
 
     def test_put_success_lang_only(self):
         body = {
@@ -232,8 +241,9 @@ class TestRouteRest(BaseTestRest):
             'document': {
                 'document_id': self.route.document_id,
                 'version': self.route.version,
-                'activities': 'paragliding',
-                'height': 2000,
+                'route_type': 'ski',
+                'activities': ['paragliding'],
+                'elevation_max': 2000,
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
@@ -253,8 +263,9 @@ class TestRouteRest(BaseTestRest):
             'document': {
                 'document_id': self.route.document_id,
                 'version': self.route.version,
-                'activities': 'paragliding',
-                'height': 2000,
+                'route_type': 'ski',
+                'activities': ['paragliding'],
+                'elevation_max': 2000,
                 'locales': [
                     {'culture': 'es', 'title': 'Mont Blanc del cielo',
                      'description': '...', 'gear': 'si'}
@@ -281,7 +292,8 @@ class TestRouteRest(BaseTestRest):
 
     def _add_test_data(self):
         self.route = Route(
-            activities='paragliding', height=2000)
+            route_type='ski',
+            activities=['paragliding'], elevation_max=2000)
 
         self.locale_en = RouteLocale(
             culture='en', title='Mont Blanc from the air', description='...',

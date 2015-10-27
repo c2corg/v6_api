@@ -209,6 +209,7 @@ class _DocumentLocaleMixin(object):
             nullable=False)
 
     title = Column(String(150), nullable=False)
+    summary = Column(String(255))
     description = Column(String)
 
     type = Column(String(1))
@@ -227,8 +228,10 @@ class DocumentLocale(Base, _DocumentLocaleMixin):
         'version_id_col': _DocumentLocaleMixin.version
     }
 
-    _ATTRIBUTES = \
-        ['document_id', 'version', 'culture', 'title', 'description']
+    _ATTRIBUTES = [
+        'document_id', 'version', 'culture', 'title', 'description',
+        'summary'
+    ]
 
     def to_archive(self, locale):
         copy_attributes(self, locale, DocumentLocale._ATTRIBUTES)
@@ -306,6 +309,13 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
 class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
     __tablename__ = 'documents_geometries_archives'
 
+
+schema_attributes = [
+    'document_id', 'version', 'locales', 'geometry'
+]
+schema_locale_attributes = [
+    'version', 'culture', 'title', 'description', 'summary'
+]
 
 geometry_schema_overrides = {
     # whitelisted attributes

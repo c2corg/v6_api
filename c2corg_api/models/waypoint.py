@@ -13,7 +13,8 @@ from c2corg_api.models import schema
 from utils import copy_attributes, ArrayOfEnum
 from document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
-    get_update_schema, geometry_schema_overrides)
+    get_update_schema, geometry_schema_overrides, schema_attributes,
+    schema_locale_attributes)
 from c2corg_api.models import enums
 
 
@@ -222,9 +223,6 @@ class _WaypointLocaleMixin(object):
         'polymorphic_identity': 'w'
     }
 
-    # resume (all)
-    summary = Column(String(255))
-
     # access (climbing_outdoor/indoor, access, local_product, sport_shop)
     access = Column(String)
 
@@ -237,7 +235,7 @@ class _WaypointLocaleMixin(object):
 
 
 attributes_locales = [
-    'summary', 'access', 'access_period'
+    'access', 'access_period'
 ]
 
 
@@ -276,8 +274,7 @@ class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
 schema_waypoint_locale = SQLAlchemySchemaNode(
     WaypointLocale,
     # whitelisted attributes
-    includes=[
-        'version', 'culture', 'title', 'description'] + attributes_locales,
+    includes=schema_locale_attributes + attributes_locales,
     overrides={
         'version': {
             'missing': None
@@ -288,7 +285,7 @@ schema_waypoint_locale = SQLAlchemySchemaNode(
 schema_waypoint = SQLAlchemySchemaNode(
     Waypoint,
     # whitelisted attributes
-    includes=['document_id', 'version', 'locales', 'geometry'] + attributes,
+    includes=schema_attributes + attributes,
     overrides={
         'document_id': {
             'missing': None
