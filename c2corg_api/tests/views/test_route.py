@@ -18,13 +18,18 @@ class TestRouteRest(BaseTestRest):
         self._add_test_data()
 
     def test_get_collection(self):
-        self.get_collection()
+        body = self.get_collection()
+        doc = body[0]
+        self.assertNotIn('climbing_outdoor_types', doc)
+        self.assertNotIn('elevation_min', doc)
 
     def test_get(self):
         body = self.get(self.route)
         self.assertEqual(
             body.get('activities'), self.route.activities)
         self._assert_geometry(body)
+        self.assertNotIn('climbing_outdoor_types', body)
+        self.assertIn('elevation_min', body)
 
     def test_get_lang(self):
         self.get_lang(self.route)

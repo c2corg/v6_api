@@ -278,6 +278,8 @@ def validate_document(document, request, fields, type_field, updating):
 
 
 def make_validator_create(fields, type_field):
+    """Returns a validator function used for the creation of documents.
+    """
     def f(request):
         document = request.validated
         validate_document(
@@ -286,9 +288,23 @@ def make_validator_create(fields, type_field):
 
 
 def make_validator_update(fields, type_field):
+    """Returns a validator function used for updating documents.
+    """
     def f(request):
         document = request.validated.get('document')
         if document:
             validate_document(
                 document, request, fields, type_field, updating=True)
     return f
+
+
+def make_schema_adaptor(adapt_schema_for_type, type_field, field_list_type):
+    """Returns a function which adapts a base schema to a specific document
+    type, e.g. it returns a function which turns the base schema for waypoints
+    into a schema which contains only the fields for the waypoint type
+    "summit".
+    """
+    def adapt_schema(_base_schema, document):
+        return adapt_schema_for_type(
+            getattr(document, type_field), field_list_type)
+    return adapt_schema
