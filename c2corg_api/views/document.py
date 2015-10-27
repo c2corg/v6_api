@@ -8,6 +8,8 @@ from c2corg_api.models.document import (
     ArchiveDocumentGeometry, set_available_cultures)
 from c2corg_api.models import DBSession
 from c2corg_api.views import to_json_dict
+from c2corg_api.views.validation import check_required_fields, \
+    check_duplicate_locales
 
 
 class DocumentRest(object):
@@ -258,3 +260,35 @@ class DocumentRest(object):
             raise HTTPBadRequest(
                 'trying do update the document with the same content')
         return (update_types, changed_langs)
+
+
+def validate_document(document, request, fields, type_field, updating):
+    """Checks that all required fields are given.
+    """
+    document_type = document.get(type_field)
+
+    if not document_type:
+        # can't do the validation without the type (an error was already added
+        # when validating the Colander schema)
+        return
+
+    fields = fields.get(document_type)
+    check_required_fields(document, fields['required'], request, updating)
+    check_duplicate_locales(document, request)
+
+
+def make_validator_create(fields, type_field):
+    def f(request):
+        document = request.validated
+        validate_document(
+            document, request, fields, type_field, updating=False)
+    return f
+
+
+def make_validator_update(fields, type_field):
+    def f(request):
+        document = request.validated.get('document')
+        if document:
+            validate_document(
+                document, request, fields, type_field, updating=True)
+    return f

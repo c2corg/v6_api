@@ -1,9 +1,15 @@
 from cornice.resource import resource, view
 
 from c2corg_api.models.route import Route, schema_route, schema_update_route
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import DocumentRest, make_validator_create, \
+    make_validator_update
 from c2corg_api.views import json_view
 from c2corg_api.views.validation import validate_id
+from c2corg_common.fields_route import fields_route
+
+
+validate_route_create = make_validator_create(fields_route, 'route_type')
+validate_route_update = make_validator_update(fields_route, 'route_type')
 
 
 @resource(collection_path='/routes', path='/routes/{id}')
@@ -16,10 +22,11 @@ class RouteRest(DocumentRest):
     def get(self):
         return self._get(Route, schema_route)
 
-    @json_view(schema=schema_route)
+    @json_view(schema=schema_route, validators=validate_route_create)
     def collection_post(self):
         return self._collection_post(Route, schema_route)
 
-    @json_view(schema=schema_update_route, validators=validate_id)
+    @json_view(schema=schema_update_route,
+               validators=[validate_id, validate_route_update])
     def put(self):
         return self._put(Route, schema_route)
