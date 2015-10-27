@@ -8,10 +8,12 @@ def enum(name, types):
     return Enum(
         name=name, metadata=Base.metadata, schema=schema, *types)
 
-activity_type = enum(
-    'activity_type', attributes.activities)
 waypoint_type = enum(
     'waypoint_type', attributes.waypoint_types)
+route_type = enum(
+    'route_type', attributes.route_types)
+activity_type = enum(
+    'activity_type', attributes.activities)
 climbing_outdoor_type = enum(
     'climbing_outdoor_type', attributes.climbing_outdoor_types)
 climbing_indoor_type = enum(
@@ -54,3 +56,39 @@ climbing_rating = enum(
     'climbing_rating', attributes.climbing_ratings)
 equipment_rating = enum(
     'equipment_rating', attributes.equipment_ratings)
+route_form = enum(
+    'route_route_form', attributes.route_forms)
+route_duration_type = enum(
+    'route_duration_type', attributes.route_duration_types)
+glacier_gear_type = enum(
+    'glacier_gear_type', attributes.glacier_gear_types)
+route_configuration_type = enum(
+    'route_configuration_type', attributes.route_configuration_types)
+ski_rating = enum(
+    'ski_rating', attributes.ski_ratings)
+labande_ski_rating = enum(
+    'labande_ski_rating', attributes.labande_ski_ratings)
+global_rating = enum(
+    'global_rating', attributes.global_ratings)
+engagement_rating = enum(
+    'engagement_rating', attributes.engagement_ratings)
+risk_rating = enum(
+    'risk_rating', attributes.risk_ratings)
+ice_rating = enum(
+    'ice_rating', attributes.ice_ratings)
+mixed_rating = enum(
+    'mixed_rating', attributes.mixed_ratings)
+exposition_rock_rating = enum(
+    'exposition_rock_rating', attributes.exposition_rock_ratings)
+aid_rating = enum(
+    'aid_rating', attributes.aid_ratings)
+via_ferrata_rating = enum(
+    'via_ferrata_rating', attributes.via_ferrata_ratings)
+hiking_rating = enum(
+    'hiking_rating', attributes.hiking_ratings)
+snowshoe_rating = enum(
+    'snowshoe_rating', attributes.snowshoe_ratings)
+mtb_up_rating = enum(
+    'mtb_up_rating', attributes.mtb_up_ratings)
+mtb_down_rating = enum(
+    'mtb_down_rating', attributes.mtb_down_ratings)

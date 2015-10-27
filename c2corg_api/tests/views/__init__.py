@@ -138,7 +138,7 @@ class BaseTestRest(BaseTestCase):
         self.assertEqual(errors[0].get('name'), 'locales')
         return body
 
-    def post_missing_elevation(self, request_body):
+    def post_missing_field(self, request_body, field):
         response = self.app.post_json(self._prefix, request_body,
                                       expect_errors=True, status=400)
 
@@ -147,7 +147,7 @@ class BaseTestRest(BaseTestCase):
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].get('description'), 'Required')
-        self.assertEqual(errors[0].get('name'), 'elevation')
+        self.assertEqual(errors[0].get('name'), field)
         return body
 
     def post_non_whitelisted_attribute(self, request_body):
@@ -243,7 +243,7 @@ class BaseTestRest(BaseTestCase):
         self.assertEqual(
             body['errors'][0]['description'], 'document is missing')
 
-    def put_missing_elevation(self, request_body, document):
+    def put_missing_field(self, request_body, document, field):
         response = self.app.put_json(
             self._prefix + '/' + str(document.document_id), request_body,
             status=400)
@@ -252,7 +252,7 @@ class BaseTestRest(BaseTestCase):
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertRequired(errors[0], 'elevation')
+        self.assertRequired(errors[0], field)
 
     def put_success_all(self, request_body, document):
         """Test updating a document with changes to the figures and locales.

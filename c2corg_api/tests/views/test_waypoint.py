@@ -113,7 +113,7 @@ class TestWaypointRest(BaseTestRest):
                  'access': 'y'}
             ]
         }
-        self.post_missing_elevation(body)
+        self.post_missing_field(body, 'elevation')
 
     def test_post_non_whitelisted_attribute(self):
         body = {
@@ -252,7 +252,7 @@ class TestWaypointRest(BaseTestRest):
                 'waypoint_type': 'summit'
             }
         }
-        self.put_missing_elevation(body, self.waypoint)
+        self.put_missing_field(body, self.waypoint, 'elevation')
 
     def test_put_success_all(self):
         body = {

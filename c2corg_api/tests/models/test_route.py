@@ -7,12 +7,15 @@ class TestRoute(BaseTestCase):
 
     def test_to_archive(self):
         route = Route(
-            document_id=1, activities='skitouring', height=1200,
+            document_id=1, route_type='ski', activities=['skitouring'],
+            elevation_max=1200,
             locales=[
                 RouteLocale(
-                    id=2, culture='en', title='A', description='abc'),
+                    id=2, culture='en', title='A', description='abc',
+                    gear='...'),
                 RouteLocale(
-                    id=3, culture='fr', title='B', description='bcd'),
+                    id=3, culture='fr', title='B', description='bcd',
+                    gear='...'),
             ]
         )
 
@@ -20,9 +23,10 @@ class TestRoute(BaseTestCase):
 
         self.assertIsNone(route_archive.id)
         self.assertEqual(route_archive.document_id, route.document_id)
+        self.assertEqual(route_archive.route_type, route.route_type)
         self.assertEqual(
             route_archive.activities, route.activities)
-        self.assertEqual(route_archive.height, route.height)
+        self.assertEqual(route_archive.elevation_max, route.elevation_max)
 
         archive_locals = route.get_archive_locales()
 
@@ -34,3 +38,4 @@ class TestRoute(BaseTestCase):
         self.assertEqual(locale_archive.culture, locale.culture)
         self.assertEqual(locale_archive.title, locale.title)
         self.assertEqual(locale_archive.description, locale.description)
+        self.assertEqual(locale_archive.gear, locale.gear)

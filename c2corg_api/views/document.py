@@ -8,6 +8,8 @@ from c2corg_api.models.document import (
     ArchiveDocumentGeometry, set_available_cultures)
 from c2corg_api.models import DBSession
 from c2corg_api.views import to_json_dict
+from c2corg_api.views.validation import check_required_fields, \
+    check_duplicate_locales
 
 
 class DocumentRest(object):
@@ -258,3 +260,51 @@ class DocumentRest(object):
             raise HTTPBadRequest(
                 'trying do update the document with the same content')
         return (update_types, changed_langs)
+
+
+def validate_document(document, request, fields, type_field, updating):
+    """Checks that all required fields are given.
+    """
+    document_type = document.get(type_field)
+
+    if not document_type:
+        # can't do the validation without the type (an error was already added
+        # when validating the Colander schema)
+        return
+
+    fields = fields.get(document_type)
+    check_required_fields(document, fields['required'], request, updating)
+    check_duplicate_locales(document, request)
+
+
+def make_validator_create(fields, type_field):
+    """Returns a validator function used for the creation of documents.
+    """
+    def f(request):
+        document = request.validated
+        validate_document(
+            document, request, fields, type_field, updating=False)
+    return f
+
+
+def make_validator_update(fields, type_field):
+    """Returns a validator function used for updating documents.
+    """
+    def f(request):
+        document = request.validated.get('document')
+        if document:
+            validate_document(
+                document, request, fields, type_field, updating=True)
+    return f
+
+
+def make_schema_adaptor(adapt_schema_for_type, type_field, field_list_type):
+    """Returns a function which adapts a base schema to a specific document
+    type, e.g. it returns a function which turns the base schema for waypoints
+    into a schema which contains only the fields for the waypoint type
+    "summit".
+    """
+    def adapt_schema(_base_schema, document):
+        return adapt_schema_for_type(
+            getattr(document, type_field), field_list_type)
+    return adapt_schema
