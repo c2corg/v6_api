@@ -12,6 +12,12 @@ from shapely.geometry import mapping
 import json
 
 
+cors_policy = dict(
+    headers=('Content-Type'),
+    origins=('*')
+)
+
+
 @view_config(context=HTTPNotFound)
 @view_config(context=HTTPError)
 def http_error_handler(exc, request):

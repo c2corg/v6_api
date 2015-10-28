@@ -2,5 +2,6 @@ include Makefile
 
 export version = 0
 
-host = c2corgv6.demo-camptocamp.com
-internalurl = $(url)
+host = c2corgv6-demo.gis.internal
+
+export cors_origins = $(url):*

@@ -7,7 +7,7 @@ from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import (
     DocumentRest, make_validator_create, make_validator_update,
     make_schema_adaptor)
-from c2corg_api.views import json_view
+from c2corg_api.views import json_view, cors_policy
 from c2corg_api.views.validation import validate_id
 from c2corg_common.fields_waypoint import fields_waypoint
 
@@ -34,7 +34,8 @@ listing_schema_adaptor = make_schema_adaptor(
     adapt_schema_for_type, 'waypoint_type', 'listing')
 
 
-@resource(collection_path='/waypoints', path='/waypoints/{id}')
+@resource(collection_path='/waypoints', path='/waypoints/{id}',
+          cors_policy=cors_policy)
 class WaypointRest(DocumentRest):
 
     def collection_get(self):
