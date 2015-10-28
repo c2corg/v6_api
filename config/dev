@@ -3,6 +3,5 @@ include Makefile
 export version = 0
 
 host = c2corgv6-demo.gis.internal
-internalurl = $(url)
 
 export cors_origins = $(url):*

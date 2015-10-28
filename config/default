@@ -8,7 +8,6 @@ export elasticsearch_host = ...
 
 host = c2corgv6.demo-camptocamp.com
 url = http://$(host)
-internalurl = http://localhost
 
 export cors_origins = $(url)
 
