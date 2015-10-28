@@ -9,7 +9,7 @@ version = {version}
 
 # the origins for CORS
 # e.g.: host1,host2
-cors.origins = c2corgv6-demo.gis.internal
+cors.origins = {cors_origins}
 
 # elasticsearch.host = {elasticsearch_host}
 # elasticsearch.port = 9200
