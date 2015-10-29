@@ -157,7 +157,7 @@ class TestWaypointRest(BaseTestRest):
             'document_id': 1234,
             'version': 2345,
             'geometry': {
-                'id': 5678, 'version': 6789,
+                'document_id': 5678, 'version': 6789,
                 'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
                 'geom_detail':
                     '{"type": "Point", "coordinates": [635956, 5723604]}'
@@ -181,7 +181,7 @@ class TestWaypointRest(BaseTestRest):
         self.assertEqual(doc.activities, ['skitouring', 'hiking'])
         self.assertNotEqual(doc.locales[0].id, 3456)
         self.assertEqual(body.get('locales')[0].get('version'), 1)
-        self.assertNotEqual(doc.geometry.id, 5678)
+        self.assertEqual(doc.geometry.document_id, doc.document_id)
         self.assertEqual(doc.geometry.version, 1)
         version = doc.versions[0]
 
@@ -196,6 +196,8 @@ class TestWaypointRest(BaseTestRest):
 
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
+        self.assertEqual(
+            archive_geometry.document_id, doc.geometry.document_id)
         self.assertIsNotNone(archive_geometry.geom)
         self.assertIsNotNone(archive_geometry.geom_detail)
 
