@@ -8,6 +8,7 @@ from sqlalchemy import (
     )
 
 from colanderalchemy import SQLAlchemySchemaNode
+import colander
 
 from c2corg_api.models import schema
 from c2corg_api.models.utils import ArrayOfEnum
@@ -25,10 +26,8 @@ class _RouteMixin(object):
         'polymorphic_identity': 'r'
     }
 
-    route_type = Column(enums.route_type, nullable=False)
-
     # activite
-    activities = Column(ArrayOfEnum(enums.activity_type))
+    activities = Column(ArrayOfEnum(enums.activity_type), nullable=False)
 
     # altitude min.
     elevation_min = Column(SmallInteger)
@@ -149,7 +148,7 @@ class _RouteMixin(object):
 
 
 attributes = [
-    'route_type', 'activities', 'elevation_min', 'elevation_max',
+    'activities', 'elevation_min', 'elevation_max',
     'height_diff_up', 'height_diff_down', 'route_length',
     'difficulties_height', 'height_diff_access', 'height_diff_difficulties',
     'route_forms', 'orientation', 'duration', 'glacier_gear', 'configuration',
@@ -276,6 +275,9 @@ schema_route = SQLAlchemySchemaNode(
         },
         'locales': {
             'children': [schema_route_locale]
+        },
+        'activities': {
+            'validator': colander.Length(min=1)
         },
         'geometry': geometry_schema_overrides
     })

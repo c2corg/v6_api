@@ -10,8 +10,6 @@ def enum(name, types):
 
 waypoint_type = enum(
     'waypoint_type', attributes.waypoint_types)
-route_type = enum(
-    'route_type', attributes.route_types)
 activity_type = enum(
     'activity_type', attributes.activities)
 climbing_outdoor_type = enum(
