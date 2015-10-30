@@ -54,8 +54,8 @@ climbing_rating = enum(
     'climbing_rating', attributes.climbing_ratings)
 equipment_rating = enum(
     'equipment_rating', attributes.equipment_ratings)
-route_form = enum(
-    'route_route_form', attributes.route_forms)
+route_type = enum(
+    'route_type', attributes.route_types)
 route_duration_type = enum(
     'route_duration_type', attributes.route_duration_types)
 glacier_gear_type = enum(
