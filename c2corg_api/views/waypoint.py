@@ -10,12 +10,13 @@ from c2corg_api.views.document import (
 from c2corg_api.views import json_view, cors_policy
 from c2corg_api.views.validation import validate_id
 from c2corg_common.fields_waypoint import fields_waypoint
+from c2corg_common.attributes import waypoint_types
 
 
 validate_waypoint_create = make_validator_create(
-    fields_waypoint, 'waypoint_type')
+    fields_waypoint, 'waypoint_type', waypoint_types)
 validate_waypoint_update = make_validator_update(
-    fields_waypoint, 'waypoint_type')
+    fields_waypoint, 'waypoint_type', waypoint_types)
 
 
 @lru_cache(maxsize=None)

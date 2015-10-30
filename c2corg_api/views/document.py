@@ -262,7 +262,8 @@ class DocumentRest(object):
         return (update_types, changed_langs)
 
 
-def validate_document(document, request, fields, type_field, updating):
+def validate_document(document, request, fields, type_field, valid_type_values,
+                      updating):
     """Checks that all required fields are given.
     """
     document_type = document.get(type_field)
@@ -272,29 +273,45 @@ def validate_document(document, request, fields, type_field, updating):
         # when validating the Colander schema)
         return
 
-    fields = fields.get(document_type)
-    check_required_fields(document, fields['required'], request, updating)
+    if type_field == 'activities':
+        # for routes the required fields depend on the assigned activities of
+        # a route. but because currently all activities have the same required
+        # fields, we can simply take the required fields of the first
+        # activity. if this is going to change in the future the fields for
+        # activities would have to be taken into account.
+        document_type = document_type[0]
+
+    if document_type not in valid_type_values:
+        request.errors.add(
+            'body', type_field, 'invalid value: %s' % document_type)
+        return
+
+    fields_req = fields.get(document_type)['required']
+
+    check_required_fields(document, fields_req, request, updating)
     check_duplicate_locales(document, request)
 
 
-def make_validator_create(fields, type_field):
+def make_validator_create(fields, type_field, valid_type_values):
     """Returns a validator function used for the creation of documents.
     """
     def f(request):
         document = request.validated
         validate_document(
-            document, request, fields, type_field, updating=False)
+            document, request, fields, type_field, valid_type_values,
+            updating=False)
     return f
 
 
-def make_validator_update(fields, type_field):
+def make_validator_update(fields, type_field, valid_type_values):
     """Returns a validator function used for updating documents.
     """
     def f(request):
         document = request.validated.get('document')
         if document:
             validate_document(
-                document, request, fields, type_field, updating=True)
+                document, request, fields, type_field, valid_type_values,
+                updating=True)
     return f
 
 
@@ -308,3 +325,14 @@ def make_schema_adaptor(adapt_schema_for_type, type_field, field_list_type):
         return adapt_schema_for_type(
             getattr(document, type_field), field_list_type)
     return adapt_schema
+
+
+def get_all_fields(fields, activities, field_list_type):
+    """Returns all fields needed for the given list of activities.
+    """
+    fields_list = [
+        fields.get(activity).get(field_list_type) for activity in activities
+    ]
+    # turn a list of lists [['a', 'b'], ['b', 'c'], ['d']] into a flat set
+    # ['a', 'b', 'c', 'd']
+    return set(sum(fields_list, []))

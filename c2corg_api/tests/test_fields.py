@@ -2,8 +2,7 @@ import unittest
 
 from c2corg_common.fields_waypoint import fields_waypoint
 from c2corg_common.fields_route import fields_route
-from c2corg_common.attributes import waypoint_types
-from c2corg_common.attributes import route_types
+from c2corg_common.attributes import waypoint_types, activities
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.document import DocumentGeometry
@@ -21,11 +20,11 @@ class TestFields(unittest.TestCase):
                 type, fields_waypoint, Waypoint, WaypointLocale)
 
     def test_route_fields(self):
-        """Test that the fields listed for a route type are correct.
+        """Test that the fields listed for a route activity are correct.
         """
         for type in fields_route:
             self.assertIn(
-                type, route_types, 'invalid route type: %s' % (type))
+                type, activities, 'invalid route type: %s' % (type))
             self._test_fields_for_type(
                 type, fields_route, Route, RouteLocale)
 

@@ -7,7 +7,7 @@ class TestRoute(BaseTestCase):
 
     def test_to_archive(self):
         route = Route(
-            document_id=1, route_type='ski', activities=['skitouring'],
+            document_id=1, activities=['skitouring'],
             elevation_max=1200,
             locales=[
                 RouteLocale(
@@ -23,7 +23,6 @@ class TestRoute(BaseTestCase):
 
         self.assertIsNone(route_archive.id)
         self.assertEqual(route_archive.document_id, route.document_id)
-        self.assertEqual(route_archive.route_type, route.route_type)
         self.assertEqual(
             route_archive.activities, route.activities)
         self.assertEqual(route_archive.elevation_max, route.elevation_max)
