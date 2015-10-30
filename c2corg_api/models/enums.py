@@ -10,8 +10,6 @@ def enum(name, types):
 
 waypoint_type = enum(
     'waypoint_type', attributes.waypoint_types)
-route_type = enum(
-    'route_type', attributes.route_types)
 activity_type = enum(
     'activity_type', attributes.activities)
 climbing_outdoor_type = enum(
@@ -56,8 +54,8 @@ climbing_rating = enum(
     'climbing_rating', attributes.climbing_ratings)
 equipment_rating = enum(
     'equipment_rating', attributes.equipment_ratings)
-route_form = enum(
-    'route_route_form', attributes.route_forms)
+route_type = enum(
+    'route_type', attributes.route_types)
 route_duration_type = enum(
     'route_duration_type', attributes.route_duration_types)
 glacier_gear_type = enum(

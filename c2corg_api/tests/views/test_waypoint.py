@@ -131,6 +131,27 @@ class TestWaypointRest(BaseTestRest):
     def test_post_missing_content_type(self):
         self.post_missing_content_type({})
 
+    def test_post_invalid_waypoint_type(self):
+        body_post = {
+            'geometry': {
+                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
+                'geom_detail':
+                    '{"type": "Point", "coordinates": [635956, 5723604]}'
+            },
+            'waypoint_type': 'swimming-pool',
+            'elevation': 3779,
+            'activities': ['skitouring', 'hiking'],
+            'locales': [
+                {'culture': 'en', 'title': 'Mont Pourri'}
+            ]
+        }
+        body = self.post_error(body_post)
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertTrue(errors[0].get('description').startswith(
+            '"swimming-pool" is not one of'))
+        self.assertEqual(errors[0].get('name'), 'waypoint_type')
+
     def test_post_success(self):
         body = {
             'document_id': 1234,
