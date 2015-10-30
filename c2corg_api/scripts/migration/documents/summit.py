@@ -53,20 +53,16 @@ class MigrateSummits(MigrateDocuments):
         return dict(
             document_id=document_in.id,
             version=version,
-            waypoint_type=self.convert_type(document_in.summit_type),
+            waypoint_type=self.convert_type(
+                document_in.summit_type, MigrateSummits.summit_types),
             elevation=document_in.elevation,
             maps_info=document_in.maps_info
         )
 
     def get_document_archive(self, document_in, version):
-        return dict(
-            document_id=document_in.id,
-            id=document_in.document_archive_id,
-            version=version,
-            waypoint_type=self.convert_type(document_in.summit_type),
-            elevation=document_in.elevation,
-            maps_info=document_in.maps_info
-        )
+        doc = self.get_document(document_in, version)
+        doc['id'] = document_in.document_archive_id
+        return doc
 
     def get_document_geometry(self, document_in, version):
         return dict(
@@ -77,12 +73,9 @@ class MigrateSummits(MigrateDocuments):
         )
 
     def get_document_geometry_archive(self, document_in, version):
-        return dict(
-            document_id=document_in.id,
-            id=document_in.document_archive_id,
-            version=version,
-            geom=document_in.geom
-        )
+        doc = self.get_document_geometry(document_in, version)
+        doc['id'] = document_in.document_archive_id
+        return doc
 
     def get_document_locale(self, document_in, version):
         # TODO extract summary
@@ -96,15 +89,7 @@ class MigrateSummits(MigrateDocuments):
         )
 
     def get_document_locale_archive(self, document_in, version):
-        # TODO extract summary
-        return dict(
-            document_id=document_in.id,
-            id=document_in.document_i18n_archive_id,
-            version=version,
-            culture=document_in.culture,
-            title=document_in.name,
-            description=document_in.description
-        )
+        return self.get_document_locale(document_in, version)
 
     summit_types = {
         '1': 'summit',    # was 'culmen'
@@ -121,11 +106,3 @@ class MigrateSummits(MigrateDocuments):
         '5': 'misc',      # was 'raid' ?
         '99': 'misc'      # was 'other'
     }
-
-    def convert_type(self, summit_type_index):
-        summit_type = str(summit_type_index)
-        if summit_type in MigrateSummits.summit_types:
-            return MigrateSummits.summit_types[summit_type]
-        else:
-            raise AssertionError(
-                'invalid summit type: {0}'.format(summit_type))

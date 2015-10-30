@@ -141,3 +141,20 @@ class MigrateDocuments(MigrateBase):
             # a bulk insertion. `mark_changed` forces a commit.
             zope.sqlalchemy.mark_changed(self.session_target)
         self.stop()
+
+    def convert_type(self, type_index, mapping):
+        if type_index is None:
+            return None
+
+        old_type = str(type_index)
+        if old_type in mapping:
+            return mapping[old_type]
+        else:
+            raise AssertionError(
+                'invalid type: {0}'.format(type_index))
+
+    def convert_types(self, old_types, mapping):
+        if old_types is None:
+            return None
+        return list(set(
+            [self.convert_type(old_type, mapping) for old_type in old_types]))
