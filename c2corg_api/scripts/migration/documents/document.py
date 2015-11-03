@@ -142,8 +142,10 @@ class MigrateDocuments(MigrateBase):
             zope.sqlalchemy.mark_changed(self.session_target)
         self.stop()
 
-    def convert_type(self, type_index, mapping):
+    def convert_type(self, type_index, mapping, skip_values=None):
         if type_index is None:
+            return None
+        if skip_values is not None and type_index in skip_values:
             return None
 
         old_type = str(type_index)
@@ -153,8 +155,18 @@ class MigrateDocuments(MigrateBase):
             raise AssertionError(
                 'invalid type: {0}'.format(type_index))
 
-    def convert_types(self, old_types, mapping):
+    def convert_types(self, old_types, mapping, skip_values=None):
         if old_types is None:
             return None
-        return list(set(
-            [self.convert_type(old_type, mapping) for old_type in old_types]))
+        new_types = list(set(
+            [self.convert_type(old_type, mapping, skip_values)
+                for old_type in old_types]))
+        return [t for t in new_types if t is not None]
+
+    def merge_text(self, a, b):
+        if not a:
+            return b
+        elif not b:
+            return a
+        else:
+            return a + '\n' + b
