@@ -6,14 +6,21 @@ from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.scripts.migration.batch import SimpleBatch
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
-# TODO currently limited to the history of summits!
+# TODO only importing the versions of waypoints
+tables = [
+    'app_huts_archives', 'app_parkings_archives', 'app_products_archives',
+    'app_sites_archives', 'app_summits_archives'
+]
+tables_union = ' union '.join(['select id from ' + t for t in tables])
+
 metadata_query_count =\
     'select count(*) ' \
     'from (select h.history_metadata_id from ' \
     '   app_history_metadata h ' \
     '      inner join app_documents_versions v ' \
     '        on h.history_metadata_id = v.history_metadata_id ' \
-    '      inner join app_summits_archives a on a.id = v.document_id' \
+    '      inner join (' + tables_union + \
+    '      ) u on u.id = v.document_id ' \
     '   group by h.history_metadata_id) t;'
 
 metadata_query = \
@@ -22,14 +29,16 @@ metadata_query = \
     '   app_history_metadata h ' \
     '     inner join app_documents_versions v ' \
     '        on h.history_metadata_id = v.history_metadata_id ' \
-    '     inner join app_summits_archives a on a.id = v.document_id ' \
+    '     inner join (' + tables_union + \
+    '     ) u on u.id = v.document_id ' \
     'group by h.history_metadata_id'
 
 versions_query_count =\
     'select count(*) ' \
     'from (select v.documents_versions_id from ' \
-    '   app_documents_versions v inner join app_summits_archives a ' \
-    '      on a.id = v.document_id ' \
+    '   app_documents_versions v ' \
+    '   inner join (' + tables_union + \
+    '   ) u on u.id = v.document_id ' \
     '  group by v.documents_versions_id) t;'
 
 versions_query =\
@@ -37,8 +46,9 @@ versions_query =\
     '   v.documents_versions_id, v.document_id, v.culture, ' \
     '   v.document_archive_id, v.document_i18n_archive_id, ' \
     '   v.history_metadata_id ' \
-    'from app_documents_versions v inner join app_summits_archives a ' \
-    '   on a.id = v.document_id ' \
+    'from app_documents_versions v ' \
+    '   inner join (' + tables_union + \
+    '   ) u on u.id = v.document_id ' \
     'group by v.documents_versions_id;'
 
 
@@ -57,7 +67,7 @@ class MigrateVersions(MigrateBase):
     def get_meta_data(self, row):
         return dict(
             id=row.history_metadata_id,
-            # user_id=user_id,
+            # user_id=user_id,  # TODO
             comment=row.comment,
             written_at=row.written_at
         )
