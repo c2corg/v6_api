@@ -42,8 +42,6 @@ orientation_type = enum(
     'orientation_type', attributes.orientation_types)
 month_type = enum(
     'month_type', attributes.months)
-custodianship_type = enum(
-    'custodianship_type', attributes.custodianship_types)
 parking_fee_type = enum(
     'parking_fee_type', attributes.parking_fee_types)
 climbing_style = enum(
