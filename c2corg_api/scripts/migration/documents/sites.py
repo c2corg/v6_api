@@ -1,3 +1,4 @@
+# coding=utf-8
 from c2corg_api.models.document import DocumentGeometry, \
     ArchiveDocumentGeometry
 from c2corg_api.models.waypoint import Waypoint, ArchiveWaypoint, \
@@ -114,16 +115,13 @@ class MigrateSites(MigrateDocuments):
 
     def get_document_locale(self, document_in, version):
         # TODO extract summary
-        # TODO what about "remarks, site_history, external_resources"?
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
             version=version,
             culture=document_in.culture,
             title=document_in.name,
-            description=self.merge_text(
-                document_in.description, document_in.way_back),
-
+            description=self.get_description(document_in),
             access=document_in.pedestrian_access,
         )
 
@@ -159,6 +157,76 @@ class MigrateSites(MigrateDocuments):
                     outdoor_types.append('bloc')
 
         return indoor_types, outdoor_types
+
+    def get_description(self, document_in):
+        sections = []
+        self.add_section(sections, 'description', document_in)
+        self.add_section(sections, 'way_back', document_in)
+        self.add_section(sections, 'remarks', document_in)
+        self.add_section(sections, 'external_resources', document_in)
+        self.add_section(sections, 'site_history', document_in)
+
+        return u'\n'.join(sections)
+
+    def add_section(self, sections, field, document_in):
+        text = document_in[field]
+        if text is None:
+            return
+        text = text.strip()
+
+        if text:
+            section = u''
+            header = self.translate(field, document_in.culture)
+            if header:
+                section += u'## ' + header + u'\n'
+            section += text
+            sections.append(section)
+
+    def translate(self, field, culture):
+        if field == 'description':
+            # no section header for main text
+            return None
+        else:
+            return MigrateSites.translations[field][culture]
+
+    translations = {
+        'way_back': {
+            'ca': u'Baixada de las vies',
+            'de': u'Abstieg der Route',
+            'en': u'Means of descent',
+            'es': u'Bajada de las vías',
+            'eu': u'Luzeeren jeitsiera',
+            'fr': u'Descente des voies',
+            'it': u'Discesa delle vie'
+        },
+        'remarks': {
+            'ca': u'Remarques',
+            'de': u'Bemerkungen',
+            'en': u'Remarks',
+            'es': u'Observaciones',
+            'eu': u'Azalpenak',
+            'fr': u'Remarques',
+            'it': u'Osservazioni'
+        },
+        'external_resources': {
+            'ca': u'Bibliografia i webgrafia',
+            'de': u'Bibliographie',
+            'en': u'External resources',
+            'es': u'Bibliografía y webgrafía',
+            'eu': u'Bibliografia et webografia',
+            'fr': u'Bibliographie et webographie',
+            'it': u'Bibliografia e riferimenti web'
+        },
+        'site_history': {
+            'ca': u'Històric',
+            'de': u'Geschichte des Klettersektors',
+            'en': u'Site history',
+            'es': u'Historia',
+            'eu': u'Historia',
+            'fr': u'Historique du site',
+            'it': u'Cenni storici'
+        }
+    }
 
     equipment_ratings = {
         '4': 'P1',
