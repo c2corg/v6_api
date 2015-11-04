@@ -14,7 +14,6 @@ class TestUtils(unittest.TestCase):
         self.assertHasField(schema, 'document_id')
         self.assertHasField(schema, 'version')
         self.assertHasField(schema, 'elevation')
-        self.assertHasField(schema, 'rock_types')
         self.assertHasNotField(schema, 'climbing_outdoor_types')
 
         geometry_node = self.get_child_node(schema, 'geometry')
