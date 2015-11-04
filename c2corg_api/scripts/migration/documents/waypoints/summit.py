@@ -66,7 +66,7 @@ class MigrateSummits(MigrateWaypoints):
         '3': 'lake',
         '7': 'glacier',
         '8': 'bisse',
-        '9': 'source',
+        '9': 'waterpoint',
         '10': 'misc',     # was 'canyon' ?
         '11': 'pit',      # was': 'hole'
         '100': 'hut',
