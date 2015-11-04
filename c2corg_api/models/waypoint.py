@@ -27,9 +27,6 @@ class _WaypointMixin(object):
     # type de WP
     waypoint_type = Column(enums.waypoint_type, nullable=False)
 
-    # activite (all types)
-    activities = Column(ArrayOfEnum(enums.activity_type))
-
     # altitude
     elevation = Column(SmallInteger)
 
@@ -135,9 +132,6 @@ class _WaypointMixin(object):
     # servi par des remontees mecaniques (access)
     lift_access = Column(Boolean)
 
-    # wc (base_camp, access)
-    toilet = Column(Boolean)
-
     # parking payant (access)
     parking_fee = Column(enums.parking_fee_type)
 
@@ -177,8 +171,8 @@ attributes = [
     'public_transportation_types', 'product_types', 'ground_types',
     'weather_station_types', 'rain_proof', 'public_transportation_rating',
     'paragliding_rating', 'children_proof', 'snow_clearance_rating',
-    'exposition_rating', 'activities', 'rock_types', 'orientation',
-    'best_periods', 'url', 'maps_info', 'phone', 'lift_access', 'toilet',
+    'exposition_rating', 'rock_types', 'orientation',
+    'best_periods', 'url', 'maps_info', 'phone', 'lift_access',
     'phone_custodian', 'custodianship', 'parking_fee', 'matress_unstaffed',
     'blanket_unstaffed', 'gas_unstaffed', 'heating_unstaffed',
     'climbing_styles', 'access_time', 'climbing_rating_max',
