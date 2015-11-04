@@ -209,7 +209,7 @@ class _DocumentLocaleMixin(object):
             nullable=False)
 
     title = Column(String(150), nullable=False)
-    summary = Column(String(255))
+    summary = Column(String)
     description = Column(String)
 
     type = Column(String(1))
