@@ -61,7 +61,7 @@ class MigrateParkings(MigrateWaypoints):
         )
 
     def get_document_locale(self, document_in, version):
-        # TODO extract summary
+        description, summary = self.extract_summary(document_in.description)
         # TODO what about "accommodation"?
         return dict(
             document_id=document_in.id,
@@ -69,7 +69,8 @@ class MigrateParkings(MigrateWaypoints):
             version=version,
             culture=document_in.culture,
             title=document_in.name,
-            description=document_in.description,
+            description=description,
+            summary=summary,
             access=document_in.public_transportation_description,
             access_period=document_in.snow_clearance_comment
         )

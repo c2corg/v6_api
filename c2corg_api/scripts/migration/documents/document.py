@@ -2,6 +2,7 @@ from sqlalchemy.sql import text
 import transaction
 import zope
 import abc
+import re
 
 from c2corg_api.scripts.migration.documents.batch_document import DocumentBatch
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
@@ -170,3 +171,18 @@ class MigrateDocuments(MigrateBase):
             return a
         else:
             return a + '\n' + b
+
+    summary_regex = re.compile('\[abs\]([\s\S]*)\[\/abs\]')
+
+    def extract_summary(self, text):
+        if text is None:
+            return None, None
+
+        match = MigrateDocuments.summary_regex.match(text)
+
+        if match:
+            text = MigrateDocuments.summary_regex.sub('', text).strip()
+            summary = match.group(1)
+            return text, summary
+        else:
+            return text, None

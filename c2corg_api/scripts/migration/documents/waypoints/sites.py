@@ -83,14 +83,15 @@ class MigrateSites(MigrateWaypoints):
         )
 
     def get_document_locale(self, document_in, version):
-        # TODO extract summary
+        description, summary = self.extract_summary(document_in.description)
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
             version=version,
             culture=document_in.culture,
             title=document_in.name,
-            description=self.get_description(document_in),
+            description=self.get_description(description, document_in),
+            summary=summary,
             access=document_in.pedestrian_access,
         )
 
@@ -124,9 +125,12 @@ class MigrateSites(MigrateWaypoints):
 
         return indoor_types, outdoor_types
 
-    def get_description(self, document_in):
+    def get_description(self, description, document_in):
         sections = []
-        self.add_section(sections, 'description', document_in)
+
+        if description is not None:
+            sections.append(description.strip())
+
         self.add_section(sections, 'way_back', document_in)
         self.add_section(sections, 'remarks', document_in)
         self.add_section(sections, 'external_resources', document_in)
@@ -143,17 +147,12 @@ class MigrateSites(MigrateWaypoints):
         if text:
             section = u''
             header = self.translate(field, document_in.culture)
-            if header:
-                section += u'## ' + header + u'\n'
+            section += u'## ' + header + u'\n'
             section += text
             sections.append(section)
 
     def translate(self, field, culture):
-        if field == 'description':
-            # no section header for main text
-            return None
-        else:
-            return MigrateSites.translations[field][culture]
+        return MigrateSites.translations[field][culture]
 
     translations = {
         'way_back': {
