@@ -56,7 +56,7 @@ class MigrateParkings(MigrateWaypoints):
                 MigrateParkings.snow_clearance_ratings),
             public_transportation_types=self.convert_types(
                 document_in.public_transportation_types,
-                MigrateParkings.public_transportation_types)
+                MigrateParkings.public_transportation_types, [0])
 
         )
 
@@ -91,7 +91,6 @@ class MigrateParkings(MigrateWaypoints):
     }
 
     public_transportation_types = {
-        '0': 'bus',  # using bus for 0
         '1': 'train',
         '2': 'bus',
         '3': 'service_on_demand',
