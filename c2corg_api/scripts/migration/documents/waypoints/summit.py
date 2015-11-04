@@ -70,6 +70,6 @@ class MigrateSummits(MigrateWaypoints):
         '10': 'misc',     # was 'canyon' ?
         '11': 'pit',      # was': 'hole'
         '100': 'hut',
-        '5': 'misc',      # was 'raid' ?
+        '5': 'virtual',   # was 'raid'
         '99': 'misc'      # was 'other'
     }
