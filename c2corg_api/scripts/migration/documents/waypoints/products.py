@@ -42,6 +42,8 @@ class MigrateProducts(MigrateWaypoints):
             document_id=document_in.id,
             version=version,
             waypoint_type='local_product',
+            protected=document_in.is_protected,
+            redirects_to=document_in.redirects_to,
             elevation=document_in.elevation,
             product_types=self.convert_types(
                 document_in.product_type,

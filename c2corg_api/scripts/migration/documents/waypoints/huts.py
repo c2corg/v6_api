@@ -49,6 +49,8 @@ class MigrateHuts(MigrateWaypoints):
             document_id=document_in.id,
             version=version,
             waypoint_type=waypoint_type,
+            protected=document_in.is_protected,
+            redirects_to=document_in.redirects_to,
             elevation=document_in.elevation,
             is_staffed=document_in.is_staffed,
             phone=document_in.phone,

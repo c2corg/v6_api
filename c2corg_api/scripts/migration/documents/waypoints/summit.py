@@ -40,6 +40,8 @@ class MigrateSummits(MigrateWaypoints):
             version=version,
             waypoint_type=self.convert_type(
                 document_in.summit_type, MigrateSummits.summit_types),
+            protected=document_in.is_protected,
+            redirects_to=document_in.redirects_to,
             elevation=document_in.elevation,
             maps_info=document_in.maps_info
         )

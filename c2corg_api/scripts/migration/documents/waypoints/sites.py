@@ -49,6 +49,8 @@ class MigrateSites(MigrateWaypoints):
             version=version,
             waypoint_type='climbing_indoor' if indoor_types
                           else 'climbing_outdoor',
+            protected=document_in.is_protected,
+            redirects_to=document_in.redirects_to,
             elevation=document_in.elevation,
             routes_quantity=document_in.routes_quantity,
             climbing_rating_max=self.convert_type(

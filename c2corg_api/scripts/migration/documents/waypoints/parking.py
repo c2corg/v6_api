@@ -44,6 +44,8 @@ class MigrateParkings(MigrateWaypoints):
             document_id=document_in.id,
             version=version,
             waypoint_type='access',
+            protected=document_in.is_protected,
+            redirects_to=document_in.redirects_to,
             elevation=document_in.elevation,
             elevation_min=document_in.lowest_elevation,
             public_transportation_rating=self.convert_type(
