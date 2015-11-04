@@ -209,7 +209,7 @@ class _DocumentLocaleMixin(object):
             nullable=False)
 
     title = Column(String(150), nullable=False)
-    summary = Column(String(255))
+    summary = Column(String)
     description = Column(String)
 
     type = Column(String(1))
@@ -251,15 +251,9 @@ class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
 
 
 class _DocumentGeometryMixin(object):
-    id = Column(Integer, primary_key=True)
     version = Column(Integer, nullable=False)
 
-    @declared_attr
-    def document_id(self):
-        return Column(
-            Integer, ForeignKey(schema + '.documents.document_id'),
-            nullable=False)
-
+    # TODO geom should be 3d?
     @declared_attr
     def geom(self):
         return Column(
@@ -293,6 +287,9 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
     __mapper_args__ = {
         'version_id_col': _DocumentGeometryMixin.version
     }
+    document_id = Column(
+            Integer, ForeignKey(schema + '.documents.document_id'),
+            primary_key=True)
 
     _ATTRIBUTES = \
         ['document_id', 'version', 'geom', 'geom_detail']
@@ -308,6 +305,11 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
 
 class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
     __tablename__ = 'documents_geometries_archives'
+
+    id = Column(Integer, primary_key=True)
+    document_id = Column(
+            Integer, ForeignKey(schema + '.documents.document_id'),
+            nullable=False)
 
 
 schema_attributes = [

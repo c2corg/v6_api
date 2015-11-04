@@ -20,7 +20,7 @@ class TestWaypoint(BaseTestCase):
                     id=3, culture='fr', title='B', description='bcd'),
             ],
             geometry=DocumentGeometry(
-                id=1, geom=from_shape(Point(1, 1), srid=3857))
+                document_id=1, geom=from_shape(Point(1, 1), srid=3857))
         )
 
         waypoint_archive = waypoint.to_archive()
@@ -44,6 +44,8 @@ class TestWaypoint(BaseTestCase):
 
         archive_geometry = waypoint.get_archive_geometry()
         self.assertIsNone(archive_geometry.id)
+        self.assertIsNotNone(archive_geometry.document_id)
+        self.assertEqual(archive_geometry.document_id, waypoint.document_id)
         self.assertIsNotNone(archive_geometry.geom)
 
     def test_version_is_incremented(self):
@@ -115,7 +117,7 @@ class TestWaypoint(BaseTestCase):
                     version=678),
             ],
             geometry=DocumentGeometry(
-                id=4, geom='SRID=3857;POINT(1 2)'
+                document_id=1, geom='SRID=3857;POINT(1 2)'
             )
         )
         waypoint_in = Waypoint(

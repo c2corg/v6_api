@@ -25,7 +25,6 @@ class TestWaypointRest(BaseTestRest):
         self.assertIn('elevation', doc)
         self.assertNotIn('geometry', doc)
         self.assertNotIn('routes_quantity', doc)
-        self.assertNotIn('activities', doc)
         locale = doc['locales'][0]
         self.assertIn('title', locale)
         self.assertIn('summary', locale)
@@ -140,7 +139,6 @@ class TestWaypointRest(BaseTestRest):
             },
             'waypoint_type': 'swimming-pool',
             'elevation': 3779,
-            'activities': ['skitouring', 'hiking'],
             'locales': [
                 {'culture': 'en', 'title': 'Mont Pourri'}
             ]
@@ -157,14 +155,13 @@ class TestWaypointRest(BaseTestRest):
             'document_id': 1234,
             'version': 2345,
             'geometry': {
-                'id': 5678, 'version': 6789,
+                'document_id': 5678, 'version': 6789,
                 'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
                 'geom_detail':
                     '{"type": "Point", "coordinates": [635956, 5723604]}'
             },
             'waypoint_type': 'summit',
             'elevation': 3779,
-            'activities': ['skitouring', 'hiking'],
             'locales': [
                 {'id': 3456, 'version': 4567,
                  'culture': 'en', 'title': 'Mont Pourri',
@@ -178,10 +175,9 @@ class TestWaypointRest(BaseTestRest):
         # test that document_id and version was reset
         self.assertNotEqual(body.get('document_id'), 1234)
         self.assertEqual(body.get('version'), 1)
-        self.assertEqual(doc.activities, ['skitouring', 'hiking'])
         self.assertNotEqual(doc.locales[0].id, 3456)
         self.assertEqual(body.get('locales')[0].get('version'), 1)
-        self.assertNotEqual(doc.geometry.id, 5678)
+        self.assertEqual(doc.geometry.document_id, doc.document_id)
         self.assertEqual(doc.geometry.version, 1)
         version = doc.versions[0]
 
@@ -196,6 +192,8 @@ class TestWaypointRest(BaseTestRest):
 
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
+        self.assertEqual(
+            archive_geometry.document_id, doc.geometry.document_id)
         self.assertIsNotNone(archive_geometry.geom)
         self.assertIsNotNone(archive_geometry.geom_detail)
 

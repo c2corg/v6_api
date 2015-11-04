@@ -96,25 +96,6 @@ class TestRouteRest(BaseTestRest):
         self.assertEqual(len(errors), 2)
         self.assertRequired(errors[1], 'locales')
 
-    def test_post_missing_elevation(self):
-        body = {
-            'activities': ['hiking'],
-            'elevation_min': 700,
-            'height_diff_up': 800,
-            'height_diff_down': 800,
-            'duration': '1',
-            'geometry': {
-                'id': 5678, 'version': 6789,
-                'geom': '{"type": "LineString", "coordinates": ' +
-                        '[[635956, 5723604], [635966, 5723644]]}'
-            },
-            'locales': [
-                {'culture': 'en', 'title': 'Some nice loop',
-                 'gear': 'shoes'}
-            ]
-        }
-        self.post_missing_field(body, 'elevation_max')
-
     def test_post_non_whitelisted_attribute(self):
         body = {
             'activities': ['hiking'],
@@ -256,31 +237,6 @@ class TestRouteRest(BaseTestRest):
 
     def test_put_no_document(self):
         self.put_put_no_document(self.route.document_id)
-
-    def test_put_missing_elevation(self):
-        body = {
-            'message': 'Update',
-            'document': {
-                'document_id': self.route.document_id,
-                'version': self.route.version,
-                'activities': ['skitouring'],
-                'elevation_min': 700,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'duration': '1',
-                'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
-                     'description': '...', 'gear': 'none',
-                     'version': self.locale_en.version}
-                ],
-                'geometry': {
-                    'version': self.route.geometry.version,
-                    'geom': '{"type": "LineString", "coordinates": ' +
-                            '[[635956, 5723604], [635976, 5723654]]}'
-                }
-            }
-        }
-        self.put_missing_field(body, self.route, 'elevation_max')
 
     def test_put_success_all(self):
         body = {
