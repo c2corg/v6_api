@@ -16,3 +16,5 @@ cors.origins = {cors_origins}
 # elasticsearch.index = c2corg
 
 logging.level = {logging_level}
+
+jwtauth.find_groups = c2corg_api.security.roles:groupfinder

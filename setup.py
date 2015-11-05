@@ -24,6 +24,7 @@ requires = [
     'geoalchemy2',
     'shapely',
     'pyproj',
+    'pyramid_jwtauth',
     'functools32',
     ]
 

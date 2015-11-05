@@ -7,7 +7,7 @@
 use = config:common.ini
 
 pyramid.reload_templates = true
-pyramid.debug_authorization = false
+pyramid.debug_authorization = true
 pyramid.debug_notfound = false
 pyramid.debug_routematch = false
 pyramid.default_locale_name = en
@@ -23,6 +23,9 @@ sqlalchemy.url = postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_na
 # By default, the toolbar only appears for clients from IP addresses
 # '127.0.0.1' and '::1'.
 debugtoolbar.hosts = 0.0.0.0/0
+
+# Key for developpement
+jwtauth.master_secret = The master key
 
 ###
 # wsgi server configuration
