@@ -42,6 +42,7 @@ class MigrateParkings(MigrateWaypoints):
     def get_document(self, document_in, version):
         return dict(
             document_id=document_in.id,
+            type='w',
             version=version,
             waypoint_type='access',
             protected=document_in.is_protected,
@@ -65,6 +66,7 @@ class MigrateParkings(MigrateWaypoints):
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
+            type='w',
             version=version,
             culture=document_in.culture,
             title=document_in.name,

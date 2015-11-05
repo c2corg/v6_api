@@ -46,6 +46,7 @@ class MigrateSites(MigrateWaypoints):
         indoor_types, outdoor_types = self.get_climbing_types(document_in)
         return dict(
             document_id=document_in.id,
+            type='w',
             version=version,
             waypoint_type='climbing_indoor' if indoor_types
                           else 'climbing_outdoor',
@@ -87,6 +88,7 @@ class MigrateSites(MigrateWaypoints):
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
+            type='w',
             version=version,
             culture=document_in.culture,
             title=document_in.name,
