@@ -25,6 +25,7 @@ requires = [
     'shapely',
     'pyproj',
     'functools32',
+    'bcrypt',
     ]
 
 setup(name='c2corg_api',
