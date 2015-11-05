@@ -4,6 +4,8 @@ import zope
 import abc
 import re
 
+from c2corg_api.models.document import DocumentGeometry, \
+    ArchiveDocumentGeometry
 from c2corg_api.scripts.migration.documents.batch_document import DocumentBatch
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
@@ -22,13 +24,11 @@ class MigrateDocuments(MigrateBase):
     def get_model_archive_document(self, locales):
         pass
 
-    @abc.abstractmethod
     def get_model_geometry(self):
-        pass
+        return DocumentGeometry
 
-    @abc.abstractmethod
     def get_model_archive_geometry(self):
-        pass
+        return ArchiveDocumentGeometry
 
     @abc.abstractmethod
     def get_query(self):
@@ -42,25 +42,26 @@ class MigrateDocuments(MigrateBase):
     def get_document(self, document_in, version):
         pass
 
-    @abc.abstractmethod
     def get_document_archive(self, document_in, version):
-        pass
+        doc = self.get_document(document_in, version)
+        doc['id'] = document_in.document_archive_id
+        return doc
 
     @abc.abstractmethod
     def get_document_geometry(self, document_in, version):
         pass
 
-    @abc.abstractmethod
     def get_document_geometry_archive(self, document_in, version):
-        pass
+        doc = self.get_document_geometry(document_in, version)
+        doc['id'] = document_in.document_archive_id
+        return doc
 
     @abc.abstractmethod
     def get_document_locale(self, document_in, version):
         pass
 
-    @abc.abstractmethod
     def get_document_locale_archive(self, document_in, version):
-        pass
+        return self.get_document_locale(document_in, version)
 
     @abc.abstractmethod
     def get_name(self):
