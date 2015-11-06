@@ -221,7 +221,7 @@ class MigrateRoutes(MigrateDocuments):
 
     route_types = {
         '1': 'return_same_way',
-        '2': 'loop_other',  # TODO ?
+        '2': 'loop',
         '3': 'traverse'
     }
 
