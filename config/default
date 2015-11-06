@@ -10,6 +10,7 @@ host = c2corgv6.demo-camptocamp.com
 url = http://$(host)
 
 export cors_origins = $(url)
+export noauthorization = False
 
 export db_host = localhost
 export db_port = 5432
