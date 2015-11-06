@@ -10,6 +10,7 @@ from pyramid.paster import get_appsettings
 from zope.sqlalchemy import ZopeTransactionExtension
 from c2corg_api.models import Base
 from c2corg_api.scripts.initializedb import setup_db
+from c2corg_api.scripts.migration.documents.routes import MigrateRoutes
 from c2corg_api.scripts.migration.documents.versions import MigrateVersions
 from c2corg_api.scripts.migration.documents.waypoints.huts import MigrateHuts
 from c2corg_api.scripts.migration.documents.waypoints.parking import \
@@ -54,6 +55,7 @@ def main(argv=sys.argv):
     MigrateSites(connection_source, session, batch_size).migrate()
     MigrateProducts(connection_source, session, batch_size).migrate()
     MigrateHuts(connection_source, session, batch_size).migrate()
+    MigrateRoutes(connection_source, session, batch_size).migrate()
     MigrateVersions(connection_source, session, batch_size).migrate()
     UpdateSequences(connection_source, session, batch_size).migrate()
 

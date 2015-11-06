@@ -57,7 +57,7 @@ class TestRouteRest(BaseTestRest):
             'elevation_max': 1500,
             'height_diff_up': 800,
             'height_diff_down': 800,
-            'duration': '1',
+            'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
                 'geom': '{"type": "LineString", "coordinates": ' +
@@ -81,7 +81,7 @@ class TestRouteRest(BaseTestRest):
             'elevation_max': 1500,
             'height_diff_up': 800,
             'height_diff_down': 800,
-            'duration': '1',
+            'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
                 'geom': '{"type": "LineString", "coordinates": ' +
@@ -104,7 +104,7 @@ class TestRouteRest(BaseTestRest):
             'elevation_max': 1500,
             'height_diff_up': 800,
             'height_diff_down': 800,
-            'duration': '1',
+            'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
                 'geom': '{"type": "LineString", "coordinates": ' +
@@ -127,7 +127,7 @@ class TestRouteRest(BaseTestRest):
             'elevation_max': 1500,
             'height_diff_up': 800,
             'height_diff_down': 800,
-            'duration': '1',
+            'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
                 'geom': '{"type": "LineString", "coordinates": ' +
@@ -165,7 +165,7 @@ class TestRouteRest(BaseTestRest):
                 'elevation_max': 1500,
                 'height_diff_up': 800,
                 'height_diff_down': 800,
-                'duration': '1',
+                'durations': ['1'],
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
@@ -185,7 +185,7 @@ class TestRouteRest(BaseTestRest):
                 'elevation_max': 1600,
                 'height_diff_up': 800,
                 'height_diff_down': 800,
-                'duration': '1',
+                'durations': ['1'],
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
@@ -205,7 +205,7 @@ class TestRouteRest(BaseTestRest):
                 'elevation_max': 1600,
                 'height_diff_up': 800,
                 'height_diff_down': 800,
-                'duration': '1',
+                'durations': ['1'],
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
@@ -225,7 +225,7 @@ class TestRouteRest(BaseTestRest):
                 'elevation_max': 1600,
                 'height_diff_up': 800,
                 'height_diff_down': 800,
-                'duration': '1',
+                'durations': ['1'],
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
@@ -249,7 +249,7 @@ class TestRouteRest(BaseTestRest):
                 'elevation_max': 1600,
                 'height_diff_up': 800,
                 'height_diff_down': 800,
-                'duration': '1',
+                'durations': ['1'],
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
@@ -300,7 +300,7 @@ class TestRouteRest(BaseTestRest):
                 'elevation_max': 1600,
                 'height_diff_up': 800,
                 'height_diff_down': 800,
-                'duration': '1',
+                'durations': ['1'],
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'paraglider',
@@ -323,7 +323,7 @@ class TestRouteRest(BaseTestRest):
                 'elevation_max': 1500,
                 'height_diff_up': 800,
                 'height_diff_down': 800,
-                'duration': '1',
+                'durations': ['1'],
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
@@ -348,7 +348,7 @@ class TestRouteRest(BaseTestRest):
                 'elevation_max': 1500,
                 'height_diff_up': 800,
                 'height_diff_down': 800,
-                'duration': '1',
+                'durations': ['1'],
                 'locales': [
                     {'culture': 'es', 'title': 'Mont Blanc del cielo',
                      'description': '...', 'gear': 'si'}
@@ -376,7 +376,7 @@ class TestRouteRest(BaseTestRest):
     def _add_test_data(self):
         self.route = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
-            height_diff_up=800, height_diff_down=800, duration='1')
+            height_diff_up=800, height_diff_down=800, durations='1')
 
         self.locale_en = RouteLocale(
             culture='en', title='Mont Blanc from the air', description='...',
