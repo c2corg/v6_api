@@ -40,7 +40,7 @@ cleanall: clean
 	rm -rf .build
 
 .PHONY: test
-test: .build/venv/bin/nosetests
+test: .build/venv/bin/nosetests test.ini
 	.build/venv/bin/nosetests
 
 .PHONY: lint
