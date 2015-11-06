@@ -66,7 +66,7 @@ Create a database that will be used to run the tests:
 
 If you want to specify a specific string as user you can instead enter:
 
-   USER=something scripts/create_user_db_test.sh
+    USER=something scripts/create_user_db_test.sh
 
 Then run the tests with:
 
