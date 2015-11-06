@@ -56,11 +56,11 @@ class _RouteMixin(object):
     # type d'itineraire (aller-retour, boucle, ...)
     route_types = Column(ArrayOfEnum(enums.route_type))
 
-    # orientation
-    orientation = Column(ArrayOfEnum(enums.orientation_type))
+    # orientations
+    orientations = Column(ArrayOfEnum(enums.orientation_type))
 
     # temps de parcours total
-    duration = Column(enums.route_duration_type)
+    durations = Column(ArrayOfEnum(enums.route_duration_type))
 
     # crampons et materiel de securite sur glacier
     glacier_gear = Column(enums.glacier_gear_type)
