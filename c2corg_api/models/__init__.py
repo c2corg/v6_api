@@ -8,6 +8,7 @@ from sqlalchemy.orm import (
 from zope.sqlalchemy import ZopeTransactionExtension
 
 schema = 'guidebook'
+users_schema = 'users'
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 
@@ -24,3 +25,4 @@ from c2corg_api.models import waypoint  # noqa
 from c2corg_api.models import route  # noqa
 from c2corg_api.models import document_history  # noqa
 from c2corg_api.models import image  # noqa
+from c2corg_api.models import user  # noqa
