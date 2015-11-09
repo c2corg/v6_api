@@ -41,9 +41,8 @@ class TestWaypointRest(BaseTestRest):
         self.app.get("/waypoints?offset=invalid", status=400)
 
         self.assertResultsEqual(self.get_collection({
-            'total': 42,
             'offset': 0,
-            'limit': 0}), [], 42)
+            'limit': 0}), [], 4)
 
         self.assertResultsEqual(self.get_collection({
             'offset': 0,
@@ -56,7 +55,6 @@ class TestWaypointRest(BaseTestRest):
             'limit': 2}), [3, 2], 4)
 
         self.assertResultsEqual(self.get_collection({
-            'total': 42,
             'after': self.waypoint3.document_id,
             'limit': 1}), [2], -1)
 
