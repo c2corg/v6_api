@@ -3,6 +3,9 @@
 [app:main]
 use = egg:c2corg_api
 
+# Disable the authorization checks if True
+noauthorization = {noauthorization}
+
 pyramid.default_locale_name = en
 
 version = {version}

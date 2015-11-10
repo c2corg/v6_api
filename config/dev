@@ -5,3 +5,4 @@ export version = 0
 host = c2corgv6-demo.gis.internal
 
 export cors_origins = $(url):*
+export noauthorization = True
