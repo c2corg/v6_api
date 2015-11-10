@@ -51,6 +51,13 @@ class BaseTestRest(BaseTestCase):
 
         return body
 
+    def assertResultsEqual(self, actual, expected, total):  # noqa
+        actual_docs = actual['documents']
+        actual_ids = map(lambda json: json['document_id'], actual_docs)
+        self.assertListEqual(actual_ids, expected)
+        actual_total = actual['total']
+        self.assertEqual(actual_total, total)
+
     def get(self, reference):
         response = self.app.get(self._prefix + '/' +
                                 str(reference.document_id),
