@@ -13,7 +13,7 @@ from c2corg_api.views.validation import check_required_fields, \
 
 
 # the maximum number of documents that can be returned in a request
-LIMIT_MAX = 120
+LIMIT_MAX = 100
 
 # the default limit value (how much documents are returned at once in a
 # listing request)
@@ -41,7 +41,7 @@ class DocumentRest(object):
         """
         after = self.request.validated['after']
         limit = self.request.validated['limit']
-        limit = min(30 if limit is None else limit, LIMIT_MAX)
+        limit = min(LIMIT_DEFAULT if limit is None else limit, LIMIT_MAX)
 
         base_query = DBSession.query(clazz)
 
