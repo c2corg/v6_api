@@ -12,25 +12,86 @@ from c2corg_api.views.validation import check_required_fields, \
     check_duplicate_locales
 
 
+# the maximum number of documents that can be returned in a request
+LIMIT_MAX = 120
+
+# the default limit value (how much documents are returned at once in a
+# listing request)
+LIMIT_DEFAULT = 30
+
+
 class DocumentRest(object):
 
     def __init__(self, request):
         self.request = request
 
     def _collection_get(self, clazz, schema, adapt_schema=None):
-        documents = DBSession. \
-            query(clazz). \
+        return self._paginate(clazz, schema, adapt_schema)
+
+    def _paginate(self, clazz, schema, adapt_schema):
+        if 'after' in self.request.validated:
+            return self._paginate_after(clazz, schema, adapt_schema)
+        else:
+            return self._paginate_offset(clazz, schema, adapt_schema)
+
+    def _paginate_after(self, clazz, schema, adapt_schema):
+        """
+        Returns all documents for which `document_id` is smaller than the
+        given id in `after`.
+        """
+        after = self.request.validated['after']
+        limit = self.request.validated['limit']
+        limit = min(30 if limit is None else limit, LIMIT_MAX)
+
+        base_query = DBSession.query(clazz)
+
+        documents = base_query. \
             options(joinedload(getattr(clazz, 'locales'))). \
-            limit(30). \
+            order_by(clazz.document_id.desc()). \
+            filter(clazz.document_id < after). \
+            limit(limit). \
             all()
         set_available_cultures(documents)
 
-        return [
-            to_json_dict(
-                doc,
-                schema if not adapt_schema else adapt_schema(schema, doc)
-            ) for doc in documents
-        ]
+        return {
+            'documents': [
+                to_json_dict(
+                    doc,
+                    schema if not adapt_schema else adapt_schema(schema, doc)
+                ) for doc in documents
+            ],
+            'total': -1
+        }
+
+    def _paginate_offset(self, clazz, schema, adapt_schema):
+        """Return a batch of documents with the given `offset` and `limit`.
+        """
+        validated = self.request.validated
+        offset = validated['offset'] if 'offset' in validated else 0
+        limit = min(
+            validated['limit'] if 'limit' in validated else LIMIT_DEFAULT,
+            LIMIT_MAX)
+
+        base_query = DBSession.query(clazz)
+
+        documents = base_query. \
+            options(joinedload(getattr(clazz, 'locales'))). \
+            order_by(clazz.document_id.desc()). \
+            slice(offset, offset + limit). \
+            all()
+        set_available_cultures(documents)
+
+        total = base_query.count()
+
+        return {
+            'documents': [
+                to_json_dict(
+                    doc,
+                    schema if not adapt_schema else adapt_schema(schema, doc)
+                ) for doc in documents
+            ],
+            'total': total
+        }
 
     def _get(self, clazz, schema, adapt_schema=None):
         id = self.request.validated['id']

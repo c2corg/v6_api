@@ -1,4 +1,5 @@
 import json
+import urllib
 
 from c2corg_api.tests import BaseTestCase
 
@@ -23,17 +24,31 @@ class BaseTestRest(BaseTestCase):
         self.assertEqual(error.get('description'), 'Required')
         self.assertEqual(error.get('name'), key)
 
-    def get_collection(self):
-        response = self.app.get(self._prefix, status=200)
+    def get_collection(self, params=None):
+        prefix = self._prefix
+        limit = None
+        if params:
+            prefix += "?" + urllib.urlencode(params)
+            limit = params['limit']
+
+        response = self.app.get(prefix, status=200)
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
-        self.assertIsInstance(body, list)
-        nb_docs = self.session.query(self._model).count()
-        self.assertEqual(len(body), nb_docs)
-        doc = body[0]
-        available_cultures = doc.get('available_cultures')
-        self.assertEqual(available_cultures, ['en', 'fr'])
+        documents = body['documents']
+        self.assertIsInstance(documents, list)
+
+        if params is None:
+            doc = documents[0]
+            available_cultures = doc.get('available_cultures')
+            self.assertEqual(available_cultures, ['en', 'fr'])
+
+        if limit is None:
+            nb_docs = self.session.query(self._model).count()
+            self.assertEqual(len(documents), nb_docs)
+        else:
+            self.assertLessEqual(len(documents), limit)
+
         return body
 
     def get(self, reference):

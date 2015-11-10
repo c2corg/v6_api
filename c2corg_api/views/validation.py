@@ -55,3 +55,26 @@ def check_duplicate_locales(document, request):
                     'culture "%s" is given twice' % (culture))
                 return
             cultures.add(culture)
+
+
+def check_get_for_integer_property(request, key, required):
+    """Checks if the value associated to a given key is an integer.
+    """
+    if not required and request.GET.get(key) is None:
+        return
+
+    try:
+        request.validated[key] = int(request.GET.get(key))
+    except ValueError:
+        request.errors.add('url', key, 'invalid ' + key)
+
+
+def validate_pagination(request):
+    """
+    Checks if a given optional offset is an integer,
+    if a given optional limit is an integer,
+    if a given optional after is an integer
+    """
+    check_get_for_integer_property(request, 'offset', False)
+    check_get_for_integer_property(request, 'limit', False)
+    check_get_for_integer_property(request, 'after', False)

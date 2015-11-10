@@ -3,12 +3,13 @@ from functools32 import lru_cache
 
 from c2corg_api.models.waypoint import (
     Waypoint, schema_waypoint, schema_update_waypoint)
+
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import (
     DocumentRest, make_validator_create, make_validator_update,
     make_schema_adaptor)
 from c2corg_api.views import cors_policy, restricted_json_view
-from c2corg_api.views.validation import validate_id
+from c2corg_api.views.validation import validate_id, validate_pagination
 from c2corg_common.fields_waypoint import fields_waypoint
 from c2corg_common.attributes import waypoint_types
 
@@ -39,6 +40,7 @@ listing_schema_adaptor = make_schema_adaptor(
           cors_policy=cors_policy)
 class WaypointRest(DocumentRest):
 
+    @view(validators=validate_pagination)
     def collection_get(self):
         return self._collection_get(
             Waypoint, schema_waypoint, listing_schema_adaptor)

@@ -19,7 +19,7 @@ class TestRouteRest(BaseTestRest):
 
     def test_get_collection(self):
         body = self.get_collection()
-        doc = body[0]
+        doc = body['documents'][0]
         self.assertNotIn('climbing_outdoor_types', doc)
         self.assertNotIn('elevation_min', doc)
 

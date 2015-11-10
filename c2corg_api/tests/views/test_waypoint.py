@@ -20,7 +20,7 @@ class TestWaypointRest(BaseTestRest):
 
     def test_get_collection(self):
         body = self.get_collection()
-        doc = body[0]
+        doc = body['documents'][0]
         self.assertIn('waypoint_type', doc)
         self.assertIn('elevation', doc)
         self.assertNotIn('geometry', doc)
@@ -29,6 +29,34 @@ class TestWaypointRest(BaseTestRest):
         self.assertIn('title', locale)
         self.assertIn('summary', locale)
         self.assertNotIn('description', locale)
+
+    def assertResultsEqual(self, actual, expected, total):  # noqa
+        actual_docs = actual['documents']
+        actual_elevations = map(lambda json: json['elevation'], actual_docs)
+        self.assertListEqual(actual_elevations, expected)
+        actual_total = actual['total']
+        self.assertEqual(actual_total, total)
+
+    def test_get_collection_paginated(self):
+        self.app.get("/waypoints?offset=invalid", status=400)
+
+        self.assertResultsEqual(self.get_collection({
+            'offset': 0,
+            'limit': 0}), [], 4)
+
+        self.assertResultsEqual(self.get_collection({
+            'offset': 0,
+            'limit': 1}), [4], 4)
+        self.assertResultsEqual(self.get_collection({
+            'offset': 0,
+            'limit': 2}), [4, 3], 4)
+        self.assertResultsEqual(self.get_collection({
+            'offset': 1,
+            'limit': 2}), [3, 2], 4)
+
+        self.assertResultsEqual(self.get_collection({
+            'after': self.waypoint3.document_id,
+            'limit': 1}), [2], -1)
 
     def test_get(self):
         body = self.get(self.waypoint)
@@ -556,8 +584,27 @@ class TestWaypointRest(BaseTestRest):
 
         self.waypoint.geometry = DocumentGeometry(
             geom='SRID=3857;POINT(635956 5723604)')
-
         self.session.add(self.waypoint)
         self.session.flush()
-
         DocumentRest(None)._create_new_version(self.waypoint)
+        self.session.add(Waypoint(
+            waypoint_type='summit', elevation=2,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)')))
+        self.waypoint3 = Waypoint(
+            waypoint_type='summit', elevation=3,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'))
+        self.session.add(self.waypoint3)
+        self.waypoint4 = Waypoint(
+            waypoint_type='summit', elevation=4,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'))
+        self.waypoint4.locales.append(WaypointLocale(
+            culture='en', title='Mont Granier', description='...',
+            access='yep'))
+        self.waypoint4.locales.append(WaypointLocale(
+            culture='fr', title='Mont Granier', description='...',
+            access='ouai'))
+        self.session.add(self.waypoint4)
+        self.session.flush()
