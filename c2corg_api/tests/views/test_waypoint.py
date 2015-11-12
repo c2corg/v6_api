@@ -23,7 +23,7 @@ class TestWaypointRest(BaseTestRest):
         doc = body['documents'][0]
         self.assertIn('waypoint_type', doc)
         self.assertIn('elevation', doc)
-        self.assertNotIn('geometry', doc)
+        self.assertIn('geometry', doc)
         self.assertNotIn('routes_quantity', doc)
         locale = doc['locales'][0]
         self.assertIn('title', locale)
