@@ -23,6 +23,27 @@ class TestRouteRest(BaseTestRest):
         self.assertNotIn('climbing_outdoor_types', doc)
         self.assertNotIn('elevation_min', doc)
 
+    def test_get_collection_paginated(self):
+        self.app.get("/routes?offset=invalid", status=400)
+
+        self.assertResultsEqual(
+            self.get_collection({'offset': 0, 'limit': 0}), [], 4)
+
+        self.assertResultsEqual(
+            self.get_collection({'offset': 0, 'limit': 1}),
+            [self.route4.document_id], 4)
+        self.assertResultsEqual(
+            self.get_collection({'offset': 0, 'limit': 2}),
+            [self.route4.document_id, self.route3.document_id], 4)
+        self.assertResultsEqual(
+            self.get_collection({'offset': 1, 'limit': 2}),
+            [self.route3.document_id, self.route2.document_id], 4)
+
+        self.assertResultsEqual(
+            self.get_collection(
+                {'after': self.route3.document_id, 'limit': 1}),
+            [self.route2.document_id], -1)
+
     def test_get(self):
         body = self.get(self.route)
         self.assertEqual(
@@ -396,3 +417,23 @@ class TestRouteRest(BaseTestRest):
         self.session.flush()
 
         DocumentRest(None)._create_new_version(self.route)
+
+        self.route2 = Route(
+            activities=['skitouring'], elevation_max=1500, elevation_min=700,
+            height_diff_up=800, height_diff_down=800, durations='1')
+        self.session.add(self.route2)
+        self.route3 = Route(
+            activities=['skitouring'], elevation_max=1500, elevation_min=700,
+            height_diff_up=800, height_diff_down=800, durations='1')
+        self.session.add(self.route3)
+        self.route4 = Route(
+            activities=['skitouring'], elevation_max=1500, elevation_min=700,
+            height_diff_up=800, height_diff_down=800, durations='1')
+        self.route4.locales.append(RouteLocale(
+            culture='en', title='Mont Blanc from the air', description='...',
+            gear='paraglider'))
+        self.route4.locales.append(RouteLocale(
+            culture='fr', title='Mont Blanc du ciel', description='...',
+            gear='paraglider'))
+        self.session.add(self.route4)
+        self.session.flush()

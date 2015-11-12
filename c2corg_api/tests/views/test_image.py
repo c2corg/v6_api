@@ -20,6 +20,27 @@ class TestImageRest(BaseTestRest):
     def test_get_collection(self):
         self.get_collection()
 
+    def test_get_collection_paginated(self):
+        self.app.get("/images?offset=invalid", status=400)
+
+        self.assertResultsEqual(
+            self.get_collection({'offset': 0, 'limit': 0}), [], 4)
+
+        self.assertResultsEqual(
+            self.get_collection({'offset': 0, 'limit': 1}),
+            [self.image4.document_id], 4)
+        self.assertResultsEqual(
+            self.get_collection({'offset': 0, 'limit': 2}),
+            [self.image4.document_id, self.image3.document_id], 4)
+        self.assertResultsEqual(
+            self.get_collection({'offset': 1, 'limit': 2}),
+            [self.image3.document_id, self.image2.document_id], 4)
+
+        self.assertResultsEqual(
+            self.get_collection(
+                {'after': self.image3.document_id, 'limit': 1}),
+            [self.image2.document_id], -1)
+
     def test_get(self):
         body = self.get(self.image)
         self._assert_geometry(body)
@@ -289,3 +310,18 @@ class TestImageRest(BaseTestRest):
         self.session.flush()
 
         DocumentRest(None)._create_new_version(self.image)
+
+        self.image2 = Image(
+            activities='paragliding', height=2000)
+        self.session.add(self.image2)
+        self.image3 = Image(
+            activities='paragliding', height=2000)
+        self.session.add(self.image3)
+        self.image4 = Image(
+            activities='paragliding', height=2000)
+        self.image4.locales.append(ImageLocale(
+            culture='en', title='Mont Blanc from the air', description='...'))
+        self.image4.locales.append(ImageLocale(
+            culture='fr', title='Mont Blanc du ciel', description='...'))
+        self.session.add(self.image4)
+        self.session.flush()

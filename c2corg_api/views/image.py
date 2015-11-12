@@ -3,13 +3,14 @@ from cornice.resource import resource, view
 from c2corg_api.models.image import Image, schema_image, schema_update_image
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views import cors_policy, restricted_json_view
-from c2corg_api.views.validation import validate_id
+from c2corg_api.views.validation import validate_id, validate_pagination
 
 
 @resource(collection_path='/images', path='/images/{id}',
           cors_policy=cors_policy)
 class ImageRest(DocumentRest):
 
+    @view(validators=validate_pagination)
     def collection_get(self):
         return self._collection_get(Image, schema_image)
 
