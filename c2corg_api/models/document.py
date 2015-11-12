@@ -344,6 +344,9 @@ def get_update_schema(document_schema):
 def set_available_cultures(documents):
     """Load and set the available cultures for the given documents.
     """
+    if len(documents) == 0:
+        return
+
     document_ids = [doc.document_id for doc in documents]
     documents_for_id = {doc.document_id: doc for doc in documents}
 
