@@ -26,6 +26,8 @@ help:
 	@echo "Secondary targets:"
 	@echo
 	@echo "- lint			Run flake8 checker on the Python code"
+	@echo "- upgrade		Upgrade the dependencies."
+	@echo "- upgrade-dev		Upgrade the dev. dependencies."
 
 .PHONY: check
 check: lint test
@@ -60,12 +62,20 @@ install-dev-egg: $(SITE_PACKAGES)/c2corg_api.egg-link
 serve: install development.ini
 	.build/venv/bin/pserve --reload development.ini
 
+.PHONY: upgrade
+upgrade:
+	.build/venv/bin/pip install --upgrade -r requirements.txt
+
+.PHONY: upgrade-dev
+upgrade-dev:
+	.build/venv/bin/pip install --upgrade -r dev-requirements.txt
+
 .build/venv/bin/flake8: .build/dev-requirements.timestamp
 
 .build/venv/bin/nosetests: .build/dev-requirements.timestamp
 
 .build/dev-requirements.timestamp: .build/venv dev-requirements.txt
-	.build/venv/bin/pip install --upgrade -r dev-requirements.txt
+	.build/venv/bin/pip install -r dev-requirements.txt
 	touch $@
 
 .build/venv:
@@ -73,7 +83,7 @@ serve: install development.ini
 	virtualenv --no-site-packages $@
 
 $(SITE_PACKAGES)/c2corg_api.egg-link: .build/venv requirements.txt setup.py
-	.build/venv/bin/pip install --upgrade -r requirements.txt
+	.build/venv/bin/pip install -r requirements.txt
 
 development.ini production.ini: common.ini
 
