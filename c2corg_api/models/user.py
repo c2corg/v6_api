@@ -7,7 +7,11 @@ from sqlalchemy import (
     String
     )
 
+from colanderalchemy import SQLAlchemySchemaNode
+
 from c2corg_api.models import Base, users_schema
+
+import colander
 
 
 class User(Base):
@@ -20,7 +24,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(200), nullable=False, unique=True)
     email = Column(String(200), nullable=False, unique=True)
-    email_validated = Column(Boolean, nullable=False)
+    email_validated = Column(Boolean, nullable=False, default=False)
     _password = Column("password", String(255), nullable=False)
     temp_password = Column(String(255))
 
@@ -55,3 +59,26 @@ class User(Base):
         return False
 
     password = property(_get_password, _set_password)
+
+
+schema_user = SQLAlchemySchemaNode(
+    User,
+    # whitelisted attributes
+    includes=[
+        'id', 'username', 'email', 'email_validated'],
+    overrides={
+        'id': {
+            'missing': None
+        }
+    })
+
+
+schema_create_user = SQLAlchemySchemaNode(
+    User,
+    # whitelisted attributes
+    includes=['username', 'email'],
+    overrides={
+        'email': {
+            'validator': colander.Email()
+        }
+    })
