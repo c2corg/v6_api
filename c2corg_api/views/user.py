@@ -21,7 +21,7 @@ def validate_json_password(request):
     """
 
     if 'password' not in request.json:
-        request.errors.add('user', 'password', 'Required')
+        request.errors.add('body', 'password', 'Required')
 
     try:
         # We receive a unicode string. The hashing function used
@@ -30,7 +30,7 @@ def validate_json_password(request):
         password = request.json['password']
         request.validated['password'] = password.encode(ENCODING)
     except:
-        request.errors.add('user', 'password', 'Invalid')
+        request.errors.add('body', 'password', 'Invalid')
 
 
 def validate_unique_attribute(attrname, request):
@@ -44,7 +44,7 @@ def validate_unique_attribute(attrname, request):
         if count == 0:
             request.validated[attrname] = value
         else:
-            request.errors.add('user', attrname, 'already used ' + attrname)
+            request.errors.add('body', attrname, 'already used ' + attrname)
 
 
 @resource(path='/users/{id}', cors_policy=cors_policy)
