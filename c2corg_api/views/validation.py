@@ -9,7 +9,7 @@ def validate_id(request):
     try:
         request.validated['id'] = int(request.matchdict['id'])
     except ValueError:
-        request.errors.add('url', 'id', 'invalid id')
+        request.errors.add('querystring', 'id', 'invalid id')
 
 
 def is_missing(val):
@@ -66,7 +66,7 @@ def check_get_for_integer_property(request, key, required):
     try:
         request.validated[key] = int(request.GET.get(key))
     except ValueError:
-        request.errors.add('url', key, 'invalid ' + key)
+        request.errors.add('querystring', key, 'invalid ' + key)
 
 
 def validate_pagination(request):
