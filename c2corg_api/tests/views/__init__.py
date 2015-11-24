@@ -4,7 +4,7 @@ import urllib
 from c2corg_api.tests import BaseTestCase
 
 
-class BaseTestRest(BaseTestCase):
+class BaseDocumentTestRest(BaseTestCase):
 
     def set_prefix_and_model(
             self, prefix, model, model_archive, model_archive_locale):

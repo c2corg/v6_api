@@ -7,15 +7,15 @@ from c2corg_api.models.document import (
     DocumentGeometry, ArchiveDocumentGeometry)
 from c2corg_api.views.document import DocumentRest
 
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest
 
 
-class TestWaypointRest(BaseTestRest):
+class TestWaypointRest(BaseDocumentTestRest):
 
     def setUp(self):  # noqa
         self.set_prefix_and_model(
             "/waypoints", Waypoint, ArchiveWaypoint, ArchiveWaypointLocale)
-        BaseTestRest.setUp(self)
+        BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
