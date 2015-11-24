@@ -64,7 +64,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         body = self.post_error({})
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertMissing(errors[0], 'waypoint_type')
+        self.assertCorniceMissing(errors[0], 'waypoint_type')
 
     def test_post_missing_title(self):
         body = {
@@ -78,7 +78,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         body = self.post_missing_title(body)
         errors = body.get('errors')
         self.assertEqual(len(errors), 2)
-        self.assertRequired(errors[1], 'locales')
+        self.assertCorniceRequired(errors[1], 'locales')
 
     def test_post_missing_geometry(self):
         body = {

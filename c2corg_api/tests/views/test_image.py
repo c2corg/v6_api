@@ -52,7 +52,7 @@ class TestImageRest(BaseDocumentTestRest):
         body = self.post_error({})
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertMissing(errors[0], 'activities')
+        self.assertCorniceMissing(errors[0], 'activities')
 
     def test_post_missing_title(self):
         body_post = {

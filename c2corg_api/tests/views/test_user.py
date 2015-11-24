@@ -1,35 +1,18 @@
 # -*- coding: utf-8 -*-
 from c2corg_api.models.user import User
 
-from c2corg_api.tests import BaseTestCase
+from c2corg_api.tests.views import BaseTestRest
 
 from nose.plugins.attrib import attr
 
 
-class TestUserRest(BaseTestCase):
+class TestUserRest(BaseTestRest):
 
     def setUp(self):  # noqa
         self._prefix = "/users"
         self._model = User
-        BaseTestCase.setUp(self)
+        BaseTestRest.setUp(self)
         self._add_test_data()
-
-    def assertErrorsContain(self, body, key):  # noqa
-        for error in body['errors']:
-            if error.get('name') == key:
-                return
-        self.fail(str(body) + " does not contain " + key)
-
-    def assertBodyEqual(self, body, key, expected):  # noqa
-        self.assertEqual(body.get(key), expected)
-
-    def get(self, reference):
-        url = self._prefix + '/' + str(reference.id)
-        response = self.app.get(url, status=200)
-        self.assertEqual(response.content_type, 'application/json')
-        body = response.json
-        self.assertEqual(body.get('id'), reference.id)
-        return body
 
     def test_register(self):
         request_body = {
@@ -63,13 +46,6 @@ class TestUserRest(BaseTestCase):
             'email': 'utf8@camptocamp.org'
         }
         body = self.app.post_json(url, request_utf8, status=200).json
-
-    def get_json_with_token(self, url, user, status):
-        token = self.global_tokens[user]
-        auth = 'JWT token="' + token.encode('ascii') + '"'
-        headers = headers = {'Authorization': auth}
-        response = self.app.get(url, headers=headers, status=status)
-        return response.json
 
     def login(self, username, password=None, status=200):
         if not password:

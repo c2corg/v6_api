@@ -59,7 +59,7 @@ class TestRouteRest(BaseDocumentTestRest):
         body = self.post_error({})
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertMissing(errors[0], 'activities')
+        self.assertCorniceMissing(errors[0], 'activities')
 
     def test_post_empty_activities_error(self):
         body = self.post_error({
@@ -115,7 +115,7 @@ class TestRouteRest(BaseDocumentTestRest):
         body = self.post_missing_title(body_post)
         errors = body.get('errors')
         self.assertEqual(len(errors), 2)
-        self.assertRequired(errors[1], 'locales')
+        self.assertCorniceRequired(errors[1], 'locales')
 
     def test_post_non_whitelisted_attribute(self):
         body = {

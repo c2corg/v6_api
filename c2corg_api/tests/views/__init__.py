@@ -4,7 +4,34 @@ import urllib
 from c2corg_api.tests import BaseTestCase
 
 
-class BaseDocumentTestRest(BaseTestCase):
+class BaseTestRest(BaseTestCase):
+
+    def assertErrorsContain(self, body, key):  # noqa
+        for error in body['errors']:
+            if error.get('name') == key:
+                return
+        self.fail(str(body) + " does not contain " + key)
+
+    def assertBodyEqual(self, body, key, expected):  # noqa
+        self.assertEqual(body.get(key), expected)
+
+    def get_json_with_token(self, url, user, status):
+        token = self.global_tokens[user]
+        auth = 'JWT token="' + token.encode('ascii') + '"'
+        headers = headers = {'Authorization': auth}
+        response = self.app.get(url, headers=headers, status=status)
+        return response.json
+
+    def assertCorniceMissing(self, error, key):  # noqa
+        self.assertEqual(error.get('description'), key + ' is missing')
+        self.assertEqual(error.get('name'), key)
+
+    def assertCorniceRequired(self, error, key):  # noqa
+        self.assertEqual(error.get('description'), 'Required')
+        self.assertEqual(error.get('name'), key)
+
+
+class BaseDocumentTestRest(BaseTestRest):
 
     def set_prefix_and_model(
             self, prefix, model, model_archive, model_archive_locale):
@@ -12,17 +39,6 @@ class BaseDocumentTestRest(BaseTestCase):
         self._model = model
         self._model_archive = model_archive
         self._model_archive_locale = model_archive_locale
-
-    def setUp(self):  # noqa
-        BaseTestCase.setUp(self)
-
-    def assertMissing(self, error, key):  # noqa
-        self.assertEqual(error.get('description'), key + ' is missing')
-        self.assertEqual(error.get('name'), key)
-
-    def assertRequired(self, error, key):  # noqa
-        self.assertEqual(error.get('description'), 'Required')
-        self.assertEqual(error.get('name'), key)
 
     def get_collection(self, params=None):
         prefix = self._prefix
@@ -57,13 +73,6 @@ class BaseDocumentTestRest(BaseTestCase):
         self.assertListEqual(actual_ids, expected)
         actual_total = actual['total']
         self.assertEqual(actual_total, total)
-
-    def get_json_with_token(self, url, user, status):
-        token = self.global_tokens[user]
-        auth = 'JWT token="' + token.encode('ascii') + '"'
-        headers = headers = {'Authorization': auth}
-        response = self.app.get(url, headers=headers, status=status)
-        return response.json
 
     def get(self, reference):
         response = self.app.get(self._prefix + '/' +
@@ -117,7 +126,7 @@ class BaseDocumentTestRest(BaseTestCase):
         body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
-        self.assertRequired(errors[0], 'locales.0.title')
+        self.assertCorniceRequired(errors[0], 'locales.0.title')
         return body
 
     def post_missing_geometry(self, request_body):
@@ -128,7 +137,7 @@ class BaseDocumentTestRest(BaseTestCase):
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertRequired(errors[0], 'geometry')
+        self.assertCorniceRequired(errors[0], 'geometry')
         return body
 
     def post_missing_geom(self, request_body):
@@ -139,7 +148,7 @@ class BaseDocumentTestRest(BaseTestCase):
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertRequired(errors[0], 'geometry.geom')
+        self.assertCorniceRequired(errors[0], 'geometry.geom')
         return body
 
     def post_missing_locales(self, request_body):
@@ -281,7 +290,7 @@ class BaseDocumentTestRest(BaseTestCase):
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertRequired(errors[0], field)
+        self.assertCorniceRequired(errors[0], field)
 
     def put_success_all(self, request_body, document):
         """Test updating a document with changes to the figures and locales.
