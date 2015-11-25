@@ -4,3 +4,4 @@ sqlalchemy.url = postgresql://{tests_db_user}:{tests_db_password}@{tests_db_host
 sqlalchemy.echo = True
 noauthorization = True
 debug_authorization = True
+jwtauth.master_secret = The master key

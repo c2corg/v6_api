@@ -1,3 +1,5 @@
+import logging
+
 from pyramid.config import Configurator
 from sqlalchemy import engine_from_config
 from pyramid.httpexceptions import HTTPUnauthorized
@@ -11,6 +13,10 @@ from c2corg_api.views import cors_policy
 from pyramid.security import Allow, Everyone, Authenticated
 
 from c2corg_api.security.roles import validate_token
+
+from pyramid.settings import asbool
+
+log = logging.getLogger(__name__)
 
 
 class RootFactory(object):
@@ -43,7 +49,7 @@ def jwt_database_validation_tween_factory(handler, registry):
         if len(request.authorization[1]) >= 8:
             # Skip the token=" prefix and " suffix
             token = request.authorization[1][7:-1]
-            valid = validate_token(request, token)
+            valid = validate_token(token)
 
         if valid:
             return handler(request)
@@ -77,7 +83,7 @@ def main(global_config, **settings):
 
     bypass_auth = False
     if 'noauthorization' in settings:
-        bypass_auth = settings['noauthorization']
+        bypass_auth = asbool(settings['noauthorization'])
 
     if not bypass_auth:
         config.include("pyramid_jwtauth")
@@ -85,6 +91,8 @@ def main(global_config, **settings):
         config.add_tween('c2corg_api.jwt_database_validation_tween_factory')
         # Inject ACLs
         config.set_root_factory(RootFactory)
+    else:
+        log.warning('Bypassing authorization')
 
     # Scan MUST be the last call otherwise ACLs will not be set
     # and the permissions would be bypassed

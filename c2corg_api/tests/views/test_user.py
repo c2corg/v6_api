@@ -3,6 +3,8 @@ from c2corg_api.models.user import User
 
 from c2corg_api.tests import BaseTestCase
 
+from nose.plugins.attrib import attr
+
 
 class TestUserRest(BaseTestCase):
 
@@ -70,6 +72,31 @@ class TestUserRest(BaseTestCase):
         }
         body = self.app.post_json(url, request_utf8, status=200).json
 
+    @attr("security")
+    def test_login_success(self):
+        # Login as admin
+        request_body = {
+            'username': 'admin',
+            'password': 'even better pass',
+        }
+
+        url = '/users/login'
+        body = self.app.post_json(url, request_body, status=200).json
+        self.assertTrue('token' in body)
+
+    @attr("security")
+    def test_login_failure(self):
+        # Login as admin
+        request_body = {
+            'username': 'admin',
+            'password': 'even better pass bad',
+        }
+
+        url = '/users/login'
+        response = self.app.post_json(url, request_body, status=401)
+        body = response.json
+        self.assertEqual(body['status'], 'error')
+
     def _add_test_data(self):
         self.contributor = User(
             username='contributor', email='contributor@camptocamp.org',
@@ -80,7 +107,7 @@ class TestUserRest(BaseTestCase):
 
         self.admin = User(
             username='admin', email='admin@camptocamp.org',
-            password='even better pass')
+            admin=True, password='even better pass')
 
         self.session.add(self.admin)
         self.session.flush()
