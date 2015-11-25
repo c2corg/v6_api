@@ -31,14 +31,6 @@ class TestUserRest(BaseTestCase):
         self.assertEqual(body.get('id'), reference.id)
         return body
 
-    def test_get(self):
-        persisted = self.contributor
-        body = self.get(persisted)
-        self.assertBodyEqual(body, 'username', 'contributor')
-        self.assertNotIn('password', body)
-        self.assertNotIn('_password', body)
-        self.assertNotIn('temp_password', body)
-
     def test_register(self):
         request_body = {
             'username': 'test',
@@ -72,42 +64,41 @@ class TestUserRest(BaseTestCase):
         }
         body = self.app.post_json(url, request_utf8, status=200).json
 
-    @attr("security")
-    def test_login_success(self):
-        # Login as admin
+    def get_json_with_token(self, url, user, status):
+        token = self.global_tokens[user]
+        auth = 'JWT token="' + token.encode('ascii') + '"'
+        headers = headers = {'Authorization': auth}
+        response = self.app.get(url, headers=headers, status=status)
+        return response.json
+
+    def login(self, username, password=None, status=200):
+        if not password:
+            password = self.global_passwords[username]
+
         request_body = {
-            'username': 'admin',
-            'password': 'even better pass',
-        }
+            'username': username,
+            'password': password
+            }
 
         url = '/users/login'
-        body = self.app.post_json(url, request_body, status=200).json
+        response = self.app.post_json(url, request_body, status=status)
+        return response
+
+    @attr("security")
+    def test_login_success(self):
+        body = self.login('admin', status=200).json
         self.assertTrue('token' in body)
 
     @attr("security")
     def test_login_failure(self):
-        # Login as admin
-        request_body = {
-            'username': 'admin',
-            'password': 'even better pass bad',
-        }
-
-        url = '/users/login'
-        response = self.app.post_json(url, request_body, status=401)
-        body = response.json
+        body = self.login('admin', password='invalid', status=401).json
         self.assertEqual(body['status'], 'error')
 
+    @attr("security")
+    def test_restricted_request(self):
+        url = '/users/' + str(self.global_userids['contributor'])
+        body = self.get_json_with_token(url, user='contributor', status=200)
+        self.assertBodyEqual(body, 'username', 'contributor')
+
     def _add_test_data(self):
-        self.contributor = User(
-            username='contributor', email='contributor@camptocamp.org',
-            password='super pass')
-
-        self.session.add(self.contributor)
-        self.session.flush()
-
-        self.admin = User(
-            username='admin', email='admin@camptocamp.org',
-            admin=True, password='even better pass')
-
-        self.session.add(self.admin)
-        self.session.flush()
+        pass

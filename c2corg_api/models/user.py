@@ -16,7 +16,7 @@ import colander
 
 class PasswordUtil():
     """
-    Utility class abstracting low-level password implementation.
+    Utility class abstracting low-level password primitives.
     """
     @staticmethod
     def encrypt_password(plain_password):

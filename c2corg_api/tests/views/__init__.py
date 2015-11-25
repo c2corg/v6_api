@@ -58,6 +58,13 @@ class BaseTestRest(BaseTestCase):
         actual_total = actual['total']
         self.assertEqual(actual_total, total)
 
+    def get_json_with_token(self, url, user, status):
+        token = self.global_tokens[user]
+        auth = 'JWT token="' + token.encode('ascii') + '"'
+        headers = headers = {'Authorization': auth}
+        response = self.app.get(url, headers=headers, status=status)
+        return response.json
+
     def get(self, reference):
         response = self.app.get(self._prefix + '/' +
                                 str(reference.document_id),

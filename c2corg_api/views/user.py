@@ -1,11 +1,11 @@
 from functools import partial
 from pyramid.httpexceptions import HTTPInternalServerError
 
-from cornice.resource import resource, view
+from cornice.resource import resource
 
 from c2corg_api.models.user import User, schema_user, schema_create_user
 from c2corg_api.views import (
-        cors_policy, json_view, to_json_dict)
+        cors_policy, json_view, restricted_view, to_json_dict)
 from c2corg_api.views.validation import validate_id
 
 from c2corg_api.models import DBSession
@@ -56,7 +56,7 @@ class UserRest(object):
     def __init__(self, request):
         self.request = request
 
-    @view(validators=validate_id)
+    @restricted_view(validators=validate_id)
     def get(self):
         id = self.request.validated['id']
         user = DBSession. \

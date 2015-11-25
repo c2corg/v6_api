@@ -52,11 +52,19 @@ def json_view(**kw):
 
 
 def restricted_json_view(**kw):
-    """ A Cornice view that handles restricted resources.
+    """ A Cornice view that handles restricted json resources.
     """
     if 'permission' not in kw:
         kw['permission'] = 'authenticated'
     return json_view(**kw)
+
+
+def restricted_view(**kw):
+    """ A Cornice view that handles restricted resources.
+    """
+    if 'permission' not in kw:
+        kw['permission'] = 'authenticated'
+    return view(**kw)
 
 
 def to_json_dict(obj, schema):

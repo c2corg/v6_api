@@ -17,7 +17,7 @@ next_expire_cleanup = datetime.datetime.utcnow()
 CONST_EXPIRE_AFTER_DAYS = 14
 
 
-def groupfinder(userid):
+def groupfinder(userid, request):
     is_admin = DBSession.query(User). \
         filter(User.id == userid and User.admin is True). \
         count() > 0
@@ -25,9 +25,9 @@ def groupfinder(userid):
 
 
 def validate_token(token):
-    # FIXME: validate expiration
+    now = datetime.datetime.utcnow()
     return DBSession.query(Token). \
-        filter(Token.value == token).count() == 1
+        filter(Token.value == token and Token.expire > now).count() == 1
 
 
 def add_token(value, expire, userid):
@@ -45,6 +45,14 @@ def remove_token(token):
     DBSession.flush()
 
 
+def create_claims(user, exp):
+    return {
+        'sub': user.id,
+        'username': user.username,
+        'exp': round((exp - datetime.datetime(1970, 1, 1)).total_seconds())
+    }
+
+
 def try_login(username, password, request):
     user = DBSession.query(User). \
         filter(User.username == username).first()
@@ -53,10 +61,7 @@ def try_login(username, password, request):
         policy = request.registry.queryUtility(IAuthenticationPolicy)
         now = datetime.datetime.utcnow()
         exp = now + datetime.timedelta(weeks=CONST_EXPIRE_AFTER_DAYS)
-        token = policy.encode_jwt(request, claims={
-            'sub': username,
-            'userid': user.id,
-            'exp': (exp - datetime.datetime(1970, 1, 1)).total_seconds()
-        })
+        claims = create_claims(user, exp)
+        token = policy.encode_jwt(request, claims=claims)
         add_token(token, exp, user.id)
         return token
