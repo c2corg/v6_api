@@ -3,8 +3,6 @@ from c2corg_api.models.user import User
 
 from c2corg_api.tests.views import BaseTestRest
 
-from nose.plugins.attrib import attr
-
 
 class TestUserRest(BaseTestRest):
 
@@ -60,17 +58,14 @@ class TestUserRest(BaseTestRest):
         response = self.app.post_json(url, request_body, status=status)
         return response
 
-    @attr("security")
     def test_login_success(self):
         body = self.login('admin', status=200).json
         self.assertTrue('token' in body)
 
-    @attr("security")
     def test_login_failure(self):
         body = self.login('admin', password='invalid', status=401).json
         self.assertEqual(body['status'], 'error')
 
-    @attr("security")
     def test_restricted_request(self):
         url = '/users/' + str(self.global_userids['contributor'])
         body = self.get_json_with_contributor(url, status=200)

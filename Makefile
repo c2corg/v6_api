@@ -43,11 +43,8 @@ cleanall: clean
 
 .PHONY: test
 test: .build/venv/bin/nosetests test.ini
-	# Tests requiring the authentication policy must use a tag 'security'.
-	# Other tests are run without authentication policy.
-	# This strategy allows writing more simpler and more maintanable tests.
-	FORCE_AUTHORIZATION_ENABLED=True .build/venv/bin/nosetests -a '!security'
-	FORCE_AUTHORIZATION_ENABLED=True .build/venv/bin/nosetests -a 'security'
+	# All tests are now run with authentication/authorization enabled
+	FORCE_AUTHORIZATION_ENABLED=True .build/venv/bin/nosetests
 
 .PHONY: lint
 lint: .build/venv/bin/flake8
