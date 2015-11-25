@@ -27,6 +27,8 @@ requires = [
     'pyramid_jwtauth',
     'functools32',
     'bcrypt',
+    'elasticsearch==2.1.0',
+    'elasticsearch_dsl==0.0.9'
     ]
 
 setup(name='c2corg_api',
@@ -53,5 +55,7 @@ setup(name='c2corg_api',
       main = c2corg_api:main
       [console_scripts]
       initialize_c2corg_api_db = c2corg_api.scripts.initializedb:main
+      initialize_c2corg_api_es = c2corg_api.scripts.initializees:main
+      fill_es_index = c2corg_api.scripts.es.fill_index:main
       """,
       )

@@ -21,6 +21,11 @@ If you want to specify a specific string as user, you can instead use:
 
     USER=something scripts/create_user_db.sh
 
+To set up ElasticSearch
+----------------------
+
+    .build/venv/bin/initialize_c2corg_api_es development.ini
+
 Run the application
 -------------------
 
