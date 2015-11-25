@@ -18,10 +18,10 @@ CONST_EXPIRE_AFTER_DAYS = 14
 
 
 def groupfinder(userid, request):
-    is_admin = DBSession.query(User). \
-        filter(User.id == userid and User.admin is True). \
+    is_moderator = DBSession.query(User). \
+        filter(User.id == userid and User.moderator is True). \
         count() > 0
-    return ['group:admins'] if is_admin else [Authenticated]
+    return ['group:moderators'] if is_moderator else [Authenticated]
 
 
 def validate_token(token):

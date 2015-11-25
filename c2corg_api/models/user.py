@@ -40,7 +40,7 @@ class User(Base):
     username = Column(String(200), nullable=False, unique=True)
     email = Column(String(200), nullable=False, unique=True)
     email_validated = Column(Boolean, nullable=False, default=False)
-    admin = Column(Boolean, nullable=False, default=False)
+    moderator = Column(Boolean, nullable=False, default=False)
     _password = Column("password", String(255), nullable=False)
     temp_password = Column(String(255))
 
@@ -85,7 +85,7 @@ schema_user = SQLAlchemySchemaNode(
     User,
     # whitelisted attributes
     includes=[
-        'id', 'username', 'email', 'email_validated', 'admin'],
+        'id', 'username', 'email', 'email_validated', 'moderator'],
     overrides={
         'id': {
             'missing': None

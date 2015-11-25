@@ -59,11 +59,11 @@ class TestUserRest(BaseTestRest):
         return response
 
     def test_login_success(self):
-        body = self.login('admin', status=200).json
+        body = self.login('moderator', status=200).json
         self.assertTrue('token' in body)
 
     def test_login_failure(self):
-        body = self.login('admin', password='invalid', status=401).json
+        body = self.login('moderator', password='invalid', status=401).json
         self.assertEqual(body['status'], 'error')
 
     def test_restricted_request(self):
