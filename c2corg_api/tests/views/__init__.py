@@ -15,12 +15,26 @@ class BaseTestRest(BaseTestCase):
     def assertBodyEqual(self, body, key, expected):  # noqa
         self.assertEqual(body.get(key), expected)
 
-    def get_json_with_token(self, url, user, status):
-        token = self.global_tokens[user]
-        auth = 'JWT token="' + token.encode('ascii') + '"'
-        headers = headers = {'Authorization': auth}
-        response = self.app.get(url, headers=headers, status=status)
-        return response.json
+    def add_authorization_header(self, username=None, token=None,
+                                 headers=None):
+        if not headers:
+            headers = {}
+        if not token:
+            token = self.global_tokens[username]
+        headers['Authorization'] = 'JWT token="' + token.encode('ascii') + '"'
+        return headers
+
+    def get_json_with_token(self, url, token, status=200):
+        headers = self.add_authorization_header(token=token)
+        return self.app.get(url, headers=headers, status=status).json
+
+    def get_json_with_contributor(self, url, status=200):
+        headers = self.add_authorization_header(username='contributor')
+        return self.app.get(url, headers=headers, status=status).json
+
+    def get_json_with_moderator(self, url, status):
+        headers = self.add_authorization_header(username='moderator')
+        return self.app.get(url, headers=headers, status=status).json
 
     def assertCorniceMissing(self, error, key):  # noqa
         self.assertEqual(error.get('description'), key + ' is missing')

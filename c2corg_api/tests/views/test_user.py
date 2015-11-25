@@ -73,7 +73,7 @@ class TestUserRest(BaseTestRest):
     @attr("security")
     def test_restricted_request(self):
         url = '/users/' + str(self.global_userids['contributor'])
-        body = self.get_json_with_token(url, user='contributor', status=200)
+        body = self.get_json_with_contributor(url, status=200)
         self.assertBodyEqual(body, 'username', 'contributor')
 
     def _add_test_data(self):
