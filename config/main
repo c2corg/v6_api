@@ -5,3 +5,4 @@ export instanceid = api
 export base_url = /${instanceid}
 export db_name = c2corg_main
 export tests_db_name = c2corg_main_tests
+export elasticsearch_index = dev_main

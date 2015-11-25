@@ -4,3 +4,4 @@ export instanceid = travis
 export base_url = /${instanceid}
 export db_name = c2corg_travis_tests
 export tests_db_name = c2corg_travis_tests
+export elasticsearch_index = travis
