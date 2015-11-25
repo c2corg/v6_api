@@ -501,7 +501,14 @@ class TestWaypointRest(BaseDocumentTestRest):
             }
         }
         response = self.app.put_json(
-            self._prefix + '/' + str(waypoint.document_id), body_put)
+            self._prefix + '/' + str(waypoint.document_id), body_put,
+            status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/' + str(waypoint.document_id), body_put,
+            headers=headers, status=200)
+
         body = response.json
         document_id = body.get('document_id')
         self.assertEquals(

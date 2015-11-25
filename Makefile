@@ -46,7 +46,7 @@ test: .build/venv/bin/nosetests test.ini
 	# Tests requiring the authentication policy must use a tag 'security'.
 	# Other tests are run without authentication policy.
 	# This strategy allows writing more simpler and more maintanable tests.
-	FORCE_AUTHORIZATION_ENABLED=False .build/venv/bin/nosetests -a '!security'
+	FORCE_AUTHORIZATION_ENABLED=True .build/venv/bin/nosetests -a '!security'
 	FORCE_AUTHORIZATION_ENABLED=True .build/venv/bin/nosetests -a 'security'
 
 .PHONY: lint
