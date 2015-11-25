@@ -1,14 +1,18 @@
 from functools import partial
 from pyramid.httpexceptions import HTTPInternalServerError
 
-from cornice.resource import resource, view
+from cornice.resource import resource
 
 from c2corg_api.models.user import User, schema_user, schema_create_user
 from c2corg_api.views import (
-        cors_policy, json_view, to_json_dict)
+        cors_policy, json_view, restricted_view, to_json_dict)
 from c2corg_api.views.validation import validate_id
 
 from c2corg_api.models import DBSession
+
+from c2corg_api.security.roles import try_login
+
+import colander
 
 ENCODING = 'UTF-8'
 
@@ -52,7 +56,7 @@ class UserRest(object):
     def __init__(self, request):
         self.request = request
 
-    @view(validators=validate_id)
+    @restricted_view(validators=validate_id)
     def get(self):
         id = self.request.validated['id']
         user = DBSession. \
@@ -84,3 +88,30 @@ class UserRegistrationRest(object):
             raise HTTPInternalServerError('Error persisting user')
 
         return to_json_dict(user, schema_user)
+
+
+class LoginSchema(colander.MappingSchema):
+    username = colander.SchemaNode(colander.String())
+    password = colander.SchemaNode(colander.String())
+
+login_schema = LoginSchema()
+
+
+@resource(path='/users/login', cors_policy=cors_policy)
+class UserLoginRest(object):
+    def __init__(self, request):
+        self.request = request
+
+    @json_view(schema=login_schema, validators=[validate_json_password])
+    def post(self):
+        request = self.request
+        username = request.validated['username']
+        password = request.validated['password']
+        token = try_login(username, password, request)
+        if token:
+            return {
+                'token': token
+            }
+        else:
+            request.errors.status = 401
+            request.errors.add('body', 'user', 'Login failed')

@@ -6,15 +6,15 @@ from c2corg_api.models.route import (
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.views.document import DocumentRest
 
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest
 
 
-class TestRouteRest(BaseTestRest):
+class TestRouteRest(BaseDocumentTestRest):
 
     def setUp(self):  # noqa
         self.set_prefix_and_model(
             "/routes", Route, ArchiveRoute, ArchiveRouteLocale)
-        BaseTestRest.setUp(self)
+        BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
@@ -59,7 +59,7 @@ class TestRouteRest(BaseTestRest):
         body = self.post_error({})
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertMissing(errors[0], 'activities')
+        self.assertCorniceMissing(errors[0], 'activities')
 
     def test_post_empty_activities_error(self):
         body = self.post_error({
@@ -115,7 +115,7 @@ class TestRouteRest(BaseTestRest):
         body = self.post_missing_title(body_post)
         errors = body.get('errors')
         self.assertEqual(len(errors), 2)
-        self.assertRequired(errors[1], 'locales')
+        self.assertCorniceRequired(errors[1], 'locales')
 
     def test_post_non_whitelisted_attribute(self):
         body = {

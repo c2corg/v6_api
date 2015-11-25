@@ -1,41 +1,16 @@
 # -*- coding: utf-8 -*-
 from c2corg_api.models.user import User
 
-from c2corg_api.tests import BaseTestCase
+from c2corg_api.tests.views import BaseTestRest
 
 
-class TestUserRest(BaseTestCase):
+class TestUserRest(BaseTestRest):
 
     def setUp(self):  # noqa
         self._prefix = "/users"
         self._model = User
-        BaseTestCase.setUp(self)
+        BaseTestRest.setUp(self)
         self._add_test_data()
-
-    def assertErrorsContain(self, body, key):  # noqa
-        for error in body['errors']:
-            if error.get('name') == key:
-                return
-        self.fail(str(body) + " does not contain " + key)
-
-    def assertBodyEqual(self, body, key, expected):  # noqa
-        self.assertEqual(body.get(key), expected)
-
-    def get(self, reference):
-        url = self._prefix + '/' + str(reference.id)
-        response = self.app.get(url, status=200)
-        self.assertEqual(response.content_type, 'application/json')
-        body = response.json
-        self.assertEqual(body.get('id'), reference.id)
-        return body
-
-    def test_get(self):
-        persisted = self.contributor
-        body = self.get(persisted)
-        self.assertBodyEqual(body, 'username', 'contributor')
-        self.assertNotIn('password', body)
-        self.assertNotIn('_password', body)
-        self.assertNotIn('temp_password', body)
 
     def test_register(self):
         request_body = {
@@ -70,17 +45,31 @@ class TestUserRest(BaseTestCase):
         }
         body = self.app.post_json(url, request_utf8, status=200).json
 
+    def login(self, username, password=None, status=200):
+        if not password:
+            password = self.global_passwords[username]
+
+        request_body = {
+            'username': username,
+            'password': password
+            }
+
+        url = '/users/login'
+        response = self.app.post_json(url, request_body, status=status)
+        return response
+
+    def test_login_success(self):
+        body = self.login('moderator', status=200).json
+        self.assertTrue('token' in body)
+
+    def test_login_failure(self):
+        body = self.login('moderator', password='invalid', status=401).json
+        self.assertEqual(body['status'], 'error')
+
+    def test_restricted_request(self):
+        url = '/users/' + str(self.global_userids['contributor'])
+        body = self.get_json_with_contributor(url, status=200)
+        self.assertBodyEqual(body, 'username', 'contributor')
+
     def _add_test_data(self):
-        self.contributor = User(
-            username='contributor', email='contributor@camptocamp.org',
-            password='super pass')
-
-        self.session.add(self.contributor)
-        self.session.flush()
-
-        self.admin = User(
-            username='admin', email='admin@camptocamp.org',
-            password='even better pass')
-
-        self.session.add(self.admin)
-        self.session.flush()
+        pass

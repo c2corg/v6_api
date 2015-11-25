@@ -1,8 +1,6 @@
 from pyramid.view import view_config
-from pyramid.interfaces import IAuthenticationPolicy
-from c2corg_api.security.roles import USERS, add_token, remove_token
+from c2corg_api.security.roles import try_login, remove_token
 
-import datetime
 import json
 
 
@@ -24,16 +22,8 @@ def login(request):
     user = form['username']
     password = form['password']
 
-    if user and password and USERS.get(user) == password:
-        policy = request.registry.queryUtility(IAuthenticationPolicy)
-        now = datetime.datetime.utcnow()
-        exp = now + datetime.timedelta(weeks=1)
-        token = policy.encode_jwt(request, claims={
-            'sub': user,
-            'exp': exp
-        })
-        add_token(token)
-
+    token = try_login(user, password, request)
+    if token:
         return {
             'token': token
         }

@@ -7,15 +7,15 @@ from c2corg_api.models.document import (
     DocumentGeometry, ArchiveDocumentGeometry)
 from c2corg_api.views.document import DocumentRest
 
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest
 
 
-class TestWaypointRest(BaseTestRest):
+class TestWaypointRest(BaseDocumentTestRest):
 
     def setUp(self):  # noqa
         self.set_prefix_and_model(
             "/waypoints", Waypoint, ArchiveWaypoint, ArchiveWaypointLocale)
-        BaseTestRest.setUp(self)
+        BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
@@ -64,7 +64,7 @@ class TestWaypointRest(BaseTestRest):
         body = self.post_error({})
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertMissing(errors[0], 'waypoint_type')
+        self.assertCorniceMissing(errors[0], 'waypoint_type')
 
     def test_post_missing_title(self):
         body = {
@@ -78,7 +78,7 @@ class TestWaypointRest(BaseTestRest):
         body = self.post_missing_title(body)
         errors = body.get('errors')
         self.assertEqual(len(errors), 2)
-        self.assertRequired(errors[1], 'locales')
+        self.assertCorniceRequired(errors[1], 'locales')
 
     def test_post_missing_geometry(self):
         body = {
@@ -501,7 +501,14 @@ class TestWaypointRest(BaseTestRest):
             }
         }
         response = self.app.put_json(
-            self._prefix + '/' + str(waypoint.document_id), body_put)
+            self._prefix + '/' + str(waypoint.document_id), body_put,
+            status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/' + str(waypoint.document_id), body_put,
+            headers=headers, status=200)
+
         body = response.json
         document_id = body.get('document_id')
         self.assertEquals(

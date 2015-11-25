@@ -6,23 +6,53 @@ from c2corg_api.tests import BaseTestCase
 
 class BaseTestRest(BaseTestCase):
 
+    def assertErrorsContain(self, body, key):  # noqa
+        for error in body['errors']:
+            if error.get('name') == key:
+                return
+        self.fail(str(body) + " does not contain " + key)
+
+    def assertBodyEqual(self, body, key, expected):  # noqa
+        self.assertEqual(body.get(key), expected)
+
+    def add_authorization_header(self, username=None, token=None,
+                                 headers=None):
+        if not headers:
+            headers = {}
+        if not token:
+            token = self.global_tokens[username]
+        headers['Authorization'] = 'JWT token="' + token.encode('ascii') + '"'
+        return headers
+
+    def get_json_with_token(self, url, token, status=200):
+        headers = self.add_authorization_header(token=token)
+        return self.app.get(url, headers=headers, status=status).json
+
+    def get_json_with_contributor(self, url, status=200):
+        headers = self.add_authorization_header(username='contributor')
+        return self.app.get(url, headers=headers, status=status).json
+
+    def get_json_with_moderator(self, url, status):
+        headers = self.add_authorization_header(username='moderator')
+        return self.app.get(url, headers=headers, status=status).json
+
+    def assertCorniceMissing(self, error, key):  # noqa
+        self.assertEqual(error.get('description'), key + ' is missing')
+        self.assertEqual(error.get('name'), key)
+
+    def assertCorniceRequired(self, error, key):  # noqa
+        self.assertEqual(error.get('description'), 'Required')
+        self.assertEqual(error.get('name'), key)
+
+
+class BaseDocumentTestRest(BaseTestRest):
+
     def set_prefix_and_model(
             self, prefix, model, model_archive, model_archive_locale):
         self._prefix = prefix
         self._model = model
         self._model_archive = model_archive
         self._model_archive_locale = model_archive_locale
-
-    def setUp(self):  # noqa
-        BaseTestCase.setUp(self)
-
-    def assertMissing(self, error, key):  # noqa
-        self.assertEqual(error.get('description'), key + ' is missing')
-        self.assertEqual(error.get('name'), key)
-
-    def assertRequired(self, error, key):  # noqa
-        self.assertEqual(error.get('description'), 'Required')
-        self.assertEqual(error.get('name'), key)
 
     def get_collection(self, params=None):
         prefix = self._prefix
@@ -95,7 +125,12 @@ class BaseTestRest(BaseTestCase):
 
     def post_error(self, request_body):
         response = self.app.post_json(self._prefix, request_body,
-                                      expect_errors=True, status=400)
+                                      expect_errors=True, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.post_json(self._prefix, request_body,
+                                      headers=headers, expect_errors=True,
+                                      status=400)
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -105,39 +140,59 @@ class BaseTestRest(BaseTestCase):
 
     def post_missing_title(self, request_body):
         response = self.app.post_json(self._prefix, request_body,
+                                      expect_errors=True, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.post_json(self._prefix, request_body,
+                                      headers=headers,
                                       expect_errors=True, status=400)
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
-        self.assertRequired(errors[0], 'locales.0.title')
+        self.assertCorniceRequired(errors[0], 'locales.0.title')
         return body
 
     def post_missing_geometry(self, request_body):
         response = self.app.post_json(self._prefix, request_body,
-                                      expect_errors=True, status=400)
+                                      expect_errors=True, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.post_json(
+            self._prefix, request_body, headers=headers,
+            expect_errors=True, status=400)
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertRequired(errors[0], 'geometry')
+        self.assertCorniceRequired(errors[0], 'geometry')
         return body
 
     def post_missing_geom(self, request_body):
         response = self.app.post_json(self._prefix, request_body,
-                                      expect_errors=True, status=400)
+                                      expect_errors=True, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.post_json(
+            self._prefix, request_body, headers=headers,
+            expect_errors=True, status=400)
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertRequired(errors[0], 'geometry.geom')
+        self.assertCorniceRequired(errors[0], 'geometry.geom')
         return body
 
     def post_missing_locales(self, request_body):
         response = self.app.post_json(self._prefix, request_body,
-                                      expect_errors=True, status=400)
+                                      expect_errors=True, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.post_json(
+            self._prefix, request_body, headers=headers,
+            expect_errors=True, status=400)
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -149,7 +204,12 @@ class BaseTestRest(BaseTestCase):
 
     def post_same_locale_twice(self, request_body):
         response = self.app.post_json(self._prefix, request_body,
-                                      expect_errors=True, status=400)
+                                      expect_errors=True, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.post_json(
+            self._prefix, request_body, headers=headers,
+            expect_errors=True, status=400)
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -162,7 +222,12 @@ class BaseTestRest(BaseTestCase):
 
     def post_missing_field(self, request_body, field):
         response = self.app.post_json(self._prefix, request_body,
-                                      expect_errors=True, status=400)
+                                      expect_errors=True, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.post_json(
+            self._prefix, request_body, headers=headers,
+            expect_errors=True, status=400)
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -176,7 +241,11 @@ class BaseTestRest(BaseTestCase):
         """`protected` is a non-whitelisted attribute, which is ignored when
         given in a request.
         """
-        response = self.app.post_json(self._prefix, request_body, status=200)
+        response = self.app.post_json(self._prefix, request_body, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.post_json(
+            self._prefix, request_body, headers=headers, status=200)
 
         body = response.json
         document_id = body.get('document_id')
@@ -198,7 +267,11 @@ class BaseTestRest(BaseTestCase):
         return body
 
     def post_success(self, request_body):
-        response = self.app.post_json(self._prefix, request_body, status=200)
+        response = self.app.post_json(self._prefix, request_body, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.post_json(self._prefix, request_body,
+                                      headers=headers, status=200)
 
         body = response.json
         document_id = body.get('document_id')
@@ -232,14 +305,25 @@ class BaseTestRest(BaseTestCase):
 
     def put_wrong_document_id(self, request_body):
         response = self.app.put_json(
-            self._prefix + '/-9999', request_body, status=404)
+            self._prefix + '/-9999', request_body, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/-9999', request_body, headers=headers, status=404)
+
         body = response.json
         self.assertEqual(body['status'], 'error')
         self.assertEqual(body['errors'][0]['name'], 'Not Found')
 
     def put_wrong_version(self, request_body, id):
         response = self.app.put_json(
-            self._prefix + '/' + str(id), request_body, status=409)
+            self._prefix + '/' + str(id), request_body, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/' + str(id), request_body, headers=headers,
+            status=409)
+
         body = response.json
         self.assertEqual(body['status'], 'error')
         self.assertEqual(body['errors'][0]['name'], 'Conflict')
@@ -249,7 +333,12 @@ class BaseTestRest(BaseTestCase):
         request body.
         """
         response = self.app.put_json(
-            self._prefix + '/' + str(id + 1), request_body, status=400)
+            self._prefix + '/' + str(id + 1), request_body, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/' + str(id + 1), request_body, headers=headers,
+            status=400)
         body = response.json
         self.assertEqual(body['status'], 'error')
         self.assertEqual(body['errors'][0]['name'], 'Bad Request')
@@ -259,7 +348,13 @@ class BaseTestRest(BaseTestCase):
             'message': '...'
         }
         response = self.app.put_json(
-            self._prefix + '/' + str(id), request_body, status=400)
+            self._prefix + '/' + str(id), request_body, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/' + str(id), request_body, headers=headers,
+            status=400)
+
         body = response.json
         self.assertEqual(body['status'], 'error')
         self.assertEqual(
@@ -268,19 +363,30 @@ class BaseTestRest(BaseTestCase):
     def put_missing_field(self, request_body, document, field):
         response = self.app.put_json(
             self._prefix + '/' + str(document.document_id), request_body,
-            status=400)
+            status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/' + str(document.document_id), request_body,
+            headers=headers, status=400)
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertRequired(errors[0], field)
+        self.assertCorniceRequired(errors[0], field)
 
     def put_success_all(self, request_body, document):
         """Test updating a document with changes to the figures and locales.
         """
         response = self.app.put_json(
-            self._prefix + '/' + str(document.document_id), request_body)
+            self._prefix + '/' + str(document.document_id), request_body,
+            status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/' + str(document.document_id), request_body,
+            headers=headers, status=200)
 
         body = response.json
         document_id = body.get('document_id')
@@ -358,7 +464,13 @@ class BaseTestRest(BaseTestCase):
         """Test updating a document with changes to the figures and locales.
         """
         response = self.app.put_json(
-            self._prefix + '/' + str(document.document_id), request_body)
+            self._prefix + '/' + str(document.document_id), request_body,
+            status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/' + str(document.document_id), request_body,
+            headers=headers, status=200)
 
         body = response.json
         document_id = body.get('document_id')
@@ -419,7 +531,13 @@ class BaseTestRest(BaseTestCase):
         """Test updating a document with only changes to a locale.
         """
         response = self.app.put_json(
-            self._prefix + '/' + str(document.document_id), request_body)
+            self._prefix + '/' + str(document.document_id), request_body,
+            status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/' + str(document.document_id), request_body,
+            headers=headers, status=200)
 
         body = response.json
         document_id = body.get('document_id')
@@ -480,8 +598,15 @@ class BaseTestRest(BaseTestCase):
         """Test updating a document by adding a new locale.
         """
         response = self.app.put_json(
-            self._prefix + '/' + str(document.document_id), request_body)
+            self._prefix + '/' + str(document.document_id), request_body,
+            status=403)
 
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/' + str(document.document_id), request_body,
+            headers=headers, status=200)
+
+        headers = self.add_authorization_header(username='contributor')
         body = response.json
         document_id = body.get('document_id')
         # document version does not change!

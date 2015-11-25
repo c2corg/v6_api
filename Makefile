@@ -43,7 +43,8 @@ cleanall: clean
 
 .PHONY: test
 test: .build/venv/bin/nosetests test.ini
-	.build/venv/bin/nosetests
+	# All tests are now run with authentication/authorization enabled
+	FORCE_AUTHORIZATION_ENABLED=True .build/venv/bin/nosetests
 
 .PHONY: lint
 lint: .build/venv/bin/flake8

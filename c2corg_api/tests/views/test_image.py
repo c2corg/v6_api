@@ -6,15 +6,15 @@ from c2corg_api.models.image import (
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.views.document import DocumentRest
 
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest
 
 
-class TestImageRest(BaseTestRest):
+class TestImageRest(BaseDocumentTestRest):
 
     def setUp(self):  # noqa
         self.set_prefix_and_model(
             "/images", Image, ArchiveImage, ArchiveImageLocale)
-        BaseTestRest.setUp(self)
+        BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
@@ -52,7 +52,7 @@ class TestImageRest(BaseTestRest):
         body = self.post_error({})
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertMissing(errors[0], 'activities')
+        self.assertCorniceMissing(errors[0], 'activities')
 
     def test_post_missing_title(self):
         body_post = {
