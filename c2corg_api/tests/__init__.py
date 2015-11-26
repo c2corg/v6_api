@@ -7,7 +7,6 @@ import logging
 from sqlalchemy import engine_from_config
 from sqlalchemy.orm import sessionmaker
 from pyramid.paster import get_appsettings
-from pyramid.settings import asbool
 from pyramid import testing
 import unittest
 from webtest import TestApp
@@ -24,10 +23,6 @@ curdir = os.path.dirname(os.path.abspath(__file__))
 configfile = os.path.realpath(os.path.join(curdir, '../../test.ini'))
 settings = get_appsettings(configfile)
 
-
-if 'FORCE_AUTHORIZATION_ENABLED' in os.environ:
-    enable = asbool(os.environ['FORCE_AUTHORIZATION_ENABLED'])
-    settings['noauthorization'] = not enable
 
 if settings['noauthorization']:
     log.warning('Authorization disabled for these tests')
