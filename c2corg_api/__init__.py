@@ -8,6 +8,7 @@ from c2corg_api.models import (
     DBSession,
     Base,
     )
+from c2corg_api.search import configure_es_from_config
 from c2corg_api.views import cors_policy
 
 from pyramid.security import Allow, Everyone, Authenticated
@@ -62,10 +63,13 @@ def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
 
-    # Configure sqlalchemy
+    # Configure SQLAlchemy
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
     Base.metadata.bind = engine
+
+    # Configure ElasticSearch
+    configure_es_from_config(settings)
 
     config = Configurator(settings=settings)
 

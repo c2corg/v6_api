@@ -1,8 +1,6 @@
 import os
 import sys
-from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Index
-from elasticsearch_dsl.connections import connections
 
 from pyramid.paster import (
     get_appsettings,
@@ -12,6 +10,7 @@ from pyramid.paster import (
 from pyramid.scripts.common import parse_vars
 
 from c2corg_api.search.mapping import SearchDocument
+from c2corg_api.search import configure_es_from_config, elasticsearch_config
 
 
 def usage(argv):
@@ -28,17 +27,15 @@ def main(argv=sys.argv):
     options = parse_vars(argv[2:])
     setup_logging(config_uri)
     settings = get_appsettings(config_uri, options=options)
-    setup_es(
-        settings['elasticsearch.host'],
-        int(settings['elasticsearch.port']),
-        settings['elasticsearch.index'])
+    configure_es_from_config(settings)
+    setup_es()
 
 
-def setup_es(host, port, index_name):
+def setup_es():
     """Create the ElasticSearch index and configure the mapping.
     """
-    client = Elasticsearch([{'host': host, 'port': port}])
-    connections.add_connection('default', client)
+    client = elasticsearch_config['client']
+    index_name = elasticsearch_config['index']
 
     info = client.info()
     print('ElasticSearch version: {0}'.format(info['version']['number']))
@@ -48,7 +45,8 @@ def setup_es(host, port, index_name):
               'delete the index and run this script again.'.format(index_name))
         print ('To delete the index run:')
         print('curl -XDELETE \'http://{0}:{1}/{2}/\''.format(
-            host, port, index_name))
+            elasticsearch_config['host'], elasticsearch_config['port'],
+            index_name))
         sys.exit(0)
 
     index = Index(index_name)
@@ -56,3 +54,15 @@ def setup_es(host, port, index_name):
     index.create()
 
     print('Index "{0}" created'.format(index_name))
+
+def drop_index(silent=True):
+    """Remove the ElasticSearch index.
+    """
+    client = elasticsearch_config['client']
+    index_name = elasticsearch_config['index']
+    index = Index(index_name)
+    try:
+        index.delete()
+    except Exception as exc:
+        if not silent:
+            raise exc

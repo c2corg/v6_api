@@ -11,12 +11,11 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import engine_from_config
 
-from elasticsearch import Elasticsearch
-
 from c2corg_api.search.mapping import SearchDocument
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.scripts.es.es_batch import ElasticBatch
+from c2corg_api.search import configure_es_from_config, elasticsearch_config
 
 batch_size = 1000
 
@@ -37,15 +36,13 @@ def main(argv=sys.argv):
     settings = get_appsettings(config_uri, options=options)
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
-    fill_index(
-        DBSession,
-        settings['elasticsearch.host'],
-        int(settings['elasticsearch.port']),
-        settings['elasticsearch.index'])
+    configure_es_from_config(settings)
+    fill_index(DBSession)
 
 
-def fill_index(db_session, host, port, index_name):
-    client = Elasticsearch([{'host': host, 'port': port}])
+def fill_index(db_session):
+    client = elasticsearch_config['client']
+    index_name = elasticsearch_config['index']
 
     status = {
         'start_time': datetime.now(),
