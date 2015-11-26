@@ -45,8 +45,10 @@ class FillIndexTest(BaseTestCase):
         self.assertIsNotNone(waypoint1)
         self.assertEqual(waypoint1.title_en, 'Mont Granier')
         self.assertEqual(waypoint1.title_fr, 'Mont Granier')
+        self.assertEqual(waypoint1.doc_type, 'w')
 
         waypoint2 = SearchDocument.get(id=71172)
         self.assertIsNotNone(waypoint2)
         self.assertEqual(waypoint2.title_en, 'Mont Blanc')
         self.assertEqual(waypoint2.title_fr, '')
+        self.assertEqual(waypoint2.doc_type, 'w')

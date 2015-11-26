@@ -55,7 +55,7 @@ def fill_index(db_session):
         query(
             DocumentLocale.document_id, DocumentLocale.title,
             DocumentLocale.summary, DocumentLocale.description,
-            DocumentLocale.culture).\
+            DocumentLocale.culture, DocumentLocale.type).\
         order_by(DocumentLocale.document_id, DocumentLocale.culture)
 
     def progress(count, total_count):
@@ -70,7 +70,7 @@ def fill_index(db_session):
     batch = ElasticBatch(client, batch_size)
     count = 0
     with batch:
-        for document_id, title, summary, description, culture in q:
+        for document_id, title, summary, description, culture, type in q:
             if search_document is not None and document_id != last_id:
                 batch.add(search_document)
                 search_document = None
@@ -81,6 +81,8 @@ def fill_index(db_session):
                     '_index': index_name,
                     '_type': SearchDocument._doc_type.name,
                     '_id': document_id,
+                    'doc_type': type
+
                 }
 
             search_document['title_' + culture] = title

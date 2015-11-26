@@ -5,6 +5,7 @@ class SearchDocument(DocType):
     """The ElasticSearch mapping for documents.
     """
     id = Integer()
+    doc_type = String(index='not_analyzed')
 
     # fr
     title_fr = String(analyzer='french')
