@@ -55,12 +55,11 @@ def setup_es():
 
     print('Index "{0}" created'.format(index_name))
 
+
 def drop_index(silent=True):
     """Remove the ElasticSearch index.
     """
-    client = elasticsearch_config['client']
-    index_name = elasticsearch_config['index']
-    index = Index(index_name)
+    index = Index(elasticsearch_config['index'])
     try:
         index.delete()
     except Exception as exc:

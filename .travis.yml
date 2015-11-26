@@ -7,6 +7,9 @@ python:
 addons:
   postgresql: "9.4"
 
+services:
+- elasticsearch
+
 install:
 - make -f config/travis .build/dev-requirements.timestamp
 - make -f config/travis install

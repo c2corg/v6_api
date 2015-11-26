@@ -18,7 +18,7 @@ export db_name = c2corg
 
 export elasticsearch_host = localhost
 export elasticsearch_port = 9201
-export elasticsearch_index = main
+export elasticsearch_index = c2corg
 
 # database to run the unit tests
 export tests_db_host = localhost
@@ -26,5 +26,10 @@ export tests_db_port = 5432
 export tests_db_user = www-data
 export tests_db_password = www-data
 export tests_db_name = c2corg_tests
+
+# ElasticSearch instance to run the unit tests
+export tests_elasticsearch_host = localhost
+export tests_elasticsearch_port = 9201
+export tests_elasticsearch_index = c2corg_tests
 
 export logging_level = WARNING
