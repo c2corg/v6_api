@@ -66,6 +66,11 @@ class TestUserRest(BaseTestRest):
         body = self.login('moderator', password='invalid', status=403).json
         self.assertEqual(body['status'], 'error')
 
+    def test_login_logout_success(self):
+        body = self.login('moderator', status=200).json
+        token = body['token']
+        body = self.post_json_with_token('/users/logout', token)
+
     def test_restricted_request(self):
         url = '/users/' + str(self.global_userids['contributor'])
         body = self.get_json_with_contributor(url, status=200)

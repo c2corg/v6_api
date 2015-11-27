@@ -44,6 +44,14 @@ class BaseTestRest(BaseTestCase):
         self.assertEqual(error.get('description'), 'Required')
         self.assertEqual(error.get('name'), key)
 
+    def post_json_with_token(self, url, token, status=200):
+        headers = self.add_authorization_header(token=token)
+        return self.app.post_json(url, headers=headers, status=status).json
+
+    def post_json_with_contributor(self, url, status=200):
+        headers = self.add_authorization_header(username='contributor')
+        return self.app.post_json(url, headers=headers, status=status).json
+
 
 class BaseDocumentTestRest(BaseTestRest):
 

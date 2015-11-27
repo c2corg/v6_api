@@ -10,7 +10,7 @@ from c2corg_api.views.validation import validate_id
 
 from c2corg_api.models import DBSession
 
-from c2corg_api.security.roles import try_login
+from c2corg_api.security.roles import try_login, remove_token
 
 import colander
 import datetime
@@ -124,3 +124,15 @@ class UserLoginRest(object):
         else:
             request.errors.status = 403
             request.errors.add('body', 'user', 'Login failed')
+
+
+@resource(path='/users/logout', cors_policy=cors_policy)
+class UserLogoutRest(object):
+    def __init__(self, request):
+        self.request = request
+
+    @restricted_view(renderer='json', permission='authenticated')
+    def post(self):
+        result = {'user': self.request.authenticated_userid}
+        remove_token(self.request.authorization[1][7:-1])
+        return result
