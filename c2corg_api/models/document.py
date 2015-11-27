@@ -31,6 +31,8 @@ quality_types = [
 UpdateType = enum.Enum(
     'UpdateType', 'FIGURES LANG GEOM')
 
+DOCUMENT_TYPE = 'd'
+
 
 class Culture(Base):
     """The supported languages.
@@ -53,7 +55,7 @@ class _DocumentMixin(object):
 
     type = Column(String(1))
     __mapper_args__ = {
-        'polymorphic_identity': 'd',
+        'polymorphic_identity': DOCUMENT_TYPE,
         'polymorphic_on': type
     }
 
@@ -214,7 +216,7 @@ class _DocumentLocaleMixin(object):
 
     type = Column(String(1))
     __mapper_args__ = {
-        'polymorphic_identity': 'd',
+        'polymorphic_identity': DOCUMENT_TYPE,
         'polymorphic_on': type
     }
 
@@ -223,7 +225,7 @@ class DocumentLocale(Base, _DocumentLocaleMixin):
     __tablename__ = 'documents_locales'
 
     __mapper_args__ = {
-        'polymorphic_identity': 'd',
+        'polymorphic_identity': DOCUMENT_TYPE,
         'polymorphic_on': _DocumentLocaleMixin.type,
         'version_id_col': _DocumentLocaleMixin.version
     }
@@ -245,7 +247,7 @@ class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
     __tablename__ = 'documents_locales_archives'
 
     __mapper_args__ = {
-        'polymorphic_identity': 'd',
+        'polymorphic_identity': DOCUMENT_TYPE,
         'polymorphic_on': _DocumentLocaleMixin.type
     }
 

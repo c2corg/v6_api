@@ -19,11 +19,13 @@ from document import (
     schema_attributes)
 from c2corg_api.models import enums
 
+ROUTE_TYPE = 'r'
+
 
 class _RouteMixin(object):
 
     __mapper_args__ = {
-        'polymorphic_identity': 'r'
+        'polymorphic_identity': ROUTE_TYPE
     }
 
     # activite
@@ -196,7 +198,7 @@ class ArchiveRoute(_RouteMixin, ArchiveDocument):
 class _RouteLocaleMixin(object):
 
     __mapper_args__ = {
-        'polymorphic_identity': 'r'
+        'polymorphic_identity': ROUTE_TYPE
     }
 
     # pente

@@ -15,6 +15,8 @@ from document import (
     get_update_schema, geometry_schema_overrides)
 from c2corg_common.attributes import activities
 
+IMAGE_TYPE = 'i'
+
 
 class _ImageMixin(object):
     activities = Column(
@@ -24,7 +26,7 @@ class _ImageMixin(object):
     height = Column(SmallInteger)
 
     __mapper_args__ = {
-        'polymorphic_identity': 'i'
+        'polymorphic_identity': IMAGE_TYPE
     }
 
 
@@ -64,7 +66,7 @@ class ArchiveImage(_ImageMixin, ArchiveDocument):
 class _ImageLocaleMixin(object):
 
     __mapper_args__ = {
-        'polymorphic_identity': 'i'
+        'polymorphic_identity': IMAGE_TYPE
     }
 
 
