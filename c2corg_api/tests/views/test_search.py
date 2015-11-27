@@ -2,7 +2,7 @@ from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.fill_index import fill_index
-from c2corg_api.search import elasticsearch_config
+from c2corg_api.tests.search import force_search_index
 from c2corg_api.tests.views import BaseTestRest
 
 
@@ -45,8 +45,7 @@ class TestSearchRest(BaseTestRest):
         self.session.flush()
         fill_index(self.session)
         # make sure the search index is built
-        elasticsearch_config['client'].indices.refresh(
-            elasticsearch_config['index'])
+        force_search_index()
 
     def test_search(self):
         response = self.app.get(self._prefix + '?q=granier', status=200)

@@ -5,7 +5,6 @@ import transaction
 import os
 import logging
 from sqlalchemy import engine_from_config
-from sqlalchemy.orm import sessionmaker
 from pyramid.paster import get_appsettings
 from pyramid import testing
 import unittest
@@ -130,7 +129,7 @@ class BaseTestCase(unittest.TestCase):
         # reconfigure it to use this test's connection
         DBSession.configure(bind=self.connection)
 
-        # create a session bound the connection, this session is the one
+        # create a session bound to the connection, this session is the one
         # used in the test code
         self.session = self.Session(bind=self.connection)
 

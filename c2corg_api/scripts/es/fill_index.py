@@ -82,7 +82,6 @@ def fill_index(db_session):
                     '_type': SearchDocument._doc_type.name,
                     '_id': document_id,
                     'doc_type': type
-
                 }
 
             search_document['title_' + culture] = title

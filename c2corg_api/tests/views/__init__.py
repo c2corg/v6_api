@@ -1,6 +1,8 @@
 import json
 import urllib
 
+# from c2corg_api.search import elasticsearch_config
+# from c2corg_api.search.mapping import SearchDocument
 from c2corg_api.tests import BaseTestCase
 
 
@@ -309,6 +311,15 @@ class BaseDocumentTestRest(BaseTestRest):
             archive_locale.version, waypoint_locale_en.version)
         self.assertEqual(archive_locale.document_id, document_id)
         self.assertEqual(archive_locale.culture, culture)
+
+        # FIXME transaction is not committed in the tests
+        # search_doc = SearchDocument.get(
+        #     id=doc.document_id,
+        #     index=elasticsearch_config['index'])
+        #
+        # self.assertEqual(search_doc['doc_type'], doc.type)
+        # self.assertEqual(search_doc['title_en'], waypoint_locale_en.title)
+
         return (body, doc)
 
     def put_wrong_document_id(self, request_body):
