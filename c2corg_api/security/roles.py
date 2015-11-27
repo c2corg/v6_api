@@ -57,7 +57,7 @@ def try_login(username, password, request):
     user = DBSession.query(User). \
         filter(User.username == username).first()
 
-    if username and password and user.validate_password(password, DBSession):
+    if user and user.validate_password(password, DBSession):
         policy = request.registry.queryUtility(IAuthenticationPolicy)
         now = datetime.datetime.utcnow()
         exp = now + datetime.timedelta(weeks=CONST_EXPIRE_AFTER_DAYS)
@@ -65,3 +65,5 @@ def try_login(username, password, request):
         token = policy.encode_jwt(request, claims=claims)
         add_token(token, exp, user.id)
         return token
+
+    return None
