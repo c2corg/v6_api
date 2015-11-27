@@ -10,7 +10,7 @@ from c2corg_api.views.validation import validate_id
 
 from c2corg_api.models import DBSession
 
-from c2corg_api.security.roles import try_login, remove_token
+from c2corg_api.security.roles import try_login, remove_token, extract_token
 
 import colander
 import datetime
@@ -134,5 +134,5 @@ class UserLogoutRest(object):
     @restricted_view(renderer='json', permission='authenticated')
     def post(self):
         result = {'user': self.request.authenticated_userid}
-        remove_token(self.request.authorization[1][7:-1])
+        remove_token(extract_token(self.request))
         return result

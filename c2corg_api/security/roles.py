@@ -17,6 +17,12 @@ next_expire_cleanup = datetime.datetime.utcnow()
 CONST_EXPIRE_AFTER_DAYS = 14
 
 
+def extract_token(request):
+    # Extract XXX from 'JWT token="XXX"'
+    splitted = request.authorization[1].split('"')
+    return splitted[1] if len(splitted) >= 2 else None
+
+
 def groupfinder(userid, request):
     is_moderator = DBSession.query(User). \
         filter(User.id == userid and User.moderator is True). \

@@ -12,7 +12,7 @@ from c2corg_api.views import cors_policy
 
 from pyramid.security import Allow, Everyone, Authenticated
 
-from c2corg_api.security.roles import validate_token
+from c2corg_api.security.roles import validate_token, extract_token
 
 from pyramid.settings import asbool
 
@@ -46,10 +46,8 @@ def jwt_database_validation_tween_factory(handler, registry):
             return handler(request)
 
         # Finally, check database validation
-        if len(request.authorization[1]) >= 8:
-            # Skip the token=" prefix and " suffix
-            token = request.authorization[1][7:-1]
-            valid = validate_token(token)
+        token = extract_token(request)
+        valid = token and validate_token(token)
 
         if valid:
             return handler(request)
