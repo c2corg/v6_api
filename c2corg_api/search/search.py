@@ -4,9 +4,13 @@ from sqlalchemy.orm import joinedload
 
 from c2corg_api.models import DBSession
 from c2corg_api.search import create_search
+from c2corg_api.views import to_json_dict
 
 
-def search_for_type(search_term, document_type, model, limit):
+def search_for_type(
+        search_term, document_type, model, schema, adapt_schema, limit):
+    # search in all title* (title_en, title_fr, ...), summary* and
+    # description* fields. "boost" title fields and summary fields.
     search_query = MultiMatch(
         query=search_term,
         fields=['title*^3', 'summary*^2', 'description*']
@@ -20,7 +24,6 @@ def search_for_type(search_term, document_type, model, limit):
         filter(type_query).\
         fields([]).\
         extra(from_=0, size=limit)
-    print(search.to_dict())
 
     # only request the document ids from ES
     response = search.execute()
@@ -35,7 +38,9 @@ def search_for_type(search_term, document_type, model, limit):
     return {
         'count': count,
         'total': total,
-        'documents': [to_dict(doc) for doc in documents]
+        'documents': [
+            to_json_dict(doc, adapt_schema(schema, doc)) for doc in documents
+        ]
     }
 
 
@@ -56,12 +61,3 @@ def get_documents(document_ids, model):
     # make sure the documents stay in the same order as returned by ES
     document_index = {doc.document_id: doc for doc in documents}
     return [document_index[id] for id in document_ids if id in document_index]
-
-
-def to_dict(doc):
-    locale = doc.locales[0]
-    return {
-        'id': doc.document_id,
-        'title': locale.title,
-        'summary': locale.summary
-    }
