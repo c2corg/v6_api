@@ -1,8 +1,8 @@
 import json
 import urllib
 
-# from c2corg_api.search import elasticsearch_config
-# from c2corg_api.search.mapping import SearchDocument
+from c2corg_api.search import elasticsearch_config
+from c2corg_api.search.mapping import SearchDocument
 from c2corg_api.tests import BaseTestCase
 
 
@@ -312,13 +312,13 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(archive_locale.document_id, document_id)
         self.assertEqual(archive_locale.culture, culture)
 
-        # FIXME transaction is not committed in the tests
-        # search_doc = SearchDocument.get(
-        #     id=doc.document_id,
-        #     index=elasticsearch_config['index'])
-        #
-        # self.assertEqual(search_doc['doc_type'], doc.type)
-        # self.assertEqual(search_doc['title_en'], waypoint_locale_en.title)
+        # check updates to the search index
+        search_doc = SearchDocument.get(
+            id=doc.document_id,
+            index=elasticsearch_config['index'])
+
+        self.assertEqual(search_doc['doc_type'], doc.type)
+        self.assertEqual(search_doc['title_en'], waypoint_locale_en.title)
 
         return (body, doc)
 
@@ -471,11 +471,20 @@ class BaseDocumentTestRest(BaseTestRest):
         archive_document_fr = version_fr.document_archive
         self.assertIs(archive_document_en, archive_document_fr)
 
-        archive_locale = version_fr.document_locales_archive
-        self.assertEqual(archive_locale.document_id, document_id)
+        archive_locale_fr = version_fr.document_locales_archive
+        self.assertEqual(archive_locale_fr.document_id, document_id)
         self.assertEqual(
-            archive_locale.version, self.locale_fr.version)
-        self.assertEqual(archive_locale.culture, 'fr')
+            archive_locale_fr.version, self.locale_fr.version)
+        self.assertEqual(archive_locale_fr.culture, 'fr')
+
+        # check updates to the search index
+        search_doc = SearchDocument.get(
+            id=document.document_id,
+            index=elasticsearch_config['index'])
+
+        self.assertEqual(search_doc['doc_type'], document.type)
+        self.assertEqual(search_doc['title_en'], archive_locale.title)
+        self.assertEqual(search_doc['title_fr'], archive_locale_fr.title)
 
         return (body, document)
 
@@ -544,6 +553,17 @@ class BaseDocumentTestRest(BaseTestRest):
         archive_document_fr = version_fr.document_archive
         self.assertIs(archive_document_en, archive_document_fr)
 
+        # check updates to the search index
+        search_doc = SearchDocument.get(
+            id=document.document_id,
+            index=elasticsearch_config['index'])
+
+        self.assertEqual(search_doc['doc_type'], document.type)
+        self.assertEqual(
+            search_doc['title_en'], document.get_locale('en').title)
+        self.assertEqual(
+            search_doc['title_fr'], document.get_locale('fr').title)
+
         return (body, document)
 
     def put_success_lang_only(self, request_body, document):
@@ -610,6 +630,17 @@ class BaseDocumentTestRest(BaseTestRest):
         archive_waypoint_en = version_en.document_archive
         archive_waypoint_fr = version_fr.document_archive
         self.assertIs(archive_waypoint_en, archive_waypoint_fr)
+
+        # check updates to the search index
+        search_doc = SearchDocument.get(
+            id=document.document_id,
+            index=elasticsearch_config['index'])
+
+        self.assertEqual(search_doc['doc_type'], document.type)
+        self.assertEqual(
+            search_doc['title_en'], document.get_locale('en').title)
+        self.assertEqual(
+            search_doc['title_fr'], document.get_locale('fr').title)
 
         return (body, document)
 
@@ -687,5 +718,18 @@ class BaseDocumentTestRest(BaseTestRest):
 
         archive_document_es = version_es.document_archive
         self.assertIs(archive_document_es, archive_document_fr)
+
+        # check updates to the search index
+        search_doc = SearchDocument.get(
+            id=document.document_id,
+            index=elasticsearch_config['index'])
+
+        self.assertEqual(search_doc['doc_type'], document.type)
+        self.assertEqual(
+            search_doc['title_en'], document.get_locale('en').title)
+        self.assertEqual(
+            search_doc['title_fr'], document.get_locale('fr').title)
+        self.assertEqual(
+            search_doc['title_es'], document.get_locale('es').title)
 
         return (body, document)
