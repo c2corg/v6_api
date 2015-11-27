@@ -10,9 +10,10 @@ from c2corg_api.views.validation import validate_id
 
 from c2corg_api.models import DBSession
 
-from c2corg_api.security.roles import try_login
+from c2corg_api.security.roles import try_login, remove_token, extract_token
 
 import colander
+import datetime
 
 ENCODING = 'UTF-8'
 
@@ -107,11 +108,31 @@ class UserLoginRest(object):
         request = self.request
         username = request.validated['username']
         password = request.validated['password']
-        token = try_login(username, password, request)
+        user = DBSession.query(User). \
+            filter(User.username == username).first()
+
+        token = try_login(user, password, request) if user else None
         if token:
+            expire_time = token.expire - datetime.datetime(1970, 1, 1)
+            roles = ['moderator'] if user.moderator else []
             return {
-                'token': token
+                'token': token.value,
+                'username': user.username,
+                'expire': int(expire_time.total_seconds()),
+                'roles': roles
             }
         else:
-            request.errors.status = 401
+            request.errors.status = 403
             request.errors.add('body', 'user', 'Login failed')
+
+
+@resource(path='/users/logout', cors_policy=cors_policy)
+class UserLogoutRest(object):
+    def __init__(self, request):
+        self.request = request
+
+    @restricted_view(renderer='json', permission='authenticated')
+    def post(self):
+        result = {'user': self.request.authenticated_userid}
+        remove_token(extract_token(self.request))
+        return result

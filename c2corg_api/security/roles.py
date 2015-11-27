@@ -17,6 +17,12 @@ next_expire_cleanup = datetime.datetime.utcnow()
 CONST_EXPIRE_AFTER_DAYS = 14
 
 
+def extract_token(request):
+    # Extract XXX from 'JWT token="XXX"'
+    splitted = request.authorization[1].split('"')
+    return splitted[1] if len(splitted) >= 2 else None
+
+
 def groupfinder(userid, request):
     is_moderator = DBSession.query(User). \
         filter(User.id == userid and User.moderator is True). \
@@ -34,6 +40,7 @@ def add_token(value, expire, userid):
     token = Token(value=value, expire=expire, userid=userid)
     DBSession.add(token)
     DBSession.flush()
+    return token
 
 
 def remove_token(token):
@@ -49,21 +56,17 @@ def create_claims(user, exp):
     return {
         'sub': user.id,
         'username': user.username,
-        'exp': round((exp - datetime.datetime(1970, 1, 1)).total_seconds())
+        'exp': int((exp - datetime.datetime(1970, 1, 1)).total_seconds())
     }
 
 
-def try_login(username, password, request):
-    user = DBSession.query(User). \
-        filter(User.username == username).first()
-
-    if user and user.validate_password(password, DBSession):
+def try_login(user, password, request):
+    if user.validate_password(password, DBSession):
         policy = request.registry.queryUtility(IAuthenticationPolicy)
         now = datetime.datetime.utcnow()
         exp = now + datetime.timedelta(weeks=CONST_EXPIRE_AFTER_DAYS)
         claims = create_claims(user, exp)
         token = policy.encode_jwt(request, claims=claims)
-        add_token(token, exp, user.id)
-        return token
+        return add_token(token, exp, user.id)
 
     return None
