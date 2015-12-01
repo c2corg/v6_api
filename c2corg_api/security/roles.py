@@ -30,16 +30,20 @@ def groupfinder(userid, request):
     return ['group:moderators'] if is_moderator else [Authenticated]
 
 
-def validate_token(token):
+def is_valid_token(token):
     now = datetime.datetime.utcnow()
     return DBSession.query(Token). \
         filter(Token.value == token and Token.expire > now).count() == 1
 
 
-def add_token(value, expire, userid):
-    token = Token(value=value, expire=expire, userid=userid)
-    DBSession.add(token)
-    DBSession.flush()
+def add_or_retrieve_token(value, expire, userid):
+    token = DBSession.query(Token). \
+        filter(Token.value == value and User.id == userid).first()
+    if not token:
+        token = Token(value=value, expire=expire, userid=userid)
+        DBSession.add(token)
+        DBSession.flush()
+
     return token
 
 
@@ -64,9 +68,23 @@ def try_login(user, password, request):
     if user.validate_password(password, DBSession):
         policy = request.registry.queryUtility(IAuthenticationPolicy)
         now = datetime.datetime.utcnow()
-        exp = now + datetime.timedelta(weeks=CONST_EXPIRE_AFTER_DAYS)
+        exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
         claims = create_claims(user, exp)
         token = policy.encode_jwt(request, claims=claims)
-        return add_token(token, exp, user.id)
+        return add_or_retrieve_token(token, exp, user.id)
+
+    return None
+
+
+def renew_token(user, request):
+    old_token = extract_token(request)
+
+    if is_valid_token(old_token):
+        policy = request.registry.queryUtility(IAuthenticationPolicy)
+        now = datetime.datetime.utcnow()
+        exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
+        claims = create_claims(user, exp)
+        token_value = policy.encode_jwt(request, claims=claims)
+        return add_or_retrieve_token(token_value, exp, user.id)
 
     return None

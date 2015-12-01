@@ -67,9 +67,36 @@ class TestUserRest(BaseTestRest):
         self.assertEqual(body['status'], 'error')
 
     def test_login_logout_success(self):
-        body = self.login('moderator', status=200).json
+        body = self.login('moderator').json
         token = body['token']
         body = self.post_json_with_token('/users/logout', token)
+
+    def test_renew_success(self):
+        restricted_url = '/users/' + str(self.global_userids['contributor'])
+        token = self.global_tokens['contributor']
+        token2 = self.post_json_with_token('/users/renew', token)['token']
+
+        body = self.get_json_with_token(restricted_url, token2, status=200)
+        self.assertBodyEqual(body, 'username', 'contributor')
+
+    def test_renew_token_different_success(self):
+        # Tokens created in the same second are identical
+        restricted_url = '/users/' + str(self.global_userids['contributor'])
+
+        token1 = self.login('contributor').json['token']
+
+        import time
+        print 'Waiting for more than 1s to get a different token'
+        time.sleep(1.01)
+
+        token2 = self.post_json_with_token('/users/renew', token1)['token']
+        self.assertNotEquals(token1, token2)
+
+        body = self.get_json_with_token(restricted_url, token2, status=200)
+        self.assertBodyEqual(body, 'username', 'contributor')
+
+        self.post_json_with_token('/users/logout', token1)
+        self.post_json_with_token('/users/logout', token2)
 
     def test_restricted_request(self):
         url = '/users/' + str(self.global_userids['contributor'])
