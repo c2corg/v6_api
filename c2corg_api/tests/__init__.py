@@ -16,7 +16,6 @@ from c2corg_api.models.user import User
 from c2corg_api.security.roles import create_claims, add_or_retrieve_token
 from c2corg_api.scripts import initializedb, initializees
 from c2corg_api.search import configure_es_from_config
-from c2corg_api.security.roles import create_claims, add_token
 
 
 log = logging.getLogger(__name__)
