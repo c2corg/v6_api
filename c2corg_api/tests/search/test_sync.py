@@ -2,9 +2,9 @@ import transaction
 
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.scripts.es.sync import sync_search_index
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mapping import SearchDocument
+from c2corg_api.search.sync import sync_search_index
 from c2corg_api.tests import BaseTestCase
 
 
