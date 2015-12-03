@@ -66,16 +66,32 @@ class TestUserRest(BaseTestRest):
         body = self.login('moderator', password='invalid', status=403).json
         self.assertEqual(body['status'], 'error')
 
+    def assertExpireAlmostEqual(self, expire, days, seconds_delta):  # noqa
+        import time
+        now = int(round(time.time()))
+        expected = days * 24 * 3600 + now  # 14 days from now
+        if (abs(expected - expire) > seconds_delta):
+            raise self.failureException, \
+                    '%r == %r within %r seconds' % \
+                    (expected, expire, seconds_delta)
+
     def test_login_logout_success(self):
         body = self.login('moderator').json
         token = body['token']
+        expire = body['expire']
+        self.assertExpireAlmostEqual(expire, 14, 5)
+
         body = self.post_json_with_token('/users/logout', token)
 
     def test_renew_success(self):
         restricted_url = '/users/' + str(self.global_userids['contributor'])
         token = self.global_tokens['contributor']
-        token2 = self.post_json_with_token('/users/renew', token)['token']
 
+        body = self.post_json_with_token('/users/renew', token)
+        expire = body['expire']
+        self.assertExpireAlmostEqual(expire, 14, 5)
+
+        token2 = body['token']
         body = self.get_json_with_token(restricted_url, token2, status=200)
         self.assertBodyEqual(body, 'username', 'contributor')
 
