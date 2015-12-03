@@ -17,11 +17,13 @@ from document import (
     schema_locale_attributes)
 from c2corg_api.models import enums
 
+WAYPOINT_TYPE = 'w'
+
 
 class _WaypointMixin(object):
 
     __mapper_args__ = {
-        'polymorphic_identity': 'w'
+        'polymorphic_identity': WAYPOINT_TYPE
     }
 
     # type de WP
@@ -214,7 +216,7 @@ class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
 
 class _WaypointLocaleMixin(object):
     __mapper_args__ = {
-        'polymorphic_identity': 'w'
+        'polymorphic_identity': WAYPOINT_TYPE
     }
 
     # access (climbing_outdoor/indoor, access, local_product, sport_shop)

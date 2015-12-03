@@ -25,7 +25,7 @@ class PasswordUtil():
     @staticmethod
     def is_password_valid(plain, encrypted):
         if isinstance(encrypted, unicode):
-            encrypted = encrypted.encode("UTF-8")
+            encrypted = encrypted.encode('UTF-8')
         return bcrypt.hashpw(plain, encrypted) == encrypted
 
 
@@ -34,14 +34,14 @@ class User(Base):
     Class containing the users' private and authentication data.
     """
     __tablename__ = 'user'
-    __table_args__ = {"schema": users_schema}
+    __table_args__ = {'schema': users_schema}
 
     id = Column(Integer, primary_key=True)
     username = Column(String(200), nullable=False, unique=True)
     email = Column(String(200), nullable=False, unique=True)
     email_validated = Column(Boolean, nullable=False, default=False)
     moderator = Column(Boolean, nullable=False, default=False)
-    _password = Column("password", String(255), nullable=False)
+    _password = Column('password', String(255), nullable=False)
     temp_password = Column(String(255))
 
     def _get_password(self):

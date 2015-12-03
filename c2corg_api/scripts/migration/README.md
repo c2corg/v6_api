@@ -18,3 +18,16 @@ Run migration
 To start the migration, run:
 
     .build/venv/bin/python c2corg_api/scripts/migration/migrate.py
+
+Initialize ElasticSearch
+-------------------------
+
+After the database migration, ElasticSearch has to be fed with the documents.
+
+Make sure that the index exists:
+
+    .build/venv/bin/initialize_c2corg_api_es development.ini
+
+Then start the import:
+
+    .build/venv/bin/fill_es_index development.ini

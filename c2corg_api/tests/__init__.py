@@ -5,7 +5,6 @@ import transaction
 import os
 import logging
 from sqlalchemy import engine_from_config
-from sqlalchemy.orm import sessionmaker
 from pyramid.paster import get_appsettings
 from pyramid import testing
 import unittest
@@ -14,8 +13,10 @@ from webtest import TestApp
 from c2corg_api import main
 from c2corg_api.models import *  # noqa
 from c2corg_api.models.user import User
-from c2corg_api.scripts import initializedb
 from c2corg_api.security.roles import create_claims, add_or_retrieve_token
+from c2corg_api.scripts import initializedb, initializees
+from c2corg_api.search import configure_es_from_config
+
 
 log = logging.getLogger(__name__)
 
@@ -75,6 +76,10 @@ def setup_package():
     with transaction.manager:
         _add_global_test_data(DBSession)
     DBSession.remove()
+    # set up ElasticSearch
+    configure_es_from_config(settings)
+    initializees.drop_index()
+    initializees.setup_es()
 
 # keep the database schema after a test run (useful for debugging)
 keep = False
@@ -85,6 +90,7 @@ def teardown_package():
     engine = get_engine()
     if not keep:
         Base.metadata.drop_all(engine)
+        initializees.drop_index()
 
 
 class BaseTestCase(unittest.TestCase):
@@ -122,7 +128,7 @@ class BaseTestCase(unittest.TestCase):
         # reconfigure it to use this test's connection
         DBSession.configure(bind=self.connection)
 
-        # create a session bound the connection, this session is the one
+        # create a session bound to the connection, this session is the one
         # used in the test code
         self.session = self.Session(bind=self.connection)
 

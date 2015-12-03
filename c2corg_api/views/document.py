@@ -1,16 +1,16 @@
+from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, HTTPBadRequest
 from sqlalchemy.orm import joinedload, contains_eager
 from sqlalchemy.orm.exc import StaleDataError
-from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, HTTPBadRequest
 
-from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
+from c2corg_api.models import DBSession
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
     ArchiveDocumentGeometry, set_available_cultures)
-from c2corg_api.models import DBSession
+from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
+from c2corg_api.search.sync import sync_search_index
 from c2corg_api.views import to_json_dict
 from c2corg_api.views.validation import check_required_fields, \
     check_duplicate_locales
-
 
 # the maximum number of documents that can be returned in a request
 LIMIT_MAX = 100
@@ -113,6 +113,8 @@ class DocumentRest(object):
 
         self._create_new_version(document)
 
+        sync_search_index(document)
+
         return to_json_dict(document, schema)
 
     def _put(self, clazz, schema):
@@ -145,6 +147,8 @@ class DocumentRest(object):
         self._update_version(
             document, self.request.validated['message'], update_type,
             changed_langs)
+
+        sync_search_index(document)
 
         return to_json_dict(document, schema)
 

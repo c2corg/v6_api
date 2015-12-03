@@ -4,8 +4,6 @@ export base_url = /
 export version = $(shell git rev-parse --short HEAD)
 export debug_port = 6543
 
-export elasticsearch_host = ...
-
 host = c2corgv6.demo-camptocamp.com
 url = http://$(host)
 
@@ -18,11 +16,20 @@ export db_user = www-data
 export db_password = www-data
 export db_name = c2corg
 
+export elasticsearch_host = localhost
+export elasticsearch_port = 9200
+export elasticsearch_index = c2corg
+
 # database to run the unit tests
 export tests_db_host = localhost
 export tests_db_port = 5432
 export tests_db_user = www-data
 export tests_db_password = www-data
 export tests_db_name = c2corg_tests
+
+# ElasticSearch instance to run the unit tests
+export tests_elasticsearch_host = localhost
+export tests_elasticsearch_port = 9200
+export tests_elasticsearch_index = c2corg_tests
 
 export logging_level = WARNING

@@ -14,9 +14,9 @@ version = {version}
 # e.g.: host1,host2
 cors.origins = {cors_origins}
 
-# elasticsearch.host = {elasticsearch_host}
-# elasticsearch.port = 9200
-# elasticsearch.index = c2corg
+elasticsearch.host = {elasticsearch_host}
+elasticsearch.port = {elasticsearch_port}
+elasticsearch.index = {elasticsearch_index}
 
 logging.level = {logging_level}
 
