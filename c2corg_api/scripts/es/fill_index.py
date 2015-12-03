@@ -16,6 +16,7 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import configure_es_from_config, elasticsearch_config
+from c2corg_api.search.utils import strip_bbcodes
 
 batch_size = 1000
 
@@ -85,8 +86,9 @@ def fill_index(db_session):
                 }
 
             search_document['title_' + culture] = title
-            search_document['summary_' + culture] = summary
-            search_document['description_' + culture] = description
+            search_document['summary_' + culture] = strip_bbcodes(summary)
+            search_document['description_' + culture] = \
+                strip_bbcodes(description)
 
             last_id = document_id
             count += 1

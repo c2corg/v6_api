@@ -23,7 +23,7 @@ class SyncTest(BaseTestCase):
                 WaypointLocale(
                     culture='fr', title='Mont Granier',
                     description='...',
-                    summary='Le Mont Granier')
+                    summary='Le Mont [b]Granier[/b]')
             ])
 
         t = transaction.begin()
@@ -32,6 +32,7 @@ class SyncTest(BaseTestCase):
 
         doc = SearchDocument.get(id=51251, index=index)
         self.assertEqual(doc['title_fr'], 'Mont Granier')
+        self.assertEqual(doc['summary_fr'], 'Le Mont  Granier ')
 
     def test_sync_search_index_update(self):
         """Tests that already existing documents are updated.

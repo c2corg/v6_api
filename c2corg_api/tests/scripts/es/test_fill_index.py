@@ -19,7 +19,7 @@ class FillIndexTest(BaseTestCase):
                 WaypointLocale(
                     culture='fr', title='Mont Granier',
                     description='...',
-                    summary='Le Mont Granier'),
+                    summary='Le Mont [b]Granier[/b]'),
                 WaypointLocale(
                     culture='en', title='Mont Granier',
                     description='...',
@@ -45,6 +45,7 @@ class FillIndexTest(BaseTestCase):
         self.assertIsNotNone(waypoint1)
         self.assertEqual(waypoint1.title_en, 'Mont Granier')
         self.assertEqual(waypoint1.title_fr, 'Mont Granier')
+        self.assertEqual(waypoint1.summary_fr, 'Le Mont  Granier ')
         self.assertEqual(waypoint1.doc_type, 'w')
 
         waypoint2 = SearchDocument.get(id=71172)
