@@ -15,7 +15,7 @@ from c2corg_api import main
 from c2corg_api.models import *  # noqa
 from c2corg_api.models.user import User
 from c2corg_api.scripts import initializedb
-from c2corg_api.security.roles import create_claims, add_token
+from c2corg_api.security.roles import create_claims, add_or_retrieve_token
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ def _add_global_test_data(session):
     for user in [moderator, contributor]:
         claims = create_claims(user, exp)
         token = jwt.encode(claims, key=key, algorithm=algorithm)
-        add_token(token, exp, user.id)
+        add_or_retrieve_token(token, exp, user.id)
         global_userids[user.username] = user.id
         global_tokens[user.username] = token
 

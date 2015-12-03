@@ -10,7 +10,8 @@ from c2corg_api.views.validation import validate_id
 
 from c2corg_api.models import DBSession
 
-from c2corg_api.security.roles import try_login, remove_token, extract_token
+from c2corg_api.security.roles import (
+    try_login, remove_token, extract_token, renew_token)
 
 import colander
 import datetime
@@ -98,6 +99,18 @@ class LoginSchema(colander.MappingSchema):
 login_schema = LoginSchema()
 
 
+def token_to_response(user, token, request):
+    assert token is not None
+    expire_time = token.expire - datetime.datetime(1970, 1, 1)
+    roles = ['moderator'] if user.moderator else []
+    return {
+        'token': token.value,
+        'username': user.username,
+        'expire': int(expire_time.total_seconds()),
+        'roles': roles
+    }
+
+
 @resource(path='/users/login', cors_policy=cors_policy)
 class UserLoginRest(object):
     def __init__(self, request):
@@ -113,17 +126,28 @@ class UserLoginRest(object):
 
         token = try_login(user, password, request) if user else None
         if token:
-            expire_time = token.expire - datetime.datetime(1970, 1, 1)
-            roles = ['moderator'] if user.moderator else []
-            return {
-                'token': token.value,
-                'username': user.username,
-                'expire': int(expire_time.total_seconds()),
-                'roles': roles
-            }
+            return token_to_response(user, token, request)
         else:
             request.errors.status = 403
             request.errors.add('body', 'user', 'Login failed')
+            return None
+
+
+@resource(path='/users/renew', cors_policy=cors_policy)
+class UserRenewRest(object):
+    def __init__(self, request):
+        self.request = request
+
+    @restricted_view(renderer='json', permission='authenticated')
+    def post(self):
+        request = self.request
+        userid = request.authenticated_userid
+        user = DBSession.query(User).filter(User.id == userid).first()
+        token = renew_token(user, request)
+        if token:
+            return token_to_response(user, token, request)
+        else:
+            raise HTTPInternalServerError('Error renewing token')
 
 
 @resource(path='/users/logout', cors_policy=cors_policy)

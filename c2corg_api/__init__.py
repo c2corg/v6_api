@@ -12,7 +12,7 @@ from c2corg_api.views import cors_policy
 
 from pyramid.security import Allow, Everyone, Authenticated
 
-from c2corg_api.security.roles import validate_token, extract_token
+from c2corg_api.security.roles import is_valid_token, extract_token
 
 from pyramid.settings import asbool
 
@@ -47,7 +47,7 @@ def jwt_database_validation_tween_factory(handler, registry):
 
         # Finally, check database validation
         token = extract_token(request)
-        valid = token and validate_token(token)
+        valid = token and is_valid_token(token)
 
         if valid:
             return handler(request)
