@@ -483,7 +483,8 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         self.session.add(waypoint)
         self.session.flush()
-        DocumentRest(None)._create_new_version(waypoint)
+        user_id = self.global_userids['contributor']
+        DocumentRest(None)._create_new_version(waypoint, user_id)
 
         # then add a geometry to the waypoint
         body_put = {
@@ -586,7 +587,8 @@ class TestWaypointRest(BaseDocumentTestRest):
             geom='SRID=3857;POINT(635956 5723604)')
         self.session.add(self.waypoint)
         self.session.flush()
-        DocumentRest(None)._create_new_version(self.waypoint)
+        user_id = self.global_userids['contributor']
+        DocumentRest(None)._create_new_version(self.waypoint, user_id)
 
         self.waypoint2 = Waypoint(
             waypoint_type='summit', elevation=2,

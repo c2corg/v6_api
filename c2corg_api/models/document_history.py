@@ -17,7 +17,7 @@ class HistoryMetaData(Base):
     __tablename__ = 'history_metadata'
 
     id = Column(Integer, primary_key=True)
-    # user_id
+    user_id = Column(Integer, ForeignKey('users.user.id'), nullable=False)
     comment = Column(String(200))
     written_at = Column(
         DateTime, default=datetime.datetime.now, nullable=False)
