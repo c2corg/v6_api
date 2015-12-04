@@ -67,7 +67,7 @@ class MigrateVersions(MigrateBase):
     def get_meta_data(self, row):
         return dict(
             id=row.history_metadata_id,
-            # user_id=user_id,  # TODO
+            user_id=row.user_id,
             comment=row.comment,
             written_at=row.written_at
         )

@@ -416,7 +416,8 @@ class TestRouteRest(BaseDocumentTestRest):
         self.session.add(self.route)
         self.session.flush()
 
-        DocumentRest(None)._create_new_version(self.route)
+        user_id = self.global_userids['contributor']
+        DocumentRest(None)._create_new_version(self.route, user_id)
 
         self.route2 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,

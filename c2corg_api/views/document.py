@@ -111,13 +111,15 @@ class DocumentRest(object):
         DBSession.add(document)
         DBSession.flush()
 
-        self._create_new_version(document)
+        user_id = self.request.authenticated_userid
+        self._create_new_version(document, user_id)
 
         sync_search_index(document)
 
         return to_json_dict(document, schema)
 
     def _put(self, clazz, schema):
+        user_id = self.request.authenticated_userid
         id = self.request.validated['id']
         document_in = \
             schema.objectify(self.request.validated['document'])
@@ -145,7 +147,7 @@ class DocumentRest(object):
         (update_type, changed_langs) = \
             self._check_update_type(document, old_versions)
         self._update_version(
-            document, self.request.validated['message'], update_type,
+            document, user_id, self.request.validated['message'], update_type,
             changed_langs)
 
         sync_search_index(document)
@@ -179,12 +181,13 @@ class DocumentRest(object):
 
         return document
 
-    def _create_new_version(self, document):
+    def _create_new_version(self, document, user_id):
+        assert user_id
         archive = document.to_archive()
         archive_locales = document.get_archive_locales()
         archive_geometry = document.get_archive_geometry()
 
-        meta_data = HistoryMetaData(comment='creation')
+        meta_data = HistoryMetaData(comment='creation', user_id=user_id)
         versions = []
         for locale in archive_locales:
             version = DocumentVersion(
@@ -203,10 +206,12 @@ class DocumentRest(object):
         DBSession.add_all(versions)
         DBSession.flush()
 
-    def _update_version(self, document, comment, update_types, changed_langs):
+    def _update_version(self, document, user_id, comment, update_types,
+                        changed_langs):
+        assert user_id
         assert update_types
 
-        meta_data = HistoryMetaData(comment=comment)
+        meta_data = HistoryMetaData(comment=comment, user_id=user_id)
         archive = self._get_document_archive(document, update_types)
         geometry_archive = \
             self._get_geometry_archive(document, update_types)
