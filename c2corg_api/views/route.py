@@ -9,7 +9,6 @@ from c2corg_api.views.validation import validate_id, validate_pagination
 from c2corg_common.fields_route import fields_route
 from c2corg_common.attributes import activities
 
-
 validate_route_create = make_validator_create(
     fields_route, 'activities', activities)
 validate_route_update = make_validator_update(
@@ -52,3 +51,13 @@ class RouteRest(DocumentRest):
                           validators=[validate_id, validate_route_update])
     def put(self):
         return self._put(Route, schema_route)
+
+
+# FIXME: handle /routes/history/{id} ?
+@resource(path='/history/route/{id}', cors_policy=cors_policy)
+class HistoryRouteRest(DocumentRest):
+
+    @view(validators=validate_id)
+    def get(self):
+        id = self.request.validated['id']
+        return self._get_history_versions(id)

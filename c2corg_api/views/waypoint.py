@@ -60,3 +60,13 @@ class WaypointRest(DocumentRest):
                           validators=[validate_id, validate_waypoint_update])
     def put(self):
         return self._put(Waypoint, schema_waypoint)
+
+
+# FIXME: handle /waypoint/history/{id} ?
+@resource(path='/history/waypoint/{id}', cors_policy=cors_policy)
+class HistoryWaypointeRest(DocumentRest):
+
+    @view(validators=validate_id)
+    def get(self):
+        id = self.request.validated['id']
+        return self._get_history_versions(id)

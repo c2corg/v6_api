@@ -7,10 +7,13 @@ from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
     ArchiveDocumentGeometry, set_available_cultures)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
+from c2corg_api.models.user import User
 from c2corg_api.search.sync import sync_search_index
 from c2corg_api.views import to_json_dict
 from c2corg_api.views.validation import check_required_fields, \
     check_duplicate_locales
+
+from c2corg_api.views import serialize
 
 # the maximum number of documents that can be returned in a request
 LIMIT_MAX = 100
@@ -330,6 +333,28 @@ class DocumentRest(object):
             raise HTTPBadRequest(
                 'trying do update the document with the same content')
         return (update_types, changed_langs)
+
+    def _get_history_versions(self, id):
+        results = DBSession.query(
+            DocumentVersion.id,
+            HistoryMetaData.user_id,
+            User.username,
+            HistoryMetaData.comment,
+            HistoryMetaData.written_at) \
+            .filter(DocumentVersion.document_id == id) \
+            .filter(
+                HistoryMetaData.id == DocumentVersion.history_metadata_id) \
+            .filter(User.id == HistoryMetaData.user_id) \
+            .order_by(DocumentVersion.id) \
+            .all()
+
+        return [serialize({
+            'version_id': r[0],
+            'user_id': r[1],
+            'username': r[2],
+            'comment': r[3],
+            'written_at': r[4]
+            }) for r in results]
 
 
 def validate_document(document, request, fields, type_field, valid_type_values,
