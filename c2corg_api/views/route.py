@@ -51,13 +51,3 @@ class RouteRest(DocumentRest):
                           validators=[validate_id, validate_route_update])
     def put(self):
         return self._put(Route, schema_route)
-
-
-# FIXME: handle /routes/history/{id} ?
-@resource(path='/history/route/{id}', cors_policy=cors_policy)
-class HistoryRouteRest(DocumentRest):
-
-    @view(validators=validate_id)
-    def get(self):
-        id = self.request.validated['id']
-        return self._get_history_versions(id)

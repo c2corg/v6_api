@@ -381,17 +381,20 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEquals(route.get_locale('es').gear, 'si')
 
     def test_history(self):
-        body = self.app.get('/history/route/' + str(self.route.document_id))
-        username = 'contributor'
-        user_id = self.global_userids[username]
+        id = self.route.document_id
+        cultures = ['fr', 'en']
+        for lang in cultures:
+            body = self.app.get('/document/%d/history/%s' % (id, lang))
+            username = 'contributor'
+            user_id = self.global_userids[username]
 
-        json = body.json
-        self.assertEqual(len(json), 2)
-        for r in json:
-            self.assertEqual(r['username'], username)
-            self.assertEqual(r['user_id'], user_id)
-            self.assertIn('written_at', r)
-            self.assertIn('version_id', r)
+            json = body.json['versions']
+            self.assertEqual(len(json), 1)
+            for r in json:
+                self.assertEqual(r['username'], username)
+                self.assertEqual(r['user_id'], user_id)
+                self.assertIn('written_at', r)
+                self.assertIn('version_id', r)
 
     def _assert_geometry(self, body):
         self.assertIsNotNone(body.get('geometry'))

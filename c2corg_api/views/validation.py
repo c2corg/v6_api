@@ -1,3 +1,4 @@
+from c2corg_common.attributes import default_cultures
 from colander import null
 
 # Validation functions
@@ -10,6 +11,16 @@ def validate_id(request):
         request.validated['id'] = int(request.matchdict['id'])
     except ValueError:
         request.errors.add('querystring', 'id', 'invalid id')
+
+
+def validate_lang(request):
+    """Checks if a given lang is one of the available langs.
+    """
+    lang = request.matchdict['lang']
+    if lang in default_cultures:
+        request.validated['lang'] = lang
+    else:
+        request.errors.add('querystring', 'lang', 'invalid lang')
 
 
 def is_missing(val):
