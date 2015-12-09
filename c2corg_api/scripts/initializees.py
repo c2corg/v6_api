@@ -9,7 +9,7 @@ from pyramid.paster import (
 
 from pyramid.scripts.common import parse_vars
 
-from c2corg_api.search.mapping import SearchDocument
+from c2corg_api.search.mapping import SearchDocument, analysis_settings
 from c2corg_api.search import configure_es_from_config, elasticsearch_config
 
 
@@ -50,6 +50,7 @@ def setup_es():
         sys.exit(0)
 
     index = Index(index_name)
+    index.settings(analysis=analysis_settings)
     index.doc_type(SearchDocument)
     index.create()
 
