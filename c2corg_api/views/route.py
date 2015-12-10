@@ -9,7 +9,6 @@ from c2corg_api.views.validation import validate_id, validate_pagination
 from c2corg_common.fields_route import fields_route
 from c2corg_common.attributes import activities
 
-
 validate_route_create = make_validator_create(
     fields_route, 'activities', activities)
 validate_route_update = make_validator_update(

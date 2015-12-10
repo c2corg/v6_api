@@ -568,6 +568,22 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertAlmostEqual(point.x, 635956)
         self.assertAlmostEqual(point.y, 5723604)
 
+    def test_history(self):
+        id = self.waypoint.document_id
+        cultures = ['fr', 'en']
+        for lang in cultures:
+            body = self.app.get('/document/%d/history/%s' % (id, lang))
+            username = 'contributor'
+            user_id = self.global_userids[username]
+
+            json = body.json['versions']
+            self.assertEqual(len(json), 1)
+            for r in json:
+                self.assertEqual(r['username'], username)
+                self.assertEqual(r['user_id'], user_id)
+                self.assertIn('written_at', r)
+                self.assertIn('version_id', r)
+
     def _add_test_data(self):
         self.waypoint = Waypoint(
             waypoint_type='summit', elevation=2203)
