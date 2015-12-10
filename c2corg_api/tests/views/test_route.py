@@ -388,13 +388,22 @@ class TestRouteRest(BaseDocumentTestRest):
             username = 'contributor'
             user_id = self.global_userids[username]
 
-            json = body.json['versions']
-            self.assertEqual(len(json), 1)
-            for r in json:
+            title = body.json['title']
+            versions = body.json['versions']
+            self.assertEqual(len(versions), 1)
+            self.assertEqual(getattr(self, 'locale_' + lang).title, title)
+            for r in versions:
                 self.assertEqual(r['username'], username)
                 self.assertEqual(r['user_id'], user_id)
                 self.assertIn('written_at', r)
                 self.assertIn('version_id', r)
+
+    def test_history_no_lang(self):
+        id = self.route.document_id
+        self.app.get('/document/%d/history/es' % id, status=404)
+
+    def test_history_no_doc(self):
+        self.app.get('/document/99999/history/es', status=404)
 
     def _assert_geometry(self, body):
         self.assertIsNotNone(body.get('geometry'))

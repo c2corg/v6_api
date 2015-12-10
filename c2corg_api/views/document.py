@@ -433,6 +433,14 @@ class HistoryRouteRest(DocumentRest):
         #    # validate permission (authenticated + associated)
         #    # return 403 if not correct
 
+        title = DBSession.query(DocumentLocale.title) \
+            .filter(DocumentLocale.document_id == id) \
+            .filter(DocumentLocale.culture == lang) \
+            .first()
+
+        if not title:
+            raise HTTPNotFound('no locale document for ' + lang)
+
         results = DBSession.query(
             DocumentVersion.id,
             HistoryMetaData.user_id,
@@ -448,6 +456,7 @@ class HistoryRouteRest(DocumentRest):
             .all()
 
         return {
+            'title': title.title,
             'versions': [{
                 'version_id': r[0],
                 'user_id': r[1],
