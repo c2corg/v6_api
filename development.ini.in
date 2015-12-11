@@ -24,9 +24,6 @@ sqlalchemy.url = postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_na
 # '127.0.0.1' and '::1'.
 debugtoolbar.hosts = 0.0.0.0/0
 
-# Key for developpement
-jwtauth.master_secret = The master key
-
 ###
 # wsgi server configuration
 ###
