@@ -4,13 +4,16 @@ from colander import null
 # Validation functions
 
 
-def validate_id(request):
-    """Checks if a given id is an integer.
-    """
-    try:
-        request.validated['id'] = int(request.matchdict['id'])
-    except ValueError:
-        request.errors.add('querystring', 'id', 'invalid id')
+def create_int_validator(field):
+    def validator(request):
+        try:
+            request.validated[field] = int(request.matchdict[field])
+        except ValueError:
+            request.errors.add('querystring', field, 'invalid ' + field)
+    return validator
+
+validate_id = create_int_validator('id')
+validate_version_id = create_int_validator('version_id')
 
 
 def validate_lang(request):

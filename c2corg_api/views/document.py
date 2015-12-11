@@ -9,13 +9,12 @@ from c2corg_api.models.document import (
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.user import User
 from c2corg_api.search.sync import sync_search_index
-from c2corg_api.views import to_json_dict
+from c2corg_api.views import to_json_dict, to_seconds
 from c2corg_api.views.validation import check_required_fields, \
     check_duplicate_locales, validate_id, validate_lang
 
 from cornice.resource import resource, view
 from c2corg_api.views import cors_policy
-import datetime
 
 # the maximum number of documents that can be returned in a request
 LIMIT_MAX = 100
@@ -100,8 +99,11 @@ class DocumentRest(object):
 
     def _get(self, clazz, schema, adapt_schema=None):
         id = self.request.validated['id']
-        culture = self.request.GET.get('l')
-        document = self._get_document(clazz, id, culture)
+        lang = self.request.GET.get('l')
+        return self._get_in_lang(id, lang, clazz, schema, adapt_schema)
+
+    def _get_in_lang(self, id, lang, clazz, schema, adapt_schema=None):
+        document = self._get_document(clazz, id, lang)
         set_available_cultures([document])
 
         if adapt_schema:
@@ -336,6 +338,40 @@ class DocumentRest(object):
                 'trying do update the document with the same content')
         return (update_types, changed_langs)
 
+    def _get_version(self, clazz, schema, adapt_schema=None):
+        id = self.request.validated['id']
+        lang = self.request.validated['lang']
+        version_id = self.request.validated['version_id']
+        document = self._get_in_lang(
+            id, lang, clazz, schema, adapt_schema)
+
+        version = DBSession.query(
+            DocumentVersion.id,
+            HistoryMetaData.user_id,
+            User.username,
+            HistoryMetaData.comment,
+            HistoryMetaData.written_at) \
+            .filter(DocumentVersion.document_id == id) \
+            .filter(DocumentVersion.id == version_id) \
+            .filter(
+                HistoryMetaData.id == DocumentVersion.history_metadata_id) \
+            .filter(User.id == HistoryMetaData.user_id) \
+            .first()
+
+        return {
+            'document': document,
+            'version': self._serialize_version(version)
+        }
+
+    def _serialize_version(self, version_row):
+        return {
+            'version_id': version_row[0],
+            'user_id': version_row[1],
+            'username': version_row[2],
+            'comment': version_row[3],
+            'written_at': to_seconds(version_row[4])
+        }
+
 
 def validate_document(document, request, fields, type_field, valid_type_values,
                       updating):
@@ -414,12 +450,9 @@ def get_all_fields(fields, activities, field_list_type):
 
 
 @resource(path='/document/{id}/history/{lang}', cors_policy=cors_policy)
-class HistoryRouteRest(DocumentRest):
+class HistoryDocumentRest(DocumentRest):
     """Unique class for returning history of a document.
     """
-
-    def to_seconds(self, date):
-        return int((date - datetime.datetime(1970, 1, 1)).total_seconds())
 
     @view(validators=[validate_id, validate_lang])
     def get(self):
@@ -457,10 +490,5 @@ class HistoryRouteRest(DocumentRest):
 
         return {
             'title': title.title,
-            'versions': [{
-                'version_id': r[0],
-                'user_id': r[1],
-                'username': r[2],
-                'comment': r[3],
-                'written_at': self.to_seconds(r[4])
-                } for r in results]}
+            'versions': [self._serialize_version(r) for r in results]
+        }
