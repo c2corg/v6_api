@@ -21,3 +21,6 @@ elasticsearch.index = {elasticsearch_index}
 logging.level = {logging_level}
 
 jwtauth.find_groups = c2corg_api.security.roles:groupfinder
+
+# FIXME: do not save the secret key on github
+jwtauth.master_secret = The master key
