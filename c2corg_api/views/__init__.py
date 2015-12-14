@@ -102,3 +102,7 @@ def serialize(data):
         return None
 
     return data
+
+
+def to_seconds(date):
+    return int((date - datetime.datetime(1970, 1, 1)).total_seconds())

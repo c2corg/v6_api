@@ -1,4 +1,6 @@
 import json
+
+from c2corg_api.models.document_history import DocumentVersion
 from shapely.geometry import shape, Point
 
 from c2corg_api.models.waypoint import (
@@ -56,6 +58,9 @@ class TestWaypointRest(BaseDocumentTestRest):
         self._assert_geometry(body)
         self.assertIn('waypoint_type', body)
         self.assertNotIn('routes_quantity', body)
+
+    def test_get_version(self):
+        self.get_version(self.waypoint, self.waypoint_version)
 
     def test_get_lang(self):
         self.get_lang(self.waypoint)
@@ -607,6 +612,9 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.flush()
         user_id = self.global_userids['contributor']
         DocumentRest(None)._create_new_version(self.waypoint, user_id)
+        self.waypoint_version = self.session.query(DocumentVersion). \
+            filter(DocumentVersion.document_id == self.waypoint.document_id). \
+            filter(DocumentVersion.culture == 'en').first()
 
         self.waypoint2 = Waypoint(
             waypoint_type='summit', elevation=2,

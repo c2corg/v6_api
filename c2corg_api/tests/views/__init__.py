@@ -121,6 +121,23 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(available_cultures, ['en', 'fr'])
         return body
 
+    def get_version(self, reference, reference_version):
+        response = self.app.get(
+            '{0}/{1}/en/{2}'.format(
+                self._prefix, str(reference.document_id),
+                str(reference_version.id)),
+            status=200)
+        self.assertEqual(response.content_type, 'application/json')
+
+        body = response.json
+        self.assertIn('document', body)
+        self.assertIn('version', body)
+        self.assertEqual(
+            body['document']['document_id'], reference.document_id)
+        self.assertEqual(
+            body['version']['version_id'], reference_version.id)
+        return body
+
     def get_lang(self, reference):
         response = self.app.get(self._prefix + '/' +
                                 str(reference.document_id) + '?l=en',
