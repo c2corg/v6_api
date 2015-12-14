@@ -7,7 +7,6 @@ export debug_port = 6543
 host = c2corgv6.demo-camptocamp.com
 url = http://$(host)
 
-export cors_origins = $(url)
 export noauthorization = False
 
 export db_host = localhost

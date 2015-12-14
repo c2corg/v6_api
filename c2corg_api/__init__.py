@@ -9,7 +9,6 @@ from c2corg_api.models import (
     Base,
     )
 from c2corg_api.search import configure_es_from_config
-from c2corg_api.views import cors_policy
 
 from pyramid.security import Allow, Everyone, Authenticated
 
@@ -72,9 +71,6 @@ def main(global_config, **settings):
     configure_es_from_config(settings)
 
     config = Configurator(settings=settings)
-
-    origins = settings['cors.origins']
-    cors_policy['origins'] = origins.split(',')
 
     # Add routes not handled by Cornice
     config.add_route('login', '/login')
