@@ -8,29 +8,6 @@ with open(os.path.join(here, 'README.md')) as f:
 with open(os.path.join(here, 'CHANGES.txt')) as f:
     CHANGES = f.read()
 
-requires = [
-    'pyramid',
-    'pyramid_debugtoolbar',
-    'pyramid_tm',
-    'SQLAlchemy==1.0.9',
-    'transaction',
-    'zope.sqlalchemy',
-    'waitress',
-    'psycopg2',
-    'cornice>=1.1.0',
-    'colander',
-    'ColanderAlchemy>=0.3.2',
-    'enum34',
-    'geoalchemy2',
-    'shapely',
-    'pyproj',
-    'pyramid_jwtauth',
-    'functools32',
-    'bcrypt',
-    'elasticsearch==2.1.0',
-    'elasticsearch_dsl==0.0.9'
-    ]
-
 setup(name='c2corg_api',
       version='0.0',
       description='c2corg_api',
@@ -49,7 +26,7 @@ setup(name='c2corg_api',
       include_package_data=True,
       zip_safe=False,
       test_suite='c2corg_api',
-      install_requires=requires,
+      install_requires=[],
       entry_points="""\
       [paste.app_factory]
       main = c2corg_api:main
