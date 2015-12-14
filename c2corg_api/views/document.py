@@ -337,20 +337,35 @@ class DocumentRest(object):
                 'trying do update the document with the same content')
         return (update_types, changed_langs)
 
-    def _get_version(self, clazz, schema, adapt_schema=None):
+    def _get_version(self, clazz, locale_clazz, schema, adapt_schema=None):
         id = self.request.validated['id']
         lang = self.request.validated['lang']
         version_id = self.request.validated['version_id']
-        document = self._get_in_lang(
-            id, lang, clazz, schema, adapt_schema)
 
         version = DBSession.query(DocumentVersion) \
             .options(joinedload('history_metadata').joinedload('user')) \
+            .options(joinedload(
+                DocumentVersion.document_archive.of_type(clazz))) \
+            .options(joinedload(
+                DocumentVersion.document_locales_archive.of_type(
+                    locale_clazz))) \
+            .options(joinedload(DocumentVersion.document_geometry_archive)) \
             .filter(DocumentVersion.id == version_id) \
+            .filter(DocumentVersion.document_id == id) \
+            .filter(DocumentVersion.culture == lang) \
             .first()
+        if version is None:
+            raise HTTPNotFound('invalid version')
+
+        archive_document = version.document_archive
+        archive_document.geometry = version.document_geometry_archive
+        archive_document.locales = [version.document_locales_archive]
+
+        if adapt_schema:
+            schema = adapt_schema(schema, archive_document)
 
         return {
-            'document': document,
+            'document': to_json_dict(archive_document, schema),
             'version': self._serialize_version(version)
         }
 
