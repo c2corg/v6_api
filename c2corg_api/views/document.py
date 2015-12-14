@@ -7,7 +7,6 @@ from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
     ArchiveDocumentGeometry, set_available_cultures)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
-from c2corg_api.models.user import User
 from c2corg_api.search.sync import sync_search_index
 from c2corg_api.views import to_json_dict, to_seconds
 from c2corg_api.views.validation import check_required_fields, \
@@ -338,38 +337,45 @@ class DocumentRest(object):
                 'trying do update the document with the same content')
         return (update_types, changed_langs)
 
-    def _get_version(self, clazz, schema, adapt_schema=None):
+    def _get_version(self, clazz, locale_clazz, schema, adapt_schema=None):
         id = self.request.validated['id']
         lang = self.request.validated['lang']
         version_id = self.request.validated['version_id']
-        document = self._get_in_lang(
-            id, lang, clazz, schema, adapt_schema)
 
-        version = DBSession.query(
-            DocumentVersion.id,
-            HistoryMetaData.user_id,
-            User.username,
-            HistoryMetaData.comment,
-            HistoryMetaData.written_at) \
-            .filter(DocumentVersion.document_id == id) \
+        version = DBSession.query(DocumentVersion) \
+            .options(joinedload('history_metadata').joinedload('user')) \
+            .options(joinedload(
+                DocumentVersion.document_archive.of_type(clazz))) \
+            .options(joinedload(
+                DocumentVersion.document_locales_archive.of_type(
+                    locale_clazz))) \
+            .options(joinedload(DocumentVersion.document_geometry_archive)) \
             .filter(DocumentVersion.id == version_id) \
-            .filter(
-                HistoryMetaData.id == DocumentVersion.history_metadata_id) \
-            .filter(User.id == HistoryMetaData.user_id) \
+            .filter(DocumentVersion.document_id == id) \
+            .filter(DocumentVersion.culture == lang) \
             .first()
+        if version is None:
+            raise HTTPNotFound('invalid version')
+
+        archive_document = version.document_archive
+        archive_document.geometry = version.document_geometry_archive
+        archive_document.locales = [version.document_locales_archive]
+
+        if adapt_schema:
+            schema = adapt_schema(schema, archive_document)
 
         return {
-            'document': document,
+            'document': to_json_dict(archive_document, schema),
             'version': self._serialize_version(version)
         }
 
-    def _serialize_version(self, version_row):
+    def _serialize_version(self, version):
         return {
-            'version_id': version_row[0],
-            'user_id': version_row[1],
-            'username': version_row[2],
-            'comment': version_row[3],
-            'written_at': to_seconds(version_row[4])
+            'version_id': version.id,
+            'user_id': version.history_metadata.user_id,
+            'username': version.history_metadata.user.username,
+            'comment': version.history_metadata.comment,
+            'written_at': to_seconds(version.history_metadata.written_at)
         }
 
 
@@ -459,7 +465,7 @@ class HistoryDocumentRest(DocumentRest):
         id = self.request.validated['id']
         lang = self.request.validated['lang']
 
-        # FIXME conditionnal permission check (when outings implemented)
+        # FIXME conditional permission check (when outings implemented)
         # is_outing = DBSession.query(Outing) \
         #       .filter(Outing.document_id == id).count()
         # if is_outing > 0:
@@ -474,21 +480,14 @@ class HistoryDocumentRest(DocumentRest):
         if not title:
             raise HTTPNotFound('no locale document for ' + lang)
 
-        results = DBSession.query(
-            DocumentVersion.id,
-            HistoryMetaData.user_id,
-            User.username,
-            HistoryMetaData.comment,
-            HistoryMetaData.written_at) \
+        versions = DBSession.query(DocumentVersion) \
+            .options(joinedload('history_metadata').joinedload('user')) \
             .filter(DocumentVersion.document_id == id) \
-            .filter(
-                HistoryMetaData.id == DocumentVersion.history_metadata_id) \
-            .filter(User.id == HistoryMetaData.user_id) \
             .filter(DocumentVersion.culture == lang) \
             .order_by(DocumentVersion.id) \
             .all()
 
         return {
             'title': title.title,
-            'versions': [self._serialize_version(r) for r in results]
+            'versions': [self._serialize_version(v) for v in versions]
         }

@@ -2,7 +2,8 @@ from cornice.resource import resource, view
 from functools32 import lru_cache
 
 from c2corg_api.models.waypoint import (
-    Waypoint, schema_waypoint, schema_update_waypoint)
+    Waypoint, schema_waypoint, schema_update_waypoint,
+    ArchiveWaypoint, ArchiveWaypointLocale)
 
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import (
@@ -67,4 +68,6 @@ class WaypointVersionRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
-        return self._get_version(Waypoint, schema_waypoint, schema_adaptor)
+        return self._get_version(
+            ArchiveWaypoint, ArchiveWaypointLocale, schema_waypoint,
+            schema_adaptor)

@@ -1,3 +1,4 @@
+from c2corg_api.models.user import User
 from sqlalchemy import (
     Column,
     Integer,
@@ -18,6 +19,8 @@ class HistoryMetaData(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.user.id'), nullable=False)
+    user = relationship(
+        User, primaryjoin=user_id == User.id, viewonly=True)
     comment = Column(String(200))
     written_at = Column(
         DateTime, default=datetime.datetime.now, nullable=False)
