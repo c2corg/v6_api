@@ -10,10 +10,6 @@ pyramid.default_locale_name = en
 
 version = {version}
 
-# the origins for CORS
-# e.g.: host1,host2
-cors.origins = {cors_origins}
-
 elasticsearch.host = {elasticsearch_host}
 elasticsearch.port = {elasticsearch_port}
 elasticsearch.index = {elasticsearch_index}
