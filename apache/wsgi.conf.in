@@ -2,6 +2,7 @@
 WSGIDaemonProcess c2corg_api-{instanceid} python-path={site_packages}
 
 WSGIScriptAlias {base_url} {base_dir}/apache/app-c2corg_api.wsgi
+WSGIPassAuthorization On
 
 <Location {base_url}>
   WSGIProcessGroup c2corg_api-{instanceid}
