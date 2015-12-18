@@ -397,6 +397,7 @@ def get_neighbour_version_ids(version_id, document_id, lang):
         .filter(DocumentVersion.id > version_id) \
         .filter(DocumentVersion.document_id == document_id) \
         .filter(DocumentVersion.culture == lang) \
+        .order_by(DocumentVersion.id) \
         .limit(1) \
         .subquery()
 
@@ -407,6 +408,7 @@ def get_neighbour_version_ids(version_id, document_id, lang):
         .filter(DocumentVersion.id < version_id) \
         .filter(DocumentVersion.document_id == document_id) \
         .filter(DocumentVersion.culture == lang) \
+        .order_by(DocumentVersion.id.desc()) \
         .limit(1) \
         .subquery()
 
