@@ -1,7 +1,7 @@
 from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, HTTPBadRequest
 from sqlalchemy.orm import joinedload, contains_eager
 from sqlalchemy.orm.exc import StaleDataError
-
+from sqlalchemy.sql.expression import literal_column, union
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
@@ -364,9 +364,15 @@ class DocumentRest(object):
         if adapt_schema:
             schema = adapt_schema(schema, archive_document)
 
+        previous_version_id, next_version_id = get_neighbour_version_ids(
+            version_id, id, lang
+        )
+
         return {
             'document': to_json_dict(archive_document, schema),
-            'version': self._serialize_version(version)
+            'version': self._serialize_version(version),
+            'previous_version_id': previous_version_id,
+            'next_version_id': next_version_id,
         }
 
     def _serialize_version(self, version):
@@ -377,6 +383,47 @@ class DocumentRest(object):
             'comment': version.history_metadata.comment,
             'written_at': to_seconds(version.history_metadata.written_at)
         }
+
+
+def get_neighbour_version_ids(version_id, document_id, lang):
+    """
+    Get the previous and next version for a version of a document with a
+    specific language.
+    """
+    next_version = DBSession \
+        .query(
+            DocumentVersion.id.label('id'),
+            literal_column('1').label('t')) \
+        .filter(DocumentVersion.id > version_id) \
+        .filter(DocumentVersion.document_id == document_id) \
+        .filter(DocumentVersion.culture == lang) \
+        .limit(1) \
+        .subquery()
+
+    previous_version = DBSession \
+        .query(
+            DocumentVersion.id.label('id'),
+            literal_column('-1').label('t')) \
+        .filter(DocumentVersion.id < version_id) \
+        .filter(DocumentVersion.document_id == document_id) \
+        .filter(DocumentVersion.culture == lang) \
+        .limit(1) \
+        .subquery()
+
+    query = DBSession \
+        .query('id', 't') \
+        .select_from(union(
+            next_version.select(), previous_version.select()))
+
+    previous_version_id = None
+    next_version_id = None
+    for version, typ in query:
+        if typ == -1:
+            previous_version_id = version
+        else:
+            next_version_id = version
+
+    return previous_version_id, next_version_id
 
 
 def validate_document(document, request, fields, type_field, valid_type_values,

@@ -132,6 +132,8 @@ class BaseDocumentTestRest(BaseTestRest):
         body = response.json
         self.assertIn('document', body)
         self.assertIn('version', body)
+        self.assertIn('previous_version_id', body)
+        self.assertIn('next_version_id', body)
         self.assertEqual(
             body['document']['document_id'], reference.document_id)
         self.assertEqual(
