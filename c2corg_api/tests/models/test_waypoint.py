@@ -104,6 +104,23 @@ class TestWaypoint(BaseTestCase):
         waypoint1.elevation = 2345
         self.assertRaises(StaleDataError, self.session.merge, waypoint1)
 
+    def test_geometry_update_optimization(self):
+        geom1 = 'SRID=3857;POINT(445278.0 334111.0)'
+        waypoint_db = Waypoint(
+            document_id=1, waypoint_type='summit', elevation=2203,
+            geometry=DocumentGeometry(
+                document_id=1, geom=geom1
+            )
+        )
+
+        waypoint_in = Waypoint(
+            document_id=1, waypoint_type='summit', elevation=1234,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(445278.5 334111.5)')
+        )
+        waypoint_db.update(waypoint_in)
+        self.assertEqual(waypoint_db.geometry.geom, geom1)
+
     def test_update(self):
         waypoint_db = Waypoint(
             document_id=1, waypoint_type='summit', elevation=2203,

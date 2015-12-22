@@ -11,10 +11,13 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects import postgresql
 from geoalchemy2 import Geometry
+import geoalchemy2
+from shapely import wkt
 from colander import MappingSchema, SchemaNode, String as ColanderString, null
 from itertools import ifilter
 import abc
 import enum
+import string
 
 from c2corg_api.models import Base, schema, DBSession
 from c2corg_api.ext import colander_ext
@@ -122,7 +125,8 @@ class Document(Base, _DocumentMixin):
 
         if other.geometry:
             if self.geometry:
-                self.geometry.update(other.geometry)
+                if not self.geometry.almost_equals(other.geometry):
+                    self.geometry.update(other.geometry)
             else:
                 self.geometry = other.geometry
             self.geometry.document_id = self.document_id
@@ -303,6 +307,29 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
 
     def update(self, other):
         copy_attributes(other, self, DocumentGeometry._ATTRIBUTES)
+
+    def almost_equals(self, other):
+        g1 = None
+        if isinstance(self.geom, geoalchemy2.WKBElement):
+            g1 = geoalchemy2.shape.to_shape(self.geom)
+        else:
+            # WKT are used in the tests.
+            str1 = string.split(self.geom, ';')[1]
+            g1 = wkt.loads(str1)
+
+        g2 = None
+        if isinstance(other.geom, geoalchemy2.WKBElement):
+            g2 = geoalchemy2.shape.to_shape(other.geom)
+        else:
+            # WKT are used in the tests.
+            str2 = string.split(other.geom, ';')[1]
+            g2 = wkt.loads(str2)
+
+        # FIXME: using almost_equals with +- 0.8m
+        # OK for EPSG:3857 but what about EPSG:4326?
+        # https://github.com/Toblerity/Shapely/blob/
+        # 8df2b1b718c89e7d644b246ab07ad3670d25aa6a/shapely/geometry/base.py#L673
+        return g1.almost_equals(g2, -0.2)
 
 
 class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
