@@ -138,6 +138,9 @@ class DocumentRest(object):
         # remember the current version numbers of the document
         old_versions = document.get_versions()
 
+        # find out whether the update of the geometry should be skipped.
+        skip_geometry_update = document_in.geometry is None
+
         # update the document with the input document
         document.update(document_in)
 
@@ -162,6 +165,13 @@ class DocumentRest(object):
             sync_search_index(document)
 
         json_dict = to_json_dict(document, schema)
+
+        if skip_geometry_update:
+            # Optimization: the geometry is not sent back if the client
+            # requested to skip the geometry update. Geometries may be very
+            # huge; this optimization should speed the data transfer.
+            json_dict['geometry'] = None
+
         return json_dict
 
     def _get_document(self, clazz, id, culture=None):
