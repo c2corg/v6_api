@@ -156,7 +156,7 @@ class DocumentRest(object):
         (update_type, changed_langs) = document.get_update_type(old_versions)
 
         if update_type:
-            # A new version need to be created and persisted
+            # A new version needs to be created and persisted
             self._update_version(
                 document, user_id, self.request.validated['message'],
                 update_type,  changed_langs)

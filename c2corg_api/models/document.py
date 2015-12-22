@@ -23,6 +23,8 @@ from c2corg_api.models import Base, schema, DBSession
 from c2corg_api.ext import colander_ext
 from utils import copy_attributes
 
+from pyramid.httpexceptions import HTTPInternalServerError
+
 quality_types = [
     'stub',
     'medium',
@@ -310,26 +312,48 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
 
     def almost_equals(self, other):
         g1 = None
+        proj1 = None
         if isinstance(self.geom, geoalchemy2.WKBElement):
             g1 = geoalchemy2.shape.to_shape(self.geom)
+            proj1 = self.geom.srid
         else:
             # WKT are used in the tests.
-            str1 = string.split(self.geom, ';')[1]
+            split1 = string.split(self.geom, ';')
+            proj1 = int(string.split(split1[0], '=')[1])
+            str1 = split1[1]
             g1 = wkt.loads(str1)
 
         g2 = None
+        proj2 = None
         if isinstance(other.geom, geoalchemy2.WKBElement):
             g2 = geoalchemy2.shape.to_shape(other.geom)
+            proj2 = other.geom.srid
         else:
             # WKT are used in the tests.
-            str2 = string.split(other.geom, ';')[1]
+            split2 = string.split(other.geom, ';')
+            proj2 = int(string.split(split2[0], '=')[1])
+            str2 = split2[1]
             g2 = wkt.loads(str2)
 
-        # FIXME: using almost_equals with +- 0.8m
-        # OK for EPSG:3857 but what about EPSG:4326?
         # https://github.com/Toblerity/Shapely/blob/
         # 8df2b1b718c89e7d644b246ab07ad3670d25aa6a/shapely/geometry/base.py#L673
-        return g1.almost_equals(g2, -0.2)
+        decimals = None
+        if proj1 != proj2:
+            # Should never occur
+            raise HTTPInternalServerError('Incompatible projections')
+        elif proj1 == 3857:
+            decimals = -0.2  # +- 0.8m = 0.5 * 10^0.2
+        elif proj1 == 4326:
+            decimals = 7  # +- 1m
+            # 5178564 740093 | gdaltransform -s_srs EPSG:3857 -t_srs EPSG:4326
+            # 46.5198319099112 6.63349924965325 0
+            # 5178565 740093 | gdaltransform -s_srs EPSG:3857 -t_srs EPSG:4326
+            # 46.5198408930641 6.63349924965325 0
+            # 46.5198408930641 - 46.5198319099112 = 0.0000089 -> 7 digits
+        else:
+            raise HTTPInternalServerError('Bad projection')
+
+        return g1.almost_equals(g2, decimals)
 
 
 class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
