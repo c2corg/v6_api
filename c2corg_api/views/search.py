@@ -1,6 +1,7 @@
 from cornice.resource import resource, view
 
-from c2corg_api.views.validation import validate_pagination
+from c2corg_api.views.validation import validate_pagination, \
+    validate_lang_param
 from c2corg_api.models.route import Route, ROUTE_TYPE, schema_route
 from c2corg_api.views import cors_policy
 from c2corg_api.search import search
@@ -23,9 +24,10 @@ class SearchRest(object):
     def __init__(self, request):
         self.request = request
 
-    @view(validators=validate_pagination)
+    @view(validators=[validate_pagination, validate_lang_param])
     def get(self):
         search_term = self.request.params.get('q')
+        lang = self.request.validated.get('lang')
         limit = self.request.validated.get('limit')
         limit = min(
             SEARCH_LIMIT_DEFAULT if limit is None else limit,
@@ -34,8 +36,8 @@ class SearchRest(object):
         return {
             'waypoints': search.search_for_type(
                 search_term, WAYPOINT_TYPE, Waypoint, schema_waypoint,
-                waypoint_adaptor, limit),
+                waypoint_adaptor, limit, lang),
             'routes': search.search_for_type(
                 search_term, ROUTE_TYPE, Route, schema_route,
-                route_adaptor, limit)
+                route_adaptor, limit, lang)
         }

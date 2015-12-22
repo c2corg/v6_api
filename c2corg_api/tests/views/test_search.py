@@ -21,7 +21,11 @@ class TestSearchRest(BaseTestRest):
                 WaypointLocale(
                     culture='fr', title='Mont Granier',
                     description='...',
-                    summary='Le Mont Granier')
+                    summary='Le Mont Granier'),
+                WaypointLocale(
+                    culture='en', title='Mont Granier',
+                    description='...',
+                    summary='The Mont Granier')
             ]))
         self.session.add(Waypoint(
             document_id=534682,
@@ -56,6 +60,21 @@ class TestSearchRest(BaseTestRest):
 
         waypoints = body['waypoints']
         self.assertTrue(waypoints['total'] > 0)
+        locales = waypoints['documents'][0]['locales']
+        self.assertEqual(len(locales), 2)
 
         routes = body['routes']
         self.assertEqual(0, routes['total'])
+
+    def test_search_lang(self):
+        response = self.app.get(self._prefix + '?q=granier&l=fr', status=200)
+        body = response.json
+
+        self.assertIn('waypoints', body)
+        self.assertIn('routes', body)
+
+        waypoints = body['waypoints']
+        self.assertTrue(waypoints['total'] > 0)
+
+        locales = waypoints['documents'][0]['locales']
+        self.assertEqual(len(locales), 1)
