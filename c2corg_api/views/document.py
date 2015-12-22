@@ -150,15 +150,19 @@ class DocumentRest(object):
         # version numbers in case attributes have changed. by comparing with
         # the old version numbers, we can check if only figures or only locales
         # have changed.
-        (update_type, changed_langs) = \
-            self._check_update_type(document, old_versions)
-        self._update_version(
-            document, user_id, self.request.validated['message'], update_type,
-            changed_langs)
+        (update_type, changed_langs) = document.get_update_type(old_versions)
 
-        sync_search_index(document)
+        if update_type:
+            # A new version need to be created and persisted
+            self._update_version(
+                document, user_id, self.request.validated['message'],
+                update_type,  changed_langs)
 
-        return to_json_dict(document, schema)
+            # And the search updated
+            sync_search_index(document)
+
+        json_dict = to_json_dict(document, schema)
+        return json_dict
 
     def _get_document(self, clazz, id, culture=None):
         """Get a document with either a single locale (if `culture is given)
@@ -326,16 +330,6 @@ class DocumentRest(object):
         if document.geometry and document_in.geometry:
             if document.geometry.version != document_in.geometry.version:
                 raise HTTPConflict('version of geometry has changed')
-
-    def _check_update_type(self, document, old_versions):
-        """Get the update types (figures, locales, geometry have changed?).
-        """
-        (update_types, changed_langs) = document.get_update_type(old_versions)
-        if not update_types:
-            # nothing has changed, so no need to create a new version
-            raise HTTPBadRequest(
-                'trying do update the document with the same content')
-        return (update_types, changed_langs)
 
     def _get_version(self, clazz, locale_clazz, schema, adapt_schema=None):
         id = self.request.validated['id']
