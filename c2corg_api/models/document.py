@@ -343,26 +343,32 @@ def get_update_schema(document_schema):
     return UpdateSchema()
 
 
-def set_available_cultures(documents):
+def set_available_cultures(documents, loaded=False):
     """Load and set the available cultures for the given documents.
     """
     if len(documents) == 0:
         return
 
-    document_ids = [doc.document_id for doc in documents]
-    documents_for_id = {doc.document_id: doc for doc in documents}
+    if loaded:
+        # all locales are already loaded, so simply set the attribute
+        for document in documents:
+            document.available_cultures = [
+                locale.culture for locale in document.locales]
+    else:
+        document_ids = [doc.document_id for doc in documents]
+        documents_for_id = {doc.document_id: doc for doc in documents}
 
-    # aggregate the cultures per document into an array
-    culture_agg = func.array_agg(
-        DocumentLocale.culture,
-        type_=postgresql.ARRAY(String)).label('cultures')
+        # aggregate the cultures per document into an array
+        culture_agg = func.array_agg(
+            DocumentLocale.culture,
+            type_=postgresql.ARRAY(String)).label('cultures')
 
-    cultures_per_doc = DBSession.query(
-        DocumentLocale.document_id, culture_agg). \
-        filter(DocumentLocale.document_id.in_(document_ids)). \
-        group_by(DocumentLocale.document_id). \
-        all()
+        cultures_per_doc = DBSession.query(
+            DocumentLocale.document_id, culture_agg). \
+            filter(DocumentLocale.document_id.in_(document_ids)). \
+            group_by(DocumentLocale.document_id). \
+            all()
 
-    for document_id, cultures in cultures_per_doc:
-        document = documents_for_id.get(document_id)
-        document.available_cultures = cultures
+        for document_id, cultures in cultures_per_doc:
+            document = documents_for_id.get(document_id)
+            document.available_cultures = cultures
