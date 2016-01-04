@@ -11,14 +11,19 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects import postgresql
 from geoalchemy2 import Geometry
+import geoalchemy2
+from shapely import wkt
 from colander import MappingSchema, SchemaNode, String as ColanderString, null
 from itertools import ifilter
 import abc
 import enum
+import string
 
 from c2corg_api.models import Base, schema, DBSession
 from c2corg_api.ext import colander_ext
 from utils import copy_attributes
+
+from pyramid.httpexceptions import HTTPInternalServerError
 
 quality_types = [
     'stub',
@@ -122,7 +127,8 @@ class Document(Base, _DocumentMixin):
 
         if other.geometry:
             if self.geometry:
-                self.geometry.update(other.geometry)
+                if not self.geometry.almost_equals(other.geometry):
+                    self.geometry.update(other.geometry)
             else:
                 self.geometry = other.geometry
             self.geometry.document_id = self.document_id
@@ -303,6 +309,51 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
 
     def update(self, other):
         copy_attributes(other, self, DocumentGeometry._ATTRIBUTES)
+
+    def almost_equals(self, other):
+        g1 = None
+        proj1 = None
+        if isinstance(self.geom, geoalchemy2.WKBElement):
+            g1 = geoalchemy2.shape.to_shape(self.geom)
+            proj1 = self.geom.srid
+        else:
+            # WKT are used in the tests.
+            split1 = string.split(self.geom, ';')
+            proj1 = int(string.split(split1[0], '=')[1])
+            str1 = split1[1]
+            g1 = wkt.loads(str1)
+
+        g2 = None
+        proj2 = None
+        if isinstance(other.geom, geoalchemy2.WKBElement):
+            g2 = geoalchemy2.shape.to_shape(other.geom)
+            proj2 = other.geom.srid
+        else:
+            # WKT are used in the tests.
+            split2 = string.split(other.geom, ';')
+            proj2 = int(string.split(split2[0], '=')[1])
+            str2 = split2[1]
+            g2 = wkt.loads(str2)
+
+        # https://github.com/Toblerity/Shapely/blob/
+        # 8df2b1b718c89e7d644b246ab07ad3670d25aa6a/shapely/geometry/base.py#L673
+        decimals = None
+        if proj1 != proj2:
+            # Should never occur
+            raise HTTPInternalServerError('Incompatible projections')
+        elif proj1 == 3857:
+            decimals = -0.2  # +- 0.8m = 0.5 * 10^0.2
+        elif proj1 == 4326:
+            decimals = 7  # +- 1m
+            # 5178564 740093 | gdaltransform -s_srs EPSG:3857 -t_srs EPSG:4326
+            # 46.5198319099112 6.63349924965325 0
+            # 5178565 740093 | gdaltransform -s_srs EPSG:3857 -t_srs EPSG:4326
+            # 46.5198408930641 6.63349924965325 0
+            # 46.5198408930641 - 46.5198319099112 = 0.0000089 -> 7 digits
+        else:
+            raise HTTPInternalServerError('Bad projection')
+
+        return g1.almost_equals(g2, decimals)
 
 
 class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):

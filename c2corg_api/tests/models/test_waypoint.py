@@ -104,6 +104,73 @@ class TestWaypoint(BaseTestCase):
         waypoint1.elevation = 2345
         self.assertRaises(StaleDataError, self.session.merge, waypoint1)
 
+    def test_geometry_update_optimization_4326(self):
+        lat = 46.0
+        geom1 = 'SRID=4326;POINT(' + str(lat) + ' 6.0)'
+        waypoint_db = Waypoint(
+            document_id=1, waypoint_type='summit', elevation=2203,
+            geometry=DocumentGeometry(
+                document_id=1, geom=geom1
+            )
+        )
+
+        waypoint_in = Waypoint(
+            document_id=1, waypoint_type='summit', elevation=1234,
+            geometry=DocumentGeometry(
+                geom='SRID=4326;POINT(' + str(lat + 10**(-8)) + ' 6.0)')
+        )
+        waypoint_db.update(waypoint_in)
+        self.assertEqual(waypoint_db.geometry.geom, geom1)
+
+        waypoint_in = Waypoint(
+            document_id=1, waypoint_type='summit', elevation=1234,
+            geometry=DocumentGeometry(
+                geom='SRID=4326;POINT(' + str(lat + 10**(-7)) + ' 6.0)')
+        )
+        waypoint_db.update(waypoint_in)
+        self.assertNotEqual(waypoint_db.geometry.geom, geom1)
+
+    def test_geometry_update_optimization_3857(self):
+        geom1 = 'SRID=3857;POINT(445278.0 1.0)'
+        waypoint_db = Waypoint(
+            document_id=1, waypoint_type='summit', elevation=2203,
+            geometry=DocumentGeometry(
+                document_id=1, geom=geom1
+            )
+        )
+
+        waypoint_in = Waypoint(
+            document_id=1, waypoint_type='summit', elevation=1234,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(445278.5 1.0)')
+        )
+        waypoint_db.update(waypoint_in)
+        self.assertEqual(waypoint_db.geometry.geom, geom1)
+
+        waypoint_in = Waypoint(
+            document_id=1, waypoint_type='summit', elevation=14,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(445279.0 1.0)')
+        )
+        waypoint_db.update(waypoint_in)
+        self.assertNotEqual(waypoint_db.geometry.geom, geom1)
+
+    def test_geometry_update_skip_optimization(self):
+        geom1 = 'SRID=3857;POINT(445278.0 334111.0)'
+        waypoint_db = Waypoint(
+            document_id=1, waypoint_type='summit', elevation=2203,
+            geometry=DocumentGeometry(
+                document_id=1, geom=geom1
+            )
+        )
+
+        waypoint_in = Waypoint(
+            document_id=1, waypoint_type='summit', elevation=1234,
+            geometry=None
+        )
+        waypoint_db.update(waypoint_in)
+        self.assertEqual(waypoint_db.geometry.geom, geom1)
+
     def test_update(self):
         waypoint_db = Waypoint(
             document_id=1, waypoint_type='summit', elevation=2203,
