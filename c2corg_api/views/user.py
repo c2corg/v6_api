@@ -146,7 +146,7 @@ class UserRenewRest(object):
     def __init__(self, request):
         self.request = request
 
-    @restricted_view(renderer='json', permission='authenticated')
+    @restricted_view(renderer='json')
     def post(self):
         request = self.request
         userid = request.authenticated_userid
@@ -163,7 +163,7 @@ class UserLogoutRest(object):
     def __init__(self, request):
         self.request = request
 
-    @restricted_view(renderer='json', permission='authenticated')
+    @restricted_view(renderer='json')
     def post(self):
         result = {'user': self.request.authenticated_userid}
         remove_token(extract_token(self.request))

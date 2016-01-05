@@ -52,8 +52,7 @@ class WaypointRest(DocumentRest):
         return self._get(Waypoint, schema_waypoint, schema_adaptor)
 
     @restricted_json_view(schema=schema_waypoint,
-                          validators=validate_waypoint_create,
-                          permission="authenticated")
+                          validators=validate_waypoint_create)
     def collection_post(self):
         return self._collection_post(Waypoint, schema_waypoint)
 
