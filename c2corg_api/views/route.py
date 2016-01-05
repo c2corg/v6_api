@@ -7,7 +7,8 @@ from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, make_schema_adaptor, get_all_fields
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
-    validate_lang, validate_version_id, validate_lang_param
+    validate_lang, validate_version_id, validate_lang_param, \
+    validate_preferred_lang_param
 from c2corg_common.fields_route import fields_route
 from c2corg_common.attributes import activities
 
@@ -35,7 +36,7 @@ listing_schema_adaptor = make_schema_adaptor(
           cors_policy=cors_policy)
 class RouteRest(DocumentRest):
 
-    @view(validators=[validate_pagination, validate_lang_param])
+    @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
         return self._collection_get(
             Route, schema_route, listing_schema_adaptor)

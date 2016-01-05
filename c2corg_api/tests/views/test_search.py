@@ -67,7 +67,7 @@ class TestSearchRest(BaseTestRest):
         self.assertEqual(0, routes['total'])
 
     def test_search_lang(self):
-        response = self.app.get(self._prefix + '?q=granier&l=fr', status=200)
+        response = self.app.get(self._prefix + '?q=granier&pl=fr', status=200)
         body = response.json
 
         self.assertIn('waypoints', body)

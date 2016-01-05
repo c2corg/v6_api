@@ -42,6 +42,14 @@ def validate_lang_param(request):
     validate_lang_(lang, request)
 
 
+def validate_preferred_lang_param(request):
+    """Checks if the preferred language given in the url as GET parameter
+    is correct ("...?pl=...").
+    """
+    lang = request.GET.get('pl')
+    validate_lang_(lang, request)
+
+
 def is_missing(val):
     return val is None or val == '' or val == [] or val is null
 

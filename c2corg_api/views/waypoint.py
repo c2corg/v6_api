@@ -11,7 +11,8 @@ from c2corg_api.views.document import (
     make_schema_adaptor)
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
-    validate_lang, validate_version_id, validate_lang_param
+    validate_lang, validate_version_id, validate_lang_param, \
+    validate_preferred_lang_param
 from c2corg_common.fields_waypoint import fields_waypoint
 from c2corg_common.attributes import waypoint_types
 
@@ -42,7 +43,7 @@ listing_schema_adaptor = make_schema_adaptor(
           cors_policy=cors_policy)
 class WaypointRest(DocumentRest):
 
-    @view(validators=[validate_pagination, validate_lang_param])
+    @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
         return self._collection_get(
             Waypoint, schema_waypoint, listing_schema_adaptor)

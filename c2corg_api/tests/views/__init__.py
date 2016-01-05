@@ -92,7 +92,7 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def get_collection_lang(self):
-        response = self.app.get(self._prefix + '?l=es', status=200)
+        response = self.app.get(self._prefix + '?pl=es', status=200)
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
