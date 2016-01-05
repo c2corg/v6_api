@@ -16,14 +16,38 @@ validate_id = create_int_validator('id')
 validate_version_id = create_int_validator('version_id')
 
 
-def validate_lang(request):
+def validate_lang_(lang, request):
     """Checks if a given lang is one of the available langs.
     """
+    if lang is not None:
+        if lang in default_cultures:
+            request.validated['lang'] = lang
+        else:
+            request.errors.add('querystring', 'lang', 'invalid lang')
+
+
+def validate_lang(request):
+    """Checks if the language given in the url as match-parameter
+    is correct (".../{lang}").
+    """
     lang = request.matchdict['lang']
-    if lang in default_cultures:
-        request.validated['lang'] = lang
-    else:
-        request.errors.add('querystring', 'lang', 'invalid lang')
+    validate_lang_(lang, request)
+
+
+def validate_lang_param(request):
+    """Checks if the language given in the url as GET parameter
+    is correct ("...?l=...").
+    """
+    lang = request.GET.get('l')
+    validate_lang_(lang, request)
+
+
+def validate_preferred_lang_param(request):
+    """Checks if the preferred language given in the url as GET parameter
+    is correct ("...?pl=...").
+    """
+    lang = request.GET.get('pl')
+    validate_lang_(lang, request)
 
 
 def is_missing(val):

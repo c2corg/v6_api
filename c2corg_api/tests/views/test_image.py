@@ -41,6 +41,9 @@ class TestImageRest(BaseDocumentTestRest):
                 {'after': self.image3.document_id, 'limit': 1}),
             [self.image2.document_id], -1)
 
+    def test_get_collection_lang(self):
+        self.get_collection_lang()
+
     def test_get(self):
         body = self.get(self.image)
         self._assert_geometry(body)

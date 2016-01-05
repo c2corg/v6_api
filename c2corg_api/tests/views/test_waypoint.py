@@ -32,6 +32,9 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertIn('summary', locale)
         self.assertNotIn('description', locale)
 
+    def test_get_collection_lang(self):
+        self.get_collection_lang()
+
     def test_get_collection_paginated(self):
         self.app.get("/waypoints?offset=invalid", status=400)
 

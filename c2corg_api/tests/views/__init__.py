@@ -81,13 +81,29 @@ class BaseDocumentTestRest(BaseTestRest):
         if params is None:
             doc = documents[0]
             available_cultures = doc.get('available_cultures')
-            self.assertEqual(available_cultures, ['en', 'fr'])
+            self.assertEqual(sorted(available_cultures), ['en', 'fr'])
 
         if limit is None:
             nb_docs = self.session.query(self._model).count()
             self.assertEqual(len(documents), nb_docs)
         else:
             self.assertLessEqual(len(documents), limit)
+
+        return body
+
+    def get_collection_lang(self):
+        response = self.app.get(self._prefix + '?pl=es', status=200)
+        self.assertEqual(response.content_type, 'application/json')
+
+        body = response.json
+        documents = body['documents']
+        self.assertIsInstance(documents, list)
+
+        doc = documents[0]
+        locales = doc.get('locales')
+        self.assertEqual(len(locales), 1)
+        locale = locales[0]
+        self.assertEqual('fr', locale['culture'])
 
         return body
 

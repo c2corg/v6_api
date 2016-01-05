@@ -46,6 +46,9 @@ class TestRouteRest(BaseDocumentTestRest):
                 {'after': self.route3.document_id, 'limit': 1}),
             [self.route2.document_id], -1)
 
+    def test_get_collection_lang(self):
+        self.get_collection_lang()
+
     def test_get(self):
         body = self.get(self.route)
         self.assertEqual(

@@ -1,3 +1,4 @@
+from c2corg_common.attributes import cultures_priority
 from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, HTTPBadRequest
 from sqlalchemy.orm import joinedload, contains_eager
 from sqlalchemy.orm.exc import StaleDataError
@@ -79,10 +80,14 @@ class DocumentRest(object):
 
         documents = base_query. \
             options(joinedload(getattr(clazz, 'locales'))). \
+            options(joinedload(getattr(clazz, 'geometry'))). \
             order_by(clazz.document_id.desc()). \
             slice(offset, offset + limit). \
             all()
-        set_available_cultures(documents)
+        set_available_cultures(documents, loaded=True)
+
+        if validated.get('lang') is not None:
+            set_best_locale(documents, validated.get('lang'))
 
         total = base_query.count()
 
@@ -98,7 +103,7 @@ class DocumentRest(object):
 
     def _get(self, clazz, schema, adapt_schema=None):
         id = self.request.validated['id']
-        lang = self.request.GET.get('l')
+        lang = self.request.validated.get('lang')
         return self._get_in_lang(id, lang, clazz, schema, adapt_schema)
 
     def _get_in_lang(self, id, lang, clazz, schema, adapt_schema=None):
@@ -506,6 +511,32 @@ def get_all_fields(fields, activities, field_list_type):
     # turn a list of lists [['a', 'b'], ['b', 'c'], ['d']] into a flat set
     # ['a', 'b', 'c', 'd']
     return set(sum(fields_list, []))
+
+
+def set_best_locale(documents, preferred_lang):
+    """Sets the "best" locale on the given documents. The "best" locale is
+    the locale in the given "preferred language" if available. Otherwise
+    it is the "most relevant" translation according to `cultures_priority`.
+    """
+    if preferred_lang is None:
+        return
+
+    for document in documents:
+        # need to detach the document from the session, so that the
+        # following change to `document.locales` is not persisted
+        DBSession.expunge(document)
+
+        if document.locales:
+            available_locales = {
+                locale.culture: locale for locale in document.locales}
+            if preferred_lang in available_locales:
+                document.locales = [available_locales[preferred_lang]]
+            else:
+                best_locale = next(
+                    (available_locales[lang] for lang in cultures_priority
+                        if lang in available_locales), None)
+                if best_locale:
+                    document.locales = [best_locale]
 
 
 @resource(path='/document/{id}/history/{lang}', cors_policy=cors_policy)

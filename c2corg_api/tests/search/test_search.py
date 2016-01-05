@@ -33,10 +33,10 @@ class SearchTest(BaseTestCase):
             ]))
         self.session.flush()
 
-        docs = search.get_documents([71171, 71172], Waypoint)
+        docs = search.get_documents([71171, 71172], Waypoint, None)
         self.assertEqual(71171, docs[0].document_id)
         self.assertEqual(71172, docs[1].document_id)
 
-        docs = search.get_documents([71172, 71171], Waypoint)
+        docs = search.get_documents([71172, 71171], Waypoint, None)
         self.assertEqual(71172, docs[0].document_id)
         self.assertEqual(71171, docs[1].document_id)
