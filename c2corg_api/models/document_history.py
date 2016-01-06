@@ -9,7 +9,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, backref
 import datetime
 
-from c2corg_api.models import Base, schema
+from c2corg_api.models import Base, schema, users_schema
 from c2corg_api.models.document import (
     Document, ArchiveDocument, ArchiveDocumentLocale, ArchiveDocumentGeometry)
 
