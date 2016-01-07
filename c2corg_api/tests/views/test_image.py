@@ -51,6 +51,12 @@ class TestImageRest(BaseDocumentTestRest):
     def test_get_lang(self):
         self.get_lang(self.image)
 
+    def test_get_new_lang(self):
+        self.get_new_lang(self.image)
+
+    def test_get_404(self):
+        self.get_404()
+
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')

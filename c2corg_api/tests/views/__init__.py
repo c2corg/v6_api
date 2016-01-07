@@ -168,6 +168,20 @@ class BaseDocumentTestRest(BaseTestRest):
         locale_en = locales[0]
         self.assertEqual(locale_en.get('culture'), self.locale_en.culture)
 
+    def get_new_lang(self, reference):
+        response = self.app.get(self._prefix + '/' +
+                                str(reference.document_id) + '?l=it',
+                                status=200)
+        self.assertEqual(response.content_type, 'application/json')
+
+        body = response.json
+        locales = body.get('locales')
+        self.assertEqual(len(locales), 0)
+
+    def get_404(self):
+        self.app.get(self._prefix + '/-9999', status=404)
+        self.app.get(self._prefix + '/-9999?l=es', status=404)
+
     def post_error(self, request_body):
         response = self.app.post_json(self._prefix, request_body,
                                       expect_errors=True, status=403)
