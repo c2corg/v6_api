@@ -10,3 +10,5 @@ jwtauth.master_secret = The master key
 elasticsearch.host = {tests_elasticsearch_host}
 elasticsearch.port = {tests_elasticsearch_port}
 elasticsearch.index = {tests_elasticsearch_index}
+discourse.url = http://discuss.example.com
+discourse.sso_secret = d836444a9e4084d5b224a60c208dce14
