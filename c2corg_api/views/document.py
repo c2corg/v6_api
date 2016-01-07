@@ -185,12 +185,12 @@ class DocumentRest(object):
         If no document exists for the given id, a `HTTPNotFound` exception is
         raised.
         """
-        # TODO eager load geometry?
         if not culture:
             document = DBSession. \
                 query(clazz). \
                 filter(getattr(clazz, 'document_id') == id). \
                 options(joinedload(getattr(clazz, 'locales'))). \
+                options(joinedload('geometry')). \
                 first()
         else:
             document = DBSession. \
@@ -199,7 +199,23 @@ class DocumentRest(object):
                 filter(getattr(clazz, 'document_id') == id). \
                 options(contains_eager(getattr(clazz, 'locales'))). \
                 filter(DocumentLocale.culture == culture). \
+                options(joinedload('geometry')). \
                 first()
+            if not document:
+                # the requested locale might not be available, try to get the
+                # document without locales
+                document = DBSession. \
+                    query(clazz). \
+                    filter(getattr(clazz, 'document_id') == id). \
+                    options(joinedload('geometry')). \
+                    first()
+                if document:
+                    # explicitly set `locales` to an empty list so that they
+                    # are no lazy loaded
+                    document.locales = []
+                    # also detach the document from the session, so that the
+                    # empty list is not persisted
+                    DBSession.expunge(document)
 
         if not document:
             raise HTTPNotFound('document not found')
