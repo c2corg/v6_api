@@ -13,6 +13,7 @@ from c2corg_api.models import DBSession
 from c2corg_api.security.roles import (
     try_login, remove_token, extract_token, renew_token)
 
+from c2corg_api.security.discourse_sso_provider import discourse_redirect
 import colander
 import datetime
 
@@ -126,7 +127,14 @@ class UserLoginRest(object):
 
         token = try_login(user, password, request) if user else None
         if token:
-            return token_to_response(user, token, request)
+            response = token_to_response(user, token, request)
+            if 'sso' in request.json and 'sig' in request.json:
+                sso = request.json['sso']
+                sig = request.json['sig']
+                settings = request.registry.settings
+                redirect = discourse_redirect(user, sso, sig, settings)
+                response['redirect'] = redirect
+            return response
         else:
             request.errors.status = 403
             request.errors.add('body', 'user', 'Login failed')

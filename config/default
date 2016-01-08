@@ -19,6 +19,8 @@ export elasticsearch_host = localhost
 export elasticsearch_port = 9200
 export elasticsearch_index = c2corg
 
+export discourse_url = http://c2corgv6-discourse.demo-camptocamp.com
+
 # database to run the unit tests
 export tests_db_host = localhost
 export tests_db_port = 5432

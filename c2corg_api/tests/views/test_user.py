@@ -2,6 +2,7 @@
 from c2corg_api.models.user import User
 
 from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.security.discourse_sso_provider import discourse_redirect
 
 
 class TestUserRest(BaseTestRest):
@@ -45,7 +46,7 @@ class TestUserRest(BaseTestRest):
         }
         body = self.app.post_json(url, request_utf8, status=200).json
 
-    def login(self, username, password=None, status=200):
+    def login(self, username, password=None, status=200, sso=None, sig=None):
         if not password:
             password = self.global_passwords[username]
 
@@ -54,6 +55,11 @@ class TestUserRest(BaseTestRest):
             'password': password
             }
 
+        if sso:
+            request_body['sso'] = sso
+        if sig:
+            request_body['sig'] = sig
+
         url = '/users/login'
         response = self.app.post_json(url, request_body, status=status)
         return response
@@ -61,6 +67,21 @@ class TestUserRest(BaseTestRest):
     def test_login_success(self):
         body = self.login('moderator', status=200).json
         self.assertTrue('token' in body)
+
+    def test_login_discourse_success(self):
+        # noqa See https://meta.discourse.org/t/official-single-sign-on-for-discourse/13045
+        sso = "bm9uY2U9Y2I2ODI1MWVlZmI1MjExZTU4YzAwZmYxMzk1ZjBjMGI%3D%0A"
+        sig = "2828aa29899722b35a2f191d34ef9b3ce695e0e6eeec47deb46d588d70c7cb56"  # noqa
+
+        moderator = self.session.query(User).filter(
+                User.username == 'moderator').one()
+        redirect1 = discourse_redirect(moderator, sso, sig, self.settings)
+
+        body = self.login('moderator', sso=sso, sig=sig).json
+        self.assertTrue('token' in body)
+        redirect2 = body['redirect']
+
+        self.assertEqual(redirect1, redirect2)
 
     def test_login_failure(self):
         body = self.login('moderator', password='invalid', status=403).json

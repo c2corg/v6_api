@@ -107,6 +107,7 @@ class BaseTestCase(unittest.TestCase):
         self.global_userids = global_userids
         self.global_tokens = global_tokens
         self.global_passwords = global_passwords
+        self.settings = settings
         unittest.TestCase.__init__(self, *args, **kwargs)
 
     @classmethod
