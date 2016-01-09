@@ -43,7 +43,7 @@ def setup_es():
     if client.indices.exists(index_name):
         print('Index "{0}" already exists. To re-create the index, manually '
               'delete the index and run this script again.'.format(index_name))
-        print ('To delete the index run:')
+        print('To delete the index run:')
         print('curl -XDELETE \'http://{0}:{1}/{2}/\''.format(
             elasticsearch_config['host'], elasticsearch_config['port'],
             index_name))

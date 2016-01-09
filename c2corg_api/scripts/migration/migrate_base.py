@@ -16,7 +16,7 @@ class MigrateBase(object):
         pass
 
     def start(self, type):
-        print('Importing {0}'.format(type))
+        print(('Importing {0}'.format(type)))
         self.start_time = datetime.now()
 
     def stop(self):

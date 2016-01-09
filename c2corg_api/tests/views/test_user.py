@@ -92,9 +92,9 @@ class TestUserRest(BaseTestRest):
         now = int(round(time.time()))
         expected = days * 24 * 3600 + now  # 14 days from now
         if (abs(expected - expire) > seconds_delta):
-            raise self.failureException, \
-                    '%r == %r within %r seconds' % \
-                    (expected, expire, seconds_delta)
+            raise self.failureException(
+                '%r == %r within %r seconds' %
+                (expected, expire, seconds_delta))
 
     def test_login_logout_success(self):
         body = self.login('moderator').json
@@ -123,7 +123,7 @@ class TestUserRest(BaseTestRest):
         token1 = self.login('contributor').json['token']
 
         import time
-        print 'Waiting for more than 1s to get a different token'
+        print('Waiting for more than 1s to get a different token')
         time.sleep(1.01)
 
         token2 = self.post_json_with_token('/users/renew', token1)['token']

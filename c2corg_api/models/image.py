@@ -9,8 +9,8 @@ from sqlalchemy import (
 from colanderalchemy import SQLAlchemySchemaNode
 
 from c2corg_api.models import schema
-from utils import copy_attributes
-from document import (
+from c2corg_api.models.utils import copy_attributes
+from c2corg_api.models.document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
     get_update_schema, geometry_schema_overrides)
 from c2corg_common.attributes import activities

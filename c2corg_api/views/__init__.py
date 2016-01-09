@@ -87,12 +87,12 @@ def serialize(data):
     Returns the most agnostic version of specified data.
     (remove colander notions, datetimes in ISO, ...)
     """
-    if isinstance(data, basestring):
-        return unicode(data)
+    if isinstance(data, str):
+        return str(data)
     if isinstance(data, collections.Mapping):
-        return dict(map(serialize, data.iteritems()))
+        return dict(list(map(serialize, iter(data.items()))))
     if isinstance(data, collections.Iterable):
-        return type(data)(map(serialize, data))
+        return type(data)(list(map(serialize, data)))
     if isinstance(data, (datetime.date, datetime.datetime)):
         return data.isoformat()
     if isinstance(data, WKBElement):

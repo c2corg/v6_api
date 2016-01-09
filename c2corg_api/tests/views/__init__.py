@@ -1,5 +1,7 @@
 import json
-import urllib
+import urllib.request
+import urllib.parse
+import urllib.error
 
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mapping import SearchDocument
@@ -23,7 +25,7 @@ class BaseTestRest(BaseTestCase):
             headers = {}
         if not token:
             token = self.global_tokens[username]
-        headers['Authorization'] = 'JWT token="' + token.encode('ascii') + '"'
+        headers['Authorization'] = 'JWT token="' + token + '"'
         return headers
 
     def get_json_with_token(self, url, token, status=200):
@@ -68,7 +70,7 @@ class BaseDocumentTestRest(BaseTestRest):
         prefix = self._prefix
         limit = None
         if params:
-            prefix += "?" + urllib.urlencode(params)
+            prefix += "?" + urllib.parse.urlencode(params)
             limit = params['limit']
 
         response = self.app.get(prefix, status=200)
@@ -109,7 +111,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def assertResultsEqual(self, actual, expected, total):  # noqa
         actual_docs = actual['documents']
-        actual_ids = map(lambda json: json['document_id'], actual_docs)
+        actual_ids = [json['document_id'] for json in actual_docs]
         self.assertListEqual(actual_ids, expected)
         actual_total = actual['total']
         self.assertEqual(actual_total, total)

@@ -81,7 +81,7 @@ upgrade-dev:
 
 .build/venv:
 	mkdir -p $(dir $@)
-	virtualenv --no-site-packages $@
+	virtualenv --no-site-packages -p python3 $@
 
 $(SITE_PACKAGES)/c2corg_api.egg-link: .build/venv requirements.txt setup.py
 	.build/venv/bin/pip install -r requirements.txt
