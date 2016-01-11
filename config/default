@@ -33,4 +33,11 @@ export tests_elasticsearch_host = localhost
 export tests_elasticsearch_port = 9200
 export tests_elasticsearch_index = c2corg_tests
 
+# database from which to import data from
+export migration_db_host = localhost
+export migration_db_port = 5432
+export migration_db_user = www-data
+export migration_db_password = www-data
+export migration_db_name = c2corg
+
 export logging_level = WARNING

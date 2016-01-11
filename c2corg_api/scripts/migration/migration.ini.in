@@ -2,7 +2,7 @@
 use = call:c2corg_api.scripts.migration.migrate:no_op
 
 # the source database containing the data to import
-sqlalchemy_source.url = postgresql://www-data:www-data@localhost:5432/c2corg
+sqlalchemy_source.url = postgresql://{migration_db_user}:{migration_db_password}@{migration_db_host}:{migration_db_port}/{migration_db_name}
 
 # the target database
 sqlalchemy_target.url = postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}
