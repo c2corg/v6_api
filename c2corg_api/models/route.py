@@ -12,8 +12,8 @@ import colander
 
 from c2corg_api.models import schema
 from c2corg_api.models.utils import ArrayOfEnum
-from utils import copy_attributes
-from document import (
+from c2corg_api.models.utils import copy_attributes
+from c2corg_api.models.document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
     get_update_schema, geometry_schema_overrides, schema_locale_attributes,
     schema_attributes)

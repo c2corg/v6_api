@@ -1,5 +1,4 @@
 from cornice.resource import resource, view
-from functools32 import lru_cache
 
 from c2corg_api.models.waypoint import (
     Waypoint, schema_waypoint, schema_update_waypoint,
@@ -15,7 +14,7 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_preferred_lang_param
 from c2corg_common.fields_waypoint import fields_waypoint
 from c2corg_common.attributes import waypoint_types
-
+from functools import lru_cache
 
 validate_waypoint_create = make_validator_create(
     fields_waypoint, 'waypoint_type', waypoint_types)

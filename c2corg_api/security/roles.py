@@ -70,7 +70,7 @@ def try_login(user, password, request):
         now = datetime.datetime.utcnow()
         exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
         claims = create_claims(user, exp)
-        token = policy.encode_jwt(request, claims=claims)
+        token = policy.encode_jwt(request, claims=claims).decode('utf-8')
         return add_or_retrieve_token(token, exp, user.id)
 
     return None
@@ -84,7 +84,7 @@ def renew_token(user, request):
         now = datetime.datetime.utcnow()
         exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
         claims = create_claims(user, exp)
-        token_value = policy.encode_jwt(request, claims=claims)
+        token_value = policy.encode_jwt(request, claims=claims).decode('utf-8')
         return add_or_retrieve_token(token_value, exp, user.id)
 
     return None

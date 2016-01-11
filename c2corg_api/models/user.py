@@ -1,11 +1,10 @@
 import bcrypt
-
 from sqlalchemy import (
     Boolean,
     Column,
     Integer,
     String
-    )
+)
 
 from colanderalchemy import SQLAlchemySchemaNode
 
@@ -20,12 +19,16 @@ class PasswordUtil():
     """
     @staticmethod
     def encrypt_password(plain_password):
-        return bcrypt.hashpw(plain_password, bcrypt.gensalt())
+        if isinstance(plain_password, str):
+            plain_password = plain_password.encode('utf-8')
+        return bcrypt.hashpw(plain_password, bcrypt.gensalt()).decode('utf-8')
 
     @staticmethod
     def is_password_valid(plain, encrypted):
-        if isinstance(encrypted, unicode):
-            encrypted = encrypted.encode('UTF-8')
+        if isinstance(encrypted, str):
+            encrypted = encrypted.encode('utf-8')
+        if isinstance(plain, str):
+            plain = plain.encode('utf-8')
         return bcrypt.hashpw(plain, encrypted) == encrypted
 
 

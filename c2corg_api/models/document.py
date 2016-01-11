@@ -14,14 +14,13 @@ from geoalchemy2 import Geometry
 import geoalchemy2
 from shapely import wkt
 from colander import MappingSchema, SchemaNode, String as ColanderString, null
-from itertools import ifilter
+
 import abc
 import enum
-import string
 
 from c2corg_api.models import Base, schema, DBSession
 from c2corg_api.ext import colander_ext
-from utils import copy_attributes
+from c2corg_api.models.utils import copy_attributes
 
 from pyramid.httpexceptions import HTTPInternalServerError
 
@@ -181,7 +180,7 @@ class Document(Base, _DocumentMixin):
         is present.
         """
         return next(
-            ifilter(lambda locale: locale.culture == culture, self.locales),
+            filter(lambda locale: locale.culture == culture, self.locales),
             None)
 
 
@@ -318,8 +317,8 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
             proj1 = self.geom.srid
         else:
             # WKT are used in the tests.
-            split1 = string.split(self.geom, ';')
-            proj1 = int(string.split(split1[0], '=')[1])
+            split1 = str.split(self.geom, ';')
+            proj1 = int(str.split(split1[0], '=')[1])
             str1 = split1[1]
             g1 = wkt.loads(str1)
 
@@ -330,8 +329,8 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
             proj2 = other.geom.srid
         else:
             # WKT are used in the tests.
-            split2 = string.split(other.geom, ';')
-            proj2 = int(string.split(split2[0], '=')[1])
+            split2 = str.split(other.geom, ';')
+            proj2 = int(str.split(split2[0], '=')[1])
             str2 = split2[1]
             g2 = wkt.loads(str2)
 

@@ -138,7 +138,7 @@ class MigrateSites(MigrateWaypoints):
         self.add_section(sections, 'external_resources', document_in)
         self.add_section(sections, 'site_history', document_in)
 
-        return u'\n'.join(sections)
+        return '\n'.join(sections)
 
     def add_section(self, sections, field, document_in):
         text = document_in[field]
@@ -147,9 +147,9 @@ class MigrateSites(MigrateWaypoints):
         text = text.strip()
 
         if text:
-            section = u''
+            section = ''
             header = self.translate(field, document_in.culture)
-            section += u'## ' + header + u'\n'
+            section += '## ' + header + '\n'
             section += text
             sections.append(section)
 
@@ -158,40 +158,40 @@ class MigrateSites(MigrateWaypoints):
 
     translations = {
         'way_back': {
-            'ca': u'Baixada de las vies',
-            'de': u'Abstieg der Route',
-            'en': u'Means of descent',
-            'es': u'Bajada de las vías',
-            'eu': u'Luzeeren jeitsiera',
-            'fr': u'Descente des voies',
-            'it': u'Discesa delle vie'
+            'ca': 'Baixada de las vies',
+            'de': 'Abstieg der Route',
+            'en': 'Means of descent',
+            'es': 'Bajada de las vías',
+            'eu': 'Luzeeren jeitsiera',
+            'fr': 'Descente des voies',
+            'it': 'Discesa delle vie'
         },
         'remarks': {
-            'ca': u'Remarques',
-            'de': u'Bemerkungen',
-            'en': u'Remarks',
-            'es': u'Observaciones',
-            'eu': u'Azalpenak',
-            'fr': u'Remarques',
-            'it': u'Osservazioni'
+            'ca': 'Remarques',
+            'de': 'Bemerkungen',
+            'en': 'Remarks',
+            'es': 'Observaciones',
+            'eu': 'Azalpenak',
+            'fr': 'Remarques',
+            'it': 'Osservazioni'
         },
         'external_resources': {
-            'ca': u'Bibliografia i webgrafia',
-            'de': u'Bibliographie',
-            'en': u'External resources',
-            'es': u'Bibliografía y webgrafía',
-            'eu': u'Bibliografia et webografia',
-            'fr': u'Bibliographie et webographie',
-            'it': u'Bibliografia e riferimenti web'
+            'ca': 'Bibliografia i webgrafia',
+            'de': 'Bibliographie',
+            'en': 'External resources',
+            'es': 'Bibliografía y webgrafía',
+            'eu': 'Bibliografia et webografia',
+            'fr': 'Bibliographie et webographie',
+            'it': 'Bibliografia e riferimenti web'
         },
         'site_history': {
-            'ca': u'Històric',
-            'de': u'Geschichte des Klettersektors',
-            'en': u'Site history',
-            'es': u'Historia',
-            'eu': u'Historia',
-            'fr': u'Historique du site',
-            'it': u'Cenni storici'
+            'ca': 'Històric',
+            'de': 'Geschichte des Klettersektors',
+            'en': 'Site history',
+            'es': 'Historia',
+            'eu': 'Historia',
+            'fr': 'Historique du site',
+            'it': 'Cenni storici'
         }
     }
 
