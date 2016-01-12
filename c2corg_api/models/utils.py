@@ -44,3 +44,10 @@ class ArrayOfEnum(postgresql.ARRAY):
                 return None
             return super_rp(handle_raw_string(value))
         return process
+
+
+def extend_dict(d1, d2):
+    """Update `d1` with the entries of `d2` and return `d1`.
+    """
+    d1.update(d2)
+    return d1

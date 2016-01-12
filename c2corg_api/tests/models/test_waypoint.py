@@ -10,6 +10,26 @@ from c2corg_api.tests import BaseTestCase
 
 class TestWaypoint(BaseTestCase):
 
+    def test_inheritance(self):
+        waypoint = Waypoint(
+            waypoint_type='summit', elevation=2203,
+            locales=[
+                WaypointLocale(
+                    culture='en', title='A', description='abc')
+            ],
+            geometry=DocumentGeometry(
+                geom=from_shape(Point(1, 1), srid=3857))
+        )
+        self.session.add(waypoint)
+        self.session.flush()
+
+        self.assertIsNotNone(waypoint.document_id)
+        self.assertEqual('w', waypoint.type)
+
+        locale = waypoint.locales[0]
+        self.assertIsNotNone(locale.id)
+        self.assertEqual('w', locale.type)
+
     def test_to_archive(self):
         waypoint = Waypoint(
             document_id=1, waypoint_type='summit', elevation=2203,
