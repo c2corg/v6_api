@@ -33,6 +33,7 @@ class SyncTest(BaseTestCase):
         doc = SearchDocument.get(id=51251, index=index)
         self.assertEqual(doc['title_fr'], 'Mont Granier')
         self.assertEqual(doc['summary_fr'], 'Le Mont  Granier ')
+        self.assertEqual(doc['doc_type'], 'w')
 
     def test_sync_search_index_update(self):
         """Tests that already existing documents are updated.
@@ -81,3 +82,4 @@ class SyncTest(BaseTestCase):
         self.assertEqual(doc['summary_fr'], 'Le Mont Granier')
         self.assertEqual(doc['title_en'], 'Mont Granier')
         self.assertEqual(doc['summary_en'], 'The Mont Granier')
+        self.assertEqual(doc['doc_type'], 'w')

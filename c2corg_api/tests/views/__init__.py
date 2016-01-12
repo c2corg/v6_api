@@ -368,6 +368,7 @@ class BaseDocumentTestRest(BaseTestRest):
             id=doc.document_id,
             index=elasticsearch_config['index'])
 
+        self.assertIsNotNone(search_doc['doc_type'])
         self.assertEqual(search_doc['doc_type'], doc.type)
         self.assertEqual(search_doc['title_en'], waypoint_locale_en.title)
 

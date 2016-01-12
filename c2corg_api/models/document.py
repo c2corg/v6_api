@@ -20,8 +20,7 @@ import enum
 
 from c2corg_api.models import Base, schema, DBSession
 from c2corg_api.ext import colander_ext
-from c2corg_api.models.utils import copy_attributes
-
+from c2corg_api.models.utils import copy_attributes, extend_dict
 from pyramid.httpexceptions import HTTPInternalServerError
 
 quality_types = [
@@ -80,9 +79,9 @@ class Document(Base, _DocumentMixin):
 
     available_cultures = None
 
-    __mapper_args__ = {
-            'version_id_col': _DocumentMixin.version
-    }
+    __mapper_args__ = extend_dict({
+        'version_id_col': _DocumentMixin.version
+    }, _DocumentMixin.__mapper_args__)
 
     _ATTRIBUTES_WHITELISTED = \
         ['document_id', 'version']

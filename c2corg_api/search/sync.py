@@ -36,6 +36,7 @@ def sync_search_index(document):
     doc = {
         'doc_type': document.type
     }
+
     for locale in document.locales:
         culture = locale.culture
         doc['title_' + culture] = locale.title
