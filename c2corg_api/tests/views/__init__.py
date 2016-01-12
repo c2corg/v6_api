@@ -541,7 +541,7 @@ class BaseDocumentTestRest(BaseTestRest):
         return (body, document)
 
     def put_success_figures_only(self, request_body, document):
-        """Test updating a document with changes to the figures and locales.
+        """Test updating a document with changes to the figures only.
         """
         response = self.app.put_json(
             self._prefix + '/' + str(document.document_id), request_body,

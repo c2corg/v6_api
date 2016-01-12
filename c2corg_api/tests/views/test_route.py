@@ -59,6 +59,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertNotIn('climbing_outdoor_types', body)
         self.assertIn('elevation_min', body)
 
+        self.assertIn('main_waypoint_id', body)
         self.assertIn('associations', body)
         associations = body.get('associations')
 
@@ -172,6 +173,7 @@ class TestRouteRest(BaseDocumentTestRest):
 
     def test_post_success(self):
         body = {
+            'main_waypoint_id': self.waypoint.document_id,
             'activities': ['hiking', 'skitouring'],
             'elevation_min': 700,
             'elevation_max': 1500,
@@ -204,6 +206,12 @@ class TestRouteRest(BaseDocumentTestRest):
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
         self.assertIsNotNone(archive_geometry.geom)
+
+        self.assertEqual(doc.main_waypoint_id, self.waypoint.document_id)
+        self.assertEqual(
+            body.get('main_waypoint_id'), self.waypoint.document_id)
+        self.assertEqual(
+            archive_route.main_waypoint_id, self.waypoint.document_id)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -361,6 +369,30 @@ class TestRouteRest(BaseDocumentTestRest):
         (body, route) = self.put_success_figures_only(body, self.route)
 
         self.assertEquals(route.elevation_max, 1600)
+
+    def test_put_success_main_wp_changed(self):
+        body = {
+            'message': 'Changing figures',
+            'document': {
+                'document_id': self.route.document_id,
+                'main_waypoint_id': self.waypoint.document_id,
+                'version': self.route.version,
+                'activities': ['skitouring'],
+                'elevation_min': 700,
+                'elevation_max': 1500,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'durations': ['1'],
+                'locales': [
+                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...', 'gear': 'paraglider',
+                     'version': self.locale_en.version}
+                ]
+            }
+        }
+        (body, route) = self.put_success_figures_only(body, self.route)
+
+        self.assertEqual(route.main_waypoint_id, self.waypoint.document_id)
 
     def test_put_success_lang_only(self):
         body = {
