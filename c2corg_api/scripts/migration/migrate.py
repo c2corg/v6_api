@@ -1,5 +1,8 @@
 import sys
 import logging
+
+from c2corg_api.scripts.migration.documents.associations import \
+    MigrateAssociations
 from sqlalchemy import engine_from_config
 
 import os
@@ -21,13 +24,11 @@ from c2corg_api.scripts.migration.documents.waypoints.products import \
 from c2corg_api.scripts.migration.documents.waypoints.sites import MigrateSites
 from c2corg_api.scripts.migration.documents.waypoints.summit import \
     MigrateSummits
+from c2corg_api.scripts.migration.sequences import UpdateSequences
 
 
 # no-op function referenced from `migration.ini` (required for
 # `get_appsettings` to work)
-from c2corg_api.scripts.migration.sequences import UpdateSequences
-
-
 def no_op(global_config, **settings): pass
 
 
@@ -59,6 +60,7 @@ def main(argv=sys.argv):
     MigrateHuts(connection_source, session, batch_size).migrate()
     MigrateRoutes(connection_source, session, batch_size).migrate()
     MigrateVersions(connection_source, session, batch_size).migrate()
+    MigrateAssociations(connection_source, session, batch_size).migrate()
     UpdateSequences(connection_source, session, batch_size).migrate()
 
 if __name__ == "__main__":
