@@ -1,6 +1,8 @@
 import json
 
+from c2corg_api.models.association import Association
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from shapely.geometry import shape, LineString
 
 from c2corg_api.models.route import (
@@ -56,6 +58,19 @@ class TestRouteRest(BaseDocumentTestRest):
         self._assert_geometry(body)
         self.assertNotIn('climbing_outdoor_types', body)
         self.assertIn('elevation_min', body)
+
+        self.assertIn('associations', body)
+        associations = body.get('associations')
+
+        linked_waypoints = associations.get('waypoints')
+        self.assertEqual(1, len(linked_waypoints))
+        self.assertEqual(
+            self.waypoint.document_id, linked_waypoints[0].get('document_id'))
+
+        linked_routes = associations.get('routes')
+        self.assertEqual(1, len(linked_routes))
+        self.assertEqual(
+            self.route4.document_id, linked_routes[0].get('document_id'))
 
     def test_get_version(self):
         self.get_version(self.route, self.route_version)
@@ -479,4 +494,21 @@ class TestRouteRest(BaseDocumentTestRest):
             culture='fr', title='Mont Blanc du ciel', description='...',
             gear='paraglider'))
         self.session.add(self.route4)
+
+        # add some associations
+        self.waypoint = Waypoint(
+            waypoint_type='summit', elevation=4,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'))
+        self.waypoint.locales.append(WaypointLocale(
+            culture='en', title='Mont Granier', description='...',
+            access='yep'))
+        self.session.add(self.waypoint)
+        self.session.flush()
+        self.session.add(Association(
+            parent_document_id=self.route.document_id,
+            child_document_id=self.route4.document_id))
+        self.session.add(Association(
+            parent_document_id=self.waypoint.document_id,
+            child_document_id=self.route.document_id))
         self.session.flush()

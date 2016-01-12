@@ -1,11 +1,10 @@
-from c2corg_api.views.document import set_best_locale
 from elasticsearch_dsl.query import MultiMatch
 from elasticsearch_dsl.filter import Term
 from sqlalchemy.orm import joinedload
 
 from c2corg_api.models import DBSession
 from c2corg_api.search import create_search
-from c2corg_api.views import to_json_dict
+from c2corg_api.views import to_json_dict, set_best_locale
 
 
 def search_for_type(

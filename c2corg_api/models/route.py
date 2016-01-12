@@ -1,3 +1,4 @@
+from c2corg_api.models.schema_utils import restrict_schema
 from sqlalchemy import (
     Column,
     Integer,
@@ -285,3 +286,6 @@ schema_route = SQLAlchemySchemaNode(
     })
 
 schema_update_route = get_update_schema(schema_route)
+schema_association_route = restrict_schema(schema_route, [
+    'locales.title', 'elevation_min', 'elevation_max', 'activities'
+])
