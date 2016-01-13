@@ -2,6 +2,8 @@ import json
 
 from c2corg_api.models.association import Association
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.search import elasticsearch_config
+from c2corg_api.search.mapping import SearchDocument
 from shapely.geometry import shape, Point
 
 from c2corg_api.models.route import Route, RouteLocale
@@ -332,7 +334,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Granier',
+                    {'culture': 'en', 'title': 'Mont Granier!',
                      'description': 'A.', 'access': 'n',
                      'version': self.locale_en.version}
                 ],
@@ -353,7 +355,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         versions = waypoint.versions
         version_en = versions[2]
         archive_locale = version_en.document_locales_archive
-        self.assertEqual(archive_locale.title, 'Mont Granier')
+        self.assertEqual(archive_locale.title, 'Mont Granier!')
         self.assertEqual(archive_locale.access, 'n')
 
         archive_document_en = version_en.document_archive
@@ -368,6 +370,19 @@ class TestWaypointRest(BaseDocumentTestRest):
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Granier')
         self.assertEqual(archive_locale.access, 'ouai')
+
+        # check that the title_prefix of an associated route (that the wp
+        # it the main wp of) was updated
+        route = self.session.query(Route).get(self.route.document_id)
+        route_locale_en = route.get_locale('en')
+        self.assertEqual(route_locale_en.title_prefix, 'Mont Granier!')
+
+        # check that the route was updated in the search index
+        search_doc = SearchDocument.get(
+            id=route.document_id,
+            index=elasticsearch_config['index'])
+        self.assertEqual(
+            search_doc['title_en'], 'Mont Granier!: Mont Blanc from the air')
 
     def test_put_success_figures_and_lang_only(self):
         body_put = {
@@ -665,7 +680,9 @@ class TestWaypointRest(BaseDocumentTestRest):
         # add some associations
         self.route = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
-            height_diff_up=800, height_diff_down=800, durations='1')
+            height_diff_up=800, height_diff_down=800, durations='1',
+            main_waypoint_id=self.waypoint.document_id
+        )
         self.route.locales.append(RouteLocale(
             culture='en', title='Mont Blanc from the air', description='...',
             gear='paraglider'))

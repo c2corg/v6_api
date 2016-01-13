@@ -176,16 +176,16 @@ class DocumentRest(object):
         # version numbers in case attributes have changed. by comparing with
         # the old version numbers, we can check if only figures or only locales
         # have changed.
-        (update_type, changed_langs) = document.get_update_type(old_versions)
+        (update_types, changed_langs) = document.get_update_type(old_versions)
 
-        if update_type:
+        if update_types:
             # A new version needs to be created and persisted
             self._update_version(
                 document, user_id, self.request.validated['message'],
-                update_type,  changed_langs)
+                update_types,  changed_langs)
 
             if after_update:
-                after_update(document)
+                after_update(document, update_types)
 
             # And the search updated
             sync_search_index(document)

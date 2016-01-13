@@ -60,12 +60,21 @@ class RouteRest(DocumentRest):
         return self._put(Route, schema_route, after_update=update_title_prefix)
 
 
+@resource(path='/routes/{id}/{lang}/{version_id}', cors_policy=cors_policy)
+class RouteVersionRest(DocumentRest):
+
+    @view(validators=[validate_id, validate_lang, validate_version_id])
+    def get(self):
+        return self._get_version(
+            ArchiveRoute, ArchiveRouteLocale, schema_route, schema_adaptor)
+
+
 def init_title_prefix(route):
     update_title_prefix(route, create=True)
 
 
 def update_title_prefix(route, create=False):
-    """The field `main_waypoint_id` indicates the principal waypoint of a
+    """The field `main_waypoint_id` indicates the main waypoint of a
      route. If given, the title of this waypoint is cached in
      RouteLocale.title_prefix. This method takes care of setting this field.
     """
@@ -81,18 +90,24 @@ def update_title_prefix(route, create=False):
             filter(DocumentLocale.document_id == route.main_waypoint_id). \
             options(load_only(DocumentLocale.culture, DocumentLocale.title)). \
             all()
+        waypoint_locales_index = {
+            locale.culture: locale for locale in waypoint_locales}
 
-        if len(waypoint_locales) == 1:
-            set_title_prefix(route, waypoint_locales[0].title)
-        else:
-            waypoint_locales_index = {
-                locale.culture: locale for locale in waypoint_locales}
+        set_route_title_prefix(route, waypoint_locales, waypoint_locales_index)
 
-            for locale in route.locales:
-                waypoint_local = get_best_locale(
-                    waypoint_locales_index, locale.culture)
-                set_title_prefix(
-                    route, waypoint_local.title if waypoint_local else '')
+
+def set_route_title_prefix(route, waypoint_locales, waypoint_locales_index):
+    """Sets the `title_prefix` of all locales of the given route using the
+    provided waypoint locales.
+    """
+    if len(waypoint_locales) == 1:
+        set_title_prefix(route, waypoint_locales[0].title)
+    else:
+        for locale in route.locales:
+            waypoint_local = get_best_locale(
+                waypoint_locales_index, locale.culture)
+            set_title_prefix(
+                route, waypoint_local.title if waypoint_local else '')
 
 
 def set_title_prefix(route, title):
@@ -102,12 +117,3 @@ def set_title_prefix(route, title):
     locale_ids = [l.id for l in route.locales]
     DBSession.query(RouteLocale).filter(RouteLocale.id.in_(locale_ids)). \
         update({RouteLocale.title_prefix: title}, synchronize_session=False)
-
-
-@resource(path='/routes/{id}/{lang}/{version_id}', cors_policy=cors_policy)
-class RouteVersionRest(DocumentRest):
-
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveRoute, ArchiveRouteLocale, schema_route, schema_adaptor)
