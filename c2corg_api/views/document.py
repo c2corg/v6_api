@@ -131,21 +131,23 @@ class DocumentRest(object):
             ]
         }
 
-    def _collection_post(self, clazz, schema):
+    def _collection_post(self, clazz, schema, after_add=None):
         document = schema.objectify(self.request.validated)
         document.document_id = None
 
         DBSession.add(document)
         DBSession.flush()
-
         user_id = self.request.authenticated_userid
         self._create_new_version(document, user_id)
+
+        if after_add:
+            after_add(document)
 
         sync_search_index(document)
 
         return to_json_dict(document, schema)
 
-    def _put(self, clazz, schema):
+    def _put(self, clazz, schema, after_update=None):
         user_id = self.request.authenticated_userid
         id = self.request.validated['id']
         document_in = \
@@ -181,6 +183,9 @@ class DocumentRest(object):
             self._update_version(
                 document, user_id, self.request.validated['message'],
                 update_type,  changed_langs)
+
+            if after_update:
+                after_update(document)
 
             # And the search updated
             sync_search_index(document)

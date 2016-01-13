@@ -249,6 +249,9 @@ class RouteLocale(_RouteLocaleMixin, DocumentLocale):
                 Integer,
                 ForeignKey(schema + '.documents_locales.id'), primary_key=True)
 
+    # the cached title of the main waypoint
+    title_prefix = Column(String)
+
     def to_archive(self):
         locale = ArchiveRouteLocale()
         super(RouteLocale, self).to_archive(locale)
@@ -275,7 +278,7 @@ class ArchiveRouteLocale(_RouteLocaleMixin, ArchiveDocumentLocale):
 schema_route_locale = SQLAlchemySchemaNode(
     RouteLocale,
     # whitelisted attributes
-    includes=schema_locale_attributes + attributes_locales,
+    includes=schema_locale_attributes + attributes_locales + ['title_prefix'],
     overrides={
         'version': {
             'missing': None

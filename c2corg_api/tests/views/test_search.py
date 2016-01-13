@@ -19,13 +19,13 @@ class TestSearchRest(BaseTestRest):
                 geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
                 WaypointLocale(
-                    culture='fr', title='Mont Granier',
+                    culture='fr', title='Dent de Crolles',
                     description='...',
-                    summary='Le Mont Granier'),
+                    summary='La Dent de Crolles'),
                 WaypointLocale(
-                    culture='en', title='Mont Granier',
+                    culture='en', title='Dent de Crolles',
                     description='...',
-                    summary='The Mont Granier')
+                    summary='The Dent de Crolles')
             ]))
         self.session.add(Waypoint(
             document_id=534682,
@@ -52,7 +52,7 @@ class TestSearchRest(BaseTestRest):
         force_search_index()
 
     def test_search(self):
-        response = self.app.get(self._prefix + '?q=granier', status=200)
+        response = self.app.get(self._prefix + '?q=crolles', status=200)
         body = response.json
 
         self.assertIn('waypoints', body)
@@ -67,7 +67,7 @@ class TestSearchRest(BaseTestRest):
         self.assertEqual(0, routes['total'])
 
     def test_search_lang(self):
-        response = self.app.get(self._prefix + '?q=granier&pl=fr', status=200)
+        response = self.app.get(self._prefix + '?q=crolles&pl=fr', status=200)
         body = response.json
 
         self.assertIn('waypoints', body)

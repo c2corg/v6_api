@@ -3,6 +3,7 @@ import json
 from c2corg_api.models.association import Association
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.views.route import update_title_prefix
 from shapely.geometry import shape, LineString
 
 from c2corg_api.models.route import (
@@ -213,6 +214,9 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(
             archive_route.main_waypoint_id, self.waypoint.document_id)
 
+        self.assertEqual(
+            self.waypoint.locales[0].title, doc.locales[0].title_prefix)
+
     def test_put_wrong_document_id(self):
         body = {
             'document': {
@@ -362,7 +366,8 @@ class TestRouteRest(BaseDocumentTestRest):
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'paraglider',
-                     'version': self.locale_en.version}
+                     'version': self.locale_en.version,
+                     'title_prefix': 'Should be ignored'}
                 ]
             }
         }
@@ -393,6 +398,9 @@ class TestRouteRest(BaseDocumentTestRest):
         (body, route) = self.put_success_figures_only(body, self.route)
 
         self.assertEqual(route.main_waypoint_id, self.waypoint.document_id)
+        locale_en = route.get_locale('en')
+        self.assertEqual(
+            locale_en.title_prefix, self.waypoint.get_locale('en').title)
 
     def test_put_success_lang_only(self):
         body = {
@@ -480,6 +488,29 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertAlmostEqual(line.coords[1][0], 635966)
         self.assertAlmostEqual(line.coords[1][1], 5723644)
 
+    def test_update_prefix_title(self):
+        self.route.locales.append(RouteLocale(
+            culture='es', title='Mont Blanc del cielo', description='...',
+            gear='paraglider'))
+        self.route.main_waypoint_id = self.waypoint.document_id
+        self.session.flush()
+        self.session.refresh(self.route)
+        update_title_prefix(self.route, create=False)
+
+        route = self.session.query(Route).get(self.route.document_id)
+        locale_en = route.get_locale('en')
+        self.assertEqual(locale_en.version, 1)
+        self.assertEqual(
+            locale_en.title_prefix, self.waypoint.get_locale('en').title)
+        locale_fr = route.get_locale('fr')
+        self.assertEqual(locale_fr.version, 1)
+        self.assertEqual(
+            locale_fr.title_prefix, self.waypoint.get_locale('fr').title)
+        locale_es = route.get_locale('es')
+        self.assertEqual(locale_es.version, 1)
+        self.assertEqual(
+            locale_es.title_prefix, self.waypoint.get_locale('fr').title)
+
     def _add_test_data(self):
         self.route = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
@@ -535,6 +566,9 @@ class TestRouteRest(BaseDocumentTestRest):
         self.waypoint.locales.append(WaypointLocale(
             culture='en', title='Mont Granier', description='...',
             access='yep'))
+        self.waypoint.locales.append(WaypointLocale(
+            culture='fr', title='Mont Granier', description='...',
+            access='ouai'))
         self.session.add(self.waypoint)
         self.session.flush()
         self.session.add(Association(

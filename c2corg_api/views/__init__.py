@@ -129,11 +129,16 @@ def set_best_locale(documents, preferred_lang):
         if document.locales:
             available_locales = {
                 locale.culture: locale for locale in document.locales}
-            if preferred_lang in available_locales:
-                document.locales = [available_locales[preferred_lang]]
-            else:
-                best_locale = next(
-                    (available_locales[lang] for lang in cultures_priority
-                        if lang in available_locales), None)
-                if best_locale:
-                    document.locales = [best_locale]
+            best_locale = get_best_locale(available_locales, preferred_lang)
+            if best_locale:
+                document.locales = [best_locale]
+
+
+def get_best_locale(available_locales, preferred_lang):
+    if preferred_lang in available_locales:
+        best_locale = available_locales[preferred_lang]
+    else:
+        best_locale = next(
+                (available_locales[lang] for lang in cultures_priority
+                 if lang in available_locales), None)
+    return best_locale

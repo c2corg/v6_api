@@ -3,6 +3,7 @@ import urllib.request
 import urllib.parse
 import urllib.error
 
+from c2corg_api.models.route import Route
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mapping import SearchDocument
 from c2corg_api.tests import BaseTestCase
@@ -341,6 +342,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         # check that the version was created correctly
         doc = self.session.query(self._model).get(document_id)
+        self.assertEqual(1, doc.version)
         versions = doc.versions
         self.assertEqual(len(versions), 1)
         version = versions[0]
@@ -358,6 +360,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         archive_locale = version.document_locales_archive
         waypoint_locale_en = doc.locales[0]
+        self.assertEqual(1, waypoint_locale_en.version)
         self.assertEqual(
             archive_locale.version, waypoint_locale_en.version)
         self.assertEqual(archive_locale.document_id, document_id)
@@ -370,7 +373,13 @@ class BaseDocumentTestRest(BaseTestRest):
 
         self.assertIsNotNone(search_doc['doc_type'])
         self.assertEqual(search_doc['doc_type'], doc.type)
-        self.assertEqual(search_doc['title_en'], waypoint_locale_en.title)
+
+        if isinstance(doc, Route):
+            title = waypoint_locale_en.title_prefix + ': ' + \
+                waypoint_locale_en.title
+            self.assertEqual(search_doc['title_en'], title)
+        else:
+            self.assertEqual(search_doc['title_en'], waypoint_locale_en.title)
 
         return (body, doc)
 
@@ -611,10 +620,20 @@ class BaseDocumentTestRest(BaseTestRest):
             index=elasticsearch_config['index'])
 
         self.assertEqual(search_doc['doc_type'], document.type)
-        self.assertEqual(
-            search_doc['title_en'], document.get_locale('en').title)
-        self.assertEqual(
-            search_doc['title_fr'], document.get_locale('fr').title)
+
+        if isinstance(document, Route) and document.main_waypoint_id:
+            locale_en = document.get_locale('en')
+            title = locale_en.title_prefix + ': ' + locale_en.title
+            self.assertEqual(search_doc['title_en'], title)
+
+            locale_fr = document.get_locale('fr')
+            title = locale_fr.title_prefix + ' : ' + locale_fr.title
+            self.assertEqual(search_doc['title_fr'], title)
+        else:
+            self.assertEqual(
+                search_doc['title_en'], document.get_locale('en').title)
+            self.assertEqual(
+                search_doc['title_fr'], document.get_locale('fr').title)
 
         return (body, document)
 
