@@ -58,6 +58,7 @@ class MigrateAssociations(MigrateBase):
             'associations_log',
             association_log_query_count, association_log_query, AssociationLog,
             self.get_log)
+        self._set_route_main_waypoint()
 
     def get_association(self, row):
         return dict(
@@ -96,3 +97,38 @@ class MigrateAssociations(MigrateBase):
             # a bulk insertion. `mark_changed` forces a commit.
             zope.sqlalchemy.mark_changed(self.session_target)
         self.stop()
+
+    def _set_route_main_waypoint(self):
+        """Set the field `main_waypoint_id` to the highest associated waypoint.
+        """
+        print('Set main waypoint for routes')
+        with transaction.manager:
+            self.session_target.execute(SQL_SET_MAIN_WAYPOINT_ID)
+            zope.sqlalchemy.mark_changed(self.session_target)
+        print('Done')
+
+
+SQL_SET_MAIN_WAYPOINT_ID = """
+with v as (select t.r_id, t.w_id
+  from (select
+    u.r_id, u.w_id, dense_rank() over(
+      partition by u.r_id order by u.elevation desc) as rank
+    from ((select r.document_id as r_id, wp.document_id as w_id, wp.elevation
+      from guidebook.documents r
+        join guidebook.associations a on r.document_id = a.parent_document_id
+        join guidebook.documents d on a.child_document_id = d.document_id and
+          d.type = 'w'
+        join guidebook.waypoints wp on d.document_id = wp.document_id
+      where r.type = 'r')
+    union (select r.document_id as r_id, wp.document_id as w_id, wp.elevation
+      from guidebook.documents r
+        join guidebook.associations a on r.document_id = a.child_document_id
+        join guidebook.documents d on a.parent_document_id = d.document_id and
+          d.type = 'w'
+        join guidebook.waypoints wp on d.document_id = wp.document_id
+      where r.type = 'r')) u
+  ) t where t.rank = 1)
+update guidebook.routes r
+  set main_waypoint_id = v.w_id
+from v
+where v.r_id = r.document_id;"""
