@@ -8,3 +8,4 @@ export tests_db_name = c2corg_tsauerwein_tests
 export elasticsearch_index = c2corg_tsauerwein
 export tests_elasticsearch_index = c2corg_tsauerwein_tests
 host = localhost
+export migration_db_port = 5433
