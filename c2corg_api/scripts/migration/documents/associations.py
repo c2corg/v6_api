@@ -46,7 +46,8 @@ association_log_query = \
 
 
 class MigrateAssociations(MigrateBase):
-    """Migrate associations and association log.
+    """Migrate associations and association log. And also set the main waypoint
+    and `title_prefix` for routes.
     """
 
     def migrate(self):
@@ -59,6 +60,7 @@ class MigrateAssociations(MigrateBase):
             association_log_query_count, association_log_query, AssociationLog,
             self.get_log)
         self._set_route_main_waypoint()
+        self._set_route_locale_title_prefix()
 
     def get_association(self, row):
         return dict(
@@ -93,7 +95,7 @@ class MigrateAssociations(MigrateBase):
                 batch.add(get_entity(entity_in))
                 self.progress(count, total_count)
 
-            # the transaction will not be commited automatically when doing
+            # the transaction will not be committed automatically when doing
             # a bulk insertion. `mark_changed` forces a commit.
             zope.sqlalchemy.mark_changed(self.session_target)
         self.stop()
@@ -104,6 +106,21 @@ class MigrateAssociations(MigrateBase):
         print('Set main waypoint for routes')
         with transaction.manager:
             self.session_target.execute(SQL_SET_MAIN_WAYPOINT_ID)
+            zope.sqlalchemy.mark_changed(self.session_target)
+        print('Done')
+
+    def _set_route_locale_title_prefix(self):
+        """Set the `title_prefix` field for all route locales that have a
+        main waypoint. First set the field for route locales, where there is
+        a locale of the main waypoint in the same culture. Then with a 2nd
+        query set the remaining rows by selecting the "best" locale of the main
+        waypoint.
+        """
+        with transaction.manager:
+            print('Set title prefix for route locales (same culture)')
+            self.session_target.execute(SQL_SET_TITLE_PREFIX_SAME_CULTURE)
+            print('Set title prefix for route locales (other culture)')
+            self.session_target.execute(SQL_SET_TITLE_PREFIX_OTHER_CULTURE)
             zope.sqlalchemy.mark_changed(self.session_target)
         print('Done')
 
@@ -132,3 +149,40 @@ update guidebook.routes r
   set main_waypoint_id = v.w_id
 from v
 where v.r_id = r.document_id;"""
+
+SQL_SET_TITLE_PREFIX_SAME_CULTURE = """
+with v as (select rl.id, l2.title
+  from guidebook.routes_locales rl join guidebook.documents_locales l1
+    on rl.id = l1.id
+  join guidebook.routes r on l1.document_id = r.document_id
+  join guidebook.documents_locales l2
+    on r.main_waypoint_id = l2.document_id and l2.culture = l1.culture)
+update guidebook.routes_locales l
+  set title_prefix = v.title
+from v
+where v.id = l.id;
+"""
+
+SQL_SET_TITLE_PREFIX_OTHER_CULTURE = """
+with v as (select t.id, t.title
+  from (select rl.id, l2.title, dense_rank() over(
+    partition by rl.id
+    order by
+      l2.culture != 'fr',
+      l2.culture != 'en',
+      l2.culture != 'it',
+      l2.culture != 'de',
+      l2.culture != 'es',
+      l2.culture != 'ca'
+    ) as rank
+    from guidebook.routes_locales rl join guidebook.documents_locales l1
+      on rl.id = l1.id and rl.title_prefix is null
+    join guidebook.routes r on l1.document_id = r.document_id
+    join guidebook.documents_locales l2
+      on r.main_waypoint_id = l2.document_id) t
+  where t.rank = 1)
+update guidebook.routes_locales l
+  set title_prefix = v.title
+from v
+where v.id = l.id;
+"""
