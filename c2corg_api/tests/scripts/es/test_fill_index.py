@@ -1,4 +1,5 @@
 from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.search.mapping import SearchDocument
 from c2corg_api.tests import BaseTestCase
@@ -36,6 +37,18 @@ class FillIndexTest(BaseTestCase):
                     description='...',
                     summary='The heighest point in Europe')
             ]))
+        self.session.add(Route(
+            document_id=71173,
+            activities=['skitouring'], elevation_max=1500, elevation_min=700,
+            height_diff_up=800, height_diff_down=800, durations='1',
+            locales=[
+                RouteLocale(
+                    culture='en', title='Face N',
+                    description='...', gear='paraglider',
+                    title_prefix='Mont Blanc'
+                )
+            ]
+        ))
         self.session.flush()
 
         # fill the ElasticSearch index
@@ -53,3 +66,9 @@ class FillIndexTest(BaseTestCase):
         self.assertEqual(waypoint2.title_en, 'Mont Blanc')
         self.assertEqual(waypoint2.title_fr, '')
         self.assertEqual(waypoint2.doc_type, 'w')
+
+        route = SearchDocument.get(id=71173)
+        self.assertIsNotNone(route)
+        self.assertEqual(route.title_en, 'Mont Blanc: Face N')
+        self.assertEqual(route.title_fr, '')
+        self.assertEqual(route.doc_type, 'r')

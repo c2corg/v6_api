@@ -1,6 +1,7 @@
 import os
 import sys
 
+from c2corg_api.models.route import RouteLocale
 from pyramid.paster import (
     get_appsettings,
     setup_logging,
@@ -16,7 +17,7 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import configure_es_from_config, elasticsearch_config
-from c2corg_api.search.utils import strip_bbcodes
+from c2corg_api.search.utils import strip_bbcodes, get_title
 
 batch_size = 1000
 
@@ -52,11 +53,14 @@ def fill_index(db_session):
 
     total = DBSession.query(DocumentLocale).count()
 
-    q = DBSession.\
-        query(
+    q = DBSession.query(
             DocumentLocale.document_id, DocumentLocale.title,
             DocumentLocale.summary, DocumentLocale.description,
-            DocumentLocale.culture, DocumentLocale.type).\
+            DocumentLocale.culture, DocumentLocale.type,
+            RouteLocale.__table__.c.title_prefix). \
+        outerjoin(
+            RouteLocale.__table__,
+            DocumentLocale.id == RouteLocale.__table__.c.id).\
         order_by(DocumentLocale.document_id, DocumentLocale.culture)
 
     def progress(count, total_count):
@@ -71,7 +75,8 @@ def fill_index(db_session):
     batch = ElasticBatch(client, batch_size)
     count = 0
     with batch:
-        for document_id, title, summary, description, culture, type in q:
+        for document_id, title, summary, description, culture, type, \
+                title_prefix in q:
             if search_document is not None and document_id != last_id:
                 batch.add(search_document)
                 search_document = None
@@ -85,7 +90,8 @@ def fill_index(db_session):
                     'doc_type': type
                 }
 
-            search_document['title_' + culture] = title
+            search_document['title_' + culture] = get_title(
+                title, title_prefix, culture)
             search_document['summary_' + culture] = strip_bbcodes(summary)
             search_document['description_' + culture] = \
                 strip_bbcodes(description)
