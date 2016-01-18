@@ -1,20 +1,21 @@
-from c2corg_common.attributes import cultures_priority
-from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, HTTPBadRequest
-from sqlalchemy.orm import joinedload, contains_eager
-from sqlalchemy.orm.exc import StaleDataError
-from sqlalchemy.sql.expression import literal_column, union
 from c2corg_api.models import DBSession
+from c2corg_api.models.association import get_associations
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
     ArchiveDocumentGeometry, set_available_cultures)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
+from c2corg_api.models.route import schema_association_route
+from c2corg_api.models.waypoint import schema_association_waypoint
 from c2corg_api.search.sync import sync_search_index
-from c2corg_api.views import to_json_dict, to_seconds
+from c2corg_api.views import cors_policy
+from c2corg_api.views import to_json_dict, to_seconds, set_best_locale
 from c2corg_api.views.validation import check_required_fields, \
     check_duplicate_locales, validate_id, validate_lang
-
 from cornice.resource import resource, view
-from c2corg_api.views import cors_policy
+from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, HTTPBadRequest
+from sqlalchemy.orm import joinedload, contains_eager
+from sqlalchemy.orm.exc import StaleDataError
+from sqlalchemy.sql.expression import literal_column, union
 
 # the maximum number of documents that can be returned in a request
 LIMIT_MAX = 100
@@ -110,26 +111,43 @@ class DocumentRest(object):
         document = self._get_document(clazz, id, lang)
         set_available_cultures([document])
 
+        self._set_associations(document, lang)
+
         if adapt_schema:
             schema = adapt_schema(schema, document)
 
         return to_json_dict(document, schema)
 
-    def _collection_post(self, clazz, schema):
+    def _set_associations(self, document, lang):
+        linked_waypoints, linked_routes = get_associations(document, lang)
+        document.associations = {
+            'waypoints': [
+                to_json_dict(wp, schema_association_waypoint)
+                for wp in linked_waypoints
+            ],
+            'routes': [
+                to_json_dict(r, schema_association_route)
+                for r in linked_routes
+            ]
+        }
+
+    def _collection_post(self, clazz, schema, after_add=None):
         document = schema.objectify(self.request.validated)
         document.document_id = None
 
         DBSession.add(document)
         DBSession.flush()
-
         user_id = self.request.authenticated_userid
         self._create_new_version(document, user_id)
+
+        if after_add:
+            after_add(document)
 
         sync_search_index(document)
 
         return to_json_dict(document, schema)
 
-    def _put(self, clazz, schema):
+    def _put(self, clazz, schema, after_update=None):
         user_id = self.request.authenticated_userid
         id = self.request.validated['id']
         document_in = \
@@ -158,13 +176,16 @@ class DocumentRest(object):
         # version numbers in case attributes have changed. by comparing with
         # the old version numbers, we can check if only figures or only locales
         # have changed.
-        (update_type, changed_langs) = document.get_update_type(old_versions)
+        (update_types, changed_langs) = document.get_update_type(old_versions)
 
-        if update_type:
+        if update_types:
             # A new version needs to be created and persisted
             self._update_version(
                 document, user_id, self.request.validated['message'],
-                update_type,  changed_langs)
+                update_types,  changed_langs)
+
+            if after_update:
+                after_update(document, update_types)
 
             # And the search updated
             sync_search_index(document)
@@ -527,32 +548,6 @@ def get_all_fields(fields, activities, field_list_type):
     # turn a list of lists [['a', 'b'], ['b', 'c'], ['d']] into a flat set
     # ['a', 'b', 'c', 'd']
     return set(sum(fields_list, []))
-
-
-def set_best_locale(documents, preferred_lang):
-    """Sets the "best" locale on the given documents. The "best" locale is
-    the locale in the given "preferred language" if available. Otherwise
-    it is the "most relevant" translation according to `cultures_priority`.
-    """
-    if preferred_lang is None:
-        return
-
-    for document in documents:
-        # need to detach the document from the session, so that the
-        # following change to `document.locales` is not persisted
-        DBSession.expunge(document)
-
-        if document.locales:
-            available_locales = {
-                locale.culture: locale for locale in document.locales}
-            if preferred_lang in available_locales:
-                document.locales = [available_locales[preferred_lang]]
-            else:
-                best_locale = next(
-                    (available_locales[lang] for lang in cultures_priority
-                        if lang in available_locales), None)
-                if best_locale:
-                    document.locales = [best_locale]
 
 
 @resource(path='/document/{id}/history/{lang}', cors_policy=cors_policy)

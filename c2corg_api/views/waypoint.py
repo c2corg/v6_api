@@ -1,3 +1,8 @@
+from c2corg_api.models import DBSession
+from c2corg_api.models.document import UpdateType
+from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.search.sync import sync_search_index
+from c2corg_api.views.route import set_route_title_prefix
 from cornice.resource import resource, view
 
 from c2corg_api.models.waypoint import (
@@ -15,6 +20,7 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
 from c2corg_common.fields_waypoint import fields_waypoint
 from c2corg_common.attributes import waypoint_types
 from functools import lru_cache
+from sqlalchemy.orm import joinedload, load_only
 
 validate_waypoint_create = make_validator_create(
     fields_waypoint, 'waypoint_type', waypoint_types)
@@ -52,15 +58,15 @@ class WaypointRest(DocumentRest):
         return self._get(Waypoint, schema_waypoint, schema_adaptor)
 
     @restricted_json_view(schema=schema_waypoint,
-                          validators=validate_waypoint_create,
-                          permission="authenticated")
+                          validators=validate_waypoint_create)
     def collection_post(self):
         return self._collection_post(Waypoint, schema_waypoint)
 
     @restricted_json_view(schema=schema_update_waypoint,
                           validators=[validate_id, validate_waypoint_update])
     def put(self):
-        return self._put(Waypoint, schema_waypoint)
+        return self._put(
+            Waypoint, schema_waypoint, after_update=update_linked_route_titles)
 
 
 @resource(path='/waypoints/{id}/{lang}/{version_id}', cors_policy=cors_policy)
@@ -71,3 +77,31 @@ class WaypointVersionRest(DocumentRest):
         return self._get_version(
             ArchiveWaypoint, ArchiveWaypointLocale, schema_waypoint,
             schema_adaptor)
+
+
+def update_linked_route_titles(waypoint, update_types):
+    """When a waypoint is the main waypoint of a route, the field
+    `title_prefix`, which caches the waypoint name, has to be updated.
+    This method takes care of updating all routes, that the waypoint is
+    "main waypoint" of.
+    """
+    if UpdateType.LANG not in update_types:
+        # if the locales did not change, no need to continue
+        return
+
+    linked_routes = DBSession.query(Route). \
+        filter(Route.main_waypoint_id == waypoint.document_id). \
+        options(joinedload(Route.locales).load_only(
+            RouteLocale.culture, RouteLocale.id)). \
+        options(load_only(Route.document_id)). \
+        all()
+
+    if linked_routes:
+        waypoint_locales = waypoint.locales
+        waypoint_locales_index = {
+            locale.culture: locale for locale in waypoint_locales}
+
+        for route in linked_routes:
+            set_route_title_prefix(
+                route, waypoint_locales, waypoint_locales_index)
+            sync_search_index(route)

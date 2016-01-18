@@ -1,6 +1,9 @@
 import json
 
+from c2corg_api.models.association import Association
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.views.route import update_title_prefix
 from shapely.geometry import shape, LineString
 
 from c2corg_api.models.route import (
@@ -56,6 +59,20 @@ class TestRouteRest(BaseDocumentTestRest):
         self._assert_geometry(body)
         self.assertNotIn('climbing_outdoor_types', body)
         self.assertIn('elevation_min', body)
+
+        self.assertIn('main_waypoint_id', body)
+        self.assertIn('associations', body)
+        associations = body.get('associations')
+
+        linked_waypoints = associations.get('waypoints')
+        self.assertEqual(1, len(linked_waypoints))
+        self.assertEqual(
+            self.waypoint.document_id, linked_waypoints[0].get('document_id'))
+
+        linked_routes = associations.get('routes')
+        self.assertEqual(1, len(linked_routes))
+        self.assertEqual(
+            self.route4.document_id, linked_routes[0].get('document_id'))
 
     def test_get_version(self):
         self.get_version(self.route, self.route_version)
@@ -157,6 +174,7 @@ class TestRouteRest(BaseDocumentTestRest):
 
     def test_post_success(self):
         body = {
+            'main_waypoint_id': self.waypoint.document_id,
             'activities': ['hiking', 'skitouring'],
             'elevation_min': 700,
             'elevation_max': 1500,
@@ -189,6 +207,15 @@ class TestRouteRest(BaseDocumentTestRest):
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
         self.assertIsNotNone(archive_geometry.geom)
+
+        self.assertEqual(doc.main_waypoint_id, self.waypoint.document_id)
+        self.assertEqual(
+            body.get('main_waypoint_id'), self.waypoint.document_id)
+        self.assertEqual(
+            archive_route.main_waypoint_id, self.waypoint.document_id)
+
+        self.assertEqual(
+            self.waypoint.locales[0].title, doc.locales[0].title_prefix)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -339,13 +366,41 @@ class TestRouteRest(BaseDocumentTestRest):
                 'locales': [
                     {'culture': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'paraglider',
-                     'version': self.locale_en.version}
+                     'version': self.locale_en.version,
+                     'title_prefix': 'Should be ignored'}
                 ]
             }
         }
         (body, route) = self.put_success_figures_only(body, self.route)
 
         self.assertEquals(route.elevation_max, 1600)
+
+    def test_put_success_main_wp_changed(self):
+        body = {
+            'message': 'Changing figures',
+            'document': {
+                'document_id': self.route.document_id,
+                'main_waypoint_id': self.waypoint.document_id,
+                'version': self.route.version,
+                'activities': ['skitouring'],
+                'elevation_min': 700,
+                'elevation_max': 1500,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'durations': ['1'],
+                'locales': [
+                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...', 'gear': 'paraglider',
+                     'version': self.locale_en.version}
+                ]
+            }
+        }
+        (body, route) = self.put_success_figures_only(body, self.route)
+
+        self.assertEqual(route.main_waypoint_id, self.waypoint.document_id)
+        locale_en = route.get_locale('en')
+        self.assertEqual(
+            locale_en.title_prefix, self.waypoint.get_locale('en').title)
 
     def test_put_success_lang_only(self):
         body = {
@@ -433,6 +488,29 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertAlmostEqual(line.coords[1][0], 635966)
         self.assertAlmostEqual(line.coords[1][1], 5723644)
 
+    def test_update_prefix_title(self):
+        self.route.locales.append(RouteLocale(
+            culture='es', title='Mont Blanc del cielo', description='...',
+            gear='paraglider'))
+        self.route.main_waypoint_id = self.waypoint.document_id
+        self.session.flush()
+        self.session.refresh(self.route)
+        update_title_prefix(self.route, create=False)
+
+        route = self.session.query(Route).get(self.route.document_id)
+        locale_en = route.get_locale('en')
+        self.assertEqual(locale_en.version, 1)
+        self.assertEqual(
+            locale_en.title_prefix, self.waypoint.get_locale('en').title)
+        locale_fr = route.get_locale('fr')
+        self.assertEqual(locale_fr.version, 1)
+        self.assertEqual(
+            locale_fr.title_prefix, self.waypoint.get_locale('fr').title)
+        locale_es = route.get_locale('es')
+        self.assertEqual(locale_es.version, 1)
+        self.assertEqual(
+            locale_es.title_prefix, self.waypoint.get_locale('fr').title)
+
     def _add_test_data(self):
         self.route = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
@@ -479,4 +557,24 @@ class TestRouteRest(BaseDocumentTestRest):
             culture='fr', title='Mont Blanc du ciel', description='...',
             gear='paraglider'))
         self.session.add(self.route4)
+
+        # add some associations
+        self.waypoint = Waypoint(
+            waypoint_type='summit', elevation=4,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'))
+        self.waypoint.locales.append(WaypointLocale(
+            culture='en', title='Mont Granier', description='...',
+            access='yep'))
+        self.waypoint.locales.append(WaypointLocale(
+            culture='fr', title='Mont Granier', description='...',
+            access='ouai'))
+        self.session.add(self.waypoint)
+        self.session.flush()
+        self.session.add(Association(
+            parent_document_id=self.route.document_id,
+            child_document_id=self.route4.document_id))
+        self.session.add(Association(
+            parent_document_id=self.waypoint.document_id,
+            child_document_id=self.route.document_id))
         self.session.flush()

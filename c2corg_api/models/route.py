@@ -1,3 +1,4 @@
+from c2corg_api.models.schema_utils import restrict_schema
 from sqlalchemy import (
     Column,
     Integer,
@@ -18,15 +19,12 @@ from c2corg_api.models.document import (
     get_update_schema, geometry_schema_overrides, schema_locale_attributes,
     schema_attributes)
 from c2corg_api.models import enums
+from sqlalchemy.orm import relationship
 
 ROUTE_TYPE = 'r'
 
 
 class _RouteMixin(object):
-
-    __mapper_args__ = {
-        'polymorphic_identity': ROUTE_TYPE
-    }
 
     # activite
     activities = Column(ArrayOfEnum(enums.activity_type), nullable=False)
@@ -150,7 +148,7 @@ class _RouteMixin(object):
 
 
 attributes = [
-    'activities', 'elevation_min', 'elevation_max',
+    'main_waypoint_id', 'activities', 'elevation_min', 'elevation_max',
     'height_diff_up', 'height_diff_down', 'route_length',
     'difficulties_height', 'height_diff_access', 'height_diff_difficulties',
     'route_types', 'orientation', 'duration', 'glacier_gear', 'configuration',
@@ -173,6 +171,16 @@ class Route(_RouteMixin, Document):
         Integer,
         ForeignKey(schema + '.documents.document_id'), primary_key=True)
 
+    main_waypoint_id = Column(
+        Integer, ForeignKey(schema + '.documents.document_id'), nullable=True)
+    main_waypoint = relationship(
+        Document, primaryjoin=main_waypoint_id == Document.document_id)
+
+    __mapper_args__ = {
+        'polymorphic_identity': ROUTE_TYPE,
+        'inherit_condition': Document.document_id == document_id
+    }
+
     def to_archive(self):
         route = ArchiveRoute()
         super(Route, self)._to_archive(route)
@@ -193,6 +201,16 @@ class ArchiveRoute(_RouteMixin, ArchiveDocument):
     id = Column(
         Integer,
         ForeignKey(schema + '.documents_archives.id'), primary_key=True)
+
+    main_waypoint_id = Column(
+        Integer, ForeignKey(schema + '.documents.document_id'), nullable=True)
+    main_waypoint = relationship(
+        Document, primaryjoin=main_waypoint_id == Document.document_id)
+
+    __mapper_args__ = {
+        'polymorphic_identity': ROUTE_TYPE,
+        'inherit_condition': ArchiveDocument.id == id
+    }
 
 
 class _RouteLocaleMixin(object):
@@ -231,6 +249,9 @@ class RouteLocale(_RouteLocaleMixin, DocumentLocale):
                 Integer,
                 ForeignKey(schema + '.documents_locales.id'), primary_key=True)
 
+    # the cached title of the main waypoint
+    title_prefix = Column(String)
+
     def to_archive(self):
         locale = ArchiveRouteLocale()
         super(RouteLocale, self).to_archive(locale)
@@ -257,7 +278,7 @@ class ArchiveRouteLocale(_RouteLocaleMixin, ArchiveDocumentLocale):
 schema_route_locale = SQLAlchemySchemaNode(
     RouteLocale,
     # whitelisted attributes
-    includes=schema_locale_attributes + attributes_locales,
+    includes=schema_locale_attributes + attributes_locales + ['title_prefix'],
     overrides={
         'version': {
             'missing': None
@@ -285,3 +306,6 @@ schema_route = SQLAlchemySchemaNode(
     })
 
 schema_update_route = get_update_schema(schema_route)
+schema_association_route = restrict_schema(schema_route, [
+    'locales.title', 'elevation_min', 'elevation_max', 'activities'
+])

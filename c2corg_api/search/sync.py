@@ -1,9 +1,11 @@
 import transaction
 import logging
 
+from c2corg_api.models import DBSession
+from c2corg_api.models.route import Route
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mapping import SearchDocument
-from c2corg_api.search.utils import strip_bbcodes
+from c2corg_api.search.utils import strip_bbcodes, get_title
 
 log = logging.getLogger(__name__)
 
@@ -32,14 +34,27 @@ def sync_search_index(document):
      The operation will be run once the current transaction has been committed
      successfully.
     """
+    if isinstance(document, Route):
+        # TODO the locales of routes have to be refreshed because the title
+        # prefix is set directly in the database. this is not optimized further
+        # because it is going to change anyway with
+        # https://github.com/c2corg/v6_api/issues/89
+        DBSession.refresh(document)
+
     document_id = document.document_id
     doc = {
         'doc_type': document.type
     }
 
+    has_title_prefix = isinstance(document, Route)
     for locale in document.locales:
         culture = locale.culture
-        doc['title_' + culture] = locale.title
+
+        # set the title prefix (name of the main waypoint) for routes
+        title_prefix = locale.title_prefix if has_title_prefix else None
+        title = get_title(locale.title, title_prefix, culture)
+
+        doc['title_' + culture] = title
         doc['summary_' + culture] = strip_bbcodes(locale.summary)
         doc['description_' + culture] = strip_bbcodes(locale.description)
 

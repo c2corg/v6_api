@@ -1,3 +1,4 @@
+from c2corg_api.models.schema_utils import restrict_schema
 from sqlalchemy import (
     Boolean,
     Column,
@@ -296,3 +297,6 @@ schema_waypoint = SQLAlchemySchemaNode(
     })
 
 schema_update_waypoint = get_update_schema(schema_waypoint)
+schema_association_waypoint = restrict_schema(schema_waypoint, [
+    'elevation', 'locales.title'
+])

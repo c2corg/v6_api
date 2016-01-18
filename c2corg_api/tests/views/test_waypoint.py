@@ -1,8 +1,12 @@
 import json
 
+from c2corg_api.models.association import Association
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.search import elasticsearch_config
+from c2corg_api.search.mapping import SearchDocument
 from shapely.geometry import shape, Point
 
+from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import (
     Waypoint, WaypointLocale, ArchiveWaypoint, ArchiveWaypointLocale)
 from c2corg_api.models.document import (
@@ -61,6 +65,19 @@ class TestWaypointRest(BaseDocumentTestRest):
         self._assert_geometry(body)
         self.assertIn('waypoint_type', body)
         self.assertNotIn('routes_quantity', body)
+
+        self.assertIn('associations', body)
+        associations = body.get('associations')
+
+        linked_waypoints = associations.get('waypoints')
+        self.assertEqual(1, len(linked_waypoints))
+        self.assertEqual(
+            self.waypoint4.document_id, linked_waypoints[0].get('document_id'))
+
+        linked_routes = associations.get('routes')
+        self.assertEqual(1, len(linked_routes))
+        self.assertEqual(
+            self.route.document_id, linked_routes[0].get('document_id'))
 
     def test_get_version(self):
         self.get_version(self.waypoint, self.waypoint_version)
@@ -317,7 +334,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Granier',
+                    {'culture': 'en', 'title': 'Mont Granier!',
                      'description': 'A.', 'access': 'n',
                      'version': self.locale_en.version}
                 ],
@@ -338,7 +355,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         versions = waypoint.versions
         version_en = versions[2]
         archive_locale = version_en.document_locales_archive
-        self.assertEqual(archive_locale.title, 'Mont Granier')
+        self.assertEqual(archive_locale.title, 'Mont Granier!')
         self.assertEqual(archive_locale.access, 'n')
 
         archive_document_en = version_en.document_archive
@@ -353,6 +370,19 @@ class TestWaypointRest(BaseDocumentTestRest):
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Granier')
         self.assertEqual(archive_locale.access, 'ouai')
+
+        # check that the title_prefix of an associated route (that the wp
+        # it the main wp of) was updated
+        route = self.session.query(Route).get(self.route.document_id)
+        route_locale_en = route.get_locale('en')
+        self.assertEqual(route_locale_en.title_prefix, 'Mont Granier!')
+
+        # check that the route was updated in the search index
+        search_doc = SearchDocument.get(
+            id=route.document_id,
+            index=elasticsearch_config['index'])
+        self.assertEqual(
+            search_doc['title_en'], 'Mont Granier!: Mont Blanc from the air')
 
     def test_put_success_figures_and_lang_only(self):
         body_put = {
@@ -646,4 +676,22 @@ class TestWaypointRest(BaseDocumentTestRest):
             culture='fr', title='Mont Granier', description='...',
             access='ouai'))
         self.session.add(self.waypoint4)
+
+        # add some associations
+        self.route = Route(
+            activities=['skitouring'], elevation_max=1500, elevation_min=700,
+            height_diff_up=800, height_diff_down=800, durations='1',
+            main_waypoint_id=self.waypoint.document_id
+        )
+        self.route.locales.append(RouteLocale(
+            culture='en', title='Mont Blanc from the air', description='...',
+            gear='paraglider'))
+        self.session.add(self.route)
+        self.session.flush()
+        self.session.add(Association(
+            parent_document_id=self.waypoint.document_id,
+            child_document_id=self.waypoint4.document_id))
+        self.session.add(Association(
+            parent_document_id=self.waypoint.document_id,
+            child_document_id=self.route.document_id))
         self.session.flush()
