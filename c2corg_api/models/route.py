@@ -254,7 +254,7 @@ class RouteLocale(_RouteLocaleMixin, DocumentLocale):
 
     def to_archive(self):
         locale = ArchiveRouteLocale()
-        super(RouteLocale, self).to_archive(locale)
+        super(RouteLocale, self)._to_archive(locale)
         copy_attributes(self, locale, attributes_locales)
 
         return locale

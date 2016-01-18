@@ -1,9 +1,9 @@
 import json
 from shapely.geometry import shape, Point
 
-from c2corg_api.models.image import (
-    Image, ImageLocale, ArchiveImage, ArchiveImageLocale)
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.image import Image, ArchiveImage
+from c2corg_api.models.document import (
+    DocumentGeometry, ArchiveDocumentLocale, DocumentLocale)
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
@@ -13,7 +13,7 @@ class TestImageRest(BaseDocumentTestRest):
 
     def setUp(self):  # noqa
         self.set_prefix_and_model(
-            "/images", Image, ArchiveImage, ArchiveImageLocale)
+            "/images", Image, ArchiveImage, ArchiveDocumentLocale)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
@@ -303,10 +303,10 @@ class TestImageRest(BaseDocumentTestRest):
         self.image = Image(
             activities='paragliding', height=2000)
 
-        self.locale_en = ImageLocale(
+        self.locale_en = DocumentLocale(
             culture='en', title='Mont Blanc from the air', description='...')
 
-        self.locale_fr = ImageLocale(
+        self.locale_fr = DocumentLocale(
             culture='fr', title='Mont Blanc du ciel', description='...')
 
         self.image.locales.append(self.locale_en)
@@ -329,9 +329,9 @@ class TestImageRest(BaseDocumentTestRest):
         self.session.add(self.image3)
         self.image4 = Image(
             activities='paragliding', height=2000)
-        self.image4.locales.append(ImageLocale(
+        self.image4.locales.append(DocumentLocale(
             culture='en', title='Mont Blanc from the air', description='...'))
-        self.image4.locales.append(ImageLocale(
+        self.image4.locales.append(DocumentLocale(
             culture='fr', title='Mont Blanc du ciel', description='...'))
         self.session.add(self.image4)
         self.session.flush()

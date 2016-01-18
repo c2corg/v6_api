@@ -1,3 +1,4 @@
+from colanderalchemy.schema import SQLAlchemySchemaNode
 from sqlalchemy import (
     Column,
     Integer,
@@ -239,7 +240,12 @@ class DocumentLocale(Base, _DocumentLocaleMixin):
         'summary'
     ]
 
-    def to_archive(self, locale):
+    def to_archive(self):
+        locale = ArchiveDocumentLocale()
+        self._to_archive(locale)
+        return locale
+
+    def _to_archive(self, locale):
         copy_attributes(self, locale, DocumentLocale._ATTRIBUTES)
         return locale
 
@@ -369,6 +375,16 @@ schema_attributes = [
 schema_locale_attributes = [
     'version', 'culture', 'title', 'description', 'summary'
 ]
+
+schema_document_locale = SQLAlchemySchemaNode(
+    DocumentLocale,
+    # whitelisted attributes
+    includes=schema_locale_attributes,
+    overrides={
+        'version': {
+            'missing': None
+        }
+    })
 
 geometry_schema_overrides = {
     # whitelisted attributes

@@ -247,7 +247,7 @@ class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
 
     def to_archive(self):
         locale = ArchiveWaypointLocale()
-        super(WaypointLocale, self).to_archive(locale)
+        super(WaypointLocale, self)._to_archive(locale)
         copy_attributes(self, locale, attributes_locales)
 
         return locale
