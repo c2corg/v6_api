@@ -16,10 +16,15 @@ from c2corg_api.security.roles import (
 from c2corg_api.security.discourse_sso_provider import (
     discourse_redirect, discourse_redirect_without_nonce)
 
+from pydiscourse.client import DiscourseClient
+
 import colander
 import datetime
 
 ENCODING = 'UTF-8'
+
+# 1 second timeout for requests to discourse API
+CLIENT_TIMEOUT = 1
 
 
 def validate_json_password(request):
@@ -166,6 +171,14 @@ class UserRenewRest(object):
             raise HTTPInternalServerError('Error renewing token')
 
 
+def get_discourse_client(settings):
+    api_key = settings['discourse.api_key']
+    url = settings['discourse.url']
+    # system is a built-in user available in all discourse instances.
+    return DiscourseClient(
+        url, api_username='system', api_key=api_key, timeout=CLIENT_TIMEOUT)
+
+
 @resource(path='/users/logout', cors_policy=cors_policy)
 class UserLogoutRest(object):
     def __init__(self, request):
@@ -174,5 +187,11 @@ class UserLogoutRest(object):
     @restricted_view(renderer='json')
     def post(self):
         result = {'user': self.request.authenticated_userid}
-        remove_token(extract_token(self.request))
+        token = extract_token(self.request)
+        remove_token(token)
+        try:
+            client = get_discourse_client(self.request.registry.settings)
+            client.log_out(self.request.authenticated_userid)
+        except:
+            pass  # Any error with discourse should not prevent logout
         return result
