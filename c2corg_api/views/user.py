@@ -137,8 +137,11 @@ class UserLoginRest(object):
                 redirect = discourse_redirect(user, sso, sig, settings)
                 response['redirect'] = redirect
             else:
-                redirect = discourse_redirect_without_nonce(user, settings)
-                response['redirect_internal'] = redirect
+                try:
+                    redirect = discourse_redirect_without_nonce(user, settings)
+                    response['redirect_internal'] = redirect
+                except:
+                    pass  # Any error with discourse should not prevent login
             return response
         else:
             request.errors.status = 403
