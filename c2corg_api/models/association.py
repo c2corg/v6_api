@@ -7,7 +7,6 @@ from sqlalchemy import (
     Boolean,
     Column,
     Integer,
-    String,
     DateTime,
     ForeignKey
     )
@@ -21,6 +20,11 @@ from c2corg_api.models.document import Document
 
 class Association(Base):
     """Associations between documents.
+
+    Certain associations build a hierarchy between the documents (e.g. between
+    summits), in this case it's important which document is the "parent" and
+    which is the "child" of the association. For other undirected associations
+    it doesn't matter which document is the "parent" or "child".
     """
     __tablename__ = 'associations'
 
@@ -35,9 +39,6 @@ class Association(Base):
         nullable=False)
     child_document = relationship(
         Document, primaryjoin=child_document_id == Document.document_id)
-
-    # TODO ?
-    link_type = Column(String(2))
 
     __table_args__ = (
         PrimaryKeyConstraint(parent_document_id, child_document_id),

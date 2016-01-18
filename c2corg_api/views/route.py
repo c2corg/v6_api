@@ -104,10 +104,10 @@ def set_route_title_prefix(route, waypoint_locales, waypoint_locales_index):
         set_title_prefix(route, waypoint_locales[0].title)
     else:
         for locale in route.locales:
-            waypoint_local = get_best_locale(
+            waypoint_locale = get_best_locale(
                 waypoint_locales_index, locale.culture)
             set_title_prefix(
-                route, waypoint_local.title if waypoint_local else '')
+                route, waypoint_locale.title if waypoint_locale else '')
 
 
 def set_title_prefix(route, title):
