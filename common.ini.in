@@ -23,4 +23,5 @@ jwtauth.master_secret = The master key
 
 # FIXME: do not save the forum key on github
 discourse.url = {discourse_url}
-discourse.sso_secret = some secret string
+discourse.api_key = {discourse_api_key}
+discourse.sso_secret = {discourse_sso_secret}
