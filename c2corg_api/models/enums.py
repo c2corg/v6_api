@@ -92,3 +92,5 @@ map_editor = enum(
     'map_editor', attributes.map_editors)
 map_scale = enum(
     'map_scale', attributes.map_scales)
+area_type = enum(
+    'area_type', attributes.area_types)
