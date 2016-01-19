@@ -5,7 +5,8 @@ from cornice.resource import resource
 
 from c2corg_api.models.user import User, schema_user, schema_create_user
 from c2corg_api.views import (
-        cors_policy, json_view, restricted_view, to_json_dict)
+        cors_policy, json_view, restricted_view, restricted_json_view,
+        to_json_dict)
 from c2corg_api.views.validation import validate_id
 
 from c2corg_api.models import DBSession
@@ -138,21 +139,22 @@ class UserLoginRest(object):
         token = try_login(user, password, request) if user else None
         if token:
             response = token_to_response(user, token, request)
-            settings = request.registry.settings
-            if 'sso' in request.json and 'sig' in request.json:
-                sso = request.json['sso']
-                sig = request.json['sig']
-                redirect = discourse_redirect(user, sso, sig, settings)
-                response['redirect'] = redirect
-            else:
-                try:
-                    redirect = discourse_redirect_without_nonce(user, settings)
-                    response['redirect_internal'] = redirect
-                except:
-                    # Any error with discourse should not prevent login
-                    log.warning(
-                        'Error logging into discourse for %d', user.id,
-                        exc_info=True)
+            if 'discourse' in request.json:
+                settings = request.registry.settings
+                if 'sso' in request.json and 'sig' in request.json:
+                    sso = request.json['sso']
+                    sig = request.json['sig']
+                    redirect = discourse_redirect(user, sso, sig, settings)
+                    response['redirect'] = redirect
+                else:
+                    try:
+                        r = discourse_redirect_without_nonce(user, settings)
+                        response['redirect_internal'] = r
+                    except:
+                        # Any error with discourse should not prevent login
+                        log.warning(
+                            'Error logging into discourse for %d', user.id,
+                            exc_info=True)
             return response
         else:
             request.errors.status = 403
@@ -190,17 +192,19 @@ class UserLogoutRest(object):
     def __init__(self, request):
         self.request = request
 
-    @restricted_view(renderer='json')
+    @restricted_json_view(renderer='json')
     def post(self):
-        userid = self.request.authenticated_userid
+        request = self.request
+        userid = request.authenticated_userid
         result = {'user': userid}
-        token = extract_token(self.request)
-        remove_token(token)
-        try:
-            client = get_discourse_client(self.request.registry.settings)
-            client.log_out(self.request.authenticated_userid)
-        except:
-            # Any error with discourse should not prevent logout
-            log.warning(
-                'Error logging out of discourse for %d', userid, exc_info=True)
+        remove_token(extract_token(request))
+        if 'discourse' in request.json:
+            try:
+                client = get_discourse_client(request.registry.settings)
+                client.log_out(userid)
+            except:
+                # Any error with discourse should not prevent logout
+                log.warning(
+                    'Error logging out of discourse for %d', userid,
+                    exc_info=True)
         return result
