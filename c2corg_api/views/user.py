@@ -21,6 +21,9 @@ from pydiscourse.client import DiscourseClient
 import colander
 import datetime
 
+import logging
+log = logging.getLogger(__name__)
+
 ENCODING = 'UTF-8'
 
 # 1 second timeout for requests to discourse API
@@ -146,7 +149,10 @@ class UserLoginRest(object):
                     redirect = discourse_redirect_without_nonce(user, settings)
                     response['redirect_internal'] = redirect
                 except:
-                    pass  # Any error with discourse should not prevent login
+                    # Any error with discourse should not prevent login
+                    log.warning(
+                        'Error logging into discourse for %d', user.id,
+                        exc_info=True)
             return response
         else:
             request.errors.status = 403
@@ -186,12 +192,15 @@ class UserLogoutRest(object):
 
     @restricted_view(renderer='json')
     def post(self):
-        result = {'user': self.request.authenticated_userid}
+        userid = self.request.authenticated_userid
+        result = {'user': userid}
         token = extract_token(self.request)
         remove_token(token)
         try:
             client = get_discourse_client(self.request.registry.settings)
             client.log_out(self.request.authenticated_userid)
         except:
-            pass  # Any error with discourse should not prevent logout
+            # Any error with discourse should not prevent logout
+            log.warning(
+                'Error logging out of discourse for %d', userid, exc_info=True)
         return result
