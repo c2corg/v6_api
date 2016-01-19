@@ -60,6 +60,10 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertNotIn('climbing_outdoor_types', body)
         self.assertIn('elevation_min', body)
 
+        self.assertEqual(
+            'Main waypoint title',
+            body.get('locales')[0].get('title_prefix'))
+
         self.assertIn('main_waypoint_id', body)
         self.assertIn('associations', body)
         associations = body.get('associations')
@@ -496,6 +500,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.session.flush()
         self.session.refresh(self.route)
         update_title_prefix(self.route, create=False)
+        self.session.expire_all()
 
         route = self.session.query(Route).get(self.route.document_id)
         locale_en = route.get_locale('en')
@@ -518,7 +523,7 @@ class TestRouteRest(BaseDocumentTestRest):
 
         self.locale_en = RouteLocale(
             culture='en', title='Mont Blanc from the air', description='...',
-            gear='paraglider')
+            gear='paraglider', title_prefix='Main waypoint title')
 
         self.locale_fr = RouteLocale(
             culture='fr', title='Mont Blanc du ciel', description='...',
@@ -564,10 +569,10 @@ class TestRouteRest(BaseDocumentTestRest):
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'))
         self.waypoint.locales.append(WaypointLocale(
-            culture='en', title='Mont Granier', description='...',
+            culture='en', title='Mont Granier (en)', description='...',
             access='yep'))
         self.waypoint.locales.append(WaypointLocale(
-            culture='fr', title='Mont Granier', description='...',
+            culture='fr', title='Mont Granier (fr)', description='...',
             access='ouai'))
         self.session.add(self.waypoint)
         self.session.flush()

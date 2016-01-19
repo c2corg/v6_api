@@ -106,14 +106,21 @@ def set_route_title_prefix(route, waypoint_locales, waypoint_locales_index):
         for locale in route.locales:
             waypoint_locale = get_best_locale(
                 waypoint_locales_index, locale.culture)
-            set_title_prefix(
-                route, waypoint_locale.title if waypoint_locale else '')
+            set_title_prefix_for_ids(
+                [locale.id],
+                waypoint_locale.title if waypoint_locale else '')
 
 
 def set_title_prefix(route, title):
     """Set the given title as `prefix_title` for all locales of the given
     route.
     """
-    locale_ids = [l.id for l in route.locales]
-    DBSession.query(RouteLocale).filter(RouteLocale.id.in_(locale_ids)). \
+    set_title_prefix_for_ids([l.id for l in route.locales])
+
+
+def set_title_prefix_for_ids(ids, title):
+    """Set the given title as `prefix_title` for all route locales with
+    the given ids.
+    """
+    DBSession.query(RouteLocale).filter(RouteLocale.id.in_(ids)). \
         update({RouteLocale.title_prefix: title}, synchronize_session=False)
