@@ -474,8 +474,8 @@ def get_neighbour_version_ids(version_id, document_id, lang):
     return previous_version_id, next_version_id
 
 
-def validate_document(document, request, fields, type_field, valid_type_values,
-                      updating):
+def validate_document_for_type(document, request, fields, type_field,
+                               valid_type_values, updating):
     """Checks that all required fields are given.
     """
     document_type = document.get(type_field)
@@ -499,31 +499,47 @@ def validate_document(document, request, fields, type_field, valid_type_values,
         return
 
     fields_req = fields.get(document_type)['required']
+    validate_document(document, request, fields_req, updating)
 
-    check_required_fields(document, fields_req, request, updating)
+
+def validate_document(document, request, fields, updating):
+    """Checks that all required fields are given.
+    """
+    check_required_fields(document, fields, request, updating)
     check_duplicate_locales(document, request)
 
 
-def make_validator_create(fields, type_field, valid_type_values):
+def make_validator_create(fields, type_field=None, valid_type_values=None):
     """Returns a validator function used for the creation of documents.
     """
-    def f(request):
-        document = request.validated
-        validate_document(
-            document, request, fields, type_field, valid_type_values,
-            updating=False)
+    if type_field is None or valid_type_values is None:
+        def f(request):
+            document = request.validated
+            validate_document(document, request, fields, updating=False)
+    else:
+        def f(request):
+            document = request.validated
+            validate_document_for_type(
+                document, request, fields, type_field, valid_type_values,
+                updating=False)
     return f
 
 
-def make_validator_update(fields, type_field, valid_type_values):
+def make_validator_update(fields, type_field=None, valid_type_values=None):
     """Returns a validator function used for updating documents.
     """
-    def f(request):
-        document = request.validated.get('document')
-        if document:
-            validate_document(
-                document, request, fields, type_field, valid_type_values,
-                updating=True)
+    if type_field is None or valid_type_values is None:
+        def f(request):
+            document = request.validated.get('document')
+            if document:
+                validate_document(document, request, fields, updating=True)
+    else:
+        def f(request):
+            document = request.validated.get('document')
+            if document:
+                validate_document_for_type(
+                    document, request, fields, type_field, valid_type_values,
+                    updating=True)
     return f
 
 
