@@ -27,8 +27,10 @@ log = logging.getLogger(__name__)
 
 ENCODING = 'UTF-8'
 
-# 1 second timeout for requests to discourse API
-CLIENT_TIMEOUT = 1
+# 10 seconds timeout for requests to discourse API
+# Using a large value to take into account a possible slow restart (caching)
+# of discourse.
+CLIENT_TIMEOUT = 10
 
 
 def validate_json_password(request):
