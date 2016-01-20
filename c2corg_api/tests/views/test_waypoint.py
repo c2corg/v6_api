@@ -2,6 +2,7 @@ import json
 
 from c2corg_api.models.association import Association
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mapping import SearchDocument
 from shapely.geometry import shape, Point
@@ -10,7 +11,7 @@ from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import (
     Waypoint, WaypointLocale, ArchiveWaypoint, ArchiveWaypointLocale)
 from c2corg_api.models.document import (
-    DocumentGeometry, ArchiveDocumentGeometry)
+    DocumentGeometry, ArchiveDocumentGeometry, DocumentLocale)
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
@@ -78,6 +79,11 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(1, len(linked_routes))
         self.assertEqual(
             self.route.document_id, linked_routes[0].get('document_id'))
+
+        self.assertIn('maps', body)
+        topo_map = body.get('maps')[0]
+        self.assertEqual(topo_map.get('code'), '3232ET')
+        self.assertEqual(topo_map.get('locales')[0].get('title'), 'Belley')
 
     def test_get_version(self):
         self.get_version(self.waypoint, self.waypoint_version)
@@ -694,4 +700,13 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(Association(
             parent_document_id=self.waypoint.document_id,
             child_document_id=self.route.document_id))
+
+        # add a map
+        self.session.add(TopoMap(
+            code='3232ET', editor='ign', scale='25000',
+            locales=[
+                DocumentLocale(culture='fr', title='Belley')
+            ],
+            geometry=DocumentGeometry(geom='SRID=3857;POLYGON((611774.917032556 5706934.10657514,611774.917032556 5744215.5846397,642834.402570357 5744215.5846397,642834.402570357 5706934.10657514,611774.917032556 5706934.10657514))')  # noqa
+        ))
         self.session.flush()

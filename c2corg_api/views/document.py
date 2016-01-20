@@ -5,6 +5,7 @@ from c2corg_api.models.document import (
     ArchiveDocumentGeometry, set_available_cultures)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.route import schema_association_route
+from c2corg_api.models.topo_map import get_maps, schema_listing_topo_map
 from c2corg_api.models.waypoint import schema_association_waypoint
 from c2corg_api.search.sync import sync_search_index
 from c2corg_api.views import cors_policy
@@ -102,16 +103,20 @@ class DocumentRest(object):
             'total': total
         }
 
-    def _get(self, clazz, schema, adapt_schema=None):
+    def _get(self, clazz, schema, adapt_schema=None, include_maps=True):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')
-        return self._get_in_lang(id, lang, clazz, schema, adapt_schema)
+        return self._get_in_lang(
+            id, lang, clazz, schema, adapt_schema, include_maps)
 
-    def _get_in_lang(self, id, lang, clazz, schema, adapt_schema=None):
+    def _get_in_lang(self, id, lang, clazz, schema, adapt_schema=None,
+                     include_maps=True):
         document = self._get_document(clazz, id, lang)
         set_available_cultures([document])
 
         self._set_associations(document, lang)
+        if include_maps:
+            self._set_maps(document, lang)
 
         if adapt_schema:
             schema = adapt_schema(schema, document)
@@ -130,6 +135,12 @@ class DocumentRest(object):
                 for r in linked_routes
             ]
         }
+
+    def _set_maps(self, document, lang):
+        topo_maps = get_maps(document, lang)
+        document.maps = [
+            to_json_dict(m, schema_listing_topo_map) for m in topo_maps
+        ]
 
     def _collection_post(self, clazz, schema, after_add=None):
         document = schema.objectify(self.request.validated)
