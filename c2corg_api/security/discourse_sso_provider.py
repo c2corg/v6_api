@@ -11,9 +11,6 @@ from urllib.parse import parse_qs
 import logging
 log = logging.getLogger(__name__)
 
-# 1 second timeout for getting sso information from discourse
-TIMEOUT = 1
-
 
 def decode_payload(payload):
     decoded = b64decode(payload.encode('utf-8')).decode('utf-8')
@@ -32,10 +29,10 @@ def check_signature(payload, signature, key):
         raise HTTPBadRequest('discourse login failed')
 
 
-def request_nonce(base_url, key):
+def request_nonce(base_url, key, timeout):
     url = '%s/session/sso' % base_url
     try:
-        r = requests.get(url, allow_redirects=False, timeout=TIMEOUT)
+        r = requests.get(url, allow_redirects=False, timeout=timeout)
         assert r.status_code == 302
     except Exception:
         log.error('Could not request nonce', exc_info=True)
@@ -97,9 +94,9 @@ def discourse_redirect(user, sso, signature, settings):
         return None
 
 
-def discourse_redirect_without_nonce(user, settings):
+def discourse_redirect_without_nonce(user, timeout, settings):
     discourse_url = settings.get('discourse.url')
     base_url = '%s/session/sso_login' % discourse_url
     key = str(settings.get('discourse.sso_secret'))  # must not be unicode
-    nonce = request_nonce(discourse_url, key)
+    nonce = request_nonce(discourse_url, key, timeout)
     return create_response_payload(user, nonce, base_url, key)

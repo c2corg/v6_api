@@ -150,7 +150,8 @@ class UserLoginRest(object):
                     response['redirect'] = redirect
                 else:
                     try:
-                        r = discourse_redirect_without_nonce(user, settings)
+                        r = discourse_redirect_without_nonce(
+                            user, CLIENT_TIMEOUT, settings)
                         response['redirect_internal'] = r
                     except:
                         # Any error with discourse should not prevent login
