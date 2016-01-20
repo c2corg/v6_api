@@ -1,5 +1,6 @@
-from c2corg_api.models.area import Area, ArchiveArea
-from c2corg_api.models.document import DocumentLocale, ArchiveDocumentLocale
+from c2corg_api.models.area import Area, ArchiveArea, AREA_TYPE
+from c2corg_api.models.document import DocumentLocale, ArchiveDocumentLocale, \
+    DOCUMENT_TYPE
 from c2corg_api.scripts.migration.documents.document import MigrateDocuments
 
 
@@ -55,7 +56,7 @@ class MigrateAreas(MigrateDocuments):
     def get_document(self, document_in, version):
         return dict(
             document_id=document_in.id,
-            type='m',
+            type=AREA_TYPE,
             version=version,
             protected=document_in.is_protected,
             redirects_to=document_in.redirects_to,
@@ -68,7 +69,7 @@ class MigrateAreas(MigrateDocuments):
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
-            type='m',
+            type=DOCUMENT_TYPE,
             version=version,
             culture=document_in.culture,
             title=document_in.name,

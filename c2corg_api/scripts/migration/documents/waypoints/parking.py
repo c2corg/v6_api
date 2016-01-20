@@ -1,3 +1,4 @@
+from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.migration.documents.waypoints.waypoint import \
     MigrateWaypoints
 
@@ -42,7 +43,7 @@ class MigrateParkings(MigrateWaypoints):
     def get_document(self, document_in, version):
         return dict(
             document_id=document_in.id,
-            type='w',
+            type=WAYPOINT_TYPE,
             version=version,
             waypoint_type='access',
             protected=document_in.is_protected,
@@ -66,7 +67,7 @@ class MigrateParkings(MigrateWaypoints):
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
-            type='w',
+            type=WAYPOINT_TYPE,
             version=version,
             culture=document_in.culture,
             title=document_in.name,
