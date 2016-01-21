@@ -1,4 +1,6 @@
 from c2corg_api.models.area import schema_area, Area, schema_update_area
+from c2corg_api.models.area_association import update_area
+from c2corg_api.models.document import UpdateType
 from c2corg_common.fields_area import fields_area
 from cornice.resource import resource, view
 
@@ -29,11 +31,26 @@ class AreaRest(DocumentRest):
             schema=schema_area, validators=validate_area_create)
     def collection_post(self):
         # TODO limit to moderators
-        return self._collection_post(Area, schema_area)
+        return self._collection_post(
+            Area, schema_area, after_add=insert_associations)
 
     @restricted_json_view(
             schema=schema_update_area,
             validators=[validate_id, validate_area_update])
     def put(self):
         # TODO limit to moderators
-        return self._put(Area, schema_area)
+        return self._put(Area, schema_area, after_update=update_associations)
+
+
+def insert_associations(area):
+    """Create links between this new area and documents.
+    """
+    update_area(area, reset=False)
+
+
+def update_associations(area, update_types):
+    """Update the links between this area and documents when the geometry
+    has changed.
+    """
+    if UpdateType.GEOM in update_types:
+        update_area(area, reset=True)

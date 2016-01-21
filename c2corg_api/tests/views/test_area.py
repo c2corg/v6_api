@@ -1,7 +1,9 @@
 import json
 
 from c2corg_api.models.area import Area, ArchiveArea
-from shapely.geometry import shape, Point
+from c2corg_api.models.area_association import AreaAssociation
+from c2corg_api.models.waypoint import Waypoint
+from shapely.geometry import shape, Polygon
 
 from c2corg_api.models.document import (
     DocumentGeometry, ArchiveDocumentLocale, DocumentLocale)
@@ -104,7 +106,7 @@ class TestAreaRest(BaseDocumentTestRest):
             'area_type': 'range',
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
+                'geom': '{"type":"Polygon","coordinates":[[[668518.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668518.249382151,5728802.39591739]]]}'  # noqa
             },
             'locales': [
                 {'culture': 'en', 'title': 'Chartreuse'}
@@ -125,6 +127,14 @@ class TestAreaRest(BaseDocumentTestRest):
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
         self.assertIsNotNone(archive_geometry.geom)
+
+        # check that a link for intersecting documents is created
+        links = self.session.query(AreaAssociation). \
+            filter(
+                AreaAssociation.area_id == doc.document_id). \
+            all()
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].document_id, self.waypoint1.document_id)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -194,7 +204,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'area_type': 'admin_limits',
                 'geometry': {
                     'version': self.area1.geometry.version,
-                    'geom': '{"type": "Point", "coordinates": [1, 2]}'
+                    'geom': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
                 },
                 'locales': [
                     {'culture': 'en', 'title': 'New title',
@@ -225,6 +235,14 @@ class TestAreaRest(BaseDocumentTestRest):
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Chartreuse')
 
+        # check that the links to intersecting documents are updated
+        links = self.session.query(AreaAssociation). \
+            filter(
+                AreaAssociation.area_id == self.area1.document_id). \
+            all()
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].document_id, self.waypoint1.document_id)
+
     def test_put_success_figures_only(self):
         body = {
             'message': 'Changing figures',
@@ -241,6 +259,15 @@ class TestAreaRest(BaseDocumentTestRest):
         (body, area) = self.put_success_figures_only(body, self.area1)
 
         self.assertEquals(area.area_type, 'admin_limits')
+
+        # check that the links to intersecting documents are not updated,
+        # because the geometry did not change
+        links = self.session.query(AreaAssociation). \
+            filter(
+                AreaAssociation.area_id == self.area1.document_id). \
+            all()
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].document_id, self.waypoint2.document_id)
 
     def test_put_success_lang_only(self):
         body = {
@@ -259,6 +286,15 @@ class TestAreaRest(BaseDocumentTestRest):
 
         self.assertEquals(
             area.get_locale('en').title, 'New title')
+
+        # check that the links to intersecting documents are not updated,
+        # because the geometry did not change
+        links = self.session.query(AreaAssociation). \
+            filter(
+                AreaAssociation.area_id == self.area1.document_id). \
+            all()
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].document_id, self.waypoint2.document_id)
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale.
@@ -285,10 +321,8 @@ class TestAreaRest(BaseDocumentTestRest):
         self.assertIsNotNone(geometry.get('geom'))
 
         geom = geometry.get('geom')
-        point = shape(json.loads(geom))
-        self.assertIsInstance(point, Point)
-        self.assertAlmostEqual(point.x, 635956)
-        self.assertAlmostEqual(point.y, 5723604)
+        polygon = shape(json.loads(geom))
+        self.assertIsInstance(polygon, Polygon)
 
     def _add_test_data(self):
         self.area1 = Area(area_type='range')
@@ -300,7 +334,8 @@ class TestAreaRest(BaseDocumentTestRest):
         self.area1.locales.append(self.locale_fr)
 
         self.area1.geometry = DocumentGeometry(
-            geom='SRID=3857;POINT(635956 5723604)')
+            geom='SRID=3857;POLYGON((668518.249382151 5728802.39591739,668518.249382151 5745465.66808356,689156.247019149 5745465.66808356,689156.247019149 5728802.39591739,668518.249382151 5728802.39591739))'  # noqa
+        )
 
         self.session.add(self.area1)
         self.session.flush()
@@ -318,4 +353,18 @@ class TestAreaRest(BaseDocumentTestRest):
         self.area4.locales.append(DocumentLocale(
             culture='fr', title='Isère'))
         self.session.add(self.area4)
+
+        self.waypoint1 = Waypoint(
+            waypoint_type='summit',
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(677461.381691516 5740879.44638645)')
+        )
+        self.waypoint2 = Waypoint(
+            waypoint_type='summit',
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(693666.031687976 5741108.7574713)')
+        )
+        self.session.add_all([self.waypoint1, self.waypoint2])
+        self.session.add(AreaAssociation(
+            document=self.waypoint2, area=self.area1))
         self.session.flush()
