@@ -1,4 +1,6 @@
 from c2corg_api.models import DBSession
+from c2corg_api.models.area import AREA_TYPE
+from c2corg_api.models.area_association import update_areas_for_document
 from c2corg_api.models.association import get_associations
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
@@ -151,6 +153,9 @@ class DocumentRest(object):
         user_id = self.request.authenticated_userid
         self._create_new_version(document, user_id)
 
+        if document.type != AREA_TYPE:
+            update_areas_for_document(document, reset=False)
+
         if after_add:
             after_add(document)
 
@@ -194,6 +199,9 @@ class DocumentRest(object):
             self._update_version(
                 document, user_id, self.request.validated['message'],
                 update_types,  changed_langs)
+
+            if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
+                update_areas_for_document(document, reset=True)
 
             if after_update:
                 after_update(document, update_types)

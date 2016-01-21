@@ -1,6 +1,6 @@
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import update_area, AreaAssociation, \
-    update_document
+    update_areas_for_document
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.waypoint import Waypoint
 
@@ -69,7 +69,7 @@ class TestAreaAssociation(BaseTestCase):
 
     def test_update_document(self):
         # waypoint inside the area
-        update_document(self.waypoint1)
+        update_areas_for_document(self.waypoint1)
 
         added_links = self._get_links_for_document(self.waypoint1)
         self.assertEqual(len(added_links), 1)
@@ -77,19 +77,19 @@ class TestAreaAssociation(BaseTestCase):
             added_links[0].area_id, self.area.document_id)
 
         # wp outside the area
-        update_document(self.waypoint2)
+        update_areas_for_document(self.waypoint2)
 
         added_links = self._get_links_for_document(self.waypoint2)
         self.assertEqual(len(added_links), 0)
 
         # wp without geometry
-        update_document(self.waypoint3)
+        update_areas_for_document(self.waypoint3)
 
         added_links = self._get_links_for_document(self.waypoint3)
         self.assertEqual(len(added_links), 0)
 
         # wp with empty geometry
-        update_document(self.waypoint4)
+        update_areas_for_document(self.waypoint4)
 
         added_links = self._get_links_for_document(self.waypoint4)
         self.assertEqual(len(added_links), 0)
@@ -101,7 +101,7 @@ class TestAreaAssociation(BaseTestCase):
             area_id=self.area.document_id))
         self.session.flush()
 
-        update_document(self.waypoint2, reset=True)
+        update_areas_for_document(self.waypoint2, reset=True)
 
         updated_links = self._get_links_for_document(self.waypoint2)
         self.assertEqual(len(updated_links), 0)

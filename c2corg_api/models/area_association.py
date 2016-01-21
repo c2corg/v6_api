@@ -72,7 +72,7 @@ def update_area(area, reset=False):
             intersecting_documents))
 
 
-def update_document(document, reset=False):
+def update_areas_for_document(document, reset=False):
     """Create associations for the given documents with all intersecting areas.
 
     If `reset` is True, all possible existing associations to this document are

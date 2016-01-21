@@ -1,5 +1,7 @@
 import json
 
+from c2corg_api.models.area import Area
+from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.topo_map import TopoMap
@@ -255,6 +257,14 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertIsNotNone(archive_geometry.geom)
         self.assertIsNotNone(archive_geometry.geom_detail)
 
+        # check that a link for intersecting areas is created
+        links = self.session.query(AreaAssociation). \
+            filter(
+                AreaAssociation.document_id == doc.document_id). \
+            all()
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].area_id, self.area1.document_id)
+
     def test_put_wrong_document_id(self):
         body = {
             'document': {
@@ -346,7 +356,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 ],
                 'geometry': {
                     'version': self.waypoint.geometry.version,
-                    'geom': '{"type": "Point", "coordinates": [1, 2]}'
+                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}'  # noqa
                 }
             }
         }
@@ -389,6 +399,14 @@ class TestWaypointRest(BaseDocumentTestRest):
             index=elasticsearch_config['index'])
         self.assertEqual(
             search_doc['title_en'], 'Mont Granier!: Mont Blanc from the air')
+
+        # check that the links for intersecting areas are updated
+        links = self.session.query(AreaAssociation). \
+            filter(
+                AreaAssociation.document_id == self.waypoint.document_id). \
+            all()
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].area_id, self.area1.document_id)
 
     def test_put_success_figures_and_lang_only(self):
         body_put = {
@@ -458,6 +476,15 @@ class TestWaypointRest(BaseDocumentTestRest):
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Granier')
         self.assertEqual(archive_locale.access, 'ouai')
+
+        # check that the links to intersecting areas are not updated,
+        # because the geometry did not change
+        links = self.session.query(AreaAssociation). \
+            filter(
+                AreaAssociation.document_id == self.waypoint.document_id). \
+            all()
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].area_id, self.area2.document_id)
 
     def test_put_success_figures_only(self):
         """Test updating a document with only changes to the figures.
@@ -709,4 +736,19 @@ class TestWaypointRest(BaseDocumentTestRest):
             ],
             geometry=DocumentGeometry(geom='SRID=3857;POLYGON((611774.917032556 5706934.10657514,611774.917032556 5744215.5846397,642834.402570357 5744215.5846397,642834.402570357 5706934.10657514,611774.917032556 5706934.10657514))')  # noqa
         ))
+
+        # add areas
+        self.area1 = Area(
+            area_type='range',
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POLYGON((611774.917032556 5706934.10657514,611774.917032556 5744215.5846397,642834.402570357 5744215.5846397,642834.402570357 5706934.10657514,611774.917032556 5706934.10657514))'  # noqa
+            )
+        )
+        self.area2 = Area(
+            area_type='range'
+        )
+
+        self.session.add_all([self.area1, self.area2])
+        self.session.add(AreaAssociation(
+            document=self.waypoint, area=self.area2))
         self.session.flush()
