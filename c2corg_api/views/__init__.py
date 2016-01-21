@@ -76,7 +76,9 @@ def to_json_dict(obj, schema):
     # manually copy certain attributes that were set on the object (it would be
     # cleaner to add the field to the schema, but ColanderAlchemy doesn't like
     # it because it's not a real column)
-    special_attributes = ['available_cultures', 'associations', 'maps']
+    special_attributes = [
+        'available_cultures', 'associations', 'maps', 'areas'
+    ]
     for attr in special_attributes:
         if hasattr(obj, attr):
             obj_dict[attr] = getattr(obj, attr)

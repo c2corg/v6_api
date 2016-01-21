@@ -25,7 +25,7 @@ class AreaRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
-        return self._get(Area, schema_area)
+        return self._get(Area, schema_area, include_areas=False)
 
     @restricted_json_view(
             schema=schema_area, validators=validate_area_create)

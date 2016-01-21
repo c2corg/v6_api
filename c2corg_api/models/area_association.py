@@ -1,12 +1,14 @@
 from c2corg_api.models import Base, schema, DBSession
 from c2corg_api.models.area import Area, AREA_TYPE
-from c2corg_api.models.document import Document, DocumentGeometry
+from c2corg_api.models.document import Document, DocumentGeometry, \
+    DocumentLocale
+from c2corg_api.views import set_best_locale
 from sqlalchemy import (
     Column,
     Integer,
     ForeignKey
     )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, load_only, joinedload
 from sqlalchemy.schema import PrimaryKeyConstraint
 from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import and_
@@ -103,3 +105,27 @@ def update_areas_for_document(document, reset=False):
         AreaAssociation.__table__.insert().from_select(
             [AreaAssociation.area_id, AreaAssociation.document_id],
             intersecting_areas))
+
+
+def get_areas(document, lang):
+    """Load and return areas linked with the given document.
+    """
+    areas = DBSession. \
+        query(Area). \
+        join(
+            AreaAssociation,
+            Area.document_id == AreaAssociation.area_id). \
+        options(load_only(
+            Area.document_id, Area.area_type, Area.version)). \
+        options(joinedload(Area.locales).load_only(
+            DocumentLocale.culture, DocumentLocale.title,
+            DocumentLocale.version)). \
+        filter(
+            AreaAssociation.document_id == document.document_id
+        ). \
+        all()
+
+    if lang is not None:
+        set_best_locale(areas, lang)
+
+    return areas

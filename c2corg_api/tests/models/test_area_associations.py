@@ -1,6 +1,6 @@
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import update_area, AreaAssociation, \
-    update_areas_for_document
+    update_areas_for_document, get_areas
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.waypoint import Waypoint
 
@@ -105,6 +105,14 @@ class TestAreaAssociation(BaseTestCase):
 
         updated_links = self._get_links_for_document(self.waypoint2)
         self.assertEqual(len(updated_links), 0)
+
+    def test_get_areas(self):
+        update_area(self.area)
+        areas = get_areas(self.waypoint1, 'en')
+
+        self.assertEqual(len(areas), 1)
+        self.assertEqual(
+            areas[0].document_id, self.area.document_id)
 
     def _get_links_for_document(self, doc):
         return self.session.query(AreaAssociation). \

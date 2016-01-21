@@ -87,6 +87,11 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(topo_map.get('code'), '3232ET')
         self.assertEqual(topo_map.get('locales')[0].get('title'), 'Belley')
 
+        self.assertIn('areas', body)
+        area = body.get('areas')[0]
+        self.assertEqual(area.get('area_type'), 'range')
+        self.assertEqual(area.get('locales')[0].get('title'), 'France')
+
     def test_get_version(self):
         self.get_version(self.waypoint, self.waypoint_version)
 
@@ -745,7 +750,10 @@ class TestWaypointRest(BaseDocumentTestRest):
             )
         )
         self.area2 = Area(
-            area_type='range'
+            area_type='range',
+            locales=[
+                DocumentLocale(culture='fr', title='France')
+            ]
         )
 
         self.session.add_all([self.area1, self.area2])

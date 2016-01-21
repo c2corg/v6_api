@@ -1,6 +1,7 @@
 from c2corg_api.models import DBSession
-from c2corg_api.models.area import AREA_TYPE
-from c2corg_api.models.area_association import update_areas_for_document
+from c2corg_api.models.area import AREA_TYPE, schema_listing_area
+from c2corg_api.models.area_association import update_areas_for_document, \
+    get_areas
 from c2corg_api.models.association import get_associations
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
@@ -105,20 +106,23 @@ class DocumentRest(object):
             'total': total
         }
 
-    def _get(self, clazz, schema, adapt_schema=None, include_maps=True):
+    def _get(self, clazz, schema, adapt_schema=None, include_maps=True,
+             include_areas=True):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')
         return self._get_in_lang(
             id, lang, clazz, schema, adapt_schema, include_maps)
 
     def _get_in_lang(self, id, lang, clazz, schema, adapt_schema=None,
-                     include_maps=True):
+                     include_maps=True, include_areas=True):
         document = self._get_document(clazz, id, lang)
         set_available_cultures([document])
 
         self._set_associations(document, lang)
         if include_maps:
             self._set_maps(document, lang)
+        if include_areas:
+            self._set_areas(document, lang)
 
         if adapt_schema:
             schema = adapt_schema(schema, document)
@@ -142,6 +146,12 @@ class DocumentRest(object):
         topo_maps = get_maps(document, lang)
         document.maps = [
             to_json_dict(m, schema_listing_topo_map) for m in topo_maps
+        ]
+
+    def _set_areas(self, document, lang):
+        areas = get_areas(document, lang)
+        document.areas = [
+            to_json_dict(m, schema_listing_area) for m in areas
         ]
 
     def _collection_post(self, clazz, schema, after_add=None):
