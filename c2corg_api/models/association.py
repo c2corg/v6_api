@@ -86,7 +86,7 @@ def get_associations(document, lang):
     """Load and return associated documents.
     """
     def limit_waypoint_fields(query):
-        return query.\
+        return query. \
             options(load_only(
                 Waypoint.waypoint_type, Waypoint.document_id,
                 Waypoint.elevation, Waypoint.version)). \
