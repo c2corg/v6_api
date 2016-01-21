@@ -1,6 +1,8 @@
 import sys
 import logging
 
+from c2corg_api.scripts.migration.area_associations import \
+    MigrateAreaAssociations
 from c2corg_api.scripts.migration.documents.area import MigrateAreas
 from c2corg_api.scripts.migration.documents.associations import \
     MigrateAssociations
@@ -65,6 +67,7 @@ def main(argv=sys.argv):
     MigrateAreas(connection_source, session, batch_size).migrate()
     MigrateVersions(connection_source, session, batch_size).migrate()
     MigrateAssociations(connection_source, session, batch_size).migrate()
+    MigrateAreaAssociations(connection_source, session, batch_size).migrate()
     UpdateSequences(connection_source, session, batch_size).migrate()
 
 if __name__ == "__main__":
