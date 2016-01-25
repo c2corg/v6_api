@@ -190,6 +190,18 @@ def get_discourse_client(settings):
         url, api_username='system', api_key=api_key, timeout=CLIENT_TIMEOUT)
 
 
+discourse_userid_cache = {}
+
+
+def get_discourse_userid_by_userid(client, userid):
+    discourse_userid = discourse_userid_cache.get(userid)
+    if not discourse_userid:
+        discourse_user = client.by_external_id(userid)
+        discourse_userid = discourse_user['id']
+        discourse_userid_cache[userid] = discourse_userid
+    return discourse_userid
+
+
 @resource(path='/users/logout', cors_policy=cors_policy)
 class UserLogoutRest(object):
     def __init__(self, request):
@@ -204,7 +216,10 @@ class UserLogoutRest(object):
         if 'discourse' in request.json:
             try:
                 client = get_discourse_client(request.registry.settings)
-                client.log_out(userid)
+                discourse_userid = get_discourse_userid_by_userid(
+                    client, userid)
+                client.log_out(discourse_userid)
+                result['discourse_user'] = discourse_userid
             except:
                 # Any error with discourse should not prevent logout
                 log.warning(
