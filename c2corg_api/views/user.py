@@ -15,9 +15,9 @@ from c2corg_api.security.roles import (
     try_login, remove_token, extract_token, renew_token)
 
 from c2corg_api.security.discourse_sso_provider import (
-    discourse_redirect, discourse_redirect_without_nonce)
+    discourse_redirect, discourse_redirect_without_nonce,
+    discourse_sync_sso, discourse_logout)
 
-from pydiscourse.client import DiscourseClient
 
 import colander
 import datetime
@@ -26,11 +26,6 @@ import logging
 log = logging.getLogger(__name__)
 
 ENCODING = 'UTF-8'
-
-# 10 seconds timeout for requests to discourse API
-# Using a large value to take into account a possible slow restart (caching)
-# of discourse.
-CLIENT_TIMEOUT = 10
 
 
 def validate_json_password(request):
@@ -88,6 +83,9 @@ class UserRegistrationRest(object):
     def __init__(self, request):
         self.request = request
 
+    def complete_registration(self, user):
+        return discourse_sync_sso(user, self.request.registry.settings)
+
     @json_view(schema=schema_create_user, validators=[
         validate_json_password,
         partial(validate_unique_attribute, "email"),
@@ -102,6 +100,16 @@ class UserRegistrationRest(object):
         except:
             # TODO: log the error for debugging
             raise HTTPInternalServerError('Error persisting user')
+
+        try:
+            result = self.complete_registration(user)
+            if not result:
+                log.warning(
+                    'Error syncing with discourse, no result for %d', user.id)
+
+        except:
+            log.warning(
+                'Error syncing with discourse for %d', user.id, exc_info=True)
 
         return to_json_dict(user, schema_user)
 
@@ -151,7 +159,7 @@ class UserLoginRest(object):
                 else:
                     try:
                         r = discourse_redirect_without_nonce(
-                            user, CLIENT_TIMEOUT, settings)
+                            user, settings)
                         response['redirect_internal'] = r
                     except:
                         # Any error with discourse should not prevent login
@@ -182,26 +190,6 @@ class UserRenewRest(object):
             raise HTTPInternalServerError('Error renewing token')
 
 
-def get_discourse_client(settings):
-    api_key = settings['discourse.api_key']
-    url = settings['discourse.url']
-    # system is a built-in user available in all discourse instances.
-    return DiscourseClient(
-        url, api_username='system', api_key=api_key, timeout=CLIENT_TIMEOUT)
-
-
-discourse_userid_cache = {}
-
-
-def get_discourse_userid_by_userid(client, userid):
-    discourse_userid = discourse_userid_cache.get(userid)
-    if not discourse_userid:
-        discourse_user = client.by_external_id(userid)
-        discourse_userid = discourse_user['id']
-        discourse_userid_cache[userid] = discourse_userid
-    return discourse_userid
-
-
 @resource(path='/users/logout', cors_policy=cors_policy)
 class UserLogoutRest(object):
     def __init__(self, request):
@@ -215,11 +203,8 @@ class UserLogoutRest(object):
         remove_token(extract_token(request))
         if 'discourse' in request.json:
             try:
-                client = get_discourse_client(request.registry.settings)
-                discourse_userid = get_discourse_userid_by_userid(
-                    client, userid)
-                client.log_out(discourse_userid)
-                result['discourse_user'] = discourse_userid
+                settings = request.registry.settings
+                result['discourse_user'] = discourse_logout(userid, settings)
             except:
                 # Any error with discourse should not prevent logout
                 log.warning(

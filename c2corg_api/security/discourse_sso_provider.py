@@ -8,8 +8,16 @@ import urllib.error
 
 from urllib.parse import parse_qs
 
+from pydiscourse.client import DiscourseClient
+
 import logging
 log = logging.getLogger(__name__)
+
+
+# 10 seconds timeout for requests to discourse API
+# Using a large value to take into account a possible slow restart (caching)
+# of discourse.
+CLIENT_TIMEOUT = 10
 
 
 def decode_payload(payload):
@@ -94,9 +102,50 @@ def discourse_redirect(user, sso, signature, settings):
         return None
 
 
-def discourse_redirect_without_nonce(user, timeout, settings):
+def discourse_redirect_without_nonce(user, settings):
     discourse_url = settings.get('discourse.url')
     base_url = '%s/session/sso_login' % discourse_url
     key = str(settings.get('discourse.sso_secret'))  # must not be unicode
-    nonce = request_nonce(discourse_url, key, timeout)
+    nonce = request_nonce(discourse_url, key, CLIENT_TIMEOUT)
     return create_response_payload(user, nonce, base_url, key)
+
+
+def get_discourse_client(settings):
+    api_key = settings['discourse.api_key']
+    url = settings['discourse.url']
+    # system is a built-in user available in all discourse instances.
+    return DiscourseClient(
+        url, api_username='system', api_key=api_key, timeout=CLIENT_TIMEOUT)
+
+
+discourse_userid_cache = {}
+
+
+def discourse_get_userid_by_userid(client, userid):
+    discourse_userid = discourse_userid_cache.get(userid)
+    if not discourse_userid:
+        discourse_user = client.by_external_id(userid)
+        discourse_userid = discourse_user['id']
+        discourse_userid_cache[userid] = discourse_userid
+    return discourse_userid
+
+
+def discourse_sync_sso(user, settings):
+    key = str(settings.get('discourse.sso_secret'))  # must not be unicode
+    client = get_discourse_client(settings)
+    result = client.sync_sso(
+        sso_secret=key,
+        name=user.username,
+        username=user.username,
+        email=user.email,
+        external_id=user.id)
+    if result:
+        discourse_userid_cache[user.id] = result['id']
+    return result
+
+
+def discourse_logout(userid, settings):
+    client = get_discourse_client(settings)
+    discourse_userid = discourse_get_userid_by_userid(client, userid)
+    client.log_out(discourse_userid)
+    return discourse_userid
