@@ -46,7 +46,8 @@ class TestUserRest(BaseTestRest):
         }
         body = self.app.post_json(url, request_utf8, status=200).json
 
-    def login(self, username, password=None, status=200, sso=None, sig=None):
+    def login(self, username, password=None, status=200, sso=None, sig=None,
+              discourse=None):
         if not password:
             password = self.global_passwords[username]
 
@@ -59,6 +60,8 @@ class TestUserRest(BaseTestRest):
             request_body['sso'] = sso
         if sig:
             request_body['sig'] = sig
+        if discourse:
+            request_body['discourse'] = discourse
 
         url = '/users/login'
         response = self.app.post_json(url, request_body, status=status)
@@ -77,7 +80,7 @@ class TestUserRest(BaseTestRest):
                 User.username == 'moderator').one()
         redirect1 = discourse_redirect(moderator, sso, sig, self.settings)
 
-        body = self.login('moderator', sso=sso, sig=sig).json
+        body = self.login('moderator', sso=sso, sig=sig, discourse=True).json
         self.assertTrue('token' in body)
         redirect2 = body['redirect']
 

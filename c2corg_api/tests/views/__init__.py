@@ -49,13 +49,15 @@ class BaseTestRest(BaseTestCase):
         self.assertEqual(error.get('description'), 'Required')
         self.assertEqual(error.get('name'), key)
 
-    def post_json_with_token(self, url, token, status=200):
+    def post_json_with_token(self, url, token, body={}, status=200):
         headers = self.add_authorization_header(token=token)
-        return self.app.post_json(url, headers=headers, status=status).json
+        r = self.app.post_json(url, body, headers=headers, status=status)
+        return r.json
 
-    def post_json_with_contributor(self, url, status=200):
+    def post_json_with_contributor(self, url, body={}, status=200):
         headers = self.add_authorization_header(username='contributor')
-        return self.app.post_json(url, headers=headers, status=status).json
+        r = self.app.post_json(url, body, headers=headers, status=status)
+        return r.json
 
 
 class BaseDocumentTestRest(BaseTestRest):

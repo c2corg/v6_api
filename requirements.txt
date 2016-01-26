@@ -29,4 +29,7 @@ git+https://github.com/tsauerwein/ColanderAlchemy.git@c2corg
 # -e ../v6_common
 git+https://github.com/c2corg/v6_common.git@d809fa18521bd5489e0b0ee82249659dc0a6a92a
 
+# Discourse API client
+git+https://github.com/c2corg/pydiscourse.git@65e398343bbbc74fdb71cca4637c9f808e5adfb2
+
 -e .

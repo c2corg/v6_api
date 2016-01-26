@@ -63,6 +63,12 @@ Updating a waypoint:
     -d '{"message": "Comment about change", "document": {"elevation": 4633, "maps_info": null, "version": 1, "document_id": 1, "waypoint_type": "summit", "locales": [{"culture": "fr", "version": 1, "title": "Mont Rose", "access": null, "description": null}]}}' \
     http://localhost:6543/waypoints/1
 
+
+Forum integration (discourse)
+--------------------------
+
+See https://github.com/c2corg/v6_forum
+
 Run the tests
 --------------
 Create a database that will be used to run the tests:

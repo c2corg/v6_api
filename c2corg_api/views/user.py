@@ -5,7 +5,8 @@ from cornice.resource import resource
 
 from c2corg_api.models.user import User, schema_user, schema_create_user
 from c2corg_api.views import (
-        cors_policy, json_view, restricted_view, to_json_dict)
+        cors_policy, json_view, restricted_view, restricted_json_view,
+        to_json_dict)
 from c2corg_api.views.validation import validate_id
 
 from c2corg_api.models import DBSession
@@ -13,9 +14,16 @@ from c2corg_api.models import DBSession
 from c2corg_api.security.roles import (
     try_login, remove_token, extract_token, renew_token)
 
-from c2corg_api.security.discourse_sso_provider import discourse_redirect
+from c2corg_api.security.discourse_sso_provider import (
+    discourse_redirect, discourse_redirect_without_nonce,
+    discourse_sync_sso, discourse_logout)
+
+
 import colander
 import datetime
+
+import logging
+log = logging.getLogger(__name__)
 
 ENCODING = 'UTF-8'
 
@@ -75,6 +83,9 @@ class UserRegistrationRest(object):
     def __init__(self, request):
         self.request = request
 
+    def complete_registration(self, user):
+        return discourse_sync_sso(user, self.request.registry.settings)
+
     @json_view(schema=schema_create_user, validators=[
         validate_json_password,
         partial(validate_unique_attribute, "email"),
@@ -89,6 +100,16 @@ class UserRegistrationRest(object):
         except:
             # TODO: log the error for debugging
             raise HTTPInternalServerError('Error persisting user')
+
+        try:
+            result = self.complete_registration(user)
+            if not result:
+                log.warning(
+                    'Error syncing with discourse, no result for %d', user.id)
+
+        except:
+            log.warning(
+                'Error syncing with discourse for %d', user.id, exc_info=True)
 
         return to_json_dict(user, schema_user)
 
@@ -128,12 +149,23 @@ class UserLoginRest(object):
         token = try_login(user, password, request) if user else None
         if token:
             response = token_to_response(user, token, request)
-            if 'sso' in request.json and 'sig' in request.json:
-                sso = request.json['sso']
-                sig = request.json['sig']
+            if 'discourse' in request.json:
                 settings = request.registry.settings
-                redirect = discourse_redirect(user, sso, sig, settings)
-                response['redirect'] = redirect
+                if 'sso' in request.json and 'sig' in request.json:
+                    sso = request.json['sso']
+                    sig = request.json['sig']
+                    redirect = discourse_redirect(user, sso, sig, settings)
+                    response['redirect'] = redirect
+                else:
+                    try:
+                        r = discourse_redirect_without_nonce(
+                            user, settings)
+                        response['redirect_internal'] = r
+                    except:
+                        # Any error with discourse should not prevent login
+                        log.warning(
+                            'Error logging into discourse for %d', user.id,
+                            exc_info=True)
             return response
         else:
             request.errors.status = 403
@@ -163,8 +195,19 @@ class UserLogoutRest(object):
     def __init__(self, request):
         self.request = request
 
-    @restricted_view(renderer='json')
+    @restricted_json_view(renderer='json')
     def post(self):
-        result = {'user': self.request.authenticated_userid}
-        remove_token(extract_token(self.request))
+        request = self.request
+        userid = request.authenticated_userid
+        result = {'user': userid}
+        remove_token(extract_token(request))
+        if 'discourse' in request.json:
+            try:
+                settings = request.registry.settings
+                result['discourse_user'] = discourse_logout(userid, settings)
+            except:
+                # Any error with discourse should not prevent logout
+                log.warning(
+                    'Error logging out of discourse for %d', userid,
+                    exc_info=True)
         return result
