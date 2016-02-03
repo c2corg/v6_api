@@ -91,7 +91,7 @@ def fill_index(db_session):
                 }
 
             search_document['title_' + culture] = get_title(
-                title, title_prefix, culture)
+                title, title_prefix)
             search_document['summary_' + culture] = strip_bbcodes(summary)
             search_document['description_' + culture] = \
                 strip_bbcodes(description)

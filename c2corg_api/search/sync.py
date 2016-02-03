@@ -52,7 +52,7 @@ def sync_search_index(document):
 
         # set the title prefix (name of the main waypoint) for routes
         title_prefix = locale.title_prefix if has_title_prefix else None
-        title = get_title(locale.title, title_prefix, culture)
+        title = get_title(locale.title, title_prefix)
 
         doc['title_' + culture] = title
         doc['summary_' + culture] = strip_bbcodes(locale.summary)

@@ -377,7 +377,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(search_doc['doc_type'], doc.type)
 
         if isinstance(doc, Route):
-            title = waypoint_locale_en.title_prefix + ': ' + \
+            title = waypoint_locale_en.title_prefix + ' : ' + \
                 waypoint_locale_en.title
             self.assertEqual(search_doc['title_en'], title)
         else:
@@ -625,7 +625,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         if isinstance(document, Route) and document.main_waypoint_id:
             locale_en = document.get_locale('en')
-            title = locale_en.title_prefix + ': ' + locale_en.title
+            title = locale_en.title_prefix + ' : ' + locale_en.title
             self.assertEqual(search_doc['title_en'], title)
 
             locale_fr = document.get_locale('fr')

@@ -382,7 +382,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             id=route.document_id,
             index=elasticsearch_config['index'])
         self.assertEqual(
-            search_doc['title_en'], 'Mont Granier!: Mont Blanc from the air')
+            search_doc['title_en'], 'Mont Granier! : Mont Blanc from the air')
 
     def test_put_success_figures_and_lang_only(self):
         body_put = {

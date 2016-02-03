@@ -29,8 +29,5 @@ def strip_bbcodes(s):
         return BBCODE_REGEX_ALL.sub(' ', s)
 
 
-def get_title(title, title_prefix, culture):
-    if title_prefix:
-        return title_prefix + (' : ' if culture == 'fr' else ': ') + title
-    else:
-        return title
+def get_title(title, title_prefix):
+    return title_prefix + ' : ' + title if title_prefix else title
