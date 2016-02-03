@@ -63,7 +63,7 @@ class TestAreaRest(BaseDocumentTestRest):
         self.get_404()
 
     def test_post_error(self):
-        body = self.post_error({})
+        body = self.post_error({}, user='moderator')
         errors = body.get('errors')
         self.assertEqual(len(errors), 3)
         self.assertCorniceRequired(errors[0], 'locales')
@@ -80,7 +80,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 {'culture': 'en'}
             ]
         }
-        body = self.post_missing_title(body_post)
+        body = self.post_missing_title(body_post, user='moderator')
         errors = body.get('errors')
         self.assertEqual(len(errors), 2)
         self.assertCorniceRequired(errors[0], 'locales.0.title')
@@ -98,7 +98,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 {'culture': 'en', 'title': 'Chartreuse'}
             ]
         }
-        self.post_non_whitelisted_attribute(body)
+        self.post_non_whitelisted_attribute(body, user='moderator')
 
     def test_post_missing_content_type(self):
         self.post_missing_content_type({})
@@ -114,7 +114,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 {'culture': 'en', 'title': 'Chartreuse'}
             ]
         }
-        body, doc = self.post_success(body)
+        body, doc = self.post_success(body, user='moderator')
         self._assert_geometry(body)
 
         version = doc.versions[0]

@@ -28,9 +28,9 @@ class AreaRest(DocumentRest):
         return self._get(Area, schema_area, include_areas=False)
 
     @restricted_json_view(
-            schema=schema_area, validators=validate_area_create)
+            schema=schema_area, validators=validate_area_create,
+            permission='moderator')
     def collection_post(self):
-        # TODO limit to moderators
         return self._collection_post(
             Area, schema_area, after_add=insert_associations)
 
