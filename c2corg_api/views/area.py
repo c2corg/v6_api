@@ -21,7 +21,7 @@ class AreaRest(DocumentRest):
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        return self._collection_get(Area, schema_area)
+        return self._collection_get(Area, schema_area, include_areas=False)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):

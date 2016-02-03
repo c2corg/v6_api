@@ -115,7 +115,7 @@ def to_seconds(date):
     return int((date - datetime.datetime(1970, 1, 1)).total_seconds())
 
 
-def set_best_locale(documents, preferred_lang):
+def set_best_locale(documents, preferred_lang, expunge=True):
     """Sets the "best" locale on the given documents. The "best" locale is
     the locale in the given "preferred language" if available. Otherwise
     it is the "most relevant" translation according to `cultures_priority`.
@@ -126,7 +126,8 @@ def set_best_locale(documents, preferred_lang):
     for document in documents:
         # need to detach the document from the session, so that the
         # following change to `document.locales` is not persisted
-        DBSession.expunge(document)
+        if expunge:
+            DBSession.expunge(document)
 
         if document.locales:
             available_locales = {

@@ -27,7 +27,8 @@ class AreaAssociation(Base):
         Integer, ForeignKey(schema + '.documents.document_id'),
         nullable=False)
     document = relationship(
-        Document, primaryjoin=document_id == Document.document_id)
+        Document, primaryjoin=document_id == Document.document_id
+    )
 
     area_id = Column(
         Integer, ForeignKey(schema + '.areas.document_id'),
@@ -39,6 +40,13 @@ class AreaAssociation(Base):
         PrimaryKeyConstraint(document_id, area_id),
         Base.__table_args__
     )
+
+
+Document._areas = relationship(
+    Area,
+    secondary=AreaAssociation.__table__,
+    viewonly=True, cascade='expunge'
+)
 
 
 def update_area(area, reset=False):

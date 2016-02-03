@@ -38,6 +38,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertIn('title', locale)
         self.assertIn('summary', locale)
         self.assertNotIn('description', locale)
+        self.assertIn('areas', doc)
 
     def test_get_collection_lang(self):
         self.get_collection_lang()

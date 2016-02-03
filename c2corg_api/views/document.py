@@ -34,67 +34,41 @@ class DocumentRest(object):
     def __init__(self, request):
         self.request = request
 
-    def _collection_get(self, clazz, schema, adapt_schema=None):
-        return self._paginate(clazz, schema, adapt_schema)
+    def _collection_get(self, clazz, schema, adapt_schema=None,
+                        include_areas=True):
+        return self._paginate(clazz, schema, adapt_schema, include_areas)
 
-    def _paginate(self, clazz, schema, adapt_schema):
-        if 'after' in self.request.validated:
-            return self._paginate_after(clazz, schema, adapt_schema)
-        else:
-            return self._paginate_offset(clazz, schema, adapt_schema)
-
-    def _paginate_after(self, clazz, schema, adapt_schema):
-        """
-        Returns all documents for which `document_id` is smaller than the
-        given id in `after`.
-        """
-        after = self.request.validated['after']
-        limit = self.request.validated['limit']
-        limit = min(LIMIT_DEFAULT if limit is None else limit, LIMIT_MAX)
-
-        base_query = DBSession.query(clazz)
-
-        documents = base_query. \
-            options(joinedload(getattr(clazz, 'locales'))). \
-            order_by(clazz.document_id.desc()). \
-            filter(clazz.document_id < after). \
-            limit(limit). \
-            all()
-        set_available_cultures(documents)
-
-        return {
-            'documents': [
-                to_json_dict(
-                    doc,
-                    schema if not adapt_schema else adapt_schema(schema, doc)
-                ) for doc in documents
-            ],
-            'total': -1
-        }
-
-    def _paginate_offset(self, clazz, schema, adapt_schema):
-        """Return a batch of documents with the given `offset` and `limit`.
-        """
+    def _paginate(self, clazz, schema, adapt_schema, include_areas):
         validated = self.request.validated
-        offset = validated['offset'] if 'offset' in validated else 0
-        limit = min(
-            validated['limit'] if 'limit' in validated else LIMIT_DEFAULT,
-            LIMIT_MAX)
 
-        base_query = DBSession.query(clazz)
-
-        documents = base_query. \
+        base_query = DBSession.query(clazz). \
             options(joinedload(getattr(clazz, 'locales'))). \
             options(joinedload(getattr(clazz, 'geometry'))). \
-            order_by(clazz.document_id.desc()). \
-            slice(offset, offset + limit). \
-            all()
+            order_by(clazz.document_id.desc())
+
+        if include_areas:
+            base_query = base_query. \
+                options(
+                    joinedload(getattr(clazz, '_areas')).
+                    load_only('document_id', 'area_type', 'version').
+                    joinedload('locales').
+                    load_only(
+                        'culture', 'title',
+                        'version')
+                )
+
+        if 'after' in self.request.validated:
+            documents, total = self._paginate_after(base_query, clazz)
+        else:
+            documents, total = self._paginate_offset(base_query, clazz)
+
         set_available_cultures(documents, loaded=True)
 
         if validated.get('lang') is not None:
             set_best_locale(documents, validated.get('lang'))
 
-        total = base_query.count()
+        if include_areas:
+            self._set_areas_for_documents(documents, validated.get('lang'))
 
         return {
             'documents': [
@@ -105,6 +79,39 @@ class DocumentRest(object):
             ],
             'total': total
         }
+
+    def _paginate_after(self, base_query, clazz):
+        """
+        Returns all documents for which `document_id` is smaller than the
+        given id in `after`.
+        """
+        after = self.request.validated['after']
+        limit = self.request.validated['limit']
+        limit = min(LIMIT_DEFAULT if limit is None else limit, LIMIT_MAX)
+
+        documents = base_query. \
+            filter(clazz.document_id < after). \
+            limit(limit). \
+            all()
+
+        return documents, -1
+
+    def _paginate_offset(self, base_query, clazz):
+        """Return a batch of documents with the given `offset` and `limit`.
+        """
+        validated = self.request.validated
+        offset = validated['offset'] if 'offset' in validated else 0
+        limit = min(
+            validated['limit'] if 'limit' in validated else LIMIT_DEFAULT,
+            LIMIT_MAX)
+
+        documents = base_query. \
+            slice(offset, offset + limit). \
+            limit(limit). \
+            all()
+        total = DBSession.query(clazz).count()
+
+        return documents, total
 
     def _get(self, clazz, schema, adapt_schema=None, include_maps=True,
              include_areas=True):
@@ -153,6 +160,16 @@ class DocumentRest(object):
         document.areas = [
             to_json_dict(m, schema_listing_area) for m in areas
         ]
+
+    def _set_areas_for_documents(self, documents, lang):
+        for document in documents:
+            # expunge is set to False because the parent document of the areas
+            # was already disconnected from the session at this point
+            set_best_locale(document._areas, lang, expunge=False)
+
+            document.areas = [
+                to_json_dict(m, schema_listing_area) for m in document._areas
+            ]
 
     def _collection_post(self, clazz, schema, after_add=None):
         document = schema.objectify(self.request.validated)

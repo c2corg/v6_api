@@ -21,7 +21,9 @@ class TestAreaRest(BaseDocumentTestRest):
         self._add_test_data()
 
     def test_get_collection(self):
-        self.get_collection()
+        body = self.get_collection()
+        doc = body['documents'][0]
+        self.assertNotIn('areas', doc)
 
     def test_get_collection_paginated(self):
         self.app.get("/areas?offset=invalid", status=400)
