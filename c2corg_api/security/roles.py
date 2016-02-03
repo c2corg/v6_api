@@ -25,7 +25,7 @@ def extract_token(request):
 
 def groupfinder(userid, request):
     is_moderator = DBSession.query(User). \
-        filter(User.id == userid and User.moderator is True). \
+        filter(User.id == userid, User.moderator). \
         count() > 0
     return ['group:moderators'] if is_moderator else [Authenticated]
 
@@ -33,12 +33,12 @@ def groupfinder(userid, request):
 def is_valid_token(token):
     now = datetime.datetime.utcnow()
     return DBSession.query(Token). \
-        filter(Token.value == token and Token.expire > now).count() == 1
+        filter(Token.value == token, Token.expire > now).count() == 1
 
 
 def add_or_retrieve_token(value, expire, userid):
     token = DBSession.query(Token). \
-        filter(Token.value == value and User.id == userid).first()
+        filter(Token.value == value, User.id == userid).first()
     if not token:
         token = Token(value=value, expire=expire, userid=userid)
         DBSession.add(token)

@@ -143,5 +143,9 @@ class TestUserRest(BaseTestRest):
         body = self.get_json_with_contributor(url, status=200)
         self.assertBodyEqual(body, 'username', 'contributor')
 
+    def test_restricted_request_unauthenticated(self):
+        url = '/users/' + str(self.global_userids['contributor'])
+        self.app.get(url, status=403)
+
     def _add_test_data(self):
         pass
