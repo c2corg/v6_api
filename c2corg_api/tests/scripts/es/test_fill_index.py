@@ -69,6 +69,6 @@ class FillIndexTest(BaseTestCase):
 
         route = SearchDocument.get(id=71173)
         self.assertIsNotNone(route)
-        self.assertEqual(route.title_en, 'Mont Blanc: Face N')
+        self.assertEqual(route.title_en, 'Mont Blanc : Face N')
         self.assertEqual(route.title_fr, '')
         self.assertEqual(route.doc_type, 'r')
