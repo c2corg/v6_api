@@ -58,8 +58,14 @@ class TestTopoMapRest(BaseDocumentTestRest):
     def test_get_404(self):
         self.get_404()
 
+    def test_post_not_moderator(self):
+        headers = self.add_authorization_header(username='contributor')
+        self.app.post_json(
+            self._prefix, {}, headers=headers,
+            expect_errors=True, status=403)
+
     def test_post_error(self):
-        body = self.post_error({})
+        body = self.post_error({}, user='moderator')
         errors = body.get('errors')
         self.assertEqual(len(errors), 2)
         self.assertCorniceRequired(errors[0], 'locales')
@@ -78,7 +84,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 {'culture': 'en'}
             ]
         }
-        body = self.post_missing_title(body_post)
+        body = self.post_missing_title(body_post, user='moderator')
         errors = body.get('errors')
         self.assertEqual(len(errors), 2)
         self.assertCorniceRequired(errors[0], 'locales.0.title')
@@ -98,7 +104,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 {'culture': 'en', 'title': 'Lac d\'Annecy'}
             ]
         }
-        self.post_non_whitelisted_attribute(body)
+        self.post_non_whitelisted_attribute(body, user='moderator')
 
     def test_post_missing_content_type(self):
         self.post_missing_content_type({})
@@ -116,7 +122,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 {'culture': 'en', 'title': 'Lac d\'Annecy'}
             ]
         }
-        body, doc = self.post_success(body)
+        body, doc = self.post_success(body, user='moderator')
         self._assert_geometry(body)
 
         version = doc.versions[0]
@@ -148,7 +154,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 ]
             }
         }
-        self.put_wrong_document_id(body)
+        self.put_wrong_document_id(body, user='moderator')
 
     def test_put_wrong_document_version(self):
         body = {
@@ -164,7 +170,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 ]
             }
         }
-        self.put_wrong_version(body, self.map1.document_id)
+        self.put_wrong_version(body, self.map1.document_id, user='moderator')
 
     def test_put_wrong_locale_version(self):
         body = {
@@ -180,7 +186,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 ]
             }
         }
-        self.put_wrong_version(body, self.map1.document_id)
+        self.put_wrong_version(body, self.map1.document_id, user='moderator')
 
     def test_put_wrong_ids(self):
         body = {
@@ -196,10 +202,10 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 ]
             }
         }
-        self.put_wrong_ids(body, self.map1.document_id)
+        self.put_wrong_ids(body, self.map1.document_id, user='moderator')
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.map1.document_id)
+        self.put_put_no_document(self.map1.document_id, user='moderator')
 
     def test_put_success_all(self):
         body = {
@@ -220,7 +226,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 ]
             }
         }
-        (body, map1) = self.put_success_all(body, self.map1)
+        (body, map1) = self.put_success_all(body, self.map1, user='moderator')
 
         self.assertEquals(map1.code, '3433OT')
         locale_en = map1.get_locale('en')
@@ -259,7 +265,8 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 ]
             }
         }
-        (body, map1) = self.put_success_figures_only(body, self.map1)
+        (body, map1) = self.put_success_figures_only(
+            body, self.map1, user='moderator')
 
         self.assertEquals(map1.code, '3433OT')
 
@@ -278,7 +285,8 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 ]
             }
         }
-        (body, map1) = self.put_success_lang_only(body, self.map1)
+        (body, map1) = self.put_success_lang_only(
+            body, self.map1, user='moderator')
 
         self.assertEquals(
             map1.get_locale('en').title, 'New title')
@@ -299,7 +307,8 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 ]
             }
         }
-        (body, map1) = self.put_success_new_lang(body, self.map1)
+        (body, map1) = self.put_success_new_lang(
+            body, self.map1, user='moderator')
 
         self.assertEquals(map1.get_locale('es').title, 'Lac d\'Annecy')
 

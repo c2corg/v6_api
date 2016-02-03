@@ -27,14 +27,14 @@ class TopoMapRest(DocumentRest):
         return self._get(TopoMap, schema_topo_map, include_maps=False)
 
     @restricted_json_view(
-            schema=schema_topo_map, validators=validate_map_create)
+            schema=schema_topo_map, validators=validate_map_create,
+            permission='moderator')
     def collection_post(self):
-        # TODO limit to moderators
         return self._collection_post(TopoMap, schema_topo_map)
 
     @restricted_json_view(
             schema=schema_update_topo_map,
-            validators=[validate_id, validate_map_update])
+            validators=[validate_id, validate_map_update],
+            permission='moderator')
     def put(self):
-        # TODO limit to moderators
         return self._put(TopoMap, schema_topo_map)
