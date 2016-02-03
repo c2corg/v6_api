@@ -8,4 +8,3 @@ export elasticsearch_port = 9200
 export elasticsearch_index = c2corg_travis_tests
 export tests_elasticsearch_port = 9200
 export tests_elasticsearch_index = c2corg_travis_tests
-export discourse_sso_secret = d836444a9e4084d5b224a60c208dce14
