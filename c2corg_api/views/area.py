@@ -9,7 +9,7 @@ from c2corg_api.views.document import DocumentRest, make_validator_create, \
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param
-
+from pyramid.httpexceptions import HTTPBadRequest
 
 validate_area_create = make_validator_create(fields_area.get('required'))
 validate_area_update = make_validator_update(fields_area.get('required'))
@@ -38,7 +38,12 @@ class AreaRest(DocumentRest):
             schema=schema_update_area,
             validators=[validate_id, validate_area_update])
     def put(self):
-        # TODO limit to moderators
+        if not self.request.has_permission('moderator'):
+            # the geometry of areas should not be modifiable for non-moderators
+            if self.request.validated['document'] and \
+                    self.request.validated['document']['geometry']:
+                raise HTTPBadRequest('No permission to change the geometry')
+
         return self._put(Area, schema_area, after_update=update_associations)
 
 

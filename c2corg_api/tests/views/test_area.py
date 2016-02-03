@@ -197,7 +197,7 @@ class TestAreaRest(BaseDocumentTestRest):
     def test_put_no_document(self):
         self.put_put_no_document(self.area1.document_id)
 
-    def test_put_success_all(self):
+    def test_put_update_geometry_fail(self):
         body = {
             'message': 'Update',
             'document': {
@@ -208,6 +208,31 @@ class TestAreaRest(BaseDocumentTestRest):
                     'version': self.area1.geometry.version,
                     'geom': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
                 },
+                'locales': [
+                    {'culture': 'en', 'title': 'New title',
+                     'version': self.locale_en.version}
+                ]
+            }
+        }
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/' + str(self.area1.document_id), body,
+            headers=headers, status=400)
+
+        body = response.json
+        self.assertEqual(body['status'], 'error')
+        self.assertEqual(body['errors'][0]['name'], 'Bad Request')
+        self.assertEqual(
+            body['errors'][0]['description'],
+            'No permission to change the geometry')
+
+    def test_put_success_all(self):
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.area1.document_id,
+                'version': self.area1.version,
+                'area_type': 'admin_limits',
                 'locales': [
                     {'culture': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
@@ -229,13 +254,41 @@ class TestAreaRest(BaseDocumentTestRest):
         archive_document_en = version_en.document_archive
         self.assertEqual(archive_document_en.area_type, 'admin_limits')
 
+        # geometry has not changed because changes to the geometry are not
+        # allowed for non-moderators
         archive_geometry_en = version_en.document_geometry_archive
-        self.assertEqual(archive_geometry_en.version, 2)
+        self.assertEqual(archive_geometry_en.version, 1)
 
         # version with culture 'fr'
         version_fr = versions[3]
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Chartreuse')
+
+    def test_put_success_all_as_moderator(self):
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.area1.document_id,
+                'version': self.area1.version,
+                'area_type': 'admin_limits',
+                'geometry': {
+                    'version': self.area1.geometry.version,
+                    'geom': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
+                },
+                'locales': [
+                    {'culture': 'en', 'title': 'New title',
+                     'version': self.locale_en.version}
+                ]
+            }
+        }
+        (body, map1) = self.put_success_all(body, self.area1, user='moderator')
+
+        # version with culture 'en'
+        version_en = map1.versions[2]
+
+        # geometry has been changed because the user is a moderator
+        archive_geometry_en = version_en.document_geometry_archive
+        self.assertEqual(archive_geometry_en.version, 2)
 
         # check that the links to intersecting documents are updated
         links = self.session.query(AreaAssociation). \
