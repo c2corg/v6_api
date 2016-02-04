@@ -115,7 +115,7 @@ def set_title_prefix(route, title):
     """Set the given title as `prefix_title` for all locales of the given
     route.
     """
-    set_title_prefix_for_ids([l.id for l in route.locales])
+    set_title_prefix_for_ids([l.id for l in route.locales], title)
 
 
 def set_title_prefix_for_ids(ids, title):
