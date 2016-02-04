@@ -1,10 +1,14 @@
 from c2corg_api.models import DBSession
+from c2corg_api.models.area import AREA_TYPE, schema_listing_area
+from c2corg_api.models.area_association import update_areas_for_document, \
+    get_areas
 from c2corg_api.models.association import get_associations
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
     ArchiveDocumentGeometry, set_available_cultures)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.route import schema_association_route
+from c2corg_api.models.topo_map import get_maps, schema_listing_topo_map
 from c2corg_api.models.waypoint import schema_association_waypoint
 from c2corg_api.search.sync import sync_search_index
 from c2corg_api.views import cors_policy
@@ -30,67 +34,41 @@ class DocumentRest(object):
     def __init__(self, request):
         self.request = request
 
-    def _collection_get(self, clazz, schema, adapt_schema=None):
-        return self._paginate(clazz, schema, adapt_schema)
+    def _collection_get(self, clazz, schema, adapt_schema=None,
+                        include_areas=True):
+        return self._paginate(clazz, schema, adapt_schema, include_areas)
 
-    def _paginate(self, clazz, schema, adapt_schema):
-        if 'after' in self.request.validated:
-            return self._paginate_after(clazz, schema, adapt_schema)
-        else:
-            return self._paginate_offset(clazz, schema, adapt_schema)
-
-    def _paginate_after(self, clazz, schema, adapt_schema):
-        """
-        Returns all documents for which `document_id` is smaller than the
-        given id in `after`.
-        """
-        after = self.request.validated['after']
-        limit = self.request.validated['limit']
-        limit = min(LIMIT_DEFAULT if limit is None else limit, LIMIT_MAX)
-
-        base_query = DBSession.query(clazz)
-
-        documents = base_query. \
-            options(joinedload(getattr(clazz, 'locales'))). \
-            order_by(clazz.document_id.desc()). \
-            filter(clazz.document_id < after). \
-            limit(limit). \
-            all()
-        set_available_cultures(documents)
-
-        return {
-            'documents': [
-                to_json_dict(
-                    doc,
-                    schema if not adapt_schema else adapt_schema(schema, doc)
-                ) for doc in documents
-            ],
-            'total': -1
-        }
-
-    def _paginate_offset(self, clazz, schema, adapt_schema):
-        """Return a batch of documents with the given `offset` and `limit`.
-        """
+    def _paginate(self, clazz, schema, adapt_schema, include_areas):
         validated = self.request.validated
-        offset = validated['offset'] if 'offset' in validated else 0
-        limit = min(
-            validated['limit'] if 'limit' in validated else LIMIT_DEFAULT,
-            LIMIT_MAX)
 
-        base_query = DBSession.query(clazz)
-
-        documents = base_query. \
+        base_query = DBSession.query(clazz). \
             options(joinedload(getattr(clazz, 'locales'))). \
             options(joinedload(getattr(clazz, 'geometry'))). \
-            order_by(clazz.document_id.desc()). \
-            slice(offset, offset + limit). \
-            all()
+            order_by(clazz.document_id.desc())
+
+        if include_areas:
+            base_query = base_query. \
+                options(
+                    joinedload(getattr(clazz, '_areas')).
+                    load_only('document_id', 'area_type', 'version').
+                    joinedload('locales').
+                    load_only(
+                        'culture', 'title',
+                        'version')
+                )
+
+        if 'after' in self.request.validated:
+            documents, total = self._paginate_after(base_query, clazz)
+        else:
+            documents, total = self._paginate_offset(base_query, clazz)
+
         set_available_cultures(documents, loaded=True)
 
         if validated.get('lang') is not None:
             set_best_locale(documents, validated.get('lang'))
 
-        total = base_query.count()
+        if include_areas:
+            self._set_areas_for_documents(documents, validated.get('lang'))
 
         return {
             'documents': [
@@ -102,16 +80,56 @@ class DocumentRest(object):
             'total': total
         }
 
-    def _get(self, clazz, schema, adapt_schema=None):
+    def _paginate_after(self, base_query, clazz):
+        """
+        Returns all documents for which `document_id` is smaller than the
+        given id in `after`.
+        """
+        after = self.request.validated['after']
+        limit = self.request.validated['limit']
+        limit = min(LIMIT_DEFAULT if limit is None else limit, LIMIT_MAX)
+
+        documents = base_query. \
+            filter(clazz.document_id < after). \
+            limit(limit). \
+            all()
+
+        return documents, -1
+
+    def _paginate_offset(self, base_query, clazz):
+        """Return a batch of documents with the given `offset` and `limit`.
+        """
+        validated = self.request.validated
+        offset = validated['offset'] if 'offset' in validated else 0
+        limit = min(
+            validated['limit'] if 'limit' in validated else LIMIT_DEFAULT,
+            LIMIT_MAX)
+
+        documents = base_query. \
+            slice(offset, offset + limit). \
+            limit(limit). \
+            all()
+        total = DBSession.query(clazz).count()
+
+        return documents, total
+
+    def _get(self, clazz, schema, adapt_schema=None, include_maps=True,
+             include_areas=True):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')
-        return self._get_in_lang(id, lang, clazz, schema, adapt_schema)
+        return self._get_in_lang(
+            id, lang, clazz, schema, adapt_schema, include_maps)
 
-    def _get_in_lang(self, id, lang, clazz, schema, adapt_schema=None):
+    def _get_in_lang(self, id, lang, clazz, schema, adapt_schema=None,
+                     include_maps=True, include_areas=True):
         document = self._get_document(clazz, id, lang)
         set_available_cultures([document])
 
         self._set_associations(document, lang)
+        if include_maps:
+            self._set_maps(document, lang)
+        if include_areas:
+            self._set_areas(document, lang)
 
         if adapt_schema:
             schema = adapt_schema(schema, document)
@@ -131,6 +149,28 @@ class DocumentRest(object):
             ]
         }
 
+    def _set_maps(self, document, lang):
+        topo_maps = get_maps(document, lang)
+        document.maps = [
+            to_json_dict(m, schema_listing_topo_map) for m in topo_maps
+        ]
+
+    def _set_areas(self, document, lang):
+        areas = get_areas(document, lang)
+        document.areas = [
+            to_json_dict(m, schema_listing_area) for m in areas
+        ]
+
+    def _set_areas_for_documents(self, documents, lang):
+        for document in documents:
+            # expunge is set to False because the parent document of the areas
+            # was already disconnected from the session at this point
+            set_best_locale(document._areas, lang, expunge=False)
+
+            document.areas = [
+                to_json_dict(m, schema_listing_area) for m in document._areas
+            ]
+
     def _collection_post(self, clazz, schema, after_add=None):
         document = schema.objectify(self.request.validated)
         document.document_id = None
@@ -139,6 +179,9 @@ class DocumentRest(object):
         DBSession.flush()
         user_id = self.request.authenticated_userid
         self._create_new_version(document, user_id)
+
+        if document.type != AREA_TYPE:
+            update_areas_for_document(document, reset=False)
 
         if after_add:
             after_add(document)
@@ -183,6 +226,9 @@ class DocumentRest(object):
             self._update_version(
                 document, user_id, self.request.validated['message'],
                 update_types,  changed_langs)
+
+            if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
+                update_areas_for_document(document, reset=True)
 
             if after_update:
                 after_update(document, update_types)
@@ -474,8 +520,8 @@ def get_neighbour_version_ids(version_id, document_id, lang):
     return previous_version_id, next_version_id
 
 
-def validate_document(document, request, fields, type_field, valid_type_values,
-                      updating):
+def validate_document_for_type(document, request, fields, type_field,
+                               valid_type_values, updating):
     """Checks that all required fields are given.
     """
     document_type = document.get(type_field)
@@ -499,31 +545,47 @@ def validate_document(document, request, fields, type_field, valid_type_values,
         return
 
     fields_req = fields.get(document_type)['required']
+    validate_document(document, request, fields_req, updating)
 
-    check_required_fields(document, fields_req, request, updating)
+
+def validate_document(document, request, fields, updating):
+    """Checks that all required fields are given.
+    """
+    check_required_fields(document, fields, request, updating)
     check_duplicate_locales(document, request)
 
 
-def make_validator_create(fields, type_field, valid_type_values):
+def make_validator_create(fields, type_field=None, valid_type_values=None):
     """Returns a validator function used for the creation of documents.
     """
-    def f(request):
-        document = request.validated
-        validate_document(
-            document, request, fields, type_field, valid_type_values,
-            updating=False)
+    if type_field is None or valid_type_values is None:
+        def f(request):
+            document = request.validated
+            validate_document(document, request, fields, updating=False)
+    else:
+        def f(request):
+            document = request.validated
+            validate_document_for_type(
+                document, request, fields, type_field, valid_type_values,
+                updating=False)
     return f
 
 
-def make_validator_update(fields, type_field, valid_type_values):
+def make_validator_update(fields, type_field=None, valid_type_values=None):
     """Returns a validator function used for updating documents.
     """
-    def f(request):
-        document = request.validated.get('document')
-        if document:
-            validate_document(
-                document, request, fields, type_field, valid_type_values,
-                updating=True)
+    if type_field is None or valid_type_values is None:
+        def f(request):
+            document = request.validated.get('document')
+            if document:
+                validate_document(document, request, fields, updating=True)
+    else:
+        def f(request):
+            document = request.validated.get('document')
+            if document:
+                validate_document_for_type(
+                    document, request, fields, type_field, valid_type_values,
+                    updating=True)
     return f
 
 

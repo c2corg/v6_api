@@ -73,13 +73,15 @@ def restricted_view(**kw):
 def to_json_dict(obj, schema):
     obj_dict = serialize(schema.dictify(obj))
 
-    # manually copy `available_cultures` and `associations` (it would be
+    # manually copy certain attributes that were set on the object (it would be
     # cleaner to add the field to the schema, but ColanderAlchemy doesn't like
     # it because it's not a real column)
-    if hasattr(obj, 'available_cultures'):
-        obj_dict['available_cultures'] = getattr(obj, 'available_cultures')
-    if hasattr(obj, 'associations'):
-        obj_dict['associations'] = getattr(obj, 'associations')
+    special_attributes = [
+        'available_cultures', 'associations', 'maps', 'areas'
+    ]
+    for attr in special_attributes:
+        if hasattr(obj, attr):
+            obj_dict[attr] = getattr(obj, attr)
 
     return obj_dict
 
@@ -113,7 +115,7 @@ def to_seconds(date):
     return int((date - datetime.datetime(1970, 1, 1)).total_seconds())
 
 
-def set_best_locale(documents, preferred_lang):
+def set_best_locale(documents, preferred_lang, expunge=True):
     """Sets the "best" locale on the given documents. The "best" locale is
     the locale in the given "preferred language" if available. Otherwise
     it is the "most relevant" translation according to `cultures_priority`.
@@ -124,7 +126,8 @@ def set_best_locale(documents, preferred_lang):
     for document in documents:
         # need to detach the document from the session, so that the
         # following change to `document.locales` is not persisted
-        DBSession.expunge(document)
+        if expunge:
+            DBSession.expunge(document)
 
         if document.locales:
             available_locales = {

@@ -6,10 +6,11 @@ from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.scripts.migration.batch import SimpleBatch
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
-# TODO only importing the versions of waypoints and routes
+# TODO only importing the versions of waypoints, routes, areas and maps
 tables = [
     'app_huts_archives', 'app_parkings_archives', 'app_products_archives',
-    'app_sites_archives', 'app_summits_archives', 'app_routes_archives'
+    'app_sites_archives', 'app_summits_archives', 'app_routes_archives',
+    'app_maps_archives', 'app_areas_archives'
 ]
 tables_union = ' union '.join(['select id from ' + t for t in tables])
 

@@ -1,5 +1,5 @@
 from c2corg_api.models.route import Route, RouteLocale, ArchiveRoute, \
-    ArchiveRouteLocale
+    ArchiveRouteLocale, ROUTE_TYPE
 from c2corg_api.scripts.migration.documents.document import MigrateDocuments
 
 
@@ -108,7 +108,7 @@ class MigrateRoutes(MigrateDocuments):
 
         return dict(
             document_id=document_in.id,
-            type='r',
+            type=ROUTE_TYPE,
             version=version,
             protected=document_in.is_protected,
             redirects_to=document_in.redirects_to,
@@ -184,7 +184,7 @@ class MigrateRoutes(MigrateDocuments):
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
-            type='r',
+            type=ROUTE_TYPE,
             version=version,
             culture=document_in.culture,
             title=document_in.name,

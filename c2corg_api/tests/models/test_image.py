@@ -1,4 +1,5 @@
-from c2corg_api.models.image import Image, ImageLocale
+from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models.image import Image
 
 from c2corg_api.tests import BaseTestCase
 
@@ -9,9 +10,9 @@ class TestImage(BaseTestCase):
         image = Image(
             document_id=1, activities='skitouring', height=1200,
             locales=[
-                ImageLocale(
+                DocumentLocale(
                     id=2, culture='en', title='A', description='abc'),
-                ImageLocale(
+                DocumentLocale(
                     id=3, culture='fr', title='B', description='bcd'),
             ]
         )

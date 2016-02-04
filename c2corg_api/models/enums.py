@@ -88,3 +88,9 @@ mtb_up_rating = enum(
     'mtb_up_rating', attributes.mtb_up_ratings)
 mtb_down_rating = enum(
     'mtb_down_rating', attributes.mtb_down_ratings)
+map_editor = enum(
+    'map_editor', attributes.map_editors)
+map_scale = enum(
+    'map_scale', attributes.map_scales)
+area_type = enum(
+    'area_type', attributes.area_types)
