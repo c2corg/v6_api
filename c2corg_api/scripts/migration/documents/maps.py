@@ -72,7 +72,7 @@ class MigrateMaps(MigrateDocuments):
             id=document_in.document_i18n_archive_id,
             type=DOCUMENT_TYPE,
             version=version,
-            culture=document_in.culture,
+            lang=document_in.culture,
             title=document_in.name,
             description=description,
             summary=summary

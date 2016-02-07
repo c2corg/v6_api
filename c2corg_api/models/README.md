@@ -21,9 +21,9 @@ current version).
 For the versioning there are two more classes: `HistoryMetaData` and `DocumentVersion`.
 `HistoryMetaData` contains a change comment and the date. `DocumentVersion`
 is the list of actual versions of a document for a language. A *document version*
-for a language/culture references an entry in `ArchiveDocument`,
+for a language/lang references an entry in `ArchiveDocument`,
 `ArchiveDocumentLocale`, `ArchiveDocumentGeometry` and `HistoryMetaData`.
-It has the following fields: `document_id`, `culture`, `document_archive_id`,
+It has the following fields: `document_id`, `lang`, `document_archive_id`,
 `document_locales_archive_id`, `document_geometry_archive_id` and
 `history_metadata_id`.
 

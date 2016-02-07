@@ -4,7 +4,7 @@ from geoalchemy2.shape import from_shape
 
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.document import (
-    UpdateType, DocumentGeometry, set_available_cultures)
+    UpdateType, DocumentGeometry, set_available_langs)
 from c2corg_api.tests import BaseTestCase
 
 
@@ -15,7 +15,7 @@ class TestWaypoint(BaseTestCase):
             waypoint_type='summit', elevation=2203,
             locales=[
                 WaypointLocale(
-                    culture='en', title='A', description='abc')
+                    lang='en', title='A', description='abc')
             ],
             geometry=DocumentGeometry(
                 geom=from_shape(Point(1, 1), srid=3857))
@@ -35,9 +35,9 @@ class TestWaypoint(BaseTestCase):
             document_id=1, waypoint_type='summit', elevation=2203,
             locales=[
                 WaypointLocale(
-                    id=2, culture='en', title='A', description='abc'),
+                    id=2, lang='en', title='A', description='abc'),
                 WaypointLocale(
-                    id=3, culture='fr', title='B', description='bcd'),
+                    id=3, lang='fr', title='B', description='bcd'),
             ],
             geometry=DocumentGeometry(
                 document_id=1, geom=from_shape(Point(1, 1), srid=3857))
@@ -58,7 +58,7 @@ class TestWaypoint(BaseTestCase):
         locale_archive = archive_locals[0]
         self.assertIsNot(locale_archive, locale)
         self.assertIsNone(locale_archive.id)
-        self.assertEqual(locale_archive.culture, locale.culture)
+        self.assertEqual(locale_archive.lang, locale.lang)
         self.assertEqual(locale_archive.title, locale.title)
         self.assertEqual(locale_archive.description, locale.description)
 
@@ -73,7 +73,7 @@ class TestWaypoint(BaseTestCase):
             document_id=1, waypoint_type='summit', elevation=2203,
             locales=[
                 WaypointLocale(
-                    id=2, culture='en', title='A', description='abc')
+                    id=2, lang='en', title='A', description='abc')
             ]
         )
         self.session.add(waypoint)
@@ -98,7 +98,7 @@ class TestWaypoint(BaseTestCase):
             document_id=1, waypoint_type='summit', elevation=2203,
             locales=[
                 WaypointLocale(
-                    id=2, culture='en', title='A', description='abc')
+                    id=2, lang='en', title='A', description='abc')
             ]
         )
 
@@ -197,10 +197,10 @@ class TestWaypoint(BaseTestCase):
             version=123,
             locales=[
                 WaypointLocale(
-                    id=2, culture='en', title='A', description='abc',
+                    id=2, lang='en', title='A', description='abc',
                     version=345),
                 WaypointLocale(
-                    id=3, culture='fr', title='B', description='bcd',
+                    id=3, lang='fr', title='B', description='bcd',
                     version=678),
             ],
             geometry=DocumentGeometry(
@@ -212,10 +212,10 @@ class TestWaypoint(BaseTestCase):
             version=123,
             locales=[
                 WaypointLocale(
-                    id=2, culture='en', title='C', description='abc',
+                    id=2, lang='en', title='C', description='abc',
                     version=345),
                 WaypointLocale(
-                    culture='es', title='D', description='efg'),
+                    lang='es', title='D', description='efg'),
             ],
             geometry=DocumentGeometry(geom='SRID=3857;POINT(3 4)')
         )
@@ -286,7 +286,7 @@ class TestWaypoint(BaseTestCase):
         versions = waypoint.get_versions()
 
         waypoint.locales.append(WaypointLocale(
-            culture='es', title='A', description='abc'))
+            lang='es', title='A', description='abc'))
         self.session.merge(waypoint)
         self.session.flush()
 
@@ -304,7 +304,7 @@ class TestWaypoint(BaseTestCase):
         waypoint.elevation = 1234
         waypoint.get_locale('en').description = 'abcd'
         waypoint.locales.append(WaypointLocale(
-            culture='es', title='A', description='abc'))
+            lang='es', title='A', description='abc'))
 
         self.session.merge(waypoint)
         self.session.flush()
@@ -335,25 +335,25 @@ class TestWaypoint(BaseTestCase):
         self.session.add(waypoint)
         self.session.flush()
 
-    def test_set_available_cultures(self):
+    def test_set_available_langs(self):
         waypoint = self._get_waypoint()
         waypoint.geometry = DocumentGeometry(
             geom='SRID=3857;POINT(635956.075332665 5723604.677994)')
         self.session.add(waypoint)
         self.session.flush()
 
-        set_available_cultures([waypoint])
-        self.assertEqual(waypoint.available_cultures, ['en', 'fr'])
+        set_available_langs([waypoint])
+        self.assertEqual(waypoint.available_langs, ['en', 'fr'])
 
     def _get_waypoint(self):
         return Waypoint(
             waypoint_type='summit', elevation=2203,
             locales=[
                 WaypointLocale(
-                    culture='en', title='A', description='abc',
+                    lang='en', title='A', description='abc',
                     access='y'),
                 WaypointLocale(
-                    culture='fr', title='B', description='bcd',
+                    lang='fr', title='B', description='bcd',
                     access='y')
             ],
             geometry=DocumentGeometry(

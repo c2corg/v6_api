@@ -91,7 +91,7 @@ def get_associations(document, lang):
                 Waypoint.waypoint_type, Waypoint.document_id,
                 Waypoint.elevation, Waypoint.version)). \
             options(joinedload(Waypoint.locales).load_only(
-                WaypointLocale.culture, WaypointLocale.title,
+                WaypointLocale.lang, WaypointLocale.title,
                 WaypointLocale.version))
 
     parent_waypoints = limit_waypoint_fields(
@@ -113,7 +113,7 @@ def get_associations(document, lang):
                 Route.document_id, Route.activities, Route.elevation_min,
                 Route.elevation_max, Route.version)). \
             options(joinedload(Waypoint.locales).load_only(
-                RouteLocale.culture, RouteLocale.title, RouteLocale.version))
+                RouteLocale.lang, RouteLocale.title, RouteLocale.version))
 
     parent_routes = limit_route_fields(
         DBSession.query(Route).

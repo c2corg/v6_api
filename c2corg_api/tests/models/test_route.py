@@ -11,10 +11,10 @@ class TestRoute(BaseTestCase):
             elevation_max=1200,
             locales=[
                 RouteLocale(
-                    id=2, culture='en', title='A', description='abc',
+                    id=2, lang='en', title='A', description='abc',
                     gear='...'),
                 RouteLocale(
-                    id=3, culture='fr', title='B', description='bcd',
+                    id=3, lang='fr', title='B', description='bcd',
                     gear='...'),
             ]
         )
@@ -34,7 +34,7 @@ class TestRoute(BaseTestCase):
         locale_archive = archive_locals[0]
         self.assertIsNot(locale_archive, locale)
         self.assertIsNone(locale_archive.id)
-        self.assertEqual(locale_archive.culture, locale.culture)
+        self.assertEqual(locale_archive.lang, locale.lang)
         self.assertEqual(locale_archive.title, locale.title)
         self.assertEqual(locale_archive.description, locale.description)
         self.assertEqual(locale_archive.gear, locale.gear)

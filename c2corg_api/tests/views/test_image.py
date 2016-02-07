@@ -68,7 +68,7 @@ class TestImageRest(BaseDocumentTestRest):
             'activities': 'skitouring',
             'height': 1200,
             'locales': [
-                {'culture': 'en'}
+                {'lang': 'en'}
             ]
         }
         body = self.post_missing_title(body_post)
@@ -81,7 +81,7 @@ class TestImageRest(BaseDocumentTestRest):
             'height': 750,
             'protected': True,
             'locales': [
-                {'culture': 'en', 'title': 'Some nice loop'}
+                {'lang': 'en', 'title': 'Some nice loop'}
             ]
         }
         self.post_non_whitelisted_attribute(body)
@@ -98,7 +98,7 @@ class TestImageRest(BaseDocumentTestRest):
                 'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
             },
             'locales': [
-                {'culture': 'en', 'title': 'Some nice loop'}
+                {'lang': 'en', 'title': 'Some nice loop'}
             ]
         }
         body, doc = self.post_success(body)
@@ -111,7 +111,7 @@ class TestImageRest(BaseDocumentTestRest):
         self.assertEqual(archive_image.height, 750)
 
         archive_locale = version.document_locales_archive
-        self.assertEqual(archive_locale.culture, 'en')
+        self.assertEqual(archive_locale.lang, 'en')
         self.assertEqual(archive_locale.title, 'Some nice loop')
 
         archive_geometry = version.document_geometry_archive
@@ -126,7 +126,7 @@ class TestImageRest(BaseDocumentTestRest):
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...',
                      'version': self.locale_en.version}
                 ]
@@ -142,7 +142,7 @@ class TestImageRest(BaseDocumentTestRest):
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...',
                      'version': self.locale_en.version}
                 ]
@@ -158,7 +158,7 @@ class TestImageRest(BaseDocumentTestRest):
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...',
                      'version': -9999}
                 ]
@@ -174,7 +174,7 @@ class TestImageRest(BaseDocumentTestRest):
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...',
                      'version': self.locale_en.version}
                 ]
@@ -198,7 +198,7 @@ class TestImageRest(BaseDocumentTestRest):
                     'geom': '{"type": "Point", "coordinates": [1, 2]}'
                 },
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': 'New description',
                      'version': self.locale_en.version}
                 ]
@@ -210,7 +210,7 @@ class TestImageRest(BaseDocumentTestRest):
         locale_en = image.get_locale('en')
         self.assertEquals(locale_en.description, 'New description')
 
-        # version with culture 'en'
+        # version with lang 'en'
         versions = image.versions
         version_en = versions[2]
         archive_locale = version_en.document_locales_archive
@@ -223,7 +223,7 @@ class TestImageRest(BaseDocumentTestRest):
         archive_geometry_en = version_en.document_geometry_archive
         self.assertEqual(archive_geometry_en.version, 2)
 
-        # version with culture 'fr'
+        # version with lang 'fr'
         version_fr = versions[3]
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Blanc du ciel')
@@ -237,7 +237,7 @@ class TestImageRest(BaseDocumentTestRest):
                 'activities': 'paragliding',
                 'height': 1500,
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...',
                      'version': self.locale_en.version}
                 ]
@@ -256,7 +256,7 @@ class TestImageRest(BaseDocumentTestRest):
                 'activities': 'paragliding',
                 'height': 2000,
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': 'New description',
                      'version': self.locale_en.version}
                 ]
@@ -278,7 +278,7 @@ class TestImageRest(BaseDocumentTestRest):
                 'activities': 'paragliding',
                 'height': 2000,
                 'locales': [
-                    {'culture': 'es', 'title': 'Mont Blanc del cielo',
+                    {'lang': 'es', 'title': 'Mont Blanc del cielo',
                      'description': '...'}
                 ]
             }
@@ -304,10 +304,10 @@ class TestImageRest(BaseDocumentTestRest):
             activities='paragliding', height=2000)
 
         self.locale_en = DocumentLocale(
-            culture='en', title='Mont Blanc from the air', description='...')
+            lang='en', title='Mont Blanc from the air', description='...')
 
         self.locale_fr = DocumentLocale(
-            culture='fr', title='Mont Blanc du ciel', description='...')
+            lang='fr', title='Mont Blanc du ciel', description='...')
 
         self.image.locales.append(self.locale_en)
         self.image.locales.append(self.locale_fr)
@@ -330,8 +330,8 @@ class TestImageRest(BaseDocumentTestRest):
         self.image4 = Image(
             activities='paragliding', height=2000)
         self.image4.locales.append(DocumentLocale(
-            culture='en', title='Mont Blanc from the air', description='...'))
+            lang='en', title='Mont Blanc from the air', description='...'))
         self.image4.locales.append(DocumentLocale(
-            culture='fr', title='Mont Blanc du ciel', description='...'))
+            lang='fr', title='Mont Blanc du ciel', description='...'))
         self.session.add(self.image4)
         self.session.flush()

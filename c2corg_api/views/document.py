@@ -5,7 +5,7 @@ from c2corg_api.models.area_association import update_areas_for_document, \
 from c2corg_api.models.association import get_associations
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
-    ArchiveDocumentGeometry, set_available_cultures)
+    ArchiveDocumentGeometry, set_available_langs)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.route import schema_association_route
 from c2corg_api.models.topo_map import get_maps, schema_listing_topo_map
@@ -53,7 +53,7 @@ class DocumentRest(object):
                     load_only('document_id', 'area_type', 'version').
                     joinedload('locales').
                     load_only(
-                        'culture', 'title',
+                        'lang', 'title',
                         'version')
                 )
 
@@ -62,7 +62,7 @@ class DocumentRest(object):
         else:
             documents, total = self._paginate_offset(base_query, clazz)
 
-        set_available_cultures(documents, loaded=True)
+        set_available_langs(documents, loaded=True)
 
         if validated.get('lang') is not None:
             set_best_locale(documents, validated.get('lang'))
@@ -123,7 +123,7 @@ class DocumentRest(object):
     def _get_in_lang(self, id, lang, clazz, schema, adapt_schema=None,
                      include_maps=True, include_areas=True):
         document = self._get_document(clazz, id, lang)
-        set_available_cultures([document])
+        set_available_langs([document])
 
         self._set_associations(document, lang)
         if include_maps:
@@ -246,13 +246,13 @@ class DocumentRest(object):
 
         return json_dict
 
-    def _get_document(self, clazz, id, culture=None):
-        """Get a document with either a single locale (if `culture is given)
+    def _get_document(self, clazz, id, lang=None):
+        """Get a document with either a single locale (if `lang is given)
         or with all locales.
         If no document exists for the given id, a `HTTPNotFound` exception is
         raised.
         """
-        if not culture:
+        if not lang:
             document = DBSession. \
                 query(clazz). \
                 filter(getattr(clazz, 'document_id') == id). \
@@ -265,7 +265,7 @@ class DocumentRest(object):
                 join(getattr(clazz, 'locales')). \
                 filter(getattr(clazz, 'document_id') == id). \
                 options(contains_eager(getattr(clazz, 'locales'))). \
-                filter(DocumentLocale.culture == culture). \
+                filter(DocumentLocale.lang == lang). \
                 options(joinedload('geometry')). \
                 first()
             if not document:
@@ -300,7 +300,7 @@ class DocumentRest(object):
         for locale in archive_locales:
             version = DocumentVersion(
                 document_id=document.document_id,
-                culture=locale.culture,
+                lang=locale.lang,
                 document_archive=archive,
                 document_locales_archive=locale,
                 document_geometry_archive=archive_geometry,
@@ -324,16 +324,16 @@ class DocumentRest(object):
         geometry_archive = \
             self._get_geometry_archive(document, update_types)
 
-        cultures = \
-            self._get_cultures_to_update(document, update_types, changed_langs)
+        langs = \
+            self._get_langs_to_update(document, update_types, changed_langs)
         locale_versions = []
-        for culture in cultures:
-            locale = document.get_locale(culture)
+        for lang in langs:
+            locale = document.get_locale(lang)
             locale_archive = self._get_locale_archive(locale, changed_langs)
 
             version = DocumentVersion(
                 document_id=document.document_id,
-                culture=locale.culture,
+                lang=locale.lang,
                 document_archive=archive,
                 document_geometry_archive=geometry_archive,
                 document_locales_archive=locale_archive,
@@ -377,7 +377,7 @@ class DocumentRest(object):
                 one()
         return archive
 
-    def _get_cultures_to_update(self, document, update_types, changed_langs):
+    def _get_langs_to_update(self, document, update_types, changed_langs):
         if UpdateType.GEOM not in update_types and \
                 UpdateType.FIGURES not in update_types:
             # if the figures or geometry have no been changed, only update the
@@ -385,10 +385,10 @@ class DocumentRest(object):
             return changed_langs
         else:
             # if the figures or geometry have been changed, update all locales
-            return [locale.culture for locale in document.locales]
+            return [locale.lang for locale in document.locales]
 
     def _get_locale_archive(self, locale, changed_langs):
-        if locale.culture in changed_langs:
+        if locale.lang in changed_langs:
             # create new archive version for this locale
             locale_archive = locale.to_archive()
         else:
@@ -397,7 +397,7 @@ class DocumentRest(object):
                 filter(
                     ArchiveDocumentLocale.version == locale.version,
                     ArchiveDocumentLocale.document_id == locale.document_id,
-                    ArchiveDocumentLocale.culture == locale.culture). \
+                    ArchiveDocumentLocale.lang == locale.lang). \
                 one()
         return locale_archive
 
@@ -419,12 +419,12 @@ class DocumentRest(object):
         if document.version != document_in.version:
             raise HTTPConflict('version of document has changed')
         for locale_in in document_in.locales:
-            locale = document.get_locale(locale_in.culture)
+            locale = document.get_locale(locale_in.lang)
             if locale:
                 if locale.version != locale_in.version:
                     raise HTTPConflict(
                         'version of locale \'%s\' has changed'
-                        % locale.culture)
+                        % locale.lang)
         if document.geometry and document_in.geometry:
             if document.geometry.version != document_in.geometry.version:
                 raise HTTPConflict('version of geometry has changed')
@@ -444,7 +444,7 @@ class DocumentRest(object):
             .options(joinedload(DocumentVersion.document_geometry_archive)) \
             .filter(DocumentVersion.id == version_id) \
             .filter(DocumentVersion.document_id == id) \
-            .filter(DocumentVersion.culture == lang) \
+            .filter(DocumentVersion.lang == lang) \
             .first()
         if version is None:
             raise HTTPNotFound('invalid version')
@@ -488,7 +488,7 @@ def get_neighbour_version_ids(version_id, document_id, lang):
             literal_column('1').label('t')) \
         .filter(DocumentVersion.id > version_id) \
         .filter(DocumentVersion.document_id == document_id) \
-        .filter(DocumentVersion.culture == lang) \
+        .filter(DocumentVersion.lang == lang) \
         .order_by(DocumentVersion.id) \
         .limit(1) \
         .subquery()
@@ -499,7 +499,7 @@ def get_neighbour_version_ids(version_id, document_id, lang):
             literal_column('-1').label('t')) \
         .filter(DocumentVersion.id < version_id) \
         .filter(DocumentVersion.document_id == document_id) \
-        .filter(DocumentVersion.culture == lang) \
+        .filter(DocumentVersion.lang == lang) \
         .order_by(DocumentVersion.id.desc()) \
         .limit(1) \
         .subquery()
@@ -631,7 +631,7 @@ class HistoryDocumentRest(DocumentRest):
 
         title = DBSession.query(DocumentLocale.title) \
             .filter(DocumentLocale.document_id == id) \
-            .filter(DocumentLocale.culture == lang) \
+            .filter(DocumentLocale.lang == lang) \
             .first()
 
         if not title:
@@ -640,7 +640,7 @@ class HistoryDocumentRest(DocumentRest):
         versions = DBSession.query(DocumentVersion) \
             .options(joinedload('history_metadata').joinedload('user')) \
             .filter(DocumentVersion.document_id == id) \
-            .filter(DocumentVersion.culture == lang) \
+            .filter(DocumentVersion.lang == lang) \
             .order_by(DocumentVersion.id) \
             .all()
 

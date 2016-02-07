@@ -1,4 +1,4 @@
-from c2corg_common.attributes import default_cultures
+from c2corg_common.attributes import default_langs
 from colander import null
 
 # Validation functions
@@ -20,7 +20,7 @@ def validate_lang_(lang, request):
     """Checks if a given lang is one of the available langs.
     """
     if lang is not None:
-        if lang in default_cultures:
+        if lang in default_langs:
             request.validated['lang'] = lang
         else:
             request.errors.add('querystring', 'lang', 'invalid lang')
@@ -80,19 +80,19 @@ def check_required_fields(document, fields, request, updating):
 
 
 def check_duplicate_locales(document, request):
-    """Check that there is only one entry for each culture.
+    """Check that there is only one entry for each lang.
     """
     locales = document.get('locales')
     if locales:
-        cultures = set()
+        langs = set()
         for locale in locales:
-            culture = locale.get('culture')
-            if culture in cultures:
+            lang = locale.get('lang')
+            if lang in langs:
                 request.errors.add(
                     'body', 'locales',
-                    'culture "%s" is given twice' % (culture))
+                    'lang "%s" is given twice' % (lang))
                 return
-            cultures.add(culture)
+            langs.add(lang)
 
 
 def check_get_for_integer_property(request, key, required):

@@ -112,14 +112,14 @@ class MigrateAssociations(MigrateBase):
     def _set_route_locale_title_prefix(self):
         """Set the `title_prefix` field for all route locales that have a
         main waypoint. First set the field for route locales, where there is
-        a locale of the main waypoint in the same culture. Then with a 2nd
+        a locale of the main waypoint in the same lang. Then with a 2nd
         query set the remaining rows by selecting the "best" locale of the main
         waypoint.
         """
         with transaction.manager:
-            print('Set title prefix for route locales (same culture)')
+            print('Set title prefix for route locales (same lang)')
             self.session_target.execute(SQL_SET_TITLE_PREFIX_SAME_CULTURE)
-            print('Set title prefix for route locales (other culture)')
+            print('Set title prefix for route locales (other lang)')
             self.session_target.execute(SQL_SET_TITLE_PREFIX_OTHER_CULTURE)
             zope.sqlalchemy.mark_changed(self.session_target)
         print('Done')
@@ -156,7 +156,7 @@ with v as (select rl.id, l2.title
     on rl.id = l1.id
   join guidebook.routes r on l1.document_id = r.document_id
   join guidebook.documents_locales l2
-    on r.main_waypoint_id = l2.document_id and l2.culture = l1.culture)
+    on r.main_waypoint_id = l2.document_id and l2.lang = l1.lang)
 update guidebook.routes_locales l
   set title_prefix = v.title
 from v
@@ -168,12 +168,12 @@ with v as (select t.id, t.title
   from (select rl.id, l2.title, dense_rank() over(
     partition by rl.id
     order by
-      l2.culture != 'fr',
-      l2.culture != 'en',
-      l2.culture != 'it',
-      l2.culture != 'de',
-      l2.culture != 'es',
-      l2.culture != 'ca'
+      l2.lang != 'fr',
+      l2.lang != 'en',
+      l2.lang != 'it',
+      l2.lang != 'de',
+      l2.lang != 'es',
+      l2.lang != 'ca'
     ) as rank
     from guidebook.routes_locales rl join guidebook.documents_locales l1
       on rl.id = l1.id and rl.title_prefix is null

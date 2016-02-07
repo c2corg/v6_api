@@ -16,7 +16,7 @@ class SearchTest(BaseTestCase):
                 geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
                 WaypointLocale(
-                    culture='fr', title='Mont Granier',
+                    lang='fr', title='Mont Granier',
                     description='...',
                     summary='Le Mont Granier')
             ]))
@@ -27,7 +27,7 @@ class SearchTest(BaseTestCase):
                 geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
                 WaypointLocale(
-                    culture='en', title='Mont Blanc',
+                    lang='en', title='Mont Blanc',
                     description='...',
                     summary='The heighest point in Europe')
             ]))

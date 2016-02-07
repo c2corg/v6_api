@@ -126,7 +126,7 @@ def get_areas(document, lang):
         options(load_only(
             Area.document_id, Area.area_type, Area.version)). \
         options(joinedload(Area.locales).load_only(
-            DocumentLocale.culture, DocumentLocale.title,
+            DocumentLocale.lang, DocumentLocale.title,
             DocumentLocale.version)). \
         filter(
             AreaAssociation.document_id == document.document_id

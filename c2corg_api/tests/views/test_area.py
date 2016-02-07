@@ -77,7 +77,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
             },
             'locales': [
-                {'culture': 'en'}
+                {'lang': 'en'}
             ]
         }
         body = self.post_missing_title(body_post, user='moderator')
@@ -95,7 +95,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
             },
             'locales': [
-                {'culture': 'en', 'title': 'Chartreuse'}
+                {'lang': 'en', 'title': 'Chartreuse'}
             ]
         }
         self.post_non_whitelisted_attribute(body, user='moderator')
@@ -111,7 +111,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'geom': '{"type":"Polygon","coordinates":[[[668518.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668518.249382151,5728802.39591739]]]}'  # noqa
             },
             'locales': [
-                {'culture': 'en', 'title': 'Chartreuse'}
+                {'lang': 'en', 'title': 'Chartreuse'}
             ]
         }
         body, doc = self.post_success(body, user='moderator')
@@ -123,7 +123,7 @@ class TestAreaRest(BaseDocumentTestRest):
         self.assertEqual(archive_map.area_type, 'range')
 
         archive_locale = version.document_locales_archive
-        self.assertEqual(archive_locale.culture, 'en')
+        self.assertEqual(archive_locale.lang, 'en')
         self.assertEqual(archive_locale.title, 'Chartreuse')
 
         archive_geometry = version.document_geometry_archive
@@ -145,7 +145,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'version': self.area1.version,
                 'area_type': 'range',
                 'locales': [
-                    {'culture': 'en', 'title': 'Chartreuse',
+                    {'lang': 'en', 'title': 'Chartreuse',
                      'version': self.locale_en.version}
                 ]
             }
@@ -159,7 +159,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'version': -9999,
                 'area_type': 'range',
                 'locales': [
-                    {'culture': 'en', 'title': 'Chartreuse',
+                    {'lang': 'en', 'title': 'Chartreuse',
                      'version': self.locale_en.version}
                 ]
             }
@@ -173,7 +173,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'version': self.area1.version,
                 'area_type': 'range',
                 'locales': [
-                    {'culture': 'en', 'title': 'Chartreuse',
+                    {'lang': 'en', 'title': 'Chartreuse',
                      'version': -9999}
                 ]
             }
@@ -187,7 +187,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'version': self.area1.version,
                 'area_type': 'range',
                 'locales': [
-                    {'culture': 'en', 'title': 'Chartreuse',
+                    {'lang': 'en', 'title': 'Chartreuse',
                      'version': self.locale_en.version}
                 ]
             }
@@ -209,7 +209,7 @@ class TestAreaRest(BaseDocumentTestRest):
                     'geom': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
                 },
                 'locales': [
-                    {'culture': 'en', 'title': 'New title',
+                    {'lang': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
                 ]
             }
@@ -234,7 +234,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'version': self.area1.version,
                 'area_type': 'admin_limits',
                 'locales': [
-                    {'culture': 'en', 'title': 'New title',
+                    {'lang': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
                 ]
             }
@@ -245,7 +245,7 @@ class TestAreaRest(BaseDocumentTestRest):
         locale_en = map1.get_locale('en')
         self.assertEquals(locale_en.title, 'New title')
 
-        # version with culture 'en'
+        # version with lang 'en'
         versions = map1.versions
         version_en = versions[2]
         archive_locale = version_en.document_locales_archive
@@ -259,7 +259,7 @@ class TestAreaRest(BaseDocumentTestRest):
         archive_geometry_en = version_en.document_geometry_archive
         self.assertEqual(archive_geometry_en.version, 1)
 
-        # version with culture 'fr'
+        # version with lang 'fr'
         version_fr = versions[3]
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Chartreuse')
@@ -276,14 +276,14 @@ class TestAreaRest(BaseDocumentTestRest):
                     'geom': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
                 },
                 'locales': [
-                    {'culture': 'en', 'title': 'New title',
+                    {'lang': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
                 ]
             }
         }
         (body, map1) = self.put_success_all(body, self.area1, user='moderator')
 
-        # version with culture 'en'
+        # version with lang 'en'
         version_en = map1.versions[2]
 
         # geometry has been changed because the user is a moderator
@@ -306,7 +306,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'version': self.area1.version,
                 'area_type': 'admin_limits',
                 'locales': [
-                    {'culture': 'en', 'title': 'Chartreuse',
+                    {'lang': 'en', 'title': 'Chartreuse',
                      'version': self.locale_en.version}
                 ]
             }
@@ -332,7 +332,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'version': self.area1.version,
                 'area_type': 'range',
                 'locales': [
-                    {'culture': 'en', 'title': 'New title',
+                    {'lang': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
                 ]
             }
@@ -361,7 +361,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'version': self.area1.version,
                 'area_type': 'range',
                 'locales': [
-                    {'culture': 'es', 'title': 'Chartreuse'}
+                    {'lang': 'es', 'title': 'Chartreuse'}
                 ]
             }
         }
@@ -382,8 +382,8 @@ class TestAreaRest(BaseDocumentTestRest):
     def _add_test_data(self):
         self.area1 = Area(area_type='range')
 
-        self.locale_en = DocumentLocale(culture='en', title='Chartreuse')
-        self.locale_fr = DocumentLocale(culture='fr', title='Chartreuse')
+        self.locale_en = DocumentLocale(lang='en', title='Chartreuse')
+        self.locale_fr = DocumentLocale(lang='fr', title='Chartreuse')
 
         self.area1.locales.append(self.locale_en)
         self.area1.locales.append(self.locale_fr)
@@ -404,9 +404,9 @@ class TestAreaRest(BaseDocumentTestRest):
         self.session.add(self.area3)
         self.area4 = Area(area_type='admin_limits')
         self.area4.locales.append(DocumentLocale(
-            culture='en', title='Isère'))
+            lang='en', title='Isère'))
         self.area4.locales.append(DocumentLocale(
-            culture='fr', title='Isère'))
+            lang='fr', title='Isère'))
         self.session.add(self.area4)
 
         self.waypoint1 = Waypoint(

@@ -11,9 +11,9 @@ class TestArea(BaseTestCase):
             document_id=1, area_type='range',
             locales=[
                 DocumentLocale(
-                    id=2, culture='en', title='Chartreuse', summary='...'),
+                    id=2, lang='en', title='Chartreuse', summary='...'),
                 DocumentLocale(
-                    id=3, culture='fr', title='Chartreuse', summary='...'),
+                    id=3, lang='fr', title='Chartreuse', summary='...'),
             ]
         )
 
@@ -30,5 +30,5 @@ class TestArea(BaseTestCase):
         locale_archive = archive_locals[0]
         self.assertIsNot(locale_archive, locale)
         self.assertIsNone(locale_archive.id)
-        self.assertEqual(locale_archive.culture, locale.culture)
+        self.assertEqual(locale_archive.lang, locale.lang)
         self.assertEqual(locale_archive.title, locale.title)

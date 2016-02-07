@@ -88,10 +88,10 @@ def update_title_prefix(route, create=False):
         # "next" locale).
         waypoint_locales = DBSession.query(DocumentLocale). \
             filter(DocumentLocale.document_id == route.main_waypoint_id). \
-            options(load_only(DocumentLocale.culture, DocumentLocale.title)). \
+            options(load_only(DocumentLocale.lang, DocumentLocale.title)). \
             all()
         waypoint_locales_index = {
-            locale.culture: locale for locale in waypoint_locales}
+            locale.lang: locale for locale in waypoint_locales}
 
         set_route_title_prefix(route, waypoint_locales, waypoint_locales_index)
 
@@ -105,7 +105,7 @@ def set_route_title_prefix(route, waypoint_locales, waypoint_locales_index):
     else:
         for locale in route.locales:
             waypoint_locale = get_best_locale(
-                waypoint_locales_index, locale.culture)
+                waypoint_locales_index, locale.lang)
             set_title_prefix_for_ids(
                 [locale.id],
                 waypoint_locale.title if waypoint_locale else '')

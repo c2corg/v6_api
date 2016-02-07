@@ -77,7 +77,7 @@ class MigrateVersions(MigrateBase):
         return dict(
             id=row.documents_versions_id,
             document_id=row.document_id,
-            culture=row.culture,
+            lang=row.culture,
             document_archive_id=row.document_archive_id,
             document_locales_archive_id=row.document_i18n_archive_id,
             document_geometry_archive_id=row.document_archive_id,

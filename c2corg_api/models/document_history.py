@@ -38,8 +38,8 @@ class DocumentVersion(Base):
         Document, primaryjoin=document_id == Document.document_id,
         backref=backref('versions', viewonly=True))
 
-    culture = Column(
-        String(2), ForeignKey(schema + '.cultures.culture'),
+    lang = Column(
+        String(2), ForeignKey(schema + '.langs.lang'),
         nullable=False)
 
     document_archive_id = Column(

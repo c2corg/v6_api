@@ -106,7 +106,7 @@ def get_maps(document, lang):
             TopoMap.document_id, TopoMap.editor, TopoMap.code,
             TopoMap.version)). \
         options(joinedload(TopoMap.locales).load_only(
-            DocumentLocale.culture, DocumentLocale.title,
+            DocumentLocale.lang, DocumentLocale.title,
             DocumentLocale.version)). \
         filter(
             DocumentGeometry.geom.intersects(
