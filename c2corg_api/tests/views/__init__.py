@@ -163,7 +163,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def get_lang(self, reference):
         response = self.app.get(self._prefix + '/' +
-                                str(reference.document_id) + '?l=en',
+                                str(reference.document_id) + '?lang=en',
                                 status=200)
         self.assertEqual(response.content_type, 'application/json')
 
@@ -175,7 +175,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def get_new_lang(self, reference):
         response = self.app.get(self._prefix + '/' +
-                                str(reference.document_id) + '?l=it',
+                                str(reference.document_id) + '?lang=it',
                                 status=200)
         self.assertEqual(response.content_type, 'application/json')
 
@@ -185,7 +185,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def get_404(self):
         self.app.get(self._prefix + '/-9999', status=404)
-        self.app.get(self._prefix + '/-9999?l=es', status=404)
+        self.app.get(self._prefix + '/-9999?lang=es', status=404)
 
     def post_error(self, request_body, user='contributor'):
         response = self.app.post_json(self._prefix, request_body,
