@@ -36,9 +36,9 @@ def validate_lang(request):
 
 def validate_lang_param(request):
     """Checks if the language given in the url as GET parameter
-    is correct ("...?l=...").
+    is correct ("...?lang=...").
     """
-    lang = request.GET.get('l')
+    lang = request.GET.get('lang')
     validate_lang_(lang, request)
 
 
