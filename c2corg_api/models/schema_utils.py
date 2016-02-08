@@ -1,5 +1,5 @@
 default_fields_doc = ['document_id', 'version', 'waypoint_type']
-default_fields_locale = ['version', 'culture']
+default_fields_locale = ['version', 'lang']
 default_fields_geometry = ['version']
 
 

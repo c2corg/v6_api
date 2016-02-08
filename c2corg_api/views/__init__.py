@@ -2,7 +2,7 @@ import collections
 import datetime
 
 from c2corg_api.models import DBSession
-from c2corg_common.attributes import cultures_priority
+from c2corg_common.attributes import langs_priority
 from colander import null
 from pyramid.httpexceptions import HTTPError, HTTPNotFound
 from pyramid.view import view_config
@@ -77,7 +77,7 @@ def to_json_dict(obj, schema):
     # cleaner to add the field to the schema, but ColanderAlchemy doesn't like
     # it because it's not a real column)
     special_attributes = [
-        'available_cultures', 'associations', 'maps', 'areas'
+        'available_langs', 'associations', 'maps', 'areas'
     ]
     for attr in special_attributes:
         if hasattr(obj, attr):
@@ -118,7 +118,7 @@ def to_seconds(date):
 def set_best_locale(documents, preferred_lang, expunge=True):
     """Sets the "best" locale on the given documents. The "best" locale is
     the locale in the given "preferred language" if available. Otherwise
-    it is the "most relevant" translation according to `cultures_priority`.
+    it is the "most relevant" translation according to `langs_priority`.
     """
     if preferred_lang is None:
         return
@@ -131,7 +131,7 @@ def set_best_locale(documents, preferred_lang, expunge=True):
 
         if document.locales:
             available_locales = {
-                locale.culture: locale for locale in document.locales}
+                locale.lang: locale for locale in document.locales}
             best_locale = get_best_locale(available_locales, preferred_lang)
             if best_locale:
                 document.locales = [best_locale]
@@ -142,6 +142,6 @@ def get_best_locale(available_locales, preferred_lang):
         best_locale = available_locales[preferred_lang]
     else:
         best_locale = next(
-                (available_locales[lang] for lang in cultures_priority
+                (available_locales[lang] for lang in langs_priority
                  if lang in available_locales), None)
     return best_locale

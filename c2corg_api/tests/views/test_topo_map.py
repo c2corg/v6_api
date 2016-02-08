@@ -81,7 +81,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
             },
             'locales': [
-                {'culture': 'en'}
+                {'lang': 'en'}
             ]
         }
         body = self.post_missing_title(body_post, user='moderator')
@@ -101,7 +101,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
             },
             'locales': [
-                {'culture': 'en', 'title': 'Lac d\'Annecy'}
+                {'lang': 'en', 'title': 'Lac d\'Annecy'}
             ]
         }
         self.post_non_whitelisted_attribute(body, user='moderator')
@@ -119,7 +119,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
             },
             'locales': [
-                {'culture': 'en', 'title': 'Lac d\'Annecy'}
+                {'lang': 'en', 'title': 'Lac d\'Annecy'}
             ]
         }
         body, doc = self.post_success(body, user='moderator')
@@ -133,7 +133,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         self.assertEqual(archive_map.code, '3432OT')
 
         archive_locale = version.document_locales_archive
-        self.assertEqual(archive_locale.culture, 'en')
+        self.assertEqual(archive_locale.lang, 'en')
         self.assertEqual(archive_locale.title, 'Lac d\'Annecy')
 
         archive_geometry = version.document_geometry_archive
@@ -149,7 +149,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 'scale': '25000',
                 'code': '3432OT',
                 'locales': [
-                    {'culture': 'en', 'title': 'Lac d\'Annecy',
+                    {'lang': 'en', 'title': 'Lac d\'Annecy',
                      'version': self.locale_en.version}
                 ]
             }
@@ -165,7 +165,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 'scale': '25000',
                 'code': '3432OT',
                 'locales': [
-                    {'culture': 'en', 'title': 'Lac d\'Annecy',
+                    {'lang': 'en', 'title': 'Lac d\'Annecy',
                      'version': self.locale_en.version}
                 ]
             }
@@ -181,7 +181,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 'scale': '25000',
                 'code': '3432OT',
                 'locales': [
-                    {'culture': 'en', 'title': 'Lac d\'Annecy',
+                    {'lang': 'en', 'title': 'Lac d\'Annecy',
                      'version': -9999}
                 ]
             }
@@ -197,7 +197,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 'scale': '25000',
                 'code': '3432OT',
                 'locales': [
-                    {'culture': 'en', 'title': 'Lac d\'Annecy',
+                    {'lang': 'en', 'title': 'Lac d\'Annecy',
                      'version': self.locale_en.version}
                 ]
             }
@@ -221,7 +221,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                     'geom': '{"type": "Point", "coordinates": [1, 2]}'
                 },
                 'locales': [
-                    {'culture': 'en', 'title': 'New title',
+                    {'lang': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
                 ]
             }
@@ -232,7 +232,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         locale_en = map1.get_locale('en')
         self.assertEquals(locale_en.title, 'New title')
 
-        # version with culture 'en'
+        # version with lang 'en'
         versions = map1.versions
         version_en = versions[2]
         archive_locale = version_en.document_locales_archive
@@ -245,7 +245,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         archive_geometry_en = version_en.document_geometry_archive
         self.assertEqual(archive_geometry_en.version, 2)
 
-        # version with culture 'fr'
+        # version with lang 'fr'
         version_fr = versions[3]
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Lac d\'Annecy')
@@ -260,7 +260,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 'scale': '25000',
                 'code': '3433OT',
                 'locales': [
-                    {'culture': 'en', 'title': 'Lac d\'Annecy',
+                    {'lang': 'en', 'title': 'Lac d\'Annecy',
                      'version': self.locale_en.version}
                 ]
             }
@@ -280,7 +280,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 'scale': '25000',
                 'code': '3431OT',
                 'locales': [
-                    {'culture': 'en', 'title': 'New title',
+                    {'lang': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
                 ]
             }
@@ -303,7 +303,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 'scale': '25000',
                 'code': '3431OT',
                 'locales': [
-                    {'culture': 'es', 'title': 'Lac d\'Annecy'}
+                    {'lang': 'es', 'title': 'Lac d\'Annecy'}
                 ]
             }
         }
@@ -327,8 +327,8 @@ class TestTopoMapRest(BaseDocumentTestRest):
     def _add_test_data(self):
         self.map1 = TopoMap(editor='ign', scale='25000', code='3431OT')
 
-        self.locale_en = DocumentLocale(culture='en', title='Lac d\'Annecy')
-        self.locale_fr = DocumentLocale(culture='fr', title='Lac d\'Annecy')
+        self.locale_en = DocumentLocale(lang='en', title='Lac d\'Annecy')
+        self.locale_fr = DocumentLocale(lang='fr', title='Lac d\'Annecy')
 
         self.map1.locales.append(self.locale_en)
         self.map1.locales.append(self.locale_fr)
@@ -351,8 +351,8 @@ class TestTopoMapRest(BaseDocumentTestRest):
         self.map4 = TopoMap(
             editor='ign', scale='25000', code='3434OT')
         self.map4.locales.append(DocumentLocale(
-            culture='en', title='Lac d\'Annecy'))
+            lang='en', title='Lac d\'Annecy'))
         self.map4.locales.append(DocumentLocale(
-            culture='fr', title='Lac d\'Annecy'))
+            lang='fr', title='Lac d\'Annecy'))
         self.session.add(self.map4)
         self.session.flush()

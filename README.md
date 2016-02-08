@@ -53,14 +53,14 @@ Insert a waypoint:
 
     curl -X POST -v \
     -H "Content-Type: application/json" \
-    -d '{"waypoint_type": "summit", "elevation": 3779, "geometry": {"geom": "{\"type\": \"Point\", \"coordinates\": [635956, 5723604]}"},"locales": [{"culture": "fr", "title": "Mont Pourri"}]}' \
+    -d '{"waypoint_type": "summit", "elevation": 3779, "geometry": {"geom": "{\"type\": \"Point\", \"coordinates\": [635956, 5723604]}"},"locales": [{"lang": "fr", "title": "Mont Pourri"}]}' \
     http://localhost:6543/waypoints
 
 Updating a waypoint:
 
     curl -X PUT -v \
     -H "Content-Type: application/json" \
-    -d '{"message": "Comment about change", "document": {"elevation": 4633, "maps_info": null, "version": 1, "document_id": 1, "waypoint_type": "summit", "locales": [{"culture": "fr", "version": 1, "title": "Mont Rose", "access": null, "description": null}]}}' \
+    -d '{"message": "Comment about change", "document": {"elevation": 4633, "maps_info": null, "version": 1, "document_id": 1, "waypoint_type": "summit", "locales": [{"lang": "fr", "version": 1, "title": "Mont Rose", "access": null, "description": null}]}}' \
     http://localhost:6543/waypoints/1
 
 

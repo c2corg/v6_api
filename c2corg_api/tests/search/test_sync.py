@@ -21,7 +21,7 @@ class SyncTest(BaseTestCase):
                 geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
                 WaypointLocale(
-                    culture='fr', title='Mont Granier',
+                    lang='fr', title='Mont Granier',
                     description='...',
                     summary='Le Mont [b]Granier[/b]')
             ])
@@ -46,7 +46,7 @@ class SyncTest(BaseTestCase):
                 geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
                 WaypointLocale(
-                    culture='fr', title='Mont Granier',
+                    lang='fr', title='Mont Granier',
                     description='...',
                     summary='Le Mont Granier')
             ])
@@ -64,11 +64,11 @@ class SyncTest(BaseTestCase):
                 geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
                 WaypointLocale(
-                    culture='fr', title='Mont Granier',
+                    lang='fr', title='Mont Granier',
                     description='...',
                     summary='Le Mont Granier'),
                 WaypointLocale(
-                    culture='en', title='Mont Granier',
+                    lang='en', title='Mont Granier',
                     description='...',
                     summary='The Mont Granier')
             ])

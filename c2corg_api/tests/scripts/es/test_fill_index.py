@@ -18,11 +18,11 @@ class FillIndexTest(BaseTestCase):
                 geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
                 WaypointLocale(
-                    culture='fr', title='Mont Granier',
+                    lang='fr', title='Mont Granier',
                     description='...',
                     summary='Le Mont [b]Granier[/b]'),
                 WaypointLocale(
-                    culture='en', title='Mont Granier',
+                    lang='en', title='Mont Granier',
                     description='...',
                     summary='The Mont Granier')
             ]))
@@ -33,7 +33,7 @@ class FillIndexTest(BaseTestCase):
                 geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
                 WaypointLocale(
-                    culture='en', title='Mont Blanc',
+                    lang='en', title='Mont Blanc',
                     description='...',
                     summary='The heighest point in Europe')
             ]))
@@ -43,7 +43,7 @@ class FillIndexTest(BaseTestCase):
             height_diff_up=800, height_diff_down=800, durations='1',
             locales=[
                 RouteLocale(
-                    culture='en', title='Face N',
+                    lang='en', title='Face N',
                     description='...', gear='paraglider',
                     title_prefix='Mont Blanc'
                 )

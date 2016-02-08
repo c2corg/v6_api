@@ -120,7 +120,7 @@ class TestRouteRest(BaseDocumentTestRest):
                         '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
-                {'culture': 'en', 'title': 'Some nice loop'}
+                {'lang': 'en', 'title': 'Some nice loop'}
             ]
         }
         body = self.post_error(body_post)
@@ -144,7 +144,7 @@ class TestRouteRest(BaseDocumentTestRest):
                         '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
-                {'culture': 'en'}
+                {'lang': 'en'}
             ]
         }
         body = self.post_missing_title(body_post)
@@ -167,7 +167,7 @@ class TestRouteRest(BaseDocumentTestRest):
                         '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
-                {'culture': 'en', 'title': 'Some nice loop',
+                {'lang': 'en', 'title': 'Some nice loop',
                  'gear': 'shoes'}
             ]
         }
@@ -191,7 +191,7 @@ class TestRouteRest(BaseDocumentTestRest):
                         '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
-                {'culture': 'en', 'title': 'Some nice loop',
+                {'lang': 'en', 'title': 'Some nice loop',
                  'gear': 'shoes'}
             ]
         }
@@ -205,7 +205,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(archive_route.elevation_max, 1500)
 
         archive_locale = version.document_locales_archive
-        self.assertEqual(archive_locale.culture, 'en')
+        self.assertEqual(archive_locale.lang, 'en')
         self.assertEqual(archive_locale.title, 'Some nice loop')
 
         archive_geometry = version.document_geometry_archive
@@ -233,7 +233,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'durations': ['1'],
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
                      'version': self.locale_en.version}
                 ]
@@ -253,7 +253,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'durations': ['1'],
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
                      'version': self.locale_en.version}
                 ]
@@ -273,7 +273,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'durations': ['1'],
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
                      'version': -9999}
                 ]
@@ -293,7 +293,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'durations': ['1'],
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
                      'version': self.locale_en.version}
                 ]
@@ -317,7 +317,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'durations': ['1'],
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
                      'version': self.locale_en.version}
                 ],
@@ -335,7 +335,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEquals(locale_en.description, '...')
         self.assertEquals(locale_en.gear, 'none')
 
-        # version with culture 'en'
+        # version with lang 'en'
         versions = route.versions
         version_en = versions[2]
         archive_locale = version_en.document_locales_archive
@@ -349,7 +349,7 @@ class TestRouteRest(BaseDocumentTestRest):
         archive_geometry_en = version_en.document_geometry_archive
         self.assertEqual(archive_geometry_en.version, 2)
 
-        # version with culture 'fr'
+        # version with lang 'fr'
         version_fr = versions[3]
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Blanc du ciel')
@@ -368,7 +368,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'durations': ['1'],
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'paraglider',
                      'version': self.locale_en.version,
                      'title_prefix': 'Should be ignored'}
@@ -393,7 +393,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'durations': ['1'],
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'paraglider',
                      'version': self.locale_en.version}
                 ]
@@ -419,7 +419,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'durations': ['1'],
                 'locales': [
-                    {'culture': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
                      'version': self.locale_en.version}
                 ]
@@ -444,7 +444,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'durations': ['1'],
                 'locales': [
-                    {'culture': 'es', 'title': 'Mont Blanc del cielo',
+                    {'lang': 'es', 'title': 'Mont Blanc del cielo',
                      'description': '...', 'gear': 'si'}
                 ]
             }
@@ -455,8 +455,8 @@ class TestRouteRest(BaseDocumentTestRest):
 
     def test_history(self):
         id = self.route.document_id
-        cultures = ['fr', 'en']
-        for lang in cultures:
+        langs = ['fr', 'en']
+        for lang in langs:
             body = self.app.get('/document/%d/history/%s' % (id, lang))
             username = 'contributor'
             user_id = self.global_userids[username]
@@ -494,7 +494,7 @@ class TestRouteRest(BaseDocumentTestRest):
 
     def test_update_prefix_title(self):
         self.route.locales.append(RouteLocale(
-            culture='es', title='Mont Blanc del cielo', description='...',
+            lang='es', title='Mont Blanc del cielo', description='...',
             gear='paraglider'))
         self.route.main_waypoint_id = self.waypoint.document_id
         self.session.flush()
@@ -522,11 +522,11 @@ class TestRouteRest(BaseDocumentTestRest):
             height_diff_up=800, height_diff_down=800, durations='1')
 
         self.locale_en = RouteLocale(
-            culture='en', title='Mont Blanc from the air', description='...',
+            lang='en', title='Mont Blanc from the air', description='...',
             gear='paraglider', title_prefix='Main waypoint title')
 
         self.locale_fr = RouteLocale(
-            culture='fr', title='Mont Blanc du ciel', description='...',
+            lang='fr', title='Mont Blanc du ciel', description='...',
             gear='paraglider')
 
         self.route.locales.append(self.locale_en)
@@ -542,7 +542,7 @@ class TestRouteRest(BaseDocumentTestRest):
         DocumentRest(None)._create_new_version(self.route, user_id)
         self.route_version = self.session.query(DocumentVersion). \
             filter(DocumentVersion.document_id == self.route.document_id). \
-            filter(DocumentVersion.culture == 'en').first()
+            filter(DocumentVersion.lang == 'en').first()
 
         self.route2 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
@@ -556,10 +556,10 @@ class TestRouteRest(BaseDocumentTestRest):
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
             height_diff_up=800, height_diff_down=800, durations='1')
         self.route4.locales.append(RouteLocale(
-            culture='en', title='Mont Blanc from the air', description='...',
+            lang='en', title='Mont Blanc from the air', description='...',
             gear='paraglider'))
         self.route4.locales.append(RouteLocale(
-            culture='fr', title='Mont Blanc du ciel', description='...',
+            lang='fr', title='Mont Blanc du ciel', description='...',
             gear='paraglider'))
         self.session.add(self.route4)
 
@@ -569,10 +569,10 @@ class TestRouteRest(BaseDocumentTestRest):
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'))
         self.waypoint.locales.append(WaypointLocale(
-            culture='en', title='Mont Granier (en)', description='...',
+            lang='en', title='Mont Granier (en)', description='...',
             access='yep'))
         self.waypoint.locales.append(WaypointLocale(
-            culture='fr', title='Mont Granier (fr)', description='...',
+            lang='fr', title='Mont Granier (fr)', description='...',
             access='ouai'))
         self.session.add(self.waypoint)
         self.session.flush()

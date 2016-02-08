@@ -23,7 +23,7 @@ class TestUtils(unittest.TestCase):
         locales_node = self.get_child_node(schema, 'locales')
         locale_node = locales_node.children[0]
         self.assertHasField(locale_node, 'version')
-        self.assertHasField(locale_node, 'culture')
+        self.assertHasField(locale_node, 'lang')
         self.assertHasField(locale_node, 'title')
         self.assertHasNotField(locale_node, 'access_period')
 

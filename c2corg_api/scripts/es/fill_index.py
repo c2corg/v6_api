@@ -56,12 +56,12 @@ def fill_index(db_session):
     q = DBSession.query(
             DocumentLocale.document_id, DocumentLocale.title,
             DocumentLocale.summary, DocumentLocale.description,
-            DocumentLocale.culture, DocumentLocale.type,
+            DocumentLocale.lang, DocumentLocale.type,
             RouteLocale.__table__.c.title_prefix). \
         outerjoin(
             RouteLocale.__table__,
             DocumentLocale.id == RouteLocale.__table__.c.id).\
-        order_by(DocumentLocale.document_id, DocumentLocale.culture)
+        order_by(DocumentLocale.document_id, DocumentLocale.lang)
 
     def progress(count, total_count):
         if status['last_progress_update'] is None or \
@@ -75,7 +75,7 @@ def fill_index(db_session):
     batch = ElasticBatch(client, batch_size)
     count = 0
     with batch:
-        for document_id, title, summary, description, culture, type, \
+        for document_id, title, summary, description, lang, type, \
                 title_prefix in q:
             if search_document is not None and document_id != last_id:
                 batch.add(search_document)
@@ -90,10 +90,10 @@ def fill_index(db_session):
                     'doc_type': type
                 }
 
-            search_document['title_' + culture] = get_title(
+            search_document['title_' + lang] = get_title(
                 title, title_prefix)
-            search_document['summary_' + culture] = strip_bbcodes(summary)
-            search_document['description_' + culture] = \
+            search_document['summary_' + lang] = strip_bbcodes(summary)
+            search_document['description_' + lang] = \
                 strip_bbcodes(description)
 
             last_id = document_id

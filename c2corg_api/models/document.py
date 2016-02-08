@@ -38,11 +38,11 @@ UpdateType = enum.Enum(
 DOCUMENT_TYPE = 'd'
 
 
-class Culture(Base):
+class Lang(Base):
     """The supported languages.
     """
-    __tablename__ = 'cultures'
-    culture = Column(String(2), primary_key=True)
+    __tablename__ = 'langs'
+    lang = Column(String(2), primary_key=True)
 
 
 class _DocumentMixin(object):
@@ -78,7 +78,7 @@ class Document(Base, _DocumentMixin):
     locales = relationship('DocumentLocale')
     geometry = relationship('DocumentGeometry', uselist=False)
 
-    available_cultures = None
+    available_langs = None
 
     __mapper_args__ = extend_dict({
         'version_id_col': _DocumentMixin.version
@@ -117,7 +117,7 @@ class Document(Base, _DocumentMixin):
         copy_attributes(other, self, Document._ATTRIBUTES_WHITELISTED)
 
         for locale_in in other.locales:
-            locale = self.get_locale(locale_in.culture)
+            locale = self.get_locale(locale_in.lang)
             if locale:
                 locale.update(locale_in)
                 locale.document_id = self.document_id
@@ -138,7 +138,7 @@ class Document(Base, _DocumentMixin):
         return {
             'document': self.version,
             'locales': {
-                locale.culture: locale.version for locale in self.locales
+                locale.lang: locale.version for locale in self.locales
             },
             'geometry': self.geometry.version if self.geometry else None
         }
@@ -159,11 +159,11 @@ class Document(Base, _DocumentMixin):
         changed_langs = []
         locale_versions = old_versions['locales']
         for locale in self.locales:
-            locale_version = locale_versions.get(locale.culture)
+            locale_version = locale_versions.get(locale.lang)
 
             if not (locale_version and locale_version == locale.version):
                 # new locale or locale has changed
-                changed_langs.append(locale.culture)
+                changed_langs.append(locale.lang)
 
         update_types = []
         if not figures_equal:
@@ -175,12 +175,12 @@ class Document(Base, _DocumentMixin):
 
         return (update_types, changed_langs)
 
-    def get_locale(self, culture):
-        """Get the locale with the given culture or `None` if no locale
+    def get_locale(self, lang):
+        """Get the locale with the given lang or `None` if no locale
         is present.
         """
         return next(
-            filter(lambda locale: locale.culture == culture, self.locales),
+            filter(lambda locale: locale.lang == lang, self.locales),
             None)
 
 
@@ -210,9 +210,9 @@ class _DocumentLocaleMixin(object):
             nullable=False)
 
     @declared_attr
-    def culture(self):
+    def lang(self):
         return Column(
-            String(2), ForeignKey(schema + '.cultures.culture'),
+            String(2), ForeignKey(schema + '.langs.lang'),
             nullable=False)
 
     title = Column(String(150), nullable=False)
@@ -236,7 +236,7 @@ class DocumentLocale(Base, _DocumentLocaleMixin):
     }
 
     _ATTRIBUTES = [
-        'document_id', 'version', 'culture', 'title', 'description',
+        'document_id', 'version', 'lang', 'title', 'description',
         'summary'
     ]
 
@@ -373,7 +373,7 @@ schema_attributes = [
     'document_id', 'version', 'locales', 'geometry'
 ]
 schema_locale_attributes = [
-    'version', 'culture', 'title', 'description', 'summary'
+    'version', 'lang', 'title', 'description', 'summary'
 ]
 
 schema_document_locale = SQLAlchemySchemaNode(
@@ -408,8 +408,8 @@ def get_update_schema(document_schema):
     return UpdateSchema()
 
 
-def set_available_cultures(documents, loaded=False):
-    """Load and set the available cultures for the given documents.
+def set_available_langs(documents, loaded=False):
+    """Load and set the available langs for the given documents.
     """
     if len(documents) == 0:
         return
@@ -417,23 +417,23 @@ def set_available_cultures(documents, loaded=False):
     if loaded:
         # all locales are already loaded, so simply set the attribute
         for document in documents:
-            document.available_cultures = [
-                locale.culture for locale in document.locales]
+            document.available_langs = [
+                locale.lang for locale in document.locales]
     else:
         document_ids = [doc.document_id for doc in documents]
         documents_for_id = {doc.document_id: doc for doc in documents}
 
-        # aggregate the cultures per document into an array
-        culture_agg = func.array_agg(
-            DocumentLocale.culture,
-            type_=postgresql.ARRAY(String)).label('cultures')
+        # aggregate the langs per document into an array
+        lang_agg = func.array_agg(
+            DocumentLocale.lang,
+            type_=postgresql.ARRAY(String)).label('langs')
 
-        cultures_per_doc = DBSession.query(
-            DocumentLocale.document_id, culture_agg). \
+        langs_per_doc = DBSession.query(
+            DocumentLocale.document_id, lang_agg). \
             filter(DocumentLocale.document_id.in_(document_ids)). \
             group_by(DocumentLocale.document_id). \
             all()
 
-        for document_id, cultures in cultures_per_doc:
+        for document_id, langs in langs_per_doc:
             document = documents_for_id.get(document_id)
-            document.available_cultures = cultures
+            document.available_langs = langs

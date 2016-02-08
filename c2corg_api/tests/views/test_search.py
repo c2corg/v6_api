@@ -19,11 +19,11 @@ class TestSearchRest(BaseTestRest):
                 geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
                 WaypointLocale(
-                    culture='fr', title='Dent de Crolles',
+                    lang='fr', title='Dent de Crolles',
                     description='...',
                     summary='La Dent de Crolles'),
                 WaypointLocale(
-                    culture='en', title='Dent de Crolles',
+                    lang='en', title='Dent de Crolles',
                     description='...',
                     summary='The Dent de Crolles')
             ]))
@@ -34,7 +34,7 @@ class TestSearchRest(BaseTestRest):
                 geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
                 WaypointLocale(
-                    culture='en', title='Mont Blanc',
+                    lang='en', title='Mont Blanc',
                     description='...',
                     summary='The heighest point in Europe')
             ]))
@@ -43,7 +43,7 @@ class TestSearchRest(BaseTestRest):
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
             locales=[
                 RouteLocale(
-                    culture='fr', title='Mont Blanc du ciel',
+                    lang='fr', title='Mont Blanc du ciel',
                     description='...', summary='Ski')
             ]))
         self.session.flush()

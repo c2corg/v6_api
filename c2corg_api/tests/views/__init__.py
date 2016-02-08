@@ -85,8 +85,8 @@ class BaseDocumentTestRest(BaseTestRest):
 
         if params is None:
             doc = documents[0]
-            available_cultures = doc.get('available_cultures')
-            self.assertEqual(sorted(available_cultures), ['en', 'fr'])
+            available_langs = doc.get('available_langs')
+            self.assertEqual(sorted(available_langs), ['en', 'fr'])
 
         if limit is None:
             nb_docs = self.session.query(self._model).count()
@@ -108,7 +108,7 @@ class BaseDocumentTestRest(BaseTestRest):
         locales = doc.get('locales')
         self.assertEqual(len(locales), 1)
         locale = locales[0]
-        self.assertEqual('fr', locale['culture'])
+        self.assertEqual('fr', locale['lang'])
 
         return body
 
@@ -135,11 +135,11 @@ class BaseDocumentTestRest(BaseTestRest):
         locale_en = locales[0]
         self.assertNotIn('id', locale_en)
         self.assertIsNotNone(locale_en.get('version'))
-        self.assertEqual(locale_en.get('culture'), self.locale_en.culture)
+        self.assertEqual(locale_en.get('lang'), self.locale_en.lang)
         self.assertEqual(locale_en.get('title'), self.locale_en.title)
 
-        available_cultures = body.get('available_cultures')
-        self.assertEqual(available_cultures, ['en', 'fr'])
+        available_langs = body.get('available_langs')
+        self.assertEqual(available_langs, ['en', 'fr'])
         return body
 
     def get_version(self, reference, reference_version):
@@ -171,7 +171,7 @@ class BaseDocumentTestRest(BaseTestRest):
         locales = body.get('locales')
         self.assertEqual(len(locales), 1)
         locale_en = locales[0]
-        self.assertEqual(locale_en.get('culture'), self.locale_en.culture)
+        self.assertEqual(locale_en.get('lang'), self.locale_en.lang)
 
     def get_new_lang(self, reference):
         response = self.app.get(self._prefix + '/' +
@@ -280,7 +280,7 @@ class BaseDocumentTestRest(BaseTestRest):
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
         self.assertEqual(
-            errors[0].get('description'), 'culture "en" is given twice')
+            errors[0].get('description'), 'lang "en" is given twice')
         self.assertEqual(errors[0].get('name'), 'locales')
         return body
 
@@ -349,8 +349,8 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(len(versions), 1)
         version = versions[0]
 
-        culture = body.get('locales')[0].get('culture')
-        self.assertEqual(version.culture, culture)
+        lang = body.get('locales')[0].get('lang')
+        self.assertEqual(version.lang, lang)
 
         meta_data = version.history_metadata
         self.assertEqual(meta_data.comment, 'creation')
@@ -366,7 +366,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(
             archive_locale.version, waypoint_locale_en.version)
         self.assertEqual(archive_locale.document_id, document_id)
-        self.assertEqual(archive_locale.culture, culture)
+        self.assertEqual(archive_locale.lang, lang)
 
         # check updates to the search index
         search_doc = SearchDocument.get(
@@ -505,10 +505,10 @@ class BaseDocumentTestRest(BaseTestRest):
         versions = document.versions
         self.assertEqual(len(versions), 4)
 
-        # version with culture 'en'
+        # version with lang 'en'
         version_en = versions[2]
 
-        self.assertEqual(version_en.culture, 'en')
+        self.assertEqual(version_en.lang, 'en')
 
         meta_data_en = version_en.history_metadata
         self.assertEqual(meta_data_en.comment, 'Update')
@@ -522,12 +522,12 @@ class BaseDocumentTestRest(BaseTestRest):
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.document_id, document_id)
         self.assertEqual(archive_locale.version, locale_en.version)
-        self.assertEqual(archive_locale.culture, 'en')
+        self.assertEqual(archive_locale.lang, 'en')
 
-        # version with culture 'fr'
+        # version with lang 'fr'
         version_fr = versions[3]
 
-        self.assertEqual(version_fr.culture, 'fr')
+        self.assertEqual(version_fr.lang, 'fr')
 
         meta_data_fr = version_fr.history_metadata
         self.assertIs(meta_data_en, meta_data_fr)
@@ -539,7 +539,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(archive_locale_fr.document_id, document_id)
         self.assertEqual(
             archive_locale_fr.version, self.locale_fr.version)
-        self.assertEqual(archive_locale_fr.culture, 'fr')
+        self.assertEqual(archive_locale_fr.lang, 'fr')
 
         # check updates to the search index
         search_doc = SearchDocument.get(
@@ -597,19 +597,19 @@ class BaseDocumentTestRest(BaseTestRest):
         versions = document.versions
         self.assertEqual(len(versions), 4)
 
-        # version with culture 'en'
+        # version with lang 'en'
         version_en = versions[2]
 
-        self.assertEqual(version_en.culture, 'en')
+        self.assertEqual(version_en.lang, 'en')
 
         meta_data_en = version_en.history_metadata
         self.assertEqual(meta_data_en.comment, 'Changing figures')
         self.assertIsNotNone(meta_data_en.written_at)
 
-        # version with culture 'fr'
+        # version with lang 'fr'
         version_fr = versions[3]
 
-        self.assertEqual(version_fr.culture, 'fr')
+        self.assertEqual(version_fr.lang, 'fr')
 
         meta_data_fr = version_fr.history_metadata
         self.assertIs(meta_data_en, meta_data_fr)
@@ -686,19 +686,19 @@ class BaseDocumentTestRest(BaseTestRest):
         versions = document.versions
         self.assertEqual(len(versions), 3)
 
-        # version with culture 'en'
+        # version with lang 'en'
         version_en = versions[2]
 
-        self.assertEqual(version_en.culture, 'en')
+        self.assertEqual(version_en.lang, 'en')
 
         meta_data_en = version_en.history_metadata
         self.assertEqual(meta_data_en.comment, 'Changing lang')
         self.assertIsNotNone(meta_data_en.written_at)
 
-        # version with culture 'fr'
+        # version with lang 'fr'
         version_fr = versions[1]
 
-        self.assertEqual(version_fr.culture, 'fr')
+        self.assertEqual(version_fr.lang, 'fr')
 
         meta_data_fr = version_fr.history_metadata
         self.assertIsNot(meta_data_en, meta_data_fr)
@@ -765,17 +765,17 @@ class BaseDocumentTestRest(BaseTestRest):
         versions = document.versions
         self.assertEqual(len(versions), 3)
 
-        # version with culture 'en'
+        # version with lang 'en'
         version_en = versions[0]
 
-        self.assertEqual(version_en.culture, 'en')
+        self.assertEqual(version_en.lang, 'en')
 
         meta_data_en = version_en.history_metadata
 
-        # version with culture 'fr'
+        # version with lang 'fr'
         version_fr = versions[1]
 
-        self.assertEqual(version_fr.culture, 'fr')
+        self.assertEqual(version_fr.lang, 'fr')
 
         meta_data_fr = version_fr.history_metadata
         self.assertIs(meta_data_en, meta_data_fr)
@@ -784,10 +784,10 @@ class BaseDocumentTestRest(BaseTestRest):
         archive_document_fr = version_fr.document_archive
         self.assertIs(archive_document_en, archive_document_fr)
 
-        # version with culture 'es'
+        # version with lang 'es'
         version_es = versions[2]
 
-        self.assertEqual(version_es.culture, 'es')
+        self.assertEqual(version_es.lang, 'es')
 
         meta_data_es = version_es.history_metadata
         self.assertIsNot(meta_data_en, meta_data_es)

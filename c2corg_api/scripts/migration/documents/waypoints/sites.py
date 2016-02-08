@@ -91,7 +91,7 @@ class MigrateSites(MigrateWaypoints):
             id=document_in.document_i18n_archive_id,
             type=WAYPOINT_TYPE,
             version=version,
-            culture=document_in.culture,
+            lang=document_in.culture,
             title=document_in.name,
             description=self.get_description(description, document_in),
             summary=summary,
@@ -154,8 +154,8 @@ class MigrateSites(MigrateWaypoints):
             section += text
             sections.append(section)
 
-    def translate(self, field, culture):
-        return MigrateSites.translations[field][culture]
+    def translate(self, field, lang):
+        return MigrateSites.translations[field][lang]
 
     translations = {
         'way_back': {

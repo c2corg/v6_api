@@ -48,15 +48,15 @@ def sync_search_index(document):
 
     has_title_prefix = isinstance(document, Route)
     for locale in document.locales:
-        culture = locale.culture
+        lang = locale.lang
 
         # set the title prefix (name of the main waypoint) for routes
         title_prefix = locale.title_prefix if has_title_prefix else None
         title = get_title(locale.title, title_prefix)
 
-        doc['title_' + culture] = title
-        doc['summary_' + culture] = strip_bbcodes(locale.summary)
-        doc['description_' + culture] = strip_bbcodes(locale.description)
+        doc['title_' + lang] = title
+        doc['summary_' + lang] = strip_bbcodes(locale.summary)
+        doc['description_' + lang] = strip_bbcodes(locale.description)
 
     def sync_operation():
         client = elasticsearch_config['client']

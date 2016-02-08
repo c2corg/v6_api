@@ -92,14 +92,14 @@ def update_linked_route_titles(waypoint, update_types):
     linked_routes = DBSession.query(Route). \
         filter(Route.main_waypoint_id == waypoint.document_id). \
         options(joinedload(Route.locales).load_only(
-            RouteLocale.culture, RouteLocale.id)). \
+            RouteLocale.lang, RouteLocale.id)). \
         options(load_only(Route.document_id)). \
         all()
 
     if linked_routes:
         waypoint_locales = waypoint.locales
         waypoint_locales_index = {
-            locale.culture: locale for locale in waypoint_locales}
+            locale.lang: locale for locale in waypoint_locales}
 
         for route in linked_routes:
             set_route_title_prefix(
