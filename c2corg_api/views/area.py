@@ -32,7 +32,7 @@ class AreaRest(DocumentRest):
             permission='moderator')
     def collection_post(self):
         return self._collection_post(
-            Area, schema_area, after_add=insert_associations)
+            schema_area, after_add=insert_associations)
 
     @restricted_json_view(
             schema=schema_update_area,

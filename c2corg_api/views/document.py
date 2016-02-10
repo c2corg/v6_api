@@ -171,7 +171,7 @@ class DocumentRest(object):
                 to_json_dict(m, schema_listing_area) for m in document._areas
             ]
 
-    def _collection_post(self, clazz, schema, after_add=None):
+    def _collection_post(self, schema, after_add=None):
         document = schema.objectify(self.request.validated)
         document.document_id = None
 
@@ -188,7 +188,7 @@ class DocumentRest(object):
 
         sync_search_index(document)
 
-        return to_json_dict(document, schema)
+        return {'document_id': document.document_id}
 
     def _put(self, clazz, schema, after_update=None):
         user_id = self.request.authenticated_userid
@@ -203,9 +203,6 @@ class DocumentRest(object):
 
         # remember the current version numbers of the document
         old_versions = document.get_versions()
-
-        # find out whether the update of the geometry should be skipped.
-        skip_geometry_update = document_in.geometry is None
 
         # update the document with the input document
         document.update(document_in)
@@ -236,15 +233,7 @@ class DocumentRest(object):
             # And the search updated
             sync_search_index(document)
 
-        json_dict = to_json_dict(document, schema)
-
-        if skip_geometry_update:
-            # Optimization: the geometry is not sent back if the client
-            # requested to skip the geometry update. Geometries may be very
-            # huge; this optimization should speed the data transfer.
-            json_dict['geometry'] = None
-
-        return json_dict
+        return {}
 
     def _get_document(self, clazz, id, lang=None):
         """Get a document with either a single locale (if `lang is given)

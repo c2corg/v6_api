@@ -236,7 +236,6 @@ class TestWaypointRest(BaseDocumentTestRest):
         }
         body, doc = self.post_success(body)
         self._assert_geometry(body, 'geom')
-        self._assert_geometry(body, 'geom_detail')
 
         # test that document_id and version was reset
         self.assertNotEqual(body.get('document_id'), 1234)
@@ -589,9 +588,13 @@ class TestWaypointRest(BaseDocumentTestRest):
             status=403)
 
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.put_json(
+        self.app.put_json(
             self._prefix + '/' + str(waypoint.document_id), body_put,
             headers=headers, status=200)
+
+        response = self.app.get(
+            self._prefix + '/' + str(waypoint.document_id), status=200)
+        self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
         document_id = body.get('document_id')
