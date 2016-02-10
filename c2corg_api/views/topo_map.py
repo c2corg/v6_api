@@ -30,7 +30,7 @@ class TopoMapRest(DocumentRest):
             schema=schema_topo_map, validators=validate_map_create,
             permission='moderator')
     def collection_post(self):
-        return self._collection_post(TopoMap, schema_topo_map)
+        return self._collection_post(schema_topo_map)
 
     @restricted_json_view(
             schema=schema_update_topo_map,

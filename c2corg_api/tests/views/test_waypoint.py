@@ -236,7 +236,6 @@ class TestWaypointRest(BaseDocumentTestRest):
         }
         body, doc = self.post_success(body)
         self._assert_geometry(body, 'geom')
-        self._assert_geometry(body, 'geom_detail')
 
         # test that document_id and version was reset
         self.assertNotEqual(body.get('document_id'), 1234)

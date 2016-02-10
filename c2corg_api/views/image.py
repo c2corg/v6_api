@@ -21,7 +21,7 @@ class ImageRest(DocumentRest):
 
     @restricted_json_view(schema=schema_image)
     def collection_post(self):
-        return self._collection_post(Image, schema_image)
+        return self._collection_post(schema_image)
 
     @restricted_json_view(schema=schema_update_image, validators=validate_id)
     def put(self):

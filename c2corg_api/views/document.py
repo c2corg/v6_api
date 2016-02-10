@@ -171,7 +171,7 @@ class DocumentRest(object):
                 to_json_dict(m, schema_listing_area) for m in document._areas
             ]
 
-    def _collection_post(self, clazz, schema, after_add=None):
+    def _collection_post(self, schema, after_add=None):
         document = schema.objectify(self.request.validated)
         document.document_id = None
 
@@ -188,7 +188,7 @@ class DocumentRest(object):
 
         sync_search_index(document)
 
-        return to_json_dict(document, schema)
+        return {'document_id': document.document_id}
 
     def _put(self, clazz, schema, after_update=None):
         user_id = self.request.authenticated_userid

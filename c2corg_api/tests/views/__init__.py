@@ -339,8 +339,14 @@ class BaseDocumentTestRest(BaseTestRest):
 
         body = response.json
         document_id = body.get('document_id')
-        self.assertIsNotNone(body.get('version'))
         self.assertIsNotNone(document_id)
+
+        response = self.app.get(self._prefix + '/' + str(document_id),
+                                status=200)
+        self.assertEqual(response.content_type, 'application/json')
+
+        body = response.json
+        self.assertIsNotNone(body.get('version'))
 
         # check that the version was created correctly
         doc = self.session.query(self._model).get(document_id)
