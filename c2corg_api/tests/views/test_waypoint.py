@@ -588,9 +588,13 @@ class TestWaypointRest(BaseDocumentTestRest):
             status=403)
 
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.put_json(
+        self.app.put_json(
             self._prefix + '/' + str(waypoint.document_id), body_put,
             headers=headers, status=200)
+
+        response = self.app.get(
+            self._prefix + '/' + str(waypoint.document_id), status=200)
+        self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
         document_id = body.get('document_id')
