@@ -171,8 +171,10 @@ class DocumentRest(object):
                 to_json_dict(m, schema_listing_area) for m in document._areas
             ]
 
-    def _collection_post(self, schema, after_add=None):
-        document = schema.objectify(self.request.validated)
+    def _collection_post(self, schema, after_add=None, document_field=None):
+        document_in = self.request.validated if document_field is None else \
+                self.request.validated[document_field]
+        document = schema.objectify(document_in)
         document.document_id = None
 
         DBSession.add(document)
@@ -545,16 +547,19 @@ def validate_document(document, request, fields, updating):
     check_duplicate_locales(document, request)
 
 
-def make_validator_create(fields, type_field=None, valid_type_values=None):
+def make_validator_create(
+        fields, type_field=None, valid_type_values=None, document_field=None):
     """Returns a validator function used for the creation of documents.
     """
     if type_field is None or valid_type_values is None:
         def f(request):
-            document = request.validated
+            document = request.validated if document_field is None else \
+                request.validated.get(document_field, {})
             validate_document(document, request, fields, updating=False)
     else:
         def f(request):
-            document = request.validated
+            document = request.validated if document_field is None else \
+                request.validated.get(document_field, {})
             validate_document_for_type(
                 document, request, fields, type_field, valid_type_values,
                 updating=False)

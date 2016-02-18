@@ -223,7 +223,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertGreater(len(errors), 0)
         return body
 
-    def post_missing_title(self, request_body, user='contributor'):
+    def post_missing_title(self, request_body, user='contributor', prefix=''):
         response = self.app.post_json(self._prefix, request_body,
                                       expect_errors=True, status=403)
 
@@ -235,7 +235,7 @@ class BaseDocumentTestRest(BaseTestRest):
         body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
-        self.assertCorniceRequired(errors[0], 'locales.0.title')
+        self.assertCorniceRequired(errors[0], prefix + 'locales.0.title')
         return body
 
     def post_missing_geometry(self, request_body):
