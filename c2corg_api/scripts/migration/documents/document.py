@@ -103,9 +103,13 @@ class MigrateDocuments(MigrateBase):
                     current_document_id = document_in.id
                 else:
                     if current_document_id != document_in.id:
-                        raise AssertionError(
-                            'no latest version for {0}'.format(
+                        print('WARNING: no latest version for {0}'.format(
                                 current_document_id))
+                        archives = []
+                        geometry_archives = []
+                        version = 1
+                        current_document_id = document_in.id
+
                 if locales:
                     document_archive = self.get_document_locale_archive(
                         document_in, version)
