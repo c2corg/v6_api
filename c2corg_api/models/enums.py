@@ -96,3 +96,19 @@ area_type = enum(
     'area_type', attributes.area_types)
 user_category = enum(
     'user_category', attributes.user_categories)
+frequentation_type = enum(
+    'frequentation_type', attributes.frequentation_types)
+access_condition = enum(
+    'access_condition', attributes.access_conditions)
+lift_status = enum(
+    'lift_status', attributes.lift_status)
+awesomeness = enum(
+    'awesomeness', attributes.awesomeness)
+condition_rating = enum(
+    'condition_rating', attributes.condition_ratings)
+glacier_rating = enum(
+    'glacier_rating', attributes.glacier_ratings)
+avalanche_signs = enum(
+    'avalanche_signs', attributes.avalanche_signs)
+hut_status = enum(
+    'hut_status', attributes.hut_status)
