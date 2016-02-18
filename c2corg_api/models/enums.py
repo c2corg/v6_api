@@ -112,3 +112,7 @@ avalanche_signs = enum(
     'avalanche_signs', attributes.avalanche_signs)
 hut_status = enum(
     'hut_status', attributes.hut_status)
+image_category = enum(
+    'image_category', attributes.image_categories)
+image_type = enum(
+    'image_type', attributes.image_types)

@@ -1,33 +1,66 @@
 from sqlalchemy import (
+    Boolean,
     Column,
+    DateTime,
+    Float,
+    ForeignKey,
     Integer,
     SmallInteger,
-    ForeignKey,
-    Enum
+    String
     )
 
 from colanderalchemy import SQLAlchemySchemaNode
 
-from c2corg_api.models import schema
-from c2corg_api.models.utils import copy_attributes
+from c2corg_api.models import schema, enums
+from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.document import (
     ArchiveDocument, Document, get_update_schema, geometry_schema_overrides,
     schema_document_locale, schema_attributes)
-from c2corg_common.attributes import activities
 from c2corg_common import document_types
 
 IMAGE_TYPE = document_types.IMAGE_TYPE
 
 
 class _ImageMixin(object):
-    activities = Column(
-        Enum(name='activities', inherit_schema=True, *activities),
-        nullable=False)
+
+    activities = Column(ArrayOfEnum(enums.activity_type))
+
+    categories = Column(ArrayOfEnum(enums.image_category))
+
+    image_type = Column(enums.image_type)
+
+    author = Column(String(100))
+
+    has_svg = Column(Boolean)
+
+    elevation = Column(SmallInteger)
 
     height = Column(SmallInteger)
 
+    width = Column(SmallInteger)
 
-attributes = ['activities', 'height']
+    file_size = Column(Integer)
+
+    filename = Column(String(30))
+
+    date_time = Column(DateTime)
+
+    camera_name = Column(String(100))
+
+    exposure_time = Column(Float)
+
+    focal_length = Column(Float)
+
+    fnumber = Column(Float)
+
+    iso_speed = Column(SmallInteger)
+
+
+attributes = [
+    'activities', 'categories', 'image_type', 'author', 'has_svg', 'elevation',
+    'height', 'width', 'file_size', 'filename', 'camera_name', 'exposure_time',
+    'focal_length', 'fnumber', 'iso_speed', 'date_time'
+]
 
 
 class Image(_ImageMixin, Document):
