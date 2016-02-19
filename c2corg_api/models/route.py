@@ -215,10 +215,6 @@ class ArchiveRoute(_RouteMixin, ArchiveDocument):
 
 class _RouteLocaleMixin(object):
 
-    __mapper_args__ = {
-        'polymorphic_identity': ROUTE_TYPE
-    }
-
     # pente
     slope = Column(String)
 
@@ -249,6 +245,11 @@ class RouteLocale(_RouteLocaleMixin, DocumentLocale):
                 Integer,
                 ForeignKey(schema + '.documents_locales.id'), primary_key=True)
 
+    __mapper_args__ = {
+        'polymorphic_identity': ROUTE_TYPE,
+        'inherit_condition': DocumentLocale.id == id
+    }
+
     # the cached title of the main waypoint
     title_prefix = Column(String)
 
@@ -273,6 +274,11 @@ class ArchiveRouteLocale(_RouteLocaleMixin, ArchiveDocumentLocale):
         Integer,
         ForeignKey(schema + '.documents_locales_archives.id'),
         primary_key=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': ROUTE_TYPE,
+        'inherit_condition': ArchiveDocumentLocale.id == id
+    }
 
 
 schema_route_locale = SQLAlchemySchemaNode(
