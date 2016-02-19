@@ -194,6 +194,80 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_post_missing_content_type(self):
         self.post_missing_content_type({})
 
+    def test_post_missing_waypoint_route_id(self):
+        request_body = {
+            'outing': {
+                'activities': ['skitouring'],
+                'date_start': '2016-01-01',
+                'date_end': '2016-01-02',
+                'elevation_min': 700,
+                'elevation_max': 1500,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'geometry': {
+                    'id': 5678, 'version': 6789,
+                    'geom': '{"type": "LineString", "coordinates": ' +
+                            '[[635956, 5723604], [635966, 5723644]]}'
+                },
+                'locales': [
+                    {'lang': 'en', 'title': 'Some nice loop',
+                     'weather': 'sunny'}
+                ]
+            },
+            'waypoint_id': None
+            # missing route_id
+        }
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.post_json(self._prefix, request_body,
+                                      headers=headers, status=400)
+
+        body = response.json
+        self.assertEqual(body.get('status'), 'error')
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 2)
+        self.assertCorniceRequired(errors[0], 'waypoint_id')
+        self.assertCorniceMissing(errors[1], 'route_id')
+
+    def test_post_invalid_waypoint_route_id(self):
+        request_body = {
+            'outing': {
+                'activities': ['skitouring'],
+                'date_start': '2016-01-01',
+                'date_end': '2016-01-02',
+                'elevation_min': 700,
+                'elevation_max': 1500,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'geometry': {
+                    'id': 5678, 'version': 6789,
+                    'geom': '{"type": "LineString", "coordinates": ' +
+                            '[[635956, 5723604], [635966, 5723644]]}'
+                },
+                'locales': [
+                    {'lang': 'en', 'title': 'Some nice loop',
+                     'weather': 'sunny'}
+                ]
+            },
+            # invalid ids
+            'waypoint_id': -999,
+            'route_id': self.waypoint.document_id
+        }
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.post_json(self._prefix, request_body,
+                                      headers=headers, status=400)
+
+        body = response.json
+        self.assertEqual(body.get('status'), 'error')
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 2)
+
+        self.assertEqual(
+            errors[0].get('description'), 'waypoint does not exist')
+        self.assertEqual(errors[0].get('name'), 'waypoint_id')
+        self.assertEqual(
+            errors[1].get('description'), 'route does not exist')
+        self.assertEqual(errors[1].get('name'), 'route_id')
+
     def test_post_success(self):
         body = {
             'outing': {
@@ -233,6 +307,14 @@ class TestOutingRest(BaseDocumentTestRest):
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
         self.assertIsNotNone(archive_geometry.geom)
+
+        association_waypoint = self.session.query(Association).get(
+            (doc.document_id, self.waypoint.document_id))
+        self.assertIsNotNone(association_waypoint)
+
+        association_route = self.session.query(Association).get(
+            (doc.document_id, self.route.document_id))
+        self.assertIsNotNone(association_route)
 
     def test_put_wrong_document_id(self):
         body = {

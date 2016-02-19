@@ -1,6 +1,12 @@
+import functools
+
+from c2corg_api.models import DBSession
+from c2corg_api.models.association import Association
 from c2corg_api.models.outing import schema_outing, Outing, \
     schema_create_outing, schema_update_outing, ArchiveOuting, \
     ArchiveOutingLocale
+from c2corg_api.models.route import Route
+from c2corg_api.models.waypoint import Waypoint
 from c2corg_common.fields_outing import fields_outing
 from cornice.resource import resource, view
 
@@ -13,11 +19,32 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param
 from c2corg_common.attributes import activities
+from sqlalchemy.sql.expression import exists
 
 validate_route_create = make_validator_create(
     fields_outing, 'activities', activities, document_field='outing')
 validate_outing_update = make_validator_update(
     fields_outing, 'activities', activities)
+
+
+def validate_associations(request):
+    """Check if the given waypoint and route id are valid.
+    """
+    waypoint_id = request.validated.get('waypoint_id')
+    if waypoint_id:
+        waypoint_exists = DBSession.query(
+            exists().where(Waypoint.document_id == waypoint_id)).scalar()
+        if not waypoint_exists:
+            request.errors.add(
+                'body', 'waypoint_id', 'waypoint does not exist')
+
+    route_id = request.validated.get('route_id')
+    if route_id:
+        route_exists = DBSession.query(
+            exists().where(Route.document_id == route_id)).scalar()
+        if not route_exists:
+            request.errors.add(
+                'body', 'route_id', 'route does not exist')
 
 
 def adapt_schema_for_activities(activities, field_list_type):
@@ -48,10 +75,17 @@ class OutingRest(DocumentRest):
         return self._get(Outing, schema_outing, schema_adaptor)
 
     @restricted_json_view(schema=schema_create_outing,
-                          validators=validate_route_create)
+                          validators=[validate_route_create,
+                                      validate_associations])
     def collection_post(self):
-        # TODO set up associations in after_add
-        return self._collection_post(schema_outing, document_field='outing')
+        create_associations = functools.partial(
+            add_associations,
+            self.request.validated['waypoint_id'],
+            self.request.validated['route_id']
+        )
+        return self._collection_post(
+            schema_outing, document_field='outing',
+            after_add=create_associations)
 
     @restricted_json_view(schema=schema_update_outing,
                           validators=[validate_id, validate_outing_update])
@@ -66,3 +100,13 @@ class OutingVersionRest(DocumentRest):
     def get(self):
         return self._get_version(
             ArchiveOuting, ArchiveOutingLocale, schema_outing, schema_adaptor)
+
+
+def add_associations(waypoint_id, route_id, outing):
+    """When creating a new outing, associations to a waypoint and route are
+    set up at the same time.
+    """
+    DBSession.add(Association(
+        parent_document_id=outing.document_id, child_document_id=waypoint_id))
+    DBSession.add(Association(
+        parent_document_id=outing.document_id, child_document_id=route_id))
