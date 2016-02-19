@@ -23,10 +23,6 @@ WAYPOINT_TYPE = 'w'
 
 class _WaypointMixin(object):
 
-    __mapper_args__ = {
-        'polymorphic_identity': WAYPOINT_TYPE
-    }
-
     # type de WP
     waypoint_type = Column(enums.waypoint_type, nullable=False)
 
@@ -193,6 +189,11 @@ class Waypoint(_WaypointMixin, Document):
         Integer,
         ForeignKey(schema + '.documents.document_id'), primary_key=True)
 
+    __mapper_args__ = {
+        'polymorphic_identity': WAYPOINT_TYPE,
+        'inherit_condition': Document.document_id == document_id
+    }
+
     def to_archive(self):
         waypoint = ArchiveWaypoint()
         super(Waypoint, self)._to_archive(waypoint)
@@ -214,11 +215,13 @@ class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
         Integer,
         ForeignKey(schema + '.documents_archives.id'), primary_key=True)
 
+    __mapper_args__ = {
+        'polymorphic_identity': WAYPOINT_TYPE,
+        'inherit_condition': ArchiveDocument.id == id
+    }
+
 
 class _WaypointLocaleMixin(object):
-    __mapper_args__ = {
-        'polymorphic_identity': WAYPOINT_TYPE
-    }
 
     # access (climbing_outdoor/indoor, access, local_product, sport_shop)
     access = Column(String)
@@ -245,6 +248,11 @@ class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
                 Integer,
                 ForeignKey(schema + '.documents_locales.id'), primary_key=True)
 
+    __mapper_args__ = {
+        'polymorphic_identity': WAYPOINT_TYPE,
+        'inherit_condition': DocumentLocale.id == id
+    }
+
     def to_archive(self):
         locale = ArchiveWaypointLocale()
         super(WaypointLocale, self)._to_archive(locale)
@@ -266,6 +274,11 @@ class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
         Integer,
         ForeignKey(schema + '.documents_locales_archives.id'),
         primary_key=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': WAYPOINT_TYPE,
+        'inherit_condition': ArchiveDocumentLocale.id == id
+    }
 
 
 schema_waypoint_locale = SQLAlchemySchemaNode(

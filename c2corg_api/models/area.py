@@ -19,10 +19,6 @@ AREA_TYPE = 'a'
 class _AreaMixin(object):
     area_type = Column(area_type)
 
-    __mapper_args__ = {
-        'polymorphic_identity': AREA_TYPE
-    }
-
 attributes = ['area_type']
 
 
@@ -34,6 +30,11 @@ class Area(_AreaMixin, Document):
     document_id = Column(
         Integer,
         ForeignKey(schema + '.documents.document_id'), primary_key=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': AREA_TYPE,
+        'inherit_condition': Document.document_id == document_id
+    }
 
     def to_archive(self):
         area = ArchiveArea()
@@ -55,6 +56,11 @@ class ArchiveArea(_AreaMixin, ArchiveDocument):
     id = Column(
         Integer,
         ForeignKey(schema + '.documents_archives.id'), primary_key=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': AREA_TYPE,
+        'inherit_condition': ArchiveDocument.id == id
+    }
 
 
 schema_area = SQLAlchemySchemaNode(

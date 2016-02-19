@@ -25,10 +25,6 @@ class _ImageMixin(object):
 
     height = Column(SmallInteger)
 
-    __mapper_args__ = {
-        'polymorphic_identity': IMAGE_TYPE
-    }
-
 
 attributes = ['activities', 'height']
 
@@ -41,6 +37,11 @@ class Image(_ImageMixin, Document):
     document_id = Column(
         Integer,
         ForeignKey(schema + '.documents.document_id'), primary_key=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': IMAGE_TYPE,
+        'inherit_condition': Document.document_id == document_id
+    }
 
     def to_archive(self):
         image = ArchiveImage()
@@ -62,6 +63,11 @@ class ArchiveImage(_ImageMixin, ArchiveDocument):
     id = Column(
         Integer,
         ForeignKey(schema + '.documents_archives.id'), primary_key=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': IMAGE_TYPE,
+        'inherit_condition': ArchiveDocument.id == id
+    }
 
 
 schema_image = SQLAlchemySchemaNode(

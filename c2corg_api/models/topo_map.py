@@ -27,10 +27,6 @@ class _MapMixin(object):
     scale = Column(map_scale)
     code = Column(String)
 
-    __mapper_args__ = {
-        'polymorphic_identity': MAP_TYPE
-    }
-
 attributes = [
     'editor', 'scale', 'code'
 ]
@@ -44,6 +40,11 @@ class TopoMap(_MapMixin, Document):
     document_id = Column(
         Integer,
         ForeignKey(schema + '.documents.document_id'), primary_key=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': MAP_TYPE,
+        'inherit_condition': Document.document_id == document_id
+    }
 
     def to_archive(self):
         m = ArchiveTopoMap()
@@ -65,6 +66,11 @@ class ArchiveTopoMap(_MapMixin, ArchiveDocument):
     id = Column(
         Integer,
         ForeignKey(schema + '.documents_archives.id'), primary_key=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': MAP_TYPE,
+        'inherit_condition': ArchiveDocument.id == id
+    }
 
 
 schema_topo_map = SQLAlchemySchemaNode(
