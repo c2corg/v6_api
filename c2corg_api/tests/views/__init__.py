@@ -69,14 +69,17 @@ class BaseDocumentTestRest(BaseTestRest):
         self._model_archive = model_archive
         self._model_archive_locale = model_archive_locale
 
-    def get_collection(self, params=None):
+    def get_collection(self, params=None, user=None):
         prefix = self._prefix
         limit = None
         if params:
             prefix += "?" + urllib.parse.urlencode(params)
             limit = params['limit']
 
-        response = self.app.get(prefix, status=200)
+        headers = {} if not user else \
+            self.add_authorization_header(username=user)
+
+        response = self.app.get(prefix, headers=headers, status=200)
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -96,8 +99,12 @@ class BaseDocumentTestRest(BaseTestRest):
 
         return body
 
-    def get_collection_lang(self):
-        response = self.app.get(self._prefix + '?pl=es', status=200)
+    def get_collection_lang(self, user=None):
+        headers = {} if not user else \
+            self.add_authorization_header(username=user)
+
+        response = self.app.get(
+            self._prefix + '?pl=es', headers=headers, status=200)
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -119,9 +126,12 @@ class BaseDocumentTestRest(BaseTestRest):
         actual_total = actual['total']
         self.assertEqual(actual_total, total)
 
-    def get(self, reference):
+    def get(self, reference, user=None):
+        headers = {} if not user else \
+            self.add_authorization_header(username=user)
         response = self.app.get(self._prefix + '/' +
                                 str(reference.document_id),
+                                headers=headers,
                                 status=200)
         self.assertEqual(response.content_type, 'application/json')
 
@@ -161,9 +171,13 @@ class BaseDocumentTestRest(BaseTestRest):
             body['version']['version_id'], reference_version.id)
         return body
 
-    def get_lang(self, reference):
+    def get_lang(self, reference, user=None):
+        headers = {} if not user else \
+            self.add_authorization_header(username=user)
+
         response = self.app.get(self._prefix + '/' +
                                 str(reference.document_id) + '?l=en',
+                                headers=headers,
                                 status=200)
         self.assertEqual(response.content_type, 'application/json')
 
@@ -173,9 +187,13 @@ class BaseDocumentTestRest(BaseTestRest):
         locale_en = locales[0]
         self.assertEqual(locale_en.get('lang'), self.locale_en.lang)
 
-    def get_new_lang(self, reference):
+    def get_new_lang(self, reference, user=None):
+        headers = {} if not user else \
+            self.add_authorization_header(username=user)
+
         response = self.app.get(self._prefix + '/' +
                                 str(reference.document_id) + '?l=it',
+                                headers=headers,
                                 status=200)
         self.assertEqual(response.content_type, 'application/json')
 
@@ -183,9 +201,12 @@ class BaseDocumentTestRest(BaseTestRest):
         locales = body.get('locales')
         self.assertEqual(len(locales), 0)
 
-    def get_404(self):
-        self.app.get(self._prefix + '/-9999', status=404)
-        self.app.get(self._prefix + '/-9999?l=es', status=404)
+    def get_404(self, user=None):
+        headers = {} if not user else \
+            self.add_authorization_header(username=user)
+
+        self.app.get(self._prefix + '/-9999', headers=headers, status=404)
+        self.app.get(self._prefix + '/-9999?l=es', headers=headers, status=404)
 
     def post_error(self, request_body, user='contributor'):
         response = self.app.post_json(self._prefix, request_body,
@@ -478,7 +499,8 @@ class BaseDocumentTestRest(BaseTestRest):
             headers=headers, status=200)
 
         response = self.app.get(
-            self._prefix + '/' + str(document.document_id), status=200)
+            self._prefix + '/' + str(document.document_id), headers=headers,
+            status=200)
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -576,7 +598,8 @@ class BaseDocumentTestRest(BaseTestRest):
             headers=headers, status=200)
 
         response = self.app.get(
-            self._prefix + '/' + str(document.document_id), status=200)
+            self._prefix + '/' + str(document.document_id), headers=headers,
+            status=200)
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -669,7 +692,8 @@ class BaseDocumentTestRest(BaseTestRest):
             headers=headers, status=200)
 
         response = self.app.get(
-            self._prefix + '/' + str(document.document_id), status=200)
+            self._prefix + '/' + str(document.document_id), headers=headers,
+            status=200)
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -751,7 +775,8 @@ class BaseDocumentTestRest(BaseTestRest):
             headers=headers, status=200)
 
         response = self.app.get(
-            self._prefix + '/' + str(document.document_id), status=200)
+            self._prefix + '/' + str(document.document_id), headers=headers,
+            status=200)
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
