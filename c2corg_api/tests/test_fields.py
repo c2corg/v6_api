@@ -1,11 +1,13 @@
 import unittest
 
+from c2corg_api.models.user_profile import UserProfile
+from c2corg_common.fields_user_profile import fields_user_profile
 from c2corg_common.fields_waypoint import fields_waypoint
 from c2corg_common.fields_route import fields_route
 from c2corg_common.attributes import waypoint_types, activities
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.route import Route, RouteLocale
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 
 
 class TestFields(unittest.TestCase):
@@ -28,11 +30,23 @@ class TestFields(unittest.TestCase):
             self._test_fields_for_type(
                 type, fields_route, Route, RouteLocale)
 
+    def test_user_profile_fields(self):
+        """Test that the fields listed for the user profile are correct.
+        """
+        self._test_fields_for_model(
+            fields_user_profile, UserProfile, DocumentLocale)
+
+    def _test_fields_for_model(self, fields, model, model_locale):
+        self._test_fields(fields.get('fields'), model, model_locale)
+        self._test_fields(fields.get('required'), model, model_locale)
+        self._test_fields(fields.get('listing'), model, model_locale)
+
     def _test_fields_for_type(
             self, waypoint_type, fields, model, model_locale):
         fields_info = fields.get(waypoint_type)
         self._test_fields(fields_info.get('fields'), model, model_locale)
         self._test_fields(fields_info.get('required'), model, model_locale)
+        self._test_fields(fields_info.get('listing'), model, model_locale)
 
     def _test_fields(self, fields, model, model_locale):
         for field in fields:
