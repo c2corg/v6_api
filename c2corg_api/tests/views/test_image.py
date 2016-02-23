@@ -60,25 +60,28 @@ class TestImageRest(BaseDocumentTestRest):
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
-        self.assertCorniceMissing(errors[0], 'activities')
+        self.assertEqual(len(errors), 2)
+        self.assertCorniceRequired(errors[0], 'locales')
+        self.assertCorniceRequired(errors[1], 'image_type')
 
     def test_post_missing_title(self):
         body_post = {
-            'activities': 'skitouring',
-            'height': 1200,
+            'activities': ['paragliding'],
+            'image_type': 'collaborative',
+            'height': 1500,
             'locales': [
                 {'lang': 'en'}
             ]
         }
         body = self.post_missing_title(body_post)
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
+        self.assertEqual(len(errors), 2)
 
     def test_post_non_whitelisted_attribute(self):
         body = {
-            'activities': 'hiking',
-            'height': 750,
+            'activities': ['paragliding'],
+            'image_type': 'collaborative',
+            'height': 1500,
             'protected': True,
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop'}
@@ -91,8 +94,9 @@ class TestImageRest(BaseDocumentTestRest):
 
     def test_post_success(self):
         body = {
-            'activities': 'hiking',
-            'height': 750,
+            'activities': ['paragliding'],
+            'image_type': 'collaborative',
+            'height': 1500,
             'geometry': {
                 'id': 5678, 'version': 6789,
                 'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
@@ -107,8 +111,8 @@ class TestImageRest(BaseDocumentTestRest):
         version = doc.versions[0]
 
         archive_image = version.document_archive
-        self.assertEqual(archive_image.activities, 'hiking')
-        self.assertEqual(archive_image.height, 750)
+        self.assertEqual(archive_image.activities, ['paragliding'])
+        self.assertEqual(archive_image.height, 1500)
 
         archive_locale = version.document_locales_archive
         self.assertEqual(archive_locale.lang, 'en')
@@ -123,7 +127,8 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': '-9999',
                 'version': self.image.version,
-                'activities': 'paragliding',
+                'activities': ['paragliding'],
+                'image_type': 'collaborative',
                 'height': 1500,
                 'locales': [
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
@@ -139,7 +144,8 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image.document_id,
                 'version': -9999,
-                'activities': 'paragliding',
+                'activities': ['paragliding'],
+                'image_type': 'collaborative',
                 'height': 1500,
                 'locales': [
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
@@ -155,7 +161,8 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image.document_id,
                 'version': self.image.version,
-                'activities': 'paragliding',
+                'activities': ['paragliding'],
+                'image_type': 'collaborative',
                 'height': 1500,
                 'locales': [
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
@@ -171,7 +178,8 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image.document_id,
                 'version': self.image.version,
-                'activities': 'paragliding',
+                'activities': ['paragliding'],
+                'image_type': 'collaborative',
                 'height': 1500,
                 'locales': [
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
@@ -191,8 +199,9 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image.document_id,
                 'version': self.image.version,
-                'activities': 'paragliding',
-                'height': 1500,
+                'activities': ['paragliding'],
+                'image_type': 'collaborative',
+                'height': 2000,
                 'geometry': {
                     'version': self.image.geometry.version,
                     'geom': '{"type": "Point", "coordinates": [1, 2]}'
@@ -206,7 +215,7 @@ class TestImageRest(BaseDocumentTestRest):
         }
         (body, image) = self.put_success_all(body, self.image)
 
-        self.assertEquals(image.height, 1500)
+        self.assertEquals(image.height, 2000)
         locale_en = image.get_locale('en')
         self.assertEquals(locale_en.description, 'New description')
 
@@ -217,8 +226,8 @@ class TestImageRest(BaseDocumentTestRest):
         self.assertEqual(archive_locale.title, 'Mont Blanc from the air')
 
         archive_document_en = version_en.document_archive
-        self.assertEqual(archive_document_en.activities, 'paragliding')
-        self.assertEqual(archive_document_en.height, 1500)
+        self.assertEqual(archive_document_en.activities, ['paragliding'])
+        self.assertEqual(archive_document_en.height, 2000)
 
         archive_geometry_en = version_en.document_geometry_archive
         self.assertEqual(archive_geometry_en.version, 2)
@@ -234,8 +243,9 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image.document_id,
                 'version': self.image.version,
-                'activities': 'paragliding',
-                'height': 1500,
+                'activities': ['paragliding'],
+                'image_type': 'collaborative',
+                'height': 2000,
                 'locales': [
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...',
@@ -245,7 +255,7 @@ class TestImageRest(BaseDocumentTestRest):
         }
         (body, image) = self.put_success_figures_only(body, self.image)
 
-        self.assertEquals(image.height, 1500)
+        self.assertEquals(image.height, 2000)
 
     def test_put_success_lang_only(self):
         body = {
@@ -253,8 +263,9 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image.document_id,
                 'version': self.image.version,
-                'activities': 'paragliding',
-                'height': 2000,
+                'activities': ['paragliding'],
+                'image_type': 'collaborative',
+                'height': 1500,
                 'locales': [
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': 'New description',
@@ -275,8 +286,9 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image.document_id,
                 'version': self.image.version,
-                'activities': 'paragliding',
-                'height': 2000,
+                'activities': ['paragliding'],
+                'image_type': 'collaborative',
+                'height': 1500,
                 'locales': [
                     {'lang': 'es', 'title': 'Mont Blanc del cielo',
                      'description': '...'}
@@ -301,7 +313,8 @@ class TestImageRest(BaseDocumentTestRest):
 
     def _add_test_data(self):
         self.image = Image(
-            activities='paragliding', height=2000)
+            activities=['paragliding'], height=1500,
+            image_type='collaborative')
 
         self.locale_en = DocumentLocale(
             lang='en', title='Mont Blanc from the air', description='...')
@@ -322,13 +335,13 @@ class TestImageRest(BaseDocumentTestRest):
         DocumentRest.create_new_version(self.image, user_id)
 
         self.image2 = Image(
-            activities='paragliding', height=2000)
+            activities=['paragliding'], height=1500)
         self.session.add(self.image2)
         self.image3 = Image(
-            activities='paragliding', height=2000)
+            activities=['paragliding'], height=1500)
         self.session.add(self.image3)
         self.image4 = Image(
-            activities='paragliding', height=2000)
+            activities=['paragliding'], height=1500)
         self.image4.locales.append(DocumentLocale(
             lang='en', title='Mont Blanc from the air', description='...'))
         self.image4.locales.append(DocumentLocale(

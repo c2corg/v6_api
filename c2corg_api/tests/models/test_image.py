@@ -8,7 +8,7 @@ class TestImage(BaseTestCase):
 
     def test_to_archive(self):
         image = Image(
-            document_id=1, activities='skitouring', height=1200,
+            document_id=1, activities=['skitouring'], height=1200,
             locales=[
                 DocumentLocale(
                     id=2, lang='en', title='A', description='abc'),
