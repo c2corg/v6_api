@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from c2corg_api.models.user import User
+from c2corg_api.models.user_profile import UserProfile
 
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.security.discourse_sso_provider import discourse_redirect
@@ -26,6 +27,12 @@ class TestUserRest(BaseTestRest):
         self.assertBodyEqual(body, 'username', 'test')
         self.assertBodyEqual(body, 'email', 'some_user@camptocamp.org')
         self.assertNotIn('password', body)
+        self.assertIn('id', body)
+        user_id = body.get('id')
+        self.assertIsNotNone(self.session.query(User).get(user_id))
+        profile = self.session.query(UserProfile).get(user_id)
+        self.assertIsNotNone(profile)
+        self.assertEqual(len(profile.versions), 1)
 
         # Now reject non unique attributes
         body = self.app.post_json(url, request_body, status=400).json

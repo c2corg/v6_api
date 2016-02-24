@@ -24,7 +24,8 @@ attributes = ['activities', 'category']
 
 
 class UserProfile(_UserProfileMixin, Document):
-    """
+    """The user profile for each user
+    User profile documents are created automatically when creating a new user.
     """
     __tablename__ = 'user_profiles'
 

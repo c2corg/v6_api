@@ -1,3 +1,6 @@
+from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.views.document import DocumentRest
 from functools import partial
 from pyramid.httpexceptions import HTTPInternalServerError
 
@@ -94,12 +97,25 @@ class UserRegistrationRest(object):
         user = schema_create_user.objectify(self.request.validated)
         user.password = self.request.validated['password']
 
+        # directly create the user profile, the document id of the profile
+        # is the user id
+        # TODO to create the profile we need at least one locale. once we have
+        # an interface language (https://github.com/c2corg/v6_api/issues/116)
+        # we can create the profile in that language.
+        user.profile = UserProfile(
+            category='amateur',
+            locales=[DocumentLocale(lang='fr', title=user.username)]
+        )
+
         DBSession.add(user)
         try:
             DBSession.flush()
         except:
-            # TODO: log the error for debugging
+            log.warning('Error persisting user', exc_info=True)
             raise HTTPInternalServerError('Error persisting user')
+
+        # also create a version for the profile
+        DocumentRest.create_new_version(user.profile, user.id)
 
         try:
             result = self.complete_registration(user)

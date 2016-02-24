@@ -31,20 +31,20 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 0, 'limit': 0}, user='contributor'),
-            [], 4)
+            [], 6)
 
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 0, 'limit': 1}, user='contributor'),
-            [self.profile4.document_id], 4)
+            [self.profile4.document_id], 6)
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 0, 'limit': 2}, user='contributor'),
-            [self.profile4.document_id, self.profile3.document_id], 4)
+            [self.profile4.document_id, self.profile3.document_id], 6)
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 1, 'limit': 2}, user='contributor'),
-            [self.profile3.document_id, self.profile2.document_id], 4)
+            [self.profile3.document_id, self.profile2.document_id], 6)
 
         self.assertResultsEqual(
             self.get_collection(

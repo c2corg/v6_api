@@ -1,4 +1,5 @@
 import bcrypt
+from c2corg_api.models.user_profile import UserProfile
 from sqlalchemy import (
     Boolean,
     Column,
@@ -8,9 +9,11 @@ from sqlalchemy import (
 
 from colanderalchemy import SQLAlchemySchemaNode
 
-from c2corg_api.models import Base, users_schema
+from c2corg_api.models import Base, users_schema, schema
 
 import colander
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql.schema import ForeignKey
 
 
 class PasswordUtil():
@@ -39,7 +42,13 @@ class User(Base):
     __tablename__ = 'user'
     __table_args__ = {'schema': users_schema}
 
-    id = Column(Integer, primary_key=True)
+    # the user id is the same as the document id of the user profile
+    id = Column(
+        Integer, ForeignKey(schema + '.user_profiles.document_id'),
+        primary_key=True)
+    profile = relationship(
+        UserProfile, primaryjoin=id == UserProfile.document_id, backref='user')
+
     username = Column(String(200), nullable=False, unique=True)
     email = Column(String(200), nullable=False, unique=True)
     email_validated = Column(Boolean, nullable=False, default=False)
