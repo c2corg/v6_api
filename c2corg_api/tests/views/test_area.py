@@ -396,7 +396,7 @@ class TestAreaRest(BaseDocumentTestRest):
         self.session.flush()
 
         user_id = self.global_userids['contributor']
-        DocumentRest(None)._create_new_version(self.area1, user_id)
+        DocumentRest.create_new_version(self.area1, user_id)
 
         self.area2 = Area(area_type='range')
         self.session.add(self.area2)

@@ -539,7 +539,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.session.flush()
 
         user_id = self.global_userids['contributor']
-        DocumentRest(None)._create_new_version(self.route, user_id)
+        DocumentRest.create_new_version(self.route, user_id)
         self.route_version = self.session.query(DocumentVersion). \
             filter(DocumentVersion.document_id == self.route.document_id). \
             filter(DocumentVersion.lang == 'en').first()

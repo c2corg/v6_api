@@ -340,7 +340,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         self.session.flush()
 
         user_id = self.global_userids['contributor']
-        DocumentRest(None)._create_new_version(self.map1, user_id)
+        DocumentRest.create_new_version(self.map1, user_id)
 
         self.map2 = TopoMap(
             editor='ign', scale='25000', code='3432OT')

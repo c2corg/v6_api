@@ -251,7 +251,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.session.add(self.profile1)
         self.session.flush()
 
-        DocumentRest(None)._create_new_version(self.profile1, user_id)
+        DocumentRest.create_new_version(self.profile1, user_id)
 
         self.profile2 = UserProfile(category='amateur')
         self.session.add(self.profile2)
