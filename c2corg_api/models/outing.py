@@ -11,7 +11,8 @@ from sqlalchemy import (
     )
 
 from colanderalchemy import SQLAlchemySchemaNode
-from colander import MappingSchema, SchemaNode, Integer as ColanderInteger
+from colander import MappingSchema, SchemaNode, Integer as ColanderInteger, \
+    Sequence
 
 from c2corg_api.models import schema
 from c2corg_api.models.utils import ArrayOfEnum
@@ -231,6 +232,9 @@ class CreateOutingSchema(MappingSchema):
     """
     waypoint_id = SchemaNode(ColanderInteger())
     route_id = SchemaNode(ColanderInteger())
+    user_ids = SchemaNode(Sequence(),
+                          SchemaNode(ColanderInteger()),
+                          validator=colander.Length(min=1))
     outing = schema_outing.clone()
 
 schema_create_outing = CreateOutingSchema()

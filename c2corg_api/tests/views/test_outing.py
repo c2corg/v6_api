@@ -89,10 +89,11 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
-        self.assertEqual(len(errors), 3)
+        self.assertEqual(len(errors), 4)
         self.assertCorniceMissing(errors[0], 'outing')
         self.assertCorniceMissing(errors[1], 'waypoint_id')
         self.assertCorniceMissing(errors[2], 'route_id')
+        self.assertCorniceMissing(errors[3], 'user_ids')
 
     def test_post_empty_activities_error(self):
         body = self.post_error({
@@ -102,7 +103,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 'date_end': '2016-01-02'
             },
             'waypoint_id': self.waypoint.document_id,
-            'route_id': self.route.document_id
+            'route_id': self.route.document_id,
+            'user_ids': [self.global_userids['contributor']]
         })
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
@@ -130,7 +132,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 ]
             },
             'waypoint_id': self.waypoint.document_id,
-            'route_id': self.route.document_id
+            'route_id': self.route.document_id,
+            'user_ids': [self.global_userids['contributor']]
         }
         body = self.post_error(body_post)
         errors = body.get('errors')
@@ -159,7 +162,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 ]
             },
             'waypoint_id': self.waypoint.document_id,
-            'route_id': self.route.document_id
+            'route_id': self.route.document_id,
+            'user_ids': [self.global_userids['contributor']]
         }
         body = self.post_missing_title(body_post, prefix='outing.')
         errors = body.get('errors')
@@ -187,14 +191,15 @@ class TestOutingRest(BaseDocumentTestRest):
                 ]
             },
             'waypoint_id': self.waypoint.document_id,
-            'route_id': self.route.document_id
+            'route_id': self.route.document_id,
+            'user_ids': [self.global_userids['contributor']]
         }
         self.post_non_whitelisted_attribute(body)
 
     def test_post_missing_content_type(self):
         self.post_missing_content_type({})
 
-    def test_post_missing_waypoint_route_id(self):
+    def test_post_missing_waypoint_route_user_id(self):
         request_body = {
             'outing': {
                 'activities': ['skitouring'],
@@ -214,8 +219,9 @@ class TestOutingRest(BaseDocumentTestRest):
                      'weather': 'sunny'}
                 ]
             },
-            'waypoint_id': None
-            # missing route_id
+            'waypoint_id': None,
+            # missing route_id,
+            'user_ids': []
         }
         headers = self.add_authorization_header(username='contributor')
         response = self.app.post_json(self._prefix, request_body,
@@ -224,9 +230,12 @@ class TestOutingRest(BaseDocumentTestRest):
         body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
-        self.assertEqual(len(errors), 2)
+        self.assertEqual(len(errors), 3)
         self.assertCorniceRequired(errors[0], 'waypoint_id')
         self.assertCorniceMissing(errors[1], 'route_id')
+        self.assertEqual(
+            errors[2].get('description'), 'Shorter than minimum length 1')
+        self.assertEqual(errors[2].get('name'), 'user_ids')
 
     def test_post_invalid_waypoint_route_id(self):
         request_body = {
@@ -250,7 +259,8 @@ class TestOutingRest(BaseDocumentTestRest):
             },
             # invalid ids
             'waypoint_id': -999,
-            'route_id': self.waypoint.document_id
+            'route_id': self.waypoint.document_id,
+            'user_ids': [-999]
         }
         headers = self.add_authorization_header(username='contributor')
         response = self.app.post_json(self._prefix, request_body,
@@ -259,7 +269,7 @@ class TestOutingRest(BaseDocumentTestRest):
         body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
-        self.assertEqual(len(errors), 2)
+        self.assertEqual(len(errors), 3)
 
         self.assertEqual(
             errors[0].get('description'), 'waypoint does not exist')
@@ -267,6 +277,9 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(
             errors[1].get('description'), 'route does not exist')
         self.assertEqual(errors[1].get('name'), 'route_id')
+        self.assertEqual(
+            errors[2].get('description'), 'user "-999" does not exist')
+        self.assertEqual(errors[2].get('name'), 'user_ids')
 
     def test_post_success(self):
         body = {
@@ -289,7 +302,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 ]
             },
             'waypoint_id': self.waypoint.document_id,
-            'route_id': self.route.document_id
+            'route_id': self.route.document_id,
+            'user_ids': [self.global_userids['contributor']]
         }
         body, doc = self.post_success(body)
         self._assert_geometry(body)
@@ -309,12 +323,16 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertIsNotNone(archive_geometry.geom)
 
         association_waypoint = self.session.query(Association).get(
-            (doc.document_id, self.waypoint.document_id))
+            (self.waypoint.document_id, doc.document_id))
         self.assertIsNotNone(association_waypoint)
 
         association_route = self.session.query(Association).get(
-            (doc.document_id, self.route.document_id))
+            (self.route.document_id, doc.document_id))
         self.assertIsNotNone(association_route)
+
+        association_user = self.session.query(Association).get(
+            (self.global_userids['contributor'], doc.document_id))
+        self.assertIsNotNone(association_user)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -591,7 +609,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self.session.flush()
 
         user_id = self.global_userids['contributor']
-        DocumentRest(None)._create_new_version(self.outing, user_id)
+        DocumentRest.create_new_version(self.outing, user_id)
         self.outing_version = self.session.query(DocumentVersion). \
             filter(DocumentVersion.document_id == self.outing.document_id). \
             filter(DocumentVersion.lang == 'en').first()

@@ -6,6 +6,7 @@ from c2corg_api.models.outing import schema_outing, Outing, \
     schema_create_outing, schema_update_outing, ArchiveOuting, \
     ArchiveOutingLocale
 from c2corg_api.models.route import Route
+from c2corg_api.models.user import User
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_common.fields_outing import fields_outing
 from cornice.resource import resource, view
@@ -46,6 +47,16 @@ def validate_associations(request):
             request.errors.add(
                 'body', 'route_id', 'route does not exist')
 
+    user_ids = request.validated.get('user_ids')
+    if user_ids:
+        for user_id in user_ids:
+            user_exists = DBSession.query(
+                exists().where(User.id == user_id)).scalar()
+            if not user_exists:
+                request.errors.add(
+                    'body', 'user_ids',
+                    'user "{0:n}" does not exist'.format(user_id))
+
 
 def adapt_schema_for_activities(activities, field_list_type):
     """Get the schema for a set of activities.
@@ -81,7 +92,8 @@ class OutingRest(DocumentRest):
         create_associations = functools.partial(
             add_associations,
             self.request.validated['waypoint_id'],
-            self.request.validated['route_id']
+            self.request.validated['route_id'],
+            self.request.validated['user_ids']
         )
         return self._collection_post(
             schema_outing, document_field='outing',
@@ -102,11 +114,14 @@ class OutingVersionRest(DocumentRest):
             ArchiveOuting, ArchiveOutingLocale, schema_outing, schema_adaptor)
 
 
-def add_associations(waypoint_id, route_id, outing):
-    """When creating a new outing, associations to a waypoint and route are
-    set up at the same time.
+def add_associations(waypoint_id, route_id, user_ids, outing):
+    """When creating a new outing, associations to the linked waypoint, route
+    and users are set up at the same time.
     """
     DBSession.add(Association(
-        parent_document_id=outing.document_id, child_document_id=waypoint_id))
+        parent_document_id=waypoint_id, child_document_id=outing.document_id))
     DBSession.add(Association(
-        parent_document_id=outing.document_id, child_document_id=route_id))
+        parent_document_id=route_id, child_document_id=outing.document_id))
+    for user_id in user_ids:
+        DBSession.add(Association(
+            parent_document_id=user_id, child_document_id=outing.document_id))
