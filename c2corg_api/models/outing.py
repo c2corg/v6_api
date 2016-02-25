@@ -239,5 +239,5 @@ class CreateOutingSchema(MappingSchema):
 schema_create_outing = CreateOutingSchema()
 schema_update_outing = get_update_schema(schema_outing)
 schema_association_outing = restrict_schema(schema_outing, [
-    'locales.title', 'activities'
+    'locales.title', 'activities', 'date_start', 'date_end'
 ])

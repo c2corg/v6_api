@@ -76,7 +76,7 @@ class OutingRest(DocumentRest):
     def collection_get(self):
         return self._collection_get(
             Outing, schema_outing, listing_schema_adaptor,
-            set_custom_fields=OutingRest.set_author)
+            set_custom_fields=set_author)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
@@ -135,47 +135,47 @@ class OutingRest(DocumentRest):
             for user in linked_users
         ]
 
-    @staticmethod
-    def set_author(outings, lang):
-        """Set the author (the user who created an outing) on a list of
-        outings.
-        """
-        if not outings:
-            return
-        outing_ids = [o.document_id for o in outings]
 
-        t = DBSession.query(
-            ArchiveDocument.document_id.label('document_id'),
-            User.username.label('username'),
-            User.id.label('user_id'),
-            over(
-                func.rank(), partition_by=ArchiveDocument.document_id,
-                order_by=HistoryMetaData.id).label('rank')). \
-            select_from(ArchiveDocument). \
-            join(
-                DocumentVersion,
-                and_(
-                    ArchiveDocument.document_id == DocumentVersion.document_id,
-                    ArchiveDocument.version == 1)). \
-            join(HistoryMetaData,
-                 DocumentVersion.history_metadata_id == HistoryMetaData.id). \
-            join(User,
-                 HistoryMetaData.user_id == User.id). \
-            filter(ArchiveDocument.document_id.in_(outing_ids)). \
-            subquery('t')
-        query = DBSession.query(
-                t.c.document_id, t.c.user_id, t.c.username). \
-            filter(t.c.rank == 1)
+def set_author(outings, lang):
+    """Set the author (the user who created an outing) on a list of
+    outings.
+    """
+    if not outings:
+        return
+    outing_ids = [o.document_id for o in outings]
 
-        author_for_outings = {
-            document_id: {
-                'username': username,
-                'user_id': user_id
-            } for document_id, user_id, username in query
-        }
+    t = DBSession.query(
+        ArchiveDocument.document_id.label('document_id'),
+        User.username.label('username'),
+        User.id.label('user_id'),
+        over(
+            func.rank(), partition_by=ArchiveDocument.document_id,
+            order_by=HistoryMetaData.id).label('rank')). \
+        select_from(ArchiveDocument). \
+        join(
+            DocumentVersion,
+            and_(
+                ArchiveDocument.document_id == DocumentVersion.document_id,
+                ArchiveDocument.version == 1)). \
+        join(HistoryMetaData,
+             DocumentVersion.history_metadata_id == HistoryMetaData.id). \
+        join(User,
+             HistoryMetaData.user_id == User.id). \
+        filter(ArchiveDocument.document_id.in_(outing_ids)). \
+        subquery('t')
+    query = DBSession.query(
+            t.c.document_id, t.c.user_id, t.c.username). \
+        filter(t.c.rank == 1)
 
-        for outing in outings:
-            outing.author = author_for_outings.get(outing.document_id)
+    author_for_outings = {
+        document_id: {
+            'username': username,
+            'user_id': user_id
+        } for document_id, user_id, username in query
+    }
+
+    for outing in outings:
+        outing.author = author_for_outings.get(outing.document_id)
 
 
 @resource(path='/outings/{id}/{lang}/{version_id}', cors_policy=cors_policy)

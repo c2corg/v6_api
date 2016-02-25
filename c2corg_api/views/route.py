@@ -1,5 +1,8 @@
 from c2corg_api.models import DBSession
+from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models.outing import schema_association_outing, Outing
+from c2corg_api.views.outing import set_author
 from cornice.resource import resource, view
 
 from c2corg_api.models.route import Route, schema_route, schema_update_route, \
@@ -7,13 +10,14 @@ from c2corg_api.models.route import Route, schema_route, schema_update_route, \
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, make_schema_adaptor, get_all_fields
-from c2corg_api.views import cors_policy, restricted_json_view, get_best_locale
+from c2corg_api.views import cors_policy, restricted_json_view, \
+    get_best_locale, to_json_dict, set_best_locale
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param
 from c2corg_common.fields_route import fields_route
 from c2corg_common.attributes import activities
-from sqlalchemy.orm import load_only
+from sqlalchemy.orm import load_only, joinedload
 
 validate_route_create = make_validator_create(
     fields_route, 'activities', activities)
@@ -46,7 +50,9 @@ class RouteRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
-        return self._get(Route, schema_route, schema_adaptor)
+        return self._get(
+            Route, schema_route, schema_adaptor,
+            set_custom_associations=RouteRest.set_recent_outings)
 
     @restricted_json_view(schema=schema_route,
                           validators=validate_route_create)
@@ -57,6 +63,44 @@ class RouteRest(DocumentRest):
                           validators=[validate_id, validate_route_update])
     def put(self):
         return self._put(Route, schema_route, after_update=update_title_prefix)
+
+    @staticmethod
+    def set_recent_outings(route, lang):
+        """Set last 10 outings on the given route.
+        """
+        recent_outings = DBSession.query(Outing). \
+            join(
+                Association,
+            Outing.document_id == Association.child_document_id). \
+            filter(Association.parent_document_id == route.document_id). \
+            options(load_only(
+                Outing.document_id, Outing.activities, Outing.date_start,
+                Outing.date_end, Outing.version)). \
+            options(joinedload(Outing.locales).load_only(
+                DocumentLocale.lang, DocumentLocale.title,
+                DocumentLocale.version)). \
+            order_by(Outing.date_end). \
+            limit(10). \
+            all()
+
+        set_author(recent_outings, None)
+        if lang is not None:
+            set_best_locale(recent_outings, lang)
+
+        total = DBSession.query(Outing.document_id). \
+            join(
+                Association,
+                Outing.document_id == Association.child_document_id). \
+            filter(Association.parent_document_id == route.document_id). \
+            count()
+
+        route.associations['recent_outings'] = {
+            'outings': [
+                to_json_dict(user, schema_association_outing)
+                for user in recent_outings
+            ],
+            'total': total
+        }
 
 
 @resource(path='/routes/{id}/{lang}/{version_id}', cors_policy=cors_policy)
