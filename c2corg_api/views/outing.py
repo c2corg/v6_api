@@ -20,7 +20,8 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param
 from c2corg_common.attributes import activities
-from sqlalchemy.sql.expression import exists
+from pyramid.httpexceptions import HTTPForbidden
+from sqlalchemy.sql.expression import exists, and_
 
 validate_route_create = make_validator_create(
     fields_outing, 'activities', activities, document_field='outing')
@@ -102,7 +103,26 @@ class OutingRest(DocumentRest):
     @restricted_json_view(schema=schema_update_outing,
                           validators=[validate_id, validate_outing_update])
     def put(self):
+        if not self.request.has_permission('moderator'):
+            # moderators can change every outing
+            if not self._has_permission(
+                    self.request.authenticated_userid,
+                    self.request.validated['id']):
+                # but a normal user can only change an outing that they are
+                # associated to
+                raise HTTPForbidden('No permission to change this outing')
         return self._put(Outing, schema_outing)
+
+    def _has_permission(self, user_id, outing_id):
+        """Check if the user with the given id has permission to change an
+        outing. That is only users that are currently assigned to the outing
+        can modify it.
+        """
+        return DBSession.query(exists().where(
+            and_(
+                Association.parent_document_id == user_id,
+                Association.child_document_id == outing_id
+            ))).scalar()
 
 
 @resource(path='/outings/{id}/{lang}/{version_id}', cors_policy=cors_policy)

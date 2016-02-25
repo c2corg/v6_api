@@ -42,6 +42,7 @@ global_passwords = {}
 
 def _add_global_test_data(session):
     global_passwords['contributor'] = 'super pass'
+    global_passwords['contributor2'] = 'better pass'
     global_passwords['moderator'] = 'even better pass'
 
     contributor_profile = UserProfile(
@@ -53,6 +54,15 @@ def _add_global_test_data(session):
         password='super pass',
         profile=contributor_profile)
 
+    contributor2_profile = UserProfile(
+        category='amateur',
+        locales=[DocumentLocale(title='...', lang='en')])
+
+    contributor2 = User(
+        username='contributor2', email='contributor2@camptocamp.org',
+        password='better pass',
+        profile=contributor2_profile)
+
     moderator_profile = UserProfile(
         categories=['mountain_guide'],
         locales=[DocumentLocale(title='...', lang='en')])
@@ -62,7 +72,7 @@ def _add_global_test_data(session):
         moderator=True, password='even better pass',
         profile=moderator_profile)
 
-    users = [moderator, contributor]
+    users = [moderator, contributor, contributor2]
     session.add_all(users)
     session.flush()
 
@@ -71,7 +81,7 @@ def _add_global_test_data(session):
     now = datetime.datetime.utcnow()
     exp = now + datetime.timedelta(weeks=10)
 
-    for user in [moderator, contributor]:
+    for user in [moderator, contributor, contributor2]:
         claims = create_claims(user, exp)
         token = jwt.encode(claims, key=key, algorithm=algorithm). \
             decode('utf-8')

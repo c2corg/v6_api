@@ -353,7 +353,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 ]
             }
         }
-        self.put_wrong_document_id(body)
+        self.put_wrong_document_id(body, user='moderator')
 
     def test_put_wrong_document_version(self):
         body = {
@@ -374,7 +374,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 ]
             }
         }
-        self.put_wrong_version(body, self.outing.document_id)
+        self.put_wrong_version(body, self.outing.document_id, user='moderator')
 
     def test_put_wrong_locale_version(self):
         body = {
@@ -395,7 +395,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 ]
             }
         }
-        self.put_wrong_version(body, self.outing.document_id)
+        self.put_wrong_version(body, self.outing.document_id, user='moderator')
 
     def test_put_wrong_ids(self):
         body = {
@@ -416,10 +416,66 @@ class TestOutingRest(BaseDocumentTestRest):
                 ]
             }
         }
-        self.put_wrong_ids(body, self.outing.document_id)
+        self.put_wrong_ids(body, self.outing.document_id, user='moderator')
 
     def test_put_no_document(self):
         self.put_put_no_document(self.outing.document_id)
+
+    def test_put_wrong_user(self):
+        """Test that a non-moderator user who is not associated to the outing
+        is not allowed to modify.
+        """
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.outing.document_id,
+                'version': self.outing.version,
+                'activities': ['skitouring'],
+                'date_start': '2016-01-01',
+                'date_end': '2016-01-02',
+                'elevation_min': 700,
+                'elevation_max': 1600,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...', 'weather': 'mostly sunny',
+                     'version': self.locale_en.version}
+                ]
+            }
+        }
+        headers = self.add_authorization_header(username='contributor2')
+        self.app.put_json(
+            self._prefix + '/' + str(self.outing.document_id), body,
+            headers=headers, status=403)
+
+    def test_put_good_user(self):
+        """Test that a non-moderator user who is associated to the outing
+        is allowed to modify.
+        """
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.outing.document_id,
+                'version': self.outing.version,
+                'activities': ['skitouring'],
+                'date_start': '2016-01-01',
+                'date_end': '2016-01-02',
+                'elevation_min': 700,
+                'elevation_max': 1600,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...', 'weather': 'mostly sunny',
+                     'version': self.locale_en.version}
+                ]
+            }
+        }
+        headers = self.add_authorization_header(username='contributor')
+        self.app.put_json(
+            self._prefix + '/' + str(self.outing.document_id), body,
+            headers=headers, status=200)
 
     def test_put_success_all(self):
         body = {
@@ -446,7 +502,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 }
             }
         }
-        (body, outing) = self.put_success_all(body, self.outing)
+        (body, outing) = self.put_success_all(
+            body, self.outing, user='moderator')
 
         self.assertEquals(outing.elevation_max, 1600)
         locale_en = outing.get_locale('en')
@@ -493,7 +550,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 ]
             }
         }
-        (body, route) = self.put_success_figures_only(body, self.outing)
+        (body, route) = self.put_success_figures_only(
+            body, self.outing, user='moderator')
 
         self.assertEquals(route.elevation_max, 1600)
 
@@ -517,7 +575,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 ]
             }
         }
-        (body, route) = self.put_success_lang_only(body, self.outing)
+        (body, route) = self.put_success_lang_only(
+            body, self.outing, user='moderator')
 
         self.assertEquals(route.get_locale('en').weather, 'mostly sunny')
 
@@ -542,7 +601,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 ]
             }
         }
-        (body, route) = self.put_success_new_lang(body, self.outing)
+        (body, route) = self.put_success_new_lang(
+            body, self.outing, user='moderator')
 
         self.assertEquals(route.get_locale('es').weather, 'soleado')
 
@@ -665,5 +725,9 @@ class TestOutingRest(BaseDocumentTestRest):
         self.session.flush()
         self.session.add(Association(
             parent_document_id=self.route.document_id,
+            child_document_id=self.outing.document_id))
+
+        self.session.add(Association(
+            parent_document_id=user_id,
             child_document_id=self.outing.document_id))
         self.session.flush()
