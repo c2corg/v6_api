@@ -230,7 +230,6 @@ schema_outing = SQLAlchemySchemaNode(
 class CreateOutingSchema(MappingSchema):
     """The schema used for the web-service to create a new outing.
     """
-    waypoint_id = SchemaNode(ColanderInteger())
     route_id = SchemaNode(ColanderInteger())
     user_ids = SchemaNode(Sequence(),
                           SchemaNode(ColanderInteger()),

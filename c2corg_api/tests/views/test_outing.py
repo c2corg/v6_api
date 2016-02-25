@@ -64,11 +64,6 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertIn('associations', body)
         associations = body.get('associations')
 
-        linked_waypoints = associations.get('waypoints')
-        self.assertEqual(1, len(linked_waypoints))
-        self.assertEqual(
-            self.waypoint.document_id, linked_waypoints[0].get('document_id'))
-
         linked_routes = associations.get('routes')
         self.assertEqual(1, len(linked_routes))
         self.assertEqual(
@@ -89,11 +84,10 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
-        self.assertEqual(len(errors), 4)
+        self.assertEqual(len(errors), 3)
         self.assertCorniceMissing(errors[0], 'outing')
-        self.assertCorniceMissing(errors[1], 'waypoint_id')
-        self.assertCorniceMissing(errors[2], 'route_id')
-        self.assertCorniceMissing(errors[3], 'user_ids')
+        self.assertCorniceMissing(errors[1], 'route_id')
+        self.assertCorniceMissing(errors[2], 'user_ids')
 
     def test_post_empty_activities_error(self):
         body = self.post_error({
@@ -102,7 +96,6 @@ class TestOutingRest(BaseDocumentTestRest):
                 'date_start': '2016-01-01',
                 'date_end': '2016-01-02'
             },
-            'waypoint_id': self.waypoint.document_id,
             'route_id': self.route.document_id,
             'user_ids': [self.global_userids['contributor']]
         })
@@ -131,7 +124,6 @@ class TestOutingRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Some nice loop'}
                 ]
             },
-            'waypoint_id': self.waypoint.document_id,
             'route_id': self.route.document_id,
             'user_ids': [self.global_userids['contributor']]
         }
@@ -161,7 +153,6 @@ class TestOutingRest(BaseDocumentTestRest):
                     {'lang': 'en'}
                 ]
             },
-            'waypoint_id': self.waypoint.document_id,
             'route_id': self.route.document_id,
             'user_ids': [self.global_userids['contributor']]
         }
@@ -190,7 +181,6 @@ class TestOutingRest(BaseDocumentTestRest):
                      'weather': 'sunny'}
                 ]
             },
-            'waypoint_id': self.waypoint.document_id,
             'route_id': self.route.document_id,
             'user_ids': [self.global_userids['contributor']]
         }
@@ -199,7 +189,7 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_post_missing_content_type(self):
         self.post_missing_content_type({})
 
-    def test_post_missing_waypoint_route_user_id(self):
+    def test_post_missing_route_user_id(self):
         request_body = {
             'outing': {
                 'activities': ['skitouring'],
@@ -219,7 +209,6 @@ class TestOutingRest(BaseDocumentTestRest):
                      'weather': 'sunny'}
                 ]
             },
-            'waypoint_id': None,
             # missing route_id,
             'user_ids': []
         }
@@ -230,14 +219,13 @@ class TestOutingRest(BaseDocumentTestRest):
         body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
-        self.assertEqual(len(errors), 3)
-        self.assertCorniceRequired(errors[0], 'waypoint_id')
-        self.assertCorniceMissing(errors[1], 'route_id')
+        self.assertEqual(len(errors), 2)
+        self.assertCorniceMissing(errors[0], 'route_id')
         self.assertEqual(
-            errors[2].get('description'), 'Shorter than minimum length 1')
-        self.assertEqual(errors[2].get('name'), 'user_ids')
+            errors[1].get('description'), 'Shorter than minimum length 1')
+        self.assertEqual(errors[1].get('name'), 'user_ids')
 
-    def test_post_invalid_waypoint_route_id(self):
+    def test_post_invalid_route_id(self):
         request_body = {
             'outing': {
                 'activities': ['skitouring'],
@@ -258,7 +246,6 @@ class TestOutingRest(BaseDocumentTestRest):
                 ]
             },
             # invalid ids
-            'waypoint_id': -999,
             'route_id': self.waypoint.document_id,
             'user_ids': [-999]
         }
@@ -269,17 +256,14 @@ class TestOutingRest(BaseDocumentTestRest):
         body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
-        self.assertEqual(len(errors), 3)
+        self.assertEqual(len(errors), 2)
 
         self.assertEqual(
-            errors[0].get('description'), 'waypoint does not exist')
-        self.assertEqual(errors[0].get('name'), 'waypoint_id')
+            errors[0].get('description'), 'route does not exist')
+        self.assertEqual(errors[0].get('name'), 'route_id')
         self.assertEqual(
-            errors[1].get('description'), 'route does not exist')
-        self.assertEqual(errors[1].get('name'), 'route_id')
-        self.assertEqual(
-            errors[2].get('description'), 'user "-999" does not exist')
-        self.assertEqual(errors[2].get('name'), 'user_ids')
+            errors[1].get('description'), 'user "-999" does not exist')
+        self.assertEqual(errors[1].get('name'), 'user_ids')
 
     def test_post_success(self):
         body = {
@@ -301,7 +285,6 @@ class TestOutingRest(BaseDocumentTestRest):
                      'weather': 'sunny'}
                 ]
             },
-            'waypoint_id': self.waypoint.document_id,
             'route_id': self.route.document_id,
             'user_ids': [self.global_userids['contributor']]
         }
@@ -321,10 +304,6 @@ class TestOutingRest(BaseDocumentTestRest):
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
         self.assertIsNotNone(archive_geometry.geom)
-
-        association_waypoint = self.session.query(Association).get(
-            (self.waypoint.document_id, doc.document_id))
-        self.assertIsNotNone(association_waypoint)
 
         association_route = self.session.query(Association).get(
             (self.route.document_id, doc.document_id))
@@ -694,7 +673,6 @@ class TestOutingRest(BaseDocumentTestRest):
             lang='fr', title='Mont Granier (fr)', description='...'))
         self.session.add(self.outing4)
 
-        # add some associations
         self.waypoint = Waypoint(
             waypoint_type='summit', elevation=4,
             geometry=DocumentGeometry(
@@ -707,11 +685,8 @@ class TestOutingRest(BaseDocumentTestRest):
             access='ouai'))
         self.session.add(self.waypoint)
         self.session.flush()
-        self.session.add(Association(
-            parent_document_id=self.waypoint.document_id,
-            child_document_id=self.outing.document_id))
-        self.session.flush()
 
+        # add some associations
         self.route = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
             height_diff_up=800, height_diff_down=800, durations='1')

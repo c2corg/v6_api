@@ -7,7 +7,6 @@ from c2corg_api.models.outing import schema_outing, Outing, \
     ArchiveOutingLocale
 from c2corg_api.models.route import Route
 from c2corg_api.models.user import User
-from c2corg_api.models.waypoint import Waypoint
 from c2corg_common.fields_outing import fields_outing
 from cornice.resource import resource, view
 
@@ -23,7 +22,7 @@ from c2corg_common.attributes import activities
 from pyramid.httpexceptions import HTTPForbidden
 from sqlalchemy.sql.expression import exists, and_
 
-validate_route_create = make_validator_create(
+validate_outing_create = make_validator_create(
     fields_outing, 'activities', activities, document_field='outing')
 validate_outing_update = make_validator_update(
     fields_outing, 'activities', activities)
@@ -32,14 +31,6 @@ validate_outing_update = make_validator_update(
 def validate_associations(request):
     """Check if the given waypoint and route id are valid.
     """
-    waypoint_id = request.validated.get('waypoint_id')
-    if waypoint_id:
-        waypoint_exists = DBSession.query(
-            exists().where(Waypoint.document_id == waypoint_id)).scalar()
-        if not waypoint_exists:
-            request.errors.add(
-                'body', 'waypoint_id', 'waypoint does not exist')
-
     route_id = request.validated.get('route_id')
     if route_id:
         route_exists = DBSession.query(
@@ -87,12 +78,11 @@ class OutingRest(DocumentRest):
         return self._get(Outing, schema_outing, schema_adaptor)
 
     @restricted_json_view(schema=schema_create_outing,
-                          validators=[validate_route_create,
+                          validators=[validate_outing_create,
                                       validate_associations])
     def collection_post(self):
         create_associations = functools.partial(
             add_associations,
-            self.request.validated['waypoint_id'],
             self.request.validated['route_id'],
             self.request.validated['user_ids']
         )
@@ -134,12 +124,10 @@ class OutingVersionRest(DocumentRest):
             ArchiveOuting, ArchiveOutingLocale, schema_outing, schema_adaptor)
 
 
-def add_associations(waypoint_id, route_id, user_ids, outing):
-    """When creating a new outing, associations to the linked waypoint, route
+def add_associations(route_id, user_ids, outing):
+    """When creating a new outing, associations to the linked route
     and users are set up at the same time.
     """
-    DBSession.add(Association(
-        parent_document_id=waypoint_id, child_document_id=outing.document_id))
     DBSession.add(Association(
         parent_document_id=route_id, child_document_id=outing.document_id))
     for user_id in user_ids:
