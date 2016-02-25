@@ -25,9 +25,16 @@ class TestOutingRest(BaseDocumentTestRest):
 
     def test_get_collection(self):
         body = self.get_collection()
-        doc = body['documents'][0]
-        self.assertNotIn('frequentation', doc)
-        self.assertNotIn('duration_difficulties', doc)
+        self.assertEqual(len(body['documents']), 4)
+        doc1 = body['documents'][0]
+        self.assertNotIn('frequentation', doc1)
+        self.assertNotIn('duration_difficulties', doc1)
+
+        doc4 = body['documents'][3]
+        self.assertIn('author', doc4)
+        author = doc4['author']
+        self.assertEqual(author['username'], 'contributor')
+        self.assertEqual(author['user_id'], self.global_userids['contributor'])
 
     def test_get_collection_paginated(self):
         self.app.get("/outings?offset=invalid", status=400)
@@ -65,9 +72,14 @@ class TestOutingRest(BaseDocumentTestRest):
         associations = body.get('associations')
 
         linked_routes = associations.get('routes')
-        self.assertEqual(1, len(linked_routes))
+        self.assertEqual(len(linked_routes), 1)
         self.assertEqual(
             self.route.document_id, linked_routes[0].get('document_id'))
+
+        linked_users = associations.get('users')
+        self.assertEqual(len(linked_users), 1)
+        self.assertEqual(
+            linked_users[0]['id'], self.global_userids['contributor'])
 
     def test_get_version(self):
         self.get_version(self.outing, self.outing_version)

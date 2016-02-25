@@ -35,10 +35,13 @@ class DocumentRest(object):
         self.request = request
 
     def _collection_get(self, clazz, schema, adapt_schema=None,
-                        include_areas=True):
-        return self._paginate(clazz, schema, adapt_schema, include_areas)
+                        include_areas=True, set_custom_fields=None):
+        return self._paginate(
+            clazz, schema, adapt_schema, include_areas, set_custom_fields)
 
-    def _paginate(self, clazz, schema, adapt_schema, include_areas):
+    def _paginate(
+            self, clazz, schema, adapt_schema, include_areas,
+            set_custom_fields):
         validated = self.request.validated
 
         base_query = DBSession.query(clazz). \
@@ -69,6 +72,9 @@ class DocumentRest(object):
 
         if include_areas:
             self._set_areas_for_documents(documents, validated.get('lang'))
+
+        if set_custom_fields:
+            set_custom_fields(documents, validated.get('lang'))
 
         return {
             'documents': [
@@ -114,18 +120,23 @@ class DocumentRest(object):
         return documents, total
 
     def _get(self, clazz, schema, adapt_schema=None, include_maps=True,
-             include_areas=True):
+             include_areas=True, set_custom_associations=None):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')
         return self._get_in_lang(
-            id, lang, clazz, schema, adapt_schema, include_maps)
+            id, lang, clazz, schema, adapt_schema, include_maps, include_areas,
+            set_custom_associations)
 
     def _get_in_lang(self, id, lang, clazz, schema, adapt_schema=None,
-                     include_maps=True, include_areas=True):
+                     include_maps=True, include_areas=True,
+                     set_custom_associations=None):
         document = self._get_document(clazz, id, lang)
         set_available_langs([document])
 
         self._set_associations(document, lang)
+        if set_custom_associations:
+            set_custom_associations(document, lang)
+
         if include_maps:
             self._set_maps(document, lang)
         if include_areas:

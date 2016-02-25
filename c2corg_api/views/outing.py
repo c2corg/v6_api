@@ -2,11 +2,13 @@ import functools
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
+from c2corg_api.models.document import ArchiveDocument
+from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.outing import schema_outing, Outing, \
     schema_create_outing, schema_update_outing, ArchiveOuting, \
     ArchiveOutingLocale
 from c2corg_api.models.route import Route
-from c2corg_api.models.user import User
+from c2corg_api.models.user import User, schema_association_user
 from c2corg_common.fields_outing import fields_outing
 from cornice.resource import resource, view
 
@@ -14,13 +16,15 @@ from cornice.resource import resource, view
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, make_schema_adaptor, get_all_fields
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import cors_policy, restricted_json_view, to_json_dict
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param
 from c2corg_common.attributes import activities
 from pyramid.httpexceptions import HTTPForbidden
-from sqlalchemy.sql.expression import exists, and_
+from sqlalchemy.orm import load_only
+from sqlalchemy.sql.expression import exists, and_, over
+from sqlalchemy.sql.functions import func
 
 validate_outing_create = make_validator_create(
     fields_outing, 'activities', activities, document_field='outing')
@@ -71,11 +75,14 @@ class OutingRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
         return self._collection_get(
-            Outing, schema_outing, listing_schema_adaptor)
+            Outing, schema_outing, listing_schema_adaptor,
+            set_custom_fields=OutingRest.set_author)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
-        return self._get(Outing, schema_outing, schema_adaptor)
+        return self._get(
+            Outing, schema_outing, schema_adaptor,
+            set_custom_associations=OutingRest.set_users)
 
     @restricted_json_view(schema=schema_create_outing,
                           validators=[validate_outing_create,
@@ -113,6 +120,62 @@ class OutingRest(DocumentRest):
                 Association.parent_document_id == user_id,
                 Association.child_document_id == outing_id
             ))).scalar()
+
+    @staticmethod
+    def set_users(outing, lang):
+        """Set all linked users on the given outing.
+        """
+        linked_users = DBSession.query(User). \
+            join(Association, Association.parent_document_id == User.id). \
+            filter(Association.child_document_id == outing.document_id). \
+            options(load_only(User.id, User.username)). \
+            all()
+        outing.associations['users'] = [
+            to_json_dict(user, schema_association_user)
+            for user in linked_users
+        ]
+
+    @staticmethod
+    def set_author(outings, lang):
+        """Set the author (the user who created an outing) on a list of
+        outings.
+        """
+        if not outings:
+            return
+        outing_ids = [o.document_id for o in outings]
+
+        t = DBSession.query(
+            ArchiveDocument.document_id.label('document_id'),
+            User.username.label('username'),
+            User.id.label('user_id'),
+            over(
+                func.rank(), partition_by=ArchiveDocument.document_id,
+                order_by=HistoryMetaData.id).label('rank')). \
+            select_from(ArchiveDocument). \
+            join(
+                DocumentVersion,
+                and_(
+                    ArchiveDocument.document_id == DocumentVersion.document_id,
+                    ArchiveDocument.version == 1)). \
+            join(HistoryMetaData,
+                 DocumentVersion.history_metadata_id == HistoryMetaData.id). \
+            join(User,
+                 HistoryMetaData.user_id == User.id). \
+            filter(ArchiveDocument.document_id.in_(outing_ids)). \
+            subquery('t')
+        query = DBSession.query(
+                t.c.document_id, t.c.user_id, t.c.username). \
+            filter(t.c.rank == 1)
+
+        author_for_outings = {
+            document_id: {
+                'username': username,
+                'user_id': user_id
+            } for document_id, user_id, username in query
+        }
+
+        for outing in outings:
+            outing.author = author_for_outings.get(outing.document_id)
 
 
 @resource(path='/outings/{id}/{lang}/{version_id}', cors_policy=cors_policy)
