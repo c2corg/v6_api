@@ -1,3 +1,6 @@
+from c2corg_api.models.document import ArchiveDocument, ArchiveDocumentLocale
+from c2corg_api.scripts.migration.documents.user_profiles import \
+    MigrateUserProfiles
 from sqlalchemy.sql import text
 import transaction
 import zope
@@ -6,11 +9,11 @@ from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.scripts.migration.batch import SimpleBatch
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
-# TODO only importing the versions of waypoints, routes, areas and maps
+# TODO only importing the versions of the tables listed below
 tables = [
     'app_huts_archives', 'app_parkings_archives', 'app_products_archives',
     'app_sites_archives', 'app_summits_archives', 'app_routes_archives',
-    'app_maps_archives', 'app_areas_archives'
+    'app_maps_archives', 'app_areas_archives', 'app_users_i18n_archives'
 ]
 tables_union = ' union '.join(['select id from ' + t for t in tables])
 
@@ -64,6 +67,42 @@ class MigrateVersions(MigrateBase):
             'documents_versions',
             versions_query_count, versions_query, DocumentVersion,
             self.get_version)
+
+        # there are a couple of users that did not have a profile (see
+        # MigrateUserProfiles). now also create a version for the created
+        # profiles.
+        with transaction.manager:
+            profileless_users = self.connection_source.execute(
+                text(MigrateUserProfiles.query_profileless_users))
+            last_metadata_id = self.connection_source.execute(
+                text('select max(history_metadata_id) '
+                     'from app_history_metadata;')).fetchone()[0]
+            last_version_id = self.connection_source.execute(
+                text('select max(documents_versions_id) '
+                     'from app_documents_versions;')).fetchone()[0]
+
+            for row in profileless_users:
+                user_id = row[0]
+                last_metadata_id += 1
+                last_version_id += 1
+
+                archive = self.session_target.query(ArchiveDocument).filter(
+                    ArchiveDocument.document_id == user_id).one()
+                locale = self.session_target.query(ArchiveDocumentLocale). \
+                    filter(ArchiveDocumentLocale.document_id == user_id).one()
+
+                meta_data = HistoryMetaData(
+                    id=last_metadata_id,
+                    comment='creation', user_id=user_id)
+                version = DocumentVersion(
+                    id=last_version_id,
+                    document_id=user_id,
+                    lang=locale.lang,
+                    document_archive=archive,
+                    document_locales_archive=locale,
+                    history_metadata=meta_data
+                )
+                self.session_target.add(version)
 
     def get_meta_data(self, row):
         return dict(

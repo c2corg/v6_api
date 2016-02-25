@@ -94,3 +94,5 @@ map_scale = enum(
     'map_scale', attributes.map_scales)
 area_type = enum(
     'area_type', attributes.area_types)
+user_category = enum(
+    'user_category', attributes.user_categories)

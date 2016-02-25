@@ -4,6 +4,9 @@ import datetime
 import transaction
 import os
 import logging
+
+from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models.user_profile import UserProfile
 from sqlalchemy import engine_from_config
 from pyramid.paster import get_appsettings
 from pyramid import testing
@@ -41,13 +44,23 @@ def _add_global_test_data(session):
     global_passwords['contributor'] = 'super pass'
     global_passwords['moderator'] = 'even better pass'
 
+    contributor_profile = UserProfile(
+        category='amateur',
+        locales=[DocumentLocale(title='...', lang='en')])
+
     contributor = User(
         username='contributor', email='contributor@camptocamp.org',
-        password='super pass')
+        password='super pass',
+        profile=contributor_profile)
+
+    moderator_profile = UserProfile(
+        category='pro',
+        locales=[DocumentLocale(title='...', lang='en')])
 
     moderator = User(
         username='moderator', email='moderator@camptocamp.org',
-        moderator=True, password='even better pass')
+        moderator=True, password='even better pass',
+        profile=moderator_profile)
 
     users = [moderator, contributor]
     session.add_all(users)

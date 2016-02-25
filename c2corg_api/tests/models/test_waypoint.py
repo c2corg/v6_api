@@ -70,10 +70,10 @@ class TestWaypoint(BaseTestCase):
 
     def test_version_is_incremented(self):
         waypoint = Waypoint(
-            document_id=1, waypoint_type='summit', elevation=2203,
+            waypoint_type='summit', elevation=2203,
             locales=[
                 WaypointLocale(
-                    id=2, lang='en', title='A', description='abc')
+                    lang='en', title='A', description='abc')
             ]
         )
         self.session.add(waypoint)
@@ -95,10 +95,10 @@ class TestWaypoint(BaseTestCase):
         waypoint with an old version number.
         """
         waypoint1 = Waypoint(
-            document_id=1, waypoint_type='summit', elevation=2203,
+            waypoint_type='summit', elevation=2203,
             locales=[
                 WaypointLocale(
-                    id=2, lang='en', title='A', description='abc')
+                    lang='en', title='A', description='abc')
             ]
         )
 

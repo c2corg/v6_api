@@ -566,7 +566,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(waypoint)
         self.session.flush()
         user_id = self.global_userids['contributor']
-        DocumentRest(None)._create_new_version(waypoint, user_id)
+        DocumentRest.create_new_version(waypoint, user_id)
 
         # then add a geometry to the waypoint
         body_put = {
@@ -692,7 +692,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(self.waypoint)
         self.session.flush()
         user_id = self.global_userids['contributor']
-        DocumentRest(None)._create_new_version(self.waypoint, user_id)
+        DocumentRest.create_new_version(self.waypoint, user_id)
         self.waypoint_version = self.session.query(DocumentVersion). \
             filter(DocumentVersion.document_id == self.waypoint.document_id). \
             filter(DocumentVersion.lang == 'en').first()

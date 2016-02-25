@@ -178,7 +178,7 @@ class DocumentRest(object):
         DBSession.add(document)
         DBSession.flush()
         user_id = self.request.authenticated_userid
-        self._create_new_version(document, user_id)
+        DocumentRest.create_new_version(document, user_id)
 
         if document.type != AREA_TYPE:
             update_areas_for_document(document, reset=False)
@@ -278,7 +278,8 @@ class DocumentRest(object):
 
         return document
 
-    def _create_new_version(self, document, user_id):
+    @staticmethod
+    def create_new_version(document, user_id):
         assert user_id
         archive = document.to_archive()
         archive_locales = document.get_archive_locales()

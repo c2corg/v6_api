@@ -319,7 +319,7 @@ class TestImageRest(BaseDocumentTestRest):
         self.session.flush()
 
         user_id = self.global_userids['contributor']
-        DocumentRest(None)._create_new_version(self.image, user_id)
+        DocumentRest.create_new_version(self.image, user_id)
 
         self.image2 = Image(
             activities='paragliding', height=2000)

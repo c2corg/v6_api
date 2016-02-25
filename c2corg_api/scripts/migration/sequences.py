@@ -14,7 +14,6 @@ class UpdateSequences(MigrateBase):
         ('guidebook', 'documents_versions', 'id', 'documents_versions_id_seq'),
         ('guidebook', 'history_metadata', 'id', 'history_metadata_id_seq'),
         ('guidebook', 'association_log', 'id', 'association_log_id_seq'),
-        ('users', 'user', 'id', 'user_id_seq'),
     ]
 
     def migrate(self):
