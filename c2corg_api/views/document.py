@@ -28,6 +28,9 @@ LIMIT_MAX = 100
 # listing request)
 LIMIT_DEFAULT = 30
 
+# the number of recent outings that are included for waypoint and routes
+NUM_RECENT_OUTINGS = 10
+
 
 class DocumentRest(object):
 

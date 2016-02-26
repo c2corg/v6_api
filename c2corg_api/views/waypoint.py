@@ -1,7 +1,10 @@
 from c2corg_api.models import DBSession
-from c2corg_api.models.document import UpdateType
-from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.models.association import Association
+from c2corg_api.models.document import UpdateType, Document, DocumentLocale
+from c2corg_api.models.outing import Outing, schema_association_outing
+from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
 from c2corg_api.search.sync import sync_search_index
+from c2corg_api.views.outing import set_author
 from c2corg_api.views.route import set_route_title_prefix
 from cornice.resource import resource, view
 
@@ -12,8 +15,9 @@ from c2corg_api.models.waypoint import (
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import (
     DocumentRest, make_validator_create, make_validator_update,
-    make_schema_adaptor)
-from c2corg_api.views import cors_policy, restricted_json_view
+    make_schema_adaptor, NUM_RECENT_OUTINGS)
+from c2corg_api.views import cors_policy, restricted_json_view, \
+    to_json_dict, set_best_locale
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param
@@ -21,6 +25,8 @@ from c2corg_common.fields_waypoint import fields_waypoint
 from c2corg_common.attributes import waypoint_types
 from functools import lru_cache
 from sqlalchemy.orm import joinedload, load_only
+from sqlalchemy.orm.util import aliased
+from sqlalchemy.sql.expression import and_
 
 validate_waypoint_create = make_validator_create(
     fields_waypoint, 'waypoint_type', waypoint_types)
@@ -55,7 +61,9 @@ class WaypointRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
-        return self._get(Waypoint, schema_waypoint, schema_adaptor)
+        return self._get(
+            Waypoint, schema_waypoint, schema_adaptor,
+            set_custom_associations=WaypointRest.set_recent_outings)
 
     @restricted_json_view(schema=schema_waypoint,
                           validators=validate_waypoint_create)
@@ -67,6 +75,66 @@ class WaypointRest(DocumentRest):
     def put(self):
         return self._put(
             Waypoint, schema_waypoint, after_update=update_linked_route_titles)
+
+    @staticmethod
+    def set_recent_outings(waypoint, lang):
+        """Set last 10 outings on routes associated to the given waypoint.
+        """
+        t_outing_route = aliased(Association, name='a1')
+        t_route_wp = aliased(Association, name='a2')
+        t_route = aliased(Document, name='r')
+
+        recent_outings = DBSession.query(Outing). \
+            join(
+                t_outing_route,
+                Outing.document_id == t_outing_route.child_document_id). \
+            join(
+                t_route,
+                and_(
+                    t_outing_route.parent_document_id == t_route.document_id,
+                    t_route.type == ROUTE_TYPE)). \
+            join(
+                t_route_wp,
+                and_(
+                    t_route_wp.parent_document_id == waypoint.document_id,
+                    t_route_wp.child_document_id == t_route.document_id)). \
+            options(load_only(
+                Outing.document_id, Outing.activities, Outing.date_start,
+                Outing.date_end, Outing.version)). \
+            options(joinedload(Outing.locales).load_only(
+                DocumentLocale.lang, DocumentLocale.title,
+                DocumentLocale.version)). \
+            order_by(Outing.date_end.desc()). \
+            limit(NUM_RECENT_OUTINGS). \
+            all()
+
+        set_author(recent_outings, None)
+        if lang is not None:
+            set_best_locale(recent_outings, lang)
+
+        total = DBSession.query(Outing.document_id). \
+            join(
+                t_outing_route,
+                Outing.document_id == t_outing_route.child_document_id). \
+            join(
+                t_route,
+                and_(
+                    t_outing_route.parent_document_id == t_route.document_id,
+                    t_route.type == ROUTE_TYPE)). \
+            join(
+                t_route_wp,
+                and_(
+                    t_route_wp.parent_document_id == waypoint.document_id,
+                    t_route_wp.child_document_id == t_route.document_id)). \
+            count()
+
+        waypoint.associations['recent_outings'] = {
+            'outings': [
+                to_json_dict(user, schema_association_outing)
+                for user in recent_outings
+            ],
+            'total': total
+        }
 
 
 @resource(path='/waypoints/{id}/{lang}/{version_id}', cors_policy=cors_policy)

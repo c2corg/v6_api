@@ -9,7 +9,8 @@ from c2corg_api.models.route import Route, schema_route, schema_update_route, \
     ArchiveRoute, ArchiveRouteLocale, RouteLocale
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
-    make_validator_update, make_schema_adaptor, get_all_fields
+    make_validator_update, make_schema_adaptor, get_all_fields, \
+    NUM_RECENT_OUTINGS
 from c2corg_api.views import cors_policy, restricted_json_view, \
     get_best_locale, to_json_dict, set_best_locale
 from c2corg_api.views.validation import validate_id, validate_pagination, \
@@ -71,7 +72,7 @@ class RouteRest(DocumentRest):
         recent_outings = DBSession.query(Outing). \
             join(
                 Association,
-            Outing.document_id == Association.child_document_id). \
+                Outing.document_id == Association.child_document_id). \
             filter(Association.parent_document_id == route.document_id). \
             options(load_only(
                 Outing.document_id, Outing.activities, Outing.date_start,
@@ -79,8 +80,8 @@ class RouteRest(DocumentRest):
             options(joinedload(Outing.locales).load_only(
                 DocumentLocale.lang, DocumentLocale.title,
                 DocumentLocale.version)). \
-            order_by(Outing.date_end). \
-            limit(10). \
+            order_by(Outing.date_end.desc()). \
+            limit(NUM_RECENT_OUTINGS). \
             all()
 
         set_author(recent_outings, None)
