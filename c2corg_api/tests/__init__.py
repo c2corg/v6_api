@@ -45,7 +45,7 @@ def _add_global_test_data(session):
     global_passwords['moderator'] = 'even better pass'
 
     contributor_profile = UserProfile(
-        category='amateur',
+        categories=['amateur'],
         locales=[DocumentLocale(title='...', lang='en')])
 
     contributor = User(
@@ -54,7 +54,7 @@ def _add_global_test_data(session):
         profile=contributor_profile)
 
     moderator_profile = UserProfile(
-        category='pro',
+        categories=['mountain_guide'],
         locales=[DocumentLocale(title='...', lang='en')])
 
     moderator = User(

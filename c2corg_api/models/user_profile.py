@@ -18,9 +18,9 @@ USERPROFILE_TYPE = 'u'
 
 class _UserProfileMixin(object):
     activities = Column(ArrayOfEnum(activity_type))
-    category = Column(user_category)
+    categories = Column(ArrayOfEnum(user_category))
 
-attributes = ['activities', 'category']
+attributes = ['activities', 'categories']
 
 
 class UserProfile(_UserProfileMixin, Document):

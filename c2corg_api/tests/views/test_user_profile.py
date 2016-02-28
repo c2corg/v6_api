@@ -85,7 +85,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.profile1.document_id,
                 'version': self.profile1.version,
-                'category': 'pro',
+                'categories': ['mountain_guide'],
                 'locales': [
                     {'lang': 'en', 'title': 'Me!',
                      'version': self.locale_en.version}
@@ -107,7 +107,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             'document': {
                 'document_id': '-9999',
                 'version': self.profile1.version,
-                'category': 'pro',
+                'categories': ['mountain_guide'],
                 'locales': [
                     {'lang': 'en', 'title': 'Me!',
                      'version': self.locale_en.version}
@@ -121,7 +121,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.profile1.document_id,
                 'version': -9999,
-                'category': 'pro',
+                'categories': ['mountain_guide'],
                 'locales': [
                     {'lang': 'en', 'title': 'Me!',
                      'version': self.locale_en.version}
@@ -136,7 +136,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.profile1.document_id,
                 'version': self.profile1.version,
-                'category': 'pro',
+                'categories': ['mountain_guide'],
                 'locales': [
                     {'lang': 'en', 'title': 'Me!',
                      'version': -9999}
@@ -151,7 +151,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.profile1.document_id,
                 'version': self.profile1.version,
-                'category': 'pro',
+                'categories': ['mountain_guide'],
                 'locales': [
                     {'lang': 'en', 'title': 'Me!',
                      'version': self.locale_en.version}
@@ -171,7 +171,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.profile1.document_id,
                 'version': self.profile1.version,
-                'category': 'pro',
+                'categories': ['mountain_guide'],
                 'locales': [
                     {'lang': 'en', 'title': 'Me!',
                      'version': self.locale_en.version}
@@ -198,7 +198,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.profile1.document_id,
                 'version': self.profile1.version,
-                'category': 'pro',
+                'categories': ['mountain_guide'],
                 'locales': [
                     {'lang': 'en', 'title': 'Me',
                      'version': self.locale_en.version}
@@ -208,7 +208,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         (body, profile) = self.put_success_figures_only(
             body, self.profile1, user='moderator')
 
-        self.assertEquals(profile.category, 'pro')
+        self.assertEquals(profile.categories, ['mountain_guide'])
 
     def test_put_success_lang_only(self):
         body = {
@@ -216,7 +216,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.profile1.document_id,
                 'version': self.profile1.version,
-                'category': 'amateur',
+                'categories': ['amateur'],
                 'locales': [
                     {'lang': 'en', 'title': 'Me!',
                      'version': self.locale_en.version}
@@ -237,7 +237,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.profile1.document_id,
                 'version': self.profile1.version,
-                'category': 'amateur',
+                'categories': ['amateur'],
                 'locales': [
                     {'lang': 'es', 'title': 'Yo'}
                 ]
@@ -260,7 +260,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
 
     def _add_test_data(self):
         user_id = self.global_userids['contributor']
-        self.profile1 = UserProfile(category='amateur')
+        self.profile1 = UserProfile(categories=['amateur'])
 
         self.locale_en = DocumentLocale(lang='en', title='Me')
         self.locale_fr = DocumentLocale(lang='fr', title='Moi')
@@ -276,11 +276,11 @@ class TestUserProfileRest(BaseDocumentTestRest):
 
         DocumentRest.create_new_version(self.profile1, user_id)
 
-        self.profile2 = UserProfile(category='amateur')
+        self.profile2 = UserProfile(categories=['amateur'])
         self.session.add(self.profile2)
-        self.profile3 = UserProfile(category='amateur')
+        self.profile3 = UserProfile(categories=['amateur'])
         self.session.add(self.profile3)
-        self.profile4 = UserProfile(category='amateur')
+        self.profile4 = UserProfile(categories=['amateur'])
         self.profile4.locales.append(DocumentLocale(
             lang='en', title='You'))
         self.profile4.locales.append(DocumentLocale(
