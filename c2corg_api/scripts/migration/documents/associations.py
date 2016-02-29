@@ -135,14 +135,22 @@ with v as (select t.r_id, t.w_id
         join guidebook.associations a on r.document_id = a.parent_document_id
         join guidebook.documents d on a.child_document_id = d.document_id and
           d.type = 'w'
-        join guidebook.waypoints wp on d.document_id = wp.document_id
+        join guidebook.waypoints wp on d.document_id = wp.document_id and
+          wp.waypoint_type in ('summit', 'virtual', 'pass', 'lake', 'bisse',
+                               'waterfall', 'cliff', 'cave', 'pit', 'locality',
+                               'confluence', 'glacier', 'waterpoint',
+                               'bergschrund')
       where r.type = 'r')
     union (select r.document_id as r_id, wp.document_id as w_id, wp.elevation
       from guidebook.documents r
         join guidebook.associations a on r.document_id = a.child_document_id
         join guidebook.documents d on a.parent_document_id = d.document_id and
           d.type = 'w'
-        join guidebook.waypoints wp on d.document_id = wp.document_id
+        join guidebook.waypoints wp on d.document_id = wp.document_id and
+          wp.waypoint_type in ('summit', 'virtual', 'pass', 'lake', 'bisse',
+                               'waterfall', 'cliff', 'cave', 'pit', 'locality',
+                               'confluence', 'glacier', 'waterpoint',
+                               'bergschrund')
       where r.type = 'r')) u
   ) t where t.rank = 1)
 update guidebook.routes r
