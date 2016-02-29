@@ -85,7 +85,7 @@ class MigrateMaps(MigrateDocuments):
     }
 
     editors = {
-        '1': 'ign',
-        '2': 'swisstopo',
-        '3': 'escursionista',
+        '1': 'IGN',
+        '2': 'Swisstopo',
+        '3': 'Escursionista',
     }
