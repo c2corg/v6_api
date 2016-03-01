@@ -8,7 +8,7 @@ class TestUserProfile(BaseTestCase):
 
     def test_to_archive(self):
         user_profile = UserProfile(
-            document_id=1, category='amateur',
+            document_id=1, categories=['amateur'],
             locales=[
                 DocumentLocale(
                     id=2, lang='en', title='Me', summary='...'),
@@ -22,7 +22,8 @@ class TestUserProfile(BaseTestCase):
         self.assertIsNone(user_profile_archive.id)
         self.assertEqual(
             user_profile_archive.document_id, user_profile.document_id)
-        self.assertEqual(user_profile_archive.category, user_profile.category)
+        self.assertEqual(
+            user_profile_archive.categories, user_profile.categories)
 
         archive_locals = user_profile.get_archive_locales()
 

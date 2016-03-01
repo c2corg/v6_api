@@ -105,18 +105,19 @@ class MigrateUserProfiles(MigrateDocuments):
                 self.session_target.add(profile_archive)
 
     def get_document(self, document_in, version):
-        activities = self.convert_types(
-            document_in.activities, MigrateRoutes.activities)
-
+        categories = [document_in.category] \
+            if document_in.category is not None else None
         return dict(
             document_id=document_in.id,
             type=USERPROFILE_TYPE,
             version=version,
             protected=document_in.is_protected,
             redirects_to=document_in.redirects_to,
-            activities=activities,
-            category=self.convert_type(
-                document_in.category, MigrateUserProfiles.user_categories),
+            activities=self.convert_types(
+                document_in.activities, MigrateRoutes.activities),
+            categories=self.convert_types(
+                categories, MigrateUserProfiles.user_categories,
+                skip_values=[0, 2]),
         )
 
     def get_document_locale(self, document_in, version):
@@ -134,7 +135,6 @@ class MigrateUserProfiles(MigrateDocuments):
 
     user_categories = {
         '1': 'amateur',
-        '2': 'pro',
         '3': 'club',
         '4': 'institution',
     }

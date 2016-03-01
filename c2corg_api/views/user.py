@@ -103,7 +103,7 @@ class UserRegistrationRest(object):
         # an interface language (https://github.com/c2corg/v6_api/issues/116)
         # we can create the profile in that language.
         user.profile = UserProfile(
-            category='amateur',
+            categories=['amateur'],
             locales=[DocumentLocale(lang='fr', title=user.username)]
         )
 
