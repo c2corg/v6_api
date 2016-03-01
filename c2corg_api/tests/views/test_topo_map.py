@@ -73,7 +73,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
 
     def test_post_missing_title(self):
         body_post = {
-            'editor': 'ign',
+            'editor': 'IGN',
             'scale': '25000',
             'code': '3432OT',
             'geometry': {
@@ -92,7 +92,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
 
     def test_post_non_whitelisted_attribute(self):
         body = {
-            'editor': 'ign',
+            'editor': 'IGN',
             'scale': '25000',
             'code': '3432OT',
             'protected': True,
@@ -111,7 +111,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
 
     def test_post_success(self):
         body = {
-            'editor': 'ign',
+            'editor': 'IGN',
             'scale': '25000',
             'code': '3432OT',
             'geometry': {
@@ -128,7 +128,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         version = doc.versions[0]
 
         archive_map = version.document_archive
-        self.assertEqual(archive_map.editor, 'ign')
+        self.assertEqual(archive_map.editor, 'IGN')
         self.assertEqual(archive_map.scale, '25000')
         self.assertEqual(archive_map.code, '3432OT')
 
@@ -145,7 +145,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'document': {
                 'document_id': '-9999',
                 'version': self.map1.version,
-                'editor': 'ign',
+                'editor': 'IGN',
                 'scale': '25000',
                 'code': '3432OT',
                 'locales': [
@@ -161,7 +161,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.map1.document_id,
                 'version': -9999,
-                'editor': 'ign',
+                'editor': 'IGN',
                 'scale': '25000',
                 'code': '3432OT',
                 'locales': [
@@ -177,7 +177,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.map1.document_id,
                 'version': self.map1.version,
-                'editor': 'ign',
+                'editor': 'IGN',
                 'scale': '25000',
                 'code': '3432OT',
                 'locales': [
@@ -193,7 +193,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.map1.document_id,
                 'version': self.map1.version,
-                'editor': 'ign',
+                'editor': 'IGN',
                 'scale': '25000',
                 'code': '3432OT',
                 'locales': [
@@ -213,7 +213,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.map1.document_id,
                 'version': self.map1.version,
-                'editor': 'ign',
+                'editor': 'IGN',
                 'scale': '25000',
                 'code': '3433OT',
                 'geometry': {
@@ -256,7 +256,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.map1.document_id,
                 'version': self.map1.version,
-                'editor': 'ign',
+                'editor': 'IGN',
                 'scale': '25000',
                 'code': '3433OT',
                 'locales': [
@@ -276,7 +276,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.map1.document_id,
                 'version': self.map1.version,
-                'editor': 'ign',
+                'editor': 'IGN',
                 'scale': '25000',
                 'code': '3431OT',
                 'locales': [
@@ -299,7 +299,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.map1.document_id,
                 'version': self.map1.version,
-                'editor': 'ign',
+                'editor': 'IGN',
                 'scale': '25000',
                 'code': '3431OT',
                 'locales': [
@@ -325,7 +325,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         self.assertAlmostEqual(point.y, 5723604)
 
     def _add_test_data(self):
-        self.map1 = TopoMap(editor='ign', scale='25000', code='3431OT')
+        self.map1 = TopoMap(editor='IGN', scale='25000', code='3431OT')
 
         self.locale_en = DocumentLocale(lang='en', title='Lac d\'Annecy')
         self.locale_fr = DocumentLocale(lang='fr', title='Lac d\'Annecy')
@@ -343,13 +343,13 @@ class TestTopoMapRest(BaseDocumentTestRest):
         DocumentRest.create_new_version(self.map1, user_id)
 
         self.map2 = TopoMap(
-            editor='ign', scale='25000', code='3432OT')
+            editor='IGN', scale='25000', code='3432OT')
         self.session.add(self.map2)
         self.map3 = TopoMap(
-            editor='ign', scale='25000', code='3433OT')
+            editor='IGN', scale='25000', code='3433OT')
         self.session.add(self.map3)
         self.map4 = TopoMap(
-            editor='ign', scale='25000', code='3434OT')
+            editor='IGN', scale='25000', code='3434OT')
         self.map4.locales.append(DocumentLocale(
             lang='en', title='Lac d\'Annecy'))
         self.map4.locales.append(DocumentLocale(

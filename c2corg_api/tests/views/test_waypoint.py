@@ -739,7 +739,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         # add a map
         self.session.add(TopoMap(
-            code='3232ET', editor='ign', scale='25000',
+            code='3232ET', editor='IGN', scale='25000',
             locales=[
                 DocumentLocale(lang='fr', title='Belley')
             ],
