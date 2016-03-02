@@ -38,16 +38,25 @@ class DocumentRest(object):
         self.request = request
 
     def _collection_get(self, clazz, schema, adapt_schema=None,
-                        include_areas=True, set_custom_fields=None):
+                        custom_filter=None, include_areas=True,
+                        set_custom_fields=None):
         return self._paginate(
-            clazz, schema, adapt_schema, include_areas, set_custom_fields)
+            clazz, schema, adapt_schema, custom_filter, include_areas,
+            set_custom_fields)
 
     def _paginate(
-            self, clazz, schema, adapt_schema, include_areas,
+            self, clazz, schema, adapt_schema, custom_filter, include_areas,
             set_custom_fields):
         validated = self.request.validated
 
-        base_query = DBSession.query(clazz). \
+        base_query = DBSession.query(clazz)
+        base_total_query = DBSession.query(getattr(clazz, 'document_id'))
+
+        if custom_filter:
+            base_query = custom_filter(base_query)
+            base_total_query = custom_filter(base_total_query)
+
+        base_query = base_query. \
             options(joinedload(getattr(clazz, 'locales'))). \
             options(joinedload(getattr(clazz, 'geometry'))). \
             order_by(clazz.document_id.desc())
@@ -66,7 +75,8 @@ class DocumentRest(object):
         if 'after' in self.request.validated:
             documents, total = self._paginate_after(base_query, clazz)
         else:
-            documents, total = self._paginate_offset(base_query, clazz)
+            documents, total = self._paginate_offset(
+                base_query, base_total_query)
 
         set_available_langs(documents, loaded=True)
 
@@ -105,7 +115,7 @@ class DocumentRest(object):
 
         return documents, -1
 
-    def _paginate_offset(self, base_query, clazz):
+    def _paginate_offset(self, base_query, base_total_query):
         """Return a batch of documents with the given `offset` and `limit`.
         """
         validated = self.request.validated
@@ -118,7 +128,7 @@ class DocumentRest(object):
             slice(offset, offset + limit). \
             limit(limit). \
             all()
-        total = DBSession.query(clazz).count()
+        total = base_total_query.count()
 
         return documents, total
 

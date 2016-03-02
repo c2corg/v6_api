@@ -2,12 +2,12 @@ import functools
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
-from c2corg_api.models.document import ArchiveDocument
+from c2corg_api.models.document import ArchiveDocument, Document
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.outing import schema_outing, Outing, \
     schema_create_outing, schema_update_outing, ArchiveOuting, \
     ArchiveOutingLocale
-from c2corg_api.models.route import Route
+from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.models.user import User, schema_association_user
 from c2corg_common.fields_outing import fields_outing
 from cornice.resource import resource, view
@@ -19,10 +19,11 @@ from c2corg_api.views.document import DocumentRest, make_validator_create, \
 from c2corg_api.views import cors_policy, restricted_json_view, to_json_dict
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
-    validate_preferred_lang_param
+    validate_preferred_lang_param, check_get_for_integer_property
 from c2corg_common.attributes import activities
 from pyramid.httpexceptions import HTTPForbidden
 from sqlalchemy.orm import load_only
+from sqlalchemy.orm.util import aliased
 from sqlalchemy.sql.expression import exists, and_, over
 from sqlalchemy.sql.functions import func
 
@@ -54,6 +55,15 @@ def validate_associations(request):
                     'user "{0:n}" does not exist'.format(user_id))
 
 
+def validate_filter_params(request):
+    """
+    Checks if a given optional waypoint id is an integer,
+    if a given optional route id is an integer.
+    """
+    check_get_for_integer_property(request, 'wp', False)
+    check_get_for_integer_property(request, 'r', False)
+
+
 def adapt_schema_for_activities(activities, field_list_type):
     """Get the schema for a set of activities.
     `field_list_type` should be either "fields" or "listing".
@@ -72,11 +82,22 @@ listing_schema_adaptor = make_schema_adaptor(
           cors_policy=cors_policy)
 class OutingRest(DocumentRest):
 
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
+    @view(validators=[
+        validate_pagination, validate_preferred_lang_param,
+        validate_filter_params])
     def collection_get(self):
+        custom_filter = None
+        if self.request.validated.get('wp'):
+            # only show outings for the given waypoint
+            custom_filter = self.filter_on_waypoint(
+                self.request.validated['wp'])
+        elif self.request.validated.get('r'):
+            # only show outings for the given route
+            custom_filter = self.filter_on_route(self.request.validated['r'])
+
         return self._collection_get(
             Outing, schema_outing, listing_schema_adaptor,
-            set_custom_fields=set_author)
+            custom_filter=custom_filter, set_custom_fields=set_author)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
@@ -134,6 +155,38 @@ class OutingRest(DocumentRest):
             to_json_dict(user, schema_association_user)
             for user in linked_users
         ]
+
+    def filter_on_route(self, route_id):
+        def filter_query(query):
+            return query. \
+                join(
+                    Association,
+                    Outing.document_id == Association.child_document_id). \
+                filter(Association.parent_document_id == route_id)
+        return filter_query
+
+    def filter_on_waypoint(self, waypoint_id):
+        def filter_query(query):
+            t_outing_route = aliased(Association, name='a1')
+            t_route_wp = aliased(Association, name='a2')
+            t_route = aliased(Document, name='r')
+
+            return query. \
+                join(
+                    t_outing_route,
+                    Outing.document_id == t_outing_route.child_document_id). \
+                join(
+                    t_route,
+                    and_(
+                        t_outing_route.parent_document_id ==
+                        t_route.document_id,
+                        t_route.type == ROUTE_TYPE)). \
+                join(
+                    t_route_wp,
+                    and_(
+                        t_route_wp.parent_document_id == waypoint_id,
+                        t_route_wp.child_document_id == t_route.document_id))
+        return filter_query
 
 
 def set_author(outings, lang):

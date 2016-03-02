@@ -35,6 +35,25 @@ class TestOutingRest(BaseDocumentTestRest):
         author = doc4['author']
         self.assertEqual(author['username'], 'contributor')
         self.assertEqual(author['user_id'], self.global_userids['contributor'])
+        self._add_test_data()
+
+    def test_get_collection_for_route(self):
+        response = self.app.get(
+            self._prefix + '?r=' + str(self.route.document_id), status=200)
+
+        documents = response.json['documents']
+
+        self.assertEqual(documents[0]['document_id'], self.outing.document_id)
+        self.assertEqual(response.json['total'], 1)
+
+    def test_get_collection_for_waypoint(self):
+        response = self.app.get(
+            self._prefix + '?wp=' + str(self.waypoint.document_id), status=200)
+
+        documents = response.json['documents']
+
+        self.assertEqual(documents[0]['document_id'], self.outing.document_id)
+        self.assertEqual(response.json['total'], 1)
 
     def test_get_collection_paginated(self):
         self.app.get("/outings?offset=invalid", status=400)
@@ -710,6 +729,9 @@ class TestOutingRest(BaseDocumentTestRest):
             gear='paraglider'))
         self.session.add(self.route)
         self.session.flush()
+        self.session.add(Association(
+            parent_document_id=self.waypoint.document_id,
+            child_document_id=self.route.document_id))
         self.session.add(Association(
             parent_document_id=self.route.document_id,
             child_document_id=self.outing.document_id))
