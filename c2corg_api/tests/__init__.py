@@ -55,7 +55,7 @@ def _add_global_test_data(session):
         profile=contributor_profile)
 
     contributor2_profile = UserProfile(
-        category='amateur',
+        categories=['amateur'],
         locales=[DocumentLocale(title='...', lang='en')])
 
     contributor2 = User(
