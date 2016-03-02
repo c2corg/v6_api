@@ -173,7 +173,7 @@ class MigrateDocuments(MigrateBase):
         else:
             return a + '\n' + b
 
-    summary_regex = re.compile('\[abs\]([\s\S]*)\[\/abs\]')
+    summary_regex = re.compile('\[abs(tract)?\]([\s\S]*)\[\/abs(tract)?\]')
 
     def extract_summary(self, text):
         if text is None:
