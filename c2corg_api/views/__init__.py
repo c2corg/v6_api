@@ -14,6 +14,7 @@ from geoalchemy2.shape import to_shape
 from shapely.geometry import mapping
 import json
 
+from sqlalchemy.inspection import inspect
 
 cors_policy = dict(
     headers=('Content-Type'),
@@ -126,7 +127,7 @@ def set_best_locale(documents, preferred_lang, expunge=True):
     for document in documents:
         # need to detach the document from the session, so that the
         # following change to `document.locales` is not persisted
-        if expunge:
+        if expunge and not inspect(document).detached:
             DBSession.expunge(document)
 
         if document.locales:
