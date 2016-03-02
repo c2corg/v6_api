@@ -16,6 +16,7 @@ import datetime
 
 from c2corg_api.models import Base, schema, users_schema, DBSession
 from c2corg_api.models.document import Document
+from sqlalchemy.sql.expression import or_, and_
 
 
 class Association(Base):
@@ -115,23 +116,22 @@ def get_associations(document, lang):
             options(joinedload(Waypoint.locales).load_only(
                 RouteLocale.lang, RouteLocale.title, RouteLocale.version))
 
-    parent_routes = limit_route_fields(
+    routes = limit_route_fields(
         DBSession.query(Route).
-        join(Association,
-             Association.parent_document_id == Route.document_id).
-        filter(Association.child_document_id == document.document_id)). \
-        all()
-    child_routes = limit_route_fields(
-        DBSession.query(Route).
-        join(Association,
-             Association.child_document_id == Route.document_id).
-        filter(Association.parent_document_id == document.document_id)). \
+        join(
+            Association,
+            or_(
+                and_(
+                    Association.child_document_id == Route.document_id,
+                    Association.parent_document_id == document.document_id),
+                and_(
+                    Association.child_document_id == document.document_id,
+                    Association.parent_document_id == Route.document_id)))). \
         all()
 
     if lang is not None:
         set_best_locale(parent_waypoints, lang)
-        set_best_locale(parent_routes, lang)
         set_best_locale(child_waypoints, lang)
-        set_best_locale(child_routes, lang)
+        set_best_locale(routes, lang)
 
-    return parent_waypoints + child_waypoints, parent_routes + child_routes
+    return parent_waypoints + child_waypoints, routes

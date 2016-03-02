@@ -580,6 +580,9 @@ class TestRouteRest(BaseDocumentTestRest):
             parent_document_id=self.route.document_id,
             child_document_id=self.route4.document_id))
         self.session.add(Association(
+            parent_document_id=self.route4.document_id,
+            child_document_id=self.route.document_id))
+        self.session.add(Association(
             parent_document_id=self.waypoint.document_id,
             child_document_id=self.route.document_id))
         self.session.flush()
