@@ -17,6 +17,7 @@ class TestUserRest(BaseTestRest):
     def test_register(self):
         request_body = {
             'username': 'test',
+            'name': 'Max Mustermann',
             'password': 'super secret',
             'email': 'some_user@camptocamp.org'
         }
@@ -25,6 +26,7 @@ class TestUserRest(BaseTestRest):
         # First succeed in creating a new user
         body = self.app.post_json(url, request_body, status=200).json
         self.assertBodyEqual(body, 'username', 'test')
+        self.assertBodyEqual(body, 'name', 'Max Mustermann')
         self.assertBodyEqual(body, 'email', 'some_user@camptocamp.org')
         self.assertNotIn('password', body)
         self.assertIn('id', body)

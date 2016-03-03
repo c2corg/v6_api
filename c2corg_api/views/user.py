@@ -104,7 +104,7 @@ class UserRegistrationRest(object):
         # we can create the profile in that language.
         user.profile = UserProfile(
             categories=['amateur'],
-            locales=[DocumentLocale(lang='fr', title=user.username)]
+            locales=[DocumentLocale(lang='fr', title='')]
         )
 
         DBSession.add(user)
