@@ -26,7 +26,7 @@ class MigrateUsers(MigrateBase):
 
         print('Total: {0} rows'.format(total_count))
 
-        query = text('select id, login_name, email, '
+        query = text('select id, login_name, topo_name, email, '
                      'password, password_tmp '
                      'from app_users_private_data order by id')
 
@@ -63,6 +63,7 @@ class MigrateUsers(MigrateBase):
                 batch.add(dict(
                     id=user_in.id,
                     username=username,
+                    name=user_in.topo_name,
                     email=user_in.email,
                     _password=user_in.password,
                     temp_password=user_in.password_tmp,

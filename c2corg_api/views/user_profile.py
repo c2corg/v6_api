@@ -1,6 +1,6 @@
 
 from c2corg_api.models.user_profile import schema_update_user_profile, \
-    UserProfile, schema_user_profile
+    UserProfile, schema_user_profile, schema_internal_user_profile
 from cornice.resource import resource
 
 from c2corg_api.views.document import DocumentRest
@@ -35,4 +35,16 @@ class UserProfileRest(DocumentRest):
                 raise HTTPForbidden(
                     'No permission to change this user profile')
 
-        return self._put(UserProfile, schema_user_profile)
+        self._reset_title()
+
+        return self._put(UserProfile, schema_internal_user_profile)
+
+    def _reset_title(self):
+        """The title of user profile documents is left empty. Because the title
+        must be non-null it is set to an empty string though.
+        """
+        document = self.request.validated['document']
+        locales = document.get('locales')
+        if locales:
+            for locale in locales:
+                locale['title'] = ''

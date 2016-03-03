@@ -47,11 +47,11 @@ def _add_global_test_data(session):
 
     contributor_profile = UserProfile(
         categories=['amateur'],
-        locales=[DocumentLocale(title='...', lang='en')])
+        locales=[DocumentLocale(title='', lang='en')])
 
     contributor = User(
         username='contributor', email='contributor@camptocamp.org',
-        password='super pass',
+        password='super pass', name='Contributor',
         profile=contributor_profile)
 
     contributor2_profile = UserProfile(
@@ -65,7 +65,7 @@ def _add_global_test_data(session):
 
     moderator_profile = UserProfile(
         categories=['mountain_guide'],
-        locales=[DocumentLocale(title='...', lang='en')])
+        locales=[DocumentLocale(title='', lang='en')])
 
     moderator = User(
         username='moderator', email='moderator@camptocamp.org',

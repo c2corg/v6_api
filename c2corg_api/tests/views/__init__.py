@@ -126,7 +126,7 @@ class BaseDocumentTestRest(BaseTestRest):
         actual_total = actual['total']
         self.assertEqual(actual_total, total)
 
-    def get(self, reference, user=None):
+    def get(self, reference, user=None, check_title=True):
         headers = {} if not user else \
             self.add_authorization_header(username=user)
         response = self.app.get(self._prefix + '/' +
@@ -146,7 +146,8 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertNotIn('id', locale_en)
         self.assertIsNotNone(locale_en.get('version'))
         self.assertEqual(locale_en.get('lang'), self.locale_en.lang)
-        self.assertEqual(locale_en.get('title'), self.locale_en.title)
+        if check_title:
+            self.assertEqual(locale_en.get('title'), self.locale_en.title)
 
         available_langs = body.get('available_langs')
         self.assertEqual(available_langs, ['en', 'fr'])

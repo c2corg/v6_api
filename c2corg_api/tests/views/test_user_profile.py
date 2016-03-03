@@ -60,8 +60,9 @@ class TestUserProfileRest(BaseDocumentTestRest):
             self._prefix + '/' + str(self.profile1.document_id), status=403)
 
     def test_get(self):
-        body = self.get(self.profile1, user='contributor')
+        body = self.get(self.profile1, user='contributor', check_title=False)
         self._assert_geometry(body)
+        self.assertIsNone(body['locales'][0].get('title'))
 
     def test_get_lang(self):
         self.get_lang(self.profile1, user='contributor')
@@ -87,7 +88,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 'version': self.profile1.version,
                 'categories': ['mountain_guide'],
                 'locales': [
-                    {'lang': 'en', 'title': 'Me!',
+                    {'lang': 'en', 'description': 'Me!',
                      'version': self.locale_en.version}
                 ],
                 'geometry': {
@@ -109,7 +110,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 'version': self.profile1.version,
                 'categories': ['mountain_guide'],
                 'locales': [
-                    {'lang': 'en', 'title': 'Me!',
+                    {'lang': 'en', 'description': 'Me!',
                      'version': self.locale_en.version}
                 ]
             }
@@ -123,7 +124,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 'version': -9999,
                 'categories': ['mountain_guide'],
                 'locales': [
-                    {'lang': 'en', 'title': 'Me!',
+                    {'lang': 'en', 'description': 'Me!',
                      'version': self.locale_en.version}
                 ]
             }
@@ -138,7 +139,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 'version': self.profile1.version,
                 'categories': ['mountain_guide'],
                 'locales': [
-                    {'lang': 'en', 'title': 'Me!',
+                    {'lang': 'en', 'description': 'Me!',
                      'version': -9999}
                 ]
             }
@@ -153,7 +154,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 'version': self.profile1.version,
                 'categories': ['mountain_guide'],
                 'locales': [
-                    {'lang': 'en', 'title': 'Me!',
+                    {'lang': 'en', 'description': 'Me!',
                      'version': self.locale_en.version}
                 ]
             }
@@ -173,7 +174,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 'version': self.profile1.version,
                 'categories': ['mountain_guide'],
                 'locales': [
-                    {'lang': 'en', 'title': 'Me!',
+                    {'lang': 'en', 'description': 'Me!',
                      'version': self.locale_en.version}
                 ],
                 'geometry': {
@@ -200,7 +201,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 'version': self.profile1.version,
                 'categories': ['mountain_guide'],
                 'locales': [
-                    {'lang': 'en', 'title': 'Me',
+                    {'lang': 'en', 'description': 'Me',
                      'version': self.locale_en.version}
                 ]
             }
@@ -218,7 +219,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 'version': self.profile1.version,
                 'categories': ['amateur'],
                 'locales': [
-                    {'lang': 'en', 'title': 'Me!',
+                    {'lang': 'en', 'description': 'Me!',
                      'version': self.locale_en.version}
                 ]
             }
@@ -227,7 +228,31 @@ class TestUserProfileRest(BaseDocumentTestRest):
             body, self.profile1, user='moderator')
 
         self.assertEquals(
-            profile.get_locale('en').title, 'Me!')
+            profile.get_locale('en').description, 'Me!')
+
+    def test_put_reset_title(self):
+        """Tests that the title can not be set.
+        """
+        body = {
+            'message': 'Changing lang',
+            'document': {
+                'document_id': self.profile1.document_id,
+                'version': self.profile1.version,
+                'categories': ['amateur'],
+                'locales': [
+                    {'lang': 'en', 'title': 'Should not be set',
+                     'description': 'Me!',
+                     'version': self.locale_en.version}
+                ]
+            }
+        }
+        (body, profile) = self.put_success_lang_only(
+            body, self.profile1, user='moderator')
+
+        self.assertEquals(
+            profile.get_locale('en').description, 'Me!')
+        self.session.refresh(self.locale_en)
+        self.assertEqual(self.locale_en.title, '')
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale.
@@ -239,14 +264,14 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 'version': self.profile1.version,
                 'categories': ['amateur'],
                 'locales': [
-                    {'lang': 'es', 'title': 'Yo'}
+                    {'lang': 'es', 'description': 'Yo'}
                 ]
             }
         }
         (body, profile) = self.put_success_new_lang(
             body, self.profile1, user='moderator')
 
-        self.assertEquals(profile.get_locale('es').title, 'Yo')
+        self.assertEquals(profile.get_locale('es').description, 'Yo')
 
     def _assert_geometry(self, body):
         self.assertIsNotNone(body.get('geometry'))
@@ -262,8 +287,8 @@ class TestUserProfileRest(BaseDocumentTestRest):
         user_id = self.global_userids['contributor']
         self.profile1 = UserProfile(categories=['amateur'])
 
-        self.locale_en = DocumentLocale(lang='en', title='Me')
-        self.locale_fr = DocumentLocale(lang='fr', title='Moi')
+        self.locale_en = DocumentLocale(lang='en', description='Me', title='')
+        self.locale_fr = DocumentLocale(lang='fr', description='Moi', title='')
 
         self.profile1.locales.append(self.locale_en)
         self.profile1.locales.append(self.locale_fr)
@@ -282,9 +307,9 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.session.add(self.profile3)
         self.profile4 = UserProfile(categories=['amateur'])
         self.profile4.locales.append(DocumentLocale(
-            lang='en', title='You'))
+            lang='en', description='You', title=''))
         self.profile4.locales.append(DocumentLocale(
-            lang='fr', title='Toi'))
+            lang='fr', description='Toi', title=''))
         self.session.add(self.profile4)
 
         self.session.flush()

@@ -199,8 +199,9 @@ def set_author(outings, lang):
 
     t = DBSession.query(
         ArchiveDocument.document_id.label('document_id'),
-        User.username.label('username'),
         User.id.label('user_id'),
+        User.username.label('username'),
+        User.name.label('name'),
         over(
             func.rank(), partition_by=ArchiveDocument.document_id,
             order_by=HistoryMetaData.id).label('rank')). \
@@ -217,14 +218,15 @@ def set_author(outings, lang):
         filter(ArchiveDocument.document_id.in_(outing_ids)). \
         subquery('t')
     query = DBSession.query(
-            t.c.document_id, t.c.user_id, t.c.username). \
+            t.c.document_id, t.c.user_id, t.c.username, t.c.name). \
         filter(t.c.rank == 1)
 
     author_for_outings = {
         document_id: {
             'username': username,
+            'name': name,
             'user_id': user_id
-        } for document_id, user_id, username in query
+        } for document_id, user_id, username, name in query
     }
 
     for outing in outings:

@@ -52,7 +52,7 @@ class MigrateUserProfiles(MigrateDocuments):
         return (
             'select '
             '   id, document_i18n_archive_id, is_latest_version, culture, '
-            '   name, description '
+            '   description '
             'from app_users_i18n_archives '
             'order by id, document_i18n_archive_id;'
         )
@@ -128,7 +128,11 @@ class MigrateUserProfiles(MigrateDocuments):
             type=DOCUMENT_TYPE,
             version=version,
             lang=document_in.culture,
-            title=document_in.name,
+            # do not set the title (in v5 the title of an user profile was the
+            # topo-guide username. this name was also stored on the user itself
+            # and was copied to the locale when it was changed. to simplify
+            # things, the name is now only stored on the user.)
+            title='',
             description=description,
             summary=summary
         )

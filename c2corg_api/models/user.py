@@ -51,6 +51,7 @@ class User(Base):
         UserProfile, primaryjoin=id == UserProfile.document_id, backref='user')
 
     username = Column(String(200), nullable=False, unique=True)
+    name = Column(String(200))
     email = Column(String(200), nullable=False, unique=True)
     email_validated = Column(Boolean, nullable=False, default=False)
     moderator = Column(Boolean, nullable=False, default=False)
@@ -98,7 +99,7 @@ schema_user = SQLAlchemySchemaNode(
     User,
     # whitelisted attributes
     includes=[
-        'id', 'username', 'email', 'email_validated', 'moderator'],
+        'id', 'username', 'name', 'email', 'email_validated', 'moderator'],
     overrides={
         'id': {
             'missing': None
@@ -109,7 +110,7 @@ schema_user = SQLAlchemySchemaNode(
 schema_create_user = SQLAlchemySchemaNode(
     User,
     # whitelisted attributes
-    includes=['username', 'email'],
+    includes=['username', 'name', 'email'],
     overrides={
         'email': {
             'validator': colander.Email()
@@ -117,5 +118,5 @@ schema_create_user = SQLAlchemySchemaNode(
     })
 
 schema_association_user = restrict_schema(schema_user, [
-    'id', 'username'
+    'id', 'username', 'name'
 ])
