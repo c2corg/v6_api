@@ -51,7 +51,7 @@ def _add_global_test_data(session):
 
     contributor = User(
         username='contributor', email='contributor@camptocamp.org',
-        password='super pass',
+        password='super pass', name='Contributor',
         profile=contributor_profile)
 
     contributor2_profile = UserProfile(

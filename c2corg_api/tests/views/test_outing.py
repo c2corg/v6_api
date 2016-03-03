@@ -34,6 +34,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertIn('author', doc4)
         author = doc4['author']
         self.assertEqual(author['username'], 'contributor')
+        self.assertEqual(author['name'], 'Contributor')
         self.assertEqual(author['user_id'], self.global_userids['contributor'])
         self._add_test_data()
 
