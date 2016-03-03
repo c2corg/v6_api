@@ -1,7 +1,7 @@
 from c2corg_api.models import schema
 from c2corg_api.models.document import (
     ArchiveDocument, Document, get_update_schema, geometry_schema_overrides,
-    schema_document_locale, schema_attributes)
+    schema_document_locale, schema_attributes, DocumentLocale)
 from c2corg_api.models.enums import user_category, activity_type
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
@@ -65,7 +65,38 @@ class ArchiveUserProfile(_UserProfileMixin, ArchiveDocument):
     }
 
 
+# user profiles use a special schema for the locales which ignores the 'title'
+# attribute (user profiles do not have a title).
+schema_user_profile_locale = SQLAlchemySchemaNode(
+    DocumentLocale,
+    # whitelisted attributes (without 'title')
+    includes=['version', 'lang', 'description', 'summary'],
+    overrides={
+        'version': {
+            'missing': None
+        }
+    })
+
+
 schema_user_profile = SQLAlchemySchemaNode(
+    UserProfile,
+    # whitelisted attributes
+    includes=schema_attributes + attributes,
+    overrides={
+        'document_id': {
+            'missing': None
+        },
+        'version': {
+            'missing': None
+        },
+        'locales': {
+            'children': [schema_user_profile_locale]
+        },
+        'geometry': geometry_schema_overrides
+    })
+
+
+schema_internal_user_profile = SQLAlchemySchemaNode(
     UserProfile,
     # whitelisted attributes
     includes=schema_attributes + attributes,
