@@ -1,4 +1,5 @@
 import bcrypt
+from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.user_profile import UserProfile
 from sqlalchemy import (
     Boolean,
@@ -114,3 +115,7 @@ schema_create_user = SQLAlchemySchemaNode(
             'validator': colander.Email()
         }
     })
+
+schema_association_user = restrict_schema(schema_user, [
+    'id', 'username'
+])

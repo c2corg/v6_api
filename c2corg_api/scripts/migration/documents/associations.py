@@ -7,7 +7,8 @@ from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.scripts.migration.batch import SimpleBatch
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
-# TODO currently only importing associations for waypoints and routes
+# TODO currently only importing associations for waypoints, routes and
+# outings
 associations_query_count =\
     'select count(*) from (' \
     '  select a.main_id, a.linked_id from app_documents_associations a ' \
@@ -92,7 +93,11 @@ class MigrateAssociations(MigrateBase):
             count = 0
             for entity_in in self.connection_source.execute(query):
                 count += 1
-                batch.add(get_entity(entity_in))
+                # ignore associations for these documents because the
+                # documents are broken (no latest version)
+                if entity_in.main_id not in [224228, 436917] and \
+                        entity_in.linked_id not in [224228, 436917]:
+                    batch.add(get_entity(entity_in))
                 self.progress(count, total_count)
 
             # the transaction will not be committed automatically when doing

@@ -9,6 +9,7 @@ from c2corg_api.scripts.migration.documents.associations import \
 from c2corg_api.scripts.migration.documents.maps import MigrateMaps
 from c2corg_api.scripts.migration.documents.user_profiles import \
     MigrateUserProfiles
+from c2corg_api.scripts.migration.documents.outings import MigrateOutings
 from sqlalchemy import engine_from_config
 
 import os
@@ -68,6 +69,7 @@ def main(argv=sys.argv):
     MigrateRoutes(connection_source, session, batch_size).migrate()
     MigrateMaps(connection_source, session, batch_size).migrate()
     MigrateAreas(connection_source, session, batch_size).migrate()
+    MigrateOutings(connection_source, session, batch_size).migrate()
     MigrateVersions(connection_source, session, batch_size).migrate()
     MigrateAssociations(connection_source, session, batch_size).migrate()
     MigrateAreaAssociations(connection_source, session, batch_size).migrate()

@@ -1,7 +1,9 @@
+import datetime
 import json
 
 from c2corg_api.models.association import Association
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.views.route import update_title_prefix
 from shapely.geometry import shape, LineString
@@ -77,6 +79,13 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(1, len(linked_routes))
         self.assertEqual(
             self.route4.document_id, linked_routes[0].get('document_id'))
+
+        recent_outings = associations.get('recent_outings')
+        self.assertEqual(1, recent_outings['total'])
+        self.assertEqual(1, len(recent_outings['outings']))
+        self.assertEqual(
+            self.outing.document_id,
+            recent_outings['outings'][0].get('document_id'))
 
     def test_get_version(self):
         self.get_version(self.route, self.route_version)
@@ -585,4 +594,19 @@ class TestRouteRest(BaseDocumentTestRest):
         self.session.add(Association(
             parent_document_id=self.waypoint.document_id,
             child_document_id=self.route.document_id))
+
+        self.outing = Outing(
+            activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
+            date_end=datetime.date(2016, 1, 1),
+            locales=[
+                OutingLocale(
+                    lang='en', title='...', description='...',
+                    weather='sunny')
+            ]
+        )
+        self.session.add(self.outing)
+        self.session.flush()
+        self.session.add(Association(
+            parent_document_id=self.route.document_id,
+            child_document_id=self.outing.document_id))
         self.session.flush()

@@ -28,6 +28,9 @@ LIMIT_MAX = 100
 # listing request)
 LIMIT_DEFAULT = 30
 
+# the number of recent outings that are included for waypoint and routes
+NUM_RECENT_OUTINGS = 10
+
 
 class DocumentRest(object):
 
@@ -35,13 +38,25 @@ class DocumentRest(object):
         self.request = request
 
     def _collection_get(self, clazz, schema, adapt_schema=None,
-                        include_areas=True):
-        return self._paginate(clazz, schema, adapt_schema, include_areas)
+                        custom_filter=None, include_areas=True,
+                        set_custom_fields=None):
+        return self._paginate(
+            clazz, schema, adapt_schema, custom_filter, include_areas,
+            set_custom_fields)
 
-    def _paginate(self, clazz, schema, adapt_schema, include_areas):
+    def _paginate(
+            self, clazz, schema, adapt_schema, custom_filter, include_areas,
+            set_custom_fields):
         validated = self.request.validated
 
-        base_query = DBSession.query(clazz). \
+        base_query = DBSession.query(clazz)
+        base_total_query = DBSession.query(getattr(clazz, 'document_id'))
+
+        if custom_filter:
+            base_query = custom_filter(base_query)
+            base_total_query = custom_filter(base_total_query)
+
+        base_query = base_query. \
             options(joinedload(getattr(clazz, 'locales'))). \
             options(joinedload(getattr(clazz, 'geometry'))). \
             order_by(clazz.document_id.desc())
@@ -60,7 +75,8 @@ class DocumentRest(object):
         if 'after' in self.request.validated:
             documents, total = self._paginate_after(base_query, clazz)
         else:
-            documents, total = self._paginate_offset(base_query, clazz)
+            documents, total = self._paginate_offset(
+                base_query, base_total_query)
 
         set_available_langs(documents, loaded=True)
 
@@ -69,6 +85,9 @@ class DocumentRest(object):
 
         if include_areas:
             self._set_areas_for_documents(documents, validated.get('lang'))
+
+        if set_custom_fields:
+            set_custom_fields(documents, validated.get('lang'))
 
         return {
             'documents': [
@@ -96,7 +115,7 @@ class DocumentRest(object):
 
         return documents, -1
 
-    def _paginate_offset(self, base_query, clazz):
+    def _paginate_offset(self, base_query, base_total_query):
         """Return a batch of documents with the given `offset` and `limit`.
         """
         validated = self.request.validated
@@ -109,23 +128,28 @@ class DocumentRest(object):
             slice(offset, offset + limit). \
             limit(limit). \
             all()
-        total = DBSession.query(clazz).count()
+        total = base_total_query.count()
 
         return documents, total
 
     def _get(self, clazz, schema, adapt_schema=None, include_maps=True,
-             include_areas=True):
+             include_areas=True, set_custom_associations=None):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')
         return self._get_in_lang(
-            id, lang, clazz, schema, adapt_schema, include_maps)
+            id, lang, clazz, schema, adapt_schema, include_maps, include_areas,
+            set_custom_associations)
 
     def _get_in_lang(self, id, lang, clazz, schema, adapt_schema=None,
-                     include_maps=True, include_areas=True):
+                     include_maps=True, include_areas=True,
+                     set_custom_associations=None):
         document = self._get_document(clazz, id, lang)
         set_available_langs([document])
 
         self._set_associations(document, lang)
+        if set_custom_associations:
+            set_custom_associations(document, lang)
+
         if include_maps:
             self._set_maps(document, lang)
         if include_areas:
@@ -171,8 +195,10 @@ class DocumentRest(object):
                 to_json_dict(m, schema_listing_area) for m in document._areas
             ]
 
-    def _collection_post(self, schema, after_add=None):
-        document = schema.objectify(self.request.validated)
+    def _collection_post(self, schema, after_add=None, document_field=None):
+        document_in = self.request.validated if document_field is None else \
+                self.request.validated[document_field]
+        document = schema.objectify(document_in)
         document.document_id = None
 
         DBSession.add(document)
@@ -545,16 +571,19 @@ def validate_document(document, request, fields, updating):
     check_duplicate_locales(document, request)
 
 
-def make_validator_create(fields, type_field=None, valid_type_values=None):
+def make_validator_create(
+        fields, type_field=None, valid_type_values=None, document_field=None):
     """Returns a validator function used for the creation of documents.
     """
     if type_field is None or valid_type_values is None:
         def f(request):
-            document = request.validated
+            document = request.validated if document_field is None else \
+                request.validated.get(document_field, {})
             validate_document(document, request, fields, updating=False)
     else:
         def f(request):
-            document = request.validated
+            document = request.validated if document_field is None else \
+                request.validated.get(document_field, {})
             validate_document_for_type(
                 document, request, fields, type_field, valid_type_values,
                 updating=False)

@@ -13,7 +13,8 @@ from c2corg_api.scripts.migration.migrate_base import MigrateBase
 tables = [
     'app_huts_archives', 'app_parkings_archives', 'app_products_archives',
     'app_sites_archives', 'app_summits_archives', 'app_routes_archives',
-    'app_maps_archives', 'app_areas_archives', 'app_users_i18n_archives'
+    'app_maps_archives', 'app_areas_archives', 'app_users_i18n_archives',
+    'app_outings_archives'
 ]
 tables_union = ' union '.join(['select id from ' + t for t in tables])
 
@@ -105,9 +106,16 @@ class MigrateVersions(MigrateBase):
                 self.session_target.add(version)
 
     def get_meta_data(self, row):
+        if row.history_metadata_id == 75191:
+            # the user_id (8040) is wrong for this entry, use the user_id of
+            # the user who created the outing
+            user_id = 206753
+        else:
+            user_id = row.user_id
+
         return dict(
             id=row.history_metadata_id,
-            user_id=row.user_id,
+            user_id=user_id,
             comment=row.comment,
             written_at=row.written_at
         )
