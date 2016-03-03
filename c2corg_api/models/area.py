@@ -12,8 +12,9 @@ from sqlalchemy import (
     Integer,
     ForeignKey
     )
+from c2corg_common import document_types
 
-AREA_TYPE = 'a'
+AREA_TYPE = document_types.AREA_TYPE
 
 
 class _AreaMixin(object):

@@ -18,8 +18,9 @@ from c2corg_api.models.document import (
     schema_document_locale, schema_attributes, DocumentGeometry,
     DocumentLocale)
 from sqlalchemy.orm import load_only, joinedload
+from c2corg_common import document_types
 
-MAP_TYPE = 'm'
+MAP_TYPE = document_types.MAP_TYPE
 
 
 class _MapMixin(object):
