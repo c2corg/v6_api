@@ -12,8 +12,9 @@ from sqlalchemy import (
     Integer,
     ForeignKey
     )
+from c2corg_common import document_types
 
-USERPROFILE_TYPE = 'u'
+USERPROFILE_TYPE = document_types.USERPROFILE_TYPE
 
 
 class _UserProfileMixin(object):

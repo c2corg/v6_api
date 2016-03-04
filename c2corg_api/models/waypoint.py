@@ -17,8 +17,9 @@ from c2corg_api.models.document import (
     get_update_schema, geometry_schema_overrides, schema_attributes,
     schema_locale_attributes)
 from c2corg_api.models import enums
+from c2corg_common import document_types
 
-WAYPOINT_TYPE = 'w'
+WAYPOINT_TYPE = document_types.WAYPOINT_TYPE
 
 
 class _WaypointMixin(object):

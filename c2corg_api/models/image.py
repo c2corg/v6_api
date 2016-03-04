@@ -14,8 +14,9 @@ from c2corg_api.models.document import (
     ArchiveDocument, Document, get_update_schema, geometry_schema_overrides,
     schema_document_locale, schema_attributes)
 from c2corg_common.attributes import activities
+from c2corg_common import document_types
 
-IMAGE_TYPE = 'i'
+IMAGE_TYPE = document_types.IMAGE_TYPE
 
 
 class _ImageMixin(object):

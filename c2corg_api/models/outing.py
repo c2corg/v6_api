@@ -22,8 +22,9 @@ from c2corg_api.models.document import (
     get_update_schema, geometry_schema_overrides, schema_locale_attributes,
     schema_attributes)
 from c2corg_api.models import enums
+from c2corg_common import document_types
 
-OUTING_TYPE = 'o'
+OUTING_TYPE = document_types.OUTING_TYPE
 
 
 class _OutingMixin(object):

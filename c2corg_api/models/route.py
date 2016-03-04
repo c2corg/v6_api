@@ -20,8 +20,9 @@ from c2corg_api.models.document import (
     schema_attributes)
 from c2corg_api.models import enums
 from sqlalchemy.orm import relationship
+from c2corg_common import document_types
 
-ROUTE_TYPE = 'r'
+ROUTE_TYPE = document_types.ROUTE_TYPE
 
 
 class _RouteMixin(object):

@@ -23,6 +23,7 @@ from c2corg_api.models import Base, schema, DBSession
 from c2corg_api.ext import colander_ext
 from c2corg_api.models.utils import copy_attributes, extend_dict
 from pyramid.httpexceptions import HTTPInternalServerError
+from c2corg_common import document_types
 
 quality_types = [
     'stub',
@@ -35,7 +36,7 @@ quality_types = [
 UpdateType = enum.Enum(
     'UpdateType', 'FIGURES LANG GEOM')
 
-DOCUMENT_TYPE = 'd'
+DOCUMENT_TYPE = document_types.DOCUMENT_TYPE
 
 
 class Lang(Base):
