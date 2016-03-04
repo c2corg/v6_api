@@ -7,6 +7,7 @@ from pyramid.httpexceptions import HTTPBadRequest
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.models.association import schema_association, \
     AssociationLog, Association
+from sqlalchemy.sql.expression import or_, and_
 
 
 def validate_association(request):
@@ -52,7 +53,8 @@ class AssociationRest(object):
         association = schema_association.objectify(self.request.validated)
 
         if self._exists_already(association):
-            raise HTTPBadRequest('association exists already')
+            raise HTTPBadRequest(
+                'association (or its back-link) exists already')
 
         DBSession.add(association)
         DBSession.add(
@@ -84,8 +86,24 @@ class AssociationRest(object):
             is_creation=is_creation
         )
 
-    def _exists_already(self, association):
-        return self._load(association) is not None
+    def _exists_already(self, link):
+        """ Checks if the given association exists already. For example, for
+        two given documents D1 and D2, it checks if there is no association
+        D1 -> D2 or D2 -> D1.
+        """
+        associations_exists = DBSession.query(Association). \
+            filter(or_(
+                and_(
+                    Association.parent_document_id == link.parent_document_id,
+                    Association.child_document_id == link.child_document_id
+                ),
+                and_(
+                    Association.child_document_id == link.parent_document_id,
+                    Association.parent_document_id == link.child_document_id
+                )
+            )). \
+            exists()
+        return DBSession.query(associations_exists).scalar()
 
     def _load(self, association_in):
         return DBSession.query(Association). \
