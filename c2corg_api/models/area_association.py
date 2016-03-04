@@ -71,8 +71,9 @@ def update_area(area, reset=False):
                 Document.document_id == DocumentGeometry.document_id,
                 Document.type != AREA_TYPE)). \
         filter(
+            # TODO
             DocumentGeometry.geom.intersects(
-                DBSession.query(DocumentGeometry.geom).filter(
+                DBSession.query(DocumentGeometry.geom_detail).filter(
                     DocumentGeometry.document_id == area.document_id)
             ))
 
@@ -104,7 +105,8 @@ def update_areas_for_document(document, reset=False):
             Area.__table__,
             Area.document_id == DocumentGeometry.document_id). \
         filter(
-            DocumentGeometry.geom.intersects(
+            # TODO
+            DocumentGeometry.geom_detail.intersects(
                 DBSession.query(DocumentGeometry.geom).filter(
                     DocumentGeometry.document_id == document.document_id)
             ))

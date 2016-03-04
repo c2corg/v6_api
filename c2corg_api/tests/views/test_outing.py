@@ -149,7 +149,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'geometry': {
                     'id': 5678, 'version': 6789,
-                    'geom': '{"type": "LineString", "coordinates": ' +
+                    'geom_detail': '{"type": "LineString", "coordinates": ' +
                             '[[635956, 5723604], [635966, 5723644]]}'
                 },
                 'locales': [
@@ -178,7 +178,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'geometry': {
                     'id': 5678, 'version': 6789,
-                    'geom': '{"type": "LineString", "coordinates": ' +
+                    'geom_detail': '{"type": "LineString", "coordinates": ' +
                             '[[635956, 5723604], [635966, 5723644]]}'
                 },
                 'locales': [
@@ -205,7 +205,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'geometry': {
                     'id': 5678, 'version': 6789,
-                    'geom': '{"type": "LineString", "coordinates": ' +
+                    'geom_detail': '{"type": "LineString", "coordinates": ' +
                             '[[635956, 5723604], [635966, 5723644]]}'
                 },
                 'locales': [
@@ -233,7 +233,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'geometry': {
                     'id': 5678, 'version': 6789,
-                    'geom': '{"type": "LineString", "coordinates": ' +
+                    'geom_detail': '{"type": "LineString", "coordinates": ' +
                             '[[635956, 5723604], [635966, 5723644]]}'
                 },
                 'locales': [
@@ -269,7 +269,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'geometry': {
                     'id': 5678, 'version': 6789,
-                    'geom': '{"type": "LineString", "coordinates": ' +
+                    'geom_detail': '{"type": "LineString", "coordinates": ' +
                             '[[635956, 5723604], [635966, 5723644]]}'
                 },
                 'locales': [
@@ -309,7 +309,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'height_diff_down': 800,
                 'geometry': {
                     'id': 5678, 'version': 6789,
-                    'geom': '{"type": "LineString", "coordinates": ' +
+                    'geom_detail': '{"type": "LineString", "coordinates": ' +
                             '[[635956, 5723604], [635966, 5723644]]}'
                 },
                 'locales': [
@@ -335,7 +335,7 @@ class TestOutingRest(BaseDocumentTestRest):
 
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
-        self.assertIsNotNone(archive_geometry.geom)
+        self.assertIsNotNone(archive_geometry.geom_detail)
 
         association_route = self.session.query(Association).get(
             (self.route.document_id, doc.document_id))
@@ -508,8 +508,9 @@ class TestOutingRest(BaseDocumentTestRest):
                 ],
                 'geometry': {
                     'version': self.outing.geometry.version,
-                    'geom': '{"type": "LineString", "coordinates": ' +
-                            '[[635956, 5723604], [635976, 5723654]]}'
+                    'geom_detail':
+                        '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635976, 5723654]]}'
                 }
             }
         }
@@ -646,9 +647,9 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertIsNotNone(body.get('geometry'))
         geometry = body.get('geometry')
         self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom'))
+        self.assertIsNotNone(geometry.get('geom_detail'))
 
-        geom = geometry.get('geom')
+        geom = geometry.get('geom_detail')
         line = shape(json.loads(geom))
         self.assertIsInstance(line, LineString)
         self.assertAlmostEqual(line.coords[0][0], 635956)
@@ -674,7 +675,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self.outing.locales.append(self.locale_fr)
 
         self.outing.geometry = DocumentGeometry(
-            geom='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)')
+            geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)')
 
         self.session.add(self.outing)
         self.session.flush()

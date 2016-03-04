@@ -74,7 +74,7 @@ class TestAreaRest(BaseDocumentTestRest):
         body_post = {
             'area_type': 'range',
             'geometry': {
-                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
+                'geom_detail': '{"type": "Point", "coordinates": [635956, 5723604]}'  # noqa
             },
             'locales': [
                 {'lang': 'en'}
@@ -92,7 +92,7 @@ class TestAreaRest(BaseDocumentTestRest):
             'protected': True,
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
+                'geom_detail': '{"type": "Point", "coordinates": [635956, 5723604]}'  # noqa
             },
             'locales': [
                 {'lang': 'en', 'title': 'Chartreuse'}
@@ -108,7 +108,7 @@ class TestAreaRest(BaseDocumentTestRest):
             'area_type': 'range',
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type":"Polygon","coordinates":[[[668518.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668518.249382151,5728802.39591739]]]}'  # noqa
+                'geom_detail': '{"type":"Polygon","coordinates":[[[668518.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668518.249382151,5728802.39591739]]]}'  # noqa
             },
             'locales': [
                 {'lang': 'en', 'title': 'Chartreuse'}
@@ -128,7 +128,7 @@ class TestAreaRest(BaseDocumentTestRest):
 
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
-        self.assertIsNotNone(archive_geometry.geom)
+        self.assertIsNotNone(archive_geometry.geom_detail)
 
         # check that a link for intersecting documents is created
         links = self.session.query(AreaAssociation). \
@@ -206,7 +206,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'area_type': 'admin_limits',
                 'geometry': {
                     'version': self.area1.geometry.version,
-                    'geom': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
+                    'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
                 },
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
@@ -273,7 +273,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'area_type': 'admin_limits',
                 'geometry': {
                     'version': self.area1.geometry.version,
-                    'geom': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
+                    'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
                 },
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
@@ -373,9 +373,9 @@ class TestAreaRest(BaseDocumentTestRest):
         self.assertIsNotNone(body.get('geometry'))
         geometry = body.get('geometry')
         self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom'))
+        self.assertIsNotNone(geometry.get('geom_detail'))
 
-        geom = geometry.get('geom')
+        geom = geometry.get('geom_detail')
         polygon = shape(json.loads(geom))
         self.assertIsInstance(polygon, Polygon)
 
@@ -389,7 +389,7 @@ class TestAreaRest(BaseDocumentTestRest):
         self.area1.locales.append(self.locale_fr)
 
         self.area1.geometry = DocumentGeometry(
-            geom='SRID=3857;POLYGON((668518.249382151 5728802.39591739,668518.249382151 5745465.66808356,689156.247019149 5745465.66808356,689156.247019149 5728802.39591739,668518.249382151 5728802.39591739))'  # noqa
+            geom_detail='SRID=3857;POLYGON((668518.249382151 5728802.39591739,668518.249382151 5745465.66808356,689156.247019149 5745465.66808356,689156.247019149 5728802.39591739,668518.249382151 5728802.39591739))'  # noqa
         )
 
         self.session.add(self.area1)

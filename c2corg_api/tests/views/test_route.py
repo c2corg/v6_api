@@ -125,7 +125,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "LineString", "coordinates": ' +
+                'geom_detail': '{"type": "LineString", "coordinates": ' +
                         '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
@@ -149,7 +149,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "LineString", "coordinates": ' +
+                'geom_detail': '{"type": "LineString", "coordinates": ' +
                         '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
@@ -172,7 +172,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "LineString", "coordinates": ' +
+                'geom_detail': '{"type": "LineString", "coordinates": ' +
                         '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
@@ -196,7 +196,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "LineString", "coordinates": ' +
+                'geom_detail': '{"type": "LineString", "coordinates": ' +
                         '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
@@ -219,7 +219,7 @@ class TestRouteRest(BaseDocumentTestRest):
 
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
-        self.assertIsNotNone(archive_geometry.geom)
+        self.assertIsNotNone(archive_geometry.geom_detail)
 
         self.assertEqual(doc.main_waypoint_id, self.waypoint.document_id)
         self.assertEqual(
@@ -332,7 +332,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 ],
                 'geometry': {
                     'version': self.route.geometry.version,
-                    'geom': '{"type": "LineString", "coordinates": ' +
+                    'geom_detail': '{"type": "LineString", "coordinates": ' +
                             '[[635956, 5723604], [635976, 5723654]]}'
                 }
             }
@@ -491,9 +491,9 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertIsNotNone(body.get('geometry'))
         geometry = body.get('geometry')
         self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom'))
+        self.assertIsNotNone(geometry.get('geom_detail'))
 
-        geom = geometry.get('geom')
+        geom = geometry.get('geom_detail')
         line = shape(json.loads(geom))
         self.assertIsInstance(line, LineString)
         self.assertAlmostEqual(line.coords[0][0], 635956)
@@ -542,7 +542,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.route.locales.append(self.locale_fr)
 
         self.route.geometry = DocumentGeometry(
-            geom='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)')
+            geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)')
 
         self.session.add(self.route)
         self.session.flush()

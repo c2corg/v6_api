@@ -116,7 +116,8 @@ def get_maps(document, lang):
             DocumentLocale.lang, DocumentLocale.title,
             DocumentLocale.version)). \
         filter(
-            DocumentGeometry.geom.intersects(
+            # TODO
+            DocumentGeometry.geom_detail.intersects(
                 DBSession.query(DocumentGeometry.geom).filter(
                     DocumentGeometry.document_id == document.document_id)
             )). \
