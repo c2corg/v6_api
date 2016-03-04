@@ -2,6 +2,7 @@ import json
 
 from c2corg_api.models.area import Area, ArchiveArea
 from c2corg_api.models.area_association import AreaAssociation
+from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
 from shapely.geometry import shape, Polygon
 
@@ -135,8 +136,9 @@ class TestAreaRest(BaseDocumentTestRest):
             filter(
                 AreaAssociation.area_id == doc.document_id). \
             all()
-        self.assertEqual(len(links), 1)
+        self.assertEqual(len(links), 2)
         self.assertEqual(links[0].document_id, self.waypoint1.document_id)
+        self.assertEqual(links[1].document_id, self.route.document_id)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -295,8 +297,9 @@ class TestAreaRest(BaseDocumentTestRest):
             filter(
                 AreaAssociation.area_id == self.area1.document_id). \
             all()
-        self.assertEqual(len(links), 1)
+        self.assertEqual(len(links), 2)
         self.assertEqual(links[0].document_id, self.waypoint1.document_id)
+        self.assertEqual(links[1].document_id, self.route.document_id)
 
     def test_put_success_figures_only(self):
         body = {
@@ -419,7 +422,12 @@ class TestAreaRest(BaseDocumentTestRest):
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(693666.031687976 5741108.7574713)')
         )
-        self.session.add_all([self.waypoint1, self.waypoint2])
+        route_geom = 'SRID=3857;LINESTRING(668518 5728802, 668528 5728812)'
+        self.route = Route(
+            activities=['skitouring'],
+            geometry=DocumentGeometry(geom_detail=route_geom))
+
+        self.session.add_all([self.waypoint1, self.waypoint2, self.route])
         self.session.add(AreaAssociation(
             document=self.waypoint2, area=self.area1))
         self.session.flush()

@@ -1,16 +1,19 @@
 import datetime
 import json
 
+from c2corg_api.models.area import Area
+from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, OutingLocale
+from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.views.route import update_title_prefix
 from shapely.geometry import shape, LineString
 
 from c2corg_api.models.route import (
     Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale)
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
@@ -87,6 +90,11 @@ class TestRouteRest(BaseDocumentTestRest):
             self.outing.document_id,
             recent_outings['outings'][0].get('document_id'))
 
+        self.assertIn('maps', body)
+        topo_map = body.get('maps')[0]
+        self.assertEqual(topo_map.get('code'), '3232ET')
+        self.assertEqual(topo_map.get('locales')[0].get('title'), 'Belley')
+
     def test_get_version(self):
         self.get_version(self.route, self.route_version)
 
@@ -125,8 +133,9 @@ class TestRouteRest(BaseDocumentTestRest):
             'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom_detail': '{"type": "LineString", "coordinates": ' +
-                        '[[635956, 5723604], [635966, 5723644]]}'
+                'geom_detail':
+                    '{"type": "LineString", "coordinates": ' +
+                    '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop'}
@@ -149,8 +158,9 @@ class TestRouteRest(BaseDocumentTestRest):
             'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom_detail': '{"type": "LineString", "coordinates": ' +
-                        '[[635956, 5723604], [635966, 5723644]]}'
+                'geom_detail':
+                    '{"type": "LineString", "coordinates": ' +
+                    '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
                 {'lang': 'en'}
@@ -172,8 +182,9 @@ class TestRouteRest(BaseDocumentTestRest):
             'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom_detail': '{"type": "LineString", "coordinates": ' +
-                        '[[635956, 5723604], [635966, 5723644]]}'
+                'geom_detail':
+                    '{"type": "LineString", "coordinates": ' +
+                    '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop',
@@ -196,8 +207,9 @@ class TestRouteRest(BaseDocumentTestRest):
             'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom_detail': '{"type": "LineString", "coordinates": ' +
-                        '[[635956, 5723604], [635966, 5723644]]}'
+                'geom_detail':
+                    '{"type": "LineString", "coordinates": ' +
+                    '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop',
@@ -229,6 +241,14 @@ class TestRouteRest(BaseDocumentTestRest):
 
         self.assertEqual(
             self.waypoint.locales[0].title, doc.locales[0].title_prefix)
+
+        # check that a link for intersecting areas is created
+        links = self.session.query(AreaAssociation). \
+            filter(
+                AreaAssociation.document_id == doc.document_id). \
+            all()
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].area_id, self.area1.document_id)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -332,8 +352,9 @@ class TestRouteRest(BaseDocumentTestRest):
                 ],
                 'geometry': {
                     'version': self.route.geometry.version,
-                    'geom_detail': '{"type": "LineString", "coordinates": ' +
-                            '[[635956, 5723604], [635976, 5723654]]}'
+                    'geom_detail':
+                        '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635976, 5723654]]}'
                 }
             }
         }
@@ -572,6 +593,15 @@ class TestRouteRest(BaseDocumentTestRest):
             gear='paraglider'))
         self.session.add(self.route4)
 
+        # add a map
+        self.session.add(TopoMap(
+            code='3232ET', editor='IGN', scale='25000',
+            locales=[
+                DocumentLocale(lang='fr', title='Belley')
+            ],
+            geometry=DocumentGeometry(geom_detail='SRID=3857;POLYGON((635900 5723600, 635900 5723700, 636000 5723700, 636000 5723600, 635900 5723600))')  # noqa
+        ))
+
         # add some associations
         self.waypoint = Waypoint(
             waypoint_type='summit', elevation=4,
@@ -609,4 +639,21 @@ class TestRouteRest(BaseDocumentTestRest):
         self.session.add(Association(
             parent_document_id=self.route.document_id,
             child_document_id=self.outing.document_id))
+        self.session.flush()
+
+        # add areas
+        self.area1 = Area(
+            area_type='range',
+            geometry=DocumentGeometry(
+                geom_detail='SRID=3857;POLYGON((635900 5723600, 635900 5723700, 636000 5723700, 636000 5723600, 635900 5723600))'  # noqa
+            )
+        )
+        self.area2 = Area(
+            area_type='range',
+            locales=[
+                DocumentLocale(lang='fr', title='France')
+            ]
+        )
+
+        self.session.add_all([self.area1, self.area2])
         self.session.flush()
