@@ -1,7 +1,6 @@
 SITE_PACKAGES = $(shell .build/venv/bin/python -c "import distutils; print(distutils.sysconfig.get_python_lib())" 2> /dev/null)
 TEMPLATE_FILES_IN = $(filter-out ./.build/%, $(shell find . -type f -name '*.in'))
 TEMPLATE_FILES = $(TEMPLATE_FILES_IN:.in=)
-CONFIG_MAKEFILE = $(shell find config -type f)
 
 # variables used in config files (*.in)
 export base_dir = $(abspath .)
@@ -42,7 +41,7 @@ cleanall: clean
 	rm -rf .build
 
 .PHONY: test
-test: .build/venv/bin/nosetests test.ini
+test: .build/venv/bin/nosetests template
 	# All tests must be run with authentication/authorization enabled
 	.build/venv/bin/nosetests
 
@@ -92,6 +91,7 @@ apache/app-c2corg_api.wsgi: production.ini
 
 apache/wsgi.conf: apache/app-c2corg_api.wsgi
 
-%: %.in $(CONFIG_MAKEFILE)
+.PHONY: $(TEMPLATE_FILES)
+$(TEMPLATE_FILES): %: %.in
 	scripts/env_replace < $< > $@
 	chmod --reference $< $@
