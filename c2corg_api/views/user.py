@@ -17,9 +17,11 @@ from c2corg_api.models import DBSession
 from c2corg_api.security.roles import (
     try_login, remove_token, extract_token, renew_token)
 
-from c2corg_api.security.discourse_sso_provider import (
-    discourse_redirect, discourse_redirect_without_nonce,
+from c2corg_api.security.discourse_client import (
     discourse_sync_sso, discourse_logout)
+
+from c2corg_api.security.discourse_sso_provider import (
+    discourse_redirect, discourse_redirect_without_nonce)
 
 
 import colander
