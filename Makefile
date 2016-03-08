@@ -41,7 +41,7 @@ cleanall: clean
 	rm -rf .build
 
 .PHONY: test
-test: .build/venv/bin/nosetests template
+test: .build/venv/bin/nosetests template .build/dev-requirements.timestamp .build/requirements.timestamp
 	# All tests must be run with authentication/authorization enabled
 	.build/venv/bin/nosetests
 
@@ -50,40 +50,38 @@ lint: .build/venv/bin/flake8
 	.build/venv/bin/flake8 c2corg_api
 
 .PHONY: install
-install: install-dev-egg template
+install: .build/requirements.timestamp template
 
 .PHONY: template
 template: $(TEMPLATE_FILES)
-
-.PHONY: install-dev-egg
-install-dev-egg: $(SITE_PACKAGES)/c2corg_api.egg-link
 
 .PHONY: serve
 serve: install development.ini
 	.build/venv/bin/pserve --reload development.ini
 
 .PHONY: upgrade
-upgrade:
+upgrade: .build/venv/bin/pip
 	.build/venv/bin/pip install --upgrade -r requirements.txt
 
 .PHONY: upgrade-dev
-upgrade-dev:
+upgrade-dev: .build/venv/bin/pip
 	.build/venv/bin/pip install --upgrade -r dev-requirements.txt
 
 .build/venv/bin/flake8: .build/dev-requirements.timestamp
 
 .build/venv/bin/nosetests: .build/dev-requirements.timestamp
 
-.build/dev-requirements.timestamp: .build/venv dev-requirements.txt
+.build/dev-requirements.timestamp: .build/venv/bin/pip dev-requirements.txt
 	.build/venv/bin/pip install -r dev-requirements.txt
 	touch $@
 
-.build/venv:
-	mkdir -p $(dir $@)
-	virtualenv --no-site-packages -p python3 $@
+.build/venv/bin/pip:
+	mkdir -p $(dir .build/venv)
+	virtualenv --no-site-packages -p python3 .build/venv
 
-$(SITE_PACKAGES)/c2corg_api.egg-link: .build/venv requirements.txt setup.py
+.build/requirements.timestamp: .build/venv/bin/pip requirements.txt setup.py
 	.build/venv/bin/pip install -r requirements.txt
+	touch $@
 
 development.ini production.ini: common.ini
 
