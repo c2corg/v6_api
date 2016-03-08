@@ -10,9 +10,17 @@ log = logging.getLogger(__name__)
 CLIENT_TIMEOUT = 10
 
 
+def get_discourse_base_url(settings):
+    return settings['discourse.url']
+
+
+def get_discourse_public_url(settings):
+    return settings['discourse.public_url']
+
+
 def get_discourse_client(settings):
     api_key = settings['discourse.api_key']
-    url = settings['discourse.url']
+    url = get_discourse_base_url(settings)
     # system is a built-in user available in all discourse instances.
     return DiscourseClient(
         url, api_username='system', api_key=api_key, timeout=CLIENT_TIMEOUT)
