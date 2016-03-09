@@ -105,6 +105,18 @@ class MigrateAssociations(MigrateBase):
             zope.sqlalchemy.mark_changed(self.session_target)
         self.stop()
 
+    def _remove_duplicate_associations(self):
+        """In v5 there are some double associations between documents, for
+        example two associations R1 -> R2 and R2 -> R1. The following two
+        queries remove these duplicates, so that there is only one.
+        """
+        print('Removing duplicate associations')
+        with transaction.manager:
+            self.session_target.execute(SQL_DELETE_DUPLICATE_ASSOCIATONS_LOG)
+            self.session_target.execute(SQL_DELETE_DUPLICATE_ASSOCIATONS)
+            zope.sqlalchemy.mark_changed(self.session_target)
+        print('Done')
+
     def _set_route_main_waypoint(self):
         """Set the field `main_waypoint_id` to the highest associated waypoint.
         """
@@ -198,4 +210,42 @@ update guidebook.routes_locales l
   set title_prefix = v.title
 from v
 where v.id = l.id;
+"""
+
+
+SQL_DELETE_DUPLICATE_ASSOCIATONS_LOG = """
+delete from guidebook.association_log l
+  using (
+    select
+      duplicate_link[1] as document_id_1,
+      duplicate_link[2] as document_id_2
+    from (
+      select (SELECT ARRAY(SELECT unnest(
+        ARRAY[a.parent_document_id, a.child_document_id]) ORDER BY 1))
+        duplicate_link
+      from guidebook.associations a join guidebook.associations b
+        on a.parent_document_id = b.child_document_id and
+           a.child_document_id = b.parent_document_id
+      group by duplicate_link) t) v
+  where l.parent_document_id = v.document_id_1 and
+        l.child_document_id = v.document_id_2;
+"""
+
+
+SQL_DELETE_DUPLICATE_ASSOCIATONS = """
+delete from guidebook.associations assoc
+  using (
+    select
+      duplicate_link[1] as document_id_1,
+      duplicate_link[2] as document_id_2
+    from (
+      select (SELECT ARRAY(SELECT unnest(
+        ARRAY[a.parent_document_id, a.child_document_id]) ORDER BY 1))
+        duplicate_link
+      from guidebook.associations a join guidebook.associations b
+        on a.parent_document_id = b.child_document_id and
+           a.child_document_id = b.parent_document_id
+      group by duplicate_link) t) v
+  where assoc.parent_document_id = v.document_id_1 and
+        assoc.child_document_id = v.document_id_2;
 """

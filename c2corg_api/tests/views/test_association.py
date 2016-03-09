@@ -57,6 +57,15 @@ class TestAssociationRest(BaseTestRest):
             TestAssociationRest.prefix, request_body, headers=headers,
             status=400)
 
+        # back-link association also fails
+        request_body = {
+            'parent_document_id': self.waypoint2.document_id,
+            'child_document_id': self.waypoint1.document_id
+        }
+        self.app.post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=400)
+
     def test_add_association_invalid(self):
         request_body = {
             'parent_document_id': self.route1.document_id,
