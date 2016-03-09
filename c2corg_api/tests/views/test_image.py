@@ -188,7 +188,7 @@ class TestImageRest(BaseDocumentTestRest):
                 ]
             }
         }
-        self.put_wrong_ids(body, self.image.document_id)
+        self.put_wrong_ids(body, self.image.document_id, user='moderator')
 
     def test_put_no_document(self):
         self.put_put_no_document(self.image.document_id)

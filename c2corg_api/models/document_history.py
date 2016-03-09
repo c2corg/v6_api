@@ -7,9 +7,10 @@ from sqlalchemy import (
     ForeignKey
     )
 from sqlalchemy.orm import relationship, backref
+from sqlalchemy.sql.expression import exists, and_
 import datetime
 
-from c2corg_api.models import Base, schema, users_schema
+from c2corg_api.models import Base, DBSession, schema, users_schema
 from c2corg_api.models.document import (
     Document, ArchiveDocument, ArchiveDocumentLocale, ArchiveDocumentGeometry)
 
@@ -65,3 +66,17 @@ class DocumentVersion(Base):
         Integer, ForeignKey(schema + '.history_metadata.id'), nullable=False)
     history_metadata = relationship(
         HistoryMetaData, primaryjoin=history_metadata_id == HistoryMetaData.id)
+
+
+def has_been_created_by(document_id, user_id):
+    """Check if passed user_id is the id of the user that has created
+    the inital version of this document, whatever the language.
+    """
+    return DBSession.query(
+        exists().where(and_(
+            ArchiveDocument.document_id == document_id,
+            ArchiveDocument.version == 1,
+            DocumentVersion.document_id == document_id,
+            HistoryMetaData.user_id == user_id
+        ))
+    ).scalar()
