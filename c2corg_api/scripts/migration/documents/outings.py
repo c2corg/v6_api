@@ -20,7 +20,7 @@ class MigrateOutings(MigrateDocuments):
             document_id=document_in.id,
             id=document_in.id,
             version=version,
-            geom=document_in.geom
+            geom_detail=document_in.geom
         )
 
     def get_count_query(self):
