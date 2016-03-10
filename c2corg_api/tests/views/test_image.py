@@ -193,6 +193,54 @@ class TestImageRest(BaseDocumentTestRest):
     def test_put_no_document(self):
         self.put_put_no_document(self.image.document_id)
 
+    def test_put_wrong_user(self):
+        """Test that a non-moderator user who is not the creator of
+        a personal image is not allowed to modify it.
+        """
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.image4.document_id,
+                'version': self.image4.version,
+                'activities': ['skitouring'],
+                'image_type': 'personal',
+                'height': 2000,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': 'A nice picture',
+                     'version': self.image4.get_locale('en').version}
+                ]
+            }
+        }
+        headers = self.add_authorization_header(username='contributor2')
+        self.app.put_json(
+            self._prefix + '/' + str(self.image4.document_id), body,
+            headers=headers, status=403)
+
+    def test_put_good_user(self):
+        """Test that a non-moderator user who is the creator of
+        a personal image is allowed to modify it.
+        """
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.image4.document_id,
+                'version': self.image4.version,
+                'activities': ['skitouring'],
+                'image_type': 'personal',
+                'height': 2000,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': 'A nice picture',
+                     'version': self.image4.get_locale('en').version}
+                ]
+            }
+        }
+        headers = self.add_authorization_header(username='contributor')
+        self.app.put_json(
+            self._prefix + '/' + str(self.image4.document_id), body,
+            headers=headers, status=200)
+
     def test_put_success_all(self):
         body = {
             'message': 'Update',
@@ -341,10 +389,12 @@ class TestImageRest(BaseDocumentTestRest):
             activities=['paragliding'], height=1500)
         self.session.add(self.image3)
         self.image4 = Image(
-            activities=['paragliding'], height=1500)
+            activities=['paragliding'], height=1500,
+            image_type='personal')
         self.image4.locales.append(DocumentLocale(
             lang='en', title='Mont Blanc from the air', description='...'))
         self.image4.locales.append(DocumentLocale(
             lang='fr', title='Mont Blanc du ciel', description='...'))
         self.session.add(self.image4)
         self.session.flush()
+        DocumentRest.create_new_version(self.image4, user_id)
