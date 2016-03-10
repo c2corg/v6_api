@@ -347,6 +347,77 @@ class TestImageRest(BaseDocumentTestRest):
 
         self.assertEquals(image.get_locale('es').description, '...')
 
+    def test_change_image_type_collaborative(self):
+        """Test that a non-moderator user cannot change the image_type
+        of collaborative images
+        """
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.image.document_id,
+                'version': self.image.version,
+                'activities': ['paragliding'],
+                'image_type': 'personal',
+                'height': 1500,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...',
+                     'version': self.locale_en.version}
+                ]
+            }
+        }
+        headers = self.add_authorization_header(username='contributor')
+        self.app.put_json(
+            self._prefix + '/' + str(self.image.document_id), body,
+            headers=headers, status=400)
+
+    def test_change_image_type_collaborative_moderator(self):
+        """Test that a moderator can change the image_type
+        of collaborative images
+        """
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.image.document_id,
+                'version': self.image.version,
+                'activities': ['paragliding'],
+                'image_type': 'personal',
+                'height': 1500,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...',
+                     'version': self.locale_en.version}
+                ]
+            }
+        }
+        headers = self.add_authorization_header(username='moderator')
+        self.app.put_json(
+            self._prefix + '/' + str(self.image.document_id), body,
+            headers=headers, status=200)
+
+    def test_change_image_type_non_collaborative(self):
+        """Test that non collaborative images can become collaborative
+        """
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.image4.document_id,
+                'version': self.image4.version,
+                'activities': ['paragliding'],
+                'image_type': 'collaborative',
+                'height': 1500,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...',
+                     'version': self.image4.get_locale('en').version}
+                ]
+            }
+        }
+        headers = self.add_authorization_header(username='contributor')
+        self.app.put_json(
+            self._prefix + '/' + str(self.image4.document_id), body,
+            headers=headers, status=200)
+
     def _assert_geometry(self, body):
         self.assertIsNotNone(body.get('geometry'))
         geometry = body.get('geometry')
