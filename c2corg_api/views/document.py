@@ -195,11 +195,16 @@ class DocumentRest(object):
                 to_json_dict(m, schema_listing_area) for m in document._areas
             ]
 
-    def _collection_post(self, schema, after_add=None, document_field=None):
+    def _collection_post(
+            self, schema, before_add=None, after_add=None,
+            document_field=None):
         document_in = self.request.validated if document_field is None else \
                 self.request.validated[document_field]
         document = schema.objectify(document_in)
         document.document_id = None
+
+        if before_add:
+            before_add(document)
 
         DBSession.add(document)
         DBSession.flush()
@@ -216,7 +221,7 @@ class DocumentRest(object):
 
         return {'document_id': document.document_id}
 
-    def _put(self, clazz, schema, after_update=None):
+    def _put(self, clazz, schema, before_update=None, after_update=None):
         user_id = self.request.authenticated_userid
         id = self.request.validated['id']
         document_in = \
@@ -232,6 +237,9 @@ class DocumentRest(object):
 
         # update the document with the input document
         document.update(document_in)
+
+        if before_update:
+            before_update(document, document_in)
 
         try:
             DBSession.flush()

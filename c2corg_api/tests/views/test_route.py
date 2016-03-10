@@ -17,6 +17,7 @@ from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
+from shapely.geometry.point import Point
 
 
 class TestRouteRest(BaseDocumentTestRest):
@@ -218,6 +219,7 @@ class TestRouteRest(BaseDocumentTestRest):
         }
         body, doc = self.post_success(body)
         self._assert_geometry(body)
+        self._assert_default_geometry(body)
 
         version = doc.versions[0]
 
@@ -232,6 +234,7 @@ class TestRouteRest(BaseDocumentTestRest):
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
         self.assertIsNotNone(archive_geometry.geom_detail)
+        self.assertIsNotNone(archive_geometry.geom)
 
         self.assertEqual(doc.main_waypoint_id, self.waypoint.document_id)
         self.assertEqual(
@@ -249,6 +252,51 @@ class TestRouteRest(BaseDocumentTestRest):
             all()
         self.assertEqual(len(links), 1)
         self.assertEqual(links[0].area_id, self.area1.document_id)
+
+    def test_post_default_geom_multi_line(self):
+        body = {
+            'main_waypoint_id': self.waypoint.document_id,
+            'activities': ['hiking', 'skitouring'],
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom_detail':
+                    '{"type": "MultiLineString", "coordinates": ' +
+                    '[[[635956, 5723604], [635966, 5723644]], '
+                    '[[635966, 5723614], [635976, 5723654]]]}'
+            },
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'gear': 'shoes'}
+            ]
+        }
+        body, doc = self.post_success(body)
+        self.assertIsNotNone(doc.geometry.geom)
+        self.assertIsNotNone(doc.geometry.geom_detail)
+        self._assert_default_geometry(body)
+
+    def test_post_default_geom_from_main_wp(self):
+        body = {
+            'main_waypoint_id': self.waypoint.document_id,
+            'activities': ['hiking', 'skitouring'],
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'gear': 'shoes'}
+            ]
+        }
+        body, doc = self.post_success(body)
+        self.assertIsNotNone(doc.geometry.geom)
+        self.assertIsNone(doc.geometry.geom_detail)
+        self._assert_default_geometry(body, x=635956, y=5723604)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -359,6 +407,7 @@ class TestRouteRest(BaseDocumentTestRest):
             }
         }
         (body, route) = self.put_success_all(body, self.route)
+        self._assert_default_geometry(body, x=635966, y=5723629)
 
         self.assertEquals(route.elevation_max, 1600)
         locale_en = route.get_locale('en')
@@ -409,6 +458,66 @@ class TestRouteRest(BaseDocumentTestRest):
 
         self.assertEquals(route.elevation_max, 1600)
 
+    def test_put_success_new_track_with_default_geom(self):
+        """Test that a provided default geometry (`geom`) is used instead of
+        obtaining the geom from a track (`geom_detail`).
+        """
+        body = {
+            'message': 'Changing figures',
+            'document': {
+                'document_id': self.route.document_id,
+                'version': self.route.version,
+                'activities': ['skitouring'],
+                'elevation_min': 700,
+                'elevation_max': 1600,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'durations': ['1'],
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...', 'gear': 'paraglider',
+                     'version': self.locale_en.version,
+                     'title_prefix': 'Should be ignored'}
+                ],
+                'geometry': {
+                    'version': self.route.geometry.version,
+                    'geom_detail':
+                        '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635976, 5723654]]}',
+                    'geom':
+                        '{"type": "Point", "coordinates": [635000, 5723000]}'
+                }
+            }
+        }
+        (body, route) = self.put_success_figures_only(body, self.route)
+        self._assert_default_geometry(body, x=635000, y=5723000)
+
+    def test_put_success_update_default_geom_main_wp_changed(self):
+        """Test that the default geom is updated when the main waypoint changes
+        and no track exists.
+        """
+        body = {
+            'message': 'Changing figures',
+            'document': {
+                'document_id': self.route2.document_id,
+                'version': self.route2.version,
+                'main_waypoint_id': self.waypoint.document_id,
+                'activities': ['skitouring'],
+                'elevation_min': 700,
+                'elevation_max': 1600,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'durations': ['1'],
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...', 'gear': 'paraglider',
+                     'version': self.route2.locales[0].version}
+                ]
+            }
+        }
+        (body, route) = self.put_success_figures_only(body, self.route2)
+        self._assert_default_geometry(body, x=635956, y=5723604)
+
     def test_put_success_main_wp_changed(self):
         body = {
             'message': 'Changing figures',
@@ -430,6 +539,9 @@ class TestRouteRest(BaseDocumentTestRest):
             }
         }
         (body, route) = self.put_success_figures_only(body, self.route)
+        # tests that the default geometry has not changed (main wp has changed
+        # but the route has a track)
+        self._assert_default_geometry(body)
 
         self.assertEqual(route.main_waypoint_id, self.waypoint.document_id)
         locale_en = route.get_locale('en')
@@ -522,6 +634,18 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertAlmostEqual(line.coords[1][0], 635966)
         self.assertAlmostEqual(line.coords[1][1], 5723644)
 
+    def _assert_default_geometry(self, body, x=635961, y=5723624):
+        self.assertIsNotNone(body.get('geometry'))
+        geometry = body.get('geometry')
+        self.assertIsNotNone(geometry.get('version'))
+        self.assertIsNotNone(geometry.get('geom'))
+
+        geom = geometry.get('geom')
+        point = shape(json.loads(geom))
+        self.assertIsInstance(point, Point)
+        self.assertAlmostEqual(point.x, x)
+        self.assertAlmostEqual(point.y, y)
+
     def test_update_prefix_title(self):
         self.route.locales.append(RouteLocale(
             lang='es', title='Mont Blanc del cielo', description='...',
@@ -563,7 +687,9 @@ class TestRouteRest(BaseDocumentTestRest):
         self.route.locales.append(self.locale_fr)
 
         self.route.geometry = DocumentGeometry(
-            geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)')
+            geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
+            geom='SRID=3857;POINT(635961 5723624)'
+        )
 
         self.session.add(self.route)
         self.session.flush()
@@ -576,8 +702,19 @@ class TestRouteRest(BaseDocumentTestRest):
 
         self.route2 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
-            height_diff_up=800, height_diff_down=800, durations='1')
+            height_diff_up=800, height_diff_down=800, durations='1',
+            locales=[
+                RouteLocale(
+                    lang='en', title='Mont Blanc from the air',
+                    description='...', gear='paraglider'),
+                RouteLocale(
+                    lang='fr', title='Mont Blanc du ciel', description='...',
+                    gear='paraglider')]
+        )
         self.session.add(self.route2)
+        self.session.flush()
+        DocumentRest.create_new_version(self.route2, user_id)
+
         self.route3 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
             height_diff_up=800, height_diff_down=800, durations='1')
