@@ -2,6 +2,7 @@ import json
 
 from c2corg_api.models.area import Area, ArchiveArea
 from c2corg_api.models.area_association import AreaAssociation
+from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
 from shapely.geometry import shape, Polygon
 
@@ -74,7 +75,7 @@ class TestAreaRest(BaseDocumentTestRest):
         body_post = {
             'area_type': 'range',
             'geometry': {
-                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
+                'geom_detail': '{"type": "Point", "coordinates": [635956, 5723604]}'  # noqa
             },
             'locales': [
                 {'lang': 'en'}
@@ -92,7 +93,7 @@ class TestAreaRest(BaseDocumentTestRest):
             'protected': True,
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
+                'geom_detail': '{"type": "Point", "coordinates": [635956, 5723604]}'  # noqa
             },
             'locales': [
                 {'lang': 'en', 'title': 'Chartreuse'}
@@ -108,7 +109,7 @@ class TestAreaRest(BaseDocumentTestRest):
             'area_type': 'range',
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type":"Polygon","coordinates":[[[668518.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668518.249382151,5728802.39591739]]]}'  # noqa
+                'geom_detail': '{"type":"Polygon","coordinates":[[[668518.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668518.249382151,5728802.39591739]]]}'  # noqa
             },
             'locales': [
                 {'lang': 'en', 'title': 'Chartreuse'}
@@ -128,15 +129,16 @@ class TestAreaRest(BaseDocumentTestRest):
 
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
-        self.assertIsNotNone(archive_geometry.geom)
+        self.assertIsNotNone(archive_geometry.geom_detail)
 
         # check that a link for intersecting documents is created
         links = self.session.query(AreaAssociation). \
             filter(
                 AreaAssociation.area_id == doc.document_id). \
             all()
-        self.assertEqual(len(links), 1)
+        self.assertEqual(len(links), 2)
         self.assertEqual(links[0].document_id, self.waypoint1.document_id)
+        self.assertEqual(links[1].document_id, self.route.document_id)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -206,7 +208,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'area_type': 'admin_limits',
                 'geometry': {
                     'version': self.area1.geometry.version,
-                    'geom': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
+                    'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
                 },
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
@@ -273,7 +275,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'area_type': 'admin_limits',
                 'geometry': {
                     'version': self.area1.geometry.version,
-                    'geom': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
+                    'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
                 },
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
@@ -295,8 +297,9 @@ class TestAreaRest(BaseDocumentTestRest):
             filter(
                 AreaAssociation.area_id == self.area1.document_id). \
             all()
-        self.assertEqual(len(links), 1)
+        self.assertEqual(len(links), 2)
         self.assertEqual(links[0].document_id, self.waypoint1.document_id)
+        self.assertEqual(links[1].document_id, self.route.document_id)
 
     def test_put_success_figures_only(self):
         body = {
@@ -373,9 +376,9 @@ class TestAreaRest(BaseDocumentTestRest):
         self.assertIsNotNone(body.get('geometry'))
         geometry = body.get('geometry')
         self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom'))
+        self.assertIsNotNone(geometry.get('geom_detail'))
 
-        geom = geometry.get('geom')
+        geom = geometry.get('geom_detail')
         polygon = shape(json.loads(geom))
         self.assertIsInstance(polygon, Polygon)
 
@@ -389,7 +392,7 @@ class TestAreaRest(BaseDocumentTestRest):
         self.area1.locales.append(self.locale_fr)
 
         self.area1.geometry = DocumentGeometry(
-            geom='SRID=3857;POLYGON((668518.249382151 5728802.39591739,668518.249382151 5745465.66808356,689156.247019149 5745465.66808356,689156.247019149 5728802.39591739,668518.249382151 5728802.39591739))'  # noqa
+            geom_detail='SRID=3857;POLYGON((668518.249382151 5728802.39591739,668518.249382151 5745465.66808356,689156.247019149 5745465.66808356,689156.247019149 5728802.39591739,668518.249382151 5728802.39591739))'  # noqa
         )
 
         self.session.add(self.area1)
@@ -419,7 +422,12 @@ class TestAreaRest(BaseDocumentTestRest):
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(693666.031687976 5741108.7574713)')
         )
-        self.session.add_all([self.waypoint1, self.waypoint2])
+        route_geom = 'SRID=3857;LINESTRING(668518 5728802, 668528 5728812)'
+        self.route = Route(
+            activities=['skitouring'],
+            geometry=DocumentGeometry(geom_detail=route_geom))
+
+        self.session.add_all([self.waypoint1, self.waypoint2, self.route])
         self.session.add(AreaAssociation(
             document=self.waypoint2, area=self.area1))
         self.session.flush()

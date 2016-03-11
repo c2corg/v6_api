@@ -30,11 +30,11 @@ class MigrateAreaAssociations(MigrateBase):
 SQL_CREATE_AREA_ASSOCIATIONS = """
 insert into guidebook.area_associations (document_id, area_id) (
   select d.document_id, a.document_id as area_document_id
-  from (select g.document_id, g.geom from
+  from (select g.document_id, g.geom, g.geom_detail from
     guidebook.documents_geometries g join guidebook.documents d
     on g.document_id = d.document_id and d.type <> 'a') d
   join (select ga.document_id, ga.geom from
     guidebook.areas a join guidebook.documents_geometries ga
     on ga.document_id = a.document_id) a
-  on ST_Intersects(d.geom, a.geom));
+  on ST_Intersects(d.geom, a.geom) or ST_Intersects(d.geom_detail, a.geom));
 """

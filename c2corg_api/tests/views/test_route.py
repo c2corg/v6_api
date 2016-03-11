@@ -1,19 +1,23 @@
 import datetime
 import json
 
+from c2corg_api.models.area import Area
+from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, OutingLocale
+from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.views.route import update_title_prefix
 from shapely.geometry import shape, LineString
 
 from c2corg_api.models.route import (
     Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale)
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
+from shapely.geometry.point import Point
 
 
 class TestRouteRest(BaseDocumentTestRest):
@@ -87,6 +91,11 @@ class TestRouteRest(BaseDocumentTestRest):
             self.outing.document_id,
             recent_outings['outings'][0].get('document_id'))
 
+        self.assertIn('maps', body)
+        topo_map = body.get('maps')[0]
+        self.assertEqual(topo_map.get('code'), '3232ET')
+        self.assertEqual(topo_map.get('locales')[0].get('title'), 'Belley')
+
     def test_get_version(self):
         self.get_version(self.route, self.route_version)
 
@@ -125,8 +134,9 @@ class TestRouteRest(BaseDocumentTestRest):
             'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "LineString", "coordinates": ' +
-                        '[[635956, 5723604], [635966, 5723644]]}'
+                'geom_detail':
+                    '{"type": "LineString", "coordinates": ' +
+                    '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop'}
@@ -149,8 +159,9 @@ class TestRouteRest(BaseDocumentTestRest):
             'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "LineString", "coordinates": ' +
-                        '[[635956, 5723604], [635966, 5723644]]}'
+                'geom_detail':
+                    '{"type": "LineString", "coordinates": ' +
+                    '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
                 {'lang': 'en'}
@@ -172,8 +183,9 @@ class TestRouteRest(BaseDocumentTestRest):
             'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "LineString", "coordinates": ' +
-                        '[[635956, 5723604], [635966, 5723644]]}'
+                'geom_detail':
+                    '{"type": "LineString", "coordinates": ' +
+                    '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop',
@@ -196,8 +208,9 @@ class TestRouteRest(BaseDocumentTestRest):
             'durations': ['1'],
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "LineString", "coordinates": ' +
-                        '[[635956, 5723604], [635966, 5723644]]}'
+                'geom_detail':
+                    '{"type": "LineString", "coordinates": ' +
+                    '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop',
@@ -206,6 +219,7 @@ class TestRouteRest(BaseDocumentTestRest):
         }
         body, doc = self.post_success(body)
         self._assert_geometry(body)
+        self._assert_default_geometry(body)
 
         version = doc.versions[0]
 
@@ -219,6 +233,7 @@ class TestRouteRest(BaseDocumentTestRest):
 
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
+        self.assertIsNotNone(archive_geometry.geom_detail)
         self.assertIsNotNone(archive_geometry.geom)
 
         self.assertEqual(doc.main_waypoint_id, self.waypoint.document_id)
@@ -229,6 +244,59 @@ class TestRouteRest(BaseDocumentTestRest):
 
         self.assertEqual(
             self.waypoint.locales[0].title, doc.locales[0].title_prefix)
+
+        # check that a link for intersecting areas is created
+        links = self.session.query(AreaAssociation). \
+            filter(
+                AreaAssociation.document_id == doc.document_id). \
+            all()
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].area_id, self.area1.document_id)
+
+    def test_post_default_geom_multi_line(self):
+        body = {
+            'main_waypoint_id': self.waypoint.document_id,
+            'activities': ['hiking', 'skitouring'],
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom_detail':
+                    '{"type": "MultiLineString", "coordinates": ' +
+                    '[[[635956, 5723604], [635966, 5723644]], '
+                    '[[635966, 5723614], [635976, 5723654]]]}'
+            },
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'gear': 'shoes'}
+            ]
+        }
+        body, doc = self.post_success(body)
+        self.assertIsNotNone(doc.geometry.geom)
+        self.assertIsNotNone(doc.geometry.geom_detail)
+        self._assert_default_geometry(body)
+
+    def test_post_default_geom_from_main_wp(self):
+        body = {
+            'main_waypoint_id': self.waypoint.document_id,
+            'activities': ['hiking', 'skitouring'],
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'gear': 'shoes'}
+            ]
+        }
+        body, doc = self.post_success(body)
+        self.assertIsNotNone(doc.geometry.geom)
+        self.assertIsNone(doc.geometry.geom_detail)
+        self._assert_default_geometry(body, x=635956, y=5723604)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -332,12 +400,14 @@ class TestRouteRest(BaseDocumentTestRest):
                 ],
                 'geometry': {
                     'version': self.route.geometry.version,
-                    'geom': '{"type": "LineString", "coordinates": ' +
-                            '[[635956, 5723604], [635976, 5723654]]}'
+                    'geom_detail':
+                        '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635976, 5723654]]}'
                 }
             }
         }
         (body, route) = self.put_success_all(body, self.route)
+        self._assert_default_geometry(body, x=635966, y=5723629)
 
         self.assertEquals(route.elevation_max, 1600)
         locale_en = route.get_locale('en')
@@ -388,6 +458,66 @@ class TestRouteRest(BaseDocumentTestRest):
 
         self.assertEquals(route.elevation_max, 1600)
 
+    def test_put_success_new_track_with_default_geom(self):
+        """Test that a provided default geometry (`geom`) is used instead of
+        obtaining the geom from a track (`geom_detail`).
+        """
+        body = {
+            'message': 'Changing figures',
+            'document': {
+                'document_id': self.route.document_id,
+                'version': self.route.version,
+                'activities': ['skitouring'],
+                'elevation_min': 700,
+                'elevation_max': 1600,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'durations': ['1'],
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...', 'gear': 'paraglider',
+                     'version': self.locale_en.version,
+                     'title_prefix': 'Should be ignored'}
+                ],
+                'geometry': {
+                    'version': self.route.geometry.version,
+                    'geom_detail':
+                        '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635976, 5723654]]}',
+                    'geom':
+                        '{"type": "Point", "coordinates": [635000, 5723000]}'
+                }
+            }
+        }
+        (body, route) = self.put_success_figures_only(body, self.route)
+        self._assert_default_geometry(body, x=635000, y=5723000)
+
+    def test_put_success_update_default_geom_main_wp_changed(self):
+        """Test that the default geom is updated when the main waypoint changes
+        and no track exists.
+        """
+        body = {
+            'message': 'Changing figures',
+            'document': {
+                'document_id': self.route2.document_id,
+                'version': self.route2.version,
+                'main_waypoint_id': self.waypoint.document_id,
+                'activities': ['skitouring'],
+                'elevation_min': 700,
+                'elevation_max': 1600,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'durations': ['1'],
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...', 'gear': 'paraglider',
+                     'version': self.route2.locales[0].version}
+                ]
+            }
+        }
+        (body, route) = self.put_success_figures_only(body, self.route2)
+        self._assert_default_geometry(body, x=635956, y=5723604)
+
     def test_put_success_main_wp_changed(self):
         body = {
             'message': 'Changing figures',
@@ -409,6 +539,9 @@ class TestRouteRest(BaseDocumentTestRest):
             }
         }
         (body, route) = self.put_success_figures_only(body, self.route)
+        # tests that the default geometry has not changed (main wp has changed
+        # but the route has a track)
+        self._assert_default_geometry(body)
 
         self.assertEqual(route.main_waypoint_id, self.waypoint.document_id)
         locale_en = route.get_locale('en')
@@ -491,15 +624,27 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertIsNotNone(body.get('geometry'))
         geometry = body.get('geometry')
         self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom'))
+        self.assertIsNotNone(geometry.get('geom_detail'))
 
-        geom = geometry.get('geom')
+        geom = geometry.get('geom_detail')
         line = shape(json.loads(geom))
         self.assertIsInstance(line, LineString)
         self.assertAlmostEqual(line.coords[0][0], 635956)
         self.assertAlmostEqual(line.coords[0][1], 5723604)
         self.assertAlmostEqual(line.coords[1][0], 635966)
         self.assertAlmostEqual(line.coords[1][1], 5723644)
+
+    def _assert_default_geometry(self, body, x=635961, y=5723624):
+        self.assertIsNotNone(body.get('geometry'))
+        geometry = body.get('geometry')
+        self.assertIsNotNone(geometry.get('version'))
+        self.assertIsNotNone(geometry.get('geom'))
+
+        geom = geometry.get('geom')
+        point = shape(json.loads(geom))
+        self.assertIsInstance(point, Point)
+        self.assertAlmostEqual(point.x, x)
+        self.assertAlmostEqual(point.y, y)
 
     def test_update_prefix_title(self):
         self.route.locales.append(RouteLocale(
@@ -542,7 +687,9 @@ class TestRouteRest(BaseDocumentTestRest):
         self.route.locales.append(self.locale_fr)
 
         self.route.geometry = DocumentGeometry(
-            geom='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)')
+            geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
+            geom='SRID=3857;POINT(635961 5723624)'
+        )
 
         self.session.add(self.route)
         self.session.flush()
@@ -555,8 +702,19 @@ class TestRouteRest(BaseDocumentTestRest):
 
         self.route2 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
-            height_diff_up=800, height_diff_down=800, durations='1')
+            height_diff_up=800, height_diff_down=800, durations='1',
+            locales=[
+                RouteLocale(
+                    lang='en', title='Mont Blanc from the air',
+                    description='...', gear='paraglider'),
+                RouteLocale(
+                    lang='fr', title='Mont Blanc du ciel', description='...',
+                    gear='paraglider')]
+        )
         self.session.add(self.route2)
+        self.session.flush()
+        DocumentRest.create_new_version(self.route2, user_id)
+
         self.route3 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
             height_diff_up=800, height_diff_down=800, durations='1')
@@ -571,6 +729,15 @@ class TestRouteRest(BaseDocumentTestRest):
             lang='fr', title='Mont Blanc du ciel', description='...',
             gear='paraglider'))
         self.session.add(self.route4)
+
+        # add a map
+        self.session.add(TopoMap(
+            code='3232ET', editor='IGN', scale='25000',
+            locales=[
+                DocumentLocale(lang='fr', title='Belley')
+            ],
+            geometry=DocumentGeometry(geom_detail='SRID=3857;POLYGON((635900 5723600, 635900 5723700, 636000 5723700, 636000 5723600, 635900 5723600))')  # noqa
+        ))
 
         # add some associations
         self.waypoint = Waypoint(
@@ -609,4 +776,21 @@ class TestRouteRest(BaseDocumentTestRest):
         self.session.add(Association(
             parent_document_id=self.route.document_id,
             child_document_id=self.outing.document_id))
+        self.session.flush()
+
+        # add areas
+        self.area1 = Area(
+            area_type='range',
+            geometry=DocumentGeometry(
+                geom_detail='SRID=3857;POLYGON((635900 5723600, 635900 5723700, 636000 5723700, 636000 5723600, 635900 5723600))'  # noqa
+            )
+        )
+        self.area2 = Area(
+            area_type='range',
+            locales=[
+                DocumentLocale(lang='fr', title='France')
+            ]
+        )
+
+        self.session.add_all([self.area1, self.area2])
         self.session.flush()

@@ -78,7 +78,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'code': '3432OT',
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
+                'geom_detail': '{"type": "Point", "coordinates": [635956, 5723604]}'  # noqa
             },
             'locales': [
                 {'lang': 'en'}
@@ -98,7 +98,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'protected': True,
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
+                'geom_detail': '{"type": "Point", "coordinates": [635956, 5723604]}'  # noqa
             },
             'locales': [
                 {'lang': 'en', 'title': 'Lac d\'Annecy'}
@@ -116,7 +116,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'code': '3432OT',
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
+                'geom_detail': '{"type": "Point", "coordinates": [635956, 5723604]}'  # noqa
             },
             'locales': [
                 {'lang': 'en', 'title': 'Lac d\'Annecy'}
@@ -138,7 +138,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
 
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
-        self.assertIsNotNone(archive_geometry.geom)
+        self.assertIsNotNone(archive_geometry.geom_detail)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -218,7 +218,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 'code': '3433OT',
                 'geometry': {
                     'version': self.map1.geometry.version,
-                    'geom': '{"type": "Point", "coordinates": [1, 2]}'
+                    'geom_detail': '{"type": "Point", "coordinates": [1, 2]}'  # noqa
                 },
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
@@ -316,9 +316,9 @@ class TestTopoMapRest(BaseDocumentTestRest):
         self.assertIsNotNone(body.get('geometry'))
         geometry = body.get('geometry')
         self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom'))
+        self.assertIsNotNone(geometry.get('geom_detail'))
 
-        geom = geometry.get('geom')
+        geom = geometry.get('geom_detail')
         point = shape(json.loads(geom))
         self.assertIsInstance(point, Point)
         self.assertAlmostEqual(point.x, 635956)
@@ -334,7 +334,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         self.map1.locales.append(self.locale_fr)
 
         self.map1.geometry = DocumentGeometry(
-            geom='SRID=3857;POINT(635956 5723604)')
+            geom_detail='SRID=3857;POINT(635956 5723604)')
 
         self.session.add(self.map1)
         self.session.flush()

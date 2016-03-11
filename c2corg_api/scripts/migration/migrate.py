@@ -11,6 +11,8 @@ from c2corg_api.scripts.migration.documents.user_profiles import \
     MigrateUserProfiles
 from c2corg_api.scripts.migration.documents.outings import MigrateOutings
 from c2corg_api.scripts.migration.documents.images import MigrateImages
+from c2corg_api.scripts.migration.set_default_geometries import \
+    SetDefaultGeometries
 from sqlalchemy import engine_from_config
 
 import os
@@ -74,6 +76,7 @@ def main(argv=sys.argv):
     MigrateImages(connection_source, session, batch_size).migrate()
     MigrateVersions(connection_source, session, batch_size).migrate()
     MigrateAssociations(connection_source, session, batch_size).migrate()
+    SetDefaultGeometries(connection_source, session, batch_size).migrate()
     MigrateAreaAssociations(connection_source, session, batch_size).migrate()
     UpdateSequences(connection_source, session, batch_size).migrate()
 

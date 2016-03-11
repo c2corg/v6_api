@@ -11,7 +11,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, load_only, joinedload
 from sqlalchemy.schema import PrimaryKeyConstraint
 from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import and_
+from sqlalchemy.sql.expression import and_, or_
 
 
 class AreaAssociation(Base):
@@ -71,9 +71,13 @@ def update_area(area, reset=False):
                 Document.document_id == DocumentGeometry.document_id,
                 Document.type != AREA_TYPE)). \
         filter(
-            DocumentGeometry.geom.intersects(
-                DBSession.query(DocumentGeometry.geom).filter(
-                    DocumentGeometry.document_id == area.document_id)
+            or_(
+                DocumentGeometry.geom.intersects(
+                    DBSession.query(DocumentGeometry.geom_detail).filter(
+                        DocumentGeometry.document_id == area.document_id)),
+                DocumentGeometry.geom_detail.intersects(
+                    DBSession.query(DocumentGeometry.geom_detail).filter(
+                        DocumentGeometry.document_id == area.document_id))
             ))
 
     DBSession.execute(
@@ -104,9 +108,13 @@ def update_areas_for_document(document, reset=False):
             Area.__table__,
             Area.document_id == DocumentGeometry.document_id). \
         filter(
-            DocumentGeometry.geom.intersects(
-                DBSession.query(DocumentGeometry.geom).filter(
-                    DocumentGeometry.document_id == document.document_id)
+            or_(
+                DocumentGeometry.geom_detail.intersects(
+                    DBSession.query(DocumentGeometry.geom).filter(
+                        DocumentGeometry.document_id == document.document_id)),
+                DocumentGeometry.geom_detail.intersects(
+                    DBSession.query(DocumentGeometry.geom_detail).filter(
+                        DocumentGeometry.document_id == document.document_id))
             ))
 
     DBSession.execute(

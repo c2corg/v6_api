@@ -1,26 +1,25 @@
 import functools
-
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
-from c2corg_api.models.document import ArchiveDocument, Document
+from c2corg_api.models.document import ArchiveDocument, Document, \
+    DocumentGeometry
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.outing import schema_outing, Outing, \
     schema_create_outing, schema_update_outing, ArchiveOuting, \
     ArchiveOutingLocale
 from c2corg_api.models.route import Route, ROUTE_TYPE
-from c2corg_api.models.user import User, schema_association_user
-from c2corg_common.fields_outing import fields_outing
-from cornice.resource import resource, view
-
-
 from c2corg_api.models.schema_utils import restrict_schema
+from c2corg_api.models.user import User, schema_association_user
+from c2corg_api.models.utils import get_mid_point
+from c2corg_api.views import cors_policy, restricted_json_view, to_json_dict
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, make_schema_adaptor, get_all_fields
-from c2corg_api.views import cors_policy, restricted_json_view, to_json_dict
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param, check_get_for_integer_property
 from c2corg_common.attributes import activities
+from c2corg_common.fields_outing import fields_outing
+from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPForbidden
 from sqlalchemy.orm import load_only
 from sqlalchemy.orm.util import aliased
@@ -114,8 +113,13 @@ class OutingRest(DocumentRest):
             self.request.validated['route_id'],
             self.request.validated['user_ids']
         )
+        set_default_geom = functools.partial(
+            set_default_geometry,
+            self.request.validated['route_id']
+        )
         return self._collection_post(
             schema_outing, document_field='outing',
+            before_add=set_default_geom,
             after_add=create_associations)
 
     @restricted_json_view(schema=schema_update_outing,
@@ -129,7 +133,8 @@ class OutingRest(DocumentRest):
                 # but a normal user can only change an outing that they are
                 # associated to
                 raise HTTPForbidden('No permission to change this outing')
-        return self._put(Outing, schema_outing)
+        return self._put(
+            Outing, schema_outing, before_update=update_default_geometry)
 
     def _has_permission(self, user_id, outing_id):
         """Check if the user with the given id has permission to change an
@@ -231,6 +236,38 @@ def set_author(outings, lang):
 
     for outing in outings:
         outing.author = author_for_outings.get(outing.document_id)
+
+
+def set_default_geometry(route_id, outing):
+    """When creating a new outing, set the default geometry to the middle point
+    of a given track, if not to the geometry of the associated route.
+    """
+    if outing.geometry is not None and outing.geometry.geom is not None:
+        # default geometry already set
+        return
+
+    if outing.geometry is not None and outing.geometry.geom_detail is not None:
+        # track is given, obtain a default point from the track
+        outing.geometry.geom = get_mid_point(outing.geometry.geom_detail)
+    elif route_id:
+        # get default point from route
+        route_point = DBSession.query(DocumentGeometry.geom).filter(
+            DocumentGeometry.document_id == route_id).scalar()
+        if route_point is not None:
+            outing.geometry = DocumentGeometry(geom=route_point)
+
+
+def update_default_geometry(outing, outing_in):
+    """When updating an outing, set the default geometry to the middle point
+    of a new track, or directly update with a given geometry.
+    """
+    geometry_in = outing_in.geometry
+    if geometry_in is not None and geometry_in.geom is not None:
+        # default geom is manually set in the request
+        return
+    elif geometry_in is not None and geometry_in.geom_detail is not None:
+        # update the default geom with the new track
+        outing.geometry.geom = get_mid_point(outing.geometry.geom_detail)
 
 
 @resource(path='/outings/{id}/{lang}/{version_id}', cors_policy=cors_policy)

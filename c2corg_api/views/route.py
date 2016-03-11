@@ -1,8 +1,11 @@
+import functools
+
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
-from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.outing import schema_association_outing, Outing
 from c2corg_api.views.outing import set_author
+from c2corg_api.models.utils import get_mid_point
 from cornice.resource import resource, view
 
 from c2corg_api.models.route import Route, schema_route, schema_update_route, \
@@ -58,12 +61,20 @@ class RouteRest(DocumentRest):
     @restricted_json_view(schema=schema_route,
                           validators=validate_route_create)
     def collection_post(self):
-        return self._collection_post(schema_route, after_add=init_title_prefix)
+        return self._collection_post(
+            schema_route, before_add=set_default_geometry,
+            after_add=init_title_prefix)
 
     @restricted_json_view(schema=schema_update_route,
                           validators=[validate_id, validate_route_update])
     def put(self):
-        return self._put(Route, schema_route, after_update=update_title_prefix)
+        old_main_waypoint_id = DBSession.query(Route.main_waypoint_id). \
+            filter(Route.document_id == self.request.validated['id']).scalar()
+        return self._put(
+            Route, schema_route,
+            before_update=functools.partial(
+                update_default_geometry, old_main_waypoint_id),
+            after_update=update_title_prefix)
 
     @staticmethod
     def set_recent_outings(route, lang):
@@ -111,6 +122,53 @@ class RouteVersionRest(DocumentRest):
     def get(self):
         return self._get_version(
             ArchiveRoute, ArchiveRouteLocale, schema_route, schema_adaptor)
+
+
+def set_default_geometry(route):
+    """When creating a new route, set the default geometry to the middle point
+    of a given track, if not to the geometry of the associated main waypoint.
+    """
+    if route.geometry is not None and route.geometry.geom is not None:
+        # default geometry already set
+        return
+
+    if route.geometry is not None and route.geometry.geom_detail is not None:
+        # track is given, obtain a default point from the track
+        route.geometry.geom = get_mid_point(route.geometry.geom_detail)
+    elif route.main_waypoint_id:
+        # get default point from main waypoint
+        main_wp_point = DBSession.query(DocumentGeometry.geom).filter(
+            DocumentGeometry.document_id == route.main_waypoint_id).scalar()
+        if main_wp_point is not None:
+            route.geometry = DocumentGeometry(geom=main_wp_point)
+
+
+def update_default_geometry(old_main_waypoint_id, route, route_in):
+    geometry_in = route_in.geometry
+    if geometry_in is not None and geometry_in.geom is not None:
+        # default geom is manually set in the request
+        return
+    elif geometry_in is not None and geometry_in.geom_detail is not None:
+        # update the default geom with the new track
+        route.geometry.geom = get_mid_point(route.geometry.geom_detail)
+    elif main_waypoint_has_changed(route_in, old_main_waypoint_id):
+        # when the main waypoint has changed, use the waypoint geom
+        main_wp_point = DBSession.query(DocumentGeometry.geom).filter(
+            DocumentGeometry.document_id == route.main_waypoint_id).scalar()
+        if main_wp_point is not None:
+            if route.geometry is not None:
+                if route.geometry.geom_detail is None:
+                    # only update if no own track
+                    route.geometry.geom = main_wp_point
+            else:
+                route.geometry = DocumentGeometry(geom=main_wp_point)
+
+
+def main_waypoint_has_changed(route, old_main_waypoint_id):
+    if route.main_waypoint_id is None:
+        return False
+    else:
+        return old_main_waypoint_id != route.main_waypoint_id
 
 
 def init_title_prefix(route):

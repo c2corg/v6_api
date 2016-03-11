@@ -19,6 +19,7 @@ from c2corg_api.models.document import (
     DocumentLocale)
 from sqlalchemy.orm import load_only, joinedload
 from c2corg_common import document_types
+from sqlalchemy.sql.expression import or_
 
 MAP_TYPE = document_types.MAP_TYPE
 
@@ -116,9 +117,13 @@ def get_maps(document, lang):
             DocumentLocale.lang, DocumentLocale.title,
             DocumentLocale.version)). \
         filter(
-            DocumentGeometry.geom.intersects(
-                DBSession.query(DocumentGeometry.geom).filter(
-                    DocumentGeometry.document_id == document.document_id)
+            or_(
+                DocumentGeometry.geom_detail.intersects(
+                    DBSession.query(DocumentGeometry.geom).filter(
+                        DocumentGeometry.document_id == document.document_id)),
+                DocumentGeometry.geom_detail.intersects(
+                    DBSession.query(DocumentGeometry.geom_detail).filter(
+                        DocumentGeometry.document_id == document.document_id))
             )). \
         all()
 

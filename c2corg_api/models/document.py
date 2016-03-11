@@ -266,18 +266,18 @@ class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
 class _DocumentGeometryMixin(object):
     version = Column(Integer, nullable=False)
 
-    # TODO geom should be 3d?
     @declared_attr
     def geom(self):
         return Column(
-            Geometry(geometry_type='GEOMETRY', srid=3857, management=True),
+            Geometry(geometry_type='POINT', srid=3857, management=True),
             info={
                 'colanderalchemy': {
-                    'typ': colander_ext.Geometry('GEOMETRY', srid=3857)
+                    'typ': colander_ext.Geometry('POINT', srid=3857)
                 }
             }
         )
 
+    # TODO geom_detail should be 3d for tracks?
     @declared_attr
     def geom_detail(self):
         return Column(
@@ -316,26 +316,37 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
         copy_attributes(other, self, DocumentGeometry._ATTRIBUTES)
 
     def almost_equals(self, other):
+        return self._almost_equals(self.geom, other.geom) and \
+               self._almost_equals(self.geom_detail, other.geom_detail)
+
+    def _almost_equals(self, geom, other_geom):
+        if geom is None and other_geom is None:
+            return True
+        elif geom is not None and other_geom is None:
+            return False
+        elif geom is None and other_geom is not None:
+            return False
+
         g1 = None
         proj1 = None
-        if isinstance(self.geom, geoalchemy2.WKBElement):
-            g1 = geoalchemy2.shape.to_shape(self.geom)
-            proj1 = self.geom.srid
+        if isinstance(geom, geoalchemy2.WKBElement):
+            g1 = geoalchemy2.shape.to_shape(geom)
+            proj1 = geom.srid
         else:
             # WKT are used in the tests.
-            split1 = str.split(self.geom, ';')
+            split1 = str.split(geom, ';')
             proj1 = int(str.split(split1[0], '=')[1])
             str1 = split1[1]
             g1 = wkt.loads(str1)
 
         g2 = None
         proj2 = None
-        if isinstance(other.geom, geoalchemy2.WKBElement):
-            g2 = geoalchemy2.shape.to_shape(other.geom)
-            proj2 = other.geom.srid
+        if isinstance(other_geom, geoalchemy2.WKBElement):
+            g2 = geoalchemy2.shape.to_shape(other_geom)
+            proj2 = other_geom.srid
         else:
             # WKT are used in the tests.
-            split2 = str.split(other.geom, ';')
+            split2 = str.split(other_geom, ';')
             proj2 = int(str.split(split2[0], '=')[1])
             str2 = split2[1]
             g2 = wkt.loads(str2)
