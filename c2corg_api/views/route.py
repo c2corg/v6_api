@@ -4,7 +4,8 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.outing import schema_association_outing, Outing
-from c2corg_api.views.outing import set_author, get_mid_point
+from c2corg_api.views.outing import set_author
+from c2corg_api.models.utils import get_mid_point
 from cornice.resource import resource, view
 
 from c2corg_api.models.route import Route, schema_route, schema_update_route, \

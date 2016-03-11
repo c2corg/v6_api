@@ -1,6 +1,4 @@
 import functools
-import geoalchemy2
-
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import ArchiveDocument, Document, \
@@ -10,22 +8,19 @@ from c2corg_api.models.outing import schema_outing, Outing, \
     schema_create_outing, schema_update_outing, ArchiveOuting, \
     ArchiveOutingLocale
 from c2corg_api.models.route import Route, ROUTE_TYPE
-from c2corg_api.models.user import User, schema_association_user
-from c2corg_common.fields_outing import fields_outing
-from cornice.resource import resource, view
-
-
 from c2corg_api.models.schema_utils import restrict_schema
+from c2corg_api.models.user import User, schema_association_user
+from c2corg_api.models.utils import get_mid_point
+from c2corg_api.views import cors_policy, restricted_json_view, to_json_dict
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, make_schema_adaptor, get_all_fields
-from c2corg_api.views import cors_policy, restricted_json_view, to_json_dict
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param, check_get_for_integer_property
 from c2corg_common.attributes import activities
+from c2corg_common.fields_outing import fields_outing
+from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPForbidden
-from shapely.geometry.linestring import LineString
-from shapely.geometry.multilinestring import MultiLineString
 from sqlalchemy.orm import load_only
 from sqlalchemy.orm.util import aliased
 from sqlalchemy.sql.expression import exists, and_, over
@@ -273,19 +268,6 @@ def update_default_geometry(outing, outing_in):
     elif geometry_in is not None and geometry_in.geom_detail is not None:
         # update the default geom with the new track
         outing.geometry.geom = get_mid_point(outing.geometry.geom_detail)
-
-
-def get_mid_point(wkb_track):
-    assert(isinstance(wkb_track, geoalchemy2.WKBElement))
-    track = geoalchemy2.shape.to_shape(wkb_track)
-    if isinstance(track, LineString):
-        return geoalchemy2.shape.from_shape(
-            track.interpolate(0.5, True), srid=3857)
-    elif isinstance(track, MultiLineString) and track.geoms:
-        return geoalchemy2.shape.from_shape(
-            track.geoms[0].interpolate(0.5, True), srid=3857)
-    else:
-        return None
 
 
 @resource(path='/outings/{id}/{lang}/{version_id}', cors_policy=cors_policy)

@@ -1,4 +1,6 @@
+import geoalchemy2
 from geoalchemy2 import WKBElement
+from shapely.geometry import LineString, MultiLineString
 from sqlalchemy.dialects import postgresql
 import sqlalchemy as sa
 import re
@@ -51,3 +53,19 @@ def extend_dict(d1, d2):
     """
     d1.update(d2)
     return d1
+
+
+def get_mid_point(wkb_track):
+    """Get the point in the middle of a track. If the track is a
+    MultiLineString the point in the middle of the first line is taken.
+    """
+    assert(isinstance(wkb_track, geoalchemy2.WKBElement))
+    track = geoalchemy2.shape.to_shape(wkb_track)
+    if isinstance(track, LineString):
+        return geoalchemy2.shape.from_shape(
+            track.interpolate(0.5, True), srid=3857)
+    elif isinstance(track, MultiLineString) and track.geoms:
+        return geoalchemy2.shape.from_shape(
+            track.geoms[0].interpolate(0.5, True), srid=3857)
+    else:
+        return None
