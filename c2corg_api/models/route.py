@@ -314,5 +314,6 @@ schema_route = SQLAlchemySchemaNode(
 
 schema_update_route = get_update_schema(schema_route)
 schema_association_route = restrict_schema(schema_route, [
-    'locales.title', 'elevation_min', 'elevation_max', 'activities'
+    'locales.title', 'locales.title_prefix', 'elevation_min', 'elevation_max',
+    'activities'
 ])

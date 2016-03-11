@@ -114,7 +114,8 @@ def get_associations(document, lang):
                 Route.document_id, Route.activities, Route.elevation_min,
                 Route.elevation_max, Route.version)). \
             options(joinedload(Waypoint.locales).load_only(
-                RouteLocale.lang, RouteLocale.title, RouteLocale.version))
+                RouteLocale.lang, RouteLocale.title, RouteLocale.title_prefix,
+                RouteLocale.version))
 
     routes = limit_route_fields(
         DBSession.query(Route).
