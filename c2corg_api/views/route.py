@@ -22,6 +22,7 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
 from c2corg_common.fields_route import fields_route
 from c2corg_common.attributes import activities
 from sqlalchemy.orm import load_only, joinedload
+from sqlalchemy.sql.expression import exists, and_
 
 validate_route_create = make_validator_create(
     fields_route, 'activities', activities)
@@ -63,7 +64,7 @@ class RouteRest(DocumentRest):
     def collection_post(self):
         return self._collection_post(
             schema_route, before_add=set_default_geometry,
-            after_add=init_title_prefix)
+            after_add=after_route_add)
 
     @restricted_json_view(schema=schema_update_route,
                           validators=[validate_id, validate_route_update])
@@ -74,7 +75,7 @@ class RouteRest(DocumentRest):
             Route, schema_route,
             before_update=functools.partial(
                 update_default_geometry, old_main_waypoint_id),
-            after_update=update_title_prefix)
+            after_update=after_route_update)
 
     @staticmethod
     def set_recent_outings(route, lang):
@@ -171,8 +172,35 @@ def main_waypoint_has_changed(route, old_main_waypoint_id):
         return old_main_waypoint_id != route.main_waypoint_id
 
 
+def after_route_add(route):
+    create_main_waypoint_association(route)
+    init_title_prefix(route)
+
+
+def create_main_waypoint_association(route, check_first=False):
+    """Create an association between the newly created route and the main
+    waypoint.
+    """
+    if route.main_waypoint_id:
+        if check_first:
+            association_exists = exists().where(and_(
+                Association.parent_document_id == route.main_waypoint_id,
+                Association.child_document_id == route.document_id,
+            ))
+            if DBSession.query(association_exists).scalar():
+                return
+        DBSession.add(Association(
+            parent_document_id=route.main_waypoint_id,
+            child_document_id=route.document_id))
+
+
 def init_title_prefix(route):
     update_title_prefix(route, create=True)
+
+
+def after_route_update(route, update_types):
+    create_main_waypoint_association(route, check_first=True)
+    update_title_prefix(route)
 
 
 def update_title_prefix(route, create=False):

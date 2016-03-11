@@ -253,6 +253,11 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(len(links), 1)
         self.assertEqual(links[0].area_id, self.area1.document_id)
 
+        # check that a link to the main waypoint is created
+        association_main_wp = self.session.query(Association).get(
+            (self.waypoint.document_id, doc.document_id))
+        self.assertIsNotNone(association_main_wp)
+
     def test_post_default_geom_multi_line(self):
         body = {
             'main_waypoint_id': self.waypoint.document_id,
@@ -523,7 +528,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'message': 'Changing figures',
             'document': {
                 'document_id': self.route.document_id,
-                'main_waypoint_id': self.waypoint.document_id,
+                'main_waypoint_id': self.waypoint2.document_id,
                 'version': self.route.version,
                 'activities': ['skitouring'],
                 'elevation_min': 700,
@@ -543,10 +548,15 @@ class TestRouteRest(BaseDocumentTestRest):
         # but the route has a track)
         self._assert_default_geometry(body)
 
-        self.assertEqual(route.main_waypoint_id, self.waypoint.document_id)
+        self.assertEqual(route.main_waypoint_id, self.waypoint2.document_id)
         locale_en = route.get_locale('en')
         self.assertEqual(
-            locale_en.title_prefix, self.waypoint.get_locale('en').title)
+            locale_en.title_prefix, self.waypoint2.get_locale('en').title)
+
+        # check that a link to the new main waypoint is created
+        association_main_wp = self.session.query(Association).get(
+            (self.waypoint2.document_id, route.document_id))
+        self.assertIsNotNone(association_main_wp)
 
     def test_put_success_lang_only(self):
         body = {
@@ -751,6 +761,14 @@ class TestRouteRest(BaseDocumentTestRest):
             lang='fr', title='Mont Granier (fr)', description='...',
             access='ouai'))
         self.session.add(self.waypoint)
+        self.waypoint2 = Waypoint(
+            waypoint_type='summit', elevation=4,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'))
+        self.waypoint2.locales.append(WaypointLocale(
+            lang='en', title='Mont Granier (en)', description='...',
+            access='yep'))
+        self.session.add(self.waypoint2)
         self.session.flush()
         self.session.add(Association(
             parent_document_id=self.route.document_id,
