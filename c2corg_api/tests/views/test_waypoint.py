@@ -105,6 +105,16 @@ class TestWaypointRest(BaseDocumentTestRest):
             self.outing.document_id,
             recent_outings['outings'][0].get('document_id'))
 
+    def test_get_no_associations(self):
+        response = self.app.get(self._prefix + '/' +
+                                str(self.waypoint.document_id) + '?a=0',
+                                status=200)
+        body = response.json
+
+        self.assertNotIn('associations', body)
+        self.assertIn('maps', body)
+        self.assertNotIn('areas', body)
+
     def test_get_version(self):
         self.get_version(self.waypoint, self.waypoint_version)
 
