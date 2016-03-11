@@ -82,8 +82,11 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         linked_routes = associations.get('routes')
         self.assertEqual(1, len(linked_routes))
+        linked_route = linked_routes[0]
         self.assertEqual(
-            self.route.document_id, linked_routes[0].get('document_id'))
+            self.route.document_id, linked_route.get('document_id'))
+        self.assertEqual(
+            linked_route.get('locales')[0].get('title_prefix'), 'Mont Blanc :')
 
         self.assertIn('maps', body)
         topo_map = body.get('maps')[0]
@@ -736,7 +739,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         )
         self.route.locales.append(RouteLocale(
             lang='en', title='Mont Blanc from the air', description='...',
-            gear='paraglider'))
+            title_prefix='Mont Blanc :', gear='paraglider'))
         self.session.add(self.route)
         self.session.flush()
         self.session.add(Association(
