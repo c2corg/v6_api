@@ -147,7 +147,7 @@ class WaypointVersionRest(DocumentRest):
             schema_adaptor)
 
 
-def update_linked_route_titles(waypoint, update_types):
+def update_linked_route_titles(waypoint, update_types, user_id):
     """When a waypoint is the main waypoint of a route, the field
     `title_prefix`, which caches the waypoint name, has to be updated.
     This method takes care of updating all routes, that the waypoint is

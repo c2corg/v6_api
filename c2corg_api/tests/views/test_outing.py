@@ -1,7 +1,7 @@
 import datetime
 import json
 
-from c2corg_api.models.association import Association
+from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, ArchiveOuting, \
     ArchiveOutingLocale, OutingLocale
@@ -343,9 +343,25 @@ class TestOutingRest(BaseDocumentTestRest):
             (self.route.document_id, doc.document_id))
         self.assertIsNotNone(association_route)
 
+        association_route_log = self.session.query(AssociationLog). \
+            filter(AssociationLog.parent_document_id ==
+                   self.route.document_id). \
+            filter(AssociationLog.child_document_id ==
+                   doc.document_id). \
+            first()
+        self.assertIsNotNone(association_route_log)
+
         association_user = self.session.query(Association).get(
             (self.global_userids['contributor'], doc.document_id))
         self.assertIsNotNone(association_user)
+
+        association_user_log = self.session.query(AssociationLog). \
+            filter(AssociationLog.parent_document_id ==
+                   self.global_userids['contributor']). \
+            filter(AssociationLog.child_document_id ==
+                   doc.document_id). \
+            first()
+        self.assertIsNotNone(association_user_log)
 
     def test_post_set_default_geom_from_route(self):
         body = {

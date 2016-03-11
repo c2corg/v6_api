@@ -1,6 +1,6 @@
 import functools
 from c2corg_api.models import DBSession
-from c2corg_api.models.association import Association
+from c2corg_api.models.association import Association, add_association
 from c2corg_api.models.document import ArchiveDocument, Document, \
     DocumentGeometry
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
@@ -238,7 +238,7 @@ def set_author(outings, lang):
         outing.author = author_for_outings.get(outing.document_id)
 
 
-def set_default_geometry(route_id, outing):
+def set_default_geometry(route_id, outing, user_id):
     """When creating a new outing, set the default geometry to the middle point
     of a given track, if not to the geometry of the associated route.
     """
@@ -257,7 +257,7 @@ def set_default_geometry(route_id, outing):
             outing.geometry = DocumentGeometry(geom=route_point)
 
 
-def update_default_geometry(outing, outing_in):
+def update_default_geometry(outing, outing_in, user_id):
     """When updating an outing, set the default geometry to the middle point
     of a new track, or directly update with a given geometry.
     """
@@ -279,12 +279,10 @@ class OutingVersionRest(DocumentRest):
             ArchiveOuting, ArchiveOutingLocale, schema_outing, schema_adaptor)
 
 
-def add_associations(route_id, user_ids, outing):
+def add_associations(route_id, user_ids, outing, user_id):
     """When creating a new outing, associations to the linked route
     and users are set up at the same time.
     """
-    DBSession.add(Association(
-        parent_document_id=route_id, child_document_id=outing.document_id))
+    add_association(route_id, outing.document_id, user_id)
     for user_id in user_ids:
-        DBSession.add(Association(
-            parent_document_id=user_id, child_document_id=outing.document_id))
+        add_association(user_id, outing.document_id, user_id)

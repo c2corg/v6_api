@@ -3,7 +3,7 @@ import json
 
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
-from c2corg_api.models.association import Association
+from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
@@ -257,6 +257,14 @@ class TestRouteRest(BaseDocumentTestRest):
         association_main_wp = self.session.query(Association).get(
             (self.waypoint.document_id, doc.document_id))
         self.assertIsNotNone(association_main_wp)
+
+        association_main_wp_log = self.session.query(AssociationLog). \
+            filter(AssociationLog.parent_document_id ==
+                   self.waypoint.document_id). \
+            filter(AssociationLog.child_document_id ==
+                   doc.document_id). \
+            first()
+        self.assertIsNotNone(association_main_wp_log)
 
     def test_post_default_geom_multi_line(self):
         body = {
@@ -557,6 +565,14 @@ class TestRouteRest(BaseDocumentTestRest):
         association_main_wp = self.session.query(Association).get(
             (self.waypoint2.document_id, route.document_id))
         self.assertIsNotNone(association_main_wp)
+
+        association_main_wp_log = self.session.query(AssociationLog). \
+            filter(AssociationLog.parent_document_id ==
+                   self.waypoint2.document_id). \
+            filter(AssociationLog.child_document_id ==
+                   route.document_id). \
+            first()
+        self.assertIsNotNone(association_main_wp_log)
 
     def test_put_success_lang_only(self):
         body = {
