@@ -1,11 +1,10 @@
 import functools
 
-import geoalchemy2
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.outing import schema_association_outing, Outing
-from c2corg_api.views.outing import set_author
+from c2corg_api.views.outing import set_author, get_mid_point
 from cornice.resource import resource, view
 
 from c2corg_api.models.route import Route, schema_route, schema_update_route, \
@@ -21,8 +20,6 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_preferred_lang_param
 from c2corg_common.fields_route import fields_route
 from c2corg_common.attributes import activities
-from shapely.geometry.linestring import LineString
-from shapely.geometry.multilinestring import MultiLineString
 from sqlalchemy.orm import load_only, joinedload
 
 validate_route_create = make_validator_create(
@@ -164,19 +161,6 @@ def update_default_geometry(old_main_waypoint_id, route, route_in):
                     route.geometry.geom = main_wp_point
             else:
                 route.geometry = DocumentGeometry(geom=main_wp_point)
-
-
-def get_mid_point(wkb_track):
-    assert(isinstance(wkb_track, geoalchemy2.WKBElement))
-    track = geoalchemy2.shape.to_shape(wkb_track)
-    if isinstance(track, LineString):
-        return geoalchemy2.shape.from_shape(
-            track.interpolate(0.5, True), srid=3857)
-    elif isinstance(track, MultiLineString) and track.geoms:
-        return geoalchemy2.shape.from_shape(
-            track.geoms[0].interpolate(0.5, True), srid=3857)
-    else:
-        return None
 
 
 def main_waypoint_has_changed(route, old_main_waypoint_id):

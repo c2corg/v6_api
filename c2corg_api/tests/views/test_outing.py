@@ -13,6 +13,7 @@ from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
+from shapely.geometry.point import Point
 
 
 class TestOutingRest(BaseDocumentTestRest):
@@ -322,6 +323,7 @@ class TestOutingRest(BaseDocumentTestRest):
         }
         body, doc = self.post_success(body)
         self._assert_geometry(body)
+        self._assert_default_geometry(body)
 
         version = doc.versions[0]
 
@@ -344,6 +346,27 @@ class TestOutingRest(BaseDocumentTestRest):
         association_user = self.session.query(Association).get(
             (self.global_userids['contributor'], doc.document_id))
         self.assertIsNotNone(association_user)
+
+    def test_post_set_default_geom_from_route(self):
+        body = {
+            'outing': {
+                'activities': ['skitouring'],
+                'date_start': '2016-01-01',
+                'date_end': '2016-01-02',
+                'elevation_min': 700,
+                'elevation_max': 1500,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'locales': [
+                    {'lang': 'en', 'title': 'Some nice loop',
+                     'weather': 'sunny'}
+                ]
+            },
+            'route_id': self.route.document_id,
+            'user_ids': [self.global_userids['contributor']]
+        }
+        body, doc = self.post_success(body)
+        self._assert_default_geometry(body, x=635961, y=5723624)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -517,6 +540,9 @@ class TestOutingRest(BaseDocumentTestRest):
         (body, outing) = self.put_success_all(
             body, self.outing, user='moderator')
 
+        # default geom is updated with the new track
+        self._assert_default_geometry(body, x=635966, y=5723629)
+
         self.assertEquals(outing.elevation_max, 1600)
         locale_en = outing.get_locale('en')
         self.assertEquals(locale_en.description, '...')
@@ -566,6 +592,40 @@ class TestOutingRest(BaseDocumentTestRest):
             body, self.outing, user='moderator')
 
         self.assertEquals(route.elevation_max, 1600)
+
+    def test_put_update_default_geom(self):
+        """Tests that the default geometry can be updated directly.
+        """
+        body = {
+            'message': 'Changing figures',
+            'document': {
+                'document_id': self.outing.document_id,
+                'version': self.outing.version,
+                'activities': ['skitouring'],
+                'date_start': '2016-01-01',
+                'date_end': '2016-01-01',
+                'elevation_min': 700,
+                'elevation_max': 1600,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...', 'weather': 'sunny',
+                     'version': self.locale_en.version}
+                ],
+                'geometry': {
+                    'version': self.outing.geometry.version,
+                    'geom_detail':
+                        '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635976, 5723654]]}',
+                    'geom':
+                        '{"type": "Point", "coordinates": [635000, 5723000]}'
+                }
+            }
+        }
+        (body, route) = self.put_success_figures_only(
+            body, self.outing, user='moderator')
+        self._assert_default_geometry(body, x=635000, y=5723000)
 
     def test_put_success_lang_only(self):
         body = {
@@ -657,6 +717,18 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertAlmostEqual(line.coords[1][0], 635966)
         self.assertAlmostEqual(line.coords[1][1], 5723644)
 
+    def _assert_default_geometry(self, body, x=635961, y=5723624):
+        self.assertIsNotNone(body.get('geometry'))
+        geometry = body.get('geometry')
+        self.assertIsNotNone(geometry.get('version'))
+        self.assertIsNotNone(geometry.get('geom'))
+
+        geom = geometry.get('geom')
+        point = shape(json.loads(geom))
+        self.assertIsInstance(point, Point)
+        self.assertAlmostEqual(point.x, x)
+        self.assertAlmostEqual(point.y, y)
+
     def _add_test_data(self):
         self.outing = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
@@ -722,7 +794,11 @@ class TestOutingRest(BaseDocumentTestRest):
         # add some associations
         self.route = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
-            height_diff_up=800, height_diff_down=800, durations='1')
+            height_diff_up=800, height_diff_down=800, durations='1',
+            geometry=DocumentGeometry(
+                geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',  # noqa
+                geom='SRID=3857;POINT(635961 5723624)'
+        ))
         self.route.locales.append(RouteLocale(
             lang='en', title='Mont Blanc from the air', description='...',
             gear='paraglider', title_prefix='Main waypoint title'))
