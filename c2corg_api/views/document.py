@@ -146,14 +146,17 @@ class DocumentRest(object):
         document = self._get_document(clazz, id, lang)
         set_available_langs([document])
 
-        self._set_associations(document, lang)
-        if set_custom_associations:
-            set_custom_associations(document, lang)
+        include_associations = self.request.GET.get('a', '1') == '1'
+        if include_associations:
+            self._set_associations(document, lang)
+            if set_custom_associations:
+                set_custom_associations(document, lang)
+
+            if include_areas:
+                self._set_areas(document, lang)
 
         if include_maps:
             self._set_maps(document, lang)
-        if include_areas:
-            self._set_areas(document, lang)
 
         if adapt_schema:
             schema = adapt_schema(schema, document)
