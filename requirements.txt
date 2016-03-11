@@ -26,7 +26,7 @@ git+https://github.com/tsauerwein/ColanderAlchemy.git@c2corg
 # c2corg_common project
 # for development use a local checkout
 # -e ../v6_common
-git+https://github.com/c2corg/v6_common.git@4f50e53
+git+https://github.com/c2corg/v6_common.git@5bf3030
 
 # Discourse API client
 git+https://github.com/c2corg/pydiscourse.git@65e398343bbbc74fdb71cca4637c9f808e5adfb2
