@@ -11,3 +11,4 @@ export discourse_url = http://localhost:3000
 export discourse_api_key = c1706802dbf1152c91492a9dbd5dc6e1480a1de57c25089401b3f2416d8f6a1a
 export mail_host = localhost
 export mail_port = 2525
+export mail_debug = 1
