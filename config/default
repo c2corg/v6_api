@@ -45,6 +45,11 @@ export migration_db_name = c2corg
 
 export logging_level = WARNING
 
+export mail_host = psemail.epfl.ch
+export mail_port = 25
+export mail_from = noreply@camptocamp.org
+export mail_debug = 0
+
 # FIXME
 export discourse_sso_secret = d836444a9e4084d5b224a60c208dce14
 export discourse_api_key = 4647c0d98e8beb793da099ff103b9793d8d4f94fff7cdd52d58391c6fa025845
