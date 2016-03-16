@@ -53,6 +53,7 @@ class _DocumentMixin(object):
     """
     version = Column(Integer, nullable=False, server_default='1')
     # move to metadata?
+    # TODO use FK
     protected = Column(Boolean)
     redirects_to = Column(Integer)
     quality = Column(

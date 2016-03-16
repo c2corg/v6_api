@@ -49,8 +49,10 @@ class DocumentRest(object):
             set_custom_fields):
         validated = self.request.validated
 
-        base_query = DBSession.query(clazz)
-        base_total_query = DBSession.query(getattr(clazz, 'document_id'))
+        base_query = DBSession.query(clazz).\
+            filter(getattr(clazz, 'redirects_to').is_(None))
+        base_total_query = DBSession.query(getattr(clazz, 'document_id')).\
+            filter(getattr(clazz, 'redirects_to').is_(None))
 
         if custom_filter:
             base_query = custom_filter(base_query)
@@ -144,6 +146,10 @@ class DocumentRest(object):
                      include_maps=True, include_areas=True,
                      set_custom_associations=None):
         document = self._get_document(clazz, id, lang)
+
+        if document.redirects_to:
+            return {'redirects_to': document.redirects_to}
+
         set_available_langs([document])
 
         include_associations = self.request.GET.get('a', '1') == '1'
@@ -233,6 +239,9 @@ class DocumentRest(object):
 
         # get the current version of the document
         document = self._get_document(clazz, id)
+        if document.redirects_to:
+            raise HTTPBadRequest('can not update merged document')
+
         self._check_versions(document, document_in)
 
         # remember the current version numbers of the document

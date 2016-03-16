@@ -127,6 +127,15 @@ class TestWaypointRest(BaseDocumentTestRest):
     def test_get_404(self):
         self.get_404()
 
+    def test_get_redirected_wp(self):
+        response = self.app.get(self._prefix + '/' +
+                                str(self.waypoint5.document_id),
+                                status=200)
+        body = response.json
+
+        self.assertIn('redirects_to', body)
+        self.assertEqual(body['redirects_to'], self.waypoint.document_id)
+
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
@@ -664,6 +673,31 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(meta_data_en.comment, 'Adding geom')
         self.assertIsNotNone(meta_data_en.written_at)
 
+    def test_put_merged_wp(self):
+        """Tests updating a waypoint with `redirected_to` set.
+        """
+        body_put = {
+            'message': 'Updating',
+            'document': {
+                'document_id': self.waypoint5.document_id,
+                'version': self.waypoint5.version,
+                'waypoint_type': 'summit',
+                'elevation': 3779,
+                'locales': []
+            }
+        }
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/' + str(self.waypoint5.document_id), body_put,
+            headers=headers, status=400)
+
+        errors = response.json.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(
+            errors[0].get('description'), 'can not update merged document')
+        self.assertEqual(errors[0].get('name'), 'Bad Request')
+
     def _assert_geometry(self, body, field='geom'):
         self.assertIsNotNone(body.get('geometry'))
         geometry = body.get('geometry')
@@ -740,6 +774,18 @@ class TestWaypointRest(BaseDocumentTestRest):
             lang='fr', title='Mont Granier', description='...',
             access='ouai'))
         self.session.add(self.waypoint4)
+        self.waypoint5 = Waypoint(
+            waypoint_type='summit', elevation=3,
+            redirects_to=self.waypoint.document_id,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'))
+        self.waypoint5.locales.append(WaypointLocale(
+            lang='en', title='Mont Granier', description='...',
+            access='yep'))
+        self.session.add(self.waypoint5)
+        self.session.flush()
+        DocumentRest.create_new_version(
+            self.waypoint5, self.global_userids['contributor'])
 
         # add some associations
         self.route = Route(
