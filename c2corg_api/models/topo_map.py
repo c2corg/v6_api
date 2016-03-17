@@ -107,6 +107,7 @@ def get_maps(document, lang):
 
     topo_maps = DBSession. \
         query(TopoMap). \
+        filter(TopoMap.redirects_to.is_(None)). \
         join(
             DocumentGeometry,
             TopoMap.document_id == DocumentGeometry.document_id). \

@@ -89,6 +89,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             linked_route.get('locales')[0].get('title_prefix'), 'Mont Blanc :')
 
         self.assertIn('maps', body)
+        self.assertEqual(1, len(body.get('maps')))
         topo_map = body.get('maps')[0]
         self.assertEqual(topo_map.get('code'), '3232ET')
         self.assertEqual(topo_map.get('locales')[0].get('title'), 'Belley')
@@ -835,7 +836,17 @@ class TestWaypointRest(BaseDocumentTestRest):
             child_document_id=self.outing.document_id))
 
         # add a map
+        topo_map = TopoMap(
+            code='3232ET', editor='IGN', scale='25000',
+            locales=[
+                DocumentLocale(lang='fr', title='Belley')
+            ],
+            geometry=DocumentGeometry(geom_detail='SRID=3857;POLYGON((611774.917032556 5706934.10657514,611774.917032556 5744215.5846397,642834.402570357 5744215.5846397,642834.402570357 5706934.10657514,611774.917032556 5706934.10657514))')  # noqa
+        )
+        self.session.add(topo_map)
+        self.session.flush()
         self.session.add(TopoMap(
+            redirects_to=topo_map.document_id,
             code='3232ET', editor='IGN', scale='25000',
             locales=[
                 DocumentLocale(lang='fr', title='Belley')
