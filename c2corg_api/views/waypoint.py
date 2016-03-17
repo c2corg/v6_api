@@ -85,6 +85,7 @@ class WaypointRest(DocumentRest):
         t_route = aliased(Document, name='r')
 
         recent_outings = DBSession.query(Outing). \
+            filter(Outing.redirects_to.is_(None)). \
             join(
                 t_outing_route,
                 Outing.document_id == t_outing_route.child_document_id). \
@@ -113,6 +114,7 @@ class WaypointRest(DocumentRest):
             set_best_locale(recent_outings, lang)
 
         total = DBSession.query(Outing.document_id). \
+            filter(Outing.redirects_to.is_(None)). \
             join(
                 t_outing_route,
                 Outing.document_id == t_outing_route.child_document_id). \

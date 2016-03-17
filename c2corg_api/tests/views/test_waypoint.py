@@ -103,7 +103,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(1, recent_outings['total'])
         self.assertEqual(1, len(recent_outings['outings']))
         self.assertEqual(
-            self.outing.document_id,
+            self.outing1.document_id,
             recent_outings['outings'][0].get('document_id'))
 
     def test_get_no_associations(self):
@@ -820,7 +820,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             parent_document_id=self.waypoint.document_id,
             child_document_id=self.route2.document_id))
 
-        self.outing = Outing(
+        self.outing1 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
             date_end=datetime.date(2016, 1, 1),
             locales=[
@@ -829,11 +829,27 @@ class TestWaypointRest(BaseDocumentTestRest):
                     weather='sunny')
             ]
         )
-        self.session.add(self.outing)
+        self.session.add(self.outing1)
         self.session.flush()
         self.session.add(Association(
             parent_document_id=self.route1.document_id,
-            child_document_id=self.outing.document_id))
+            child_document_id=self.outing1.document_id))
+
+        self.outing2 = Outing(
+            redirects_to=self.outing1.document_id,
+            activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
+            date_end=datetime.date(2016, 1, 1),
+            locales=[
+                OutingLocale(
+                    lang='en', title='...', description='...',
+                    weather='sunny')
+            ]
+        )
+        self.session.add(self.outing2)
+        self.session.flush()
+        self.session.add(Association(
+            parent_document_id=self.route1.document_id,
+            child_document_id=self.outing2.document_id))
 
         # add a map
         topo_map = TopoMap(
