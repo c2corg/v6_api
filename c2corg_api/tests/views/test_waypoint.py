@@ -84,7 +84,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(1, len(linked_routes))
         linked_route = linked_routes[0]
         self.assertEqual(
-            self.route.document_id, linked_route.get('document_id'))
+            self.route1.document_id, linked_route.get('document_id'))
         self.assertEqual(
             linked_route.get('locales')[0].get('title_prefix'), 'Mont Blanc :')
 
@@ -425,7 +425,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         # check that the title_prefix of an associated route (that the wp
         # it the main wp of) was updated
-        route = self.session.query(Route).get(self.route.document_id)
+        route = self.session.query(Route).get(self.route1.document_id)
         route_locale_en = route.get_locale('en')
         self.assertEqual(route_locale_en.title_prefix, 'Mont Granier!')
 
@@ -788,22 +788,36 @@ class TestWaypointRest(BaseDocumentTestRest):
             self.waypoint5, self.global_userids['contributor'])
 
         # add some associations
-        self.route = Route(
+        self.route1 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
             height_diff_up=800, height_diff_down=800, durations='1',
             main_waypoint_id=self.waypoint.document_id
         )
-        self.route.locales.append(RouteLocale(
+        self.route1.locales.append(RouteLocale(
             lang='en', title='Mont Blanc from the air', description='...',
             title_prefix='Mont Blanc :', gear='paraglider'))
-        self.session.add(self.route)
+        self.session.add(self.route1)
+        self.session.flush()
+        self.route2 = Route(
+            redirects_to=self.route1.document_id,
+            activities=['skitouring'], elevation_max=1500, elevation_min=700,
+            height_diff_up=800, height_diff_down=800, durations='1',
+            main_waypoint_id=self.waypoint.document_id
+        )
+        self.session.add(self.route2)
         self.session.flush()
         self.session.add(Association(
             parent_document_id=self.waypoint.document_id,
             child_document_id=self.waypoint4.document_id))
         self.session.add(Association(
             parent_document_id=self.waypoint.document_id,
-            child_document_id=self.route.document_id))
+            child_document_id=self.waypoint5.document_id))
+        self.session.add(Association(
+            parent_document_id=self.waypoint.document_id,
+            child_document_id=self.route1.document_id))
+        self.session.add(Association(
+            parent_document_id=self.waypoint.document_id,
+            child_document_id=self.route2.document_id))
 
         self.outing = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
@@ -817,7 +831,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(self.outing)
         self.session.flush()
         self.session.add(Association(
-            parent_document_id=self.route.document_id,
+            parent_document_id=self.route1.document_id,
             child_document_id=self.outing.document_id))
 
         # add a map
