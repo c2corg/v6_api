@@ -5,7 +5,7 @@ from c2corg_api.models.area_association import update_areas_for_document, \
 from c2corg_api.models.association import get_associations
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
-    ArchiveDocumentGeometry, set_available_langs)
+    ArchiveDocumentGeometry, set_available_langs, get_available_langs)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.route import schema_association_route
 from c2corg_api.models.topo_map import get_maps, schema_listing_topo_map
@@ -148,7 +148,10 @@ class DocumentRest(object):
         document = self._get_document(clazz, id, lang)
 
         if document.redirects_to:
-            return {'redirects_to': document.redirects_to}
+            return {
+                'redirects_to': document.redirects_to,
+                'available_langs': get_available_langs(document.redirects_to)
+            }
 
         set_available_langs([document])
 

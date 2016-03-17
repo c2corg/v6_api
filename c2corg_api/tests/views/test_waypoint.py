@@ -136,6 +136,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         self.assertIn('redirects_to', body)
         self.assertEqual(body['redirects_to'], self.waypoint.document_id)
+        self.assertEqual(body['available_langs'], ['en', 'fr'])
 
     def test_post_error(self):
         body = self.post_error({})
