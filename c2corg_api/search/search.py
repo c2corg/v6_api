@@ -54,6 +54,7 @@ def get_documents(document_ids, model, lang):
 
     documents = DBSession.\
         query(model).\
+        filter(model.redirects_to.is_(None)).\
         filter(model.document_id.in_(document_ids)).\
         options(joinedload(model.locales)). \
         options(joinedload(model.geometry)). \
