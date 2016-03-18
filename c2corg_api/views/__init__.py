@@ -78,7 +78,8 @@ def to_json_dict(obj, schema):
     # cleaner to add the field to the schema, but ColanderAlchemy doesn't like
     # it because it's not a real column)
     special_attributes = [
-        'available_langs', 'associations', 'maps', 'areas', 'author'
+        'available_langs', 'associations', 'maps', 'areas', 'author',
+        'protected'
     ]
     for attr in special_attributes:
         if hasattr(obj, attr):

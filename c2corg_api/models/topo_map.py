@@ -113,7 +113,7 @@ def get_maps(document, lang):
             TopoMap.document_id == DocumentGeometry.document_id). \
         options(load_only(
             TopoMap.document_id, TopoMap.editor, TopoMap.code,
-            TopoMap.version)). \
+            TopoMap.version, TopoMap.protected)). \
         options(joinedload(TopoMap.locales).load_only(
             DocumentLocale.lang, DocumentLocale.title,
             DocumentLocale.version)). \
