@@ -57,7 +57,7 @@ def fill_index(db_session):
     q = DBSession.query(
             DocumentLocale.document_id, DocumentLocale.title,
             DocumentLocale.summary, DocumentLocale.description,
-            DocumentLocale.lang, DocumentLocale.type,
+            DocumentLocale.lang, Document.type,
             RouteLocale.__table__.c.title_prefix). \
         join(Document).filter(Document.redirects_to.is_(None)). \
         outerjoin(
