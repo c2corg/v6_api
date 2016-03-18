@@ -700,6 +700,51 @@ class TestWaypointRest(BaseDocumentTestRest):
             errors[0].get('description'), 'can not update merged document')
         self.assertEqual(errors[0].get('name'), 'Bad Request')
 
+    def test_put_protected_no_permission(self):
+        """Tests updating a protected waypoint as non-moderator.
+        """
+        body_put = {
+            'message': 'Updating',
+            'document': {
+                'document_id': self.waypoint4.document_id,
+                'version': self.waypoint4.version,
+                'waypoint_type': 'summit',
+                'elevation': 3779,
+                'locales': []
+            }
+        }
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/' + str(self.waypoint4.document_id), body_put,
+            headers=headers, status=403)
+
+        errors = response.json.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(
+            errors[0].get('description'),
+            'No permission to change a protected document')
+        self.assertEqual(errors[0].get('name'), 'Forbidden')
+
+    def test_put_protected_as_moderator(self):
+        """Tests updating a protected waypoint as moderator.
+        """
+        body_put = {
+            'message': 'Updating',
+            'document': {
+                'document_id': self.waypoint4.document_id,
+                'version': self.waypoint4.version,
+                'waypoint_type': 'summit',
+                'elevation': 3779,
+                'locales': []
+            }
+        }
+
+        headers = self.add_authorization_header(username='moderator')
+        self.app.put_json(
+            self._prefix + '/' + str(self.waypoint4.document_id), body_put,
+            headers=headers, status=200)
+
     def _assert_geometry(self, body, field='geom'):
         self.assertIsNotNone(body.get('geometry'))
         geometry = body.get('geometry')
@@ -767,6 +812,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(self.waypoint3)
         self.waypoint4 = Waypoint(
             waypoint_type='summit', elevation=4,
+            protected=True,
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'))
         self.waypoint4.locales.append(WaypointLocale(
@@ -786,6 +832,8 @@ class TestWaypointRest(BaseDocumentTestRest):
             access='yep'))
         self.session.add(self.waypoint5)
         self.session.flush()
+        DocumentRest.create_new_version(
+            self.waypoint4, self.global_userids['contributor'])
         DocumentRest.create_new_version(
             self.waypoint5, self.global_userids['contributor'])
 

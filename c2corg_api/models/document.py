@@ -52,6 +52,8 @@ class _DocumentMixin(object):
     `ArchiveDocument`.
     """
     version = Column(Integer, nullable=False, server_default='1')
+
+    # a protected document can only be edited by moderators
     protected = Column(Boolean)
 
     @declared_attr

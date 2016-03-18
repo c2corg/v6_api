@@ -4,7 +4,7 @@ import datetime
 from c2corg_api.models import DBSession
 from c2corg_common.attributes import langs_priority
 from colander import null
-from pyramid.httpexceptions import HTTPError, HTTPNotFound
+from pyramid.httpexceptions import HTTPError, HTTPNotFound, HTTPForbidden
 from pyramid.view import view_config
 from cornice import Errors
 from cornice.util import json_error, _JSONError
@@ -24,6 +24,7 @@ cors_policy = dict(
 
 @view_config(context=HTTPNotFound)
 @view_config(context=HTTPError)
+@view_config(context=HTTPForbidden)
 def http_error_handler(exc, request):
     """In case of a HTTP error, return the error details as JSON, e.g.:
 
