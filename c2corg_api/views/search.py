@@ -1,8 +1,10 @@
+from c2corg_api.models.document import DocumentLocale
 from cornice.resource import resource, view
 
 from c2corg_api.views.validation import validate_pagination, \
     validate_preferred_lang_param
-from c2corg_api.models.route import Route, ROUTE_TYPE, schema_route
+from c2corg_api.models.route import Route, ROUTE_TYPE, schema_route, \
+    RouteLocale
 from c2corg_api.views import cors_policy
 from c2corg_api.search import search
 from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE, schema_waypoint
@@ -35,9 +37,9 @@ class SearchRest(object):
 
         return {
             'waypoints': search.search_for_type(
-                search_term, WAYPOINT_TYPE, Waypoint, schema_waypoint,
-                waypoint_adaptor, limit, lang),
+                search_term, WAYPOINT_TYPE, Waypoint, DocumentLocale,
+                schema_waypoint, waypoint_adaptor, limit, lang),
             'routes': search.search_for_type(
-                search_term, ROUTE_TYPE, Route, schema_route,
-                route_adaptor, limit, lang)
+                search_term, ROUTE_TYPE, Route, RouteLocale,
+                schema_route, route_adaptor, limit, lang)
         }

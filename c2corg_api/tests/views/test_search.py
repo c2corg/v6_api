@@ -1,4 +1,4 @@
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.fill_index import fill_index
@@ -96,5 +96,6 @@ class TestSearchRest(BaseTestRest):
                     summary='The heighest point in Europe')
             ])
         self.session.add(waypoint)
-        documents = get_documents([waypoint.document_id], Waypoint, None)
+        documents = get_documents(
+            [waypoint.document_id], Waypoint, DocumentLocale, None)
         self.assertEquals(0, len(documents))

@@ -8,7 +8,8 @@ from c2corg_api.views import to_json_dict, set_best_locale
 
 
 def search_for_type(
-        search_term, document_type, model, schema, adapt_schema, limit, lang):
+        search_term, document_type, model, locale_model,
+        schema, adapt_schema, limit, lang):
     # search in all title* (title_en, title_fr, ...), summary* and
     # description* fields. "boost" title fields and summary fields.
     search_query = MultiMatch(
@@ -30,7 +31,7 @@ def search_for_type(
     document_ids = [int(doc.meta.id) for doc in response]
 
     # then load the documents for the returned ids
-    documents = get_documents(document_ids, model, lang)
+    documents = get_documents(document_ids, model, locale_model, lang)
 
     count = len(documents)
     total = response.hits.total
@@ -44,7 +45,7 @@ def search_for_type(
     }
 
 
-def get_documents(document_ids, model, lang):
+def get_documents(document_ids, model, locale_model, lang):
     """Load the documents for the given ids.
     The documents are returned in the same order as the ids. If a document
     for a given id does not exist, the document is skipped.
@@ -56,7 +57,7 @@ def get_documents(document_ids, model, lang):
         query(model).\
         filter(model.redirects_to.is_(None)).\
         filter(model.document_id.in_(document_ids)).\
-        options(joinedload(model.locales)). \
+        options(joinedload(model.locales.of_type(locale_model))). \
         options(joinedload(model.geometry)). \
         all()
 
