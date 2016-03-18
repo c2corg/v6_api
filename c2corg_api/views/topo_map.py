@@ -1,5 +1,5 @@
 from c2corg_api.models.topo_map import (
-    TopoMap, schema_topo_map, schema_update_topo_map)
+    TopoMap, schema_topo_map, schema_update_topo_map, schema_listing_topo_map)
 from c2corg_common.fields_topo_map import fields_topo_map
 from cornice.resource import resource, view
 
@@ -20,7 +20,7 @@ class TopoMapRest(DocumentRest):
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        return self._collection_get(TopoMap, schema_topo_map)
+        return self._collection_get(TopoMap, schema_listing_topo_map)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):

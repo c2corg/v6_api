@@ -19,7 +19,9 @@ class TestTopoMapRest(BaseDocumentTestRest):
         self._add_test_data()
 
     def test_get_collection(self):
-        self.get_collection()
+        body = self.get_collection()
+        doc = body['documents'][0]
+        self.assertNotIn('geometry', doc)
 
     def test_get_collection_paginated(self):
         self.app.get("/maps?offset=invalid", status=400)

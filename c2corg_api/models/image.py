@@ -1,3 +1,5 @@
+from c2corg_api.models.schema_utils import restrict_schema
+from c2corg_common.fields_image import fields_image
 from sqlalchemy import (
     Boolean,
     Column,
@@ -122,3 +124,5 @@ schema_image = SQLAlchemySchemaNode(
     })
 
 schema_update_image = get_update_schema(schema_image)
+schema_listing_image = restrict_schema(
+    schema_image, fields_image.get('listing'))

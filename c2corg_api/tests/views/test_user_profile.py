@@ -26,6 +26,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         body = self.get_collection(user='contributor')
         doc = body['documents'][0]
         self.assertIn('areas', doc)
+        self.assertNotIn('geometry', doc)
 
     def test_get_collection_paginated(self):
         self.assertResultsEqual(
