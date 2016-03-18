@@ -52,10 +52,14 @@ class _DocumentMixin(object):
     `ArchiveDocument`.
     """
     version = Column(Integer, nullable=False, server_default='1')
-    # move to metadata?
-    # TODO use FK
     protected = Column(Boolean)
-    redirects_to = Column(Integer)
+
+    @declared_attr
+    def redirects_to(self):
+        return Column(
+            Integer, ForeignKey(schema + '.documents.document_id'),
+            nullable=True)
+
     quality = Column(
         Enum(name='quality_type', inherit_schema=True, *quality_types))
 
