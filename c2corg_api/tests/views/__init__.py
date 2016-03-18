@@ -491,7 +491,8 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(len(errors), 1)
         self.assertCorniceRequired(errors[0], field)
 
-    def put_success_all(self, request_body, document, user='contributor'):
+    def put_success_all(
+            self, request_body, document, user='contributor', check_es=True):
         """Test updating a document with changes to the figures and locales.
         """
         response = self.app.put_json(
@@ -578,19 +579,20 @@ class BaseDocumentTestRest(BaseTestRest):
             archive_locale_fr.version, self.locale_fr.version)
         self.assertEqual(archive_locale_fr.lang, 'fr')
 
-        # check updates to the search index
-        search_doc = SearchDocument.get(
-            id=document.document_id,
-            index=elasticsearch_config['index'])
+        if check_es:
+            # check updates to the search index
+            search_doc = SearchDocument.get(
+                id=document.document_id,
+                index=elasticsearch_config['index'])
 
-        self.assertEqual(search_doc['doc_type'], document.type)
-        self.assertEqual(search_doc['title_en'], archive_locale.title)
-        self.assertEqual(search_doc['title_fr'], archive_locale_fr.title)
+            self.assertEqual(search_doc['doc_type'], document.type)
+            self.assertEqual(search_doc['title_en'], archive_locale.title)
+            self.assertEqual(search_doc['title_fr'], archive_locale_fr.title)
 
         return (body, document)
 
     def put_success_figures_only(
-            self, request_body, document, user='contributor'):
+            self, request_body, document, user='contributor', check_es=True):
         """Test updating a document with changes to the figures only.
         """
         response = self.app.put_json(
@@ -675,7 +677,7 @@ class BaseDocumentTestRest(BaseTestRest):
             locale_fr = document.get_locale('fr')
             title = locale_fr.title_prefix + ' : ' + locale_fr.title
             self.assertEqual(search_doc['title_fr'], title)
-        else:
+        elif check_es:
             self.assertEqual(
                 search_doc['title_en'], document.get_locale('en').title)
             self.assertEqual(
@@ -684,7 +686,7 @@ class BaseDocumentTestRest(BaseTestRest):
         return (body, document)
 
     def put_success_lang_only(
-            self, request_body, document, user='contributor'):
+            self, request_body, document, user='contributor', check_es=True):
         """Test updating a document with only changes to a locale.
         """
         response = self.app.put_json(
@@ -755,19 +757,21 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertIs(archive_waypoint_en, archive_waypoint_fr)
 
         # check updates to the search index
-        search_doc = SearchDocument.get(
-            id=document.document_id,
-            index=elasticsearch_config['index'])
+        if check_es:
+            search_doc = SearchDocument.get(
+                id=document.document_id,
+                index=elasticsearch_config['index'])
 
-        self.assertEqual(search_doc['doc_type'], document.type)
-        self.assertEqual(
-            search_doc['title_en'], document.get_locale('en').title)
-        self.assertEqual(
-            search_doc['title_fr'], document.get_locale('fr').title)
+            self.assertEqual(search_doc['doc_type'], document.type)
+            self.assertEqual(
+                search_doc['title_en'], document.get_locale('en').title)
+            self.assertEqual(
+                search_doc['title_fr'], document.get_locale('fr').title)
 
         return (body, document)
 
-    def put_success_new_lang(self, request_body, document, user='contributor'):
+    def put_success_new_lang(
+            self, request_body, document, user='contributor', check_es=True):
         """Test updating a document by adding a new locale.
         """
         response = self.app.put_json(
@@ -847,16 +851,17 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertIs(archive_document_es, archive_document_fr)
 
         # check updates to the search index
-        search_doc = SearchDocument.get(
-            id=document.document_id,
-            index=elasticsearch_config['index'])
+        if check_es:
+            search_doc = SearchDocument.get(
+                id=document.document_id,
+                index=elasticsearch_config['index'])
 
-        self.assertEqual(search_doc['doc_type'], document.type)
-        self.assertEqual(
-            search_doc['title_en'], document.get_locale('en').title)
-        self.assertEqual(
-            search_doc['title_fr'], document.get_locale('fr').title)
-        self.assertEqual(
-            search_doc['title_es'], document.get_locale('es').title)
+            self.assertEqual(search_doc['doc_type'], document.type)
+            self.assertEqual(
+                search_doc['title_en'], document.get_locale('en').title)
+            self.assertEqual(
+                search_doc['title_fr'], document.get_locale('fr').title)
+            self.assertEqual(
+                search_doc['title_es'], document.get_locale('es').title)
 
         return (body, document)

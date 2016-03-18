@@ -3,6 +3,8 @@ import logging
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.route import Route
+from c2corg_api.models.user import User
+from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mapping import SearchDocument
 from c2corg_api.search.utils import strip_bbcodes, get_title
@@ -62,13 +64,27 @@ def sync_search_index(document):
             # https://github.com/c2corg/v6_api/issues/89
             DBSession.refresh(document)
 
+        is_user_profile = isinstance(document, UserProfile)
+        if is_user_profile:
+            # set user login + full-name as document title so that it can
+            # be searched
+            user_login, user_name = DBSession. \
+                query(User.name, User.username). \
+                filter(User.id == document.document_id). \
+                first()
+            user_title = '{0} {1}'.format(user_name or '', user_login or '')
+
         has_title_prefix = isinstance(document, Route)
         for locale in document.locales:
             lang = locale.lang
 
-            # set the title prefix (name of the main waypoint) for routes
-            title_prefix = locale.title_prefix if has_title_prefix else None
-            title = get_title(locale.title, title_prefix)
+            if is_user_profile:
+                title = user_title
+            else:
+                # set the title prefix (name of the main waypoint) for routes
+                title_prefix = locale.title_prefix if has_title_prefix \
+                    else None
+                title = get_title(locale.title, title_prefix)
 
             doc['title_' + lang] = title
             doc['summary_' + lang] = strip_bbcodes(locale.summary)

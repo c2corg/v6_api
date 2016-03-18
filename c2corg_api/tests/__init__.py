@@ -5,7 +5,7 @@ import transaction
 import os
 import logging
 
-from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.user_profile import UserProfile
 from sqlalchemy import engine_from_config
 from pyramid.paster import get_appsettings
@@ -51,7 +51,10 @@ def _add_global_test_data(session):
 
     contributor_profile = UserProfile(
         categories=['amateur'],
-        locales=[DocumentLocale(title='', lang='en')])
+        locales=[
+            DocumentLocale(title='', description='Me', lang='en'),
+            DocumentLocale(title='', description='Moi', lang='fr')],
+        geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'))
 
     contributor = User(
         username='contributor', email='contributor@camptocamp.org',
