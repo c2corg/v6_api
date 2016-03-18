@@ -24,53 +24,50 @@ class MigrateRoutes(MigrateDocuments):
 
     def get_count_query(self):
         return (
-            'select count(*) from app_routes_archives;'
+            'select count(*) '
+            'from app_routes_archives ra join routes r on ra.id = r.id '
+            'where r.redirects_to is null;'
         )
 
     def get_query(self):
         return (
             'select '
-            '   id, document_archive_id, is_latest_version, elevation, '
-            '   is_protected, redirects_to, '
-            '   ST_Force2D(ST_SetSRID(geom, 3857)) geom, '
-            '   activities, facing, height_diff_up, height_diff_down, '
-            '   route_type, route_length, min_elevation, max_elevation, '
-            '   duration, slope, difficulties_height, configuration, '
-            '   global_rating, engagement_rating, equipment_rating, '
-            '   is_on_glacier, sub_activities, toponeige_technical_rating, '
-            '   toponeige_exposition_rating, labande_ski_rating, '
-            '   labande_global_rating, ice_rating, mixed_rating, '
-            '   rock_free_rating, rock_required_rating, aid_rating, '
-            '   hiking_rating, snowshoeing_rating, objective_risk_rating, '
-            '   rock_exposition_rating '
-            'from app_routes_archives '
-            'order by id, document_archive_id;'
+            '   ra.id, ra.document_archive_id, ra.is_latest_version, '
+            '   ra.elevation, ra.is_protected, ra.redirects_to, '
+            '   ST_Force2D(ST_SetSRID(ra.geom, 3857)) geom, '
+            '   ra.activities, ra.facing, ra.height_diff_up, '
+            '   ra.height_diff_down, ra.route_type, ra.route_length, '
+            '   ra.min_elevation, ra.max_elevation, ra.duration, ra.slope, '
+            '   ra.difficulties_height, ra.configuration, '
+            '   ra.global_rating, ra.engagement_rating, ra.equipment_rating, '
+            '   ra.is_on_glacier, ra.sub_activities, '
+            '   ra.toponeige_technical_rating, '
+            '   ra.toponeige_exposition_rating, ra.labande_ski_rating, '
+            '   ra.labande_global_rating, ra.ice_rating, ra.mixed_rating, '
+            '   ra.rock_free_rating, ra.rock_required_rating, ra.aid_rating, '
+            '   ra.hiking_rating, ra.snowshoeing_rating, '
+            '   ra.objective_risk_rating, ra.rock_exposition_rating '
+            'from app_routes_archives ra join routes r on ra.id = r.id '
+            'where r.redirects_to is null '
+            'order by ra.id, ra.document_archive_id;'
         )
 
     def get_count_query_locales(self):
         return (
-            'select count(*) from app_routes_i18n_archives;'
+            'select count(*) '
+            'from app_routes_i18n_archives ra join routes r on ra.id = r.id '
+            'where r.redirects_to is null;'
         )
 
     def get_query_locales(self):
         return (
             'select '
-            '   id, rl.document_i18n_archive_id, is_latest_version, culture, '
-            '   name, description, remarks, gear, route_history, slope '
-            'from app_routes_i18n_archives rl left outer join ('
-            '  /* get the slope from the latest version of each document */'
-            '  select document_i18n_archive_id, slope from ( '
-            '    select r.slope, v.document_i18n_archive_id, '
-            '    dense_rank() over('
-            '        partition by v.document_i18n_archive_id '
-            '        order by r.document_archive_id desc) as rank '
-            '    from app_routes_archives r '
-            '      inner join app_documents_versions v '
-            '      on v.document_archive_id = r.document_archive_id '
-            '    ) t '
-            '  where rank = 1 '
-            '  ) s on rl.document_i18n_archive_id = s.document_i18n_archive_id'
-            ' order by id, rl.document_i18n_archive_id;'
+            '   ra.id, ra.document_i18n_archive_id, ra.is_latest_version, '
+            '   ra.culture, ra.name, ra.description, ra.remarks, ra.gear, '
+            '   ra.route_history, r.slope '
+            'from app_routes_i18n_archives ra join routes r on ra.id = r.id '
+            'where r.redirects_to is null '
+            'order by ra.id, ra.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

@@ -11,36 +11,44 @@ class MigrateSites(MigrateWaypoints):
 
     def get_count_query(self):
         return (
-            'select count(*) from app_sites_archives;'
+            'select count(*) '
+            'from app_sites_archives sa join sites s on sa.id = s.id '
+            'where s.redirects_to is null;'
         )
 
     def get_query(self):
         return (
             'select '
-            '   id, document_archive_id, is_latest_version, elevation, '
-            '   is_protected, redirects_to, '
-            '   ST_Force2D(ST_SetSRID(geom, 3857)) geom,'
-            '   routes_quantity, max_rating, min_rating, mean_rating, '
-            '   max_height, min_height, mean_height, equipment_rating, '
-            '   climbing_styles, rock_types, site_types, children_proof, '
-            '   rain_proof, facings, best_periods '
-            'from app_sites_archives '
-            'order by id, document_archive_id;'
+            '   sa.id, sa.document_archive_id, sa.is_latest_version, '
+            '   sa.elevation, sa.is_protected, sa.redirects_to, '
+            '   ST_Force2D(ST_SetSRID(sa.geom, 3857)) geom,'
+            '   sa.routes_quantity, sa.max_rating, sa.min_rating, '
+            '   sa.mean_rating, sa.max_height, sa.min_height, sa.mean_height, '
+            '   sa.equipment_rating, sa.climbing_styles, sa.rock_types, '
+            '   sa.site_types, sa.children_proof, sa.rain_proof, sa.facings, '
+            '   sa.best_periods '
+            'from app_sites_archives sa join sites s on sa.id = s.id '
+            'where s.redirects_to is null '
+            'order by sa.id, sa.document_archive_id;'
         )
 
     def get_count_query_locales(self):
         return (
-            'select count(*) from app_sites_i18n_archives;'
+            'select count(*) '
+            'from app_sites_i18n_archives sa join sites s on sa.id = s.id '
+            'where s.redirects_to is null;'
         )
 
     def get_query_locales(self):
         return (
             'select '
-            '   id, document_i18n_archive_id, is_latest_version, culture, '
-            '   name, description, remarks, pedestrian_access, way_back, '
-            '   site_history, external_resources '
-            'from app_sites_i18n_archives '
-            'order by id, document_i18n_archive_id;'
+            '   sa.id, sa.document_i18n_archive_id, sa.is_latest_version, '
+            '   sa.culture, sa.name, sa.description, sa.remarks, '
+            '   sa.pedestrian_access, sa.way_back, sa.site_history, '
+            '   sa.external_resources '
+            'from app_sites_i18n_archives sa join sites s on sa.id = s.id '
+            'where s.redirects_to is null '
+            'order by sa.id, sa.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

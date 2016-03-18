@@ -10,34 +10,43 @@ class MigrateParkings(MigrateWaypoints):
 
     def get_count_query(self):
         return (
-            'select count(*) from app_parkings_archives;'
+            'select count(*) '
+            'from app_parkings_archives pa join parkings p on pa.id = p.id '
+            'where p.redirects_to is null;'
         )
 
     def get_query(self):
         return (
             'select '
-            '   id, document_archive_id, is_latest_version, elevation, '
-            '   is_protected, redirects_to, '
-            '   ST_Force2D(ST_SetSRID(geom, 3857)) geom,'
-            '   public_transportation_rating, snow_clearance_rating, '
-            '   lowest_elevation, public_transportation_types '
-            'from app_parkings_archives '
-            'order by id, document_archive_id;'
+            '   pa.id, pa.document_archive_id, pa.is_latest_version, '
+            '   pa.elevation, pa.is_protected, pa.redirects_to, '
+            '   ST_Force2D(ST_SetSRID(pa.geom, 3857)) geom,'
+            '   pa.public_transportation_rating, pa.snow_clearance_rating, '
+            '   pa.lowest_elevation, pa.public_transportation_types '
+            'from app_parkings_archives pa join parkings p on pa.id = p.id '
+            'where p.redirects_to is null '
+            'order by pa.id, pa.document_archive_id;'
         )
 
     def get_count_query_locales(self):
         return (
-            'select count(*) from app_parkings_i18n_archives;'
+            'select count(*) '
+            'from app_parkings_i18n_archives pa '
+            '  join parkings p on pa.id = p.id '
+            'where p.redirects_to is null;'
         )
 
     def get_query_locales(self):
         return (
             'select '
-            '   id, document_i18n_archive_id, is_latest_version, culture, '
-            '    name, description, public_transportation_description, '
-            '    snow_clearance_comment, accommodation '
-            'from app_parkings_i18n_archives '
-            'order by id, document_i18n_archive_id;'
+            '   pa.id, pa.document_i18n_archive_id, pa.is_latest_version, '
+            '   pa.name, pa.description, '
+            '   pa.public_transportation_description, '
+            '   pa.snow_clearance_comment, pa.accommodation, pa.culture '
+            'from app_parkings_i18n_archives pa '
+            '  join parkings p on pa.id = p.id '
+            'where p.redirects_to is null '
+            'order by pa.id, pa.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

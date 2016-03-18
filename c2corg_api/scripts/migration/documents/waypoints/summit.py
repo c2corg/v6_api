@@ -10,29 +10,35 @@ class MigrateSummits(MigrateWaypoints):
 
     def get_count_query(self):
         return (
-            'select count(*) from app_summits_archives'
+            'select count(*) '
+            'from app_summits_archives sa join summits s on sa.id = s.id '
+            'where s.redirects_to is null;'
         )
 
     def get_query(self):
         return (
-            'select id, document_archive_id, is_latest_version, elevation, '
-            'summit_type, maps_info, is_protected, redirects_to, '
-            'ST_Force2D(ST_SetSRID(geom, 3857)) geom '
-            'from app_summits_archives '
-            'order by id, document_archive_id'
+            'select sa.id, sa.document_archive_id, sa.is_latest_version, '
+            'sa.elevation, sa.summit_type, sa.maps_info, sa.is_protected, '
+            'sa.redirects_to, ST_Force2D(ST_SetSRID(sa.geom, 3857)) geom '
+            'from app_summits_archives sa join summits s on sa.id = s.id '
+            'where s.redirects_to is null '
+            'order by sa.id, sa.document_archive_id;'
         )
 
     def get_count_query_locales(self):
         return (
-            'select count(*) from app_summits_i18n_archives'
+            'select count(*) '
+            'from app_summits_i18n_archives sa join summits s on sa.id = s.id '
+            'where s.redirects_to is null;'
         )
 
     def get_query_locales(self):
         return (
-            'select id, document_i18n_archive_id, is_latest_version, culture, '
-            'name, description '
-            'from app_summits_i18n_archives '
-            'order by id, document_i18n_archive_id'
+            'select sa.id, sa.document_i18n_archive_id, sa.is_latest_version, '
+            'sa.culture, sa.name, sa.description '
+            'from app_summits_i18n_archives sa join summits s on sa.id = s.id '
+            'where s.redirects_to is null '
+            'order by sa.id, sa.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

@@ -25,32 +25,38 @@ class MigrateMaps(MigrateDocuments):
 
     def get_count_query(self):
         return (
-            'select count(*) from app_maps_archives;'
+            'select count(*) '
+            'from app_maps_archives ma join maps m on ma.id = m.id '
+            'where m.redirects_to is null;'
         )
 
     def get_query(self):
         return (
             'select '
-            '   id, document_archive_id, is_latest_version, '
-            '   is_protected, redirects_to, '
-            '   ST_Force2D(ST_SetSRID(geom, 3857)) geom, '
-            '   editor, scale, code '
-            'from app_maps_archives '
-            'order by id, document_archive_id;'
+            '   ma.id, ma.document_archive_id, ma.is_latest_version, '
+            '   ma.is_protected, ma.redirects_to, '
+            '   ST_Force2D(ST_SetSRID(ma.geom, 3857)) geom, '
+            '   ma.editor, ma.scale, ma.code '
+            'from app_maps_archives ma join maps m on ma.id = m.id '
+            'where m.redirects_to is null '
+            'order by ma.id, ma.document_archive_id;'
         )
 
     def get_count_query_locales(self):
         return (
-            'select count(*) from app_maps_i18n_archives;'
+            'select count(*) '
+            'from app_maps_i18n_archives ma join maps m on ma.id = m.id '
+            'where m.redirects_to is null;'
         )
 
     def get_query_locales(self):
         return (
             'select '
-            '   id, document_i18n_archive_id, is_latest_version, culture, '
-            '   name, description '
-            'from app_maps_i18n_archives '
-            'order by id, document_i18n_archive_id;'
+            '   ma.id, ma.document_i18n_archive_id, ma.is_latest_version, '
+            '   ma.culture, ma.name, ma.description '
+            'from app_maps_i18n_archives ma join maps m on ma.id = m.id '
+            'where m.redirects_to is null  '
+            'order by ma.id, ma.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

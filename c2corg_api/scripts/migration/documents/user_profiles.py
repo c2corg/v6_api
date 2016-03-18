@@ -29,38 +29,52 @@ class MigrateUserProfiles(MigrateDocuments):
 
     def get_count_query(self):
         return (
-            'select count(*) from app_users_archives;'
+            'select count(*) '
+            'from app_users_archives ua '
+            '  join users u on ua.id = u.id '
+            '  join app_users_private_data au on ua.id = au.id '
+            'where u.redirects_to is null;'
         )
 
     def get_query(self):
         return (
             'select '
-            '   id, document_archive_id, is_latest_version, '
-            '   is_protected, redirects_to, '
-            '   ST_Force2D(ST_SetSRID(geom, 3857)) geom, '
-            '   activities, category '
-            'from app_users_archives '
-            'order by id, document_archive_id;'
+            '   ua.id, ua.document_archive_id, ua.is_latest_version, '
+            '   ua.is_protected, ua.redirects_to, '
+            '   ST_Force2D(ST_SetSRID(ua.geom, 3857)) geom, '
+            '   ua.activities, ua.category '
+            'from app_users_archives ua '
+            '  join users u on ua.id = u.id '
+            '  join app_users_private_data au on ua.id = au.id '
+            'where u.redirects_to is null '
+            'order by ua.id, ua.document_archive_id;'
         )
 
     def get_count_query_locales(self):
         return (
-            'select count(*) from app_users_i18n_archives;'
+            'select count(*) '
+            'from app_users_i18n_archives ua '
+            '  join users u on ua.id = u.id '
+            '  join app_users_private_data au on ua.id = au.id '
+            'where u.redirects_to is null;'
         )
 
     def get_query_locales(self):
         return (
             'select '
-            '   id, document_i18n_archive_id, is_latest_version, culture, '
-            '   description '
-            'from app_users_i18n_archives '
-            'order by id, document_i18n_archive_id;'
+            '   ua.id, ua.document_i18n_archive_id, ua.is_latest_version, '
+            '   ua.culture, ua.description '
+            'from app_users_i18n_archives ua '
+            '  join users u on ua.id = u.id '
+            '  join app_users_private_data au on ua.id = au.id '
+            'where u.redirects_to is null '
+            'order by ua.id, ua.document_i18n_archive_id;'
         )
 
     query_profileless_users = (
         'select pu.id '
         'from app_users_private_data pu left outer join users u '
-        '  on pu.id = u.id '
+        '  on pu.id = u.id and u.redirects_to is null '
         'where u.id is null;'
     )
 

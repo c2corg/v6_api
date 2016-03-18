@@ -7,32 +7,31 @@ from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.scripts.migration.batch import SimpleBatch
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
-# TODO currently only importing associations for waypoints, routes and
-# outings
+# TODO currently only importing associations for document types imported so far
 associations_query_count =\
     'select count(*) from (' \
     '  select a.main_id, a.linked_id from app_documents_associations a ' \
     '  inner join (' + tables_union + \
-    '  ) u on u.id = a.main_id ' \
+    '  ) u on u.id = a.main_id and u.redirects_to is null ' \
     '  inner join (' + tables_union + \
-    '  ) v on v.id = a.linked_id ' \
+    '  ) v on v.id = a.linked_id and v.redirects_to is null ' \
     '  group by a.main_id, a.linked_id) t;'
 
 associations_query = \
     'select main_id, linked_id from app_documents_associations a ' \
     'inner join (' + tables_union + \
-    ') u on u.id = a.main_id ' \
+    ') u on u.id = a.main_id and u.redirects_to is null ' \
     'inner join (' + tables_union + \
-    ') v on v.id = a.linked_id ' \
+    ') v on v.id = a.linked_id and v.redirects_to is null ' \
     'group by a.main_id, a.linked_id;'
 
 association_log_query_count =\
     'select count(*) from (' \
     '  select associations_log_id from app_associations_log a ' \
     '  inner join (' + tables_union + \
-    '  ) u on u.id = a.main_id ' \
+    '  ) u on u.id = a.main_id and u.redirects_to is null ' \
     '  inner join (' + tables_union + \
-    '  ) v on v.id = a.linked_id ' \
+    '  ) v on v.id = a.linked_id and v.redirects_to is null ' \
     '  group by associations_log_id) t;'
 
 association_log_query = \
@@ -40,9 +39,9 @@ association_log_query = \
     '  associations_log_id, main_id, linked_id, user_id, is_creation, ' \
     '  written_at from app_associations_log a ' \
     'inner join (' + tables_union + \
-    ') u on u.id = a.main_id ' \
+    ') u on u.id = a.main_id and u.redirects_to is null ' \
     'inner join (' + tables_union + \
-    ') v on v.id = a.linked_id ' \
+    ') v on v.id = a.linked_id and v.redirects_to is null ' \
     'group by associations_log_id;'
 
 

@@ -11,12 +11,13 @@ from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
 # TODO only importing the versions of the tables listed below
 tables = [
-    'app_huts_archives', 'app_parkings_archives', 'app_products_archives',
-    'app_sites_archives', 'app_summits_archives', 'app_routes_archives',
-    'app_maps_archives', 'app_areas_archives', 'app_users_i18n_archives',
-    'app_outings_archives', 'app_images_archives'
+    'huts', 'parkings', 'products', 'sites', 'summits', 'routes',
+    'maps', 'areas', 'outings', 'images'
 ]
-tables_union = ' union '.join(['select id from ' + t for t in tables])
+tables_union = ' union '.join(
+    ['select id, redirects_to from ' + t for t in tables]) + \
+    ' union select up.id, up.redirects_to from users up ' \
+    ' join app_users_private_data u on up.id = u.id'
 
 metadata_query_count =\
     'select count(*) ' \
@@ -25,7 +26,7 @@ metadata_query_count =\
     '      inner join app_documents_versions v ' \
     '        on h.history_metadata_id = v.history_metadata_id ' \
     '      inner join (' + tables_union + \
-    '      ) u on u.id = v.document_id ' \
+    '      ) u on u.id = v.document_id and u.redirects_to is null ' \
     '   group by h.history_metadata_id) t;'
 
 metadata_query = \
@@ -35,7 +36,7 @@ metadata_query = \
     '     inner join app_documents_versions v ' \
     '        on h.history_metadata_id = v.history_metadata_id ' \
     '     inner join (' + tables_union + \
-    '     ) u on u.id = v.document_id ' \
+    '     ) u on u.id = v.document_id and u.redirects_to is null ' \
     'group by h.history_metadata_id'
 
 versions_query_count =\
@@ -43,7 +44,7 @@ versions_query_count =\
     'from (select v.documents_versions_id from ' \
     '   app_documents_versions v ' \
     '   inner join (' + tables_union + \
-    '   ) u on u.id = v.document_id ' \
+    '   ) u on u.id = v.document_id and u.redirects_to is null ' \
     '  group by v.documents_versions_id) t;'
 
 versions_query =\
@@ -53,7 +54,7 @@ versions_query =\
     '   v.history_metadata_id ' \
     'from app_documents_versions v ' \
     '   inner join (' + tables_union + \
-    '   ) u on u.id = v.document_id ' \
+    '   ) u on u.id = v.document_id and u.redirects_to is null ' \
     'group by v.documents_versions_id;'
 
 

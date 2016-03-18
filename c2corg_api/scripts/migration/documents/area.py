@@ -25,32 +25,38 @@ class MigrateAreas(MigrateDocuments):
 
     def get_count_query(self):
         return (
-            'select count(*) from app_areas_archives;'
+            'select count(*) '
+            'from app_areas_archives aa join areas a on aa.id = a.id '
+            'where a.redirects_to is null;'
         )
 
     def get_query(self):
         return (
             'select '
-            '   id, document_archive_id, is_latest_version, '
-            '   is_protected, redirects_to, '
-            '   ST_Force2D(ST_SetSRID(geom, 3857)) geom, '
-            '   area_type '
-            'from app_areas_archives '
-            'order by id, document_archive_id;'
+            '   aa.id, aa.document_archive_id, aa.is_latest_version, '
+            '   aa.is_protected, aa.redirects_to, '
+            '   ST_Force2D(ST_SetSRID(aa.geom, 3857)) geom, '
+            '   aa.area_type '
+            'from app_areas_archives aa join areas a on aa.id = a.id '
+            'where a.redirects_to is null '
+            'order by aa.id, aa.document_archive_id;'
         )
 
     def get_count_query_locales(self):
         return (
-            'select count(*) from app_areas_i18n_archives;'
+            'select count(*) '
+            'from app_areas_i18n_archives aa join areas a on aa.id = a.id '
+            'where a.redirects_to is null;'
         )
 
     def get_query_locales(self):
         return (
             'select '
-            '   id, document_i18n_archive_id, is_latest_version, culture, '
-            '   name, description '
-            'from app_areas_i18n_archives '
-            'order by id, document_i18n_archive_id;'
+            '   aa.id, aa.document_i18n_archive_id, aa.is_latest_version, '
+            '   aa.culture, aa.name, aa.description '
+            'from app_areas_i18n_archives aa join areas a on aa.id = a.id '
+            'where a.redirects_to is null '
+            'order by aa.id, aa.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):
