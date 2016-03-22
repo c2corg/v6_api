@@ -15,7 +15,8 @@ from c2corg_api.views.validation import validate_id
 from c2corg_api.models import DBSession
 
 from c2corg_api.security.roles import (
-    try_login, remove_token, extract_token, renew_token)
+    try_login, log_validated_user_i_know_what_i_do,
+    remove_token, extract_token, renew_token)
 
 from c2corg_api.security.discourse_client import (
     discourse_sync_sso, discourse_logout)
@@ -23,6 +24,9 @@ from c2corg_api.security.discourse_client import (
 from c2corg_api.security.discourse_sso_provider import (
     discourse_redirect, discourse_redirect_without_nonce)
 
+from c2corg_api.emails.email_service import get_email_service
+
+from sqlalchemy.sql.expression import and_
 
 import colander
 import datetime
@@ -31,6 +35,7 @@ import logging
 log = logging.getLogger(__name__)
 
 ENCODING = 'UTF-8'
+VALIDATION_EXPIRE_DAYS = 3
 
 
 def validate_json_password(request):
@@ -88,9 +93,6 @@ class UserRegistrationRest(object):
     def __init__(self, request):
         self.request = request
 
-    def complete_registration(self, user):
-        return discourse_sync_sso(user, self.request.registry.settings)
-
     @json_view(schema=schema_create_user, validators=[
         validate_json_password,
         partial(validate_unique_attribute, "email"),
@@ -98,15 +100,17 @@ class UserRegistrationRest(object):
     def post(self):
         user = schema_create_user.objectify(self.request.validated)
         user.password = self.request.validated['password']
+        user.update_validation_nonce(VALIDATION_EXPIRE_DAYS)
 
         # directly create the user profile, the document id of the profile
         # is the user id
         # TODO to create the profile we need at least one locale. once we have
         # an interface language (https://github.com/c2corg/v6_api/issues/116)
         # we can create the profile in that language.
+        lang = 'fr'
         user.profile = UserProfile(
             categories=['amateur'],
-            locales=[DocumentLocale(lang='fr', title='')]
+            locales=[DocumentLocale(lang=lang, title='')]
         )
 
         DBSession.add(user)
@@ -116,20 +120,126 @@ class UserRegistrationRest(object):
             log.warning('Error persisting user', exc_info=True)
             raise HTTPInternalServerError('Error persisting user')
 
+        # The user needs validation
+        email_service = get_email_service(self.request)
+        nonce = user.validation_nonce
+        settings = self.request.registry.settings
+        link = settings['mail.validate_register_url_template'] % nonce
+        email_service.send_registration_confirmation(lang, user, link)
+
+        return to_json_dict(user, schema_user)
+
+
+def validate_user_from_nonce(request):
+    nonce = request.matchdict['nonce']
+    if nonce is None:
+        request.errors.add('querystring', 'nonce', 'missing nonce')
+    else:
+        now = datetime.datetime.utcnow()
+        user = DBSession.query(User).filter(
+                and_(
+                    User.validation_nonce == nonce,
+                    User.validation_nonce_expire > now)).first()
+        if user is None:
+            request.errors.add('querystring', 'nonce', 'invalid nonce')
+        else:
+            request.validated['user'] = user
+
+
+def validate_password(request):
+    password = request.matchdict['password']
+    if password is None:
+        request.errors.add('querystring', 'password', 'missing password')
+    else:
+        request.validated['password'] = password
+
+
+@resource(
+        path='/users/validate_new_password/{nonce}/{password}',
+        cors_policy=cors_policy)
+class UserValidateNewPasswordRest(object):
+    def __init__(self, request):
+        self.request = request
+
+    @json_view(validators=[validate_user_from_nonce, validate_password])
+    def post(self):
+        request = self.request
+        user = request.validated['user']
+        user.clear_validation_nonce()
+        password = request.validated['password']
+        user.password = password
+
+        # The user was validated by the nonce so we can log in
+        token = log_validated_user_i_know_what_i_do(user, request)
+        try:
+            DBSession.flush()
+        except:
+            log.warning('Error persisting user', exc_info=True)
+            raise HTTPInternalServerError('Error persisting user')
+
+        if token:
+            settings = request.registry.settings
+            response = token_to_response(user, token, request)
+            try:
+                r = discourse_redirect_without_nonce(user, settings)
+                response['redirect_internal'] = r
+            except:
+                # Any error with discourse should not prevent login
+                log.warning(
+                    'Error logging into discourse for %d', user.id,
+                    exc_info=True)
+            return response
+        else:
+            request.errors.status = 403
+            request.errors.add('body', 'user', 'Login failed')
+            return None
+
+
+@resource(
+        path='/users/validate_register_email/{nonce}',
+        cors_policy=cors_policy)
+class UserNonceValidationRest(object):
+    def __init__(self, request):
+        self.request = request
+
+    def complete_registration(self, user):
+        return discourse_sync_sso(user, self.request.registry.settings)
+
+    @json_view(validators=[validate_user_from_nonce])
+    def post(self):
+        request = self.request
+        user = request.validated['user']
+        user.clear_validation_nonce()
+        user.email_validated = True
+
+        # The user was validated by the nonce so we can log in
+        token = log_validated_user_i_know_what_i_do(user, request)
+        try:
+            DBSession.flush()
+        except:
+            log.warning('Error persisting user', exc_info=True)
+            raise HTTPInternalServerError('Error persisting user')
+
         # also create a version for the profile
         DocumentRest.create_new_version(user.profile, user.id)
 
-        try:
-            result = self.complete_registration(user)
-            if not result:
+        if token:
+            response = token_to_response(user, token, request)
+            settings = request.registry.settings
+            try:
+                r = discourse_redirect_without_nonce(
+                    user, settings)
+                response['redirect_internal'] = r
+            except:
+                # Any error with discourse should not prevent login
                 log.warning(
-                    'Error syncing with discourse, no result for %d', user.id)
-
-        except:
-            log.warning(
-                'Error syncing with discourse for %d', user.id, exc_info=True)
-
-        return to_json_dict(user, schema_user)
+                    'Error logging into discourse for %d', user.id,
+                    exc_info=True)
+            return response
+        else:
+            request.errors.status = 403
+            request.errors.add('body', 'user', 'Login failed')
+            return None
 
 
 class LoginSchema(colander.MappingSchema):

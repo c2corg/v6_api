@@ -1,14 +1,6 @@
-import os
-
 from c2corg_api.tests import BaseTestCase
 
-from pyramid.paster import get_appsettings
-
 from c2corg_api.models.user import User
-
-curdir = os.path.dirname(os.path.abspath(__file__))
-configfile = os.path.realpath(os.path.join(curdir, '../../../test.ini'))
-settings = get_appsettings(configfile)
 
 
 class EmailTests(BaseTestCase):

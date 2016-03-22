@@ -9,9 +9,13 @@ from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.user_profile import UserProfile
 from sqlalchemy import engine_from_config
 from pyramid.paster import get_appsettings
+from pyramid_mailer import get_mailer
 from pyramid import testing
+
 import unittest
 from webtest import TestApp
+
+from c2corg_api.emails.email_service import EmailService
 
 from c2corg_api import main
 from c2corg_api.models import *  # noqa
@@ -52,7 +56,7 @@ def _add_global_test_data(session):
     contributor = User(
         username='contributor', email='contributor@camptocamp.org',
         password='super pass', name='Contributor',
-        profile=contributor_profile)
+        email_validated=True, profile=contributor_profile)
 
     contributor2_profile = UserProfile(
         categories=['amateur'],
@@ -60,7 +64,7 @@ def _add_global_test_data(session):
 
     contributor2 = User(
         username='contributor2', email='contributor2@camptocamp.org',
-        password='better pass',
+        password='better pass', email_validated=True,
         profile=contributor2_profile)
 
     moderator_profile = UserProfile(
@@ -70,7 +74,7 @@ def _add_global_test_data(session):
     moderator = User(
         username='moderator', email='moderator@camptocamp.org',
         moderator=True, password='even better pass',
-        profile=moderator_profile)
+        email_validated=True, profile=moderator_profile)
 
     users = [moderator, contributor, contributor2]
     session.add_all(users)
@@ -134,6 +138,13 @@ class BaseTestCase(unittest.TestCase):
         self.settings = settings
         unittest.TestCase.__init__(self, *args, **kwargs)
 
+    def get_email_box_length(self):
+        return len(self.mailer.outbox)
+
+    def get_last_email(self):
+        outbox_count = self.get_email_box_length()
+        return self.mailer.outbox[outbox_count - 1]
+
     @classmethod
     def setUpClass(cls):  # noqa
         cls.app = main({}, **settings)
@@ -142,6 +153,10 @@ class BaseTestCase(unittest.TestCase):
 
     def setUp(self):  # noqa
         self.app = TestApp(self.app)
+        registry = self.app.app.registry
+        self.mailer = get_mailer(registry)
+        self.email_service = EmailService(self.mailer, settings)
+
         self.config = testing.setUp()
 
         self.connection = self.engine.connect()

@@ -72,11 +72,6 @@ def main(global_config, **settings):
 
     config = Configurator(settings=settings)
 
-    # Add routes not handled by Cornice
-    config.add_route('login', '/login')
-    config.add_route('logout', '/logout')
-    config.add_route('check_token', '/check_token')
-
     config.include('cornice')
 
     bypass_auth = False

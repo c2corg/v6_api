@@ -65,15 +65,23 @@ def create_claims(user, exp):
 
 
 def try_login(user, password, request):
-    if user.validate_password(password, DBSession):
-        policy = request.registry.queryUtility(IAuthenticationPolicy)
-        now = datetime.datetime.utcnow()
-        exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
-        claims = create_claims(user, exp)
-        token = policy.encode_jwt(request, claims=claims).decode('utf-8')
-        return add_or_retrieve_token(token, exp, user.id)
+    if user.email_validated and user.validate_password(password):
+        return log_validated_user_i_know_what_i_do(user, request)
+    else:
+        return None
 
-    return None
+
+def log_validated_user_i_know_what_i_do(user, request):
+    """This method may only be called for validated users.
+    See the try_login function for a safe version.
+    """
+    assert user.email_validated
+    policy = request.registry.queryUtility(IAuthenticationPolicy)
+    now = datetime.datetime.utcnow()
+    exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
+    claims = create_claims(user, exp)
+    token = policy.encode_jwt(request, claims=claims).decode('utf-8')
+    return add_or_retrieve_token(token, exp, user.id)
 
 
 def renew_token(user, request):

@@ -14,11 +14,16 @@ class EmailService:
 
     def __init__(self, mailer, settings):
         self.mail_from = settings['mail.from']
+        host = settings['mail.host']
+        port = settings['mail.port']
+        self.mail_server = '%s:%s' % (host, port)
         self.mailer = mailer
         self.settings = settings
 
     def _send_email(self, to_address, subject=None, body=None):
         """Send an email. This method may throw."""
+        log.debug('Sending email to %s through %s' % (
+            to_address, self.mail_server))
         msg = Message(
                 subject=subject,
                 sender=self.mail_from,
