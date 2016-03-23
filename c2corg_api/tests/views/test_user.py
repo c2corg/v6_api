@@ -5,6 +5,8 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.security.discourse_sso_provider import discourse_redirect
 
+import re
+
 
 class TestUserRest(BaseTestRest):
 
@@ -13,6 +15,9 @@ class TestUserRest(BaseTestRest):
         self._model = User
         BaseTestRest.setUp(self)
         self._add_test_data()
+
+    def extract_urls(self, data):
+        return re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', data)  # noqa
 
     def test_register(self):
         request_body = {
@@ -24,6 +29,7 @@ class TestUserRest(BaseTestRest):
         url = self._prefix + '/register'
 
         # First succeed in creating a new user
+        email_count = self.get_email_box_length()
         body = self.app.post_json(url, request_body, status=200).json
         self.assertBodyEqual(body, 'username', 'test')
         self.assertBodyEqual(body, 'name', 'Max Mustermann')
@@ -31,10 +37,31 @@ class TestUserRest(BaseTestRest):
         self.assertNotIn('password', body)
         self.assertIn('id', body)
         user_id = body.get('id')
-        self.assertIsNotNone(self.session.query(User).get(user_id))
+        user = self.session.query(User).get(user_id)
+        self.assertIsNotNone(user)
+        self.assertFalse(user.email_validated)
         profile = self.session.query(UserProfile).get(user_id)
         self.assertIsNotNone(profile)
         self.assertEqual(len(profile.versions), 1)
+        email_count_after = self.get_email_box_length()
+        self.assertEqual(email_count_after, email_count + 1)
+
+        # Simulate confirmation email validation
+        validation_url = self.extract_urls(self.get_last_email().body)[0]
+        from urllib.parse import urlparse, parse_qs
+        query = parse_qs(urlparse(validation_url).query)
+        nonce = query['validate_register_email'][0]
+        url_api_validation = '/users/validate_register_email/%s' % nonce
+        self.app.post_json(url_api_validation, {}, status=200)
+        profile = self.session.query(UserProfile).get(user_id)
+        # Need to expunge the profile and user so that the latest
+        # version (the one from the view) is actually picked up.
+        self.session.expunge(profile)
+        self.session.expunge(user)
+        profile = self.session.query(UserProfile).get(user_id)
+        self.assertEqual(len(profile.versions), 1)
+        user = self.session.query(User).get(user_id)
+        self.assertTrue(user.email_validated)
 
         # Now reject non unique attributes
         body = self.app.post_json(url, request_body, status=400).json
