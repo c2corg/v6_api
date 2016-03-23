@@ -49,6 +49,18 @@ class FillIndexTest(BaseTestCase):
                 )
             ]
         ))
+        self.session.add(Waypoint(
+            document_id=71174,
+            redirects_to=71171,
+            waypoint_type='summit', elevation=4985,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'),
+            locales=[
+                WaypointLocale(
+                    lang='en', title='Mont Blanc',
+                    description='...',
+                    summary='The heighest point in Europe')
+            ]))
         self.session.flush()
 
         # fill the ElasticSearch index
@@ -72,3 +84,6 @@ class FillIndexTest(BaseTestCase):
         self.assertEqual(route.title_en, 'Mont Blanc : Face N')
         self.assertEqual(route.title_fr, '')
         self.assertEqual(route.doc_type, 'r')
+
+        # merged document is ignored
+        self.assertIsNone(SearchDocument.get(id=71174, ignore=404))

@@ -97,12 +97,14 @@ def get_associations(document, lang):
 
     parent_waypoints = limit_waypoint_fields(
         DBSession.query(Waypoint).
+        filter(Waypoint.redirects_to.is_(None)).
         join(Association,
              Association.parent_document_id == Waypoint.document_id).
         filter(Association.child_document_id == document.document_id)). \
         all()
     child_waypoints = limit_waypoint_fields(
         DBSession.query(Waypoint).
+        filter(Waypoint.redirects_to.is_(None)).
         join(Association,
              Association.child_document_id == Waypoint.document_id).
         filter(Association.parent_document_id == document.document_id)). \
@@ -119,6 +121,7 @@ def get_associations(document, lang):
 
     routes = limit_route_fields(
         DBSession.query(Route).
+        filter(Route.redirects_to.is_(None)).
         join(
             Association,
             or_(

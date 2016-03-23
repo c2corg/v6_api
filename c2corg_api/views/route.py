@@ -81,6 +81,7 @@ class RouteRest(DocumentRest):
         """Set last 10 outings on the given route.
         """
         recent_outings = DBSession.query(Outing). \
+            filter(Outing.redirects_to.is_(None)). \
             join(
                 Association,
                 Outing.document_id == Association.child_document_id). \
@@ -100,6 +101,7 @@ class RouteRest(DocumentRest):
             set_best_locale(recent_outings, lang)
 
         total = DBSession.query(Outing.document_id). \
+            filter(Outing.redirects_to.is_(None)). \
             join(
                 Association,
                 Outing.document_id == Association.child_document_id). \

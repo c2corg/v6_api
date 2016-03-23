@@ -14,7 +14,7 @@ from sqlalchemy import engine_from_config
 
 from c2corg_api.search.mapping import SearchDocument
 from c2corg_api.models import DBSession
-from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models.document import DocumentLocale, Document
 from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import configure_es_from_config, elasticsearch_config
 from c2corg_api.search.utils import strip_bbcodes, get_title
@@ -51,13 +51,15 @@ def fill_index(db_session):
         'last_progress_update': None
     }
 
-    total = DBSession.query(DocumentLocale).count()
+    total = DBSession.query(DocumentLocale). \
+        join(Document).filter(Document.redirects_to.is_(None)).count()
 
     q = DBSession.query(
             DocumentLocale.document_id, DocumentLocale.title,
             DocumentLocale.summary, DocumentLocale.description,
             DocumentLocale.lang, DocumentLocale.type,
             RouteLocale.__table__.c.title_prefix). \
+        join(Document).filter(Document.redirects_to.is_(None)). \
         outerjoin(
             RouteLocale.__table__,
             DocumentLocale.id == RouteLocale.__table__.c.id).\

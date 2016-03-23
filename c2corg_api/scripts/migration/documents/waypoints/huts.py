@@ -10,34 +10,42 @@ class MigrateHuts(MigrateWaypoints):
 
     def get_count_query(self):
         return (
-            'select count(*) from app_huts_archives;'
+            'select count(*) '
+            'from app_huts_archives ha join huts h on ha.id = h.id '
+            'where h.redirects_to is null;'
         )
 
     def get_query(self):
         return (
             'select '
-            '   id, document_archive_id, is_latest_version, elevation, '
-            '   is_protected, redirects_to, '
-            '   ST_Force2D(ST_SetSRID(geom, 3857)) geom, '
-            '   shelter_type, is_staffed, phone, url, staffed_capacity, '
-            '   unstaffed_capacity, has_unstaffed_matress, '
-            '   has_unstaffed_blanket, has_unstaffed_gas, has_unstaffed_wood '
-            'from app_huts_archives '
-            'order by id, document_archive_id;'
+            '   ha.id, ha.document_archive_id, ha.is_latest_version, '
+            '   ha.elevation, ha.is_protected, ha.redirects_to, '
+            '   ST_Force2D(ST_SetSRID(ha.geom, 3857)) geom, '
+            '   ha.shelter_type, ha.is_staffed, ha.phone, ha.url, '
+            '   ha.staffed_capacity, ha.unstaffed_capacity, '
+            '   ha.has_unstaffed_matress, ha.has_unstaffed_blanket, '
+            '   ha.has_unstaffed_gas, ha.has_unstaffed_wood '
+            'from app_huts_archives ha join huts h on ha.id = h.id '
+            'where h.redirects_to is null '
+            'order by ha.id, ha.document_archive_id;'
         )
 
     def get_count_query_locales(self):
         return (
-            'select count(*) from app_huts_i18n_archives;'
+            'select count(*) '
+            'from app_huts_i18n_archives ha join huts h on ha.id = h.id '
+            'where h.redirects_to is null;'
         )
 
     def get_query_locales(self):
         return (
             'select '
-            '   id, document_i18n_archive_id, is_latest_version, culture, '
-            '    name, description, pedestrian_access, staffed_period '
-            'from app_huts_i18n_archives '
-            'order by id, document_i18n_archive_id;'
+            '   ha.id, ha.document_i18n_archive_id, ha.is_latest_version, '
+            '   ha.culture, ha.name, ha.description, ha.pedestrian_access, '
+            '   ha.staffed_period '
+            'from app_huts_i18n_archives ha join huts h on ha.id = h.id '
+            'where h.redirects_to is null '
+            'order by ha.id, ha.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

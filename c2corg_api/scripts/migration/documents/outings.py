@@ -25,39 +25,48 @@ class MigrateOutings(MigrateDocuments):
 
     def get_count_query(self):
         return (
-            'select count(*) from app_outings_archives;'
+            'select count(*) '
+            'from app_outings_archives oa join outings o on oa.id = o.id '
+            'where o.redirects_to is null;'
         )
 
     def get_query(self):
         return (
             'select '
-            '   id, document_archive_id, is_latest_version, elevation, '
-            '   is_protected, redirects_to, '
-            '   ST_Force2D(ST_SetSRID(geom, 3857)) geom, '
-            '   date, activities, height_diff_up, height_diff_down, '
-            '   outing_length, min_elevation, max_elevation, partial_trip, '
-            '   hut_status, frequentation_status, conditions_status, '
-            '   access_status, access_elevation, lift_status, glacier_status, '
-            '   up_snow_elevation, down_snow_elevation, track_status, '
-            '   outing_with_public_transportation, avalanche_date '
-            'from app_outings_archives '
-            'order by id, document_archive_id;'
+            '   oa.id, oa.document_archive_id, oa.is_latest_version, '
+            '   oa.elevation, oa.is_protected, oa.redirects_to, '
+            '   ST_Force2D(ST_SetSRID(oa.geom, 3857)) geom, '
+            '   oa.date, oa.activities, oa.height_diff_up, '
+            '   oa.height_diff_down, oa.outing_length, oa.min_elevation, '
+            '   oa.max_elevation, oa.partial_trip, '
+            '   oa.hut_status, oa.frequentation_status, oa.conditions_status, '
+            '   oa.access_status, oa.access_elevation, oa.lift_status, '
+            '   oa.glacier_status, oa.up_snow_elevation, '
+            '   oa.down_snow_elevation, oa.track_status, '
+            '   oa.outing_with_public_transportation, oa.avalanche_date '
+            'from app_outings_archives oa join outings o on oa.id = o.id '
+            'where o.redirects_to is null '
+            'order by oa.id, oa.document_archive_id;'
         )
 
     def get_count_query_locales(self):
         return (
-            'select count(*) from app_outings_i18n_archives;'
+            'select count(*) '
+            'from app_outings_i18n_archives oa join outings o on oa.id = o.id '
+            'where o.redirects_to is null;'
         )
 
     def get_query_locales(self):
         return (
             'select '
-            '   id, document_i18n_archive_id, is_latest_version, culture, '
-            '   name, description, participants, timing, weather, '
-            '   hut_comments, access_comments, conditions, conditions_levels, '
-            '   avalanche_desc, outing_route_desc '
-            'from app_outings_i18n_archives '
-            ' order by id, document_i18n_archive_id;'
+            '   oa.id, oa.document_i18n_archive_id, oa.is_latest_version, '
+            '   oa.culture, oa.name, oa.description, oa.participants, '
+            '   oa.timing, oa.weather, oa.hut_comments, oa.access_comments, '
+            '   oa.conditions, oa.conditions_levels, oa.avalanche_desc, '
+            '   oa.outing_route_desc '
+            'from app_outings_i18n_archives oa join outings o on oa.id = o.id '
+            'where o.redirects_to is null '
+            'order by oa.id, oa.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

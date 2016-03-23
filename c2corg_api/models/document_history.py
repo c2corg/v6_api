@@ -70,7 +70,7 @@ class DocumentVersion(Base):
 
 def has_been_created_by(document_id, user_id):
     """Check if passed user_id is the id of the user that has created
-    the inital version of this document, whatever the language.
+    the initial version of this document, whatever the language.
     """
     return DBSession.query(
         exists().where(and_(

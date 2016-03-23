@@ -84,11 +84,12 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(1, len(linked_routes))
         linked_route = linked_routes[0]
         self.assertEqual(
-            self.route.document_id, linked_route.get('document_id'))
+            self.route1.document_id, linked_route.get('document_id'))
         self.assertEqual(
             linked_route.get('locales')[0].get('title_prefix'), 'Mont Blanc :')
 
         self.assertIn('maps', body)
+        self.assertEqual(1, len(body.get('maps')))
         topo_map = body.get('maps')[0]
         self.assertEqual(topo_map.get('code'), '3232ET')
         self.assertEqual(topo_map.get('locales')[0].get('title'), 'Belley')
@@ -102,7 +103,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(1, recent_outings['total'])
         self.assertEqual(1, len(recent_outings['outings']))
         self.assertEqual(
-            self.outing.document_id,
+            self.outing1.document_id,
             recent_outings['outings'][0].get('document_id'))
 
     def test_get_no_associations(self):
@@ -126,6 +127,16 @@ class TestWaypointRest(BaseDocumentTestRest):
 
     def test_get_404(self):
         self.get_404()
+
+    def test_get_redirected_wp(self):
+        response = self.app.get(self._prefix + '/' +
+                                str(self.waypoint5.document_id),
+                                status=200)
+        body = response.json
+
+        self.assertIn('redirects_to', body)
+        self.assertEqual(body['redirects_to'], self.waypoint.document_id)
+        self.assertEqual(body['available_langs'], ['en', 'fr'])
 
     def test_post_error(self):
         body = self.post_error({})
@@ -416,7 +427,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         # check that the title_prefix of an associated route (that the wp
         # it the main wp of) was updated
-        route = self.session.query(Route).get(self.route.document_id)
+        route = self.session.query(Route).get(self.route1.document_id)
         route_locale_en = route.get_locale('en')
         self.assertEqual(route_locale_en.title_prefix, 'Mont Granier!')
 
@@ -664,6 +675,31 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(meta_data_en.comment, 'Adding geom')
         self.assertIsNotNone(meta_data_en.written_at)
 
+    def test_put_merged_wp(self):
+        """Tests updating a waypoint with `redirected_to` set.
+        """
+        body_put = {
+            'message': 'Updating',
+            'document': {
+                'document_id': self.waypoint5.document_id,
+                'version': self.waypoint5.version,
+                'waypoint_type': 'summit',
+                'elevation': 3779,
+                'locales': []
+            }
+        }
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.put_json(
+            self._prefix + '/' + str(self.waypoint5.document_id), body_put,
+            headers=headers, status=400)
+
+        errors = response.json.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(
+            errors[0].get('description'), 'can not update merged document')
+        self.assertEqual(errors[0].get('name'), 'Bad Request')
+
     def _assert_geometry(self, body, field='geom'):
         self.assertIsNotNone(body.get('geometry'))
         geometry = body.get('geometry')
@@ -740,26 +776,52 @@ class TestWaypointRest(BaseDocumentTestRest):
             lang='fr', title='Mont Granier', description='...',
             access='ouai'))
         self.session.add(self.waypoint4)
+        self.waypoint5 = Waypoint(
+            waypoint_type='summit', elevation=3,
+            redirects_to=self.waypoint.document_id,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'))
+        self.waypoint5.locales.append(WaypointLocale(
+            lang='en', title='Mont Granier', description='...',
+            access='yep'))
+        self.session.add(self.waypoint5)
+        self.session.flush()
+        DocumentRest.create_new_version(
+            self.waypoint5, self.global_userids['contributor'])
 
         # add some associations
-        self.route = Route(
+        self.route1 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
             height_diff_up=800, height_diff_down=800, durations='1',
             main_waypoint_id=self.waypoint.document_id
         )
-        self.route.locales.append(RouteLocale(
+        self.route1.locales.append(RouteLocale(
             lang='en', title='Mont Blanc from the air', description='...',
             title_prefix='Mont Blanc :', gear='paraglider'))
-        self.session.add(self.route)
+        self.session.add(self.route1)
+        self.session.flush()
+        self.route2 = Route(
+            redirects_to=self.route1.document_id,
+            activities=['skitouring'], elevation_max=1500, elevation_min=700,
+            height_diff_up=800, height_diff_down=800, durations='1',
+            main_waypoint_id=self.waypoint.document_id
+        )
+        self.session.add(self.route2)
         self.session.flush()
         self.session.add(Association(
             parent_document_id=self.waypoint.document_id,
             child_document_id=self.waypoint4.document_id))
         self.session.add(Association(
             parent_document_id=self.waypoint.document_id,
-            child_document_id=self.route.document_id))
+            child_document_id=self.waypoint5.document_id))
+        self.session.add(Association(
+            parent_document_id=self.waypoint.document_id,
+            child_document_id=self.route1.document_id))
+        self.session.add(Association(
+            parent_document_id=self.waypoint.document_id,
+            child_document_id=self.route2.document_id))
 
-        self.outing = Outing(
+        self.outing1 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
             date_end=datetime.date(2016, 1, 1),
             locales=[
@@ -768,14 +830,40 @@ class TestWaypointRest(BaseDocumentTestRest):
                     weather='sunny')
             ]
         )
-        self.session.add(self.outing)
+        self.session.add(self.outing1)
         self.session.flush()
         self.session.add(Association(
-            parent_document_id=self.route.document_id,
-            child_document_id=self.outing.document_id))
+            parent_document_id=self.route1.document_id,
+            child_document_id=self.outing1.document_id))
+
+        self.outing2 = Outing(
+            redirects_to=self.outing1.document_id,
+            activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
+            date_end=datetime.date(2016, 1, 1),
+            locales=[
+                OutingLocale(
+                    lang='en', title='...', description='...',
+                    weather='sunny')
+            ]
+        )
+        self.session.add(self.outing2)
+        self.session.flush()
+        self.session.add(Association(
+            parent_document_id=self.route1.document_id,
+            child_document_id=self.outing2.document_id))
 
         # add a map
+        topo_map = TopoMap(
+            code='3232ET', editor='IGN', scale='25000',
+            locales=[
+                DocumentLocale(lang='fr', title='Belley')
+            ],
+            geometry=DocumentGeometry(geom_detail='SRID=3857;POLYGON((611774.917032556 5706934.10657514,611774.917032556 5744215.5846397,642834.402570357 5744215.5846397,642834.402570357 5706934.10657514,611774.917032556 5706934.10657514))')  # noqa
+        )
+        self.session.add(topo_map)
+        self.session.flush()
         self.session.add(TopoMap(
+            redirects_to=topo_map.document_id,
             code='3232ET', editor='IGN', scale='25000',
             locales=[
                 DocumentLocale(lang='fr', title='Belley')

@@ -52,9 +52,14 @@ class _DocumentMixin(object):
     `ArchiveDocument`.
     """
     version = Column(Integer, nullable=False, server_default='1')
-    # move to metadata?
     protected = Column(Boolean)
-    redirects_to = Column(Integer)
+
+    @declared_attr
+    def redirects_to(self):
+        return Column(
+            Integer, ForeignKey(schema + '.documents.document_id'),
+            nullable=True)
+
     quality = Column(
         Enum(name='quality_type', inherit_schema=True, *quality_types))
 
@@ -418,6 +423,20 @@ def get_update_schema(document_schema):
         document = document_schema.clone()
 
     return UpdateSchema()
+
+
+def get_available_langs(document_id):
+    """Return the available languages (e.g. ['en', 'fr']) for a single
+    document.
+    """
+    return DBSession. \
+        query(
+            func.array_agg(
+                DocumentLocale.lang,
+                type_=postgresql.ARRAY(String))). \
+        filter(DocumentLocale.document_id == document_id). \
+        group_by(DocumentLocale.document_id). \
+        scalar()
 
 
 def set_available_langs(documents, loaded=False):

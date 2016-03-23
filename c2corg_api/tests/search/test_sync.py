@@ -83,3 +83,46 @@ class SyncTest(BaseTestCase):
         self.assertEqual(doc['title_en'], 'Mont Granier')
         self.assertEqual(doc['summary_en'], 'The Mont Granier')
         self.assertEqual(doc['doc_type'], 'w')
+
+    def test_sync_search_index_merged_document(self):
+        """Tests that merged documents are removed from the search index.
+        """
+        index = elasticsearch_config['index']
+        waypoint = Waypoint(
+            document_id=51251,
+            waypoint_type='summit', elevation=2000,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'),
+            locales=[
+                WaypointLocale(
+                    lang='fr', title='Mont Granier',
+                    description='...',
+                    summary='Le Mont [b]Granier[/b]')
+            ])
+
+        # first insert the document
+        t = transaction.begin()
+        sync_search_index(waypoint)
+        t.commit()
+
+        self.assertIsNotNone(SearchDocument.get(id=51251, index=index))
+
+        # then set `redirects_to` and sync again
+        waypoint.redirects_to = 51252
+
+        t = transaction.begin()
+        sync_search_index(waypoint)
+        t.commit()
+
+        # check that the document is removed
+        self.assertIsNone(SearchDocument.get(id=51251, ignore=404))
+
+        # now sync a 2nd time to check that already deleted documents are not
+        # a problem
+
+        t = transaction.begin()
+        sync_search_index(waypoint)
+        t.commit()
+
+        # check that the document is removed
+        self.assertIsNone(SearchDocument.get(id=51251, ignore=404))

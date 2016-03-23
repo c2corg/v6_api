@@ -92,7 +92,8 @@ class BaseDocumentTestRest(BaseTestRest):
             self.assertEqual(sorted(available_langs), ['en', 'fr'])
 
         if limit is None:
-            nb_docs = self.session.query(self._model).count()
+            nb_docs = self.session.query(self._model). \
+                filter(getattr(self._model, 'redirects_to').is_(None)).count()
             self.assertEqual(len(documents), nb_docs)
         else:
             self.assertLessEqual(len(documents), limit)

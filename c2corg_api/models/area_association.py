@@ -61,6 +61,10 @@ def update_area(area, reset=False):
                 AreaAssociation.area_id == area.document_id)
         )
 
+    if area.redirects_to:
+        # ignore forwarded areas
+        return
+
     intersecting_documents = DBSession. \
         query(
             DocumentGeometry.document_id,  # id of a document
@@ -70,6 +74,7 @@ def update_area(area, reset=False):
             and_(
                 Document.document_id == DocumentGeometry.document_id,
                 Document.type != AREA_TYPE)). \
+        filter(Document.redirects_to.is_(None)). \
         filter(
             or_(
                 DocumentGeometry.geom.intersects(
@@ -98,15 +103,18 @@ def update_areas_for_document(document, reset=False):
                 AreaAssociation.document_id == document.document_id)
         )
 
+    if document.redirects_to:
+        # ignore forwarded areas
+        return
+
     intersecting_areas = DBSession. \
         query(
             DocumentGeometry.document_id,  # id of an area
             literal_column(str(document.document_id))). \
         join(
-            # join on the table instead on `Area` to avoid that SQLA adds
-            # a join on "guidebook.documents"
-            Area.__table__,
+            Area,
             Area.document_id == DocumentGeometry.document_id). \
+        filter(Area.redirects_to.is_(None)). \
         filter(
             or_(
                 DocumentGeometry.geom_detail.intersects(
@@ -128,6 +136,7 @@ def get_areas(document, lang):
     """
     areas = DBSession. \
         query(Area). \
+        filter(Area.redirects_to.is_(None)). \
         join(
             AreaAssociation,
             Area.document_id == AreaAssociation.area_id). \

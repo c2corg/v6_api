@@ -2,6 +2,7 @@ from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.fill_index import fill_index
+from c2corg_api.search.search import get_documents
 from c2corg_api.tests.search import force_search_index
 from c2corg_api.tests.views import BaseTestRest
 
@@ -12,7 +13,7 @@ class TestSearchRest(BaseTestRest):
         super(TestSearchRest, self).setUp()
         self._prefix = '/search'
 
-        self.session.add(Waypoint(
+        self.waypoint1 = Waypoint(
             document_id=534681,
             waypoint_type='summit', elevation=2000,
             geometry=DocumentGeometry(
@@ -26,7 +27,8 @@ class TestSearchRest(BaseTestRest):
                     lang='en', title='Dent de Crolles',
                     description='...',
                     summary='The Dent de Crolles')
-            ]))
+            ])
+        self.session.add(self.waypoint1)
         self.session.add(Waypoint(
             document_id=534682,
             waypoint_type='summit', elevation=4985,
@@ -78,3 +80,21 @@ class TestSearchRest(BaseTestRest):
 
         locales = waypoints['documents'][0]['locales']
         self.assertEqual(len(locales), 1)
+
+    def test_get_documents_merged_documents(self):
+        """Tests that merged documents are ignored.
+        """
+        waypoint = Waypoint(
+            redirects_to=self.waypoint1.document_id,
+            waypoint_type='summit', elevation=4985,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'),
+            locales=[
+                WaypointLocale(
+                    lang='en', title='Mont Blanc',
+                    description='...',
+                    summary='The heighest point in Europe')
+            ])
+        self.session.add(waypoint)
+        documents = get_documents([waypoint.document_id], Waypoint, None)
+        self.assertEquals(0, len(documents))

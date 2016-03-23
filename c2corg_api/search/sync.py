@@ -34,39 +34,56 @@ def sync_search_index(document):
      The operation will be run once the current transaction has been committed
      successfully.
     """
-    if isinstance(document, Route):
-        # TODO the locales of routes have to be refreshed because the title
-        # prefix is set directly in the database. this is not optimized further
-        # because it is going to change anyway with
-        # https://github.com/c2corg/v6_api/issues/89
-        DBSession.refresh(document)
-
     document_id = document.document_id
-    doc = {
-        'doc_type': document.type
-    }
 
-    has_title_prefix = isinstance(document, Route)
-    for locale in document.locales:
-        lang = locale.lang
+    sync_operation = None
+    if document.redirects_to:
+        # remove merged documents from the index
+        def remove_doc():
+            client = elasticsearch_config['client']
+            index_name = elasticsearch_config['index']
 
-        # set the title prefix (name of the main waypoint) for routes
-        title_prefix = locale.title_prefix if has_title_prefix else None
-        title = get_title(locale.title, title_prefix)
+            client.delete(
+                index=index_name,
+                doc_type=SearchDocument._doc_type.name,
+                id=document_id,
+                ignore=404
+            )
+        sync_operation = remove_doc
+    else:
+        doc = {
+            'doc_type': document.type
+        }
 
-        doc['title_' + lang] = title
-        doc['summary_' + lang] = strip_bbcodes(locale.summary)
-        doc['description_' + lang] = strip_bbcodes(locale.description)
+        if isinstance(document, Route):
+            # TODO the locales of routes have to be refreshed because the title
+            # prefix is set directly in the database. this is not optimized
+            # further because it is going to change anyway with
+            # https://github.com/c2corg/v6_api/issues/89
+            DBSession.refresh(document)
 
-    def sync_operation():
-        client = elasticsearch_config['client']
-        index_name = elasticsearch_config['index']
+        has_title_prefix = isinstance(document, Route)
+        for locale in document.locales:
+            lang = locale.lang
 
-        client.index(
-            index=index_name,
-            doc_type=SearchDocument._doc_type.name,
-            id=document_id,
-            body=doc
-        )
+            # set the title prefix (name of the main waypoint) for routes
+            title_prefix = locale.title_prefix if has_title_prefix else None
+            title = get_title(locale.title, title_prefix)
+
+            doc['title_' + lang] = title
+            doc['summary_' + lang] = strip_bbcodes(locale.summary)
+            doc['description_' + lang] = strip_bbcodes(locale.description)
+
+        def update_doc():
+            client = elasticsearch_config['client']
+            index_name = elasticsearch_config['index']
+
+            client.index(
+                index=index_name,
+                doc_type=SearchDocument._doc_type.name,
+                id=document_id,
+                body=doc
+            )
+        sync_operation = update_doc
 
     run_on_successful_transaction(sync_operation)

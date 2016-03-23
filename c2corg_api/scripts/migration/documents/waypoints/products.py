@@ -10,32 +10,40 @@ class MigrateProducts(MigrateWaypoints):
 
     def get_count_query(self):
         return (
-            'select count(*) from app_products_archives;'
+            'select count(*) '
+            'from app_products_archives pa join products p on pa.id = p.id '
+            'where p.redirects_to is null;'
         )
 
     def get_query(self):
         return (
             'select '
-            '   id, document_archive_id, is_latest_version, elevation, '
-            '   is_protected, redirects_to, '
-            '   ST_Force2D(ST_SetSRID(geom, 3857)) geom, '
-            '   product_type, url '
-            'from app_products_archives '
-            'order by id, document_archive_id;'
+            '   pa.id, pa.document_archive_id, pa.is_latest_version, '
+            '   pa.elevation, pa.is_protected, pa.redirects_to, '
+            '   ST_Force2D(ST_SetSRID(pa.geom, 3857)) geom, '
+            '   pa.product_type, pa.url '
+            'from app_products_archives pa join products p on pa.id = p.id '
+            'where p.redirects_to is null '
+            'order by pa.id, pa.document_archive_id;'
         )
 
     def get_count_query_locales(self):
         return (
-            'select count(*) from app_products_i18n_archives;'
+            'select count(*) '
+            'from app_products_i18n_archives pa '
+            '  join products p on pa.id = p.id '
+            'where p.redirects_to is null;'
         )
 
     def get_query_locales(self):
         return (
             'select '
-            '   id, document_i18n_archive_id, is_latest_version, culture, '
-            '    name, description, hours, access '
-            'from app_products_i18n_archives '
-            'order by id, document_i18n_archive_id;'
+            '   pa.id, pa.document_i18n_archive_id, pa.is_latest_version, '
+            '   pa.culture, pa.name, pa.description, pa.hours, pa.access '
+            'from app_products_i18n_archives pa '
+            '  join products p on pa.id = p.id '
+            'where p.redirects_to is null '
+            'order by pa.id, pa.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):
