@@ -63,6 +63,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         body = self.get(self.profile1, user='contributor', check_title=False)
         self._assert_geometry(body)
         self.assertIsNone(body['locales'][0].get('title'))
+        self.assertNotIn('maps', body)
 
     def test_get_lang(self):
         self.get_lang(self.profile1, user='contributor')

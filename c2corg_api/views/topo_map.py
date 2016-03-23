@@ -24,7 +24,7 @@ class TopoMapRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
-        return self._get(TopoMap, schema_topo_map, include_maps=False)
+        return self._get(TopoMap, schema_topo_map)
 
     @restricted_json_view(
             schema=schema_topo_map, validators=validate_map_create,

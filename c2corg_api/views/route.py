@@ -55,7 +55,7 @@ class RouteRest(DocumentRest):
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
         return self._get(
-            Route, schema_route, schema_adaptor,
+            Route, schema_route, schema_adaptor, include_maps=True,
             set_custom_associations=RouteRest.set_recent_outings)
 
     @restricted_json_view(schema=schema_route,

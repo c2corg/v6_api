@@ -48,6 +48,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
     def test_get(self):
         body = self.get(self.map1)
         self._assert_geometry(body)
+        self.assertNotIn('maps', body)
 
     def test_get_lang(self):
         self.get_lang(self.map1)

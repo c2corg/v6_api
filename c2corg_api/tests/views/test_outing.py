@@ -88,6 +88,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self._assert_geometry(body)
         self.assertNotIn('duration_difficulties', body)
         self.assertIn('frequentation', body)
+        self.assertNotIn('maps', body)
 
         self.assertIn('associations', body)
         associations = body.get('associations')
