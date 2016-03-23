@@ -47,13 +47,13 @@ class AreaRest(DocumentRest):
         return self._put(Area, schema_area, after_update=update_associations)
 
 
-def insert_associations(area):
+def insert_associations(area, user_id):
     """Create links between this new area and documents.
     """
     update_area(area, reset=False)
 
 
-def update_associations(area, update_types):
+def update_associations(area, update_types, user_id):
     """Update the links between this area and documents when the geometry
     has changed.
     """

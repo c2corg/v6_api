@@ -6,8 +6,7 @@ from pyramid.httpexceptions import HTTPBadRequest
 
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.models.association import schema_association, \
-    AssociationLog, Association
-from sqlalchemy.sql.expression import or_, and_
+    Association, exists_already
 
 
 def validate_association(request):
@@ -52,13 +51,13 @@ class AssociationRest(object):
     def collection_post(self):
         association = schema_association.objectify(self.request.validated)
 
-        if self._exists_already(association):
+        if exists_already(association):
             raise HTTPBadRequest(
                 'association (or its back-link) exists already')
 
         DBSession.add(association)
         DBSession.add(
-            self._get_log(association, self.request.authenticated_userid))
+            association.get_log(self.request.authenticated_userid))
 
         return {}
 
@@ -70,40 +69,13 @@ class AssociationRest(object):
         if association is None:
             raise HTTPBadRequest('association does not exist')
 
-        log = self._get_log(
-            association, self.request.authenticated_userid, is_creation=False)
+        log = association.get_log(
+            self.request.authenticated_userid, is_creation=False)
 
         DBSession.delete(association)
         DBSession.add(log)
 
         return {}
-
-    def _get_log(self, association, user_id, is_creation=True):
-        return AssociationLog(
-            parent_document_id=association.parent_document_id,
-            child_document_id=association.child_document_id,
-            user_id=user_id,
-            is_creation=is_creation
-        )
-
-    def _exists_already(self, link):
-        """ Checks if the given association exists already. For example, for
-        two given documents D1 and D2, it checks if there is no association
-        D1 -> D2 or D2 -> D1.
-        """
-        associations_exists = DBSession.query(Association). \
-            filter(or_(
-                and_(
-                    Association.parent_document_id == link.parent_document_id,
-                    Association.child_document_id == link.child_document_id
-                ),
-                and_(
-                    Association.child_document_id == link.parent_document_id,
-                    Association.parent_document_id == link.child_document_id
-                )
-            )). \
-            exists()
-        return DBSession.query(associations_exists).scalar()
 
     def _load(self, association_in):
         return DBSession.query(Association). \

@@ -1,7 +1,7 @@
 import functools
 
 from c2corg_api.models import DBSession
-from c2corg_api.models.association import Association
+from c2corg_api.models.association import Association, add_association
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.outing import schema_association_outing, Outing
 from c2corg_api.views.outing import set_author
@@ -63,7 +63,7 @@ class RouteRest(DocumentRest):
     def collection_post(self):
         return self._collection_post(
             schema_route, before_add=set_default_geometry,
-            after_add=init_title_prefix)
+            after_add=after_route_add)
 
     @restricted_json_view(schema=schema_update_route,
                           validators=[validate_id, validate_route_update])
@@ -74,7 +74,7 @@ class RouteRest(DocumentRest):
             Route, schema_route,
             before_update=functools.partial(
                 update_default_geometry, old_main_waypoint_id),
-            after_update=update_title_prefix)
+            after_update=after_route_update)
 
     @staticmethod
     def set_recent_outings(route, lang):
@@ -126,7 +126,7 @@ class RouteVersionRest(DocumentRest):
             ArchiveRoute, ArchiveRouteLocale, schema_route, schema_adaptor)
 
 
-def set_default_geometry(route):
+def set_default_geometry(route, user_id):
     """When creating a new route, set the default geometry to the middle point
     of a given track, if not to the geometry of the associated main waypoint.
     """
@@ -145,7 +145,7 @@ def set_default_geometry(route):
             route.geometry = DocumentGeometry(geom=main_wp_point)
 
 
-def update_default_geometry(old_main_waypoint_id, route, route_in):
+def update_default_geometry(old_main_waypoint_id, route, route_in, user_id):
     geometry_in = route_in.geometry
     if geometry_in is not None and geometry_in.geom is not None:
         # default geom is manually set in the request
@@ -173,8 +173,28 @@ def main_waypoint_has_changed(route, old_main_waypoint_id):
         return old_main_waypoint_id != route.main_waypoint_id
 
 
+def after_route_add(route, user_id):
+    create_main_waypoint_association(route, user_id)
+    init_title_prefix(route)
+
+
+def create_main_waypoint_association(route, user_id, check_first=False):
+    """Create an association between the newly created route and the main
+    waypoint.
+    """
+    if route.main_waypoint_id:
+        add_association(
+            route.main_waypoint_id, route.document_id, user_id,
+            check_first=check_first)
+
+
 def init_title_prefix(route):
     update_title_prefix(route, create=True)
+
+
+def after_route_update(route, update_types, user_id):
+    create_main_waypoint_association(route, user_id, check_first=True)
+    update_title_prefix(route)
 
 
 def update_title_prefix(route, create=False):

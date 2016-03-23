@@ -212,24 +212,24 @@ class DocumentRest(object):
     def _collection_post(
             self, schema, before_add=None, after_add=None,
             document_field=None):
+        user_id = self.request.authenticated_userid
         document_in = self.request.validated if document_field is None else \
-                self.request.validated[document_field]
+            self.request.validated[document_field]
         document = schema.objectify(document_in)
         document.document_id = None
 
         if before_add:
-            before_add(document)
+            before_add(document, user_id=user_id)
 
         DBSession.add(document)
         DBSession.flush()
-        user_id = self.request.authenticated_userid
         DocumentRest.create_new_version(document, user_id)
 
         if document.type != AREA_TYPE:
             update_areas_for_document(document, reset=False)
 
         if after_add:
-            after_add(document)
+            after_add(document, user_id=user_id)
 
         sync_search_index(document)
 
@@ -259,7 +259,7 @@ class DocumentRest(object):
         document.update(document_in)
 
         if before_update:
-            before_update(document, document_in)
+            before_update(document, document_in, user_id=user_id)
 
         try:
             DBSession.flush()
@@ -282,7 +282,7 @@ class DocumentRest(object):
                 update_areas_for_document(document, reset=True)
 
             if after_update:
-                after_update(document, update_types)
+                after_update(document, update_types, user_id=user_id)
 
             # And the search updated
             sync_search_index(document)
