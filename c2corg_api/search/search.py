@@ -11,34 +11,40 @@ from c2corg_api.views import to_json_dict, set_best_locale
 def search_for_type(
         search_term, document_type, model, locale_model,
         schema, adapt_schema, limit, lang):
-    # search in all title* (title_en, title_fr, ...), summary* and
-    # description* fields. "boost" title fields and summary fields.
-    search_query = MultiMatch(
-        query=search_term,
-        fields=['title*^3', 'summary*^2', 'description*']
-    )
+    document_id = try_to_parse_document_id(search_term)
 
-    # filter on the document_type
-    type_query = Term(doc_type=document_type)
+    if document_id is not None:
+        # search by document id
+        documents = get_documents([document_id], model, locale_model, lang)
+        total = len(documents)
+    else:
+        # search in ElasticSearch:
+        # search in all title* (title_en, title_fr, ...), summary* and
+        # description* fields. "boost" title fields and summary fields.
+        search_query = MultiMatch(
+            query=search_term,
+            fields=['title*^3', 'summary*^2', 'description*']
+        )
 
-    search = create_search().\
-        query(search_query).\
-        filter(type_query).\
-        fields([]).\
-        extra(from_=0, size=limit)
+        # filter on the document_type
+        type_query = Term(doc_type=document_type)
 
-    # only request the document ids from ES
-    response = search.execute()
-    document_ids = [int(doc.meta.id) for doc in response]
+        search = create_search().\
+            query(search_query).\
+            filter(type_query).\
+            fields([]).\
+            extra(from_=0, size=limit)
 
-    # then load the documents for the returned ids
-    documents = get_documents(document_ids, model, locale_model, lang)
+        # only request the document ids from ES
+        response = search.execute()
+        document_ids = [int(doc.meta.id) for doc in response]
 
-    count = len(documents)
-    total = response.hits.total
+        # then load the documents for the returned ids
+        documents = get_documents(document_ids, model, locale_model, lang)
+        total = response.hits.total
 
     return {
-        'count': count,
+        'count': len(documents),
         'total': total,
         'documents': [
             to_json_dict(
@@ -73,3 +79,10 @@ def get_documents(document_ids, model, locale_model, lang):
     # make sure the documents stay in the same order as returned by ES
     document_index = {doc.document_id: doc for doc in documents}
     return [document_index[id] for id in document_ids if id in document_index]
+
+
+def try_to_parse_document_id(search_term):
+    try:
+        return int(search_term)
+    except ValueError:
+        return None

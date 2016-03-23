@@ -130,3 +130,18 @@ class TestSearchRest(BaseTestRest):
         self.assertNotIn('images', body)
         self.assertNotIn('outings', body)
         self.assertNotIn('users', body)
+
+    def test_search_by_document_id(self):
+        response = self.app.get(
+            self._prefix + '?q=' + str(self.waypoint1.document_id), status=200)
+        body = response.json
+
+        waypoints = body['waypoints']
+        self.assertEquals(waypoints['total'], 1)
+        self.assertEquals(waypoints['count'], 1)
+        self.assertEquals(len(waypoints['documents']), 1)
+
+        routes = body['routes']
+        self.assertEquals(routes['total'], 0)
+        self.assertEquals(routes['count'], 0)
+        self.assertEquals(len(routes['documents']), 0)

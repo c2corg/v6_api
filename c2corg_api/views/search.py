@@ -53,7 +53,7 @@ class SearchRest(object):
 
             `limit=...` (optional)
             How many results should be returned per document type
-            (default: 10). The maximum ist 50.
+            (default: 10). The maximum is 50.
 
             `t=...` (optional)
             Which document types should be included in the search. If not
@@ -100,7 +100,7 @@ class SearchRest(object):
                 search_term, IMAGE_TYPE, Image, DocumentLocale,
                 schema_listing_image, None, limit, lang)
 
-        if self._include_type(IMAGE_TYPE, types_to_include) and \
+        if self._include_type(USERPROFILE_TYPE, types_to_include) and \
                 self.request.has_permission('authenticated'):
             results['users'] = search.search_for_type(
                 search_term, USERPROFILE_TYPE, UserProfile, DocumentLocale,
