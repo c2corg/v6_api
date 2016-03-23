@@ -42,7 +42,7 @@ class TestUserRest(BaseTestRest):
         self.assertFalse(user.email_validated)
         profile = self.session.query(UserProfile).get(user_id)
         self.assertIsNotNone(profile)
-        self.assertEqual(len(profile.versions), 0)
+        self.assertEqual(len(profile.versions), 1)
         email_count_after = self.get_email_box_length()
         self.assertEqual(email_count_after, email_count + 1)
 

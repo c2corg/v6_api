@@ -120,6 +120,9 @@ class UserRegistrationRest(object):
             log.warning('Error persisting user', exc_info=True)
             raise HTTPInternalServerError('Error persisting user')
 
+        # also create a version for the profile
+        DocumentRest.create_new_version(user.profile, user.id)
+
         # The user needs validation
         email_service = get_email_service(self.request)
         nonce = user.validation_nonce
@@ -219,9 +222,6 @@ class UserNonceValidationRest(object):
         except:
             log.warning('Error persisting user', exc_info=True)
             raise HTTPInternalServerError('Error persisting user')
-
-        # also create a version for the profile
-        DocumentRest.create_new_version(user.profile, user.id)
 
         if token:
             response = token_to_response(user, token, request)
