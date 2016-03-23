@@ -14,7 +14,7 @@ from colanderalchemy import SQLAlchemySchemaNode
 from c2corg_api.models import Base, users_schema, schema
 
 import colander
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql.schema import ForeignKey
 
 import os
@@ -54,7 +54,8 @@ class User(Base):
         Integer, ForeignKey(schema + '.user_profiles.document_id'),
         primary_key=True)
     profile = relationship(
-        UserProfile, primaryjoin=id == UserProfile.document_id, backref='user')
+        UserProfile, primaryjoin=id == UserProfile.document_id, uselist=False,
+        backref=backref('user', uselist=False))
 
     username = Column(String(200), nullable=False, unique=True)
     name = Column(String(200))

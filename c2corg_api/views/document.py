@@ -9,6 +9,7 @@ from c2corg_api.models.document import (
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.route import schema_association_route
 from c2corg_api.models.topo_map import get_maps, schema_listing_topo_map
+from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import schema_association_waypoint
 from c2corg_api.search.sync import sync_search_index
 from c2corg_api.views import cors_policy
@@ -63,6 +64,7 @@ class DocumentRest(object):
             options(joinedload(getattr(clazz, 'locales'))). \
             options(joinedload(getattr(clazz, 'geometry'))). \
             order_by(clazz.document_id.desc())
+        base_query = add_load_for_profiles(base_query, clazz)
 
         if include_areas:
             base_query = base_query. \
@@ -296,29 +298,34 @@ class DocumentRest(object):
         raised.
         """
         if not lang:
-            document = DBSession. \
+            document_query = DBSession. \
                 query(clazz). \
                 filter(getattr(clazz, 'document_id') == id). \
                 options(joinedload(getattr(clazz, 'locales'))). \
-                options(joinedload('geometry')). \
-                first()
+                options(joinedload('geometry'))
+            document_query = add_load_for_profiles(document_query, clazz)
+            document = document_query.first()
         else:
-            document = DBSession. \
+            document_query = DBSession. \
                 query(clazz). \
                 join(getattr(clazz, 'locales')). \
                 filter(getattr(clazz, 'document_id') == id). \
                 options(contains_eager(getattr(clazz, 'locales'))). \
                 filter(DocumentLocale.lang == lang). \
-                options(joinedload('geometry')). \
-                first()
+                options(joinedload('geometry'))
+            document_query = add_load_for_profiles(document_query, clazz)
+            document = document_query.first()
+
             if not document:
                 # the requested locale might not be available, try to get the
                 # document without locales
-                document = DBSession. \
+                document_query = DBSession. \
                     query(clazz). \
                     filter(getattr(clazz, 'document_id') == id). \
-                    options(joinedload('geometry')). \
-                    first()
+                    options(joinedload('geometry'))
+                document_query = add_load_for_profiles(document_query, clazz)
+                document = document_query.first()
+
                 if document:
                     # explicitly set `locales` to an empty list so that they
                     # are no lazy loaded
@@ -657,6 +664,13 @@ def get_all_fields(fields, activities, field_list_type):
     # turn a list of lists [['a', 'b'], ['b', 'c'], ['d']] into a flat set
     # ['a', 'b', 'c', 'd']
     return set(sum(fields_list, []))
+
+
+def add_load_for_profiles(document_query, clazz):
+    if clazz == UserProfile:
+        # for profiles load username/name together from the associated user
+        document_query = document_query.options(joinedload('user'))
+    return document_query
 
 
 @resource(path='/document/{id}/history/{lang}', cors_policy=cors_policy)

@@ -145,7 +145,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         locales = body.get('locales')
         self.assertEqual(len(locales), 2)
-        locale_en = locales[0]
+        locale_en = get_locale(locales, 'en')
         self.assertNotIn('id', locale_en)
         self.assertIsNotNone(locale_en.get('version'))
         self.assertEqual(locale_en.get('lang'), self.locale_en.lang)
@@ -865,3 +865,7 @@ class BaseDocumentTestRest(BaseTestRest):
                 search_doc['title_es'], document.get_locale('es').title)
 
         return (body, document)
+
+
+def get_locale(locales, lang):
+    return next(filter(lambda locale: locale['lang'] == lang, locales), None)

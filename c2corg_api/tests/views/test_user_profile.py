@@ -28,6 +28,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         body = self.get_collection(user='contributor')
         doc = body['documents'][0]
         self.assertIn('areas', doc)
+        self.assertIn('username', doc)
         self.assertNotIn('geometry', doc)
 
     def test_get_collection_paginated(self):
@@ -67,6 +68,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self._assert_geometry(body)
         self.assertIsNone(body['locales'][0].get('title'))
         self.assertNotIn('maps', body)
+        self.assertIn('username', body)
 
     def test_get_lang(self):
         self.get_lang(self.profile1, user='contributor')
