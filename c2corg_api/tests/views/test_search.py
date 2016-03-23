@@ -60,7 +60,6 @@ class TestSearchRest(BaseTestRest):
         self.assertIn('waypoints', body)
         self.assertIn('routes', body)
         self.assertIn('maps', body)
-        self.assertIn('users', body)
         self.assertIn('areas', body)
         self.assertIn('images', body)
         self.assertIn('outings', body)
@@ -74,8 +73,7 @@ class TestSearchRest(BaseTestRest):
         self.assertEqual(0, routes['total'])
 
         # tests that user results are not included when not authenticated
-        users = body['users']
-        self.assertNotIn('total', users)
+        self.assertNotIn('users', body)
 
     def test_search_lang(self):
         response = self.app.get(self._prefix + '?q=crolles&pl=fr', status=200)
@@ -120,3 +118,15 @@ class TestSearchRest(BaseTestRest):
         self.assertIn('users', body)
         users = body['users']
         self.assertIn('total', users)
+
+    def test_search_limit_types(self):
+        response = self.app.get(self._prefix + '?q=crolles&t=w,r', status=200)
+        body = response.json
+
+        self.assertIn('waypoints', body)
+        self.assertIn('routes', body)
+        self.assertNotIn('maps', body)
+        self.assertNotIn('areas', body)
+        self.assertNotIn('images', body)
+        self.assertNotIn('outings', body)
+        self.assertNotIn('users', body)
