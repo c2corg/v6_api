@@ -16,7 +16,8 @@ from c2corg_api.views import to_json_dict, to_seconds, set_best_locale
 from c2corg_api.views.validation import check_required_fields, \
     check_duplicate_locales, validate_id, validate_lang
 from cornice.resource import resource, view
-from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, HTTPBadRequest
+from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
+    HTTPBadRequest, HTTPForbidden
 from sqlalchemy.orm import joinedload, contains_eager
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql.expression import literal_column, union
@@ -67,7 +68,8 @@ class DocumentRest(object):
             base_query = base_query. \
                 options(
                     joinedload(getattr(clazz, '_areas')).
-                    load_only('document_id', 'area_type', 'version').
+                    load_only(
+                        'document_id', 'area_type', 'version', 'protected').
                     joinedload('locales').
                     load_only(
                         'lang', 'title',
@@ -242,8 +244,11 @@ class DocumentRest(object):
 
         # get the current version of the document
         document = self._get_document(clazz, id)
+
         if document.redirects_to:
             raise HTTPBadRequest('can not update merged document')
+        if document.protected and not self.request.has_permission('moderator'):
+            raise HTTPForbidden('No permission to change a protected document')
 
         self._check_versions(document, document_in)
 

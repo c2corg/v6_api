@@ -90,6 +90,7 @@ class BaseDocumentTestRest(BaseTestRest):
             doc = documents[0]
             available_langs = doc.get('available_langs')
             self.assertEqual(sorted(available_langs), ['en', 'fr'])
+            self.assertIn('protected', doc)
 
         if limit is None:
             nb_docs = self.session.query(self._model). \
@@ -117,6 +118,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(len(locales), 1)
         locale = locales[0]
         self.assertEqual('fr', locale['lang'])
+        self.assertIn('protected', doc)
 
         return body
 
@@ -188,6 +190,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(len(locales), 1)
         locale_en = locales[0]
         self.assertEqual(locale_en.get('lang'), self.locale_en.lang)
+        self.assertIn('protected', body)
 
     def get_new_lang(self, reference, user=None):
         headers = {} if not user else \

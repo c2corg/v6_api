@@ -141,7 +141,7 @@ def get_areas(document, lang):
             AreaAssociation,
             Area.document_id == AreaAssociation.area_id). \
         options(load_only(
-            Area.document_id, Area.area_type, Area.version)). \
+            Area.document_id, Area.area_type, Area.version, Area.protected)). \
         options(joinedload(Area.locales).load_only(
             DocumentLocale.lang, DocumentLocale.title,
             DocumentLocale.version)). \

@@ -101,7 +101,7 @@ class WaypointRest(DocumentRest):
                     t_route_wp.child_document_id == t_route.document_id)). \
             options(load_only(
                 Outing.document_id, Outing.activities, Outing.date_start,
-                Outing.date_end, Outing.version)). \
+                Outing.date_end, Outing.version, Outing.protected)). \
             options(joinedload(Outing.locales).load_only(
                 DocumentLocale.lang, DocumentLocale.title,
                 DocumentLocale.version)). \

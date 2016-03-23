@@ -88,7 +88,7 @@ class RouteRest(DocumentRest):
             filter(Association.parent_document_id == route.document_id). \
             options(load_only(
                 Outing.document_id, Outing.activities, Outing.date_start,
-                Outing.date_end, Outing.version)). \
+                Outing.date_end, Outing.version, Outing.protected)). \
             options(joinedload(Outing.locales).load_only(
                 DocumentLocale.lang, DocumentLocale.title,
                 DocumentLocale.version)). \
