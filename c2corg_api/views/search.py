@@ -1,4 +1,12 @@
+from c2corg_api.models.area import AREA_TYPE, Area, \
+    schema_listing_area
 from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models.image import IMAGE_TYPE, Image, schema_listing_image
+from c2corg_api.models.outing import OUTING_TYPE, Outing, schema_outing
+from c2corg_api.models.topo_map import MAP_TYPE, TopoMap, \
+    schema_listing_topo_map
+from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile, \
+    schema_listing_user_profile
 from cornice.resource import resource, view
 
 from c2corg_api.views.validation import validate_pagination, \
@@ -12,6 +20,8 @@ from c2corg_api.views.route import listing_schema_adaptor \
     as route_adaptor
 from c2corg_api.views.waypoint import listing_schema_adaptor \
     as waypoint_adaptor
+from c2corg_api.views.outing import listing_schema_adaptor \
+    as outing_adaptor
 
 # the maximum number of documents that can be returned for each document type
 SEARCH_LIMIT_MAX = 50
@@ -41,5 +51,21 @@ class SearchRest(object):
                 schema_waypoint, waypoint_adaptor, limit, lang),
             'routes': search.search_for_type(
                 search_term, ROUTE_TYPE, Route, RouteLocale,
-                schema_route, route_adaptor, limit, lang)
+                schema_route, route_adaptor, limit, lang),
+            'outings': search.search_for_type(
+                search_term, OUTING_TYPE, Outing, DocumentLocale,
+                schema_outing, outing_adaptor, limit, lang),
+            'areas': search.search_for_type(
+                search_term, AREA_TYPE, Area, DocumentLocale,
+                schema_listing_area, None, limit, lang),
+            'maps': search.search_for_type(
+                search_term, MAP_TYPE, TopoMap, DocumentLocale,
+                schema_listing_topo_map, None, limit, lang),
+            'images': search.search_for_type(
+                search_term, IMAGE_TYPE, Image, DocumentLocale,
+                schema_listing_image, None, limit, lang),
+            'users': search.search_for_type(
+                search_term, USERPROFILE_TYPE, UserProfile, DocumentLocale,
+                schema_listing_user_profile, None, limit, lang)
+            if self.request.has_permission('authenticated') else {}
         }

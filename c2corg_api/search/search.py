@@ -1,3 +1,4 @@
+from c2corg_api.views.document import add_load_for_profiles
 from elasticsearch_dsl.query import MultiMatch
 from elasticsearch_dsl.filter import Term
 from sqlalchemy.orm import joinedload
@@ -40,7 +41,10 @@ def search_for_type(
         'count': count,
         'total': total,
         'documents': [
-            to_json_dict(doc, adapt_schema(schema, doc)) for doc in documents
+            to_json_dict(
+                doc,
+                schema if not adapt_schema else adapt_schema(schema, doc)
+            ) for doc in documents
         ]
     }
 
@@ -53,13 +57,15 @@ def get_documents(document_ids, model, locale_model, lang):
     if not document_ids:
         return []
 
-    documents = DBSession.\
+    documents_query = DBSession.\
         query(model).\
         filter(model.redirects_to.is_(None)).\
         filter(model.document_id.in_(document_ids)).\
         options(joinedload(model.locales.of_type(locale_model))). \
-        options(joinedload(model.geometry)). \
-        all()
+        options(joinedload(model.geometry))
+    add_load_for_profiles(documents_query, model)
+
+    documents = documents_query.all()
 
     if lang is not None:
         set_best_locale(documents, lang)
