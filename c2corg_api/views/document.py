@@ -136,7 +136,7 @@ class DocumentRest(object):
 
         return documents, total
 
-    def _get(self, clazz, schema, adapt_schema=None, include_maps=True,
+    def _get(self, clazz, schema, adapt_schema=None, include_maps=False,
              include_areas=True, set_custom_associations=None):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')

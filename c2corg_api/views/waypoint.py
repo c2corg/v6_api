@@ -62,7 +62,7 @@ class WaypointRest(DocumentRest):
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
         return self._get(
-            Waypoint, schema_waypoint, schema_adaptor,
+            Waypoint, schema_waypoint, schema_adaptor, include_maps=True,
             set_custom_associations=WaypointRest.set_recent_outings)
 
     @restricted_json_view(schema=schema_waypoint,
