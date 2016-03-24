@@ -19,6 +19,22 @@ class TestUserRest(BaseTestRest):
     def extract_urls(self, data):
         return re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', data)  # noqa
 
+    def test_always_register_non_validated_users(self):
+        request_body = {
+            'username': 'test',
+            'name': 'Max Mustermann',
+            'password': 'super secret',
+            'email_validated': True,
+            'email': 'some_user@camptocamp.org'
+        }
+        url = self._prefix + '/register'
+
+        # First succeed in creating a new user
+        body = self.app.post_json(url, request_body, status=200).json
+        user_id = body.get('id')
+        user = self.session.query(User).get(user_id)
+        self.assertFalse(user.email_validated)
+
     def test_register(self):
         request_body = {
             'username': 'test',
