@@ -2,6 +2,8 @@ from c2corg_api.models.outing import OutingLocale, Outing, ArchiveOuting, \
     ArchiveOutingLocale, OUTING_TYPE
 from c2corg_api.scripts.migration.documents.document import MigrateDocuments
 from c2corg_api.scripts.migration.documents.routes import MigrateRoutes
+import phpserialize
+import json
 
 
 class MigrateOutings(MigrateDocuments):
@@ -135,7 +137,9 @@ class MigrateOutings(MigrateDocuments):
             avalanches=document_in.avalanche_desc,
             route_description=document_in.outing_route_desc,
             conditions=document_in.conditions,
-            conditions_levels=document_in.conditions_levels,
+            conditions_levels=php_to_json(
+                document_in.conditions_levels,
+                document_in.document_i18n_archive_id),
             hut_comment=document_in.hut_comments,
             participants=document_in.participants,
             timing=document_in.timing,
@@ -190,3 +194,20 @@ class MigrateOutings(MigrateDocuments):
         '2': 'open',
         '4': 'closed'
     }
+
+
+def php_to_json(conditions_levels_serialized, id):
+    """Convert the condition levels which were stored as serialized PHP
+    objects to a JSON string.
+    """
+    if not conditions_levels_serialized:
+        return None
+
+    try:
+        data = bytes(conditions_levels_serialized, encoding='utf-8')
+        levels = phpserialize.loads(
+            data, object_hook=phpserialize.phpobject, decode_strings=True)
+        return json.dumps(phpserialize.dict_to_list(levels))
+    except Exception as e:
+        print(id)
+        raise e
