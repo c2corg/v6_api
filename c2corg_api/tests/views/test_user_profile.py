@@ -1,10 +1,12 @@
 import json
 
 from c2corg_api.models.user_profile import UserProfile, ArchiveUserProfile
+from c2corg_api.search import elasticsearch_config
+from c2corg_api.search.mapping import SearchDocument
 from shapely.geometry import shape, Point
 
 from c2corg_api.models.document import (
-    DocumentGeometry, ArchiveDocumentLocale, DocumentLocale)
+    ArchiveDocumentLocale, DocumentLocale)
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
@@ -26,25 +28,27 @@ class TestUserProfileRest(BaseDocumentTestRest):
         body = self.get_collection(user='contributor')
         doc = body['documents'][0]
         self.assertIn('areas', doc)
+        self.assertIn('username', doc)
+        self.assertNotIn('geometry', doc)
 
     def test_get_collection_paginated(self):
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 0, 'limit': 0}, user='contributor'),
-            [], 7)
+            [], 6)
 
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 0, 'limit': 1}, user='contributor'),
-            [self.profile4.document_id], 7)
+            [self.profile4.document_id], 6)
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 0, 'limit': 2}, user='contributor'),
-            [self.profile4.document_id, self.profile3.document_id], 7)
+            [self.profile4.document_id, self.profile3.document_id], 6)
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 1, 'limit': 2}, user='contributor'),
-            [self.profile3.document_id, self.profile2.document_id], 7)
+            [self.profile3.document_id, self.profile2.document_id], 6)
 
         self.assertResultsEqual(
             self.get_collection(
@@ -64,6 +68,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self._assert_geometry(body)
         self.assertIsNone(body['locales'][0].get('title'))
         self.assertNotIn('maps', body)
+        self.assertIn('username', body)
 
     def test_get_lang(self):
         self.get_lang(self.profile1, user='contributor')
@@ -99,7 +104,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             }
         }
 
-        headers = self.add_authorization_header(username='contributor')
+        headers = self.add_authorization_header(username='contributor2')
         self.app.put_json(
             self._prefix + '/' + str(self.profile1.document_id), body,
             headers=headers, status=403)
@@ -185,7 +190,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             }
         }
         (body, profile) = self.put_success_all(
-            body, self.profile1, user='moderator')
+            body, self.profile1, user='moderator', check_es=False)
 
         # version with lang 'en'
         version_en = profile.versions[2]
@@ -193,6 +198,8 @@ class TestUserProfileRest(BaseDocumentTestRest):
         # geometry has been changed
         archive_geometry_en = version_en.document_geometry_archive
         self.assertEqual(archive_geometry_en.version, 2)
+
+        self._check_es_index()
 
     def test_put_success_figures_only(self):
         body = {
@@ -208,9 +215,10 @@ class TestUserProfileRest(BaseDocumentTestRest):
             }
         }
         (body, profile) = self.put_success_figures_only(
-            body, self.profile1, user='moderator')
+            body, self.profile1, user='moderator', check_es=False)
 
         self.assertEquals(profile.categories, ['mountain_guide'])
+        self._check_es_index()
 
     def test_put_success_lang_only(self):
         body = {
@@ -226,10 +234,11 @@ class TestUserProfileRest(BaseDocumentTestRest):
             }
         }
         (body, profile) = self.put_success_lang_only(
-            body, self.profile1, user='moderator')
+            body, self.profile1, user='moderator', check_es=False)
 
         self.assertEquals(
             profile.get_locale('en').description, 'Me!')
+        self._check_es_index()
 
     def test_put_reset_title(self):
         """Tests that the title can not be set.
@@ -248,12 +257,15 @@ class TestUserProfileRest(BaseDocumentTestRest):
             }
         }
         (body, profile) = self.put_success_lang_only(
-            body, self.profile1, user='moderator')
+            body, self.profile1, user='moderator', check_es=False)
 
         self.assertEquals(
             profile.get_locale('en').description, 'Me!')
         self.session.refresh(self.locale_en)
         self.assertEqual(self.locale_en.title, '')
+
+        # check that the the user names are added to the search index
+        self._check_es_index()
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale.
@@ -270,9 +282,20 @@ class TestUserProfileRest(BaseDocumentTestRest):
             }
         }
         (body, profile) = self.put_success_new_lang(
-            body, self.profile1, user='moderator')
+            body, self.profile1, user='moderator', check_es=False)
 
         self.assertEquals(profile.get_locale('es').description, 'Yo')
+        search_doc = self._check_es_index()
+        self.assertEqual(search_doc['title_es'], 'contributor Contributor')
+
+    def _check_es_index(self):
+        search_doc = SearchDocument.get(
+            id=self.profile1.document_id,
+            index=elasticsearch_config['index'])
+        self.assertEqual(search_doc['doc_type'], self.profile1.type)
+        self.assertEqual(search_doc['title_en'], 'contributor Contributor')
+        self.assertEqual(search_doc['title_fr'], 'contributor Contributor')
+        return search_doc
 
     def _assert_geometry(self, body):
         self.assertIsNotNone(body.get('geometry'))
@@ -286,20 +309,9 @@ class TestUserProfileRest(BaseDocumentTestRest):
 
     def _add_test_data(self):
         user_id = self.global_userids['contributor']
-        self.profile1 = UserProfile(categories=['amateur'])
-
-        self.locale_en = DocumentLocale(lang='en', description='Me', title='')
-        self.locale_fr = DocumentLocale(lang='fr', description='Moi', title='')
-
-        self.profile1.locales.append(self.locale_en)
-        self.profile1.locales.append(self.locale_fr)
-
-        self.profile1.geometry = DocumentGeometry(
-            geom='SRID=3857;POINT(635956 5723604)')
-
-        self.session.add(self.profile1)
-        self.session.flush()
-
+        self.profile1 = self.session.query(UserProfile).get(user_id)
+        self.locale_en = self.profile1.get_locale('en')
+        self.locale_fr = self.profile1.get_locale('fr')
         DocumentRest.create_new_version(self.profile1, user_id)
 
         self.profile2 = UserProfile(categories=['amateur'])

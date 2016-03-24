@@ -1,4 +1,4 @@
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.fill_index import fill_index
@@ -59,6 +59,10 @@ class TestSearchRest(BaseTestRest):
 
         self.assertIn('waypoints', body)
         self.assertIn('routes', body)
+        self.assertIn('maps', body)
+        self.assertIn('areas', body)
+        self.assertIn('images', body)
+        self.assertIn('outings', body)
 
         waypoints = body['waypoints']
         self.assertTrue(waypoints['total'] > 0)
@@ -67,6 +71,9 @@ class TestSearchRest(BaseTestRest):
 
         routes = body['routes']
         self.assertEqual(0, routes['total'])
+
+        # tests that user results are not included when not authenticated
+        self.assertNotIn('users', body)
 
     def test_search_lang(self):
         response = self.app.get(self._prefix + '?q=crolles&pl=fr', status=200)
@@ -96,5 +103,45 @@ class TestSearchRest(BaseTestRest):
                     summary='The heighest point in Europe')
             ])
         self.session.add(waypoint)
-        documents = get_documents([waypoint.document_id], Waypoint, None)
+        documents = get_documents(
+            [waypoint.document_id], Waypoint, DocumentLocale, None)
         self.assertEquals(0, len(documents))
+
+    def test_search_authenticated(self):
+        """Tests that user results are included when authenticated.
+        """
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.get(self._prefix + '?q=crolles', headers=headers,
+                                status=200)
+        body = response.json
+
+        self.assertIn('users', body)
+        users = body['users']
+        self.assertIn('total', users)
+
+    def test_search_limit_types(self):
+        response = self.app.get(self._prefix + '?q=crolles&t=w,r', status=200)
+        body = response.json
+
+        self.assertIn('waypoints', body)
+        self.assertIn('routes', body)
+        self.assertNotIn('maps', body)
+        self.assertNotIn('areas', body)
+        self.assertNotIn('images', body)
+        self.assertNotIn('outings', body)
+        self.assertNotIn('users', body)
+
+    def test_search_by_document_id(self):
+        response = self.app.get(
+            self._prefix + '?q=' + str(self.waypoint1.document_id), status=200)
+        body = response.json
+
+        waypoints = body['waypoints']
+        self.assertEquals(waypoints['total'], 1)
+        self.assertEquals(waypoints['count'], 1)
+        self.assertEquals(len(waypoints['documents']), 1)
+
+        routes = body['routes']
+        self.assertEquals(routes['total'], 0)
+        self.assertEquals(routes['count'], 0)
+        self.assertEquals(len(routes['documents']), 0)

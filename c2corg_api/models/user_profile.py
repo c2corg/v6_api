@@ -5,7 +5,7 @@ from c2corg_api.models.document import (
 from c2corg_api.models.enums import user_category, activity_type
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
-from c2corg_common.fields_area import fields_area
+from c2corg_common.fields_user_profile import fields_user_profile
 from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Column,
@@ -13,6 +13,7 @@ from sqlalchemy import (
     ForeignKey
     )
 from c2corg_common import document_types
+from sqlalchemy.ext.associationproxy import association_proxy
 
 USERPROFILE_TYPE = document_types.USERPROFILE_TYPE
 
@@ -38,6 +39,9 @@ class UserProfile(_UserProfileMixin, Document):
         'polymorphic_identity': USERPROFILE_TYPE,
         'inherit_condition': Document.document_id == document_id
     }
+
+    username = association_proxy('user', 'username')
+    name = association_proxy('user', 'name')
 
     def to_archive(self):
         user_profile = ArchiveUserProfile()
@@ -116,4 +120,4 @@ schema_internal_user_profile = SQLAlchemySchemaNode(
 
 schema_update_user_profile = get_update_schema(schema_user_profile)
 schema_listing_user_profile = restrict_schema(
-    schema_user_profile, fields_area.get('listing'))
+    schema_user_profile, fields_user_profile.get('listing'))

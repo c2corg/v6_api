@@ -1,6 +1,7 @@
 from c2corg_api.models import DBSession
 from c2corg_api.models.document_history import has_been_created_by
-from c2corg_api.models.image import Image, schema_image, schema_update_image
+from c2corg_api.models.image import Image, schema_image, schema_update_image, \
+    schema_listing_image
 from c2corg_common.fields_image import fields_image
 from cornice.resource import resource, view
 
@@ -22,7 +23,7 @@ class ImageRest(DocumentRest):
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        return self._collection_get(Image, schema_image)
+        return self._collection_get(Image, schema_listing_image)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):

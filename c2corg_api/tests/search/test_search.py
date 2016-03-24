@@ -1,4 +1,4 @@
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests import BaseTestCase
 from c2corg_api.search import search
@@ -33,10 +33,12 @@ class SearchTest(BaseTestCase):
             ]))
         self.session.flush()
 
-        docs = search.get_documents([71171, 71172], Waypoint, None)
+        docs = search.get_documents(
+            [71171, 71172], Waypoint, DocumentLocale, None)
         self.assertEqual(71171, docs[0].document_id)
         self.assertEqual(71172, docs[1].document_id)
 
-        docs = search.get_documents([71172, 71171], Waypoint, None)
+        docs = search.get_documents(
+            [71172, 71171], Waypoint, DocumentLocale, None)
         self.assertEqual(71172, docs[0].document_id)
         self.assertEqual(71171, docs[1].document_id)

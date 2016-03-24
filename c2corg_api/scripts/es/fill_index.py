@@ -2,6 +2,8 @@ import os
 import sys
 
 from c2corg_api.models.route import RouteLocale
+from c2corg_api.models.user import User
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from pyramid.paster import (
     get_appsettings,
     setup_logging,
@@ -57,12 +59,16 @@ def fill_index(db_session):
     q = DBSession.query(
             DocumentLocale.document_id, DocumentLocale.title,
             DocumentLocale.summary, DocumentLocale.description,
-            DocumentLocale.lang, DocumentLocale.type,
-            RouteLocale.__table__.c.title_prefix). \
+            DocumentLocale.lang, Document.type,
+            RouteLocale.__table__.c.title_prefix,
+            User.name, User.username). \
         join(Document).filter(Document.redirects_to.is_(None)). \
         outerjoin(
             RouteLocale.__table__,
             DocumentLocale.id == RouteLocale.__table__.c.id).\
+        outerjoin(
+            User,
+            DocumentLocale.document_id == User.id).\
         order_by(DocumentLocale.document_id, DocumentLocale.lang)
 
     def progress(count, total_count):
@@ -78,7 +84,7 @@ def fill_index(db_session):
     count = 0
     with batch:
         for document_id, title, summary, description, lang, type, \
-                title_prefix in q:
+                title_prefix, user_login, user_name in q:
             if search_document is not None and document_id != last_id:
                 batch.add(search_document)
                 search_document = None
@@ -91,6 +97,11 @@ def fill_index(db_session):
                     '_id': document_id,
                     'doc_type': type
                 }
+
+            if type == USERPROFILE_TYPE:
+                # set user login + full-name as document title so that it can
+                # be searched
+                title = '{0} {1}'.format(user_name or '', user_login or '')
 
             search_document['title_' + lang] = get_title(
                 title, title_prefix)
