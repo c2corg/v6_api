@@ -52,19 +52,3 @@ def get_email_service(request):
         settings = request.registry.settings
         EmailService.instance = EmailService(mailer, settings)
     return EmailService.instance
-
-
-if __name__ == '__main__':
-    import os
-    import sys
-    from pyramid.paster import get_appsettings
-    from pyramid_mailer.mailer import Mailer
-    curdir = os.path.dirname(os.path.abspath(__file__))
-    configfile = os.path.realpath(os.path.join(curdir, '../../common.ini'))
-    settings = get_appsettings(configfile)
-    mailer = Mailer.from_settings(settings)
-
-    EmailService(mailer, settings)._send_email(
-            sys.argv[1],
-            subject='Test send email élève forêt ça alors',
-            body='body 日本国 http://localhost')
