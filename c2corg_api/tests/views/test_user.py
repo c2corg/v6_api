@@ -43,6 +43,46 @@ class TestUserRest(BaseTestRest):
         user = self.session.query(User).get(user_id)
         self.assertFalse(user.email_validated)
 
+    def test_register_default_lang(self):
+        request_body = {
+            'username': 'test',
+            'name': 'Max Mustermann',
+            'password': 'super secret',
+            'email': 'some_user@camptocamp.org'
+        }
+        url = self._prefix + '/register'
+
+        body = self.app.post_json(url, request_body, status=200).json
+        user_id = body.get('id')
+        user = self.session.query(User).get(user_id)
+        self.assertEqual(user.lang, 'fr')
+
+    def test_register_passed_lang(self):
+        request_body = {
+            'username': 'test',
+            'lang': 'en',
+            'name': 'Max Mustermann',
+            'password': 'super secret',
+            'email': 'some_user@camptocamp.org'
+        }
+        url = self._prefix + '/register'
+
+        body = self.app.post_json(url, request_body, status=200).json
+        user_id = body.get('id')
+        user = self.session.query(User).get(user_id)
+        self.assertEqual(user.lang, 'en')
+
+    def test_register_invalid_lang(self):
+        request_body = {
+            'username': 'test',
+            'lang': 'nn',
+            'name': 'Max Mustermann',
+            'password': 'super secret',
+            'email': 'some_user@camptocamp.org'
+        }
+        url = self._prefix + '/register'
+        self.app.post_json(url, request_body, status=400).json
+
     def test_register(self):
         request_body = {
             'username': 'test',
@@ -70,6 +110,7 @@ class TestUserRest(BaseTestRest):
         email_count_after = self.get_email_box_length()
         self.assertEqual(email_count_after, email_count + 1)
 
+        self.assertEqual(user.lang, 'fr')
         # Simulate confirmation email validation
         nonce = self.extract_nonce('validate_register_email')
         url_api_validation = '/users/validate_register_email/%s' % nonce
