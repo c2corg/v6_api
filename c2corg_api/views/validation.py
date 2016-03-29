@@ -116,3 +116,20 @@ def validate_pagination(request):
     check_get_for_integer_property(request, 'offset', False)
     check_get_for_integer_property(request, 'limit', False)
     check_get_for_integer_property(request, 'after', False)
+
+
+def validate_required_json_string(key, request):
+    """Checks if a given key is present in the request.
+    """
+
+    value = None
+    if key in request.json:
+        value = request.json[key]
+    else:
+        request.errors.add('body', key, 'Required')
+        return
+
+    if isinstance(value, str):
+        request.validated[key] = value
+    else:
+        request.errors.add('body', key, 'Invalid')

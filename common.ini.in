@@ -28,6 +28,7 @@ discourse.api_key = {discourse_api_key}
 discourse.sso_secret = {discourse_sso_secret}
 
 mail.validate_register_url_template = {mail_validate_register_url_template}
+mail.request_password_change_url_template = {mail_request_password_change_url_template}
 
 mail.from = {mail_from}
 mail.host = {mail_host}

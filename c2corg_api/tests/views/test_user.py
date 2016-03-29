@@ -5,6 +5,8 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.security.discourse_sso_provider import discourse_redirect
 
+from urllib.parse import urlparse, parse_qs
+
 import re
 
 
@@ -18,6 +20,28 @@ class TestUserRest(BaseTestRest):
 
     def extract_urls(self, data):
         return re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', data)  # noqa
+
+    def extract_nonce(self, key):
+        validation_url = self.extract_urls(self.get_last_email().body)[0]
+        query = parse_qs(urlparse(validation_url).query)
+        nonce = query[key][0]
+        return nonce
+
+    def test_always_register_non_validated_users(self):
+        request_body = {
+            'username': 'test',
+            'name': 'Max Mustermann',
+            'password': 'super secret',
+            'email_validated': True,
+            'email': 'some_user@camptocamp.org'
+        }
+        url = self._prefix + '/register'
+
+        # First succeed in creating a new user
+        body = self.app.post_json(url, request_body, status=200).json
+        user_id = body.get('id')
+        user = self.session.query(User).get(user_id)
+        self.assertFalse(user.email_validated)
 
     def test_register(self):
         request_body = {
@@ -47,10 +71,7 @@ class TestUserRest(BaseTestRest):
         self.assertEqual(email_count_after, email_count + 1)
 
         # Simulate confirmation email validation
-        validation_url = self.extract_urls(self.get_last_email().body)[0]
-        from urllib.parse import urlparse, parse_qs
-        query = parse_qs(urlparse(validation_url).query)
-        nonce = query['validate_register_email'][0]
+        nonce = self.extract_nonce('validate_register_email')
         url_api_validation = '/users/validate_register_email/%s' % nonce
         self.app.post_json(url_api_validation, {}, status=200)
         profile = self.session.query(UserProfile).get(user_id)
@@ -81,6 +102,29 @@ class TestUserRest(BaseTestRest):
             'email': 'utf8@camptocamp.org'
         }
         body = self.app.post_json(url, request_utf8, status=200).json
+
+    def test_forgot_password(self):
+        user_id = self.global_userids['contributor']
+        user = self.session.query(User).get(user_id)
+        initial_encoded_password = user.password
+
+        url = '/users/request_password_change'
+        self.app.post_json(url, {
+            'email': user.email}, status=200).json
+
+        # Simulate confirmation email validation
+        nonce = self.extract_nonce('change_password')
+        url_api_validation = '/users/validate_new_password/%s' % nonce
+        self.app.post_json(url_api_validation, {
+            'password': 'new pass'
+            }, status=200)
+
+        self.session.expunge(user)
+        user = self.session.query(User).get(user_id)
+        self.assertIsNone(user.validation_nonce)
+        modified_encoded_password = user.password
+
+        self.assertTrue(initial_encoded_password != modified_encoded_password)
 
     def login(self, username, password=None, status=200, sso=None, sig=None,
               discourse=None):
