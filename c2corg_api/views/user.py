@@ -39,6 +39,9 @@ ENCODING = 'UTF-8'
 VALIDATION_EXPIRE_DAYS = 3
 MINIMUM_PASSWORD_LENGTH = 3
 
+# TODO: introduce an attribute on the user
+prefered_lang = 'en'
+
 
 def validate_json_password(request):
     """Checks if the password was given and encodes it.
@@ -55,8 +58,6 @@ def validate_json_password(request):
     if len(password) < MINIMUM_PASSWORD_LENGTH:
         request.errors.add('body', 'password', 'Password too short')
         return
-
-        raise 'Password too short'
 
     try:
         # We receive a unicode string. The hashing function used
@@ -116,7 +117,7 @@ class UserRegistrationRest(object):
         # TODO to create the profile we need at least one locale. once we have
         # an interface language (https://github.com/c2corg/v6_api/issues/116)
         # we can create the profile in that language.
-        lang = 'fr'
+        lang = prefered_lang
         user.profile = UserProfile(
             categories=['amateur'],
             locales=[DocumentLocale(lang=lang, title='')]
@@ -217,7 +218,7 @@ class UserRequestChangePasswordRest(object):
             raise HTTPInternalServerError('Error persisting user')
 
         # FIXME use attribute stored in the user object
-        lang = 'fr'
+        lang = prefered_lang
 
         email_service = get_email_service(request)
         nonce = user.validation_nonce

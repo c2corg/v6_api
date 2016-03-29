@@ -35,15 +35,15 @@ class EmailService:
         # TODO: handle i18n
         self._send_email(
                 user.email,
-                subject='Inscription sur Camptocamp.org',
-                body='Pour activer votre compte cliquez sur %s' % link)
+                subject='Registration on Camptocamp.org',
+                body='To activate account click on %s' % link)
 
     def send_request_change_password(self, lang, user, link):
         # TODO: handle i18n
         self._send_email(
                 user.email,
-                subject='Changement de mot de passe sur Camptocamp.org',
-                body='Pour changer votre mot de passe cliquez sur %s' % link)
+                subject='Password change on Camptocamp.org',
+                body='To change your password click on %s' % link)
 
 
 def get_email_service(request):
