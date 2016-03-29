@@ -1,3 +1,5 @@
+from c2corg_common.attributes import default_langs
+
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.views.document import DocumentRest
@@ -262,6 +264,28 @@ class UserNonceValidationRest(object):
             request.errors.status = 403
             request.errors.add('body', 'user', 'Login failed')
             return None
+
+
+class UpdatePreferredLangSchema(colander.MappingSchema):
+    lang = colander.SchemaNode(
+            colander.String(),
+            validator=colander.OneOf(default_langs))
+
+
+@resource(path='/users/update_preferred_language', cors_policy=cors_policy)
+class UserPreferredLanguageRest(object):
+    schema = UpdatePreferredLangSchema()
+
+    def __init__(self, request):
+        self.request = request
+
+    @restricted_json_view(renderer='json', schema=schema)
+    def post(self):
+        request = self.request
+        userid = request.authenticated_userid
+        user = DBSession.query(User).get(userid)
+        user.lang = request.validated['lang']
+        return {}
 
 
 class LoginSchema(colander.MappingSchema):

@@ -83,6 +83,21 @@ class TestUserRest(BaseTestRest):
         url = self._prefix + '/register'
         self.app.post_json(url, request_body, status=400).json
 
+    def test_update_preferred_lang(self):
+        user_id = self.global_userids['contributor']
+        user = self.session.query(User).get(user_id)
+        self.assertEqual(user.lang, 'fr')
+
+        request_body = {
+            'lang': 'en'
+        }
+        url = self._prefix + '/update_preferred_language'
+        self.post_json_with_contributor(url, request_body, status=200)
+
+        self.session.expunge(user)
+        user = self.session.query(User).get(user_id)
+        self.assertEqual(user.lang, 'en')
+
     def test_register(self):
         request_body = {
             'username': 'test',
