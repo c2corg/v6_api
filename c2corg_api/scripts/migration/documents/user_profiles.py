@@ -131,7 +131,7 @@ class MigrateUserProfiles(MigrateDocuments):
                 document_in.activities, MigrateRoutes.activities),
             categories=self.convert_types(
                 categories, MigrateUserProfiles.user_categories,
-                skip_values=[0, 2]),
+                skip_values=[0, 2, 5]),
         )
 
     def get_document_locale(self, document_in, version):
