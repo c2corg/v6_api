@@ -46,6 +46,7 @@ export migration_db_name = c2corg
 export logging_level = WARNING
 
 export mail_validate_register_url_template = $(url)/auth?validate_register_email=%%s
+export mail_request_password_change_url_template = $(url)/auth?change_password=%%s
 
 export mail_host = psemail.epfl.ch
 export mail_port = 25
