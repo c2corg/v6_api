@@ -31,15 +31,15 @@ class EmailService:
                 body=body)
         self.mailer.send_immediately(msg)
 
-    def send_registration_confirmation(self, lang, user, link):
-        # TODO: handle i18n
+    def send_registration_confirmation(self, user, link):
+        # TODO: handle i18n using user.lang
         self._send_email(
                 user.email,
                 subject='Registration on Camptocamp.org',
                 body='To activate account click on %s' % link)
 
-    def send_request_change_password(self, lang, user, link):
-        # TODO: handle i18n
+    def send_request_change_password(self, user, link):
+        # TODO: handle i18n using user.lang
         self._send_email(
                 user.email,
                 subject='Password change on Camptocamp.org',

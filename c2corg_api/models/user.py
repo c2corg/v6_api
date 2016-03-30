@@ -1,4 +1,5 @@
 import bcrypt
+from c2corg_common.attributes import default_langs
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.user_profile import UserProfile
 from sqlalchemy import (
@@ -66,6 +67,10 @@ class User(Base):
     validation_nonce_expire = Column(DateTime, nullable=True, unique=False)
     _password = Column('password', String(255), nullable=False)
 
+    lang = Column(
+            String(2), ForeignKey(schema + '.langs.lang'),
+            nullable=False, default='fr')
+
     def update_validation_nonce(self, days):
         now = datetime.datetime.utcnow()
         nonce = binascii.hexlify(os.urandom(32)).decode('ascii')
@@ -105,10 +110,13 @@ schema_user = SQLAlchemySchemaNode(
 schema_create_user = SQLAlchemySchemaNode(
     User,
     # whitelisted attributes
-    includes=['username', 'name', 'email'],
+    includes=['username', 'name', 'email', 'lang'],
     overrides={
         'email': {
             'validator': colander.Email()
+        },
+        'lang': {
+            'validator': colander.OneOf(default_langs)
         }
     })
 

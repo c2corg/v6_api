@@ -13,11 +13,10 @@ class EmailTests(BaseTestCase):
         self.assertEqual(self.get_last_email().body, "b")
 
     def test_registration_confirmation(self):
-        lang = 'fr'
-        user = User(email='me@localhost')
+        user = User(email='me@localhost', lang='en')
         link = 'http://somelink'
         outbox_count = self.get_email_box_length()
-        self.email_service.send_registration_confirmation(lang, user, link)
+        self.email_service.send_registration_confirmation(user, link)
         self.assertEqual(self.get_email_box_length(), outbox_count + 1)
         self.assertIn("Registration", self.get_last_email().subject)
         self.assertIn("To activate", self.get_last_email().body)

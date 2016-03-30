@@ -1,3 +1,5 @@
+from c2corg_common.attributes import default_langs
+
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.views.document import DocumentRest
@@ -38,9 +40,6 @@ log = logging.getLogger(__name__)
 ENCODING = 'UTF-8'
 VALIDATION_EXPIRE_DAYS = 3
 MINIMUM_PASSWORD_LENGTH = 3
-
-# TODO: introduce an attribute on the user
-prefered_lang = 'en'
 
 
 def validate_json_password(request):
@@ -114,10 +113,7 @@ class UserRegistrationRest(object):
 
         # directly create the user profile, the document id of the profile
         # is the user id
-        # TODO to create the profile we need at least one locale. once we have
-        # an interface language (https://github.com/c2corg/v6_api/issues/116)
-        # we can create the profile in that language.
-        lang = prefered_lang
+        lang = user.lang
         user.profile = UserProfile(
             categories=['amateur'],
             locales=[DocumentLocale(lang=lang, title='')]
@@ -138,7 +134,7 @@ class UserRegistrationRest(object):
         nonce = user.validation_nonce
         settings = self.request.registry.settings
         link = settings['mail.validate_register_url_template'] % nonce
-        email_service.send_registration_confirmation(lang, user, link)
+        email_service.send_registration_confirmation(user, link)
 
         return to_json_dict(user, schema_user)
 
@@ -217,14 +213,11 @@ class UserRequestChangePasswordRest(object):
             log.warning('Error persisting user', exc_info=True)
             raise HTTPInternalServerError('Error persisting user')
 
-        # FIXME use attribute stored in the user object
-        lang = prefered_lang
-
         email_service = get_email_service(request)
         nonce = user.validation_nonce
         settings = request.registry.settings
         link = settings['mail.request_password_change_url_template'] % nonce
-        email_service.send_request_change_password(lang, user, link)
+        email_service.send_request_change_password(user, link)
 
         return {}
 
@@ -271,6 +264,28 @@ class UserNonceValidationRest(object):
             request.errors.status = 403
             request.errors.add('body', 'user', 'Login failed')
             return None
+
+
+class UpdatePreferredLangSchema(colander.MappingSchema):
+    lang = colander.SchemaNode(
+            colander.String(),
+            validator=colander.OneOf(default_langs))
+
+
+@resource(path='/users/update_preferred_language', cors_policy=cors_policy)
+class UserPreferredLanguageRest(object):
+    schema = UpdatePreferredLangSchema()
+
+    def __init__(self, request):
+        self.request = request
+
+    @restricted_json_view(renderer='json', schema=schema)
+    def post(self):
+        request = self.request
+        userid = request.authenticated_userid
+        user = DBSession.query(User).get(userid)
+        user.lang = request.validated['lang']
+        return {}
 
 
 class LoginSchema(colander.MappingSchema):

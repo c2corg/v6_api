@@ -153,7 +153,7 @@ class BaseDocumentTestRest(BaseTestRest):
             self.assertEqual(locale_en.get('title'), self.locale_en.title)
 
         available_langs = body.get('available_langs')
-        self.assertEqual(available_langs, ['en', 'fr'])
+        self.assertCountEqual(available_langs, ['en', 'fr'])
         return body
 
     def get_version(self, reference, reference_version):
