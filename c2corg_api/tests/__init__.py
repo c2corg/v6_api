@@ -58,6 +58,7 @@ def _add_global_test_data(session):
 
     contributor = User(
         username='contributor', email='contributor@camptocamp.org',
+        forum_username='contributor',
         password='super pass', name='Contributor',
         email_validated=True, profile=contributor_profile)
 
@@ -67,6 +68,7 @@ def _add_global_test_data(session):
 
     contributor2 = User(
         username='contributor2', email='contributor2@camptocamp.org',
+        forum_username='contributor2',
         password='better pass', email_validated=True,
         profile=contributor2_profile)
 
@@ -76,6 +78,7 @@ def _add_global_test_data(session):
 
     moderator = User(
         username='moderator', email='moderator@camptocamp.org',
+        forum_username='moderator',
         moderator=True, password='even better pass',
         email_validated=True, profile=moderator_profile)
 

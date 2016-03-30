@@ -53,10 +53,16 @@ def discourse_get_username_by_userid(client, userid):
 def discourse_sync_sso(user, settings):
     key = str(settings.get('discourse.sso_secret'))  # must not be unicode
     client = get_discourse_client(settings)
+    if user.forum_username is None:
+        log.error(
+                'Skipping sso sync as the forum username of %s/%d is empty'
+                % (user.name, user.id))
+        return None
+
     result = client.sync_sso(
         sso_secret=key,
-        name=user.username,
-        username=user.username,
+        name=user.name,
+        username=user.forum_username,
         email=user.email,
         external_id=user.id)
     if result:

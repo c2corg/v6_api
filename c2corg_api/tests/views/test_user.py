@@ -285,3 +285,40 @@ class TestUserRest(BaseTestRest):
 
     def _add_test_data(self):
         pass
+
+    def test_read_and_update_account_info(self):
+        user_id = self.global_userids['contributor']
+        currentpassword = self.global_passwords['contributor']
+
+        # Read account info
+        url = '/users/account'
+        body = self.get_json_with_contributor(url, status=200)
+        self.assertBodyEqual(body, 'toponame', 'Contributor')
+
+        # Change email
+        email_count = self.get_email_box_length()
+        currentpassword = self.global_passwords['contributor']
+        data = {
+            'currentpassword': currentpassword,
+            'email': 'superemail@localhost.localhost',
+        }
+        # not checking status since Discourse may not be running for tests
+        self.post_json_with_contributor(url, data, status='*')
+
+        user = self.session.query(User).get(user_id)
+        self.assertEqual(user.email_to_validate, data['email'])
+        self.assertNotEqual(user.email, data['email'])
+
+        email_count_after = self.get_email_box_length()
+        self.assertEqual(email_count_after, email_count + 1)
+
+        # Simulate confirmation email validation
+        nonce = self.extract_nonce('validate_change_email')
+        url_api_validation = '/users/validate_change_email/%s' % nonce
+        # not checking status since Discourse may not be running for tests
+        self.app.post_json(url_api_validation, {}, status='*')
+
+        self.session.expunge(user)
+        user = self.session.query(User).get(user_id)
+        self.assertEqual(user.email, data['email'])
+        self.assertIsNone(user.validation_nonce)

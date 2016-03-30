@@ -67,15 +67,18 @@ def validate_json_password(request):
         request.errors.add('body', 'password', 'Invalid')
 
 
+def available_user_attribute(attrname, value):
+    attr = getattr(User, attrname)
+    return DBSession.query(User).filter(attr == value).count() == 0
+
+
 def validate_unique_attribute(attrname, request):
     """Checks if the given attribute is unique.
     """
 
     if attrname in request.json:
         value = request.json[attrname]
-        attr = getattr(User, attrname)
-        count = DBSession.query(User).filter(attr == value).count()
-        if count == 0:
+        if available_user_attribute(attrname, value):
             request.validated[attrname] = value
         else:
             request.errors.add('body', attrname, 'already used ' + attrname)
@@ -108,8 +111,9 @@ class UserRegistrationRest(object):
         partial(validate_unique_attribute, "username")])
     def post(self):
         user = schema_create_user.objectify(self.request.validated)
+        user.forum_username = user.username  # same usernames by default
         user.password = self.request.validated['password']
-        user.update_validation_nonce(VALIDATION_EXPIRE_DAYS)
+        user.update_validation_nonce('regemail', VALIDATION_EXPIRE_DAYS)
 
         # directly create the user profile, the document id of the profile
         # is the user id
@@ -139,7 +143,7 @@ class UserRegistrationRest(object):
         return to_json_dict(user, schema_user)
 
 
-def validate_user_from_nonce(request):
+def validate_user_from_nonce(purpose, request):
     nonce = request.matchdict['nonce']
     if nonce is None:
         request.errors.add('querystring', 'nonce', 'missing nonce')
@@ -151,6 +155,8 @@ def validate_user_from_nonce(request):
                     User.validation_nonce_expire > now)).first()
         if user is None:
             request.errors.add('querystring', 'nonce', 'invalid nonce')
+        elif not user.validate_nonce_purpose(purpose):
+            request.errors.add('querystring', 'nonce', 'unexpected purpose')
         else:
             request.validated['user'] = user
 
@@ -162,7 +168,9 @@ class UserValidateNewPasswordRest(object):
     def __init__(self, request):
         self.request = request
 
-    @json_view(validators=[validate_user_from_nonce, validate_json_password])
+    @json_view(validators=[
+        partial(validate_user_from_nonce, 'newpass'),
+        validate_json_password])
     def post(self):
         request = self.request
         user = request.validated['user']
@@ -205,7 +213,7 @@ class UserRequestChangePasswordRest(object):
         request = self.request
         email = request.validated['email']
         user = DBSession.query(User).filter(User.email == email).first()
-        user.update_validation_nonce(VALIDATION_EXPIRE_DAYS)
+        user.update_validation_nonce('newpass', VALIDATION_EXPIRE_DAYS)
 
         try:
             DBSession.flush()
@@ -232,7 +240,7 @@ class UserNonceValidationRest(object):
     def complete_registration(self, user):
         return discourse_sync_sso(user, self.request.registry.settings)
 
-    @json_view(validators=[validate_user_from_nonce])
+    @json_view(validators=[partial(validate_user_from_nonce, 'regemail')])
     def post(self):
         request = self.request
         user = request.validated['user']
@@ -286,6 +294,146 @@ class UserPreferredLanguageRest(object):
         user = DBSession.query(User).get(userid)
         user.lang = request.validated['lang']
         return {}
+
+
+class UpdateAccountSchema(colander.MappingSchema):
+    email = colander.SchemaNode(
+            colander.String(),
+            missing=colander.drop,
+            validator=colander.All(
+                colander.Email(),
+                colander.Function(
+                    partial(available_user_attribute, 'email'),
+                    'Already used email'
+                )
+            ))
+    toponame = colander.SchemaNode(
+            colander.String(),
+            missing=colander.drop,
+            validator=colander.Length(min=3))
+    forumname = colander.SchemaNode(
+            colander.String(),
+            missing=colander.drop,
+            validator=colander.All(
+                colander.Length(min=3),
+                colander.Function(
+                    partial(available_user_attribute, 'forum_username'),
+                    'Already used forum name'
+                )
+            ))
+    currentpassword = colander.SchemaNode(
+            colander.String(encoding=ENCODING),
+            validator=colander.Length(min=3))
+    newpassword = colander.SchemaNode(
+            colander.String(encoding=ENCODING),
+            missing=colander.drop,
+            validator=colander.Length(min=3))
+
+
+@resource(path='/users/account', cors_policy=cors_policy)
+class UserAccountRest(object):
+    updateschema = UpdateAccountSchema()
+
+    def __init__(self, request):
+        self.request = request
+
+    def get_user(self):
+        userid = self.request.authenticated_userid
+        return DBSession.query(User).get(userid)
+
+    @restricted_view(renderer='json', http_cache=0)
+    def get(self):
+        user = self.get_user()
+        return {
+            'email': user.email,
+            'toponame': user.name,
+            'forumname': user.forum_username
+            }
+
+    @restricted_json_view(renderer='json', schema=updateschema, http_cache=0)
+    def post(self):
+        user = self.get_user()
+        request = self.request
+
+        result = {}
+
+        # Before all, check whether the user knows current password
+        current_password = request.validated['currentpassword']
+        if not user.validate_password(current_password):
+            request.errors.add('body', 'currentpassword', 'Invalid password')
+            return
+
+        # update password if a new password is provided
+        if 'newpassword' in request.validated:
+            user.password = request.validated['newpassword']
+
+        # start email validation procedure if a new email is provided
+        if 'email' in request.validated and \
+                request.validated['email'] != user.email:
+            user.email_to_validate = request.validated['email']
+            user.update_validation_nonce('chgemail', VALIDATION_EXPIRE_DAYS)
+            email_service = get_email_service(self.request)
+            nonce = user.validation_nonce
+            settings = request.registry.settings
+            link = settings['mail.validate_change_email_url_template'] % nonce
+            email_service.send_change_email_confirmation(user, link)
+            result['email'] = request.validated['email']
+            result['sent_email'] = True
+
+        if 'toponame' in request.validated:
+            user.name = request.validated['toponame']
+            result['toponame'] = user.name
+
+        if 'forumname' in request.validated:
+            user.forum_username = request.validated['forumname']
+            result['forumname'] = user.forum_username
+
+        try:
+            DBSession.flush()
+        except:
+            log.warning('Error persisting user', exc_info=True)
+            raise HTTPInternalServerError('Error persisting user')
+
+        # At last, synchronize everything except the new email (still stored
+        # in the email_to_validate attribute while validation is pending).
+        try:
+            discourse_sync_sso(user, request.registry.settings)
+        except:
+            log.warning('Error syncing with discourse', exc_info=True)
+            raise HTTPInternalServerError('Error syncing change to Discourse')
+
+        return result
+
+
+@resource(
+        path='/users/validate_change_email/{nonce}',
+        cors_policy=cors_policy)
+class UserChangeEmailNonceValidationRest(object):
+    def __init__(self, request):
+        self.request = request
+
+    @json_view(validators=[partial(validate_user_from_nonce, 'chgemail')])
+    def post(self):
+        request = self.request
+        user = request.validated['user']
+        user.clear_validation_nonce()
+        user.email = user.email_to_validate
+        user.email_to_validate = None
+
+        try:
+            DBSession.flush()
+        except:
+            log.warning('Error persisting user', exc_info=True)
+            raise HTTPInternalServerError('Error persisting user')
+
+        # At last, synchronize the new email (and other parameters)
+        try:
+            discourse_sync_sso(user, request.registry.settings)
+        except:
+            log.warning('Error syncing new email to discourse', exc_info=True)
+            raise HTTPInternalServerError('Error syncing email to Discourse')
+
+        # no login since user is supposed to be already logged in
 
 
 class LoginSchema(colander.MappingSchema):
