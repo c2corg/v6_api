@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import engine_from_config
 
-from c2corg_api.models import DBSession
+from c2corg_api.models import DBSession, es_sync
 from c2corg_api.models.document import DocumentLocale, Document
 from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import configure_es_from_config, elasticsearch_config
@@ -51,6 +51,8 @@ def fill_index(db_session):
         'start_time': datetime.now(),
         'last_progress_update': None
     }
+
+    _, date_now = es_sync.get_status(DBSession)
 
     total = DBSession.query(DocumentLocale). \
         join(Document).filter(Document.redirects_to.is_(None)).count()
@@ -114,6 +116,8 @@ def fill_index(db_session):
 
         if search_document is not None:
             batch.add(search_document)
+
+    es_sync.mark_as_updated(DBSession, date_now)
 
     duration = datetime.now() - status['start_time']
     print('Done (duration: {0})'.format(duration))
