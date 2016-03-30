@@ -399,8 +399,10 @@ class UserAccountRest(object):
         try:
             discourse_sync_sso(user, request.registry.settings)
         except:
-            log.warning('Error syncing with discourse', exc_info=True)
-            raise HTTPInternalServerError('Error syncing change to Discourse')
+            log.error('Error syncing with discourse', exc_info=True)
+            request.errors.add(
+                    'request', 'Internal Server Error',
+                    'Could not sync change to discourse')
 
         return result
 
@@ -430,8 +432,10 @@ class UserChangeEmailNonceValidationRest(object):
         try:
             discourse_sync_sso(user, request.registry.settings)
         except:
-            log.warning('Error syncing new email to discourse', exc_info=True)
-            raise HTTPInternalServerError('Error syncing email to Discourse')
+            log.error('Error syncing email with discourse', exc_info=True)
+            request.errors.add(
+                    'request', 'Internal Server Error',
+                    'Could not sync email change to discourse')
 
         # no login since user is supposed to be already logged in
 
