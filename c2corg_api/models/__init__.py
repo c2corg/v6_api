@@ -31,3 +31,4 @@ from c2corg_api.models import topo_map  # noqa
 from c2corg_api.models import area  # noqa
 from c2corg_api.models import area_association  # noqa
 from c2corg_api.models import user_profile  # noqa
+from c2corg_api.models import es_sync  # noqa

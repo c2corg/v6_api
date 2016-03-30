@@ -1,6 +1,7 @@
 import os
 import sys
 import transaction
+from c2corg_api.models.es_sync import ESSyncStatus
 
 from sqlalchemy import engine_from_config
 
@@ -42,3 +43,6 @@ def setup_db(engine, session):
         session.add_all([
             document.Lang(lang=lang) for lang in default_langs
         ])
+
+        # add a default status for the ElasticSearch synchronization
+        session.add(ESSyncStatus())
