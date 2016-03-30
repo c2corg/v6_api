@@ -12,11 +12,11 @@ from sqlalchemy import (
     )
 from sqlalchemy.schema import PrimaryKeyConstraint
 from sqlalchemy.orm import relationship, joinedload, load_only
-import datetime
 
 from c2corg_api.models import Base, schema, users_schema, DBSession
 from c2corg_api.models.document import Document
 from sqlalchemy.sql.expression import or_, and_
+from sqlalchemy.sql.functions import func
 
 
 class Association(Base):
@@ -81,8 +81,7 @@ class AssociationLog(Base):
         User, primaryjoin=user_id == User.id, viewonly=True)
 
     is_creation = Column(Boolean, default=True, nullable=False)
-    written_at = Column(
-        DateTime, default=datetime.datetime.now, nullable=False)
+    written_at = Column(DateTime, default=func.now(), nullable=False)
 
 schema_association = SQLAlchemySchemaNode(
     Association,

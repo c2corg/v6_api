@@ -8,11 +8,11 @@ from sqlalchemy import (
     )
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql.expression import exists, and_
-import datetime
 
 from c2corg_api.models import Base, DBSession, schema, users_schema
 from c2corg_api.models.document import (
     Document, ArchiveDocument, ArchiveDocumentLocale, ArchiveDocumentGeometry)
+from sqlalchemy.sql.functions import func
 
 
 class HistoryMetaData(Base):
@@ -24,8 +24,7 @@ class HistoryMetaData(Base):
     user = relationship(
         User, primaryjoin=user_id == User.id, viewonly=True)
     comment = Column(String(200))
-    written_at = Column(
-        DateTime, default=datetime.datetime.now, nullable=False)
+    written_at = Column(DateTime, default=func.now(), nullable=False)
 
 
 class DocumentVersion(Base):
