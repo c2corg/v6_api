@@ -67,7 +67,7 @@ def validate_json_password(request):
         request.errors.add('body', 'password', 'Invalid')
 
 
-def available_user_attribute(attrname, value):
+def is_unused_user_attribute(attrname, value):
     attr = getattr(User, attrname)
     return DBSession.query(User).filter(attr == value).count() == 0
 
@@ -78,7 +78,7 @@ def validate_unique_attribute(attrname, request):
 
     if attrname in request.json:
         value = request.json[attrname]
-        if available_user_attribute(attrname, value):
+        if is_unused_user_attribute(attrname, value):
             request.validated[attrname] = value
         else:
             request.errors.add('body', attrname, 'already used ' + attrname)
@@ -303,7 +303,7 @@ class UpdateAccountSchema(colander.MappingSchema):
             validator=colander.All(
                 colander.Email(),
                 colander.Function(
-                    partial(available_user_attribute, 'email'),
+                    partial(is_unused_user_attribute, 'email'),
                     'Already used email'
                 )
             ))
@@ -317,7 +317,7 @@ class UpdateAccountSchema(colander.MappingSchema):
             validator=colander.All(
                 colander.Length(min=3),
                 colander.Function(
-                    partial(available_user_attribute, 'forum_username'),
+                    partial(is_unused_user_attribute, 'forum_username'),
                     'Already used forum name'
                 )
             ))
@@ -350,14 +350,14 @@ class UserAccountRest(object):
             'forumname': user.forum_username
             }
 
-    @restricted_json_view(renderer='json', schema=updateschema, http_cache=0)
+    @restricted_json_view(renderer='json', schema=updateschema)
     def post(self):
         user = self.get_user()
         request = self.request
 
         result = {}
 
-        # Before all, check whether the user knows current password
+        # Before all, check whether the user knows the current password
         current_password = request.validated['currentpassword']
         if not user.validate_password(current_password):
             request.errors.add('body', 'currentpassword', 'Invalid password')
