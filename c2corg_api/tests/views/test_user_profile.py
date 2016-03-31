@@ -1,8 +1,9 @@
 import json
 
-from c2corg_api.models.user_profile import UserProfile, ArchiveUserProfile
+from c2corg_api.models.user_profile import UserProfile, ArchiveUserProfile, \
+    USERPROFILE_TYPE
 from c2corg_api.search import elasticsearch_config
-from c2corg_api.search.mapping import SearchDocument
+from c2corg_api.search.mappings.user_mapping import SearchUser
 from shapely.geometry import shape, Point
 
 from c2corg_api.models.document import (
@@ -16,7 +17,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
 
     def setUp(self):  # noqa
         self.set_prefix_and_model(
-            '/profiles', UserProfile, ArchiveUserProfile,
+            '/profiles', USERPROFILE_TYPE, UserProfile, ArchiveUserProfile,
             ArchiveDocumentLocale)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
@@ -289,7 +290,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.assertEqual(search_doc['title_es'], 'contributor Contributor')
 
     def _check_es_index(self):
-        search_doc = SearchDocument.get(
+        search_doc = SearchUser.get(
             id=self.profile1.document_id,
             index=elasticsearch_config['index'])
         self.assertEqual(search_doc['doc_type'], self.profile1.type)

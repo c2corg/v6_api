@@ -1,6 +1,6 @@
 import json
 
-from c2corg_api.models.area import Area, ArchiveArea
+from c2corg_api.models.area import Area, ArchiveArea, AREA_TYPE
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
@@ -17,7 +17,7 @@ class TestAreaRest(BaseDocumentTestRest):
 
     def setUp(self):  # noqa
         self.set_prefix_and_model(
-            "/areas", Area, ArchiveArea, ArchiveDocumentLocale)
+            "/areas", AREA_TYPE, Area, ArchiveArea, ArchiveDocumentLocale)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 

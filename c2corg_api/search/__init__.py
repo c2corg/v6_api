@@ -1,8 +1,20 @@
+from c2corg_api.models.area import AREA_TYPE
+from c2corg_api.models.image import IMAGE_TYPE
+from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.route import ROUTE_TYPE
+from c2corg_api.models.topo_map import MAP_TYPE
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
+from c2corg_api.models.waypoint import WAYPOINT_TYPE
+from c2corg_api.search.mappings.area_mapping import SearchArea
+from c2corg_api.search.mappings.image_mapping import SearchImage
+from c2corg_api.search.mappings.outing_mapping import SearchOuting
+from c2corg_api.search.mappings.route_mapping import SearchRoute
+from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
+from c2corg_api.search.mappings.user_mapping import SearchUser
+from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import Search
-
-from c2corg_api.search.mapping import SearchDocument
 
 elasticsearch_config = {
     'client': None,
@@ -29,8 +41,18 @@ def configure_es_from_config(settings):
     elasticsearch_config['port'] = int(settings['elasticsearch.port'])
 
 
-def create_search():
+def create_search(document_type):
     return Search(
         elasticsearch_config['client'],
         index=elasticsearch_config['index'],
-        doc_type=SearchDocument)
+        doc_type=search_documents[document_type])
+
+search_documents = {
+    AREA_TYPE: SearchArea,
+    IMAGE_TYPE: SearchImage,
+    OUTING_TYPE: SearchOuting,
+    ROUTE_TYPE: SearchRoute,
+    MAP_TYPE: SearchTopoMap,
+    USERPROFILE_TYPE: SearchUser,
+    WAYPOINT_TYPE: SearchWaypoint
+}

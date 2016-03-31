@@ -1,8 +1,15 @@
 from elasticsearch_dsl import DocType, String, Integer, MetaField
 
 
+class BaseMeta:
+    # disable the '_all' field, see
+    # https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-all-field.html
+    all = MetaField(enabled=False)
+
+
 class SearchDocument(DocType):
-    """The ElasticSearch mapping for documents.
+    """The base ElasticSearch mapping for documents. Each document type has
+    its own specific mapping.
 
     We are using the "one language per field" strategy, for example for the
     title field we have a field for each language: title_en, title_fr, ...
@@ -15,6 +22,9 @@ class SearchDocument(DocType):
     See also:
     https://www.elastic.co/guide/en/elasticsearch/guide/current/_index_time_search_as_you_type.html
     """
+    class Meta(BaseMeta):
+        pass
+
     id = Integer()
     doc_type = String(index='not_analyzed')
 
@@ -73,11 +83,6 @@ class SearchDocument(DocType):
         analyzer='index_basque', search_analyzer='search_basque')
     description_eu = String(
         analyzer='index_basque', search_analyzer='search_basque')
-
-    class Meta:
-        # disable the '_all' field, see
-        # https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-all-field.html
-        all = MetaField(enabled=False)
 
 """To support partial-matching required for the autocomplete search, we
 have to set up a n-gram filter for each language analyzer. See also:

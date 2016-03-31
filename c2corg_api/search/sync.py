@@ -6,7 +6,6 @@ from c2corg_api.models.route import Route
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.search import elasticsearch_config
-from c2corg_api.search.mapping import SearchDocument
 from c2corg_api.search.utils import strip_bbcodes, get_title
 
 log = logging.getLogger(__name__)
@@ -37,6 +36,7 @@ def sync_search_index(document):
      successfully.
     """
     document_id = document.document_id
+    document_type = document.type
 
     sync_operation = None
     if document.redirects_to:
@@ -47,14 +47,14 @@ def sync_search_index(document):
 
             client.delete(
                 index=index_name,
-                doc_type=SearchDocument._doc_type.name,
+                doc_type=document_type,
                 id=document_id,
                 ignore=404
             )
         sync_operation = remove_doc
     else:
         doc = {
-            'doc_type': document.type
+            'doc_type': document_type
         }
 
         if isinstance(document, Route):
@@ -96,7 +96,7 @@ def sync_search_index(document):
 
             client.index(
                 index=index_name,
-                doc_type=SearchDocument._doc_type.name,
+                doc_type=document_type,
                 id=document_id,
                 body=doc
             )
