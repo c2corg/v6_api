@@ -1,6 +1,6 @@
 import json
 
-from c2corg_api.models.topo_map import ArchiveTopoMap, TopoMap
+from c2corg_api.models.topo_map import ArchiveTopoMap, TopoMap, MAP_TYPE
 from shapely.geometry import shape, Point
 
 from c2corg_api.models.document import (
@@ -14,7 +14,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
 
     def setUp(self):  # noqa
         self.set_prefix_and_model(
-            "/maps", TopoMap, ArchiveTopoMap, ArchiveDocumentLocale)
+            "/maps", MAP_TYPE, TopoMap, ArchiveTopoMap, ArchiveDocumentLocale)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 

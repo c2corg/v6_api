@@ -1,7 +1,7 @@
 import json
 from shapely.geometry import shape, Point
 
-from c2corg_api.models.image import Image, ArchiveImage
+from c2corg_api.models.image import Image, ArchiveImage, IMAGE_TYPE
 from c2corg_api.models.document import (
     DocumentGeometry, ArchiveDocumentLocale, DocumentLocale)
 from c2corg_api.views.document import DocumentRest
@@ -13,7 +13,7 @@ class TestImageRest(BaseDocumentTestRest):
 
     def setUp(self):  # noqa
         self.set_prefix_and_model(
-            "/images", Image, ArchiveImage, ArchiveDocumentLocale)
+            "/images", IMAGE_TYPE, Image, ArchiveImage, ArchiveDocumentLocale)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 

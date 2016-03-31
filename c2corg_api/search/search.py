@@ -29,7 +29,7 @@ def search_for_type(
         # filter on the document_type
         type_query = Term(doc_type=document_type)
 
-        search = create_search().\
+        search = create_search(document_type).\
             query(search_query).\
             filter(type_query).\
             fields([]).\

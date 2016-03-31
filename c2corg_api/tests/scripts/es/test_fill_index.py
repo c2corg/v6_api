@@ -1,7 +1,8 @@
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.search.mapping import SearchDocument
+from c2corg_api.search.mappings.route_mapping import SearchRoute
+from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.tests import BaseTestCase
 from c2corg_api.scripts.es.fill_index import fill_index
 
@@ -66,24 +67,24 @@ class FillIndexTest(BaseTestCase):
         # fill the ElasticSearch index
         fill_index(self.session)
 
-        waypoint1 = SearchDocument.get(id=71171)
+        waypoint1 = SearchWaypoint.get(id=71171)
         self.assertIsNotNone(waypoint1)
         self.assertEqual(waypoint1.title_en, 'Mont Granier')
         self.assertEqual(waypoint1.title_fr, 'Mont Granier')
         self.assertEqual(waypoint1.summary_fr, 'Le Mont  Granier ')
         self.assertEqual(waypoint1.doc_type, 'w')
 
-        waypoint2 = SearchDocument.get(id=71172)
+        waypoint2 = SearchWaypoint.get(id=71172)
         self.assertIsNotNone(waypoint2)
         self.assertEqual(waypoint2.title_en, 'Mont Blanc')
         self.assertEqual(waypoint2.title_fr, '')
         self.assertEqual(waypoint2.doc_type, 'w')
 
-        route = SearchDocument.get(id=71173)
+        route = SearchRoute.get(id=71173)
         self.assertIsNotNone(route)
         self.assertEqual(route.title_en, 'Mont Blanc : Face N')
         self.assertEqual(route.title_fr, '')
         self.assertEqual(route.doc_type, 'r')
 
         # merged document is ignored
-        self.assertIsNone(SearchDocument.get(id=71174, ignore=404))
+        self.assertIsNone(SearchWaypoint.get(id=71174, ignore=404))

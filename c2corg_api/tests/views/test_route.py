@@ -12,7 +12,7 @@ from c2corg_api.views.route import update_title_prefix
 from shapely.geometry import shape, LineString
 
 from c2corg_api.models.route import (
-    Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale)
+    Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale, ROUTE_TYPE)
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.views.document import DocumentRest
 
@@ -24,7 +24,7 @@ class TestRouteRest(BaseDocumentTestRest):
 
     def setUp(self):  # noqa
         self.set_prefix_and_model(
-            "/routes", Route, ArchiveRoute, ArchiveRouteLocale)
+            "/routes", ROUTE_TYPE, Route, ArchiveRoute, ArchiveRouteLocale)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 

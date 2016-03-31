@@ -4,8 +4,7 @@ import urllib.parse
 import urllib.error
 
 from c2corg_api.models.route import Route
-from c2corg_api.search import elasticsearch_config
-from c2corg_api.search.mapping import SearchDocument
+from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.tests import BaseTestCase
 
 
@@ -63,8 +62,10 @@ class BaseTestRest(BaseTestCase):
 class BaseDocumentTestRest(BaseTestRest):
 
     def set_prefix_and_model(
-            self, prefix, model, model_archive, model_archive_locale):
+            self, prefix, doc_type, model,
+            model_archive, model_archive_locale):
         self._prefix = prefix
+        self._doc_type = doc_type
         self._model = model
         self._model_archive = model_archive
         self._model_archive_locale = model_archive_locale
@@ -401,7 +402,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(archive_locale.lang, lang)
 
         # check updates to the search index
-        search_doc = SearchDocument.get(
+        search_doc = search_documents[self._doc_type].get(
             id=doc.document_id,
             index=elasticsearch_config['index'])
 
@@ -581,7 +582,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         if check_es:
             # check updates to the search index
-            search_doc = SearchDocument.get(
+            search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
                 index=elasticsearch_config['index'])
 
@@ -663,7 +664,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertIs(archive_document_en, archive_document_fr)
 
         # check updates to the search index
-        search_doc = SearchDocument.get(
+        search_doc = search_documents[self._doc_type].get(
             id=document.document_id,
             index=elasticsearch_config['index'])
 
@@ -758,7 +759,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         # check updates to the search index
         if check_es:
-            search_doc = SearchDocument.get(
+            search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
                 index=elasticsearch_config['index'])
 
@@ -852,7 +853,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         # check updates to the search index
         if check_es:
-            search_doc = SearchDocument.get(
+            search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
                 index=elasticsearch_config['index'])
 

@@ -3,7 +3,7 @@ import transaction
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.search import elasticsearch_config
-from c2corg_api.search.mapping import SearchDocument
+from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.search.sync import sync_search_index
 from c2corg_api.tests import BaseTestCase
 
@@ -30,7 +30,7 @@ class SyncTest(BaseTestCase):
         sync_search_index(waypoint)
         t.commit()
 
-        doc = SearchDocument.get(id=51251, index=index)
+        doc = SearchWaypoint.get(id=51251, index=index)
         self.assertEqual(doc['title_fr'], 'Mont Granier')
         self.assertEqual(doc['summary_fr'], 'Le Mont  Granier ')
         self.assertEqual(doc['doc_type'], 'w')
@@ -77,7 +77,7 @@ class SyncTest(BaseTestCase):
         sync_search_index(waypoint)
         t.commit()
 
-        doc = SearchDocument.get(id=51252, index=index)
+        doc = SearchWaypoint.get(id=51252, index=index)
         self.assertEqual(doc['title_fr'], 'Mont Granier')
         self.assertEqual(doc['summary_fr'], 'Le Mont Granier')
         self.assertEqual(doc['title_en'], 'Mont Granier')
@@ -105,7 +105,7 @@ class SyncTest(BaseTestCase):
         sync_search_index(waypoint)
         t.commit()
 
-        self.assertIsNotNone(SearchDocument.get(id=51251, index=index))
+        self.assertIsNotNone(SearchWaypoint.get(id=51251, index=index))
 
         # then set `redirects_to` and sync again
         waypoint.redirects_to = 51252
@@ -115,7 +115,7 @@ class SyncTest(BaseTestCase):
         t.commit()
 
         # check that the document is removed
-        self.assertIsNone(SearchDocument.get(id=51251, ignore=404))
+        self.assertIsNone(SearchWaypoint.get(id=51251, ignore=404))
 
         # now sync a 2nd time to check that already deleted documents are not
         # a problem
@@ -125,4 +125,4 @@ class SyncTest(BaseTestCase):
         t.commit()
 
         # check that the document is removed
-        self.assertIsNone(SearchDocument.get(id=51251, ignore=404))
+        self.assertIsNone(SearchWaypoint.get(id=51251, ignore=404))

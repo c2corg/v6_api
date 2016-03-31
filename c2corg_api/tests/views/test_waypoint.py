@@ -8,12 +8,13 @@ from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.search import elasticsearch_config
-from c2corg_api.search.mapping import SearchDocument
+from c2corg_api.search.mappings.route_mapping import SearchRoute
 from shapely.geometry import shape, Point
 
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import (
-    Waypoint, WaypointLocale, ArchiveWaypoint, ArchiveWaypointLocale)
+    Waypoint, WaypointLocale, ArchiveWaypoint, ArchiveWaypointLocale,
+    WAYPOINT_TYPE)
 from c2corg_api.models.document import (
     DocumentGeometry, ArchiveDocumentGeometry, DocumentLocale)
 from c2corg_api.views.document import DocumentRest
@@ -25,7 +26,8 @@ class TestWaypointRest(BaseDocumentTestRest):
 
     def setUp(self):  # noqa
         self.set_prefix_and_model(
-            "/waypoints", Waypoint, ArchiveWaypoint, ArchiveWaypointLocale)
+            "/waypoints", WAYPOINT_TYPE, Waypoint, ArchiveWaypoint,
+            ArchiveWaypointLocale)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
@@ -432,7 +434,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(route_locale_en.title_prefix, 'Mont Granier!')
 
         # check that the route was updated in the search index
-        search_doc = SearchDocument.get(
+        search_doc = SearchRoute.get(
             id=route.document_id,
             index=elasticsearch_config['index'])
         self.assertEqual(

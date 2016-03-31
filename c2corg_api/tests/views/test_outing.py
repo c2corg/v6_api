@@ -4,7 +4,7 @@ import json
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, ArchiveOuting, \
-    ArchiveOutingLocale, OutingLocale
+    ArchiveOutingLocale, OutingLocale, OUTING_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from shapely.geometry import shape, LineString
 
@@ -20,7 +20,8 @@ class TestOutingRest(BaseDocumentTestRest):
 
     def setUp(self):  # noqa
         self.set_prefix_and_model(
-            '/outings', Outing, ArchiveOuting, ArchiveOutingLocale)
+            '/outings', OUTING_TYPE, Outing, ArchiveOuting,
+            ArchiveOutingLocale)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
