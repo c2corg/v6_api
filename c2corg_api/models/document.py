@@ -83,10 +83,10 @@ class Document(Base, _DocumentMixin):
     }, _DocumentMixin.__mapper_args__)
 
     _ATTRIBUTES_WHITELISTED = \
-        ['document_id', 'version']
+        ['document_id', 'version', 'quality']
 
     _ATTRIBUTES = \
-        _ATTRIBUTES_WHITELISTED + ['protected', 'redirects_to', 'quality']
+        _ATTRIBUTES_WHITELISTED + ['protected', 'redirects_to']
 
     @abc.abstractmethod
     def to_archive(self):
