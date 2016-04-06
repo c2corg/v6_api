@@ -5,7 +5,6 @@ from sqlalchemy import (
     Boolean,
     String,
     ForeignKey,
-    Enum,
     func
     )
 from sqlalchemy.ext.declarative import declared_attr
@@ -19,19 +18,11 @@ from colander import MappingSchema, SchemaNode, String as ColanderString, null
 import abc
 import enum
 
-from c2corg_api.models import Base, schema, DBSession
+from c2corg_api.models import Base, schema, DBSession, enums
 from c2corg_api.ext import colander_ext
 from c2corg_api.models.utils import copy_attributes, extend_dict
 from pyramid.httpexceptions import HTTPInternalServerError
 from c2corg_common import document_types
-
-quality_types = [
-    'stub',
-    'medium',
-    'correct',
-    'good',
-    'excellent'
-    ]
 
 UpdateType = enum.Enum(
     'UpdateType', 'FIGURES LANG GEOM')
@@ -62,8 +53,7 @@ class _DocumentMixin(object):
             Integer, ForeignKey(schema + '.documents.document_id'),
             nullable=True)
 
-    quality = Column(
-        Enum(name='quality_type', inherit_schema=True, *quality_types))
+    quality = Column(enums.quality_type)
 
     type = Column(String(1))
     __mapper_args__ = {
