@@ -11,7 +11,6 @@ class MigrateUsers(MigrateBase):
     """Migrate user data.
     Roles are stored directly as boolean columns.
     Super admins and plain admins are merged together.
-    Duplicate login_names are made uniques.
     """
 
     def __init__(self, connection_source, session_target, batch_size):
@@ -27,12 +26,8 @@ class MigrateUsers(MigrateBase):
         print('Total: {0} rows'.format(total_count))
 
         query = text('select id, login_name, topo_name, email, '
-                     'password, password_tmp '
+                     'password, username as forum_username '
                      'from app_users_private_data order by id')
-
-        duplicate_user_query = text(
-            'select count(*) as count, login_name from app_users_private_data '
-            'group by login_name having count(*) > 1')
 
         def get_group_by_id(gid):
             return self.connection_source.execute(text(
@@ -47,26 +42,17 @@ class MigrateUsers(MigrateBase):
             pending = get_group_by_id(4)
             # skipping useless logged/3 (everyone)
             # TODO: inactive = group_query_builder(5)
-            duplicates = set()
-            for item in self.connection_source.execute(duplicate_user_query):
-                assert item.count == 2
-                duplicates.add(item.login_name)
 
             for user_in in self.connection_source.execute(query):
                 count += 1
                 id = user_in.id
-                username = user_in.login_name
-                if username in duplicates:
-                    # Rename the oldest login_name
-                    duplicates.remove(username)
-                    username = username + '_v6_duplicate'
                 batch.add(dict(
                     id=user_in.id,
-                    username=username,
+                    username=user_in.login_name,
                     name=user_in.topo_name,
+                    forum_username=user_in.forum_username,
                     email=user_in.email,
                     _password=user_in.password,
-                    temp_password=user_in.password_tmp,
                     moderator=id in super_admins or id in admins,
                     email_validated=id not in pending
                     ))
