@@ -68,17 +68,17 @@ class MigrateSummits(MigrateWaypoints):
         )
 
     summit_types = {
-        '1': 'summit',    # was 'culmen'
-        '2': 'pass',
-        '4': 'cliff',
-        '6': 'locality',  # was 'valley'
-        '3': 'lake',
-        '7': 'glacier',
-        '8': 'bisse',
-        '9': 'waterpoint',
-        '10': 'misc',     # was 'canyon' ?
-        '11': 'pit',      # was': 'hole'
+        '1':   'summit',            # was 'culmen'
+        '2':   'pass',
+        '4':   'climbing_outdoor',  # was 'cliff'
+        '6':   'locality',          # was 'valley'
+        '3':   'lake',
+        '7':   'misc',              # was 'glacier'
+        '8':   'bisse',
+        '9':   'waterpoint',        # was 'source'
+        '10':  'canyon',
+        '11':  'cave',              # was': 'hole'
         '100': 'hut',
-        '5': 'virtual',   # was 'raid'
-        '99': 'misc'      # was 'other'
+        '5':   'virtual',           # was 'raid'
+        '99':  'misc'               # was 'other'
     }
