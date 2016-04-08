@@ -1,6 +1,7 @@
 from c2corg_api.models.outing import OutingLocale, Outing, ArchiveOuting, \
     ArchiveOutingLocale, OUTING_TYPE
-from c2corg_api.scripts.migration.documents.document import MigrateDocuments
+from c2corg_api.scripts.migration.documents.document import MigrateDocuments, \
+    DEFAULT_QUALITY
 from c2corg_api.scripts.migration.documents.routes import MigrateRoutes
 import phpserialize
 import json
@@ -119,7 +120,8 @@ class MigrateOutings(MigrateDocuments):
                 document_in.lift_status,
                 MigrateOutings.lift_status),
             partial_trip=document_in.partial_trip,
-            public_transport=document_in.outing_with_public_transportation
+            public_transport=document_in.outing_with_public_transportation,
+            quality=DEFAULT_QUALITY
         )
 
     def get_document_locale(self, document_in, version):

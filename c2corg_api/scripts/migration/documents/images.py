@@ -1,7 +1,8 @@
 from c2corg_api.models.image import Image, ArchiveImage, IMAGE_TYPE
 from c2corg_api.models.document import DocumentLocale, ArchiveDocumentLocale, \
     DOCUMENT_TYPE
-from c2corg_api.scripts.migration.documents.document import MigrateDocuments
+from c2corg_api.scripts.migration.documents.document import MigrateDocuments, \
+    DEFAULT_QUALITY
 
 
 class MigrateImages(MigrateDocuments):
@@ -87,7 +88,8 @@ class MigrateImages(MigrateDocuments):
             has_svg=document_in.has_svg,
             width=document_in.width,
             height=document_in.height,
-            file_size=document_in.file_size
+            file_size=document_in.file_size,
+            quality=DEFAULT_QUALITY
         )
 
     def get_document_locale(self, document_in, version):

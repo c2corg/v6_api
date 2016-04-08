@@ -1,4 +1,5 @@
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
+from c2corg_api.scripts.migration.documents.document import DEFAULT_QUALITY
 from c2corg_api.scripts.migration.documents.waypoints.waypoint import \
     MigrateWaypoints
 
@@ -74,7 +75,8 @@ class MigrateHuts(MigrateWaypoints):
             gas_unstaffed=self.convert_type(
                 document_in.has_unstaffed_gas, MigrateHuts.boolean_types),
             heating_unstaffed=self.convert_type(
-                document_in.has_unstaffed_wood, MigrateHuts.boolean_types)
+                document_in.has_unstaffed_wood, MigrateHuts.boolean_types),
+            quality=DEFAULT_QUALITY
         )
 
     def get_document_locale(self, document_in, version):

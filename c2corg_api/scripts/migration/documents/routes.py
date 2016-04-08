@@ -1,6 +1,7 @@
 from c2corg_api.models.route import Route, RouteLocale, ArchiveRoute, \
     ArchiveRouteLocale, ROUTE_TYPE
-from c2corg_api.scripts.migration.documents.document import MigrateDocuments
+from c2corg_api.scripts.migration.documents.document import MigrateDocuments, \
+    DEFAULT_QUALITY
 
 
 class MigrateRoutes(MigrateDocuments):
@@ -174,6 +175,7 @@ class MigrateRoutes(MigrateDocuments):
             exposition_rock_rating=self.convert_type(
                 document_in.rock_exposition_rating,
                 MigrateRoutes.exposition_rock_ratings),
+            quality=DEFAULT_QUALITY
         )
 
     def get_document_locale(self, document_in, version):
