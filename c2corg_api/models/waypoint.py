@@ -99,7 +99,7 @@ class _WaypointMixin(object):
     # exposition (paragliding_takeoff/landing)
     exposition_rating = Column(enums.exposition_rating)
 
-    # type de rocher (summit, waterfall, cave, pit, cliff,
+    # type de rocher (summit, waterfall, cave, climbing_outdoor,
     # climbing_outdoor/indoor)
     rock_types = Column(ArrayOfEnum(enums.rock_type))
 
@@ -153,7 +153,7 @@ class _WaypointMixin(object):
     # chauffage hors gardiennage (hut, abri)
     heating_unstaffed = Column(Boolean)
 
-    # duree de l'approche (randkluft, cliff, climbing_outdoor)
+    # duree de l'approche (climbing_outdoor)
     access_time = Column(enums.access_time_type)
 
     # nb places hors gardiennage
