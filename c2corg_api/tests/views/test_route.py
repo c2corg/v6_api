@@ -9,6 +9,7 @@ from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.views.route import update_title_prefix
+from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, LineString
 
 from c2corg_api.models.route import (
@@ -400,6 +401,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.route.document_id,
                 'version': self.route.version,
+                'quality': quality_types[1],
                 'activities': ['skitouring'],
                 'elevation_min': 700,
                 'elevation_max': 1600,
@@ -453,6 +455,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.route.document_id,
                 'version': self.route.version,
+                'quality': quality_types[1],
                 'activities': ['skitouring'],
                 'elevation_min': 700,
                 'elevation_max': 1600,
@@ -480,6 +483,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.route.document_id,
                 'version': self.route.version,
+                'quality': quality_types[1],
                 'activities': ['skitouring'],
                 'elevation_min': 700,
                 'elevation_max': 1600,
@@ -514,6 +518,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.route2.document_id,
                 'version': self.route2.version,
+                'quality': quality_types[1],
                 'main_waypoint_id': self.waypoint.document_id,
                 'activities': ['skitouring'],
                 'elevation_min': 700,
@@ -538,6 +543,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'document_id': self.route.document_id,
                 'main_waypoint_id': self.waypoint2.document_id,
                 'version': self.route.version,
+                'quality': quality_types[1],
                 'activities': ['skitouring'],
                 'elevation_min': 700,
                 'elevation_max': 1500,
@@ -580,6 +586,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.route.document_id,
                 'version': self.route.version,
+                'quality': quality_types[1],
                 'activities': ['skitouring'],
                 'elevation_min': 700,
                 'elevation_max': 1500,
@@ -605,6 +612,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.route.document_id,
                 'version': self.route.version,
+                'quality': quality_types[1],
                 'activities': ['skitouring'],
                 'elevation_min': 700,
                 'elevation_max': 1500,

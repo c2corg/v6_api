@@ -1,4 +1,6 @@
 import json
+
+from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, Point
 
 from c2corg_api.models.image import Image, ArchiveImage, IMAGE_TYPE
@@ -229,6 +231,7 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image4.document_id,
                 'version': self.image4.version,
+                'quality': quality_types[1],
                 'activities': ['skitouring'],
                 'image_type': 'personal',
                 'height': 2000,
@@ -250,6 +253,7 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image.document_id,
                 'version': self.image.version,
+                'quality': quality_types[1],
                 'activities': ['paragliding'],
                 'image_type': 'collaborative',
                 'height': 2000,
@@ -294,6 +298,7 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image.document_id,
                 'version': self.image.version,
+                'quality': quality_types[1],
                 'activities': ['paragliding'],
                 'image_type': 'collaborative',
                 'height': 2000,
@@ -314,6 +319,7 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image.document_id,
                 'version': self.image.version,
+                'quality': quality_types[1],
                 'activities': ['paragliding'],
                 'image_type': 'collaborative',
                 'height': 1500,
@@ -337,6 +343,7 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image.document_id,
                 'version': self.image.version,
+                'quality': quality_types[1],
                 'activities': ['paragliding'],
                 'image_type': 'collaborative',
                 'height': 1500,
@@ -359,6 +366,7 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image.document_id,
                 'version': self.image.version,
+                'quality': quality_types[1],
                 'activities': ['paragliding'],
                 'image_type': 'personal',
                 'height': 1500,
@@ -383,6 +391,7 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image.document_id,
                 'version': self.image.version,
+                'quality': quality_types[1],
                 'activities': ['paragliding'],
                 'image_type': 'personal',
                 'height': 1500,
@@ -406,6 +415,7 @@ class TestImageRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.image4.document_id,
                 'version': self.image4.version,
+                'quality': quality_types[1],
                 'activities': ['paragliding'],
                 'image_type': 'collaborative',
                 'height': 1500,

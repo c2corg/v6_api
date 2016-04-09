@@ -4,6 +4,7 @@ from c2corg_api.models.area import Area, ArchiveArea, AREA_TYPE
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
+from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, Polygon
 
 from c2corg_api.models.document import (
@@ -237,6 +238,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'document_id': self.area1.document_id,
                 'version': self.area1.version,
                 'area_type': 'admin_limits',
+                'quality': quality_types[1],
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
@@ -275,6 +277,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'document_id': self.area1.document_id,
                 'version': self.area1.version,
                 'area_type': 'admin_limits',
+                'quality': quality_types[1],
                 'geometry': {
                     'version': self.area1.geometry.version,
                     'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
@@ -310,6 +313,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'document_id': self.area1.document_id,
                 'version': self.area1.version,
                 'area_type': 'admin_limits',
+                'quality': quality_types[1],
                 'locales': [
                     {'lang': 'en', 'title': 'Chartreuse',
                      'version': self.locale_en.version}
@@ -336,6 +340,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'document_id': self.area1.document_id,
                 'version': self.area1.version,
                 'area_type': 'range',
+                'quality': quality_types[1],
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
@@ -365,6 +370,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'document_id': self.area1.document_id,
                 'version': self.area1.version,
                 'area_type': 'range',
+                'quality': quality_types[1],
                 'locales': [
                     {'lang': 'es', 'title': 'Chartreuse'}
                 ]

@@ -381,7 +381,7 @@ class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
 
 
 schema_attributes = [
-    'document_id', 'version', 'locales', 'geometry'
+    'document_id', 'version', 'locales', 'geometry', 'quality'
 ]
 schema_locale_attributes = [
     'version', 'lang', 'title', 'description', 'summary'
