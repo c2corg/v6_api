@@ -249,7 +249,7 @@ class TestOutingRest(BaseDocumentTestRest):
             'user_ids': []
         }
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.post_json(self._prefix, request_body,
+        response = self.app_post_json(self._prefix, request_body,
                                       headers=headers, status=400)
 
         body = response.json
@@ -286,7 +286,7 @@ class TestOutingRest(BaseDocumentTestRest):
             'user_ids': [-999]
         }
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.post_json(self._prefix, request_body,
+        response = self.app_post_json(self._prefix, request_body,
                                       headers=headers, status=400)
 
         body = response.json

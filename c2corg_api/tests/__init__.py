@@ -191,3 +191,20 @@ class BaseTestCase(unittest.TestCase):
         DBSession.remove()
         self.session.close()
         self.connection.close()
+
+    def app_post_json(self, *args, **kwargs):
+        kwargs = dict(kwargs)
+        status = 200
+        if 'status' in kwargs:
+            status = kwargs['status']
+            del kwargs['status']
+        kwargs['expect_errors'] = True
+
+        res = self.app.post_json(*args, **kwargs)
+        if status != '*' and res.status_code != status:
+            errors = res.body if res.status_code == 400 else ''
+            self.fail('Bad response: %s (not %d) : %s' % (
+                res.status,
+                status,
+                errors))
+        return res

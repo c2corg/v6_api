@@ -38,7 +38,7 @@ class TestUserRest(BaseTestRest):
         url = self._prefix + '/register'
 
         # First succeed in creating a new user
-        body = self.app.post_json(url, request_body, status=200).json
+        body = self.app_post_json(url, request_body, status=200).json
         user_id = body.get('id')
         user = self.session.query(User).get(user_id)
         self.assertFalse(user.email_validated)
@@ -52,7 +52,7 @@ class TestUserRest(BaseTestRest):
         }
         url = self._prefix + '/register'
 
-        body = self.app.post_json(url, request_body, status=200).json
+        body = self.app_post_json(url, request_body, status=200).json
         user_id = body.get('id')
         user = self.session.query(User).get(user_id)
         self.assertEqual(user.lang, 'fr')
@@ -67,7 +67,7 @@ class TestUserRest(BaseTestRest):
         }
         url = self._prefix + '/register'
 
-        body = self.app.post_json(url, request_body, status=200).json
+        body = self.app_post_json(url, request_body, status=200).json
         user_id = body.get('id')
         user = self.session.query(User).get(user_id)
         self.assertEqual(user.lang, 'en')
@@ -81,7 +81,7 @@ class TestUserRest(BaseTestRest):
             'email': 'some_user@camptocamp.org'
         }
         url = self._prefix + '/register'
-        self.app.post_json(url, request_body, status=400).json
+        self.app_post_json(url, request_body, status=400).json
 
     def test_update_preferred_lang(self):
         user_id = self.global_userids['contributor']
@@ -109,7 +109,7 @@ class TestUserRest(BaseTestRest):
 
         # First succeed in creating a new user
         email_count = self.get_email_box_length()
-        body = self.app.post_json(url, request_body, status=200).json
+        body = self.app_post_json(url, request_body, status=200).json
         self.assertBodyEqual(body, 'username', 'test')
         self.assertBodyEqual(body, 'forum_username', 'testf')
         self.assertBodyEqual(body, 'name', 'Max Mustermann')
@@ -130,7 +130,7 @@ class TestUserRest(BaseTestRest):
         # Simulate confirmation email validation
         nonce = self.extract_nonce('validate_register_email')
         url_api_validation = '/users/validate_register_email/%s' % nonce
-        self.app.post_json(url_api_validation, {}, status=200)
+        self.app_post_json(url_api_validation, {}, status=200)
         profile = self.session.query(UserProfile).get(user_id)
         # Need to expunge the profile and user so that the latest
         # version (the one from the view) is actually picked up.
@@ -142,12 +142,12 @@ class TestUserRest(BaseTestRest):
         self.assertTrue(user.email_validated)
 
         # Now reject non unique attributes
-        body = self.app.post_json(url, request_body, status=400).json
+        body = self.app_post_json(url, request_body, status=400).json
         self.assertErrorsContain(body, 'email')
         self.assertErrorsContain(body, 'username')
 
         # Require username, password and email attributes
-        body = self.app.post_json(url, {}, status=400).json
+        body = self.app_post_json(url, {}, status=400).json
         self.assertErrorsContain(body, 'email')
         self.assertErrorsContain(body, 'username')
         self.assertErrorsContain(body, 'password')
@@ -158,7 +158,7 @@ class TestUserRest(BaseTestRest):
             'password': 'élève 日本',
             'email': 'utf8@camptocamp.org'
         }
-        body = self.app.post_json(url, request_utf8, status=200).json
+        body = self.app_post_json(url, request_utf8, status=200).json
 
     def test_forgot_password(self):
         user_id = self.global_userids['contributor']
@@ -166,13 +166,13 @@ class TestUserRest(BaseTestRest):
         initial_encoded_password = user.password
 
         url = '/users/request_password_change'
-        self.app.post_json(url, {
+        self.app_post_json(url, {
             'email': user.email}, status=200).json
 
         # Simulate confirmation email validation
         nonce = self.extract_nonce('change_password')
         url_api_validation = '/users/validate_new_password/%s' % nonce
-        self.app.post_json(url_api_validation, {
+        self.app_post_json(url_api_validation, {
             'password': 'new pass'
             }, status=200)
 
@@ -201,7 +201,7 @@ class TestUserRest(BaseTestRest):
             request_body['discourse'] = discourse
 
         url = '/users/login'
-        response = self.app.post_json(url, request_body, status=status)
+        response = self.app_post_json(url, request_body, status=status)
         return response
 
     def test_login_success(self):
@@ -317,7 +317,7 @@ class TestUserRest(BaseTestRest):
         nonce = self.extract_nonce('validate_change_email')
         url_api_validation = '/users/validate_change_email/%s' % nonce
         # not checking status since Discourse may not be running for tests
-        self.app.post_json(url_api_validation, {}, status='*')
+        self.app_post_json(url_api_validation, {}, status='*')
 
         self.session.expunge(user)
         user = self.session.query(User).get(user_id)

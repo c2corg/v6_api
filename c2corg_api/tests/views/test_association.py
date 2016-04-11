@@ -13,7 +13,7 @@ class TestAssociationRest(BaseTestRest):
         self._add_test_data()
 
     def test_add_association_unauthorized(self):
-        self.app.post_json(TestAssociationRest.prefix, {}, status=403)
+        self.app_post_json(TestAssociationRest.prefix, {}, status=403)
 
     def test_add_association(self):
         request_body = {
@@ -21,7 +21,7 @@ class TestAssociationRest(BaseTestRest):
             'child_document_id': self.waypoint2.document_id,
         }
         headers = self.add_authorization_header(username='contributor')
-        self.app.post_json(
+        self.app_post_json(
             TestAssociationRest.prefix, request_body, headers=headers,
             status=200)
 
@@ -48,12 +48,12 @@ class TestAssociationRest(BaseTestRest):
         headers = self.add_authorization_header(username='contributor')
 
         # first association, ok
-        self.app.post_json(
+        self.app_post_json(
             TestAssociationRest.prefix, request_body, headers=headers,
             status=200)
 
         # 2nd association, fail
-        self.app.post_json(
+        self.app_post_json(
             TestAssociationRest.prefix, request_body, headers=headers,
             status=400)
 
@@ -62,7 +62,7 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.waypoint2.document_id,
             'child_document_id': self.waypoint1.document_id
         }
-        self.app.post_json(
+        self.app_post_json(
             TestAssociationRest.prefix, request_body, headers=headers,
             status=400)
 
@@ -72,7 +72,7 @@ class TestAssociationRest(BaseTestRest):
             'child_document_id': self.waypoint2.document_id,
         }
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.post_json(
+        response = self.app_post_json(
             TestAssociationRest.prefix, request_body, headers=headers,
             status=400)
 
@@ -91,7 +91,7 @@ class TestAssociationRest(BaseTestRest):
             'child_document_id': -999,
         }
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.post_json(
+        response = self.app_post_json(
             TestAssociationRest.prefix, request_body, headers=headers,
             status=400)
 
@@ -130,7 +130,7 @@ class TestAssociationRest(BaseTestRest):
         headers = self.add_authorization_header(username='contributor')
 
         # add association
-        self.app.post_json(
+        self.app_post_json(
             TestAssociationRest.prefix, request_body, headers=headers,
             status=200)
 

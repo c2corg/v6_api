@@ -83,7 +83,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
 
     def test_no_post(self):
         # can not create new profiles
-        self.app.post_json(
+        self.app_post_json(
             self._prefix, {}, expect_errors=True, status=404)
 
     def test_put_wrong_user(self):
