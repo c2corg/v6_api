@@ -58,6 +58,9 @@ ALTER TABLE punbb_users ALTER COLUMN username SET NOT NULL;
 ALTER TABLE punbb_users ADD constraint unique_username unique(username);
 ALTER TABLE punbb_users ADD constraint valid_username CHECK(char_length(username) >= 3 and char_length(username) <= 15 and username !~ '.*[^a-zA-Z0-9]+.*');
 
+-- Set not null on topo_name
+alter table app_users_private_data alter column topo_name set not null;
+
 
 -- Count modified usernames
 select count(*) from punbb_users where old_username != username;

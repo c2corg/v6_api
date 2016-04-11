@@ -57,9 +57,9 @@ def _add_global_test_data(session):
         geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'))
 
     contributor = User(
+        name='Contributor',
         username='contributor', email='contributor@camptocamp.org',
-        forum_username='contributor',
-        password='super pass', name='Contributor',
+        forum_username='contributor', password='super pass',
         email_validated=True, profile=contributor_profile)
 
     contributor2_profile = UserProfile(
@@ -67,6 +67,7 @@ def _add_global_test_data(session):
         locales=[DocumentLocale(title='...', lang='en')])
 
     contributor2 = User(
+        name='Contributor 2',
         username='contributor2', email='contributor2@camptocamp.org',
         forum_username='contributor2',
         password='better pass', email_validated=True,
@@ -77,6 +78,7 @@ def _add_global_test_data(session):
         locales=[DocumentLocale(title='', lang='en')])
 
     moderator = User(
+        name='Moderator',
         username='moderator', email='moderator@camptocamp.org',
         forum_username='moderator',
         moderator=True, password='even better pass',

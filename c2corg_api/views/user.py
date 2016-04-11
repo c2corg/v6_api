@@ -108,10 +108,10 @@ class UserRegistrationRest(object):
     @json_view(schema=schema_create_user, validators=[
         validate_json_password,
         partial(validate_unique_attribute, "email"),
-        partial(validate_unique_attribute, "username")])
+        partial(validate_unique_attribute, "username"),
+        partial(validate_unique_attribute, "forum_username")])
     def post(self):
         user = schema_create_user.objectify(self.request.validated)
-        user.forum_username = user.username  # same usernames by default
         user.password = self.request.validated['password']
         user.update_validation_nonce('regemail', VALIDATION_EXPIRE_DAYS)
 
@@ -454,6 +454,7 @@ def token_to_response(user, token, request):
     return {
         'token': token.value,
         'username': user.username,
+        'forum_username': user.forum_username,
         'expire': int(expire_time.total_seconds()),
         'roles': roles
     }

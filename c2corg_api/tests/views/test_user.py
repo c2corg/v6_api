@@ -29,7 +29,7 @@ class TestUserRest(BaseTestRest):
 
     def test_always_register_non_validated_users(self):
         request_body = {
-            'username': 'test',
+            'username': 'test', 'forum_username': 'test',
             'name': 'Max Mustermann',
             'password': 'super secret',
             'email_validated': True,
@@ -45,7 +45,7 @@ class TestUserRest(BaseTestRest):
 
     def test_register_default_lang(self):
         request_body = {
-            'username': 'test',
+            'username': 'test', 'forum_username': 'test',
             'name': 'Max Mustermann',
             'password': 'super secret',
             'email': 'some_user@camptocamp.org'
@@ -59,7 +59,7 @@ class TestUserRest(BaseTestRest):
 
     def test_register_passed_lang(self):
         request_body = {
-            'username': 'test',
+            'username': 'test', 'forum_username': 'test',
             'lang': 'en',
             'name': 'Max Mustermann',
             'password': 'super secret',
@@ -74,7 +74,7 @@ class TestUserRest(BaseTestRest):
 
     def test_register_invalid_lang(self):
         request_body = {
-            'username': 'test',
+            'username': 'test', 'forum_username': 'test',
             'lang': 'nn',
             'name': 'Max Mustermann',
             'password': 'super secret',
@@ -100,7 +100,7 @@ class TestUserRest(BaseTestRest):
 
     def test_register(self):
         request_body = {
-            'username': 'test',
+            'username': 'test', 'forum_username': 'testf',
             'name': 'Max Mustermann',
             'password': 'super secret',
             'email': 'some_user@camptocamp.org'
@@ -111,6 +111,7 @@ class TestUserRest(BaseTestRest):
         email_count = self.get_email_box_length()
         body = self.app.post_json(url, request_body, status=200).json
         self.assertBodyEqual(body, 'username', 'test')
+        self.assertBodyEqual(body, 'forum_username', 'testf')
         self.assertBodyEqual(body, 'name', 'Max Mustermann')
         self.assertBodyEqual(body, 'email', 'some_user@camptocamp.org')
         self.assertNotIn('password', body)
@@ -153,7 +154,7 @@ class TestUserRest(BaseTestRest):
 
         # Usage of utf8 password
         request_utf8 = {
-            'username': 'utf8',
+            'username': 'utf8', 'name': 'utf8', 'forum_username': 'utf8f',
             'password': 'élève 日本',
             'email': 'utf8@camptocamp.org'
         }
