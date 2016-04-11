@@ -3,20 +3,51 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 
 from c2corg_api.tests.views import BaseTestRest
-from c2corg_api.security.discourse_sso_provider import discourse_redirect
+from c2corg_api.security.discourse_client import (
+    APIDiscourseClient, get_discourse_client, set_discourse_client)
 
 from urllib.parse import urlparse, parse_qs
 
 import re
 
+from unittest.mock import Mock, MagicMock
+
 
 class TestUserRest(BaseTestRest):
+
+    def __init__(self, *args, **kwargs):
+        BaseTestRest.__init__(self, *args, **kwargs)
+        self.original_discourse_client = get_discourse_client(self.settings)
 
     def setUp(self):  # noqa
         self._prefix = "/users"
         self._model = User
         BaseTestRest.setUp(self)
         self._add_test_data()
+        self.set_discourse_up()
+
+    def set_discourse_client_mock(self, client):
+        self.discourse_client = client
+        set_discourse_client(client)
+
+    def set_discourse_not_mocked(self):
+        self.set_discourse_client_mock(self.original_discourse_client)
+
+    def set_discourse_up(self):
+        # unittest.Mock works great with a completly fake object
+        mock = Mock()
+        mock.redirect_without_nonce = MagicMock()
+        mock.redirect = MagicMock()
+        mock.sso_sync = MagicMock()
+        self.set_discourse_client_mock(mock)
+
+    def set_discourse_down(self):
+        # unittest.Mock wants a concrete object to throw correctly
+        mock = APIDiscourseClient(self.settings)
+        mock.redirect_without_nonce = MagicMock(side_effect=Exception)
+        mock.redirect = MagicMock(side_effect=Exception)
+        mock.sso_sync = MagicMock(side_effect=Exception)
+        self.set_discourse_client_mock(mock)
 
     def extract_urls(self, data):
         return re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', data)  # noqa
@@ -98,7 +129,7 @@ class TestUserRest(BaseTestRest):
         user = self.session.query(User).get(user_id)
         self.assertEqual(user.lang, 'en')
 
-    def test_register(self):
+    def test_register_discourse_up(self):
         request_body = {
             'username': 'test', 'forum_username': 'testf',
             'name': 'Max Mustermann',
@@ -131,7 +162,7 @@ class TestUserRest(BaseTestRest):
         nonce = self.extract_nonce('validate_register_email')
         url_api_validation = '/users/validate_register_email/%s' % nonce
         self.app_post_json(url_api_validation, {}, status=200)
-        profile = self.session.query(UserProfile).get(user_id)
+
         # Need to expunge the profile and user so that the latest
         # version (the one from the view) is actually picked up.
         self.session.expunge(profile)
@@ -160,7 +191,26 @@ class TestUserRest(BaseTestRest):
         }
         body = self.app_post_json(url, request_utf8, status=200).json
 
-    def test_forgot_password(self):
+    def test_register_discourse_down(self):
+        self.set_discourse_down()
+        request_body = {
+            'username': 'test', 'forum_username': 'testf',
+            'name': 'Max Mustermann',
+            'password': 'super secret',
+            'email': 'some_user@camptocamp.org'
+        }
+        url = self._prefix + '/register'
+
+        # First succeed in creating a new user
+        self.app_post_json(url, request_body, status=200)
+
+        # Simulate confirmation email validation
+        nonce = self.extract_nonce('validate_register_email')
+        url_api_validation = '/users/validate_register_email/%s' % nonce
+
+        self.app_post_json(url_api_validation, {}, status=500)
+
+    def test_forgot_password_discourse_up(self):
         user_id = self.global_userids['contributor']
         user = self.session.query(User).get(user_id)
         initial_encoded_password = user.password
@@ -172,6 +222,7 @@ class TestUserRest(BaseTestRest):
         # Simulate confirmation email validation
         nonce = self.extract_nonce('change_password')
         url_api_validation = '/users/validate_new_password/%s' % nonce
+
         self.app_post_json(url_api_validation, {
             'password': 'new pass'
             }, status=200)
@@ -182,6 +233,23 @@ class TestUserRest(BaseTestRest):
         modified_encoded_password = user.password
 
         self.assertTrue(initial_encoded_password != modified_encoded_password)
+
+    def test_forgot_password_discourse_down(self):
+        self.set_discourse_down()
+        user_id = self.global_userids['contributor']
+        user = self.session.query(User).get(user_id)
+
+        url = '/users/request_password_change'
+        self.app_post_json(url, {
+            'email': user.email}, status=200).json
+
+        # Simulate confirmation email validation
+        nonce = self.extract_nonce('change_password')
+        url_api_validation = '/users/validate_new_password/%s' % nonce
+
+        self.app_post_json(url_api_validation, {
+            'password': 'new pass'
+            }, status=500)
 
     def login(self, username, password=None, status=200, sso=None, sig=None,
               discourse=None):
@@ -204,18 +272,24 @@ class TestUserRest(BaseTestRest):
         response = self.app_post_json(url, request_body, status=status)
         return response
 
-    def test_login_success(self):
+    def test_login_success_discourse_up(self):
+        body = self.login('moderator', status=200).json
+        self.assertTrue('token' in body)
+
+    def test_login_success_discourse_down(self):
+        # Topoguide login allowed even if Discourse is down.
         body = self.login('moderator', status=200).json
         self.assertTrue('token' in body)
 
     def test_login_discourse_success(self):
+        self.set_discourse_not_mocked()
         # noqa See https://meta.discourse.org/t/official-single-sign-on-for-discourse/13045
         sso = "bm9uY2U9Y2I2ODI1MWVlZmI1MjExZTU4YzAwZmYxMzk1ZjBjMGI%3D%0A"
         sig = "2828aa29899722b35a2f191d34ef9b3ce695e0e6eeec47deb46d588d70c7cb56"  # noqa
 
         moderator = self.session.query(User).filter(
                 User.username == 'moderator').one()
-        redirect1 = discourse_redirect(moderator, sso, sig, self.settings)
+        redirect1 = self.discourse_client.redirect(moderator, sso, sig)
 
         body = self.login('moderator', sso=sso, sig=sig, discourse=True).json
         self.assertTrue('token' in body)
@@ -284,10 +358,7 @@ class TestUserRest(BaseTestRest):
         url = '/users/' + str(self.global_userids['contributor'])
         self.app.get(url, status=403)
 
-    def _add_test_data(self):
-        pass
-
-    def test_read_and_update_account_info(self):
+    def read_and_update_account_info_discourse_up(self):
         user_id = self.global_userids['contributor']
         currentpassword = self.global_passwords['contributor']
 
@@ -303,9 +374,8 @@ class TestUserRest(BaseTestRest):
             'currentpassword': currentpassword,
             'email': 'superemail@localhost.localhost',
         }
-        # not checking status since Discourse may not be running for tests
-        self.post_json_with_contributor(url, data, status='*')
 
+        self.post_json_with_contributor(url, data, status=200)
         user = self.session.query(User).get(user_id)
         self.assertEqual(user.email_to_validate, data['email'])
         self.assertNotEqual(user.email, data['email'])
@@ -316,10 +386,32 @@ class TestUserRest(BaseTestRest):
         # Simulate confirmation email validation
         nonce = self.extract_nonce('validate_change_email')
         url_api_validation = '/users/validate_change_email/%s' % nonce
-        # not checking status since Discourse may not be running for tests
-        self.app_post_json(url_api_validation, {}, status='*')
+        self.app_post_json(url_api_validation, {}, status=200)
 
         self.session.expunge(user)
         user = self.session.query(User).get(user_id)
         self.assertEqual(user.email, data['email'])
         self.assertIsNone(user.validation_nonce)
+
+        self.assertEqual(1, int(self.discourse_client.sso_sync.called_count))
+
+    def test_read_and_update_account_info_discourse_down(self):
+        self.set_discourse_down()
+        currentpassword = self.global_passwords['contributor']
+
+        # Read account info
+        url = '/users/account'
+        self.get_json_with_contributor(url, status=200)
+
+        # Change email
+        currentpassword = self.global_passwords['contributor']
+        data = {
+            'currentpassword': currentpassword,
+            'email': 'superemail@localhost.localhost',
+        }
+
+        self.post_json_with_contributor(url, data, status=500)
+        self.assertEqual(1, int(self.discourse_client.sso_sync.called_count))
+
+    def _add_test_data(self):
+        pass
