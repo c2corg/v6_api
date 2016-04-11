@@ -4,6 +4,7 @@ from c2corg_api.models.user_profile import UserProfile, ArchiveUserProfile, \
     USERPROFILE_TYPE
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.user_mapping import SearchUser
+from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, Point
 
 from c2corg_api.models.document import (
@@ -179,6 +180,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.profile1.document_id,
                 'version': self.profile1.version,
+                'quality': quality_types[1],
                 'categories': ['mountain_guide'],
                 'locales': [
                     {'lang': 'en', 'description': 'Me!',
@@ -208,6 +210,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.profile1.document_id,
                 'version': self.profile1.version,
+                'quality': quality_types[1],
                 'categories': ['mountain_guide'],
                 'locales': [
                     {'lang': 'en', 'description': 'Me',
@@ -227,6 +230,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.profile1.document_id,
                 'version': self.profile1.version,
+                'quality': quality_types[1],
                 'categories': ['amateur'],
                 'locales': [
                     {'lang': 'en', 'description': 'Me!',
@@ -249,6 +253,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.profile1.document_id,
                 'version': self.profile1.version,
+                'quality': quality_types[1],
                 'categories': ['amateur'],
                 'locales': [
                     {'lang': 'en', 'title': 'Should not be set',
@@ -276,6 +281,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.profile1.document_id,
                 'version': self.profile1.version,
+                'quality': quality_types[1],
                 'categories': ['amateur'],
                 'locales': [
                     {'lang': 'es', 'description': 'Yo'}

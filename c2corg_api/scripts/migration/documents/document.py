@@ -8,6 +8,10 @@ from c2corg_api.models.document import DocumentGeometry, \
     ArchiveDocumentGeometry
 from c2corg_api.scripts.migration.documents.batch_document import DocumentBatch
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
+from c2corg_common.attributes import quality_types
+
+
+DEFAULT_QUALITY = quality_types[2]
 
 
 class MigrateDocuments(MigrateBase):

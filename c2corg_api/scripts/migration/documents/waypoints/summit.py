@@ -1,4 +1,5 @@
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
+from c2corg_api.scripts.migration.documents.document import DEFAULT_QUALITY
 from c2corg_api.scripts.migration.documents.waypoints.waypoint import \
     MigrateWaypoints
 
@@ -51,7 +52,8 @@ class MigrateSummits(MigrateWaypoints):
             protected=document_in.is_protected,
             redirects_to=document_in.redirects_to,
             elevation=document_in.elevation,
-            maps_info=document_in.maps_info
+            maps_info=document_in.maps_info,
+            quality=DEFAULT_QUALITY
         )
 
     def get_document_locale(self, document_in, version):

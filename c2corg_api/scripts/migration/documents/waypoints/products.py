@@ -1,4 +1,5 @@
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
+from c2corg_api.scripts.migration.documents.document import DEFAULT_QUALITY
 from c2corg_api.scripts.migration.documents.waypoints.waypoint import \
     MigrateWaypoints
 
@@ -58,7 +59,8 @@ class MigrateProducts(MigrateWaypoints):
             product_types=self.convert_types(
                 document_in.product_type,
                 MigrateProducts.product_types, [0]),
-            url=document_in.url
+            url=document_in.url,
+            quality=DEFAULT_QUALITY
         )
 
     def get_document_locale(self, document_in, version):

@@ -1,7 +1,8 @@
 from c2corg_api.models.area import Area, ArchiveArea, AREA_TYPE
 from c2corg_api.models.document import DocumentLocale, ArchiveDocumentLocale, \
     DOCUMENT_TYPE
-from c2corg_api.scripts.migration.documents.document import MigrateDocuments
+from c2corg_api.scripts.migration.documents.document import MigrateDocuments, \
+    DEFAULT_QUALITY
 
 
 class MigrateAreas(MigrateDocuments):
@@ -68,6 +69,7 @@ class MigrateAreas(MigrateDocuments):
             redirects_to=document_in.redirects_to,
             area_type=self.convert_type(
                 document_in.area_type, MigrateAreas.area_types),
+            quality=DEFAULT_QUALITY
         )
 
     def get_document_locale(self, document_in, version):

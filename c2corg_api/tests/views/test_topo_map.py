@@ -1,6 +1,7 @@
 import json
 
 from c2corg_api.models.topo_map import ArchiveTopoMap, TopoMap, MAP_TYPE
+from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, Point
 
 from c2corg_api.models.document import (
@@ -216,6 +217,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.map1.document_id,
                 'version': self.map1.version,
+                'quality': quality_types[1],
                 'editor': 'IGN',
                 'scale': '25000',
                 'code': '3433OT',
@@ -259,6 +261,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.map1.document_id,
                 'version': self.map1.version,
+                'quality': quality_types[1],
                 'editor': 'IGN',
                 'scale': '25000',
                 'code': '3433OT',
@@ -279,6 +282,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.map1.document_id,
                 'version': self.map1.version,
+                'quality': quality_types[1],
                 'editor': 'IGN',
                 'scale': '25000',
                 'code': '3431OT',
@@ -302,6 +306,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.map1.document_id,
                 'version': self.map1.version,
+                'quality': quality_types[1],
                 'editor': 'IGN',
                 'scale': '25000',
                 'code': '3431OT',

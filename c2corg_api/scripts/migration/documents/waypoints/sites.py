@@ -1,5 +1,6 @@
 # coding=utf-8
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
+from c2corg_api.scripts.migration.documents.document import DEFAULT_QUALITY
 from c2corg_api.scripts.migration.documents.waypoints.waypoint import \
     MigrateWaypoints
 
@@ -89,7 +90,8 @@ class MigrateSites(MigrateWaypoints):
             orientation=self.convert_types(
                 document_in.facings, MigrateSites.orientation_types, [0]),
             best_periods=self.convert_types(
-                document_in.best_periods, MigrateSites.best_periods)
+                document_in.best_periods, MigrateSites.best_periods),
+            quality=DEFAULT_QUALITY
         )
 
     def get_document_locale(self, document_in, version):

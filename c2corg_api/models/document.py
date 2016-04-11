@@ -23,6 +23,7 @@ from c2corg_api.ext import colander_ext
 from c2corg_api.models.utils import copy_attributes, extend_dict
 from pyramid.httpexceptions import HTTPInternalServerError
 from c2corg_common import document_types
+from c2corg_common.attributes import quality_types
 
 UpdateType = enum.Enum(
     'UpdateType', 'FIGURES LANG GEOM')
@@ -53,7 +54,8 @@ class _DocumentMixin(object):
             Integer, ForeignKey(schema + '.documents.document_id'),
             nullable=True)
 
-    quality = Column(enums.quality_type)
+    quality = Column(
+        enums.quality_type, nullable=False, server_default=quality_types[1])
 
     type = Column(String(1))
     __mapper_args__ = {
@@ -379,7 +381,7 @@ class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
 
 
 schema_attributes = [
-    'document_id', 'version', 'locales', 'geometry'
+    'document_id', 'version', 'locales', 'geometry', 'quality'
 ]
 schema_locale_attributes = [
     'version', 'lang', 'title', 'description', 'summary'

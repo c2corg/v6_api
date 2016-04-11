@@ -9,6 +9,7 @@ from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.route_mapping import SearchRoute
+from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, Point
 
 from c2corg_api.models.route import Route, RouteLocale
@@ -387,6 +388,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.waypoint.document_id,
                 'version': self.waypoint.version,
+                'quality': quality_types[1],
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
@@ -454,6 +456,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.waypoint.document_id,
                 'version': self.waypoint.version,
+                'quality': quality_types[1],
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': [
@@ -534,6 +537,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.waypoint.document_id,
                 'version': self.waypoint.version,
+                'quality': quality_types[1],
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'locales': []
@@ -551,6 +555,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.waypoint.document_id,
                 'version': self.waypoint.version,
+                'quality': quality_types[1],
                 'waypoint_type': 'summit',
                 'elevation': 2203,
                 'locales': [
@@ -572,6 +577,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.waypoint.document_id,
                 'version': self.waypoint.version,
+                'quality': quality_types[1],
                 'waypoint_type': 'summit',
                 'elevation': 2203,
                 'locales': [
@@ -609,6 +615,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'document': {
                 'document_id': waypoint.document_id,
                 'version': waypoint.version,
+                'quality': quality_types[1],
                 'geometry': {
                     'geom':
                         '{"type": "Point", "coordinates": [635956, 5723604]}'
@@ -685,6 +692,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.waypoint5.document_id,
                 'version': self.waypoint5.version,
+                'quality': quality_types[1],
                 'waypoint_type': 'summit',
                 'elevation': 3779,
                 'locales': []
@@ -710,6 +718,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.waypoint4.document_id,
                 'version': self.waypoint4.version,
+                'quality': quality_types[1],
                 'waypoint_type': 'summit',
                 'elevation': 3779,
                 'locales': []
@@ -736,6 +745,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.waypoint4.document_id,
                 'version': self.waypoint4.version,
+                'quality': quality_types[1],
                 'waypoint_type': 'summit',
                 'elevation': 3779,
                 'locales': []

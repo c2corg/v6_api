@@ -1,4 +1,5 @@
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
+from c2corg_api.scripts.migration.documents.document import DEFAULT_QUALITY
 from c2corg_api.scripts.migration.documents.waypoints.waypoint import \
     MigrateWaypoints
 
@@ -67,8 +68,8 @@ class MigrateParkings(MigrateWaypoints):
                 MigrateParkings.snow_clearance_ratings),
             public_transportation_types=self.convert_types(
                 document_in.public_transportation_types,
-                MigrateParkings.public_transportation_types, [0])
-
+                MigrateParkings.public_transportation_types, [0]),
+            quality=DEFAULT_QUALITY
         )
 
     def get_document_locale(self, document_in, version):
