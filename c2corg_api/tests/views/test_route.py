@@ -32,7 +32,7 @@ class TestRouteRest(BaseDocumentTestRest):
     def test_get_collection(self):
         body = self.get_collection()
         doc = body['documents'][0]
-        self.assertNotIn('climbing_outdoor_types', doc)
+        self.assertNotIn('climbing_outdoor_type', doc)
         self.assertNotIn('elevation_min', doc)
 
     def test_get_collection_paginated(self):
@@ -64,7 +64,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(
             body.get('activities'), self.route.activities)
         self._assert_geometry(body)
-        self.assertNotIn('climbing_outdoor_types', body)
+        self.assertNotIn('climbing_outdoor_type', body)
         self.assertIn('elevation_min', body)
 
         self.assertEqual(
