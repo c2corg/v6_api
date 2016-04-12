@@ -152,7 +152,7 @@ attributes = [
     'main_waypoint_id', 'activities', 'elevation_min', 'elevation_max',
     'height_diff_up', 'height_diff_down', 'route_length',
     'difficulties_height', 'height_diff_access', 'height_diff_difficulties',
-    'route_types', 'orientation', 'duration', 'glacier_gear', 'configuration',
+    'route_types', 'orientations', 'duration', 'glacier_gear', 'configuration',
     'lift_access', 'ski_rating', 'ski_exposition', 'labande_ski_rating',
     'labande_global_rating', 'global_rating', 'engagement_rating',
     'risk_rating', 'equipment_rating', 'ice_rating', 'mixed_rating',
