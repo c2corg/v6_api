@@ -75,8 +75,8 @@ class _WaypointMixin(object):
     # pluie (climbing_outdoor/indoor)
     rain_proof = Column(enums.rain_proof_type)
 
-    # orientation (climbing_outdoor/indoor, paragliding_takeoff/landing)
-    orientation = Column(ArrayOfEnum(enums.orientation_type))
+    # orientations (climbing_outdoor/indoor, paragliding_takeoff/landing)
+    orientations = Column(ArrayOfEnum(enums.orientation_type))
 
     # meilleurs periodes (climbing_outdoor/indoor, paragliding_takeoff/landing)
     best_periods = Column(ArrayOfEnum(enums.month_type))
@@ -171,7 +171,7 @@ attributes = [
     'public_transportation_types', 'product_types', 'ground_types',
     'weather_station_types', 'rain_proof', 'public_transportation_rating',
     'paragliding_rating', 'children_proof', 'snow_clearance_rating',
-    'exposition_rating', 'rock_types', 'orientation',
+    'exposition_rating', 'rock_types', 'orientations',
     'best_periods', 'url', 'maps_info', 'phone', 'lift_access',
     'phone_custodian', 'custodianship', 'parking_fee', 'matress_unstaffed',
     'blanket_unstaffed', 'gas_unstaffed', 'heating_unstaffed',

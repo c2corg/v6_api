@@ -87,7 +87,7 @@ class MigrateSites(MigrateWaypoints):
                 document_in.children_proof, MigrateSites.children_proof_types),
             rain_proof=self.convert_type(
                 document_in.rain_proof, MigrateSites.rain_proof_types),
-            orientation=self.convert_types(
+            orientations=self.convert_types(
                 document_in.facings, MigrateSites.orientation_types, [0]),
             best_periods=self.convert_types(
                 document_in.best_periods, MigrateSites.best_periods),
