@@ -139,7 +139,7 @@ class _WaypointMixin(object):
     phone_custodian = Column(String(50))
 
     # gardiennage (gite, camp_site, hut, abri, bivouac, base_camp)
-    custodianship = Column(Boolean)
+    custodianship = Column(enums.custodianship_type)
 
     # matelas hors gardiennage (hut, abri, bivouac, base_camp)
     matress_unstaffed = Column(Boolean)

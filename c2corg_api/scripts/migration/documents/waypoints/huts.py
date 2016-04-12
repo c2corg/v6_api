@@ -2,6 +2,7 @@ from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.migration.documents.document import DEFAULT_QUALITY
 from c2corg_api.scripts.migration.documents.waypoints.waypoint import \
     MigrateWaypoints
+from c2corg_common.attributes import custodianship_types
 
 
 class MigrateHuts(MigrateWaypoints):
@@ -63,7 +64,7 @@ class MigrateHuts(MigrateWaypoints):
             protected=document_in.is_protected,
             redirects_to=document_in.redirects_to,
             elevation=document_in.elevation,
-            is_staffed=document_in.is_staffed,
+            custodianship=self.get_custodianship(document_in),
             phone=document_in.phone,
             url=document_in.url,
             capacity_staffed=document_in.staffed_capacity,
@@ -93,6 +94,16 @@ class MigrateHuts(MigrateWaypoints):
             access=document_in.pedestrian_access,
             access_period=document_in.staffed_period
         )
+
+    def get_custodianship(self, document_in):
+        if document_in.is_staffed is None:
+            return None
+        if document_in.is_staffed:
+            if document_in.unstaffed_capacity == 0:
+                return custodianship_types[0]  # accessible when wardened
+            else:
+                return custodianship_types[1]  # always accessible
+        return custodianship_types[3]  # no warden
 
     shelter_types = {
         '1': 'hut',
