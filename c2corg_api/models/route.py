@@ -145,14 +145,14 @@ class _RouteMixin(object):
     rock_types = Column(ArrayOfEnum(enums.rock_type))
 
     # type de voie
-    climbing_outdoor_types = Column(enums.climbing_outdoor_type)
+    climbing_outdoor_type = Column(enums.climbing_outdoor_type)
 
 
 attributes = [
     'main_waypoint_id', 'activities', 'elevation_min', 'elevation_max',
     'height_diff_up', 'height_diff_down', 'route_length',
     'difficulties_height', 'height_diff_access', 'height_diff_difficulties',
-    'route_types', 'orientation', 'duration', 'glacier_gear', 'configuration',
+    'route_types', 'orientations', 'duration', 'glacier_gear', 'configuration',
     'lift_access', 'ski_rating', 'ski_exposition', 'labande_ski_rating',
     'labande_global_rating', 'global_rating', 'engagement_rating',
     'risk_rating', 'equipment_rating', 'ice_rating', 'mixed_rating',
@@ -160,7 +160,7 @@ attributes = [
     'aid_rating', 'via_ferrata_rating', 'hiking_rating',
     'hiking_mtb_exposition', 'snowshoe_rating', 'mtb_up_rating',
     'mtb_down_rating', 'mtb_length_asphalt', 'mtb_length_trail',
-    'mtb_height_diff_portages', 'rock_types', 'climbing_outdoor_types']
+    'mtb_height_diff_portages', 'rock_types', 'climbing_outdoor_type']
 
 
 class Route(_RouteMixin, Document):
