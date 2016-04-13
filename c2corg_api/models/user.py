@@ -5,6 +5,7 @@ from c2corg_api.models.user_profile import UserProfile
 from sqlalchemy import (
     Boolean,
     Column,
+    CheckConstraint,
     Integer,
     DateTime,
     String
@@ -59,9 +60,17 @@ class User(Base):
         backref=backref('user', uselist=False))
 
     username = Column(String(200), nullable=False, unique=True)
-    name = Column(String(200))
+    name = Column(String(200), nullable=False)
+    forum_username = Column(
+        String(15),
+        CheckConstraint(  # do not have non alphanumeric characters
+            "char_length(forum_username) >= 3 and forum_username !~ '[^a-zA-Z0-9]'",  # noqa
+            name='forum_username_check_constraint'),
+        nullable=False, unique=True
+        )
     email = Column(String(200), nullable=False, unique=True)
     email_validated = Column(Boolean, nullable=False, default=False)
+    email_to_validate = Column(String(200), nullable=True)
     moderator = Column(Boolean, nullable=False, default=False)
     validation_nonce = Column(String(200), nullable=True, unique=True)
     validation_nonce_expire = Column(DateTime, nullable=True, unique=False)
@@ -71,11 +80,21 @@ class User(Base):
             String(2), ForeignKey(schema + '.langs.lang'),
             nullable=False, default='fr')
 
-    def update_validation_nonce(self, days):
+    def update_validation_nonce(self, purpose, days):
+        """Generate and overwrite the nonce.
+        A nonce is a random number which is used for authentication when doing
+        particular actions like changing password or validating an email. It
+        must have a short lifespan to avoid unused nonces to become a security
+        risk."""
         now = datetime.datetime.utcnow()
         nonce = binascii.hexlify(os.urandom(32)).decode('ascii')
-        self.validation_nonce = nonce
+        self.validation_nonce = purpose + '_' + nonce
         self.validation_nonce_expire = now + datetime.timedelta(days=days)
+
+    def validate_nonce_purpose(self, expected_purpose):
+        nonce = self.validation_nonce
+        prefix = expected_purpose + '_'
+        return nonce is not None and nonce.startswith(prefix)
 
     def clear_validation_nonce(self):
         self.validation_nonce = None
@@ -99,7 +118,8 @@ schema_user = SQLAlchemySchemaNode(
     User,
     # whitelisted attributes
     includes=[
-        'id', 'username', 'name', 'email', 'email_validated', 'moderator'],
+        'id', 'username', 'forum_username', 'name', 'email', 'email_validated',
+        'moderator'],
     overrides={
         'id': {
             'missing': None
@@ -110,7 +130,7 @@ schema_user = SQLAlchemySchemaNode(
 schema_create_user = SQLAlchemySchemaNode(
     User,
     # whitelisted attributes
-    includes=['username', 'name', 'email', 'lang'],
+    includes=['username', 'forum_username', 'name', 'email', 'lang'],
     overrides={
         'email': {
             'validator': colander.Email()

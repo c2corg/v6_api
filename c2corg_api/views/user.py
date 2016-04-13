@@ -21,11 +21,7 @@ from c2corg_api.security.roles import (
     try_login, log_validated_user_i_know_what_i_do,
     remove_token, extract_token, renew_token)
 
-from c2corg_api.security.discourse_client import (
-    discourse_sync_sso, discourse_logout)
-
-from c2corg_api.security.discourse_sso_provider import (
-    discourse_redirect, discourse_redirect_without_nonce)
+from c2corg_api.security.discourse_client import get_discourse_client
 
 from c2corg_api.emails.email_service import get_email_service
 
@@ -67,15 +63,18 @@ def validate_json_password(request):
         request.errors.add('body', 'password', 'Invalid')
 
 
+def is_unused_user_attribute(attrname, value):
+    attr = getattr(User, attrname)
+    return DBSession.query(User).filter(attr == value).count() == 0
+
+
 def validate_unique_attribute(attrname, request):
     """Checks if the given attribute is unique.
     """
 
     if attrname in request.json:
         value = request.json[attrname]
-        attr = getattr(User, attrname)
-        count = DBSession.query(User).filter(attr == value).count()
-        if count == 0:
+        if is_unused_user_attribute(attrname, value):
             request.validated[attrname] = value
         else:
             request.errors.add('body', attrname, 'already used ' + attrname)
@@ -105,11 +104,12 @@ class UserRegistrationRest(object):
     @json_view(schema=schema_create_user, validators=[
         validate_json_password,
         partial(validate_unique_attribute, "email"),
-        partial(validate_unique_attribute, "username")])
+        partial(validate_unique_attribute, "username"),
+        partial(validate_unique_attribute, "forum_username")])
     def post(self):
         user = schema_create_user.objectify(self.request.validated)
         user.password = self.request.validated['password']
-        user.update_validation_nonce(VALIDATION_EXPIRE_DAYS)
+        user.update_validation_nonce('regemail', VALIDATION_EXPIRE_DAYS)
 
         # directly create the user profile, the document id of the profile
         # is the user id
@@ -139,7 +139,7 @@ class UserRegistrationRest(object):
         return to_json_dict(user, schema_user)
 
 
-def validate_user_from_nonce(request):
+def validate_user_from_nonce(purpose, request):
     nonce = request.matchdict['nonce']
     if nonce is None:
         request.errors.add('querystring', 'nonce', 'missing nonce')
@@ -151,6 +151,8 @@ def validate_user_from_nonce(request):
                     User.validation_nonce_expire > now)).first()
         if user is None:
             request.errors.add('querystring', 'nonce', 'invalid nonce')
+        elif not user.validate_nonce_purpose(purpose):
+            request.errors.add('querystring', 'nonce', 'unexpected purpose')
         else:
             request.validated['user'] = user
 
@@ -162,32 +164,38 @@ class UserValidateNewPasswordRest(object):
     def __init__(self, request):
         self.request = request
 
-    @json_view(validators=[validate_user_from_nonce, validate_json_password])
+    @json_view(validators=[
+        partial(validate_user_from_nonce, 'newpass'),
+        validate_json_password])
     def post(self):
         request = self.request
         user = request.validated['user']
-        user.clear_validation_nonce()
         user.password = request.validated['password']
 
         # The user was validated by the nonce so we can log in
         token = log_validated_user_i_know_what_i_do(user, request)
-        try:
-            DBSession.flush()
-        except:
-            log.warning('Error persisting user', exc_info=True)
-            raise HTTPInternalServerError('Error persisting user')
 
         if token:
             settings = request.registry.settings
             response = token_to_response(user, token, request)
             try:
-                r = discourse_redirect_without_nonce(user, settings)
+                client = get_discourse_client(settings)
+                r = client.redirect_without_nonce(user)
                 response['redirect_internal'] = r
             except:
-                # Any error with discourse should not prevent login
-                log.warning(
+                # Any error with discourse must prevent login and validation
+                log.error(
                     'Error logging into discourse for %d', user.id,
                     exc_info=True)
+                raise HTTPInternalServerError('Error with Discourse')
+
+            user.clear_validation_nonce()
+            try:
+                DBSession.flush()
+            except:
+                log.warning('Error persisting user', exc_info=True)
+                raise HTTPInternalServerError('Error persisting user')
+
             return response
         else:
             request.errors.status = 403
@@ -205,7 +213,7 @@ class UserRequestChangePasswordRest(object):
         request = self.request
         email = request.validated['email']
         user = DBSession.query(User).filter(User.email == email).first()
-        user.update_validation_nonce(VALIDATION_EXPIRE_DAYS)
+        user.update_validation_nonce('newpass', VALIDATION_EXPIRE_DAYS)
 
         try:
             DBSession.flush()
@@ -230,9 +238,11 @@ class UserNonceValidationRest(object):
         self.request = request
 
     def complete_registration(self, user):
-        return discourse_sync_sso(user, self.request.registry.settings)
+        settings = self.request.registry.settings
+        client = get_discourse_client(settings)
+        return client.sync_sso(user)
 
-    @json_view(validators=[validate_user_from_nonce])
+    @json_view(validators=[partial(validate_user_from_nonce, 'regemail')])
     def post(self):
         request = self.request
         user = request.validated['user']
@@ -241,24 +251,27 @@ class UserNonceValidationRest(object):
 
         # The user was validated by the nonce so we can log in
         token = log_validated_user_i_know_what_i_do(user, request)
-        try:
-            DBSession.flush()
-        except:
-            log.warning('Error persisting user', exc_info=True)
-            raise HTTPInternalServerError('Error persisting user')
 
         if token:
             response = token_to_response(user, token, request)
             settings = request.registry.settings
             try:
-                r = discourse_redirect_without_nonce(
-                    user, settings)
+                client = get_discourse_client(settings)
+                r = client.redirect_without_nonce(user)
                 response['redirect_internal'] = r
             except:
-                # Any error with discourse should not prevent login
-                log.warning(
+                # Any error with discourse must prevent login and validation
+                log.error(
                     'Error logging into discourse for %d', user.id,
                     exc_info=True)
+                raise HTTPInternalServerError('Error with Discourse')
+
+            try:
+                DBSession.flush()
+            except:
+                log.warning('Error persisting user', exc_info=True)
+                raise HTTPInternalServerError('Error persisting user')
+
             return response
         else:
             request.errors.status = 403
@@ -288,6 +301,153 @@ class UserPreferredLanguageRest(object):
         return {}
 
 
+class UpdateAccountSchema(colander.MappingSchema):
+    email = colander.SchemaNode(
+            colander.String(),
+            missing=colander.drop,
+            validator=colander.All(
+                colander.Email(),
+                colander.Function(
+                    partial(is_unused_user_attribute, 'email'),
+                    'Already used email'
+                )
+            ))
+    toponame = colander.SchemaNode(
+            colander.String(),
+            missing=colander.drop,
+            validator=colander.Length(min=3))
+    forumname = colander.SchemaNode(
+            colander.String(),
+            missing=colander.drop,
+            validator=colander.All(
+                colander.Length(min=3),
+                colander.Function(
+                    partial(is_unused_user_attribute, 'forum_username'),
+                    'Already used forum name'
+                )
+            ))
+    currentpassword = colander.SchemaNode(
+            colander.String(encoding=ENCODING),
+            validator=colander.Length(min=3))
+    newpassword = colander.SchemaNode(
+            colander.String(encoding=ENCODING),
+            missing=colander.drop,
+            validator=colander.Length(min=3))
+
+
+@resource(path='/users/account', cors_policy=cors_policy)
+class UserAccountRest(object):
+    updateschema = UpdateAccountSchema()
+
+    def __init__(self, request):
+        self.request = request
+
+    def get_user(self):
+        userid = self.request.authenticated_userid
+        return DBSession.query(User).get(userid)
+
+    @restricted_view(renderer='json', http_cache=0)
+    def get(self):
+        user = self.get_user()
+        return {
+            'email': user.email,
+            'toponame': user.name,
+            'forumname': user.forum_username
+            }
+
+    @restricted_json_view(renderer='json', schema=updateschema)
+    def post(self):
+        user = self.get_user()
+        request = self.request
+        validated = request.validated
+
+        result = {}
+
+        # Before all, check whether the user knows the current password
+        current_password = validated['currentpassword']
+        if not user.validate_password(current_password):
+            request.errors.add('body', 'currentpassword', 'Invalid password')
+            return
+
+        # update password if a new password is provided
+        if 'newpassword' in validated:
+            user.password = validated['newpassword']
+
+        # start email validation procedure if a new email is provided
+        email_link = None
+        if 'email' in validated and validated['email'] != user.email:
+            user.email_to_validate = validated['email']
+            user.update_validation_nonce('chgemail', VALIDATION_EXPIRE_DAYS)
+            email_service = get_email_service(self.request)
+            nonce = user.validation_nonce
+            settings = request.registry.settings
+            link = settings['mail.validate_change_email_url_template'] % nonce
+            email_link = link
+            result['email'] = validated['email']
+            result['sent_email'] = True
+
+        if 'toponame' in validated:
+            user.name = validated['toponame']
+            result['toponame'] = user.name
+
+        if 'forumname' in validated:
+            user.forum_username = validated['forumname']
+            result['forumname'] = user.forum_username
+
+        # Synchronize everything except the new email (still stored
+        # in the email_to_validate attribute while validation is pending).
+        if email_link:
+            try:
+                client = get_discourse_client(request.registry.settings)
+                client.sync_sso(user)
+            except:
+                log.error('Error syncing with discourse', exc_info=True)
+                raise HTTPInternalServerError('Error with Discourse')
+
+        try:
+            DBSession.flush()
+        except:
+            log.warning('Error persisting user', exc_info=True)
+            raise HTTPInternalServerError('Error persisting user')
+
+        if email_link:
+            email_service.send_change_email_confirmation(user, link)
+
+        return result
+
+
+@resource(
+        path='/users/validate_change_email/{nonce}',
+        cors_policy=cors_policy)
+class UserChangeEmailNonceValidationRest(object):
+    def __init__(self, request):
+        self.request = request
+
+    @json_view(validators=[partial(validate_user_from_nonce, 'chgemail')])
+    def post(self):
+        request = self.request
+        user = request.validated['user']
+        user.clear_validation_nonce()
+        user.email = user.email_to_validate
+        user.email_to_validate = None
+
+        # Synchronize the new email (and other parameters)
+        try:
+            client = get_discourse_client(request.registry.settings)
+            client.sync_sso(user)
+        except:
+            log.error('Error syncing email with discourse', exc_info=True)
+            raise HTTPInternalServerError('Error with Discourse')
+
+        try:
+            DBSession.flush()
+        except:
+            log.warning('Error persisting user', exc_info=True)
+            raise HTTPInternalServerError('Error persisting user')
+
+        # no login since user is supposed to be already logged in
+
+
 class LoginSchema(colander.MappingSchema):
     username = colander.SchemaNode(colander.String())
     password = colander.SchemaNode(colander.String())
@@ -302,6 +462,7 @@ def token_to_response(user, token, request):
     return {
         'token': token.value,
         'username': user.username,
+        'forum_username': user.forum_username,
         'expire': int(expire_time.total_seconds()),
         'roles': roles
     }
@@ -325,21 +486,21 @@ class UserLoginRest(object):
             response = token_to_response(user, token, request)
             if 'discourse' in request.json:
                 settings = request.registry.settings
-                if 'sso' in request.json and 'sig' in request.json:
-                    sso = request.json['sso']
-                    sig = request.json['sig']
-                    redirect = discourse_redirect(user, sso, sig, settings)
-                    response['redirect'] = redirect
-                else:
-                    try:
-                        r = discourse_redirect_without_nonce(
-                            user, settings)
+                client = get_discourse_client(settings)
+                try:
+                    if 'sso' in request.json and 'sig' in request.json:
+                        sso = request.json['sso']
+                        sig = request.json['sig']
+                        redirect = client.redirect(user, sso, sig)
+                        response['redirect'] = redirect
+                    else:
+                        r = client.redirect_without_nonce(user)
                         response['redirect_internal'] = r
-                    except:
-                        # Any error with discourse should not prevent login
-                        log.warning(
-                            'Error logging into discourse for %d', user.id,
-                            exc_info=True)
+                except:
+                    # Any error with discourse should not prevent login
+                    log.warning(
+                        'Error logging into discourse for %d', user.id,
+                        exc_info=True)
             return response
         else:
             request.errors.status = 403
@@ -378,7 +539,8 @@ class UserLogoutRest(object):
         if 'discourse' in request.json:
             try:
                 settings = request.registry.settings
-                result['discourse_user'] = discourse_logout(userid, settings)
+                client = get_discourse_client(settings)
+                result['discourse_user'] = client.logout(userid, settings)
             except:
                 # Any error with discourse should not prevent logout
                 log.warning(

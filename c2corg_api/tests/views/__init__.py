@@ -50,12 +50,12 @@ class BaseTestRest(BaseTestCase):
 
     def post_json_with_token(self, url, token, body={}, status=200):
         headers = self.add_authorization_header(token=token)
-        r = self.app.post_json(url, body, headers=headers, status=status)
+        r = self.app_post_json(url, body, headers=headers, status=status)
         return r.json
 
     def post_json_with_contributor(self, url, body={}, status=200):
         headers = self.add_authorization_header(username='contributor')
-        r = self.app.post_json(url, body, headers=headers, status=status)
+        r = self.app_post_json(url, body, headers=headers, status=status)
         return r.json
 
 
@@ -215,11 +215,11 @@ class BaseDocumentTestRest(BaseTestRest):
         self.app.get(self._prefix + '/-9999?l=es', headers=headers, status=404)
 
     def post_error(self, request_body, user='contributor'):
-        response = self.app.post_json(self._prefix, request_body,
+        response = self.app_post_json(self._prefix, request_body,
                                       expect_errors=True, status=403)
 
         headers = self.add_authorization_header(username=user)
-        response = self.app.post_json(self._prefix, request_body,
+        response = self.app_post_json(self._prefix, request_body,
                                       headers=headers, expect_errors=True,
                                       status=400)
 
@@ -230,11 +230,11 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def post_missing_title(self, request_body, user='contributor', prefix=''):
-        response = self.app.post_json(self._prefix, request_body,
+        response = self.app_post_json(self._prefix, request_body,
                                       expect_errors=True, status=403)
 
         headers = self.add_authorization_header(username=user)
-        response = self.app.post_json(self._prefix, request_body,
+        response = self.app_post_json(self._prefix, request_body,
                                       headers=headers,
                                       expect_errors=True, status=400)
 
@@ -245,11 +245,11 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def post_missing_geometry(self, request_body):
-        response = self.app.post_json(self._prefix, request_body,
+        response = self.app_post_json(self._prefix, request_body,
                                       expect_errors=True, status=403)
 
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.post_json(
+        response = self.app_post_json(
             self._prefix, request_body, headers=headers,
             expect_errors=True, status=400)
 
@@ -261,11 +261,11 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def post_missing_geom(self, request_body):
-        response = self.app.post_json(self._prefix, request_body,
+        response = self.app_post_json(self._prefix, request_body,
                                       expect_errors=True, status=403)
 
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.post_json(
+        response = self.app_post_json(
             self._prefix, request_body, headers=headers,
             expect_errors=True, status=400)
 
@@ -277,11 +277,11 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def post_missing_locales(self, request_body):
-        response = self.app.post_json(self._prefix, request_body,
+        response = self.app_post_json(self._prefix, request_body,
                                       expect_errors=True, status=403)
 
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.post_json(
+        response = self.app_post_json(
             self._prefix, request_body, headers=headers,
             expect_errors=True, status=400)
 
@@ -294,11 +294,11 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def post_same_locale_twice(self, request_body):
-        response = self.app.post_json(self._prefix, request_body,
+        response = self.app_post_json(self._prefix, request_body,
                                       expect_errors=True, status=403)
 
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.post_json(
+        response = self.app_post_json(
             self._prefix, request_body, headers=headers,
             expect_errors=True, status=400)
 
@@ -312,11 +312,11 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def post_missing_field(self, request_body, field):
-        response = self.app.post_json(self._prefix, request_body,
+        response = self.app_post_json(self._prefix, request_body,
                                       expect_errors=True, status=403)
 
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.post_json(
+        response = self.app_post_json(
             self._prefix, request_body, headers=headers,
             expect_errors=True, status=400)
 
@@ -332,10 +332,10 @@ class BaseDocumentTestRest(BaseTestRest):
         """`protected` is a non-whitelisted attribute, which is ignored when
         given in a request.
         """
-        response = self.app.post_json(self._prefix, request_body, status=403)
+        response = self.app_post_json(self._prefix, request_body, status=403)
 
         headers = self.add_authorization_header(username=user)
-        response = self.app.post_json(
+        response = self.app_post_json(
             self._prefix, request_body, headers=headers, status=200)
 
         body = response.json
@@ -358,10 +358,10 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def post_success(self, request_body, user='contributor'):
-        response = self.app.post_json(self._prefix, request_body, status=403)
+        response = self.app_post_json(self._prefix, request_body, status=403)
 
         headers = self.add_authorization_header(username=user)
-        response = self.app.post_json(self._prefix, request_body,
+        response = self.app_post_json(self._prefix, request_body,
                                       headers=headers, status=200)
 
         body = response.json

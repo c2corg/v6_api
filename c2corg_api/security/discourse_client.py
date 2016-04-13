@@ -1,71 +1,162 @@
 from pydiscourse.client import DiscourseClient
 
 import logging
-log = logging.getLogger(__name__)
 
+from base64 import b64encode, b64decode
+from pyramid.httpexceptions import HTTPBadRequest
+
+import hmac
+import hashlib
+import requests
+import urllib.error
+
+from urllib.parse import parse_qs
+
+log = logging.getLogger(__name__)
 
 # 10 seconds timeout for requests to discourse API
 # Using a large value to take into account a possible slow restart (caching)
 # of discourse.
-CLIENT_TIMEOUT = 10
+TIMEOUT = 10
 
 
-def get_discourse_base_url(settings):
-    return settings['discourse.url']
+class APIDiscourseClient(object):
 
+    def __init__(self, settings):
+        self.settings = settings
+        self.discourse_base_url = settings['discourse.url']
+        self.discourse_public_url = settings['discourse.public_url']
+        self.api_key = settings['discourse.api_key']
+        self.sso_key = str(settings.get('discourse.sso_secret'))  # no unicode
 
-def get_discourse_public_url(settings):
-    return settings['discourse.public_url']
+        self.discourse_userid_cache = {}
+        # FIXME: are we guaranteed usernames can never change? -> no!
+        self.discourse_username_cache = {}
+
+        self.client = DiscourseClient(
+                self.discourse_base_url,
+                api_username='system',  # the built-in Discourse user
+                api_key=self.api_key,
+                timeout=TIMEOUT)
+
+    def get_userid(self, userid):
+        discourse_userid = self.discourse_userid_cache.get(userid)
+        if not discourse_userid:
+            discourse_user = self.client.by_external_id(userid)
+            discourse_userid = discourse_user['id']
+            self.discourse_userid_cache[userid] = discourse_userid
+            self.discourse_username_cache[userid] = discourse_user['username']
+        return discourse_userid
+
+    def get_username(self, userid):
+        discourse_username = self.discourse_username_cache.get(userid)
+        if not discourse_username:
+            discourse_user = self.client.by_external_id(userid)
+            self.discourse_userid_cache[userid] = discourse_user['id']
+            discourse_username = discourse_user['username']
+            self.discourse_username_cache[userid] = discourse_username
+        return discourse_username
+
+    def sync_sso(self, user):
+        result = self.client.sync_sso(
+            sso_secret=self.sso_key,
+            name=user.name,
+            username=user.forum_username,
+            email=user.email,
+            external_id=user.id)
+        if result:
+            self.discourse_userid_cache[user.id] = result['id']
+        return result
+
+    def logout(self, userid):
+        discourse_userid = self.get_userid(userid)
+        self.client.log_out(discourse_userid)
+        return discourse_userid
+
+    # Below this: SSO provider
+    def decode_payload(self, payload):
+        decoded = b64decode(payload.encode('utf-8')).decode('utf-8')
+        assert 'nonce' in decoded
+        assert len(payload) > 0
+        return decoded
+
+    def check_signature(self, payload, signature):
+        key = self.sso_key.encode('utf-8')
+        h = hmac.new(key, payload.encode('utf-8'), digestmod=hashlib.sha256)
+        this_signature = h.hexdigest()
+
+        if this_signature != signature:
+            log.error('Signature mismatch')
+            raise HTTPBadRequest('discourse login failed')
+
+    def request_nonce(self):
+        url = '%s/session/sso' % self.discourse_base_url
+        try:
+            r = requests.get(url, allow_redirects=False, timeout=TIMEOUT)
+            assert r.status_code == 302
+        except Exception:
+            log.error('Could not request nonce', exc_info=True)
+            raise Exception('Could not request nonce')
+
+        location = r.headers['Location']
+        parsed = urllib.parse.urlparse(location)
+        params = urllib.parse.parse_qs(parsed.query)
+        sso = params['sso'][0]
+        sig = params['sig'][0]
+
+        self.check_signature(sso, sig)
+        payload = self.decode_payload(sso)
+        return parse_qs(payload)['nonce'][0]
+
+    def create_response_payload(self, user, nonce, url_part):
+        assert nonce is not None, 'No nonce passed'
+
+        params = {
+            'nonce': nonce,
+            'email': user.email,
+            'external_id': user.id,
+            'username': user.username,
+            'name': user.username,
+        }
+
+        key = self.sso_key.encode('utf-8')
+        r_payload = b64encode(urllib.parse.urlencode(params).encode('utf-8'))
+        h = hmac.new(key, r_payload, digestmod=hashlib.sha256)
+        qs = urllib.parse.urlencode({'sso': r_payload, 'sig': h.hexdigest()})
+        return '%s%s?%s' % (self.discourse_base_url, url_part, qs)
+
+    def get_nonce_from_sso(self, sso, sig):
+        payload = urllib.parse.unquote(sso)
+        try:
+            decoded = self.decode_payload(payload)
+        except Exception as e:
+            log.error('Failed to decode payload', e)
+            raise HTTPBadRequest('discourse login failed')
+
+        self.check_signature(payload, sig)
+
+        # Build the return payload
+        qs = parse_qs(decoded)
+        return qs['nonce'][0]
+
+    def redirect(self, user, sso, signature):
+        nonce = self.get_nonce_from_sso(sso, signature)
+        return self.create_response_payload(user, nonce, '/session/sso_login')
+
+    def redirect_without_nonce(self, user):
+        nonce = self.request_nonce()
+        return self.create_response_payload(user, nonce, '/session/sso_login')
+
+c = None
 
 
 def get_discourse_client(settings):
-    api_key = settings['discourse.api_key']
-    url = get_discourse_base_url(settings)
-    # system is a built-in user available in all discourse instances.
-    return DiscourseClient(
-        url, api_username='system', api_key=api_key, timeout=CLIENT_TIMEOUT)
+    global c
+    if c is None:
+        c = APIDiscourseClient(settings)
+    return c
 
 
-discourse_userid_cache = {}
-discourse_username_cache = {}  # are we guaranteed usernames can never change?
-
-
-def discourse_get_userid_by_userid(client, userid):
-    discourse_userid = discourse_userid_cache.get(userid)
-    if not discourse_userid:
-        discourse_user = client.by_external_id(userid)
-        discourse_userid = discourse_user['id']
-        discourse_userid_cache[userid] = discourse_userid
-        discourse_username_cache[userid] = discourse_user['username']
-    return discourse_userid
-
-
-def discourse_get_username_by_userid(client, userid):
-    discourse_username = discourse_username_cache.get(userid)
-    if not discourse_username:
-        discourse_user = client.by_external_id(userid)
-        discourse_userid_cache[userid] = discourse_user['id']
-        discourse_username = discourse_user['username']
-        discourse_username_cache[userid] = discourse_username
-    return discourse_username
-
-
-def discourse_sync_sso(user, settings):
-    key = str(settings.get('discourse.sso_secret'))  # must not be unicode
-    client = get_discourse_client(settings)
-    result = client.sync_sso(
-        sso_secret=key,
-        name=user.username,
-        username=user.username,
-        email=user.email,
-        external_id=user.id)
-    if result:
-        discourse_userid_cache[user.id] = result['id']
-    return result
-
-
-def discourse_logout(userid, settings):
-    client = get_discourse_client(settings)
-    discourse_userid = discourse_get_userid_by_userid(client, userid)
-    client.log_out(discourse_userid)
-    return discourse_userid
+def set_discourse_client(client):
+    global c
+    c = client

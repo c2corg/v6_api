@@ -57,8 +57,9 @@ def _add_global_test_data(session):
         geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'))
 
     contributor = User(
+        name='Contributor',
         username='contributor', email='contributor@camptocamp.org',
-        password='super pass', name='Contributor',
+        forum_username='contributor', password='super pass',
         email_validated=True, profile=contributor_profile)
 
     contributor2_profile = UserProfile(
@@ -66,7 +67,9 @@ def _add_global_test_data(session):
         locales=[DocumentLocale(title='...', lang='en')])
 
     contributor2 = User(
+        name='Contributor 2',
         username='contributor2', email='contributor2@camptocamp.org',
+        forum_username='contributor2',
         password='better pass', email_validated=True,
         profile=contributor2_profile)
 
@@ -75,7 +78,9 @@ def _add_global_test_data(session):
         locales=[DocumentLocale(title='', lang='en')])
 
     moderator = User(
+        name='Moderator',
         username='moderator', email='moderator@camptocamp.org',
+        forum_username='moderator',
         moderator=True, password='even better pass',
         email_validated=True, profile=moderator_profile)
 
@@ -186,3 +191,20 @@ class BaseTestCase(unittest.TestCase):
         DBSession.remove()
         self.session.close()
         self.connection.close()
+
+    def app_post_json(self, *args, **kwargs):
+        kwargs = dict(kwargs)
+        status = 200
+        if 'status' in kwargs:
+            status = kwargs['status']
+            del kwargs['status']
+        kwargs['expect_errors'] = True
+
+        res = self.app.post_json(*args, **kwargs)
+        if status != '*' and res.status_code != status:
+            errors = res.body if res.status_code == 400 else ''
+            self.fail('Bad response: %s (not %d) : %s' % (
+                res.status,
+                status,
+                errors))
+        return res

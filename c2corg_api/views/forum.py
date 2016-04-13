@@ -1,6 +1,4 @@
-from c2corg_api.security.discourse_client import (
-    discourse_get_username_by_userid, get_discourse_client,
-    get_discourse_public_url)
+from c2corg_api.security.discourse_client import get_discourse_client
 
 from cornice.resource import resource
 
@@ -18,11 +16,11 @@ class PrivateMessageRest(object):
         userid = self.request.authenticated_userid
 
         client = get_discourse_client(settings)
-        d_username = discourse_get_username_by_userid(client, userid)
-        messages = client.private_messages_unread(d_username)
+        d_username = client.get_username(userid)
+        messages = client.client.private_messages_unread(d_username)
 
         count = len(messages['topic_list']['topics'])
         link = '%s/users/%s/messages' % (
-            get_discourse_public_url(settings), d_username)
+            client.discourse_public_url, d_username)
 
         return {link: link, count: count}

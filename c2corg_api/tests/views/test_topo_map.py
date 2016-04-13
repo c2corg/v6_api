@@ -64,7 +64,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
 
     def test_post_not_moderator(self):
         headers = self.add_authorization_header(username='contributor')
-        self.app.post_json(
+        self.app_post_json(
             self._prefix, {}, headers=headers,
             expect_errors=True, status=403)
 
