@@ -19,6 +19,10 @@ export elasticsearch_host = localhost
 export elasticsearch_port = 9200
 export elasticsearch_index = c2corg
 
+export redis_url = redis://localhost:6379/
+export redis_exchange = c2corg_$(instanceid)
+export redis_queue_es = c2corg_$(instanceid)_es_sync
+
 export discourse_url = http://c2corgv6-discourse.demo-camptocamp.com
 
 # database to run the unit tests
