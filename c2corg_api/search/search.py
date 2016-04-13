@@ -69,7 +69,7 @@ def get_documents(document_ids, model, locale_model, lang):
         filter(model.document_id.in_(document_ids)).\
         options(joinedload(model.locales.of_type(locale_model))). \
         options(joinedload(model.geometry))
-    add_load_for_profiles(documents_query, model)
+    documents_query = add_load_for_profiles(documents_query, model)
 
     documents = documents_query.all()
 
