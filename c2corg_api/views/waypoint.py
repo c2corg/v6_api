@@ -3,7 +3,6 @@ from c2corg_api.models.association import Association
 from c2corg_api.models.document import UpdateType, Document, DocumentLocale
 from c2corg_api.models.outing import Outing, schema_association_outing
 from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
-from c2corg_api.search.sync import sync_search_index
 from c2corg_api.views.outing import set_author
 from c2corg_api.views.route import set_route_title_prefix
 from cornice.resource import resource, view
@@ -174,4 +173,3 @@ def update_linked_route_titles(waypoint, update_types, user_id):
         for route in linked_routes:
             set_route_title_prefix(
                 route, waypoint_locales, waypoint_locales_index)
-            sync_search_index(route)

@@ -11,7 +11,7 @@ from c2corg_api.models.route import schema_association_route
 from c2corg_api.models.topo_map import get_maps, schema_listing_topo_map
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import schema_association_waypoint
-from c2corg_api.search.sync import sync_search_index
+from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import cors_policy
 from c2corg_api.views import to_json_dict, to_seconds, set_best_locale
 from c2corg_api.views.validation import check_required_fields, \
@@ -233,7 +233,7 @@ class DocumentRest(object):
         if after_add:
             after_add(document, user_id=user_id)
 
-        sync_search_index(document)
+        notify_es_syncer(self.request.registry.queue_config)
 
         return {'document_id': document.document_id}
 
@@ -287,7 +287,7 @@ class DocumentRest(object):
                 after_update(document, update_types, user_id=user_id)
 
             # And the search updated
-            sync_search_index(document)
+            notify_es_syncer(self.request.registry.queue_config)
 
         return {}
 

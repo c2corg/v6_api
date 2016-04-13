@@ -1,6 +1,7 @@
 import os
 import sys
 
+import transaction
 from c2corg_api.models.route import RouteLocale
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
@@ -14,13 +15,14 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import engine_from_config
 
-from c2corg_api.models import DBSession, es_sync
+from c2corg_api.models import es_sync
 from c2corg_api.models.document import DocumentLocale, Document
 from c2corg_api.scripts.es.es_batch import ElasticBatch
-from c2corg_api.search import configure_es_from_config, elasticsearch_config
+from c2corg_api.search import configure_es_from_config, elasticsearch_config, \
+    batch_size
 from c2corg_api.search.utils import strip_bbcodes, get_title
-
-batch_size = 1000
+from sqlalchemy.orm.session import sessionmaker
+from zope.sqlalchemy.datamanager import ZopeTransactionExtension
 
 
 def usage(argv):
@@ -38,12 +40,15 @@ def main(argv=sys.argv):
     setup_logging(config_uri)
     settings = get_appsettings(config_uri, options=options)
     engine = engine_from_config(settings, 'sqlalchemy.')
-    DBSession.configure(bind=engine)
+    Session = sessionmaker(extension=ZopeTransactionExtension())  # noqa
+    session = Session(bind=engine)
     configure_es_from_config(settings)
-    fill_index(DBSession)
+
+    with transaction.manager:
+        fill_index(session)
 
 
-def fill_index(db_session):
+def fill_index(session):
     client = elasticsearch_config['client']
     index_name = elasticsearch_config['index']
 
@@ -52,12 +57,12 @@ def fill_index(db_session):
         'last_progress_update': None
     }
 
-    _, date_now = es_sync.get_status(DBSession)
+    _, date_now = es_sync.get_status(session)
 
-    total = DBSession.query(DocumentLocale). \
+    total = session.query(DocumentLocale). \
         join(Document).filter(Document.redirects_to.is_(None)).count()
 
-    q = DBSession.query(
+    q = session.query(
             DocumentLocale.document_id, DocumentLocale.title,
             DocumentLocale.summary, DocumentLocale.description,
             DocumentLocale.lang, Document.type,
@@ -117,7 +122,7 @@ def fill_index(db_session):
         if search_document is not None:
             batch.add(search_document)
 
-    es_sync.mark_as_updated(DBSession, date_now)
+    es_sync.mark_as_updated(session, date_now)
 
     duration = datetime.now() - status['start_time']
     print('Done (duration: {0})'.format(duration))
