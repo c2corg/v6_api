@@ -7,6 +7,7 @@ import logging
 
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.scripts.es.fill_index import fill_index
 from sqlalchemy import engine_from_config
 from pyramid.paster import get_appsettings
 from pyramid_mailer import get_mailer
@@ -103,14 +104,17 @@ def setup_package():
     DBSession.configure(bind=engine)
     Base.metadata.drop_all(engine)
     initializedb.setup_db(engine, DBSession)
-    # Add test data needed for all tests
-    with transaction.manager:
-        _add_global_test_data(DBSession)
-    DBSession.remove()
+
     # set up ElasticSearch
     configure_es_from_config(settings)
     initializees.drop_index()
     initializees.setup_es()
+
+    # Add test data needed for all tests
+    with transaction.manager:
+        _add_global_test_data(DBSession)
+        fill_index(DBSession)
+    DBSession.remove()
 
 # keep the database schema after a test run (useful for debugging)
 keep = False
@@ -174,6 +178,8 @@ class BaseTestCase(unittest.TestCase):
         # create a session bound to the connection, this session is the one
         # used in the test code
         self.session = self.Session(bind=self.connection)
+
+        self.queue_config = registry.queue_config
 
     def tearDown(self):  # noqa
         # rollback - everything that happened with the Session above

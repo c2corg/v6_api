@@ -7,7 +7,7 @@ class TestESSyncStatus(BaseTestCase):
 
     def test_get_status(self):
         last_update, date_now = get_status(self.session)
-        self.assertIsNone(last_update)
+        self.assertIsNotNone(last_update)
         self.assertIsNotNone(date_now)
 
     def test_mark_as_updated(self):

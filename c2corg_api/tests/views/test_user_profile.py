@@ -2,6 +2,7 @@ import json
 
 from c2corg_api.models.user_profile import UserProfile, ArchiveUserProfile, \
     USERPROFILE_TYPE
+from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_common.attributes import quality_types
@@ -296,6 +297,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.assertEqual(search_doc['title_es'], 'contributor Contributor')
 
     def _check_es_index(self):
+        sync_es(self.session)
         search_doc = SearchUser.get(
             id=self.profile1.document_id,
             index=elasticsearch_config['index'])
