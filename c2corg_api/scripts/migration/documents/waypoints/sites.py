@@ -119,22 +119,25 @@ class MigrateSites(MigrateWaypoints):
 
         indoor_types = []
         outdoor_types = []
-        if '12' in site_types_in:  # climbing_gym
+        if 12 in site_types_in:  # climbing_gym
             indoor_types.append('pitch')
-            if '4' in site_types_in:  # boulder
+            if 4 in site_types_in:  # boulder
                 # assuming indoor bloc
                 indoor_types.append('bloc')
         else:
-            if '2' in site_types_in:  # single-pitch
-                if '30' in rock_types_in:  # rocktype: artificial
+            if 2 in site_types_in:  # single-pitch
+                if 30 in rock_types_in:  # rocktype: artificial
                     indoor_types.append('pitch')
                 else:
                     outdoor_types.append('single')
-            if '4' in site_types_in:  # boulder
-                if '30' in rock_types_in:  # rocktype: artificial
+            if 4 in site_types_in:  # boulder
+                if 30 in rock_types_in:  # rocktype: artificial
                     indoor_types.append('bloc')
                 else:
                     outdoor_types.append('bloc')
+
+        indoor_types = indoor_types if indoor_types else None
+        outdoor_types = outdoor_types if outdoor_types else None
 
         return indoor_types, outdoor_types
 
