@@ -1,4 +1,4 @@
-from c2corg_api.models import es_sync, document_types
+from c2corg_api.models import es_sync, document_types, document_locale_types
 from c2corg_api.models.document import Document
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.route import Route, ROUTE_TYPE
@@ -86,13 +86,18 @@ def get_documents_per_type(changed_documents):
     return docs_per_type
 
 
-def get_documents(session, doc_type, document_ids):
+def get_documents(session, doc_type, document_ids=None):
     clazz = document_types[doc_type]
+    locales_clazz = document_locale_types[doc_type]
 
-    base_query = session.query(clazz).\
-        filter(clazz.document_id.in_(document_ids)). \
-        options(joinedload(clazz.locales)). \
+    base_query = session.query(clazz)
+    if document_ids:
+        base_query = base_query.filter(clazz.document_id.in_(document_ids))
+
+    base_query = base_query. \
+        options(joinedload(clazz.locales.of_type(locales_clazz))). \
         options(joinedload(clazz.geometry))
+
     base_query = add_load_for_profiles(base_query, clazz)
 
     return base_query
