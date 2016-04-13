@@ -16,7 +16,7 @@ class PrivateMessageRest(object):
         userid = self.request.authenticated_userid
 
         client = get_discourse_client(settings)
-        d_username = client.get_username_by_userid(userid)
+        d_username = client.get_username(userid)
         messages = client.client.private_messages_unread(d_username)
 
         count = len(messages['topic_list']['topics'])

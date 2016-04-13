@@ -21,7 +21,7 @@ ALTER TABLE punbb_users ADD COLUMN  username varchar(15);
 -- Initially populate with unaccented alphanumeric old_username truncated to 15 characters
 update punbb_users set username = substring(regexp_replace(unaccent(old_username), '[^a-zA-Z0-9]', '', 'g'), 0, 16);
 
--- Create an call a normalizing function which will update the username column for conflicting rows
+-- Create and call a normalizing function which will update the username column for conflicting rows
 -- sss is appended to short old_usernames. d + a figure is appended to duplicate old_usernames. Only keep first 13 characters.
 CREATE OR REPLACE FUNCTION normalize() RETURNS integer AS
 $PROC$

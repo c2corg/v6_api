@@ -39,7 +39,7 @@ class APIDiscourseClient(object):
                 api_key=self.api_key,
                 timeout=TIMEOUT)
 
-    def get_userid_by_userid(self, userid):
+    def get_userid(self, userid):
         discourse_userid = self.discourse_userid_cache.get(userid)
         if not discourse_userid:
             discourse_user = self.client.by_external_id(userid)
@@ -48,7 +48,7 @@ class APIDiscourseClient(object):
             self.discourse_username_cache[userid] = discourse_user['username']
         return discourse_userid
 
-    def get_username_by_userid(self, userid):
+    def get_username(self, userid):
         discourse_username = self.discourse_username_cache.get(userid)
         if not discourse_username:
             discourse_user = self.client.by_external_id(userid)
@@ -69,7 +69,7 @@ class APIDiscourseClient(object):
         return result
 
     def logout(self, userid):
-        discourse_userid = self.get_userid_by_userid(userid)
+        discourse_userid = self.get_userid(userid)
         self.client.log_out(discourse_userid)
         return discourse_userid
 
