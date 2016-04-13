@@ -19,7 +19,7 @@ class TestUserRest(BaseTestRest):
         self._add_test_data()
 
     def extract_urls(self, data):
-        return re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', data)  # noqa
+        return re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+[0-9a-zA-Z]', data)  # noqa
 
     def extract_nonce(self, key):
         validation_url = self.extract_urls(self.get_last_email().body)[0]

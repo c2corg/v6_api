@@ -1,9 +1,35 @@
 from pyramid_mailer import get_mailer
 from pyramid_mailer.message import Message
+from functools import lru_cache
+from c2corg_common.attributes import default_langs
 
 import logging
+import os
 
 log = logging.getLogger(__name__)
+
+
+class EmailLocalizator(object):
+    def __init__(self):
+        self.default_lang = 'fr'
+
+    @lru_cache(maxsize=None)
+    def _get_file_content(self, lang, key):
+        filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % (lang, key)
+        if not os.path.isfile(filepath):
+            filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % ('fr', key)
+        f = open(filepath, 'r')
+        return f.read()
+
+    def get_translation(self, lang, key):
+        if lang not in default_langs:
+            raise Exception('Bad language' + lang)
+        try:
+            return self._get_file_content(lang, key)
+        except:
+            log.exception('The %s translation for %s could not be read' % (
+                lang, key))
+            return self._get_file_content('fr', key)
 
 
 # See https://docs.python.org/3/library/smtplib.html#smtplib.SMTP.sendmail
@@ -19,6 +45,8 @@ class EmailService:
         self.mail_server = '%s:%s' % (host, port)
         self.mailer = mailer
         self.settings = settings
+        localizator = EmailLocalizator()
+        self._ = lambda lang, key: localizator.get_translation(lang, key)
 
     def _send_email(self, to_address, subject=None, body=None):
         """Send an email. This method may throw."""
@@ -31,19 +59,17 @@ class EmailService:
                 body=body)
         self.mailer.send_immediately(msg)
 
-    def send_registration_confirmation(self, user, link):
-        # TODO: handle i18n using user.lang
+    def _send_email_with_link(self, user, key, link):
         self._send_email(
                 user.email,
-                subject='Registration on Camptocamp.org',
-                body='To activate account click on %s' % link)
+                subject=self._(user.lang, key + '_subject'),
+                body=self._(user.lang, key + '_body') % link)
+
+    def send_registration_confirmation(self, user, link):
+        self._send_email_with_link(user, 'registration', link)
 
     def send_request_change_password(self, user, link):
-        # TODO: handle i18n using user.lang
-        self._send_email(
-                user.email,
-                subject='Password change on Camptocamp.org',
-                body='To change your password click on %s' % link)
+        self._send_email_with_link(user, 'password_change', link)
 
 
 def get_email_service(request):
