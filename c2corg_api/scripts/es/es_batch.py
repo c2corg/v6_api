@@ -1,6 +1,10 @@
 from elasticsearch import helpers
 
 from c2corg_api.scripts.migration.batch import Batch
+from elasticsearch.helpers import BulkIndexError
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class ElasticBatch(Batch):
@@ -34,5 +38,12 @@ class ElasticBatch(Batch):
 
     def flush(self):
         if self.actions:
-            helpers.bulk(self.client, self.actions)
+            try:
+                helpers.bulk(self.client, self.actions)
+            except BulkIndexError:
+                # when trying to delete a document that does not exist, an
+                # error is raised
+                log.warn(
+                    'error sending bulk update to ElasticSearch',
+                    exc_info=True)
             self.actions = []

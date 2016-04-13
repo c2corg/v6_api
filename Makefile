@@ -20,6 +20,7 @@ help:
 	@echo "- cleanall		Remove all the build artefacts"
 	@echo "- install		Install and build the project"
 	@echo "- serve			Run the development server (pserve)"
+	@echo "- run-syncer		Run the ElasticSearch syncer script."
 	@echo "- template		Replace the config vars in the .in templates"
 	@echo
 	@echo "Secondary targets:"
@@ -57,7 +58,16 @@ template: $(TEMPLATE_FILES)
 
 .PHONY: serve
 serve: install development.ini
+	echo "#\n# Also remember to start the ElasticSearch syncer script with:\n# make -f ... run-syncer\n#"
 	.build/venv/bin/pserve --reload development.ini
+
+.PHONY: run-syncer
+run-syncer: install development.ini
+	.build/venv/bin/python c2corg_api/scripts/es/syncer.py development.ini
+
+.PHONY: run-syncer-prod
+run-syncer-prod: install production.ini
+	.build/venv/bin/python c2corg_api/scripts/es/syncer.py production.ini
 
 .PHONY: upgrade
 upgrade: .build/venv/bin/pip
