@@ -1,5 +1,21 @@
 from c2corg_api.search.utils import strip_bbcodes
-from elasticsearch_dsl import DocType, String, Integer, MetaField
+from elasticsearch_dsl import DocType, String, MetaField, Long
+
+
+class Enum(String):
+    """Field type for enums that should not be analyzed before indexing.
+    """
+
+    def __init__(self, *args, **kwargs):
+        kwargs['index'] = 'not_analyzed'
+        super(Enum, self).__init__(*args, **kwargs)
+
+
+class EnumArray(Enum):
+    """Arrays are handled in an implicit manner in ElasticSearch. This type is
+    only to mark that a field may contain multiple values.
+    """
+    pass
 
 
 class BaseMeta:
@@ -26,8 +42,13 @@ class SearchDocument(DocType):
     class Meta(BaseMeta):
         pass
 
-    id = Integer()
-    doc_type = String(index='not_analyzed')
+    id = Long()
+    doc_type = Enum()
+    quality = Enum()
+    available_locales = EnumArray()
+
+    # array of area ids
+    areas = Long()
 
     # fr
     title_fr = String(
@@ -86,7 +107,7 @@ class SearchDocument(DocType):
         analyzer='index_basque', search_analyzer='search_basque')
 
     @staticmethod
-    def to_search_document(document, index):
+    def to_search_document(document, index, include_areas=True):
         search_document = {
             '_index': index,
             '_id': document.document_id,
@@ -100,14 +121,29 @@ class SearchDocument(DocType):
             search_document['_op_type'] = 'index'
             search_document['doc_type'] = document.type
 
+            available_locales = []
             for locale in document.locales:
+                available_locales.append(locale.lang)
                 search_document['title_' + locale.lang] = locale.title
                 search_document['summary_' + locale.lang] = \
                     strip_bbcodes(locale.summary)
                 search_document['description_' + locale.lang] = \
                     strip_bbcodes(locale.description)
+            search_document['available_locales'] = available_locales
+
+            areas = []
+            if include_areas:
+                for area in document._areas:
+                    areas.append(area.document_id)
+            search_document['areas'] = areas
 
         return search_document
+
+    @staticmethod
+    def copy_fields(search_document, document, fields):
+        for field in fields:
+            search_document[field] = getattr(document, field)
+
 
 """To support partial-matching required for the autocomplete search, we
 have to set up a n-gram filter for each language analyzer. See also:

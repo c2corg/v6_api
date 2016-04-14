@@ -8,4 +8,5 @@ class SearchArea(SearchDocument):
 
     @staticmethod
     def to_search_document(document, index):
-        return SearchDocument.to_search_document(document, index)
+        return SearchDocument.to_search_document(
+            document, index, include_areas=False)
