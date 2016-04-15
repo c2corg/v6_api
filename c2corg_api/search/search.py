@@ -1,6 +1,6 @@
 from c2corg_api.views.document import add_load_for_profiles
 from elasticsearch_dsl.query import MultiMatch
-from elasticsearch_dsl.filter import Term
+from elasticsearch_dsl.query import Term
 from sqlalchemy.orm import joinedload
 
 from c2corg_api.models import DBSession

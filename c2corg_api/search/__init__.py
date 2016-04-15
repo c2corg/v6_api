@@ -60,7 +60,7 @@ def get_queue_config(settings):
 
 def create_search(document_type):
     return Search(
-        elasticsearch_config['client'],
+        using=elasticsearch_config['client'],
         index=elasticsearch_config['index'],
         doc_type=search_documents[document_type])
 
