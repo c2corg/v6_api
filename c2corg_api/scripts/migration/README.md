@@ -12,6 +12,15 @@ make sure to re-generate the file `migration.ini` with:
 
     make -f config/{user} template
 
+Prepare the v5 source database
+------------------------------
+
+Usernames normalization must be performed (once for all) on the source database
+prior to migrating.
+
+    sudo -u postgres psql c2corg -c 'create extension unaccent; create extension intarray; create extension intagg;'
+    sudo -u postgres psql c2corg < c2corg_api/scripts/migration/create_unique_normalized_usernames.sql
+
 Run migration
 -------------
 
