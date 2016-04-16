@@ -391,6 +391,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'quality': quality_types[1],
                 'waypoint_type': 'summit',
                 'elevation': 1234,
+                'orientations': None,
                 'locales': [
                     {'lang': 'en', 'title': 'Mont Granier!',
                      'description': 'A.', 'access': 'n',
@@ -463,7 +464,8 @@ class TestWaypointRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Granier',
                      'description': 'A.', 'access': 'n',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'geometry': None
             }
         }
         (body, waypoint) = self.put_success_all(body_put, self.waypoint)
