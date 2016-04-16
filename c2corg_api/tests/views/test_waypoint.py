@@ -109,6 +109,17 @@ class TestWaypointRest(BaseDocumentTestRest):
             self.outing1.document_id,
             recent_outings['outings'][0].get('document_id'))
 
+    def test_get_with_empty_arrays(self):
+        """Test-case for https://github.com/c2corg/v6_api/issues/231
+        """
+        self.assertEqual(self.waypoint2.rock_types, [])
+        response = self.app.get(self._prefix + '/' +
+                                str(self.waypoint2.document_id),
+                                status=200)
+        body = response.json
+        self.assertIn('rock_types', body)
+        self.assertEqual(body['rock_types'], [])
+
     def test_get_no_associations(self):
         response = self.app.get(self._prefix + '/' +
                                 str(self.waypoint.document_id) + '?a=0',
@@ -844,7 +855,8 @@ class TestWaypointRest(BaseDocumentTestRest):
             filter(DocumentVersion.lang == 'en').first()
 
         self.waypoint2 = Waypoint(
-            waypoint_type='summit', elevation=2,
+            waypoint_type='climbing_outdoor', elevation=2,
+            rock_types=[],
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'))
         self.session.add(self.waypoint2)

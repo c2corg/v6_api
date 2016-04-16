@@ -345,6 +345,33 @@ class TestWaypoint(BaseTestCase):
         set_available_langs([waypoint])
         self.assertEqual(waypoint.available_langs, ['en', 'fr'])
 
+    def test_array_handling_non_empty(self):
+        waypoint = Waypoint(
+            waypoint_type='summit', elevation=2203, rock_types=['basalte'])
+        self.session.add(waypoint)
+        self.session.flush()
+
+        self.session.refresh(waypoint)
+        self.assertEqual(waypoint.rock_types, ['basalte'])
+
+    def test_array_handling_empty(self):
+        waypoint = Waypoint(
+            waypoint_type='summit', elevation=2203, rock_types=[])
+        self.session.add(waypoint)
+        self.session.flush()
+
+        self.session.refresh(waypoint)
+        self.assertEqual(waypoint.rock_types, [])
+
+    def test_array_handling_none(self):
+        waypoint = Waypoint(
+            waypoint_type='summit', elevation=2203, rock_types=None)
+        self.session.add(waypoint)
+        self.session.flush()
+
+        self.session.refresh(waypoint)
+        self.assertEqual(waypoint.rock_types, None)
+
     def _get_waypoint(self):
         return Waypoint(
             waypoint_type='summit', elevation=2203,
