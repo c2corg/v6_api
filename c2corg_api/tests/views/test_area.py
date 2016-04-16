@@ -220,7 +220,7 @@ class TestAreaRest(BaseDocumentTestRest):
             }
         }
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(self.area1.document_id), body,
             headers=headers, status=400)
 

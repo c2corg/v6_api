@@ -419,11 +419,11 @@ class BaseDocumentTestRest(BaseTestRest):
         return (body, doc)
 
     def put_wrong_document_id(self, request_body, user='contributor'):
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/-9999', request_body, status=403)
 
         headers = self.add_authorization_header(username=user)
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/-9999', request_body, headers=headers, status=404)
 
         body = response.json
@@ -431,11 +431,11 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(body['errors'][0]['name'], 'Not Found')
 
     def put_wrong_version(self, request_body, id, user='contributor'):
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(id), request_body, status=403)
 
         headers = self.add_authorization_header(username=user)
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(id), request_body, headers=headers,
             status=409)
 
@@ -447,11 +447,11 @@ class BaseDocumentTestRest(BaseTestRest):
         """The id given in the URL does not equal the document_id in the
         request body.
         """
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(id + 1), request_body, status=403)
 
         headers = self.add_authorization_header(username=user)
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(id + 1), request_body, headers=headers,
             status=400)
         body = response.json
@@ -462,11 +462,11 @@ class BaseDocumentTestRest(BaseTestRest):
         request_body = {
             'message': '...'
         }
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(id), request_body, status=403)
 
         headers = self.add_authorization_header(username=user)
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(id), request_body, headers=headers,
             status=400)
 
@@ -477,12 +477,12 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def put_missing_field(
             self, request_body, document, field, user='contributor'):
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(document.document_id), request_body,
             status=403)
 
         headers = self.add_authorization_header(username=user)
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(document.document_id), request_body,
             headers=headers, status=400)
 
@@ -496,12 +496,12 @@ class BaseDocumentTestRest(BaseTestRest):
             self, request_body, document, user='contributor', check_es=True):
         """Test updating a document with changes to the figures and locales.
         """
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(document.document_id), request_body,
             status=403)
 
         headers = self.add_authorization_header(username=user)
-        self.app.put_json(
+        self.app_put_json(
             self._prefix + '/' + str(document.document_id), request_body,
             headers=headers, status=200)
 
@@ -596,12 +596,12 @@ class BaseDocumentTestRest(BaseTestRest):
             self, request_body, document, user='contributor', check_es=True):
         """Test updating a document with changes to the figures only.
         """
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(document.document_id), request_body,
             status=403)
 
         headers = self.add_authorization_header(username=user)
-        self.app.put_json(
+        self.app_put_json(
             self._prefix + '/' + str(document.document_id), request_body,
             headers=headers, status=200)
 
@@ -690,12 +690,12 @@ class BaseDocumentTestRest(BaseTestRest):
             self, request_body, document, user='contributor', check_es=True):
         """Test updating a document with only changes to a locale.
         """
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(document.document_id), request_body,
             status=403)
 
         headers = self.add_authorization_header(username=user)
-        self.app.put_json(
+        self.app_put_json(
             self._prefix + '/' + str(document.document_id), request_body,
             headers=headers, status=200)
 
@@ -775,12 +775,12 @@ class BaseDocumentTestRest(BaseTestRest):
             self, request_body, document, user='contributor', check_es=True):
         """Test updating a document by adding a new locale.
         """
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(document.document_id), request_body,
             status=403)
 
         headers = self.add_authorization_header(username=user)
-        self.app.put_json(
+        self.app_put_json(
             self._prefix + '/' + str(document.document_id), request_body,
             headers=headers, status=200)
 
