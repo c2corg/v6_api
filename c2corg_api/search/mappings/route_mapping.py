@@ -1,6 +1,7 @@
-from c2corg_api.models.route import ROUTE_TYPE
-from c2corg_api.search.mapping import SearchDocument, BaseMeta, Enum, EnumArray
-from elasticsearch_dsl import Integer
+from c2corg_api.models.route import ROUTE_TYPE, Route
+from c2corg_api.search.mapping import SearchDocument, BaseMeta
+from c2corg_api.search.mapping_types import QueryableMixin, QInteger,\
+    QEnumArray, QEnum
 from c2corg_api.search.utils import get_title
 
 
@@ -8,45 +9,84 @@ class SearchRoute(SearchDocument):
     class Meta(BaseMeta):
         doc_type = ROUTE_TYPE
 
-    activities = EnumArray()
-    elevation_min = Integer()
-    elevation_max = Integer()
-    height_diff_up = Integer()
-    height_diff_down = Integer()
-    route_length = Integer()
-    difficulties_height = Integer()
-    height_diff_access = Integer()
-    height_diff_difficulties = Integer()
-    route_types = EnumArray()
-    orientations = EnumArray()
-    durations = EnumArray()
-    glacier_gear = Enum()
-    configuration = EnumArray()
-    ski_rating = Enum()
-    ski_exposition = Enum()
-    labande_ski_rating = Enum()
-    labande_global_rating = Enum()
-    global_rating = Enum()
-    engagement_rating = Enum()
-    risk_rating = Enum()
-    equipment_rating = Enum()
-    ice_rating = Enum()
-    mixed_rating = Enum()
-    exposition_rock_rating = Enum()
-    rock_free_rating = Enum()
-    rock_required_rating = Enum()
-    aid_rating = Enum()
-    via_ferrata_rating = Enum()
-    hiking_rating = Enum()
-    hiking_mtb_exposition = Enum()
-    snowshoe_rating = Enum()
-    mtb_up_rating = Enum()
-    mtb_down_rating = Enum()
-    mtb_length_asphalt = Integer()
-    mtb_length_trail = Integer()
-    mtb_height_diff_portages = Integer()
-    rock_types = EnumArray()
-    climbing_outdoor_type = EnumArray()
+    activities = QEnumArray(
+        'ac', model_field=Route.activities)
+    elevation_min = QInteger(
+        'emi', range=True)
+    elevation_max = QInteger(
+        'ema', range=True)
+    height_diff_up = QInteger(
+        'hdu', range=True)
+    height_diff_down = QInteger(
+        'hdd', range=True)
+    route_length = QInteger(
+        'rl', range=True)
+    difficulties_height = QInteger(
+        'dh', range=True)
+    height_diff_access = QInteger(
+        'hda', range=True)
+    height_diff_difficulties = QInteger(
+        'hddi', range=True)
+    route_types = QEnumArray(
+         'rt', model_field=Route.route_types)
+    orientations = QEnumArray(
+         'o', model_field=Route.orientations)
+    durations = QEnumArray(
+         'd', model_field=Route.durations)
+    glacier_gear = QEnum(
+         'gg', model_field=Route.glacier_gear)
+    configuration = QEnumArray(
+         'c', model_field=Route.configuration)
+    ski_rating = QEnum(
+         'sr', model_field=Route.ski_rating)
+    ski_exposition = QEnum(
+         'se', model_field=Route.ski_exposition)
+    labande_ski_rating = QEnum(
+         'lsr', model_field=Route.labande_ski_rating)
+    labande_global_rating = QEnum(
+         'lgr', model_field=Route.labande_global_rating)
+    global_rating = QEnum(
+         'gr', model_field=Route.global_rating)
+    engagement_rating = QEnum(
+         'er', model_field=Route.engagement_rating)
+    risk_rating = QEnum(
+         'rr', model_field=Route.risk_rating)
+    equipment_rating = QEnum(
+         'eqr', model_field=Route.equipment_rating)
+    ice_rating = QEnum(
+         'ir', model_field=Route.ice_rating)
+    mixed_rating = QEnum(
+         'mr', model_field=Route.mixed_rating)
+    exposition_rock_rating = QEnum(
+         'err', model_field=Route.exposition_rock_rating)
+    rock_free_rating = QEnum(
+         'rfr', model_field=Route.rock_free_rating)
+    rock_required_rating = QEnum(
+         'rrqr', model_field=Route.rock_required_rating)
+    aid_rating = QEnum(
+         'ar', model_field=Route.aid_rating)
+    via_ferrata_rating = QEnum(
+         'vfr', model_field=Route.via_ferrata_rating)
+    hiking_rating = QEnum(
+         'hr', model_field=Route.hiking_rating)
+    hiking_mtb_exposition = QEnum(
+         'e', model_field=Route.hiking_mtb_exposition)
+    snowshoe_rating = QEnum(
+         'ssr', model_field=Route.snowshoe_rating)
+    mtb_up_rating = QEnum(
+         'mur', model_field=Route.mtb_up_rating)
+    mtb_down_rating = QEnum(
+         'mdr', model_field=Route.mtb_down_rating)
+    mtb_length_asphalt = QInteger(
+        'mla', range=True)
+    mtb_length_trail = QInteger(
+        'mlt', range=True)
+    mtb_height_diff_portages = QInteger(
+        'mdp', range=True)
+    rock_types = QEnumArray(
+         'rct', model_field=Route.rock_types)
+    climbing_outdoor_type = QEnumArray(
+         'cot', model_field=Route.climbing_outdoor_type)
 
     FIELDS = [
         'activities', 'elevation_min', 'elevation_max', 'height_diff_up',
@@ -78,3 +118,6 @@ class SearchRoute(SearchDocument):
                 get_title(locale.title, locale.title_prefix)
 
         return search_document
+
+SearchRoute.queryable_fields = QueryableMixin.get_queryable_fields(
+    SearchRoute)

@@ -1,21 +1,8 @@
+from c2corg_api.models.document import Document
+from c2corg_api.search.mapping_types import Enum, QEnum, QEnumArray, QLong
 from c2corg_api.search.utils import strip_bbcodes
+from c2corg_common.attributes import default_langs
 from elasticsearch_dsl import DocType, String, MetaField, Long
-
-
-class Enum(String):
-    """Field type for enums that should not be analyzed before indexing.
-    """
-
-    def __init__(self, *args, **kwargs):
-        kwargs['index'] = 'not_analyzed'
-        super(Enum, self).__init__(*args, **kwargs)
-
-
-class EnumArray(Enum):
-    """Arrays are handled in an implicit manner in ElasticSearch. This type is
-    only to mark that a field may contain multiple values.
-    """
-    pass
 
 
 class BaseMeta:
@@ -44,11 +31,11 @@ class SearchDocument(DocType):
 
     id = Long()
     doc_type = Enum()
-    quality = Enum()
-    available_locales = EnumArray()
+    quality = QEnum('qa', model_field=Document.quality)
+    available_locales = QEnumArray('l', enum=default_langs)
 
     # array of area ids
-    areas = Long()
+    areas = QLong('a', is_id=True)
 
     # fr
     title_fr = String(
