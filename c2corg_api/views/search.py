@@ -14,7 +14,7 @@ from c2corg_api.views.validation import validate_pagination, \
 from c2corg_api.models.route import Route, ROUTE_TYPE, schema_route, \
     RouteLocale
 from c2corg_api.views import cors_policy
-from c2corg_api.search import search
+from c2corg_api.search import search, SEARCH_LIMIT_DEFAULT, SEARCH_LIMIT_MAX
 from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE, schema_waypoint
 from c2corg_api.views.route import listing_schema_adaptor \
     as route_adaptor
@@ -22,13 +22,6 @@ from c2corg_api.views.waypoint import listing_schema_adaptor \
     as waypoint_adaptor
 from c2corg_api.views.outing import listing_schema_adaptor \
     as outing_adaptor
-
-# the maximum number of documents that can be returned for each document type
-SEARCH_LIMIT_MAX = 50
-
-# the default limit value (how many documents are returned at once for each
-# document type in a search request)
-SEARCH_LIMIT_DEFAULT = 10
 
 
 @resource(path='/search', cors_policy=cors_policy)
