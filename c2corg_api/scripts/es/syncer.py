@@ -33,6 +33,9 @@ class SyncWorker(ConsumerMixin):
 
     def process_task(self, body, message):
         log.info('Sync requested')
+        # the sync request is confirmed even though it might fail. in this case
+        # a new request will trigger a new sync, or manual interaction is
+        # required.
         message.ack()
         try:
             self.sync()

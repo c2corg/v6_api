@@ -16,7 +16,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import Search
 from kombu.connection import Connection
-from kombu import Exchange, Queue
+from kombu import Exchange, Queue, pools
 
 batch_size = 1000
 
@@ -46,6 +46,9 @@ def configure_es_from_config(settings):
 
 
 def get_queue_config(settings):
+    # set the number of connections to Redis
+    pools.set_limit(20)
+
     class QueueConfiguration(object):
         def __init__(self, settings):
             self.connection = Connection(settings['redis.url'])
