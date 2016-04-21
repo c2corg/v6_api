@@ -15,7 +15,11 @@ class AdvancedSearchTest(BaseTestCase):
             'a': '1234,4567',
             'l': 'fr'
         }
-        query = build_query(params, 'w')
+        meta_params = {
+            'limit': 10,
+            'offset': 0
+        }
+        query = build_query(params, meta_params, 'w')
         expected_query = create_search('w'). \
             query(get_text_query('search word')). \
             filter(Term(available_locales='fr')).\
@@ -27,11 +31,13 @@ class AdvancedSearchTest(BaseTestCase):
 
     def test_build_query_limit_offset(self):
         params = {
-            'q': 'search word',
+            'q': 'search word'
+        }
+        meta_params = {
             'limit': 20,
             'offset': 40
         }
-        query = build_query(params, 'w')
+        query = build_query(params, meta_params, 'w')
         expected_query = create_search('w'). \
             query(get_text_query('search word')). \
             fields([]).\

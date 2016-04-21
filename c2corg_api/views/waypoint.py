@@ -9,7 +9,7 @@ from cornice.resource import resource, view
 
 from c2corg_api.models.waypoint import (
     Waypoint, schema_waypoint, schema_update_waypoint,
-    ArchiveWaypoint, ArchiveWaypointLocale)
+    ArchiveWaypoint, ArchiveWaypointLocale, WAYPOINT_TYPE)
 
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import (
@@ -56,7 +56,8 @@ class WaypointRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
         return self._collection_get(
-            Waypoint, schema_waypoint, adapt_schema=listing_schema_adaptor)
+            Waypoint, schema_waypoint, WAYPOINT_TYPE,
+            adapt_schema=listing_schema_adaptor)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):

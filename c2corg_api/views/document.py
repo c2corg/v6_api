@@ -1,3 +1,5 @@
+from functools import partial
+
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
 from c2corg_api.models.area_association import update_areas_for_document, \
@@ -11,6 +13,7 @@ from c2corg_api.models.route import schema_association_route
 from c2corg_api.models.topo_map import get_maps, schema_listing_topo_map
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import schema_association_waypoint
+from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import cors_policy
 from c2corg_api.views import to_json_dict, to_seconds, set_best_locale
@@ -39,18 +42,32 @@ class DocumentRest(object):
     def __init__(self, request):
         self.request = request
 
-    def _collection_get(self, clazz, schema, clazz_locale=None,
+    def _collection_get(self, clazz, schema, doc_type, clazz_locale=None,
                         adapt_schema=None, custom_filter=None,
                         include_areas=True, set_custom_fields=None):
-        return self._paginate(
-            clazz, schema, clazz_locale, adapt_schema, custom_filter,
-            include_areas, set_custom_fields)
-
-    def _paginate(
-            self, clazz, schema, clazz_locale, adapt_schema, custom_filter,
-            include_areas, set_custom_fields):
         validated = self.request.validated
+        meta_params = {
+            'offset': validated.get('offset', 0),
+            'limit': min(validated.get('limit', LIMIT_DEFAULT), LIMIT_MAX),
+            'lang': validated.get('lang')
+        }
 
+        if advanced_search.contains_search_params(self.request.GET):
+            # search with ElasticSearch
+            load_documents = advanced_search.get_load_documents(
+                self.request.GET, meta_params, doc_type, clazz)
+        else:
+            # if no search parameters, directly load documents from the db
+            load_documents = partial(
+                self._load_documents_paginated, meta_params)
+
+        return self._get_documents(
+            clazz, schema, clazz_locale, adapt_schema, custom_filter,
+            include_areas, set_custom_fields, meta_params, load_documents)
+
+    def _get_documents(
+            self, clazz, schema, clazz_locale, adapt_schema, custom_filter,
+            include_areas, set_custom_fields, meta_params, load_documents):
         base_query = DBSession.query(clazz).\
             filter(getattr(clazz, 'redirects_to').is_(None))
         base_total_query = DBSession.query(getattr(clazz, 'document_id')).\
@@ -79,17 +96,18 @@ class DocumentRest(object):
                         'version')
                 )
 
-        documents, total = self._paginate_offset(base_query, base_total_query)
+        documents, total = load_documents(base_query, base_total_query)
 
         set_available_langs(documents, loaded=True)
-        if validated.get('lang') is not None:
-            set_best_locale(documents, validated.get('lang'))
+        lang = meta_params['lang']
+        if lang is not None:
+            set_best_locale(documents, lang)
 
         if include_areas:
-            self._set_areas_for_documents(documents, validated.get('lang'))
+            self._set_areas_for_documents(documents, lang)
 
         if set_custom_fields:
-            set_custom_fields(documents, validated.get('lang'))
+            set_custom_fields(documents, lang)
 
         return {
             'documents': [
@@ -101,15 +119,12 @@ class DocumentRest(object):
             'total': total
         }
 
-    def _paginate_offset(self, base_query, base_total_query):
+    def _load_documents_paginated(
+            self, meta_params, base_query, base_total_query):
         """Return a batch of documents with the given `offset` and `limit`.
         """
-        validated = self.request.validated
-        offset = validated['offset'] if 'offset' in validated else 0
-        limit = min(
-            validated['limit'] if 'limit' in validated else LIMIT_DEFAULT,
-            LIMIT_MAX)
-
+        offset = meta_params['offset']
+        limit = meta_params['limit']
         documents = base_query. \
             slice(offset, offset + limit). \
             limit(limit). \

@@ -1,31 +1,29 @@
 import math
 import re
+from c2corg_api.search.mapping_types import reserved_query_fields
 from functools import partial
 
 from c2corg_api.search import create_search, search_documents, \
-    get_text_query, SEARCH_LIMIT_DEFAULT, SEARCH_LIMIT_MAX
+    get_text_query
 from elasticsearch_dsl.query import Range, Term, Terms, Bool
 
 
-def build_query(url_params, doc_type):
+def build_query(url_params, meta_params, doc_type):
     """Creates an ElasticSearch query from query parameters.
     """
-    params = url_params.copy()
-
-    search_term = params.pop('q', '').strip()
-    limit = params.pop('limit', None)
-    limit = min(
-        SEARCH_LIMIT_DEFAULT if limit is None else limit,
-        SEARCH_LIMIT_MAX)
-    offset = params.pop('offset', 0)
+    search_term = url_params.get('q', '').strip()
+    limit = meta_params.get('limit')
+    offset = meta_params.get('offset')
 
     search = create_search(doc_type)
     if search_term:
         search = search.query(get_text_query(search_term))
 
     search_model = search_documents[doc_type]
-    for param in params:
-        filter = create_filter(param, params.get(param), search_model)
+    for param in url_params:
+        if param in reserved_query_fields:
+            continue
+        filter = create_filter(param, url_params.get(param), search_model)
         if filter:
             search = search.filter(filter)
 

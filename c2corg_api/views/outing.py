@@ -6,7 +6,7 @@ from c2corg_api.models.document import ArchiveDocument, Document, \
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.outing import schema_outing, Outing, \
     schema_create_outing, schema_update_outing, ArchiveOuting, \
-    ArchiveOutingLocale
+    ArchiveOutingLocale, OUTING_TYPE
 from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.user import User, schema_association_user
@@ -95,7 +95,7 @@ class OutingRest(DocumentRest):
             custom_filter = self.filter_on_route(self.request.validated['r'])
 
         return self._collection_get(
-            Outing, schema_outing,
+            Outing, schema_outing, OUTING_TYPE,
             adapt_schema=listing_schema_adaptor,
             custom_filter=custom_filter, set_custom_fields=set_author)
 
