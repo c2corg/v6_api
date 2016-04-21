@@ -2,6 +2,7 @@ import collections
 import datetime
 
 from c2corg_api.models import DBSession
+from c2corg_api.models.user import AccountNotValidated
 from c2corg_common.attributes import langs_priority
 from colander import null
 from pyramid.httpexceptions import HTTPError, HTTPNotFound, HTTPForbidden
@@ -45,6 +46,14 @@ def http_error_handler(exc, request):
 
     errors = Errors(request, exc.code)
     errors.add('request', exc.title, exc.detail)
+
+    return json_error(errors)
+
+
+@view_config(context=AccountNotValidated)
+def account_error_handler(exc, request):
+    errors = Errors(request, 400)
+    errors.add('request', 'Error', exc.args)
 
     return json_error(errors)
 

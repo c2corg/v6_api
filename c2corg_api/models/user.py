@@ -19,10 +19,17 @@ import colander
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql.schema import ForeignKey
 
+from enum import Enum
+
 import os
 import binascii
 
 import datetime
+
+
+class AccountNotValidated(Exception):
+    def __init__(self):
+        Exception.__init__(self, 'Account not validated yet')
 
 
 class PasswordUtil():
@@ -42,6 +49,12 @@ class PasswordUtil():
         if isinstance(plain, str):
             plain = plain.encode('utf-8')
         return bcrypt.hashpw(plain, encrypted) == encrypted
+
+
+class Purpose(Enum):
+    registration = 'regemail'
+    new_password = 'newpass'
+    change_email = 'chgemail'
 
 
 class User(Base):
@@ -86,14 +99,18 @@ class User(Base):
         particular actions like changing password or validating an email. It
         must have a short lifespan to avoid unused nonces to become a security
         risk."""
+        if purpose != Purpose.registration and not self.email_validated:
+            # An account must be validated before any other action is tried.
+            raise AccountNotValidated()
+
         now = datetime.datetime.utcnow()
         nonce = binascii.hexlify(os.urandom(32)).decode('ascii')
-        self.validation_nonce = purpose + '_' + nonce
+        self.validation_nonce = purpose.value + '_' + nonce
         self.validation_nonce_expire = now + datetime.timedelta(days=days)
 
     def validate_nonce_purpose(self, expected_purpose):
         nonce = self.validation_nonce
-        prefix = expected_purpose + '_'
+        prefix = expected_purpose.value + '_'
         return nonce is not None and nonce.startswith(prefix)
 
     def clear_validation_nonce(self):

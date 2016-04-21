@@ -8,7 +8,9 @@ from pyramid.httpexceptions import HTTPInternalServerError
 
 from cornice.resource import resource
 
-from c2corg_api.models.user import User, schema_user, schema_create_user
+from c2corg_api.models.user import (
+        User, schema_user, schema_create_user, Purpose)
+
 from c2corg_api.views import (
         cors_policy, json_view, restricted_view, restricted_json_view,
         to_json_dict)
@@ -109,7 +111,9 @@ class UserRegistrationRest(object):
     def post(self):
         user = schema_create_user.objectify(self.request.validated)
         user.password = self.request.validated['password']
-        user.update_validation_nonce('regemail', VALIDATION_EXPIRE_DAYS)
+        user.update_validation_nonce(
+                Purpose.registration,
+                VALIDATION_EXPIRE_DAYS)
 
         # directly create the user profile, the document id of the profile
         # is the user id
@@ -165,7 +169,7 @@ class UserValidateNewPasswordRest(object):
         self.request = request
 
     @json_view(validators=[
-        partial(validate_user_from_nonce, 'newpass'),
+        partial(validate_user_from_nonce, Purpose.new_password),
         validate_json_password])
     def post(self):
         request = self.request
@@ -213,7 +217,9 @@ class UserRequestChangePasswordRest(object):
         request = self.request
         email = request.validated['email']
         user = DBSession.query(User).filter(User.email == email).first()
-        user.update_validation_nonce('newpass', VALIDATION_EXPIRE_DAYS)
+        user.update_validation_nonce(
+                Purpose.new_password,
+                VALIDATION_EXPIRE_DAYS)
 
         try:
             DBSession.flush()
@@ -242,7 +248,8 @@ class UserNonceValidationRest(object):
         client = get_discourse_client(settings)
         return client.sync_sso(user)
 
-    @json_view(validators=[partial(validate_user_from_nonce, 'regemail')])
+    @json_view(validators=[partial(
+        validate_user_from_nonce, Purpose.registration)])
     def post(self):
         request = self.request
         user = request.validated['user']
@@ -377,7 +384,9 @@ class UserAccountRest(object):
         email_link = None
         if 'email' in validated and validated['email'] != user.email:
             user.email_to_validate = validated['email']
-            user.update_validation_nonce('chgemail', VALIDATION_EXPIRE_DAYS)
+            user.update_validation_nonce(
+                    Purpose.change_email,
+                    VALIDATION_EXPIRE_DAYS)
             email_service = get_email_service(self.request)
             nonce = user.validation_nonce
             settings = request.registry.settings
@@ -423,7 +432,8 @@ class UserChangeEmailNonceValidationRest(object):
     def __init__(self, request):
         self.request = request
 
-    @json_view(validators=[partial(validate_user_from_nonce, 'chgemail')])
+    @json_view(validators=[partial(
+        validate_user_from_nonce, Purpose.change_email)])
     def post(self):
         request = self.request
         user = request.validated['user']

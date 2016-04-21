@@ -1,4 +1,4 @@
-from c2corg_api.models.user import User
+from c2corg_api.models.user import User, Purpose
 
 from c2corg_api.tests import BaseTestCase
 
@@ -23,3 +23,15 @@ class Testuser(BaseTestCase):
 
         self.assertFalse(tony.validate_password('foobare'))
         self.assertTrue(tony.validate_password('foobar'))
+
+    def test_update_nonce(self):
+        tony = User(email_validated=False)
+        tony.update_validation_nonce(Purpose.registration, 2)
+
+        def change_email():
+            tony.update_validation_nonce(Purpose.change_email, 2)
+        self.assertRaisesRegexp(
+            Exception, 'Account not validated', change_email)
+
+        tony.email_validated = True
+        change_email()
