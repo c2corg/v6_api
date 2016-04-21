@@ -371,7 +371,6 @@ class UserAccountRest(object):
             'email': user.email,
             'name': user.name,
             'forum_username': user.forum_username,
-            'id': user.id
             }
 
     @restricted_json_view(renderer='json', schema=updateschema)
@@ -486,7 +485,8 @@ def token_to_response(user, token, request):
         'username': user.username,
         'forum_username': user.forum_username,
         'expire': int(expire_time.total_seconds()),
-        'roles': roles
+        'roles': roles,
+        'id': user.id
     }
 
 
