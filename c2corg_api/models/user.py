@@ -27,6 +27,11 @@ import binascii
 import datetime
 
 
+class AccountNotValidated(Exception):
+    def __init__(self):
+        Exception.__init__(self, 'Account not validated yet')
+
+
 class PasswordUtil():
     """
     Utility class abstracting low-level password primitives.
@@ -96,7 +101,7 @@ class User(Base):
         risk."""
         if purpose != Purpose.registration and not self.email_validated:
             # An account must be validated before any other action is tried.
-            raise Exception('Account not validated yet')
+            raise AccountNotValidated()
 
         now = datetime.datetime.utcnow()
         nonce = binascii.hexlify(os.urandom(32)).decode('ascii')
