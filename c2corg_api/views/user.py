@@ -370,7 +370,8 @@ class UserAccountRest(object):
         return {
             'email': user.email,
             'toponame': user.name,
-            'forumname': user.forum_username
+            'forumname': user.forum_username,
+            'id': user.id
             }
 
     @restricted_json_view(renderer='json', schema=updateschema)
