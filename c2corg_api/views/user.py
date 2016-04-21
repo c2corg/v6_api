@@ -187,11 +187,11 @@ class UserValidateNewPasswordRest(object):
                 r = client.redirect_without_nonce(user)
                 response['redirect_internal'] = r
             except:
-                # Any error with discourse must prevent login and validation
+                # Since only the password is changed, any error with discourse
+                # must not prevent login and validation.
                 log.error(
                     'Error logging into discourse for %d', user.id,
                     exc_info=True)
-                raise HTTPInternalServerError('Error with Discourse')
 
             user.clear_validation_nonce()
             try:

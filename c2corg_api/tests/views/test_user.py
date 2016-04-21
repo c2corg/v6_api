@@ -253,9 +253,10 @@ class TestUserRest(BaseTestRest):
         nonce = self.extract_nonce('change_password')
         url_api_validation = '/users/validate_new_password/%s' % nonce
 
+        # Succeed anyway since only the password has changed
         self.app_post_json(url_api_validation, {
             'password': 'new pass'
-            }, status=500)
+            }, status=200)
 
     def login(self, username, password=None, status=200, sso=None, sig=None,
               discourse=None):
