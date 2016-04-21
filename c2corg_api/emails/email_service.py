@@ -19,7 +19,7 @@ class EmailLocalizator(object):
         if not os.path.isfile(filepath):
             filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % ('fr', key)
         f = open(filepath, 'r')
-        return f.read()
+        return f.read().rstrip()  # No trailing new line in email subject!
 
     def get_translation(self, lang, key):
         if lang not in default_langs:
