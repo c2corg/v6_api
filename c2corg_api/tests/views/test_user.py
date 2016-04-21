@@ -210,6 +210,12 @@ class TestUserRest(BaseTestRest):
 
         self.app_post_json(url_api_validation, {}, status=500)
 
+    def test_forgot_password_non_existing_email(self):
+        url = '/users/request_password_change'
+        body = self.app_post_json(url, {
+            'email': 'non_existing_oeuhsaeuh@camptocamp.org'}, status=400).json
+        self.assertErrorsContain(body, 'email', 'No user with this email')
+
     def test_forgot_password_discourse_up(self):
         user_id = self.global_userids['contributor']
         user = self.session.query(User).get(user_id)

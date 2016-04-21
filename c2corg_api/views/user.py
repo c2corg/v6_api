@@ -207,16 +207,27 @@ class UserValidateNewPasswordRest(object):
             return None
 
 
+def validate_required_user_from_email(request):
+    validate_required_json_string("email", request)
+    if len(request.errors) != 0:
+        return
+    email = request.validated['email']
+    user = DBSession.query(User).filter(User.email == email).first()
+    if user:
+        request.validated['user'] = user
+    else:
+        request.errors.add('body', 'email', 'No user with this email')
+
+
 @resource(path='/users/request_password_change', cors_policy=cors_policy)
 class UserRequestChangePasswordRest(object):
     def __init__(self, request):
         self.request = request
 
-    @json_view(validators=[partial(validate_required_json_string, "email")])
+    @json_view(validators=[validate_required_user_from_email])
     def post(self):
         request = self.request
-        email = request.validated['email']
-        user = DBSession.query(User).filter(User.email == email).first()
+        user = request.validated['user']
         user.update_validation_nonce(
                 Purpose.new_password,
                 VALIDATION_EXPIRE_DAYS)
