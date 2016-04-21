@@ -1,5 +1,5 @@
 from c2corg_api.search import create_search, get_text_query
-from c2corg_api.search.advanced_search import create_filter, build_query
+from c2corg_api.search.search_filters import create_filter, build_query
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.tests import BaseTestCase
