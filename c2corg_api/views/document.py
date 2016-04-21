@@ -79,14 +79,9 @@ class DocumentRest(object):
                         'version')
                 )
 
-        if 'after' in self.request.validated:
-            documents, total = self._paginate_after(base_query, clazz)
-        else:
-            documents, total = self._paginate_offset(
-                base_query, base_total_query)
+        documents, total = self._paginate_offset(base_query, base_total_query)
 
         set_available_langs(documents, loaded=True)
-
         if validated.get('lang') is not None:
             set_best_locale(documents, validated.get('lang'))
 
@@ -105,22 +100,6 @@ class DocumentRest(object):
             ],
             'total': total
         }
-
-    def _paginate_after(self, base_query, clazz):
-        """
-        Returns all documents for which `document_id` is smaller than the
-        given id in `after`.
-        """
-        after = self.request.validated['after']
-        limit = self.request.validated['limit']
-        limit = min(LIMIT_DEFAULT if limit is None else limit, LIMIT_MAX)
-
-        documents = base_query. \
-            filter(clazz.document_id < after). \
-            limit(limit). \
-            all()
-
-        return documents, -1
 
     def _paginate_offset(self, base_query, base_total_query):
         """Return a batch of documents with the given `offset` and `limit`.

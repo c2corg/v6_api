@@ -44,11 +44,6 @@ class TestAreaRest(BaseDocumentTestRest):
             self.get_collection({'offset': 1, 'limit': 2}),
             [self.area3.document_id, self.area2.document_id], 4)
 
-        self.assertResultsEqual(
-            self.get_collection(
-                {'after': self.area3.document_id, 'limit': 1}),
-            [self.area2.document_id], -1)
-
     def test_get_collection_lang(self):
         self.get_collection_lang()
 

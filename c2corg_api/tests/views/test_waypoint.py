@@ -64,11 +64,6 @@ class TestWaypointRest(BaseDocumentTestRest):
             self.get_collection({'offset': 1, 'limit': 2}),
             [self.waypoint3.document_id, self.waypoint2.document_id], 4)
 
-        self.assertResultsEqual(
-            self.get_collection(
-                {'after': self.waypoint3.document_id, 'limit': 1}),
-            [self.waypoint2.document_id], -1)
-
     def test_get(self):
         body = self.get(self.waypoint)
         self._assert_geometry(body)

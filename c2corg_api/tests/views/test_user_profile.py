@@ -53,12 +53,6 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 {'offset': 1, 'limit': 2}, user='contributor'),
             [self.profile3.document_id, self.profile2.document_id], 6)
 
-        self.assertResultsEqual(
-            self.get_collection(
-                {'after': self.profile3.document_id, 'limit': 1},
-                user='contributor'),
-            [self.profile2.document_id], -1)
-
     def test_get_collection_lang(self):
         self.get_collection_lang(user='contributor')
 

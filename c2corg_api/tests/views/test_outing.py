@@ -75,11 +75,6 @@ class TestOutingRest(BaseDocumentTestRest):
             self.get_collection({'offset': 1, 'limit': 2}),
             [self.outing3.document_id, self.outing2.document_id], 4)
 
-        self.assertResultsEqual(
-            self.get_collection(
-                {'after': self.outing3.document_id, 'limit': 1}),
-            [self.outing2.document_id], -1)
-
     def test_get_collection_lang(self):
         self.get_collection_lang()
 

@@ -40,11 +40,6 @@ class TestTopoMapRest(BaseDocumentTestRest):
             self.get_collection({'offset': 1, 'limit': 2}),
             [self.map3.document_id, self.map2.document_id], 4)
 
-        self.assertResultsEqual(
-            self.get_collection(
-                {'after': self.map3.document_id, 'limit': 1}),
-            [self.map2.document_id], -1)
-
     def test_get_collection_lang(self):
         self.get_collection_lang()
 
