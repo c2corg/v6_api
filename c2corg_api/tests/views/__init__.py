@@ -10,9 +10,11 @@ from c2corg_api.tests import BaseTestCase
 
 class BaseTestRest(BaseTestCase):
 
-    def assertErrorsContain(self, body, key):  # noqa
+    def assertErrorsContain(self, body, key, value=None):  # noqa
         for error in body['errors']:
             if error.get('name') == key:
+                if value is not None:
+                    self.assertEqual(error.get('description'), value)
                 return
         self.fail(str(body) + " does not contain " + key)
 
