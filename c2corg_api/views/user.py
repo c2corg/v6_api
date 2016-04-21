@@ -334,7 +334,7 @@ class UpdateAccountSchema(colander.MappingSchema):
             colander.String(),
             missing=colander.drop,
             validator=colander.Length(min=3))
-    forumname = colander.SchemaNode(
+    forum_username = colander.SchemaNode(
             colander.String(),
             missing=colander.drop,
             validator=colander.All(
@@ -370,7 +370,7 @@ class UserAccountRest(object):
         return {
             'email': user.email,
             'toponame': user.name,
-            'forumname': user.forum_username,
+            'forum_username': user.forum_username,
             'id': user.id
             }
 
@@ -411,9 +411,9 @@ class UserAccountRest(object):
             user.name = validated['toponame']
             result['toponame'] = user.name
 
-        if 'forumname' in validated:
-            user.forum_username = validated['forumname']
-            result['forumname'] = user.forum_username
+        if 'forum_username' in validated:
+            user.forum_username = validated['forum_username']
+            result['forum_username'] = user.forum_username
 
         # Synchronize everything except the new email (still stored
         # in the email_to_validate attribute while validation is pending).
