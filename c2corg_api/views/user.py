@@ -330,7 +330,7 @@ class UpdateAccountSchema(colander.MappingSchema):
                     'Already used email'
                 )
             ))
-    toponame = colander.SchemaNode(
+    name = colander.SchemaNode(
             colander.String(),
             missing=colander.drop,
             validator=colander.Length(min=3))
@@ -369,7 +369,7 @@ class UserAccountRest(object):
         user = self.get_user()
         return {
             'email': user.email,
-            'toponame': user.name,
+            'name': user.name,
             'forum_username': user.forum_username,
             'id': user.id
             }
@@ -407,9 +407,9 @@ class UserAccountRest(object):
             result['email'] = validated['email']
             result['sent_email'] = True
 
-        if 'toponame' in validated:
-            user.name = validated['toponame']
-            result['toponame'] = user.name
+        if 'name' in validated:
+            user.name = validated['name']
+            result['name'] = user.name
 
         if 'forum_username' in validated:
             user.forum_username = validated['forum_username']

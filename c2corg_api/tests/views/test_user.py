@@ -371,7 +371,7 @@ class TestUserRest(BaseTestRest):
         # Read account info
         url = '/users/account'
         body = self.get_json_with_contributor(url, status=200)
-        self.assertBodyEqual(body, 'toponame', 'Contributor')
+        self.assertBodyEqual(body, 'name', 'Contributor')
 
         # Change email
         email_count = self.get_email_box_length()
