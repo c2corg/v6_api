@@ -799,17 +799,17 @@ class TestOutingRest(BaseDocumentTestRest):
 
         self.outing2 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
-            date_end=datetime.date(2016, 1, 1)
+            date_end=datetime.date(2016, 2, 1)
         )
         self.session.add(self.outing2)
         self.outing3 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
-            date_end=datetime.date(2016, 1, 1)
+            date_end=datetime.date(2016, 2, 2)
         )
         self.session.add(self.outing3)
         self.outing4 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
-            date_end=datetime.date(2016, 1, 1)
+            date_end=datetime.date(2016, 2, 3)
         )
         self.outing4.locales.append(OutingLocale(
             lang='en', title='Mont Granier (en)', description='...'))

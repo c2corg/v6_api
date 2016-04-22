@@ -1,3 +1,4 @@
+from c2corg_api.models.outing import Outing
 from functools import partial
 
 from c2corg_api.models import DBSession
@@ -78,9 +79,12 @@ class DocumentRest(object):
             base_total_query = custom_filter(base_total_query)
 
         base_query = add_load_for_locales(base_query, clazz, clazz_locale)
-        base_query = base_query. \
-            options(joinedload(getattr(clazz, 'geometry'))). \
-            order_by(clazz.document_id.desc())
+        base_query = base_query.options(joinedload(getattr(clazz, 'geometry')))
+
+        if clazz == Outing:
+            base_query = base_query.order_by(clazz.date_end.desc())
+        else:
+            base_query = base_query.order_by(clazz.document_id.desc())
         base_query = add_load_for_profiles(base_query, clazz)
 
         if include_areas:
