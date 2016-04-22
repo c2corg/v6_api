@@ -69,6 +69,14 @@ run-syncer: install development.ini
 run-syncer-prod: install production.ini
 	.build/venv/bin/python c2corg_api/scripts/es/syncer.py production.ini
 
+.PHONY: run-background-jobs
+run-background-jobs: install development.ini
+	.build/venv/bin/python c2corg_api/scripts/jobs/scheduler.py development.ini
+
+.PHONY: run-background-jobs-prod
+run-background-jobs-prod: install production.ini
+	.build/venv/bin/python c2corg_api/scripts/jobs/scheduler.py production.ini
+
 .PHONY: upgrade
 upgrade: .build/venv/bin/pip
 	.build/venv/bin/pip install --upgrade -r requirements.txt

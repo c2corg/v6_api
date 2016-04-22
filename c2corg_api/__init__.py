@@ -9,7 +9,6 @@ from c2corg_api.models import (
     Base,
     )
 from c2corg_api.search import configure_es_from_config, get_queue_config
-from c2corg_api.jobs import configure_scheduler_from_config
 
 from pyramid.security import Allow, Everyone, Authenticated
 
@@ -70,9 +69,6 @@ def main(global_config, **settings):
 
     # Configure ElasticSearch
     configure_es_from_config(settings)
-
-    # Configure Scheduler
-    configure_scheduler_from_config(settings)
 
     config = Configurator(settings=settings)
     config.include('cornice')
