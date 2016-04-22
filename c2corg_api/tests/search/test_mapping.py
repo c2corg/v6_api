@@ -1,9 +1,17 @@
+from c2corg_api.models.area import Area
+from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.route import Route
+from c2corg_api.models.topo_map import TopoMap
+from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.search.mapping_types import QueryableMixin
+from c2corg_api.search.mappings.area_mapping import SearchArea
+from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
+from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
+from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.tests import BaseTestCase
 
@@ -40,6 +48,18 @@ class MappingTest(BaseTestCase):
         self.assertTrue(queryable_fields['d']._date_range)
         self.assertIn('ac', queryable_fields)
         self.assertIsNotNone(queryable_fields['ac']._enum)
+
+    def test_area_mapping(self):
+        self._test_mapping(SearchArea, Area)
+
+    def test_image_mapping(self):
+        self._test_mapping(SearchImage, Image)
+
+    def test_map_mapping(self):
+        self._test_mapping(SearchTopoMap, TopoMap)
+
+    def test_userprofile_mapping(self):
+        self._test_mapping(SearchUser, UserProfile)
 
     def _test_mapping(self, search_model, model):
         """Test that the fields in a search model (e.g. SearchWaypoint) match

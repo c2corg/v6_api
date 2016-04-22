@@ -1,5 +1,6 @@
 import json
 
+from c2corg_api.tests.search import reset_search_index
 from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, Point
 
@@ -42,6 +43,13 @@ class TestImageRest(BaseDocumentTestRest):
 
     def test_get_collection_lang(self):
         self.get_collection_lang()
+
+    def test_get_collection_search(self):
+        reset_search_index(self.session)
+
+        self.assertResultsEqual(
+            self.get_collection_search({'l': 'en'}),
+            [self.image4.document_id, self.image.document_id], 2)
 
     def test_get(self):
         body = self.get(self.image)
