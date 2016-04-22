@@ -391,6 +391,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'quality': quality_types[1],
                 'waypoint_type': 'summit',
                 'elevation': 1234,
+                'orientations': None,
                 'locales': [
                     {'lang': 'en', 'title': 'Mont Granier!',
                      'description': 'A.', 'access': 'n',
@@ -463,7 +464,8 @@ class TestWaypointRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Granier',
                      'description': 'A.', 'access': 'n',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'geometry': None
             }
         }
         (body, waypoint) = self.put_success_all(body_put, self.waypoint)
@@ -546,6 +548,35 @@ class TestWaypointRest(BaseDocumentTestRest):
         (body, waypoint) = self.put_success_figures_only(body, self.waypoint)
 
         self.assertEquals(waypoint.elevation, 1234)
+
+    def test_put_boolean_default_values(self):
+        """Test-case for https://github.com/c2corg/v6_api/issues/229
+        """
+        self.assertIsNone(self.waypoint.blanket_unstaffed)
+        self.assertIsNone(self.waypoint.matress_unstaffed)
+        self.assertIsNone(self.waypoint.gas_unstaffed)
+        self.assertIsNone(self.waypoint.heating_unstaffed)
+
+        body = {
+            'message': 'Changing figures',
+            'document': {
+                'document_id': self.waypoint.document_id,
+                'version': self.waypoint.version,
+                'quality': quality_types[1],
+                'waypoint_type': 'summit',
+                'elevation': 1234,
+                'blanket_unstaffed': True,
+                'matress_unstaffed': False,
+                'gas_unstaffed': None,
+                'locales': []
+            }
+        }
+        (_, waypoint) = self.put_success_figures_only(body, self.waypoint)
+
+        self.assertEquals(waypoint.blanket_unstaffed, True)
+        self.assertEquals(waypoint.matress_unstaffed, False)
+        self.assertIsNone(waypoint.gas_unstaffed)
+        self.assertIsNone(waypoint.heating_unstaffed)
 
     def test_put_success_lang_only(self):
         """Test updating a document with only changes to a locale.
