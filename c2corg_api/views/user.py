@@ -254,11 +254,6 @@ class UserNonceValidationRest(object):
     def __init__(self, request):
         self.request = request
 
-    def complete_registration(self, user):
-        settings = self.request.registry.settings
-        client = get_discourse_client(settings)
-        return client.sync_sso(user)
-
     @json_view(validators=[partial(
         validate_user_from_nonce, Purpose.registration)])
     def post(self):
@@ -266,6 +261,9 @@ class UserNonceValidationRest(object):
         user = request.validated['user']
         user.clear_validation_nonce()
         user.email_validated = True
+
+        # Synchronizing to Discourse is unnecessary as it will be done
+        # during the redirect_without_nonce call below.
 
         # The user was validated by the nonce so we can log in
         token = log_validated_user_i_know_what_i_do(user, request)

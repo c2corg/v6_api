@@ -82,7 +82,8 @@ class User(Base):
         nullable=False, unique=True
         )
     email = Column(String(200), nullable=False, unique=True)
-    email_validated = Column(Boolean, nullable=False, default=False)
+    email_validated = Column(
+        Boolean, nullable=False, default=False, index=True)
     email_to_validate = Column(String(200), nullable=True)
     moderator = Column(Boolean, nullable=False, default=False)
     validation_nonce = Column(String(200), nullable=True, unique=True)

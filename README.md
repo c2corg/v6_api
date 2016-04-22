@@ -29,11 +29,16 @@ To set up ElasticSearch
 Run the application
 -------------------
 
-The API consists of two applications, the actual web-application and a syncer script
-that synchronizes the database with ElasticSearch. The two have to be started
-separately.
+The API consists of three applications, the actual web-application, a syncer script
+that synchronizes the database with ElasticSearch and a background jobs script that
+purges the database of non activated accounts and expired tokens. The three have to
+be started separately.
 
-To start the syncer script:
+To start the background jobs script (run-background-jobs-prod for production):
+
+    make -f config/$USER run-background-jobs
+
+To start the syncer script (run-syncher-prod for production):
 
     make -f config/$USER run-syncer
 

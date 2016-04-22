@@ -62,6 +62,11 @@ level = DEBUG
 handlers =
 qualname = c2corg_api_syncer
 
+[logger_c2corg_api_background_jobs]
+level = DEBUG
+handlers =
+qualname = c2corg_api_background_jobs
+
 [logger_sqlalchemy]
 level = INFO
 handlers =
