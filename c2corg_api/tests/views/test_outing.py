@@ -86,9 +86,10 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
-        body = self.get_collection_search({'ac': 'skitouring'})
-        self.assertEqual(body.get('total'), 4)
-        self.assertEqual(len(body.get('documents')), 4)
+        self.assertResultsEqual(
+            self.get_collection_search({'ac': 'skitouring'}),
+            [self.outing4.document_id, self.outing3.document_id,
+             self.outing2.document_id, self.outing.document_id], 4)
 
         body = self.get_collection_search({'wt': 'skitouring', 'limit': 2})
         self.assertEqual(body.get('total'), 4)

@@ -1,5 +1,6 @@
 import math
 import re
+from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.search.mapping_types import reserved_query_fields
 from functools import partial
 
@@ -32,7 +33,14 @@ def build_query(url_params, meta_params, doc_type):
         extra(from_=offset, size=limit)
 
     # TODO add bbox filter
-    # TODO add order by
+
+    if not search_term:
+        # if a search term is given, the documents are sorted by a relevance
+        # score. if not explicitly sort by id/date.
+        if doc_type == OUTING_TYPE:
+            search = search.sort({'date_end': {'order': 'desc'}})
+        else:
+            search = search.sort({'id': {'order': 'desc'}})
 
     return search
 

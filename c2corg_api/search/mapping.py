@@ -98,7 +98,8 @@ class SearchDocument(DocType):
         search_document = {
             '_index': index,
             '_id': document.document_id,
-            '_type': document.type
+            '_type': document.type,
+            'id': document.document_id
         }
 
         if document.redirects_to:

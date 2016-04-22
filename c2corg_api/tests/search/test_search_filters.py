@@ -44,6 +44,22 @@ class AdvancedSearchTest(BaseTestCase):
             extra(from_=40, size=20)
         self.assertQueryEqual(query, expected_query)
 
+    def test_build_query_sort_outing(self):
+        params = {
+            'ac': 'skitouring'
+        }
+        meta_params = {
+            'limit': 20,
+            'offset': 40
+        }
+        query = build_query(params, meta_params, 'o')
+        expected_query = create_search('o'). \
+            filter(Term(activities='skitouring')).\
+            fields([]).\
+            sort({'date_end': {'order': 'desc'}}).\
+            extra(from_=40, size=20)
+        self.assertQueryEqual(query, expected_query)
+
     def assertQueryEqual(self, query1, query2):  # noqa
         q1 = query1.to_dict()
         q2 = query2.to_dict()
@@ -51,11 +67,13 @@ class AdvancedSearchTest(BaseTestCase):
         self.assertEqual(q1['fields'], q2['fields'])
         self.assertEqual(q1['from'], q2['from'])
         self.assertEqual(q1['size'], q2['size'])
+        self.assertEqual(q1.get('sort'), q2.get('sort'))
 
         if 'bool' in q1['query'] or 'bool' in q2['query']:
             bool1 = q1['query']['bool']
             bool2 = q2['query']['bool']
-            self.assertEqual(bool1['must'], bool2['must'])
+            if 'must' in bool1 or 'must' in bool2:
+                self.assertEqual(bool1['must'], bool2['must'])
             filters1 = set(str(f) for f in bool1['filter'])
             filters2 = set(str(f) for f in bool2['filter'])
             self.assertEqual(filters1, filters2)
