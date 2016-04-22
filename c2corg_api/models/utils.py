@@ -38,8 +38,11 @@ class ArrayOfEnum(postgresql.ARRAY):
             dialect, coltype)
 
         def handle_raw_string(value):
-            inner = re.match(r"^{(.*)}$", value).group(1)
-            return inner.split(",")
+            if value == '{}':
+                return []
+            else:
+                inner = re.match(r"^{(.*)}$", value).group(1)
+                return inner.split(",")
 
         def process(value):
             if value is None:
