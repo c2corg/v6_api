@@ -46,7 +46,7 @@ class AdvancedSearchTest(BaseTestCase):
 
     def test_build_query_sort_outing(self):
         params = {
-            'ac': 'skitouring'
+            'oac': 'skitouring'
         }
         meta_params = {
             'limit': 20,
@@ -208,31 +208,31 @@ class AdvancedSearchTest(BaseTestCase):
 
     def test_create_filter_date_range(self):
         self.assertEqual(
-            create_filter('d', '', SearchOuting),
+            create_filter('od', '', SearchOuting),
             None)
         self.assertEqual(
-            create_filter('d', 'invalid date', SearchOuting),
+            create_filter('od', 'invalid date', SearchOuting),
             None)
         self.assertEqual(
-            create_filter('d', '2016-01-01', SearchOuting),
+            create_filter('od', '2016-01-01', SearchOuting),
             Bool(must=[
                 Range(date_start={'lte': '2016-01-01'}),
                 Range(date_end={'gte': '2016-01-01'})
             ]))
         self.assertEqual(
-            create_filter('d', '2016-01-01,invalid date', SearchOuting),
+            create_filter('od', '2016-01-01,invalid date', SearchOuting),
             Bool(must=[
                 Range(date_start={'lte': '2016-01-01'}),
                 Range(date_end={'gte': '2016-01-01'})
             ]))
         self.assertEqual(
-            create_filter('d', '2016-01-01,2016-01-01', SearchOuting),
+            create_filter('od', '2016-01-01,2016-01-01', SearchOuting),
             Bool(must=[
                 Range(date_start={'lte': '2016-01-01'}),
                 Range(date_end={'gte': '2016-01-01'})
             ]))
         self.assertEqual(
-            create_filter('d', '2016-01-01,2016-01-03', SearchOuting),
+            create_filter('od', '2016-01-01,2016-01-03', SearchOuting),
             Bool(must_not=Bool(should=[
                 Range(date_start={'gt': '2016-01-03'}),
                 Range(date_end={'lt': '2016-01-01'})

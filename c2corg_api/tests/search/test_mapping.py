@@ -35,19 +35,19 @@ class MappingTest(BaseTestCase):
         self._test_mapping(SearchRoute, Route)
 
         queryable_fields = SearchRoute.queryable_fields
-        self.assertIn('emi', queryable_fields)
-        self.assertTrue(queryable_fields['emi']._range)
-        self.assertIn('ac', queryable_fields)
-        self.assertIsNotNone(queryable_fields['ac']._enum)
+        self.assertIn('remi', queryable_fields)
+        self.assertTrue(queryable_fields['remi']._range)
+        self.assertIn('rac', queryable_fields)
+        self.assertIsNotNone(queryable_fields['rac']._enum)
 
     def test_outing_mapping(self):
         self._test_mapping(SearchOuting, Outing)
 
         queryable_fields = SearchOuting.queryable_fields
-        self.assertIn('d', queryable_fields)
-        self.assertTrue(queryable_fields['d']._date_range)
-        self.assertIn('ac', queryable_fields)
-        self.assertIsNotNone(queryable_fields['ac']._enum)
+        self.assertIn('od', queryable_fields)
+        self.assertTrue(queryable_fields['od']._date_range)
+        self.assertIn('oac', queryable_fields)
+        self.assertIsNotNone(queryable_fields['oac']._enum)
 
     def test_area_mapping(self):
         self._test_mapping(SearchArea, Area)
