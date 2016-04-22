@@ -199,6 +199,12 @@ class BaseTestCase(unittest.TestCase):
         self.connection.close()
 
     def app_post_json(self, *args, **kwargs):
+        return self.app_send_json('post', *args, **kwargs)
+
+    def app_put_json(self, *args, **kwargs):
+        return self.app_send_json('put', *args, **kwargs)
+
+    def app_send_json(self, action, *args, **kwargs):
         kwargs = dict(kwargs)
         status = 200
         if 'status' in kwargs:
@@ -206,7 +212,7 @@ class BaseTestCase(unittest.TestCase):
             del kwargs['status']
         kwargs['expect_errors'] = True
 
-        res = self.app.post_json(*args, **kwargs)
+        res = getattr(self.app, action + '_json')(*args, **kwargs)
         if status != '*' and res.status_code != status:
             errors = res.body if res.status_code == 400 else ''
             self.fail('Bad response: %s (not %d) : %s' % (

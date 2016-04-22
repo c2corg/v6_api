@@ -218,7 +218,7 @@ class TestImageRest(BaseDocumentTestRest):
             }
         }
         headers = self.add_authorization_header(username='contributor2')
-        self.app.put_json(
+        self.app_put_json(
             self._prefix + '/' + str(self.image4.document_id), body,
             headers=headers, status=403)
 
@@ -243,7 +243,7 @@ class TestImageRest(BaseDocumentTestRest):
             }
         }
         headers = self.add_authorization_header(username='contributor')
-        self.app.put_json(
+        self.app_put_json(
             self._prefix + '/' + str(self.image4.document_id), body,
             headers=headers, status=200)
 
@@ -378,7 +378,7 @@ class TestImageRest(BaseDocumentTestRest):
             }
         }
         headers = self.add_authorization_header(username='contributor')
-        self.app.put_json(
+        self.app_put_json(
             self._prefix + '/' + str(self.image.document_id), body,
             headers=headers, status=400)
 
@@ -403,7 +403,7 @@ class TestImageRest(BaseDocumentTestRest):
             }
         }
         headers = self.add_authorization_header(username='moderator')
-        self.app.put_json(
+        self.app_put_json(
             self._prefix + '/' + str(self.image.document_id), body,
             headers=headers, status=200)
 
@@ -427,7 +427,7 @@ class TestImageRest(BaseDocumentTestRest):
             }
         }
         headers = self.add_authorization_header(username='contributor')
-        self.app.put_json(
+        self.app_put_json(
             self._prefix + '/' + str(self.image4.document_id), body,
             headers=headers, status=200)
 

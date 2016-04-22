@@ -656,12 +656,12 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'locales': []
             }
         }
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(waypoint.document_id), body_put,
             status=403)
 
         headers = self.add_authorization_header(username='contributor')
-        self.app.put_json(
+        self.app_put_json(
             self._prefix + '/' + str(waypoint.document_id), body_put,
             headers=headers, status=200)
 
@@ -731,7 +731,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         }
 
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(self.waypoint5.document_id), body_put,
             headers=headers, status=400)
 
@@ -757,7 +757,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         }
 
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.put_json(
+        response = self.app_put_json(
             self._prefix + '/' + str(self.waypoint4.document_id), body_put,
             headers=headers, status=403)
 
@@ -784,7 +784,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         }
 
         headers = self.add_authorization_header(username='moderator')
-        self.app.put_json(
+        self.app_put_json(
             self._prefix + '/' + str(self.waypoint4.document_id), body_put,
             headers=headers, status=200)
 
