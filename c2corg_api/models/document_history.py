@@ -20,7 +20,8 @@ class HistoryMetaData(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(
-        Integer, ForeignKey(users_schema + '.user.id'), nullable=False)
+        Integer, ForeignKey(users_schema + '.user.id'), nullable=False,
+        index=True)
     user = relationship(
         User, primaryjoin=user_id == User.id, viewonly=True)
     comment = Column(String(200))

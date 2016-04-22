@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+from nose.plugins.attrib import attr
+
+from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 
@@ -257,6 +260,61 @@ class TestUserRest(BaseTestRest):
         self.app_post_json(url_api_validation, {
             'password': 'new pass'
             }, status=200)
+
+    @attr('jobs')
+    def test_purge_accounts(self):
+        from c2corg_api.jobs.purge_non_activated_accounts import purge_account
+        from datetime import datetime
+        request_body = {
+            'username': 'test', 'forum_username': 'testf',
+            'name': 'Max Mustermann',
+            'password': 'super secret',
+            'email': 'some_user@camptocamp.org'
+        }
+
+        now = datetime.utcnow()
+        query = self.session.query(User).filter(User.username == 'test')
+
+        # First succeed in creating a new user
+        url = '/users/register'
+        self.app_post_json(url, request_body, status=200)
+
+        # Then simulate sheduled call to purge accounts
+        purge_account(self.session)
+
+        # The user should still exist
+        user = query.one()
+
+        # Expire nonce
+        user.validation_nonce_expire = now
+        self.session.commit()
+
+        # The user should be removed
+        purge_account(self.session)
+        self.assertEqual(0, query.count())
+
+    @attr('jobs')
+    def test_purge_tokens(self):
+        from c2corg_api.jobs.purge_expired_tokens import purge_token
+        from datetime import datetime
+        body = self.login('moderator', status=200).json
+        token_value = body['token']
+
+        query = self.session.query(Token).filter(Token.value == token_value)
+
+        now = datetime.utcnow()
+
+        # Token should still exist
+        purge_token(self.session)
+        self.assertEqual(1, query.count())
+
+        # Expire token
+        token = query.one()
+        token.expire = now
+
+        # The token should be removed
+        purge_token(self.session)
+        self.assertEqual(0, query.count())
 
     def login(self, username, password=None, status=200, sso=None, sig=None,
               discourse=None):
