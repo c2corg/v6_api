@@ -11,6 +11,7 @@ jwtauth.master_secret = The master key
 elasticsearch.host = {tests_elasticsearch_host}
 elasticsearch.port = {tests_elasticsearch_port}
 elasticsearch.index = {tests_elasticsearch_index}
+redis.url = memory:///
 discourse.url = {tests_discourse_url}
 discourse.api_key = {discourse_api_key}
 discourse.sso_secret = {discourse_sso_secret}

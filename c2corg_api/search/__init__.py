@@ -15,6 +15,10 @@ from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import Search
+from kombu.connection import Connection
+from kombu import Exchange, Queue, pools
+
+batch_size = 1000
 
 elasticsearch_config = {
     'client': None,
@@ -39,6 +43,19 @@ def configure_es_from_config(settings):
     elasticsearch_config['index'] = settings['elasticsearch.index']
     elasticsearch_config['host'] = settings['elasticsearch.host']
     elasticsearch_config['port'] = int(settings['elasticsearch.port'])
+
+
+def get_queue_config(settings):
+    # set the number of connections to Redis
+    pools.set_limit(20)
+
+    class QueueConfiguration(object):
+        def __init__(self, settings):
+            self.connection = Connection(settings['redis.url'])
+            self.exchange = Exchange(settings['redis.exchange'], type='direct')
+            self.queue = Queue(settings['redis.queue_es_sync'], self.exchange)
+
+    return QueueConfiguration(settings)
 
 
 def create_search(document_type):

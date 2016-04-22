@@ -8,7 +8,7 @@ from c2corg_api.models import (
     DBSession,
     Base,
     )
-from c2corg_api.search import configure_es_from_config
+from c2corg_api.search import configure_es_from_config, get_queue_config
 
 from pyramid.security import Allow, Everyone, Authenticated
 
@@ -71,8 +71,8 @@ def main(global_config, **settings):
     configure_es_from_config(settings)
 
     config = Configurator(settings=settings)
-
     config.include('cornice')
+    config.registry.queue_config = get_queue_config(settings)
 
     bypass_auth = False
     if 'noauthorization' in settings:

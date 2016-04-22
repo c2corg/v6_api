@@ -1,3 +1,4 @@
+from c2corg_api.models import es_sync
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
@@ -88,3 +89,7 @@ class FillIndexTest(BaseTestCase):
 
         # merged document is ignored
         self.assertIsNone(SearchWaypoint.get(id=71174, ignore=404))
+
+        # check that the sync. status was updated
+        last_update, _ = es_sync.get_status(self.session)
+        self.assertIsNotNone(last_update)

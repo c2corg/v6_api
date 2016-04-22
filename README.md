@@ -29,6 +29,16 @@ To set up ElasticSearch
 Run the application
 -------------------
 
+The API consists of two applications, the actual web-application and a syncer script
+that synchronizes the database with ElasticSearch. The two have to be started
+separately.
+
+To start the syncer script:
+
+    make -f config/$USER run-syncer
+
+To start the web-application:
+
     make -f config/$USER serve
 
 Open your browser at http://localhost:6543/ or http://localhost:6543/?debug (debug mode). Make sure you are

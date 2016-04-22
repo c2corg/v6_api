@@ -4,6 +4,7 @@ import urllib.parse
 import urllib.error
 
 from c2corg_api.models.route import Route
+from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.tests import BaseTestCase
 
@@ -59,6 +60,11 @@ class BaseTestRest(BaseTestCase):
         headers = self.add_authorization_header(username='contributor')
         r = self.app_post_json(url, body, headers=headers, status=status)
         return r.json
+
+    def sync_es(self):
+        queue = self.queue_config.queue(self.queue_config.connection)
+        self.assertIsNotNone(queue.get(), 'no sync. notification sent for ES')
+        sync_es(self.session)
 
 
 class BaseDocumentTestRest(BaseTestRest):
@@ -404,6 +410,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(archive_locale.lang, lang)
 
         # check updates to the search index
+        self.sync_es()
         search_doc = search_documents[self._doc_type].get(
             id=doc.document_id,
             index=elasticsearch_config['index'])
@@ -583,6 +590,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(archive_locale_fr.lang, 'fr')
 
         if check_es:
+            sync_es(self.session)
             # check updates to the search index
             search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
@@ -666,6 +674,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertIs(archive_document_en, archive_document_fr)
 
         # check updates to the search index
+        sync_es(self.session)
         search_doc = search_documents[self._doc_type].get(
             id=document.document_id,
             index=elasticsearch_config['index'])
@@ -761,6 +770,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         # check updates to the search index
         if check_es:
+            sync_es(self.session)
             search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
                 index=elasticsearch_config['index'])
@@ -855,6 +865,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         # check updates to the search index
         if check_es:
+            sync_es(self.session)
             search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
                 index=elasticsearch_config['index'])

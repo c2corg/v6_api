@@ -1,9 +1,8 @@
 import os
 import sys
 
-from c2corg_api.models.route import RouteLocale
-from c2corg_api.models.user import User
-from c2corg_api.models.user_profile import USERPROFILE_TYPE
+import transaction
+from c2corg_api.scripts.es import sync
 from pyramid.paster import (
     get_appsettings,
     setup_logging,
@@ -14,13 +13,13 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import engine_from_config
 
-from c2corg_api.models import DBSession
-from c2corg_api.models.document import DocumentLocale, Document
+from c2corg_api.models import es_sync, document_types
+from c2corg_api.models.document import Document
 from c2corg_api.scripts.es.es_batch import ElasticBatch
-from c2corg_api.search import configure_es_from_config, elasticsearch_config
-from c2corg_api.search.utils import strip_bbcodes, get_title
-
-batch_size = 1000
+from c2corg_api.search import configure_es_from_config, elasticsearch_config, \
+    batch_size, search_documents
+from sqlalchemy.orm.session import sessionmaker
+from zope.sqlalchemy.datamanager import ZopeTransactionExtension
 
 
 def usage(argv):
@@ -38,12 +37,15 @@ def main(argv=sys.argv):
     setup_logging(config_uri)
     settings = get_appsettings(config_uri, options=options)
     engine = engine_from_config(settings, 'sqlalchemy.')
-    DBSession.configure(bind=engine)
+    Session = sessionmaker(extension=ZopeTransactionExtension())  # noqa
+    session = Session(bind=engine)
     configure_es_from_config(settings)
-    fill_index(DBSession)
+
+    with transaction.manager:
+        fill_index(session)
 
 
-def fill_index(db_session):
+def fill_index(session):
     client = elasticsearch_config['client']
     index_name = elasticsearch_config['index']
 
@@ -52,23 +54,10 @@ def fill_index(db_session):
         'last_progress_update': None
     }
 
-    total = DBSession.query(DocumentLocale). \
-        join(Document).filter(Document.redirects_to.is_(None)).count()
+    _, date_now = es_sync.get_status(session)
 
-    q = DBSession.query(
-            DocumentLocale.document_id, DocumentLocale.title,
-            DocumentLocale.summary, DocumentLocale.description,
-            DocumentLocale.lang, Document.type,
-            RouteLocale.__table__.c.title_prefix,
-            User.name, User.username). \
-        join(Document).filter(Document.redirects_to.is_(None)). \
-        outerjoin(
-            RouteLocale.__table__,
-            DocumentLocale.id == RouteLocale.__table__.c.id).\
-        outerjoin(
-            User,
-            DocumentLocale.document_id == User.id).\
-        order_by(DocumentLocale.document_id, DocumentLocale.lang)
+    total = session.query(Document). \
+        filter(Document.redirects_to.is_(None)).count()
 
     def progress(count, total_count):
         if status['last_progress_update'] is None or \
@@ -77,43 +66,20 @@ def fill_index(db_session):
             print('{0} of {1}'.format(count, total_count))
             status['last_progress_update'] = datetime.now()
 
-    search_document = None
-    last_id = None
     batch = ElasticBatch(client, batch_size)
     count = 0
     with batch:
-        for document_id, title, summary, description, lang, type, \
-                title_prefix, user_login, user_name in q:
-            if search_document is not None and document_id != last_id:
-                batch.add(search_document)
-                search_document = None
+        for doc_type in document_types:
+            print('Importing document type {}'.format(doc_type))
+            to_search_document = search_documents[doc_type].to_search_document
 
-            if search_document is None:
-                search_document = {
-                    '_op_type': 'index',
-                    '_index': index_name,
-                    '_type': type,
-                    '_id': document_id,
-                    'doc_type': type
-                }
+            for doc in sync.get_documents(session, doc_type):
+                batch.add(to_search_document(doc, index_name))
 
-            if type == USERPROFILE_TYPE:
-                # set user login + full-name as document title so that it can
-                # be searched
-                title = '{0} {1}'.format(user_name or '', user_login or '')
+                count += 1
+                progress(count, total)
 
-            search_document['title_' + lang] = get_title(
-                title, title_prefix)
-            search_document['summary_' + lang] = strip_bbcodes(summary)
-            search_document['description_' + lang] = \
-                strip_bbcodes(description)
-
-            last_id = document_id
-            count += 1
-            progress(count, total)
-
-        if search_document is not None:
-            batch.add(search_document)
+    es_sync.mark_as_updated(session, date_now)
 
     duration = datetime.now() - status['start_time']
     print('Done (duration: {0})'.format(duration))

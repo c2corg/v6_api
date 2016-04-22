@@ -1,3 +1,4 @@
+from c2corg_api.search.utils import strip_bbcodes
 from elasticsearch_dsl import DocType, String, Integer, MetaField
 
 
@@ -83,6 +84,30 @@ class SearchDocument(DocType):
         analyzer='index_basque', search_analyzer='search_basque')
     description_eu = String(
         analyzer='index_basque', search_analyzer='search_basque')
+
+    @staticmethod
+    def to_search_document(document, index):
+        search_document = {
+            '_index': index,
+            '_id': document.document_id,
+            '_type': document.type
+        }
+
+        if document.redirects_to:
+            # remove merged documents from the index
+            search_document['_op_type'] = 'delete'
+        else:
+            search_document['_op_type'] = 'index'
+            search_document['doc_type'] = document.type
+
+            for locale in document.locales:
+                search_document['title_' + locale.lang] = locale.title
+                search_document['summary_' + locale.lang] = \
+                    strip_bbcodes(locale.summary)
+                search_document['description_' + locale.lang] = \
+                    strip_bbcodes(locale.description)
+
+        return search_document
 
 """To support partial-matching required for the autocomplete search, we
 have to set up a n-gram filter for each language analyzer. See also:
