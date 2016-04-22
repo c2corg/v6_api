@@ -7,10 +7,10 @@ python:
 addons:
   postgresql: "9.4"
 
-services:
-- elasticsearch
-
 install:
+- mkdir /tmp/elasticsearch
+- wget -O - https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.1.2/elasticsearch-2.1.2.tar.gz | tar xz --directory=/tmp/elasticsearch --strip-components=1
+- /tmp/elasticsearch/bin/elasticsearch --daemonize --path.data /tmp
 - make -f config/travis .build/dev-requirements.timestamp
 - make -f config/travis install
 
