@@ -40,3 +40,8 @@ Make sure that the index exists:
 Then start the import:
 
     .build/venv/bin/fill_es_index development.ini
+
+For productive instances rather use
+
+    .build/venv/bin/initialize_c2corg_api_es production.ini
+    .build/venv/bin/fill_es_index production.ini
