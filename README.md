@@ -1,6 +1,22 @@
 API Application for camptocamp.org v6
 =====================================
 
+Requirements
+------------
+
+ * Python 3.4
+ * PostgreSQL 9.4 / PostGIS 2.1
+ * virtualenv (1.7 or higher)
+ * ElasticSearch 2.3.2
+ * Redis 2.8
+ * GEOS (3.4 or higher)
+
+On Debian/Ubuntu systems the required components may be installed using
+
+    sudo apt-get install virtualenv python3-dev postgresql-9.4 postgresql-9.4-postgis-2.1 postgresql-contrib-9.4 libpq-dev libgeos-dev redis-server libffi6 libffi-dev
+
+The Debian package for ElasticSearch can be downloaded from https://www.elastic.co/downloads/past-releases/elasticsearch-2-3-2
+
 Checkout
 --------
 
