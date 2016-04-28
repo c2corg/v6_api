@@ -95,13 +95,14 @@ class OutingRest(DocumentRest):
             custom_filter = self.filter_on_route(self.request.validated['r'])
 
         return self._collection_get(
-            Outing, schema_outing, listing_schema_adaptor,
+            Outing, schema_outing,
+            adapt_schema=listing_schema_adaptor,
             custom_filter=custom_filter, set_custom_fields=set_author)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
         return self._get(
-            Outing, schema_outing, schema_adaptor,
+            Outing, schema_outing, adapt_schema=schema_adaptor,
             set_custom_associations=OutingRest.set_users)
 
     @restricted_json_view(schema=schema_create_outing,

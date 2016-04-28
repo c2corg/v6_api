@@ -50,12 +50,14 @@ class RouteRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
         return self._collection_get(
-            Route, schema_route, listing_schema_adaptor)
+            Route, schema_route, RouteLocale,
+            adapt_schema=listing_schema_adaptor)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
         return self._get(
-            Route, schema_route, schema_adaptor, include_maps=True,
+            Route, schema_route, clazz_locale=RouteLocale,
+            adapt_schema=schema_adaptor, include_maps=True,
             set_custom_associations=RouteRest.set_recent_outings)
 
     @restricted_json_view(schema=schema_route,
