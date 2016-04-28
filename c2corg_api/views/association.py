@@ -67,7 +67,14 @@ class AssociationRest(object):
 
         association = self._load(association_in)
         if association is None:
-            raise HTTPBadRequest('association does not exist')
+            # also accept {parent_document_id: y, child_document_id: x} when
+            # for an association {parent_document_id: x, child_document_id: x}
+            association_in = Association(
+                parent_document_id=association_in.child_document_id,
+                child_document_id=association_in.parent_document_id)
+            association = self._load(association_in)
+            if association is None:
+                raise HTTPBadRequest('association does not exist')
 
         log = association.get_log(
             self.request.authenticated_userid, is_creation=False)

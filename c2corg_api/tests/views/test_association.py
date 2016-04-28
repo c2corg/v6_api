@@ -153,6 +153,34 @@ class TestAssociationRest(BaseTestRest):
         self.assertEqual(logs[0].is_creation, True)
         self.assertEqual(logs[1].is_creation, False)
 
+    def test_delete_association_fuzzy(self):
+        """Test that an association {parent: x, child: y} can be
+        deleted with {parent: y, child: x}.
+        """
+        request_body = {
+            'parent_document_id': self.waypoint1.document_id,
+            'child_document_id': self.waypoint2.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor')
+
+        # add association
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=200)
+
+        # then delete it again, but by switching parent/child id
+        request_body = {
+            'parent_document_id': self.waypoint2.document_id,
+            'child_document_id': self.waypoint1.document_id,
+        }
+        self.app.delete_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=200)
+
+        association = self.session.query(Association).get(
+            (self.waypoint1.document_id, self.waypoint2.document_id))
+        self.assertIsNone(association)
+
     def _add_test_data(self):
         self.waypoint1 = Waypoint(
             waypoint_type='summit', elevation=2203)
