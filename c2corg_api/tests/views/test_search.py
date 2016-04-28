@@ -68,6 +68,7 @@ class TestSearchRest(BaseTestRest):
         self.assertTrue(waypoints['total'] > 0)
         locales = waypoints['documents'][0]['locales']
         self.assertEqual(len(locales), 2)
+        self.assertIn('type', waypoints['documents'][0])
 
         routes = body['routes']
         self.assertEqual(0, routes['total'])

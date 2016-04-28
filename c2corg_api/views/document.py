@@ -71,7 +71,8 @@ class DocumentRest(object):
                 options(
                     joinedload(getattr(clazz, '_areas')).
                     load_only(
-                        'document_id', 'area_type', 'version', 'protected').
+                        'document_id', 'area_type', 'version', 'protected',
+                        'type').
                     joinedload('locales').
                     load_only(
                         'lang', 'title',

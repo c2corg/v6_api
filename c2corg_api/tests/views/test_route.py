@@ -91,6 +91,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(
             self.outing1.document_id,
             recent_outings['outings'][0].get('document_id'))
+        self.assertIn('type', recent_outings['outings'][0])
 
         self.assertIn('maps', body)
         topo_map = body.get('maps')[0]
