@@ -53,7 +53,8 @@ class DocumentRest(object):
             'lang': validated.get('lang')
         }
 
-        if advanced_search.contains_search_params(self.request.GET):
+        if not custom_filter and \
+                advanced_search.contains_search_params(self.request.GET):
             # search with ElasticSearch
             load_documents = advanced_search.get_load_documents(
                 self.request.GET, meta_params, doc_type, clazz)

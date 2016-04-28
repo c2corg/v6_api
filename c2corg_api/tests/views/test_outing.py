@@ -1,6 +1,5 @@
 import datetime
 import json
-import unittest
 
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document_history import DocumentVersion
@@ -43,8 +42,6 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(author['user_id'], self.global_userids['contributor'])
         self._add_test_data()
 
-    # TODO check how these two requests are used (as part of advanced search?)
-    @unittest.skip
     def test_get_collection_for_route(self):
         response = self.app.get(
             self._prefix + '?r=' + str(self.route.document_id), status=200)
@@ -54,7 +51,6 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(documents[0]['document_id'], self.outing.document_id)
         self.assertEqual(response.json['total'], 1)
 
-    @unittest.skip
     def test_get_collection_for_waypoint(self):
         response = self.app.get(
             self._prefix + '?wp=' + str(self.waypoint.document_id), status=200)

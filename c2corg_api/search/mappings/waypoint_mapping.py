@@ -19,7 +19,7 @@ class SearchWaypoint(SearchDocument):
     best_periods = QEnumArray(
         'wbp', model_field=Waypoint.best_periods)
     has_phone = QBoolean(
-        'wp', is_bool=True)
+        'wph', is_bool=True)
     lift_access = QBoolean(
         'wla', is_bool=True)
     custodianship = QEnum(

@@ -165,28 +165,28 @@ class AdvancedSearchTest(BaseTestCase):
 
     def test_create_filter_bool(self):
         self.assertEqual(
-            create_filter('wp', '', SearchWaypoint),
+            create_filter('wph', '', SearchWaypoint),
             None)
         self.assertEqual(
-            create_filter('wp', 'invalid value', SearchWaypoint),
+            create_filter('wph', 'invalid value', SearchWaypoint),
             None)
         self.assertEqual(
-            create_filter('wp', 'true', SearchWaypoint),
+            create_filter('wph', 'true', SearchWaypoint),
             Term(has_phone=True))
         self.assertEqual(
-            create_filter('wp', 'True', SearchWaypoint),
+            create_filter('wph', 'True', SearchWaypoint),
             Term(has_phone=True))
         self.assertEqual(
-            create_filter('wp', '1', SearchWaypoint),
+            create_filter('wph', '1', SearchWaypoint),
             Term(has_phone=True))
         self.assertEqual(
-            create_filter('wp', 'false', SearchWaypoint),
+            create_filter('wph', 'false', SearchWaypoint),
             Term(has_phone=False))
         self.assertEqual(
-            create_filter('wp', 'False', SearchWaypoint),
+            create_filter('wph', 'False', SearchWaypoint),
             Term(has_phone=False))
         self.assertEqual(
-            create_filter('wp', '0', SearchWaypoint),
+            create_filter('wph', '0', SearchWaypoint),
             Term(has_phone=False))
 
     def test_create_filter_area_ids(self):
