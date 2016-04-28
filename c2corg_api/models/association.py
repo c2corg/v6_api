@@ -122,7 +122,7 @@ def get_associations(document, lang):
             options(load_only(
                 Route.document_id, Route.activities, Route.elevation_min,
                 Route.elevation_max, Route.version, Route.protected)). \
-            options(joinedload(Waypoint.locales).load_only(
+            options(joinedload(Route.locales.of_type(RouteLocale)).load_only(
                 RouteLocale.lang, RouteLocale.title, RouteLocale.title_prefix,
                 RouteLocale.version))
 

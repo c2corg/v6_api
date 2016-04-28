@@ -82,10 +82,12 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(1, len(linked_waypoints))
         self.assertEqual(
             self.waypoint4.document_id, linked_waypoints[0].get('document_id'))
+        self.assertIn('type', linked_waypoints[0])
 
         linked_routes = associations.get('routes')
         self.assertEqual(1, len(linked_routes))
         linked_route = linked_routes[0]
+        self.assertIn('type', linked_route)
         self.assertEqual(
             self.route1.document_id, linked_route.get('document_id'))
         self.assertEqual(
@@ -94,11 +96,13 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertIn('maps', body)
         self.assertEqual(1, len(body.get('maps')))
         topo_map = body.get('maps')[0]
+        self.assertIn('type', topo_map)
         self.assertEqual(topo_map.get('code'), '3232ET')
         self.assertEqual(topo_map.get('locales')[0].get('title'), 'Belley')
 
         self.assertIn('areas', body)
         area = body.get('areas')[0]
+        self.assertIn('type', area)
         self.assertEqual(area.get('area_type'), 'range')
         self.assertEqual(area.get('locales')[0].get('title'), 'France')
 
@@ -108,6 +112,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(
             self.outing1.document_id,
             recent_outings['outings'][0].get('document_id'))
+        self.assertIn('type', recent_outings['outings'][0])
 
     def test_get_with_empty_arrays(self):
         """Test-case for https://github.com/c2corg/v6_api/issues/231

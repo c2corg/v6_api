@@ -39,16 +39,16 @@ class DocumentRest(object):
     def __init__(self, request):
         self.request = request
 
-    def _collection_get(self, clazz, schema, adapt_schema=None,
-                        custom_filter=None, include_areas=True,
-                        set_custom_fields=None):
+    def _collection_get(self, clazz, schema, clazz_locale=None,
+                        adapt_schema=None, custom_filter=None,
+                        include_areas=True, set_custom_fields=None):
         return self._paginate(
-            clazz, schema, adapt_schema, custom_filter, include_areas,
-            set_custom_fields)
+            clazz, schema, clazz_locale, adapt_schema, custom_filter,
+            include_areas, set_custom_fields)
 
     def _paginate(
-            self, clazz, schema, adapt_schema, custom_filter, include_areas,
-            set_custom_fields):
+            self, clazz, schema, clazz_locale, adapt_schema, custom_filter,
+            include_areas, set_custom_fields):
         validated = self.request.validated
 
         base_query = DBSession.query(clazz).\
@@ -60,8 +60,8 @@ class DocumentRest(object):
             base_query = custom_filter(base_query)
             base_total_query = custom_filter(base_total_query)
 
+        base_query = add_load_for_locales(base_query, clazz, clazz_locale)
         base_query = base_query. \
-            options(joinedload(getattr(clazz, 'locales'))). \
             options(joinedload(getattr(clazz, 'geometry'))). \
             order_by(clazz.document_id.desc())
         base_query = add_load_for_profiles(base_query, clazz)
@@ -71,7 +71,8 @@ class DocumentRest(object):
                 options(
                     joinedload(getattr(clazz, '_areas')).
                     load_only(
-                        'document_id', 'area_type', 'version', 'protected').
+                        'document_id', 'area_type', 'version', 'protected',
+                        'type').
                     joinedload('locales').
                     load_only(
                         'lang', 'title',
@@ -138,18 +139,21 @@ class DocumentRest(object):
 
         return documents, total
 
-    def _get(self, clazz, schema, adapt_schema=None, include_maps=False,
-             include_areas=True, set_custom_associations=None):
+    def _get(self, clazz, schema, clazz_locale=None, adapt_schema=None,
+             include_maps=False, include_areas=True,
+             set_custom_associations=None):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')
         return self._get_in_lang(
-            id, lang, clazz, schema, adapt_schema, include_maps, include_areas,
-            set_custom_associations)
+            id, lang, clazz, schema, clazz_locale, adapt_schema, include_maps,
+            include_areas, set_custom_associations)
 
-    def _get_in_lang(self, id, lang, clazz, schema, adapt_schema=None,
+    def _get_in_lang(self, id, lang, clazz, schema,
+                     clazz_locale=None, adapt_schema=None,
                      include_maps=True, include_areas=True,
                      set_custom_associations=None):
-        document = self._get_document(clazz, id, lang)
+        document = self._get_document(
+            clazz, id, clazz_locale=clazz_locale, lang=lang)
 
         if document.redirects_to:
             return {
@@ -237,7 +241,9 @@ class DocumentRest(object):
 
         return {'document_id': document.document_id}
 
-    def _put(self, clazz, schema, before_update=None, after_update=None):
+    def _put(
+            self, clazz, schema, clazz_locale=None, before_update=None,
+            after_update=None):
         user_id = self.request.authenticated_userid
         id = self.request.validated['id']
         document_in = \
@@ -245,7 +251,7 @@ class DocumentRest(object):
         self._check_document_id(id, document_in.document_id)
 
         # get the current version of the document
-        document = self._get_document(clazz, id)
+        document = self._get_document(clazz, id, clazz_locale=clazz_locale)
 
         if document.redirects_to:
             raise HTTPBadRequest('can not update merged document')
@@ -291,7 +297,7 @@ class DocumentRest(object):
 
         return {}
 
-    def _get_document(self, clazz, id, lang=None):
+    def _get_document(self, clazz, id, clazz_locale=None, lang=None):
         """Get a document with either a single locale (if `lang is given)
         or with all locales.
         If no document exists for the given id, a `HTTPNotFound` exception is
@@ -301,8 +307,9 @@ class DocumentRest(object):
             document_query = DBSession. \
                 query(clazz). \
                 filter(getattr(clazz, 'document_id') == id). \
-                options(joinedload(getattr(clazz, 'locales'))). \
                 options(joinedload('geometry'))
+            document_query = add_load_for_locales(
+                document_query, clazz, clazz_locale)
             document_query = add_load_for_profiles(document_query, clazz)
             document = document_query.first()
         else:
@@ -310,9 +317,11 @@ class DocumentRest(object):
                 query(clazz). \
                 join(getattr(clazz, 'locales')). \
                 filter(getattr(clazz, 'document_id') == id). \
-                options(contains_eager(getattr(clazz, 'locales'))). \
                 filter(DocumentLocale.lang == lang). \
                 options(joinedload('geometry'))
+            document_query = add_load_for_locales(
+                document_query, clazz, clazz_locale,
+                loading_method=contains_eager)
             document_query = add_load_for_profiles(document_query, clazz)
             document = document_query.first()
 
@@ -671,6 +680,15 @@ def add_load_for_profiles(document_query, clazz):
         # for profiles load username/name together from the associated user
         document_query = document_query.options(joinedload('user'))
     return document_query
+
+
+def add_load_for_locales(
+        base_query, clazz, clazz_locale, loading_method=joinedload):
+    if clazz_locale:
+        return base_query.options(
+            loading_method(getattr(clazz, 'locales').of_type(clazz_locale)))
+    else:
+        return base_query.options(loading_method(getattr(clazz, 'locales')))
 
 
 @resource(path='/document/{id}/history/{lang}', cors_policy=cors_policy)
