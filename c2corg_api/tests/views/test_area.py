@@ -4,6 +4,7 @@ from c2corg_api.models.area import Area, ArchiveArea, AREA_TYPE
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
+from c2corg_api.tests.search import reset_search_index
 from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, Polygon
 
@@ -44,13 +45,15 @@ class TestAreaRest(BaseDocumentTestRest):
             self.get_collection({'offset': 1, 'limit': 2}),
             [self.area3.document_id, self.area2.document_id], 4)
 
-        self.assertResultsEqual(
-            self.get_collection(
-                {'after': self.area3.document_id, 'limit': 1}),
-            [self.area2.document_id], -1)
-
     def test_get_collection_lang(self):
         self.get_collection_lang()
+
+    def test_get_collection_search(self):
+        reset_search_index(self.session)
+
+        self.assertResultsEqual(
+            self.get_collection_search({'l': 'en'}),
+            [self.area4.document_id, self.area1.document_id], 2)
 
     def test_get(self):
         body = self.get(self.area1)

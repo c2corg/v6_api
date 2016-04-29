@@ -15,10 +15,18 @@ from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import Search
+from elasticsearch_dsl.query import MultiMatch
 from kombu.connection import Connection
 from kombu import Exchange, Queue, pools
 
 batch_size = 1000
+
+# the maximum number of documents that can be returned for each document type
+SEARCH_LIMIT_MAX = 50
+
+# the default limit value (how many documents are returned at once for each
+# document type in a search request)
+SEARCH_LIMIT_DEFAULT = 10
 
 elasticsearch_config = {
     'client': None,
@@ -60,9 +68,18 @@ def get_queue_config(settings):
 
 def create_search(document_type):
     return Search(
-        elasticsearch_config['client'],
+        using=elasticsearch_config['client'],
         index=elasticsearch_config['index'],
         doc_type=search_documents[document_type])
+
+
+def get_text_query(search_term):
+    # search in all title* (title_en, title_fr, ...), summary* and
+    # description* fields. "boost" title fields and summary fields.
+    return MultiMatch(
+        query=search_term,
+        fields=['title*^3', 'summary*^2', 'description*']
+    )
 
 search_documents = {
     AREA_TYPE: SearchArea,

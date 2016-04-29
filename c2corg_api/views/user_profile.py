@@ -1,7 +1,7 @@
 
 from c2corg_api.models.user_profile import schema_update_user_profile, \
     UserProfile, schema_user_profile, schema_internal_user_profile, \
-    schema_listing_user_profile
+    schema_listing_user_profile, USERPROFILE_TYPE
 from cornice.resource import resource
 
 from c2corg_api.views.document import DocumentRest
@@ -18,7 +18,8 @@ class UserProfileRest(DocumentRest):
     @restricted_view(
         validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        return self._collection_get(UserProfile, schema_listing_user_profile)
+        return self._collection_get(UserProfile, schema_listing_user_profile,
+                                    USERPROFILE_TYPE)
 
     @restricted_view(validators=[validate_id, validate_lang_param])
     def get(self):

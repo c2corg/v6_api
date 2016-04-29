@@ -8,6 +8,7 @@ from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.tests.search import reset_search_index
 from c2corg_api.views.route import update_title_prefix
 from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, LineString
@@ -51,13 +52,22 @@ class TestRouteRest(BaseDocumentTestRest):
             self.get_collection({'offset': 1, 'limit': 2}),
             [self.route3.document_id, self.route2.document_id], 4)
 
-        self.assertResultsEqual(
-            self.get_collection(
-                {'after': self.route3.document_id, 'limit': 1}),
-            [self.route2.document_id], -1)
-
     def test_get_collection_lang(self):
         self.get_collection_lang()
+
+    def test_get_collection_search(self):
+        reset_search_index(self.session)
+
+        body = self.get_collection_search({'rac': 'skitouring'})
+        self.assertEqual(body.get('total'), 4)
+        self.assertEqual(len(body.get('documents')), 4)
+
+        body = self.get_collection_search({'rac': 'skitouring', 'limit': 2})
+        self.assertEqual(body.get('total'), 4)
+        self.assertEqual(len(body.get('documents')), 2)
+
+        body = self.get_collection_search({'rhdu': '700,900'})
+        self.assertEqual(body.get('total'), 2)
 
     def test_get(self):
         body = self.get(self.route)
@@ -752,11 +762,11 @@ class TestRouteRest(BaseDocumentTestRest):
 
         self.route3 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
-            height_diff_up=800, height_diff_down=800, durations='1')
+            height_diff_up=500, height_diff_down=500, durations='1')
         self.session.add(self.route3)
         self.route4 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
-            height_diff_up=800, height_diff_down=800, durations='1')
+            height_diff_up=500, height_diff_down=500, durations='1')
         self.route4.locales.append(RouteLocale(
             lang='en', title='Mont Blanc from the air', description='...',
             gear='paraglider'))

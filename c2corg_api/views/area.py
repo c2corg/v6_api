@@ -1,5 +1,5 @@
 from c2corg_api.models.area import schema_area, Area, schema_update_area, \
-    schema_listing_area
+    schema_listing_area, AREA_TYPE
 from c2corg_api.models.area_association import update_area
 from c2corg_api.models.document import UpdateType
 from c2corg_common.fields_area import fields_area
@@ -23,7 +23,7 @@ class AreaRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
         return self._collection_get(
-            Area, schema_listing_area, include_areas=False)
+            Area, schema_listing_area, AREA_TYPE, include_areas=False)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):

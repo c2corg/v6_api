@@ -109,13 +109,11 @@ def check_get_for_integer_property(request, key, required):
 
 def validate_pagination(request):
     """
-    Checks if a given optional offset is an integer,
-    if a given optional limit is an integer,
-    if a given optional after is an integer
+    Checks if a given optional offset is an integer and
+    if a given optional limit is an integer.
     """
     check_get_for_integer_property(request, 'offset', False)
     check_get_for_integer_property(request, 'limit', False)
-    check_get_for_integer_property(request, 'after', False)
 
 
 def validate_required_json_string(key, request):

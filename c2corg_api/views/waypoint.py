@@ -9,7 +9,7 @@ from cornice.resource import resource, view
 
 from c2corg_api.models.waypoint import (
     Waypoint, schema_waypoint, schema_update_waypoint,
-    ArchiveWaypoint, ArchiveWaypointLocale)
+    ArchiveWaypoint, ArchiveWaypointLocale, WAYPOINT_TYPE)
 
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import (
@@ -55,8 +55,67 @@ class WaypointRest(DocumentRest):
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
+        """
+        Get a list of documents, optionally matching search filters.
+        If no search filters are given, the documents are directly queried
+        from the database. If not, ElasticSearch is used to find the documents
+        that match the filters.
+
+        Request:
+            `GET` `/waypoints/?[q=...][&pl=...][&offset=...][&limit=...][filters]*`  # noqa
+
+        Parameters:
+            `q=...` (optional)
+            A search word.
+
+            `pl=...` (optional)
+            When set only the given locale will be included (if available).
+            Otherwise all locales will be returned.
+
+            `offset=...` (optional)
+            The offset to navigate through the result pages (default: 0).
+
+            `limit=...` (optional)
+            How many results should be returned per document type
+            (default: 30). The maximum is 100.
+
+        Search filters:
+        An arbitrary number of search filters can be added, for example
+        `/waypoints?wt=summit&we=4500,5000` gets all summits with a height
+        between 4500 and 5000. The available filter parameters are listed
+        below.
+
+        Generic search filters:
+            `l=v1[,v2]*` (enum)
+            available_locales
+
+            `a=a1[,a2]*` (area ids)
+            areas
+
+            `qa=v1[,v2]*` (enum)
+            quality
+
+        Waypoint search filters:
+        All waypoint query fields are listed in
+        :class:`c2corg_api.search.mappings.waypoint_mapping.SearchWaypoint`.
+
+        The following filter types are used:
+
+            enums: `key=v1[,v2]*`
+            One or more enum values can be given.
+
+            boolean: `key=(1|0|true|false|True|False)`
+
+            range: `key=[min][,max]`
+            For numbers ranges can be given with a min value and a max value.
+
+            date range: `key=from[,to]`
+            Dates must be given as `yyyy-mm-dd`, e.g `2016-12-31`. If only one
+            date is given, from and to are both set to that date.
+        """
         return self._collection_get(
-            Waypoint, schema_waypoint, adapt_schema=listing_schema_adaptor)
+            Waypoint, schema_waypoint, WAYPOINT_TYPE,
+            adapt_schema=listing_schema_adaptor)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):

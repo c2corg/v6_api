@@ -5,6 +5,7 @@ from c2corg_api.models.user_profile import UserProfile, ArchiveUserProfile, \
 from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.user_mapping import SearchUser
+from c2corg_api.tests.search import reset_search_index
 from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, Point
 
@@ -53,14 +54,16 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 {'offset': 1, 'limit': 2}, user='contributor'),
             [self.profile3.document_id, self.profile2.document_id], 6)
 
-        self.assertResultsEqual(
-            self.get_collection(
-                {'after': self.profile3.document_id, 'limit': 1},
-                user='contributor'),
-            [self.profile2.document_id], -1)
-
     def test_get_collection_lang(self):
         self.get_collection_lang(user='contributor')
+
+    def test_get_collection_search(self):
+        reset_search_index(self.session)
+
+        self.assertResultsEqual(
+            self.get_collection_search({'l': 'en'}, user='contributor'),
+            [self.profile4.document_id, self.global_userids['contributor2'],
+             self.profile1.document_id, self.global_userids['moderator']], 4)
 
     def test_get_unauthenticated(self):
         self.app.get(

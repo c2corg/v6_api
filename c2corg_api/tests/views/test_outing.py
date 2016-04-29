@@ -6,6 +6,7 @@ from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, ArchiveOuting, \
     ArchiveOutingLocale, OutingLocale, OUTING_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.tests.search import reset_search_index
 from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, LineString
 
@@ -75,13 +76,23 @@ class TestOutingRest(BaseDocumentTestRest):
             self.get_collection({'offset': 1, 'limit': 2}),
             [self.outing3.document_id, self.outing2.document_id], 4)
 
-        self.assertResultsEqual(
-            self.get_collection(
-                {'after': self.outing3.document_id, 'limit': 1}),
-            [self.outing2.document_id], -1)
-
     def test_get_collection_lang(self):
         self.get_collection_lang()
+
+    def test_get_collection_search(self):
+        reset_search_index(self.session)
+
+        self.assertResultsEqual(
+            self.get_collection_search({'oac': 'skitouring'}),
+            [self.outing4.document_id, self.outing3.document_id,
+             self.outing2.document_id, self.outing.document_id], 4)
+
+        body = self.get_collection_search({'oac': 'skitouring', 'limit': 2})
+        self.assertEqual(body.get('total'), 4)
+        self.assertEqual(len(body.get('documents')), 2)
+
+        body = self.get_collection_search({'od': '2015-12-31,2016-01-02'})
+        self.assertEqual(body.get('total'), 1)
 
     def test_get(self):
         body = self.get(self.outing)
@@ -784,18 +795,18 @@ class TestOutingRest(BaseDocumentTestRest):
             filter(DocumentVersion.lang == 'en').first()
 
         self.outing2 = Outing(
-            activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
-            date_end=datetime.date(2016, 1, 1)
+            activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
+            date_end=datetime.date(2016, 2, 1)
         )
         self.session.add(self.outing2)
         self.outing3 = Outing(
-            activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
-            date_end=datetime.date(2016, 1, 1)
+            activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
+            date_end=datetime.date(2016, 2, 2)
         )
         self.session.add(self.outing3)
         self.outing4 = Outing(
-            activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
-            date_end=datetime.date(2016, 1, 1)
+            activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
+            date_end=datetime.date(2016, 2, 3)
         )
         self.outing4.locales.append(OutingLocale(
             lang='en', title='Mont Granier (en)', description='...'))

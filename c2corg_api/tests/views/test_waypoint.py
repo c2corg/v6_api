@@ -9,6 +9,7 @@ from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.route_mapping import SearchRoute
+from c2corg_api.tests.search import reset_search_index
 from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, Point
 
@@ -64,10 +65,24 @@ class TestWaypointRest(BaseDocumentTestRest):
             self.get_collection({'offset': 1, 'limit': 2}),
             [self.waypoint3.document_id, self.waypoint2.document_id], 4)
 
+    def test_get_collection_search(self):
+        reset_search_index(self.session)
+
         self.assertResultsEqual(
-            self.get_collection(
-                {'after': self.waypoint3.document_id, 'limit': 1}),
-            [self.waypoint2.document_id], -1)
+            self.get_collection_search({'wt': 'climbing_outdoor,summit'}),
+            [self.waypoint4.document_id, self.waypoint3.document_id,
+             self.waypoint2.document_id, self.waypoint.document_id], 4)
+
+        body = self.get_collection_search(
+            {'wt': 'climbing_outdoor,summit', 'limit': 2})
+        self.assertEqual(body.get('total'), 4)
+        self.assertEqual(len(body.get('documents')), 2)
+
+        body = self.get_collection_search({'a': str(self.area2.document_id)})
+        self.assertEqual(body.get('total'), 1)
+
+        body = self.get_collection_search({'we': '2000'})
+        self.assertEqual(body.get('total'), 1)
 
     def test_get(self):
         body = self.get(self.waypoint)

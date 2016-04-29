@@ -1,10 +1,8 @@
 from c2corg_api.views.document import add_load_for_profiles
-from elasticsearch_dsl.query import MultiMatch
-from elasticsearch_dsl.filter import Term
 from sqlalchemy.orm import joinedload
 
 from c2corg_api.models import DBSession
-from c2corg_api.search import create_search
+from c2corg_api.search import create_search, get_text_query
 from c2corg_api.views import to_json_dict, set_best_locale
 
 
@@ -18,20 +16,9 @@ def search_for_type(
         documents = get_documents([document_id], model, locale_model, lang)
         total = len(documents)
     else:
-        # search in ElasticSearch:
-        # search in all title* (title_en, title_fr, ...), summary* and
-        # description* fields. "boost" title fields and summary fields.
-        search_query = MultiMatch(
-            query=search_term,
-            fields=['title*^3', 'summary*^2', 'description*']
-        )
-
-        # filter on the document_type
-        type_query = Term(doc_type=document_type)
-
+        # search in ElasticSearch
         search = create_search(document_type).\
-            query(search_query).\
-            filter(type_query).\
+            query(get_text_query(search_term)).\
             fields([]).\
             extra(from_=0, size=limit)
 
