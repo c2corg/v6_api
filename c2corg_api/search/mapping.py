@@ -1,8 +1,10 @@
+import json
+
 from c2corg_api.models.document import Document
 from c2corg_api.search.mapping_types import Enum, QEnum, QEnumArray, QLong
 from c2corg_api.search.utils import strip_bbcodes
 from c2corg_common.attributes import default_langs
-from elasticsearch_dsl import DocType, String, MetaField, Long
+from elasticsearch_dsl import DocType, String, MetaField, Long, GeoPoint
 
 
 class BaseMeta:
@@ -33,6 +35,7 @@ class SearchDocument(DocType):
     doc_type = Enum()
     quality = QEnum('qa', model_field=Document.quality)
     available_locales = QEnumArray('l', enum=default_langs)
+    geom = GeoPoint()
 
     # array of area ids
     areas = QLong('a', is_id=True)
@@ -119,6 +122,10 @@ class SearchDocument(DocType):
                     strip_bbcodes(locale.description)
             search_document['available_locales'] = available_locales
 
+            if document.geometry:
+                search_document['geom'] = SearchDocument.get_geometry(
+                    document.geometry)
+
             areas = []
             if include_areas:
                 for area in document._areas:
@@ -126,6 +133,14 @@ class SearchDocument(DocType):
             search_document['areas'] = areas
 
         return search_document
+
+    @staticmethod
+    def get_geometry(geometry):
+        if geometry.lon_lat:
+            geojson = json.loads(geometry.lon_lat)
+            return geojson['coordinates']
+        else:
+            return None
 
     @staticmethod
     def copy_fields(search_document, document, fields):

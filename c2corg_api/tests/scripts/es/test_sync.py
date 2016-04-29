@@ -40,6 +40,9 @@ class SyncTest(BaseTestCase):
         search_documents = []
         batch_mock = self._create_mock_match(search_documents)(None, 1000)
 
+        self.route1.geometry = DocumentGeometry()
+        self.route1.geometry.lon_lat = \
+            '{"type": "Point", "coordinates": [6, 46]}'
         create_search_documents('r', [self.route1], batch_mock)
         doc = search_documents[0]
 
@@ -47,6 +50,7 @@ class SyncTest(BaseTestCase):
         self.assertEqual(doc['_id'], self.route1.document_id)
         self.assertEqual(doc['title_en'], 'Mont Blanc : Face N')
         self.assertEqual(doc['description_en'], '...')
+        self.assertEqual(doc['geom'], [6, 46])
 
     def test_create_search_documents_user_profile(self):
         search_documents = []
@@ -84,6 +88,14 @@ class SyncTest(BaseTestCase):
                 search_documents),
             None)
         self.assertEqual(redirected_doc['_op_type'], 'delete')
+
+        waypoint1_doc = next(
+            filter(
+                lambda doc: doc['_id'] == self.waypoint1.document_id,
+                search_documents),
+            None)
+        self.assertAlmostEqual(waypoint1_doc['geom'][0], 5.71288995)
+        self.assertAlmostEqual(waypoint1_doc['geom'][1], 45.64476395)
 
     def _create_mock_match(self, actions):
         class MockBatch(object):
