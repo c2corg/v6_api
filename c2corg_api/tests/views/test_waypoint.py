@@ -84,6 +84,14 @@ class TestWaypointRest(BaseDocumentTestRest):
         body = self.get_collection_search({'we': '2000'})
         self.assertEqual(body.get('total'), 1)
 
+    def test_get_collection_search_bbox(self):
+        reset_search_index(self.session)
+
+        self.assertResultsEqual(
+            self.get_collection_search(
+                {'bbox': '659000,5694000,660000,5695000'}),
+            [self.waypoint4.document_id], 1)
+
     def test_get(self):
         body = self.get(self.waypoint)
         self._assert_geometry(body)
@@ -889,7 +897,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             waypoint_type='summit', elevation=4,
             protected=True,
             geometry=DocumentGeometry(
-                geom='SRID=3857;POINT(635956 5723604)'))
+                geom='SRID=3857;POINT(659775 5694854)'))
         self.waypoint4.locales.append(WaypointLocale(
             lang='en', title='Mont Granier', description='...',
             access='yep'))

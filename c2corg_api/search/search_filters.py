@@ -1,4 +1,6 @@
 import math
+
+import pyproj
 import re
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.search.mapping_types import reserved_query_fields
@@ -6,7 +8,7 @@ from functools import partial
 
 from c2corg_api.search import create_search, search_documents, \
     get_text_query
-from elasticsearch_dsl.query import Range, Term, Terms, Bool
+from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox
 
 
 def build_query(url_params, meta_params, doc_type):
@@ -32,7 +34,10 @@ def build_query(url_params, meta_params, doc_type):
         fields([]).\
         extra(from_=offset, size=limit)
 
-    # TODO add bbox filter
+    if url_params.get('bbox'):
+        bbox_filter = create_bbox_filter(url_params.get('bbox'))
+        if bbox_filter:
+            search = search.filter(bbox_filter)
 
     if not search_term:
         # if a search term is given, the documents are sorted by a relevance
@@ -184,12 +189,42 @@ def create_date_range_filter(field, query_term):
         ]))
 
 
+def create_bbox_filter(query_term):
+    query_terms = query_term.split(',')
+    bbox3857 = list(map(parse_num, query_terms))
+    if len(bbox3857) != 4 or not all(bbox3857):
+        return None
+
+    # transform the bbox from 3857 to 4326
+    xmin, ymin = transform(bbox3857[0], bbox3857[1])
+    xmax, ymax = transform(bbox3857[2], bbox3857[3])
+
+    return GeoBoundingBox(
+        geom={'left': xmin, 'bottom': ymin, 'right': xmax, 'top': ymax},
+        type='indexed'
+    )
+
+
+# A function to transform from 3857 to 4326.
+transform = partial(
+        pyproj.transform,
+        pyproj.Proj(init='epsg:3857'),
+        pyproj.Proj(init='epsg:4326'))
+
+
 def parse_num(s):
     try:
         try:
             return int(s)
         except ValueError:
             return float(s)
+    except ValueError:
+        return None
+
+
+def parse_float(s):
+    try:
+        return float(s)
     except ValueError:
         return None
 

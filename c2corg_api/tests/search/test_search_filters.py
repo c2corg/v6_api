@@ -1,9 +1,10 @@
 from c2corg_api.search import create_search, get_text_query
-from c2corg_api.search.search_filters import create_filter, build_query
+from c2corg_api.search.search_filters import create_filter, build_query, \
+    create_bbox_filter
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.tests import BaseTestCase
-from elasticsearch_dsl.query import Range, Term, Terms, Bool
+from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox
 
 
 class AdvancedSearchTest(BaseTestCase):
@@ -25,6 +26,29 @@ class AdvancedSearchTest(BaseTestCase):
             filter(Term(available_locales='fr')).\
             filter(Terms(areas=[1234, 4567])). \
             filter(Range(elevation={'gte': 1500})). \
+            fields([]).\
+            extra(from_=0, size=10)
+        self.assertQueryEqual(query, expected_query)
+
+    def test_build_query_bbox(self):
+        params = {
+            'q': 'search word',
+            'we': '1500',
+            'bbox': '699398,5785365,699498,5785465'
+        }
+        meta_params = {
+            'limit': 10,
+            'offset': 0
+        }
+        query = build_query(params, meta_params, 'w')
+        expected_query = create_search('w'). \
+            query(get_text_query('search word')). \
+            filter(Range(elevation={'gte': 1500})). \
+            filter(GeoBoundingBox(
+                geom={
+                    'left': 6.28279913, 'bottom': 46.03129072,
+                    'right': 6.28369744, 'top': 46.03191439},
+                type='indexed')).\
             fields([]).\
             extra(from_=0, size=10)
         self.assertQueryEqual(query, expected_query)
@@ -74,11 +98,26 @@ class AdvancedSearchTest(BaseTestCase):
             bool2 = q2['query']['bool']
             if 'must' in bool1 or 'must' in bool2:
                 self.assertEqual(bool1['must'], bool2['must'])
-            filters1 = set(str(f) for f in bool1['filter'])
-            filters2 = set(str(f) for f in bool2['filter'])
-            self.assertEqual(filters1, filters2)
+            filters1 = bool1['filter']
+            filters2 = bool2['filter']
+            self.assertFiltersEqual(filters1, filters2)
         else:
             self.assertEqual(q1['query'], q2['query'])
+
+    def assertFiltersEqual(self, filters1, filters2):  # noqa
+        self.assertEqual(len(filters1), len(filters2))
+
+        normal_filters1 = set(
+            str(f) for f in filters1 if 'geo_bounding_box' not in f)
+        normal_filters2 = set(
+            str(f) for f in filters2 if 'geo_bounding_box' not in f)
+        self.assertEqual(normal_filters1, normal_filters2)
+
+        bbox_filters1 = [f for f in filters1 if 'geo_bounding_box' in f]
+        bbox_filters2 = [f for f in filters2 if 'geo_bounding_box' in f]
+
+        if bbox_filters1 or bbox_filters2:
+            self.assertBboxFilterEqual(bbox_filters1[0], bbox_filters2[0])
 
     def test_create_filter_range(self):
         self.assertEqual(
@@ -237,3 +276,32 @@ class AdvancedSearchTest(BaseTestCase):
                 Range(date_start={'gt': '2016-01-03'}),
                 Range(date_end={'lt': '2016-01-01'})
             ])))
+
+    def test_create_bbox_filter(self):
+        self.assertEqual(create_bbox_filter(''), None)
+        self.assertEqual(create_bbox_filter('a,b,c,d'), None)
+        self.assertEqual(create_bbox_filter('1,2,3'), None)
+        self.assertEqual(create_bbox_filter('1,2,3,d'), None)
+        self.assertBboxFilterEqual(
+            create_bbox_filter('699398,5785365,699498,5785465').to_dict(),
+            GeoBoundingBox(
+                geom={
+                    'left': 6.28279913, 'bottom': 46.03129072,
+                    'right': 6.28369744, 'top': 46.03191439},
+                type='indexed').to_dict())
+
+    def assertBboxFilterEqual(self, f1, f2):  # noqa
+        self.assertIn('geo_bounding_box', f1)
+        self.assertIn('geo_bounding_box', f2)
+
+        self.assertEqual(
+            f1['geo_bounding_box'].get('type'),
+            f2['geo_bounding_box'].get('type'))
+
+        # assuming the property is named 'geom'
+        bbox1 = f1['geo_bounding_box']['geom']
+        bbox2 = f2['geo_bounding_box']['geom']
+        self.assertAlmostEqual(bbox1['left'], bbox2['left'])
+        self.assertAlmostEqual(bbox1['bottom'], bbox2['bottom'])
+        self.assertAlmostEqual(bbox1['right'], bbox2['right'])
+        self.assertAlmostEqual(bbox1['top'], bbox2['top'])
