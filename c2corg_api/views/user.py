@@ -1,4 +1,5 @@
 from c2corg_common.attributes import default_langs
+from pyramid.settings import asbool
 
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.user_profile import UserProfile
@@ -29,6 +30,7 @@ from c2corg_api.emails.email_service import get_email_service
 
 from sqlalchemy.sql.expression import and_
 
+import requests
 import colander
 import datetime
 
@@ -98,6 +100,44 @@ class UserRest(object):
         return to_json_dict(user, schema_user)
 
 
+def validate_captcha(request):
+    """Validate the recaptcha sent by UI.
+    """
+
+    settings = request.registry.settings
+    if asbool(settings['skip.captcha.validation']):
+        log.warning('Skipping captcha validation')
+        return
+
+    if 'captcha' not in request.json:
+        request.errors.add('body', 'captcha', 'Missing captcha')
+        return
+
+    timeout = int(settings['url.timeout'])
+    secret = settings['recaptcha.secret.key']
+    captcha = request.json['captcha']
+
+    url = 'https://www.google.com/recaptcha/api/siteverify'
+    try:
+        r = requests.post(url, timeout=timeout, data={
+            'secret': secret,
+            'response': captcha
+            }
+        )
+
+        response = r.json()
+        if not response['success']:
+            request.errors.add('body', 'captcha', 'Error, please retry')
+            return
+
+    except:
+        log.exception('Request error while checking captcha')
+        # We want a notification and not a 500 to let the user immediately
+        # resend a response.
+        request.errors.add('body', 'captcha', 'Internal error, please retry')
+        return
+
+
 @resource(path='/users/register', cors_policy=cors_policy)
 class UserRegistrationRest(object):
     def __init__(self, request):
@@ -107,7 +147,8 @@ class UserRegistrationRest(object):
         validate_json_password,
         partial(validate_unique_attribute, "email"),
         partial(validate_unique_attribute, "username"),
-        partial(validate_unique_attribute, "forum_username")])
+        partial(validate_unique_attribute, "forum_username"),
+        validate_captcha])
     def post(self):
         user = schema_create_user.objectify(self.request.validated)
         user.password = self.request.validated['password']

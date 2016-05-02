@@ -39,3 +39,12 @@ mail.from = {mail_from}
 mail.host = {mail_host}
 mail.port = {mail_port}
 mail.debug = {mail_debug}
+
+# Number of seconds to wait for response bytes on the requests sockets.
+# At the expiration of this timeout, the request is considered failed.
+# Using a large value to take into account a possible slow restart (caching).
+# This value is used globally in the application.
+url.timeout = 10
+
+recaptcha.secret.key = {recaptcha_secret_key}
+skip.captcha.validation = {skip_captcha_validation}
