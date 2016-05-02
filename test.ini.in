@@ -15,3 +15,4 @@ redis.url = memory:///
 discourse.url = {tests_discourse_url}
 discourse.api_key = {discourse_api_key}
 discourse.sso_secret = {discourse_sso_secret}
+skip.captcha.validation = True

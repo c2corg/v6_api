@@ -14,16 +14,12 @@ from urllib.parse import parse_qs
 
 log = logging.getLogger(__name__)
 
-# 10 seconds timeout for requests to discourse API
-# Using a large value to take into account a possible slow restart (caching)
-# of discourse.
-TIMEOUT = 10
-
 
 class APIDiscourseClient(object):
 
     def __init__(self, settings):
         self.settings = settings
+        self.timeout = settings['url.timeout']
         self.discourse_base_url = settings['discourse.url']
         self.discourse_public_url = settings['discourse.public_url']
         self.api_key = settings['discourse.api_key']
@@ -37,7 +33,7 @@ class APIDiscourseClient(object):
                 self.discourse_base_url,
                 api_username='system',  # the built-in Discourse user
                 api_key=self.api_key,
-                timeout=TIMEOUT)
+                timeout=self.timeout)
 
     def get_userid(self, userid):
         discourse_userid = self.discourse_userid_cache.get(userid)
@@ -92,7 +88,7 @@ class APIDiscourseClient(object):
     def request_nonce(self):
         url = '%s/session/sso' % self.discourse_base_url
         try:
-            r = requests.get(url, allow_redirects=False, timeout=TIMEOUT)
+            r = requests.get(url, allow_redirects=False, timeout=self.timeout)
             assert r.status_code == 302
         except Exception:
             log.error('Could not request nonce', exc_info=True)

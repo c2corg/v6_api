@@ -61,3 +61,6 @@ export mail_debug = 0
 # FIXME
 export discourse_sso_secret = d836444a9e4084d5b224a60c208dce14
 export discourse_api_key = 4647c0d98e8beb793da099ff103b9793d8d4f94fff7cdd52d58391c6fa025845
+
+export skip_captcha_validation = False
+export recaptcha_secret_key = 6LdWkR4TAAAAALcZLh54HFlAWFHiMQhZR5jR4p3F
