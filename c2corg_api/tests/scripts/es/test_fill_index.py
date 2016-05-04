@@ -74,6 +74,8 @@ class FillIndexTest(BaseTestCase):
         self.assertEqual(waypoint1.title_fr, 'Mont Granier')
         self.assertEqual(waypoint1.summary_fr, 'Le Mont  Granier ')
         self.assertEqual(waypoint1.doc_type, 'w')
+        self.assertAlmostEqual(waypoint1.geom[0], 5.71288994)
+        self.assertAlmostEqual(waypoint1.geom[1], 45.64476395)
 
         waypoint2 = SearchWaypoint.get(id=71172)
         self.assertIsNotNone(waypoint2)

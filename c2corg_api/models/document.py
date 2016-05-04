@@ -8,7 +8,7 @@ from sqlalchemy import (
     func
     )
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, column_property
 from sqlalchemy.dialects import postgresql
 from geoalchemy2 import Geometry
 import geoalchemy2
@@ -369,6 +369,10 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
             raise HTTPInternalServerError('Bad projection')
 
         return g1.almost_equals(g2, decimals)
+
+DocumentGeometry.lon_lat = column_property(
+    func.ST_AsGeoJSON(func.ST_Transform(DocumentGeometry.geom, 4326)),
+    deferred=True)
 
 
 class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):

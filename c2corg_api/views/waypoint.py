@@ -68,6 +68,9 @@ class WaypointRest(DocumentRest):
             `q=...` (optional)
             A search word.
 
+            `bbox=xmin,ymin,xmax,ymax` (optional)
+            A search bbox in EPSG:3857.
+
             `pl=...` (optional)
             When set only the given locale will be included (if available).
             Otherwise all locales will be returned.

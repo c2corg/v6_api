@@ -1,6 +1,6 @@
 from c2corg_api.models import es_sync, document_types, document_locale_types
 from c2corg_api.models.area import Area
-from c2corg_api.models.document import Document
+from c2corg_api.models.document import Document, DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
@@ -97,7 +97,7 @@ def get_documents(session, doc_type, document_ids=None):
 
     base_query = base_query. \
         options(joinedload(clazz.locales.of_type(locales_clazz))). \
-        options(joinedload(clazz.geometry))
+        options(joinedload(clazz.geometry).load_only(DocumentGeometry.lon_lat))
 
     if clazz != Area:
         base_query = base_query. \

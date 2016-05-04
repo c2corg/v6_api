@@ -1,3 +1,6 @@
+import json
+
+from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import StaleDataError
 from shapely.geometry import Point
 from geoalchemy2.shape import from_shape
@@ -334,6 +337,39 @@ class TestWaypoint(BaseTestCase):
             geom='SRID=3857;POINT(635956.075332665 5723604.677994)')
         self.session.add(waypoint)
         self.session.flush()
+
+    def test_get_geometry_lon_lat(self):
+        waypoint = self._get_waypoint()
+        self.session.add(waypoint)
+        self.session.flush()
+        self.session.expire(waypoint)
+
+        waypoint = self.session.query(Waypoint). \
+            options(joinedload(Waypoint.geometry).
+                    load_only(DocumentGeometry.lon_lat)).\
+            filter(Waypoint.document_id == waypoint.document_id). \
+            first()
+
+        lon_lat_geojson = json.loads(waypoint.geometry.lon_lat)
+        self.assertAlmostEqual(
+            lon_lat_geojson['coordinates'][0], 5.7128906, places=6)
+        self.assertAlmostEqual(
+            lon_lat_geojson['coordinates'][1], 45.644768, places=6)
+
+    def test_get_geometry_lon_lat_none(self):
+        waypoint = self._get_waypoint()
+        waypoint.geometry = None
+        self.session.add(waypoint)
+        self.session.flush()
+        self.session.expire(waypoint)
+
+        waypoint = self.session.query(Waypoint). \
+            options(joinedload(Waypoint.geometry).
+                    load_only(DocumentGeometry.lon_lat)).\
+            filter(Waypoint.document_id == waypoint.document_id). \
+            first()
+
+        self.assertIsNone(waypoint.geometry)
 
     def test_set_available_langs(self):
         waypoint = self._get_waypoint()
