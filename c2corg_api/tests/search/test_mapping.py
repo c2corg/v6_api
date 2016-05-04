@@ -22,32 +22,32 @@ class MappingTest(BaseTestCase):
         self._test_mapping(SearchWaypoint, Waypoint)
 
         queryable_fields = SearchWaypoint.queryable_fields
-        self.assertIn('we', queryable_fields)
-        self.assertTrue(queryable_fields['we']._range)
-        self.assertIn('wt', queryable_fields)
-        self.assertIsNotNone(queryable_fields['wt']._enum)
-        self.assertIn('wrt', queryable_fields)
-        self.assertIsNotNone(queryable_fields['wrt']._enum)
-        self.assertIn('wph', queryable_fields)
-        self.assertTrue(queryable_fields['wph']._is_bool)
+        self.assertIn('walt', queryable_fields)
+        self.assertTrue(queryable_fields['walt']._range)
+        self.assertIn('wtyp', queryable_fields)
+        self.assertIsNotNone(queryable_fields['wtyp']._enum)
+        self.assertIn('wrock', queryable_fields)
+        self.assertIsNotNone(queryable_fields['wrock']._enum)
+        self.assertIn('phone', queryable_fields)
+        self.assertTrue(queryable_fields['phone']._is_bool)
 
     def test_route_mapping(self):
         self._test_mapping(SearchRoute, Route)
 
         queryable_fields = SearchRoute.queryable_fields
-        self.assertIn('remi', queryable_fields)
-        self.assertTrue(queryable_fields['remi']._range)
-        self.assertIn('rac', queryable_fields)
-        self.assertIsNotNone(queryable_fields['rac']._enum)
+        self.assertIn('rmina', queryable_fields)
+        self.assertTrue(queryable_fields['rmina']._range)
+        self.assertIn('act', queryable_fields)
+        self.assertIsNotNone(queryable_fields['act']._enum)
 
     def test_outing_mapping(self):
         self._test_mapping(SearchOuting, Outing)
 
         queryable_fields = SearchOuting.queryable_fields
-        self.assertIn('od', queryable_fields)
-        self.assertTrue(queryable_fields['od']._date_range)
-        self.assertIn('oac', queryable_fields)
-        self.assertIsNotNone(queryable_fields['oac']._enum)
+        self.assertIn('date', queryable_fields)
+        self.assertTrue(queryable_fields['date']._date_range)
+        self.assertIn('act', queryable_fields)
+        self.assertIsNotNone(queryable_fields['act']._enum)
 
     def test_area_mapping(self):
         self._test_mapping(SearchArea, Area)

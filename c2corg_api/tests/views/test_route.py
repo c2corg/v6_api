@@ -58,15 +58,15 @@ class TestRouteRest(BaseDocumentTestRest):
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
-        body = self.get_collection_search({'rac': 'skitouring'})
+        body = self.get_collection_search({'act': 'skitouring'})
         self.assertEqual(body.get('total'), 4)
         self.assertEqual(len(body.get('documents')), 4)
 
-        body = self.get_collection_search({'rac': 'skitouring', 'limit': 2})
+        body = self.get_collection_search({'act': 'skitouring', 'limit': 2})
         self.assertEqual(body.get('total'), 4)
         self.assertEqual(len(body.get('documents')), 2)
 
-        body = self.get_collection_search({'rhdu': '700,900'})
+        body = self.get_collection_search({'hdif': '700,900'})
         self.assertEqual(body.get('total'), 2)
 
     def test_get(self):

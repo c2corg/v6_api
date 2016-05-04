@@ -69,19 +69,19 @@ class TestWaypointRest(BaseDocumentTestRest):
         reset_search_index(self.session)
 
         self.assertResultsEqual(
-            self.get_collection_search({'wt': 'climbing_outdoor,summit'}),
+            self.get_collection_search({'wtyp': 'climbing_outdoor,summit'}),
             [self.waypoint4.document_id, self.waypoint3.document_id,
              self.waypoint2.document_id, self.waypoint.document_id], 4)
 
         body = self.get_collection_search(
-            {'wt': 'climbing_outdoor,summit', 'limit': 2})
+            {'wtyp': 'climbing_outdoor,summit', 'limit': 2})
         self.assertEqual(body.get('total'), 4)
         self.assertEqual(len(body.get('documents')), 2)
 
         body = self.get_collection_search({'a': str(self.area2.document_id)})
         self.assertEqual(body.get('total'), 1)
 
-        body = self.get_collection_search({'we': '2000'})
+        body = self.get_collection_search({'walt': '2000'})
         self.assertEqual(body.get('total'), 1)
 
     def test_get_collection_search_bbox(self):
