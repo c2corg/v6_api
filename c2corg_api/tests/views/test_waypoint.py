@@ -162,7 +162,11 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.get_version(self.waypoint, self.waypoint_version)
 
     def test_get_lang(self):
-        self.get_lang(self.waypoint)
+        body = self.get_lang(self.waypoint)
+
+        self.assertEqual(
+            'Mont Granier',
+            body.get('locales')[0].get('title'))
 
     def test_get_new_lang(self):
         self.get_new_lang(self.waypoint)

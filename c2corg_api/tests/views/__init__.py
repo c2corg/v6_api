@@ -216,6 +216,7 @@ class BaseDocumentTestRest(BaseTestRest):
         locale_en = locales[0]
         self.assertEqual(locale_en.get('lang'), self.locale_en.lang)
         self.assertIn('protected', body)
+        return body
 
     def get_new_lang(self, reference, user=None):
         headers = {} if not user else \
