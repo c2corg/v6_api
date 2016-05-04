@@ -23,8 +23,9 @@ from c2corg_api.views.validation import check_required_fields, \
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
     HTTPBadRequest, HTTPForbidden
-from sqlalchemy.orm import joinedload, contains_eager
+from sqlalchemy.orm import joinedload, contains_eager, subqueryload
 from sqlalchemy.orm.exc import StaleDataError
+from sqlalchemy.orm.util import with_polymorphic
 from sqlalchemy.sql.expression import literal_column, union
 
 # the maximum number of documents that can be returned in a request
@@ -312,15 +313,19 @@ class DocumentRest(object):
             document_query = add_load_for_profiles(document_query, clazz)
             document = document_query.first()
         else:
+            locales_type = with_polymorphic(DocumentLocale, clazz_locale) \
+                if clazz_locale else DocumentLocale
+            locales_attr = getattr(clazz, 'locales')
+            locales_type_eager = locales_attr.of_type(clazz_locale) \
+                if clazz_locale else locales_attr
+
             document_query = DBSession. \
                 query(clazz). \
-                join(getattr(clazz, 'locales')). \
+                join(locales_type). \
                 filter(getattr(clazz, 'document_id') == id). \
                 filter(DocumentLocale.lang == lang). \
-                options(joinedload('geometry'))
-            document_query = add_load_for_locales(
-                document_query, clazz, clazz_locale,
-                loading_method=contains_eager)
+                options(joinedload('geometry')).\
+                options(contains_eager(locales_type_eager, alias=locales_type))
             document_query = add_load_for_profiles(document_query, clazz)
             document = document_query.first()
 
@@ -682,12 +687,12 @@ def add_load_for_profiles(document_query, clazz):
 
 
 def add_load_for_locales(
-        base_query, clazz, clazz_locale, loading_method=joinedload):
+        base_query, clazz, clazz_locale):
     if clazz_locale:
         return base_query.options(
-            loading_method(getattr(clazz, 'locales').of_type(clazz_locale)))
+            subqueryload(getattr(clazz, 'locales').of_type(clazz_locale)))
     else:
-        return base_query.options(loading_method(getattr(clazz, 'locales')))
+        return base_query.options(subqueryload(getattr(clazz, 'locales')))
 
 
 @resource(path='/document/{id}/history/{lang}', cors_policy=cors_policy)

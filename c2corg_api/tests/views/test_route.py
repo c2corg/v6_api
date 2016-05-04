@@ -112,7 +112,14 @@ class TestRouteRest(BaseDocumentTestRest):
         self.get_version(self.route, self.route_version)
 
     def test_get_lang(self):
-        self.get_lang(self.route)
+        body = self.get_lang(self.route)
+
+        self.assertEqual(
+            'Mont Blanc from the air',
+            body.get('locales')[0].get('title'))
+        self.assertEqual(
+            'Main waypoint title',
+            body.get('locales')[0].get('title_prefix'))
 
     def test_get_new_lang(self):
         self.get_new_lang(self.route)
