@@ -12,7 +12,7 @@ class AdvancedSearchTest(BaseTestCase):
     def test_build_query(self):
         params = {
             'q': 'search word',
-            'we': '1500',
+            'walt': '1500',
             'a': '1234,4567',
             'l': 'fr'
         }
@@ -33,7 +33,7 @@ class AdvancedSearchTest(BaseTestCase):
     def test_build_query_bbox(self):
         params = {
             'q': 'search word',
-            'we': '1500',
+            'walt': '1500',
             'bbox': '699398,5785365,699498,5785465'
         }
         meta_params = {
@@ -70,7 +70,7 @@ class AdvancedSearchTest(BaseTestCase):
 
     def test_build_query_sort_outing(self):
         params = {
-            'oac': 'skitouring'
+            'act': 'skitouring'
         }
         meta_params = {
             'limit': 20,
@@ -124,65 +124,65 @@ class AdvancedSearchTest(BaseTestCase):
             create_filter('not a valid field', '1500,2500', SearchWaypoint),
             None)
         self.assertEqual(
-            create_filter('we', '', SearchWaypoint),
+            create_filter('walt', '', SearchWaypoint),
             None)
         self.assertEqual(
-            create_filter('we', 'not a, number', SearchWaypoint),
+            create_filter('walt', 'not a, number', SearchWaypoint),
             None)
         self.assertEqual(
-            create_filter('we', '1500,2500', SearchWaypoint),
+            create_filter('walt', '1500,2500', SearchWaypoint),
             Range(elevation={'gte': 1500, 'lte': 2500}))
         self.assertEqual(
-            create_filter('we', '1500.5,2500.99', SearchWaypoint),
+            create_filter('walt', '1500.5,2500.99', SearchWaypoint),
             Range(elevation={'gte': 1500.5, 'lte': 2500.99}))
         self.assertEqual(
-            create_filter('we', '1500,', SearchWaypoint),
+            create_filter('walt', '1500,', SearchWaypoint),
             Range(elevation={'gte': 1500}))
         self.assertEqual(
-            create_filter('we', '1500', SearchWaypoint),
+            create_filter('walt', '1500', SearchWaypoint),
             Range(elevation={'gte': 1500}))
         self.assertEqual(
-            create_filter('we', ',2500', SearchWaypoint),
+            create_filter('walt', ',2500', SearchWaypoint),
             Range(elevation={'lte': 2500}))
         self.assertEqual(
-            create_filter('we', 'NaN,2500', SearchWaypoint),
+            create_filter('walt', 'NaN,2500', SearchWaypoint),
             Range(elevation={'lte': 2500}))
         self.assertEqual(
-            create_filter('we', '1500,NaN', SearchWaypoint),
+            create_filter('walt', '1500,NaN', SearchWaypoint),
             Range(elevation={'gte': 1500}))
 
     def test_create_filter_enum(self):
         self.assertEqual(
-            create_filter('wt', '', SearchWaypoint),
+            create_filter('wtyp', '', SearchWaypoint),
             None)
         self.assertEqual(
-            create_filter('wt', 'invalid type', SearchWaypoint),
+            create_filter('wtyp', 'invalid type', SearchWaypoint),
             None)
         self.assertEqual(
-            create_filter('wt', 'summit', SearchWaypoint),
+            create_filter('wtyp', 'summit', SearchWaypoint),
             Term(waypoint_type='summit'))
         self.assertEqual(
-            create_filter('wt', 'summit,invalid type', SearchWaypoint),
+            create_filter('wtyp', 'summit,invalid type', SearchWaypoint),
             Term(waypoint_type='summit'))
         self.assertEqual(
-            create_filter('wt', 'summit,lake', SearchWaypoint),
+            create_filter('wtyp', 'summit,lake', SearchWaypoint),
             Terms(waypoint_type=['summit', 'lake']))
 
     def test_create_filter_arrayenum(self):
         self.assertEqual(
-            create_filter('wrt', '', SearchWaypoint),
+            create_filter('wrock', '', SearchWaypoint),
             None)
         self.assertEqual(
-            create_filter('wrt', 'invalid type', SearchWaypoint),
+            create_filter('wrock', 'invalid type', SearchWaypoint),
             None)
         self.assertEqual(
-            create_filter('wrt', 'basalte', SearchWaypoint),
+            create_filter('wrock', 'basalte', SearchWaypoint),
             Term(rock_types='basalte'))
         self.assertEqual(
-            create_filter('wrt', 'basalte,invalid type', SearchWaypoint),
+            create_filter('wrock', 'basalte,invalid type', SearchWaypoint),
             Term(rock_types='basalte'))
         self.assertEqual(
-            create_filter('wrt', 'basalte,calcaire', SearchWaypoint),
+            create_filter('wrock', 'basalte,calcaire', SearchWaypoint),
             Terms(rock_types=['basalte', 'calcaire']))
 
     def test_create_filter_available_locales(self):
@@ -204,28 +204,28 @@ class AdvancedSearchTest(BaseTestCase):
 
     def test_create_filter_bool(self):
         self.assertEqual(
-            create_filter('wph', '', SearchWaypoint),
+            create_filter('phone', '', SearchWaypoint),
             None)
         self.assertEqual(
-            create_filter('wph', 'invalid value', SearchWaypoint),
+            create_filter('phone', 'invalid value', SearchWaypoint),
             None)
         self.assertEqual(
-            create_filter('wph', 'true', SearchWaypoint),
+            create_filter('phone', 'true', SearchWaypoint),
             Term(has_phone=True))
         self.assertEqual(
-            create_filter('wph', 'True', SearchWaypoint),
+            create_filter('phone', 'True', SearchWaypoint),
             Term(has_phone=True))
         self.assertEqual(
-            create_filter('wph', '1', SearchWaypoint),
+            create_filter('phone', '1', SearchWaypoint),
             Term(has_phone=True))
         self.assertEqual(
-            create_filter('wph', 'false', SearchWaypoint),
+            create_filter('phone', 'false', SearchWaypoint),
             Term(has_phone=False))
         self.assertEqual(
-            create_filter('wph', 'False', SearchWaypoint),
+            create_filter('phone', 'False', SearchWaypoint),
             Term(has_phone=False))
         self.assertEqual(
-            create_filter('wph', '0', SearchWaypoint),
+            create_filter('phone', '0', SearchWaypoint),
             Term(has_phone=False))
 
     def test_create_filter_area_ids(self):
@@ -247,31 +247,31 @@ class AdvancedSearchTest(BaseTestCase):
 
     def test_create_filter_date_range(self):
         self.assertEqual(
-            create_filter('od', '', SearchOuting),
+            create_filter('date', '', SearchOuting),
             None)
         self.assertEqual(
-            create_filter('od', 'invalid date', SearchOuting),
+            create_filter('date', 'invalid date', SearchOuting),
             None)
         self.assertEqual(
-            create_filter('od', '2016-01-01', SearchOuting),
+            create_filter('date', '2016-01-01', SearchOuting),
             Bool(must=[
                 Range(date_start={'lte': '2016-01-01'}),
                 Range(date_end={'gte': '2016-01-01'})
             ]))
         self.assertEqual(
-            create_filter('od', '2016-01-01,invalid date', SearchOuting),
+            create_filter('date', '2016-01-01,invalid date', SearchOuting),
             Bool(must=[
                 Range(date_start={'lte': '2016-01-01'}),
                 Range(date_end={'gte': '2016-01-01'})
             ]))
         self.assertEqual(
-            create_filter('od', '2016-01-01,2016-01-01', SearchOuting),
+            create_filter('date', '2016-01-01,2016-01-01', SearchOuting),
             Bool(must=[
                 Range(date_start={'lte': '2016-01-01'}),
                 Range(date_end={'gte': '2016-01-01'})
             ]))
         self.assertEqual(
-            create_filter('od', '2016-01-01,2016-01-03', SearchOuting),
+            create_filter('date', '2016-01-01,2016-01-03', SearchOuting),
             Bool(must_not=Bool(should=[
                 Range(date_start={'gt': '2016-01-03'}),
                 Range(date_end={'lt': '2016-01-01'})

@@ -84,7 +84,7 @@ class WaypointRest(DocumentRest):
 
         Search filters:
         An arbitrary number of search filters can be added, for example
-        `/waypoints?wt=summit&we=4500,5000` gets all summits with a height
+        `/waypoints?wtyp=summit&walt=4500,5000` gets all summits with a height
         between 4500 and 5000. The available filter parameters are listed
         below.
 
