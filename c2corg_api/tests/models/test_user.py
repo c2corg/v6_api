@@ -1,17 +1,7 @@
 from c2corg_api.models.user import User, Purpose
+from c2corg_api.models.user_profile import UserProfile
 
 from c2corg_api.tests import BaseTestCase
-
-
-class SessionStub():
-    def __init__(self):
-        self.updated = False
-
-    def add(self, arg2):
-        self.updated = True
-
-    def flush(self):
-        self.updated = True
 
 
 class Testuser(BaseTestCase):
@@ -35,3 +25,26 @@ class Testuser(BaseTestCase):
 
         tony.email_validated = True
         change_email()
+
+    def test_last_modified(self):
+        """Check that the last modified field is set.
+        """
+        profile = UserProfile()
+        self.session.add(profile)
+        self.session.flush()
+
+        user = User(
+            id=profile.document_id,
+            username='user', name='user', forum_username='user',
+            email_validated=True, email='user@mail.com', password='foobar')
+        self.session.add(user)
+        self.session.flush()
+        self.session.refresh(user)
+
+        self.assertIsNotNone(user.last_modified)
+
+        user.name = 'changed'
+        self.session.flush()
+        self.session.refresh(user)
+
+        self.assertIsNotNone(user.last_modified)

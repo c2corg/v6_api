@@ -17,6 +17,7 @@ from c2corg_api.models import Base, users_schema, schema
 
 import colander
 from sqlalchemy.orm import relationship, backref
+from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import ForeignKey
 
 from enum import Enum
@@ -89,6 +90,8 @@ class User(Base):
     validation_nonce = Column(String(200), nullable=True, unique=True)
     validation_nonce_expire = Column(DateTime, nullable=True, unique=False)
     _password = Column('password', String(255), nullable=False)
+    last_modified = Column(
+        DateTime, default=func.now(), onupdate=func.now(), nullable=False)
 
     lang = Column(
             String(2), ForeignKey(schema + '.langs.lang'),
