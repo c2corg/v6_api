@@ -1,3 +1,4 @@
+from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_common.attributes import default_langs
 from pyramid.settings import asbool
 
@@ -445,13 +446,16 @@ class UserAccountRest(object):
             result['email'] = validated['email']
             result['sent_email'] = True
 
+        update_search_index = False
         if 'name' in validated:
             user.name = validated['name']
             result['name'] = user.name
+            update_search_index = True
 
         if 'forum_username' in validated:
             user.forum_username = validated['forum_username']
             result['forum_username'] = user.forum_username
+            update_search_index = True
 
         # Synchronize everything except the new email (still stored
         # in the email_to_validate attribute while validation is pending).
@@ -471,6 +475,10 @@ class UserAccountRest(object):
 
         if email_link:
             email_service.send_change_email_confirmation(user, link)
+
+        if update_search_index:
+            # when user name changes, the search index has to be updated
+            notify_es_syncer(self.request.registry.queue_config)
 
         return result
 

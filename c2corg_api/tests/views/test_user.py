@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+from c2corg_api.search import search_documents, elasticsearch_config
 from nose.plugins.attrib import attr
 
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
-from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.models.user_profile import UserProfile, USERPROFILE_TYPE
 
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.security.discourse_client import (
@@ -26,7 +27,6 @@ class TestUserRest(BaseTestRest):
         self._prefix = "/users"
         self._model = User
         BaseTestRest.setUp(self)
-        self._add_test_data()
         self.set_discourse_up()
 
     def set_discourse_client_mock(self, client):
@@ -423,7 +423,7 @@ class TestUserRest(BaseTestRest):
         url = '/users/' + str(self.global_userids['contributor'])
         self.app.get(url, status=403)
 
-    def read_and_update_account_info_discourse_up(self):
+    def test_read_and_update_account_info_discourse_up(self):
         user_id = self.global_userids['contributor']
         currentpassword = self.global_passwords['contributor']
 
@@ -478,5 +478,31 @@ class TestUserRest(BaseTestRest):
         self.post_json_with_contributor(url, data, status=500)
         self.assertEqual(1, int(self.discourse_client.sso_sync.called_count))
 
-    def _add_test_data(self):
-        pass
+    def test_read_and_update_account_info_username(self):
+        user_id = self.global_userids['contributor']
+        currentpassword = self.global_passwords['contributor']
+
+        # Read account info
+        url = '/users/account'
+        body = self.get_json_with_contributor(url, status=200)
+        self.assertBodyEqual(body, 'name', 'Contributor')
+
+        # Change name
+        currentpassword = self.global_passwords['contributor']
+        data = {
+            'currentpassword': currentpassword,
+            'name': 'changed',
+        }
+
+        self.post_json_with_contributor(url, data, status=200)
+        user = self.session.query(User).get(user_id)
+        self.assertEqual(user.name, data['name'])
+
+        # check that the search index is updated with the new name
+        self.sync_es()
+        search_doc = search_documents[USERPROFILE_TYPE].get(
+            id=user_id,
+            index=elasticsearch_config['index'])
+
+        self.assertIsNotNone(search_doc['doc_type'])
+        self.assertEqual(search_doc['title_en'], 'contributor changed')
