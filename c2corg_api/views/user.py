@@ -304,6 +304,9 @@ class UserNonceValidationRest(object):
         user.clear_validation_nonce()
         user.email_validated = True
 
+        # the user profile can be indexed once the account is confirmed
+        notify_es_syncer(self.request.registry.queue_config)
+
         # Synchronizing to Discourse is unnecessary as it will be done
         # during the redirect_without_nonce call below.
 
