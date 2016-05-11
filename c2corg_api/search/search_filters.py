@@ -43,7 +43,8 @@ def build_query(url_params, meta_params, doc_type):
         # if a search term is given, the documents are sorted by a relevance
         # score. if not explicitly sort by id/date.
         if doc_type == OUTING_TYPE:
-            search = search.sort({'date_end': {'order': 'desc'}})
+            search = search.sort(
+                {'date_end': {'order': 'desc'}}, {'id': {'order': 'desc'}})
         else:
             search = search.sort({'id': {'order': 'desc'}})
 

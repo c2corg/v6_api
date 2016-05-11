@@ -80,7 +80,7 @@ class AdvancedSearchTest(BaseTestCase):
         expected_query = create_search('o'). \
             filter(Term(activities='skitouring')).\
             fields([]).\
-            sort({'date_end': {'order': 'desc'}}).\
+            sort({'date_end': {'order': 'desc'}}, {'id': {'order': 'desc'}}).\
             extra(from_=40, size=20)
         self.assertQueryEqual(query, expected_query)
 
