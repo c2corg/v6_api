@@ -1,5 +1,6 @@
 import json
 
+from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile, ArchiveUserProfile, \
     USERPROFILE_TYPE
 from c2corg_api.scripts.es.sync import sync_es
@@ -39,20 +40,21 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 0, 'limit': 0}, user='contributor'),
-            [], 6)
+            [], 5)
 
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 0, 'limit': 1}, user='contributor'),
-            [self.profile4.document_id], 6)
+            [self.profile4.document_id], 5)
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 0, 'limit': 2}, user='contributor'),
-            [self.profile4.document_id, self.profile3.document_id], 6)
+            [self.profile4.document_id, self.profile2.document_id], 5)
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 1, 'limit': 2}, user='contributor'),
-            [self.profile3.document_id, self.profile2.document_id], 6)
+            [self.profile2.document_id, self.global_userids['contributor2']],
+            5)
 
     def test_get_collection_lang(self):
         self.get_collection_lang(user='contributor')
@@ -75,6 +77,11 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.assertIsNone(body['locales'][0].get('title'))
         self.assertNotIn('maps', body)
         self.assertIn('username', body)
+
+    def test_get_unconfirmed_user(self):
+        headers = self.add_authorization_header(username='contributor')
+        self.app.get(self._prefix + '/' + str(self.profile3.document_id),
+                     headers=headers, status=404)
 
     def test_get_lang(self):
         self.get_lang(self.profile1, user='contributor')
@@ -336,5 +343,22 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.profile4.locales.append(DocumentLocale(
             lang='fr', description='Toi', title=''))
         self.session.add(self.profile4)
+
+        self.session.flush()
+
+        # create users for the profiles
+        self.user2 = User(
+            name='user2', username='user2', email='user2@c2c.org',
+            forum_username='user2', password='pass',
+            email_validated=True, profile=self.profile2)
+        self.user3 = User(
+            name='user3', username='user3', email='user3@c2c.org',
+            forum_username='user3', password='pass',
+            email_validated=False, profile=self.profile3)
+        self.user4 = User(
+            name='user4', username='user4', email='user4@c2c.org',
+            forum_username='user4', password='pass',
+            email_validated=True, profile=self.profile4)
+        self.session.add_all([self.user2, self.user3, self.user4])
 
         self.session.flush()

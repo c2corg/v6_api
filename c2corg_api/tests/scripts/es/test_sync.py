@@ -94,11 +94,18 @@ class SyncTest(BaseTestCase):
         search_documents = []
         mock.side_effect = self._create_mock_match(search_documents)
 
+        # test that unconfirmed users are ignored
+        user_id = self.global_userids['contributor2']
+        user = self.session.query(User).get(user_id)
+        user.email_validated = False
+        self.session.flush()
+
         changed_documents = [
             (self.waypoint1.document_id, 'w'),
             (self.waypoint2.document_id, 'w'),
             (self.waypoint3.document_id, 'w'),
-            (self.route1.document_id, 'r')]
+            (self.route1.document_id, 'r'),
+            (user_id, 'u')]
         sync_documents(self.session, changed_documents)
         self.assertEqual(len(search_documents), 4)
 
