@@ -3,6 +3,8 @@ from c2corg_api.models.area import Area
 from c2corg_api.models.document import Document, DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.route import Route, ROUTE_TYPE
+from c2corg_api.models.user import User
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import elasticsearch_config, batch_size, \
@@ -10,6 +12,8 @@ from c2corg_api.search import elasticsearch_config, batch_size, \
 from c2corg_api.views.document import add_load_for_profiles
 from sqlalchemy.orm import joinedload
 import logging
+
+from sqlalchemy.sql.elements import literal
 
 log = logging.getLogger(__name__)
 
@@ -22,8 +26,10 @@ def sync_es(session):
                         'initial import into ElasticSearch')
 
     # get all documents that have changed since the last update
-    # TODO also check changes to associations and user names
-    changed_documents = get_changed_documents(session, last_update)
+    # TODO also check changes to associations
+    changed_documents = get_changed_documents(session, last_update) + \
+        get_changed_users(session, last_update)
+
     if changed_documents:
         sync_documents(session, changed_documents)
 
@@ -46,6 +52,15 @@ def get_changed_documents(session, last_update):
         filter(HistoryMetaData.written_at >= last_update). \
         group_by(Document.document_id, Document.type). \
         order_by(Document.type). \
+        all()
+
+
+def get_changed_users(session, last_update):
+    """Get the users that have changed. Needed to update the profile when
+    the user name has changed.
+    """
+    return session.query(User.id, literal(USERPROFILE_TYPE)). \
+        filter(User.last_modified >= last_update). \
         all()
 
 

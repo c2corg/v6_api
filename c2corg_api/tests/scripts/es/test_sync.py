@@ -4,10 +4,12 @@ from unittest.mock import patch
 from c2corg_api.models import es_sync
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.sync import get_changed_documents, \
-    get_documents_per_type,  sync_documents, create_search_documents
+    get_documents_per_type,  sync_documents, create_search_documents, \
+    get_changed_users
 from c2corg_api.tests import BaseTestCase, global_userids
 from c2corg_api.views.document import DocumentRest
 
@@ -25,6 +27,24 @@ class SyncTest(BaseTestCase):
         self.assertEqual(len(changed_documents), 4)
         self.assertEqual('r', changed_documents[0][1])
         self.assertEqual('w', changed_documents[1][1])
+
+        self.assertEqual(
+            len(get_changed_documents(
+                self.session, last_update + datetime.timedelta(0, 1))),
+            0)
+
+    def test_get_changed_users(self):
+        user_id = self.global_userids['contributor']
+        user = self.session.query(User).get(user_id)
+        user.name = 'changed'
+        self.session.flush()
+
+        last_update, _ = es_sync.get_status(self.session)
+
+        changed_users = get_changed_users(self.session, last_update)
+        self.assertEqual(len(changed_users), 1)
+        self.assertEqual(user_id, changed_users[0][0])
+        self.assertEqual('u', changed_users[0][1])
 
         self.assertEqual(
             len(get_changed_documents(
