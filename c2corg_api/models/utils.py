@@ -3,6 +3,8 @@ from geoalchemy2 import WKBElement
 from shapely.geometry import LineString, MultiLineString
 from sqlalchemy.dialects import postgresql
 import sqlalchemy as sa
+from sqlalchemy.sql.expression import and_
+from sqlalchemy.sql.functions import func
 import re
 
 
@@ -72,3 +74,62 @@ def get_mid_point(wkb_track):
             track.geoms[0].interpolate(0.5, True), srid=3857)
     else:
         return None
+
+
+def windowed_query(q, column, windowsize):
+    """"Break a Query into windows on a given column.
+    Source: https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WindowedRangeQuery  # noqa
+
+    If the query does not use eager loading `yield_per` can be used instead for
+    native streaming.
+    """
+
+    for whereclause in column_windows(
+            q.session,
+            column, windowsize):
+        for row in q.filter(whereclause).order_by(column):
+            yield row
+
+
+def column_windows(session, column, windowsize):
+    """Return a series of WHERE clauses against
+    a given column that break it into windows.
+
+    Result is an iterable of tuples, consisting of
+    ((start, end), whereclause), where (start, end) are the ids.
+
+    Requires a database that supports window functions,
+    i.e. Postgresql, SQL Server, Oracle.
+
+    Enhance this yourself !  Add a "where" argument
+    so that windows of just a subset of rows can
+    be computed.
+
+    Source: https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WindowedRangeQuery  # noqa
+    """
+    def int_for_range(start_id, end_id):
+        if end_id:
+            return and_(
+                column >= start_id,
+                column < end_id
+            )
+        else:
+            return column >= start_id
+
+    q = session.query(
+        column,
+        func.row_number().over(order_by=column).label('rownum')
+    ). \
+        from_self(column)
+    if windowsize > 1:
+        q = q.filter(sa.text("rownum %% %d=1" % windowsize))
+
+    intervals = [id for id, in q]
+
+    while intervals:
+        start = intervals.pop(0)
+        if intervals:
+            end = intervals[0]
+        else:
+            end = None
+        yield int_for_range(start, end)

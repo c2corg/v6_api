@@ -1,3 +1,5 @@
+import logging
+
 import os
 import sys
 
@@ -35,6 +37,7 @@ def main(argv=sys.argv):
     config_uri = argv[1]
     options = parse_vars(argv[2:])
     setup_logging(config_uri)
+    logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
     settings = get_appsettings(config_uri, options=options)
     engine = engine_from_config(settings, 'sqlalchemy.')
     Session = sessionmaker(extension=ZopeTransactionExtension())  # noqa
