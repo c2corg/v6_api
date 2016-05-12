@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import search_documents, elasticsearch_config
 from nose.plugins.attrib import attr
 
@@ -194,6 +195,43 @@ class TestUserRest(BaseTestRest):
         }
         body = self.app_post_json(url, request_utf8, status=200).json
 
+    def test_register_search_index(self):
+        """Tests that user accounts are only indexed once they are confirmed.
+        """
+        request_body = {
+            'username': 'test', 'forum_username': 'testf',
+            'name': 'Max Mustermann',
+            'password': 'super secret',
+            'email': 'some_user@camptocamp.org'
+        }
+        url = self._prefix + '/register'
+
+        body = self.app_post_json(url, request_body, status=200).json
+        self.assertIn('id', body)
+        user_id = body.get('id')
+
+        # check that the profile is not inserted in the search index
+        sync_es(self.session)
+        search_doc = search_documents[USERPROFILE_TYPE].get(
+            id=user_id,
+            index=elasticsearch_config['index'], ignore=404)
+        self.assertIsNone(search_doc)
+
+        # Simulate confirmation email validation
+        nonce = self.extract_nonce('validate_register_email')
+        url_api_validation = '/users/validate_register_email/%s' % nonce
+        self.app_post_json(url_api_validation, {}, status=200)
+
+        # check that the profile is inserted in the index after confirmation
+        self.sync_es()
+        search_doc = search_documents[USERPROFILE_TYPE].get(
+            id=user_id,
+            index=elasticsearch_config['index'])
+        self.assertIsNotNone(search_doc)
+
+        self.assertIsNotNone(search_doc['doc_type'])
+        self.assertEqual(search_doc['title_fr'], 'test Max Mustermann')
+
     def test_register_discourse_down(self):
         self.set_discourse_down()
         request_body = {
@@ -279,7 +317,7 @@ class TestUserRest(BaseTestRest):
         url = '/users/register'
         self.app_post_json(url, request_body, status=200)
 
-        # Then simulate sheduled call to purge accounts
+        # Then simulate a scheduled call to purge accounts
         purge_account(self.session)
 
         # The user should still exist

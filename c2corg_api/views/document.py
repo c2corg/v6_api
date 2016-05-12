@@ -1,4 +1,5 @@
 from c2corg_api.models.outing import Outing
+from c2corg_api.models.user import User
 from functools import partial
 
 from c2corg_api.models import DBSession
@@ -87,7 +88,9 @@ class DocumentRest(object):
             base_query = base_query.order_by(clazz.date_end.desc())
         else:
             base_query = base_query.order_by(clazz.document_id.desc())
+
         base_query = add_load_for_profiles(base_query, clazz)
+        base_total_query = add_profile_filter(base_total_query, clazz)
 
         if include_areas:
             base_query = base_query. \
@@ -682,7 +685,17 @@ def get_all_fields(fields, activities, field_list_type):
 def add_load_for_profiles(document_query, clazz):
     if clazz == UserProfile:
         # for profiles load username/name together from the associated user
-        document_query = document_query.options(joinedload('user'))
+        document_query = add_profile_filter(document_query, clazz). \
+            options(contains_eager('user'))
+    return document_query
+
+
+def add_profile_filter(document_query, clazz):
+    if clazz == UserProfile:
+        # make sure only confirmed accounts are returned
+        document_query = document_query. \
+            join(User). \
+            filter(User.email_validated)
     return document_query
 
 

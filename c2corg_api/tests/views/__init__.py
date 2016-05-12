@@ -4,6 +4,8 @@ import urllib.parse
 import urllib.error
 
 from c2corg_api.models.route import Route
+from c2corg_api.models.user import User
+from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.tests import BaseTestCase
@@ -103,8 +105,15 @@ class BaseDocumentTestRest(BaseTestRest):
             self.assertIn('type', doc)
 
         if limit is None:
-            nb_docs = self.session.query(self._model). \
-                filter(getattr(self._model, 'redirects_to').is_(None)).count()
+            if self._model == UserProfile:
+                nb_docs = self.session.query(UserProfile). \
+                    join(User). \
+                    filter(User.email_validated). \
+                    filter(UserProfile.redirects_to.is_(None)).count()
+            else:
+                nb_docs = self.session.query(self._model). \
+                    filter(getattr(self._model, 'redirects_to').is_(None)).\
+                    count()
             self.assertEqual(len(documents), nb_docs)
         else:
             self.assertLessEqual(len(documents), limit)
