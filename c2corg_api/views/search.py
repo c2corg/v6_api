@@ -62,44 +62,44 @@ class SearchRest(object):
         types_to_include = self._parse_types_to_include(
             self.request.params.get('t'))
 
-        results = {}
+        search_types = []
         if self._include_type(WAYPOINT_TYPE, types_to_include):
-            results['waypoints'] = search.search_for_type(
-                search_term, WAYPOINT_TYPE, Waypoint, DocumentLocale,
-                schema_waypoint, waypoint_adaptor, limit, lang)
+            search_types.append(
+                ('waypoints', WAYPOINT_TYPE, Waypoint, DocumentLocale,
+                 schema_waypoint, waypoint_adaptor))
 
         if self._include_type(ROUTE_TYPE, types_to_include):
-            results['routes'] = search.search_for_type(
-                search_term, ROUTE_TYPE, Route, RouteLocale,
-                schema_route, route_adaptor, limit, lang)
+            search_types.append(
+                ('routes', ROUTE_TYPE, Route, RouteLocale,
+                 schema_route, route_adaptor))
 
         if self._include_type(OUTING_TYPE, types_to_include):
-            results['outings'] = search.search_for_type(
-                search_term, OUTING_TYPE, Outing, DocumentLocale,
-                schema_outing, outing_adaptor, limit, lang)
+            search_types.append(
+                ('outings', OUTING_TYPE, Outing, DocumentLocale,
+                 schema_outing, outing_adaptor))
 
         if self._include_type(AREA_TYPE, types_to_include):
-            results['areas'] = search.search_for_type(
-                search_term, AREA_TYPE, Area, DocumentLocale,
-                schema_listing_area, None, limit, lang)
+            search_types.append(
+                ('areas', AREA_TYPE, Area, DocumentLocale,
+                 schema_listing_area, None))
 
         if self._include_type(MAP_TYPE, types_to_include):
-            results['maps'] = search.search_for_type(
-                search_term, MAP_TYPE, TopoMap, DocumentLocale,
-                schema_listing_topo_map, None, limit, lang)
+            search_types.append(
+                ('maps', MAP_TYPE, TopoMap, DocumentLocale,
+                 schema_listing_topo_map, None))
 
         if self._include_type(IMAGE_TYPE, types_to_include):
-            results['images'] = search.search_for_type(
-                search_term, IMAGE_TYPE, Image, DocumentLocale,
-                schema_listing_image, None, limit, lang)
+            search_types.append(
+                ('images', IMAGE_TYPE, Image, DocumentLocale,
+                 schema_listing_image, None))
 
         if self._include_type(USERPROFILE_TYPE, types_to_include) and \
                 self.request.has_permission('authenticated'):
-            results['users'] = search.search_for_type(
-                search_term, USERPROFILE_TYPE, UserProfile, DocumentLocale,
-                schema_listing_user_profile, None, limit, lang)
+            search_types.append(
+                ('users', USERPROFILE_TYPE, UserProfile, DocumentLocale,
+                 schema_listing_user_profile, None))
 
-        return results
+        return search.search_for_types(search_types, search_term, limit, lang)
 
     def _parse_types_to_include(self, types_in):
         if not types_in:
