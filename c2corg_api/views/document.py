@@ -85,7 +85,9 @@ class DocumentRest(object):
         base_query = base_query.options(joinedload(getattr(clazz, 'geometry')))
 
         if clazz == Outing:
-            base_query = base_query.order_by(clazz.date_end.desc())
+            base_query = base_query. \
+                order_by(clazz.date_end.desc()). \
+                order_by(clazz.document_id.desc())
         else:
             base_query = base_query.order_by(clazz.document_id.desc())
 
