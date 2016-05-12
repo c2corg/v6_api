@@ -19,7 +19,7 @@ from c2corg_api.models.document import (
     DocumentLocale)
 from sqlalchemy.orm import load_only, joinedload
 from c2corg_common import document_types
-from sqlalchemy.sql.expression import or_
+from sqlalchemy.sql.expression import or_, select
 
 MAP_TYPE = document_types.MAP_TYPE
 
@@ -105,6 +105,10 @@ def get_maps(document, lang):
     if document.geometry is None:
         return []
 
+    document_geom = select([DocumentGeometry.geom]). \
+        where(DocumentGeometry.document_id == document.document_id)
+    document_geom_detail = select([DocumentGeometry.geom_detail]). \
+        where(DocumentGeometry.document_id == document.document_id)
     topo_maps = DBSession. \
         query(TopoMap). \
         filter(TopoMap.redirects_to.is_(None)). \
@@ -119,12 +123,10 @@ def get_maps(document, lang):
             DocumentLocale.version)). \
         filter(
             or_(
-                DocumentGeometry.geom_detail.intersects(
-                    DBSession.query(DocumentGeometry.geom).filter(
-                        DocumentGeometry.document_id == document.document_id)),
-                DocumentGeometry.geom_detail.intersects(
-                    DBSession.query(DocumentGeometry.geom_detail).filter(
-                        DocumentGeometry.document_id == document.document_id))
+                DocumentGeometry.geom_detail.ST_Intersects(
+                    document_geom.label('t1')),
+                DocumentGeometry.geom_detail.ST_Intersects(
+                    document_geom_detail.label('t2'))
             )). \
         all()
 
