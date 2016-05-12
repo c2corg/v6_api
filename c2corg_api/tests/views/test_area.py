@@ -256,7 +256,7 @@ class TestAreaRest(BaseDocumentTestRest):
 
         # version with lang 'en'
         versions = map1.versions
-        version_en = versions[2]
+        version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.title, 'New title')
 
@@ -269,7 +269,7 @@ class TestAreaRest(BaseDocumentTestRest):
         self.assertEqual(archive_geometry_en.version, 1)
 
         # version with lang 'fr'
-        version_fr = versions[3]
+        version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Chartreuse')
 

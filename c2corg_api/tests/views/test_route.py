@@ -77,9 +77,10 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertNotIn('climbing_outdoor_type', body)
         self.assertIn('elevation_min', body)
 
+        locale_en = self.get_locale('en', body.get('locales'))
         self.assertEqual(
             'Main waypoint title',
-            body.get('locales')[0].get('title_prefix'))
+            locale_en.get('title_prefix'))
 
         self.assertIn('main_waypoint_id', body)
         self.assertIn('associations', body)
@@ -449,7 +450,7 @@ class TestRouteRest(BaseDocumentTestRest):
 
         # version with lang 'en'
         versions = route.versions
-        version_en = versions[2]
+        version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Blanc from the air')
         self.assertEqual(archive_locale.gear, 'none')
@@ -462,7 +463,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(archive_geometry_en.version, 2)
 
         # version with lang 'fr'
-        version_fr = versions[3]
+        version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Blanc du ciel')
         self.assertEqual(archive_locale.gear, 'paraglider')

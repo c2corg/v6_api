@@ -379,7 +379,7 @@ class TestWaypoint(BaseTestCase):
         self.session.flush()
 
         set_available_langs([waypoint])
-        self.assertEqual(waypoint.available_langs, ['en', 'fr'])
+        self.assertEqual(set(waypoint.available_langs), set(['en', 'fr']))
 
     def test_array_handling_non_empty(self):
         waypoint = Waypoint(
