@@ -207,7 +207,7 @@ class _DocumentLocaleMixin(object):
     def document_id(self):
         return Column(
             Integer, ForeignKey(schema + '.documents.document_id'),
-            nullable=False)
+            nullable=False, index=True)
 
     @declared_attr
     def lang(self):
