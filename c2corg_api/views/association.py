@@ -1,5 +1,6 @@
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import Document
+from c2corg_api.models.route import Route
 from c2corg_common.associations import valid_associations
 from cornice.resource import resource
 from pyramid.httpexceptions import HTTPBadRequest
@@ -7,6 +8,7 @@ from pyramid.httpexceptions import HTTPBadRequest
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.models.association import schema_association, \
     Association, exists_already
+from sqlalchemy.sql.expression import exists
 
 
 def validate_association(request):
@@ -76,6 +78,11 @@ class AssociationRest(object):
             if association is None:
                 raise HTTPBadRequest('association does not exist')
 
+        if is_main_waypoint_association(association):
+            raise HTTPBadRequest(
+                'as the main waypoint of the route, this waypoint can not '
+                'be disassociated')
+
         log = association.get_log(
             self.request.authenticated_userid, is_creation=False)
 
@@ -88,3 +95,11 @@ class AssociationRest(object):
         return DBSession.query(Association). \
             get((association_in.parent_document_id,
                  association_in.child_document_id))
+
+
+def is_main_waypoint_association(association):
+    return DBSession.query(
+        exists().
+        where(Route.document_id == association.child_document_id).
+        where(Route.main_waypoint_id == association.parent_document_id)
+    ).scalar()
