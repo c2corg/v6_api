@@ -5,6 +5,7 @@ from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
+from c2corg_api.models.utils import windowed_query
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import elasticsearch_config, batch_size, \
@@ -120,7 +121,7 @@ def get_documents(session, doc_type, document_ids=None):
 
     base_query = add_load_for_profiles(base_query, clazz)
 
-    return base_query
+    return windowed_query(base_query, Document.document_id, batch_size)
 
 
 def create_search_documents(doc_type, documents, batch):
