@@ -279,7 +279,7 @@ class TestImageRest(BaseDocumentTestRest):
 
         # version with lang 'en'
         versions = image.versions
-        version_en = versions[2]
+        version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Blanc from the air')
 
@@ -291,7 +291,7 @@ class TestImageRest(BaseDocumentTestRest):
         self.assertEqual(archive_geometry_en.version, 2)
 
         # version with lang 'fr'
-        version_fr = versions[3]
+        version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Blanc du ciel')
 

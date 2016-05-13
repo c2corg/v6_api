@@ -68,6 +68,16 @@ class BaseTestRest(BaseTestCase):
         self.assertIsNotNone(queue.get(), 'no sync. notification sent for ES')
         sync_es(self.session)
 
+    def get_latest_version(self, lang, versions):
+        versions_in_lang = [v for v in versions if v.lang == lang]
+        versions_in_lang.sort(key=lambda v: v.id, reverse=True)
+        return versions_in_lang[0]
+
+    def get_locale(self, lang, locales):
+        return next(
+            filter(lambda locale: locale['lang'] == lang, locales),
+            None)
+
 
 class BaseDocumentTestRest(BaseTestRest):
 
@@ -580,7 +590,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(len(versions), 4)
 
         # version with lang 'en'
-        version_en = versions[2]
+        version_en = self.get_latest_version('en', versions)
 
         self.assertEqual(version_en.lang, 'en')
 
@@ -599,7 +609,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(archive_locale.lang, 'en')
 
         # version with lang 'fr'
-        version_fr = versions[3]
+        version_fr = self.get_latest_version('fr', versions)
 
         self.assertEqual(version_fr.lang, 'fr')
 
@@ -679,7 +689,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(len(versions), 4)
 
         # version with lang 'en'
-        version_en = versions[2]
+        version_en = self.get_latest_version('en', versions)
 
         self.assertEqual(version_en.lang, 'en')
 
@@ -688,7 +698,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertIsNotNone(meta_data_en.written_at)
 
         # version with lang 'fr'
-        version_fr = versions[3]
+        version_fr = self.get_latest_version('fr', versions)
 
         self.assertEqual(version_fr.lang, 'fr')
 
@@ -774,7 +784,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(len(versions), 3)
 
         # version with lang 'en'
-        version_en = versions[2]
+        version_en = self.get_latest_version('en', versions)
 
         self.assertEqual(version_en.lang, 'en')
 
@@ -783,7 +793,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertIsNotNone(meta_data_en.written_at)
 
         # version with lang 'fr'
-        version_fr = versions[1]
+        version_fr = self.get_latest_version('fr', versions)
 
         self.assertEqual(version_fr.lang, 'fr')
 
@@ -860,15 +870,13 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(len(versions), 3)
 
         # version with lang 'en'
-        version_en = versions[0]
-
+        version_en = self.get_latest_version('en', versions)
         self.assertEqual(version_en.lang, 'en')
 
         meta_data_en = version_en.history_metadata
 
         # version with lang 'fr'
-        version_fr = versions[1]
-
+        version_fr = self.get_latest_version('fr', versions)
         self.assertEqual(version_fr.lang, 'fr')
 
         meta_data_fr = version_fr.history_metadata
@@ -879,8 +887,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertIs(archive_document_en, archive_document_fr)
 
         # version with lang 'es'
-        version_es = versions[2]
-
+        version_es = self.get_latest_version('es', versions)
         self.assertEqual(version_es.lang, 'es')
 
         meta_data_es = version_es.history_metadata

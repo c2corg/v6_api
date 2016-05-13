@@ -182,7 +182,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         self.assertIn('redirects_to', body)
         self.assertEqual(body['redirects_to'], self.waypoint.document_id)
-        self.assertEqual(body['available_langs'], ['en', 'fr'])
+        self.assertEqual(set(body['available_langs']), set(['en', 'fr']))
 
     def test_post_error(self):
         body = self.post_error({})
@@ -455,7 +455,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         # version with lang 'en'
         versions = waypoint.versions
-        version_en = versions[2]
+        version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Granier!')
         self.assertEqual(archive_locale.access, 'n')
@@ -468,7 +468,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(archive_geometry_en.version, 2)
 
         # version with lang 'fr'
-        version_fr = versions[3]
+        version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Granier')
         self.assertEqual(archive_locale.access, 'ouai')
@@ -547,7 +547,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         # version with lang 'en'
         versions = waypoint.versions
-        version_en = versions[2]
+        version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Granier')
         self.assertEqual(archive_locale.access, 'n')
@@ -560,7 +560,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(archive_geometry_en.version, 1)
 
         # version with lang 'fr'
-        version_fr = versions[3]
+        version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Granier')
         self.assertEqual(archive_locale.access, 'ouai')
@@ -750,7 +750,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(len(versions), 2)
 
         # version with lang 'en'
-        version_en = versions[1]
+        version_en = self.get_latest_version('en', versions)
 
         self.assertEqual(version_en.lang, 'en')
 

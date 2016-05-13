@@ -1,45 +1,75 @@
 from c2corg_api.views.document import add_load_for_profiles
+from elasticsearch_dsl.search import MultiSearch
 from sqlalchemy.orm import joinedload
 
 from c2corg_api.models import DBSession
-from c2corg_api.search import create_search, get_text_query
+from c2corg_api.search import create_search, get_text_query, \
+    elasticsearch_config
 from c2corg_api.views import to_json_dict, set_best_locale
 
 
-def search_for_type(
-        search_term, document_type, model, locale_model,
-        schema, adapt_schema, limit, lang):
+def search_for_types(search_types, search_term, limit, lang):
+    """Get results for all given types.
+    """
     document_id = try_to_parse_document_id(search_term)
 
     if document_id is not None:
-        # search by document id
-        documents = get_documents([document_id], model, locale_model, lang)
-        total = len(documents)
+        # search by document id for every type
+        results_for_type = [([document_id], None)] * len(search_types)
     else:
         # search in ElasticSearch
+        results_for_type = do_multi_search_for_types(
+            search_types, search_term, limit)
+
+    # load the documents using the document ids returned from the search
+    results = {}
+    for search_type, result_for_type in zip(search_types, results_for_type):
+        (key, document_type, model, locale_model, schema, adapt_schema) = \
+            search_type
+        (document_ids, total) = result_for_type
+
+        documents = get_documents(document_ids, model, locale_model, lang)
+        count = len(documents)
+        total = total if total is not None else count
+
+        results[key] = {
+            'count': count,
+            'total': total,
+            'documents': [
+                to_json_dict(
+                    doc,
+                    schema if not adapt_schema else adapt_schema(schema, doc)
+                ) for doc in documents
+            ]
+        }
+
+    return results
+
+
+def do_multi_search_for_types(search_types, search_term, limit):
+    """ Executes a multi-search for all document types in a single request
+    and returns a list of tuples (document_ids, total) containing the results
+    for each type.
+    """
+    multi_search = MultiSearch(index=elasticsearch_config['index'])
+
+    for search_type in search_types:
+        (_, document_type, _, _, _, _) = search_type
         search = create_search(document_type).\
             query(get_text_query(search_term)).\
             fields([]).\
             extra(from_=0, size=limit)
+        multi_search = multi_search.add(search)
 
-        # only request the document ids from ES
-        response = search.execute()
+    responses = multi_search.execute()
+
+    results_for_type = []
+    for response in responses:
+        # only requesting the document ids from ES
         document_ids = [int(doc.meta.id) for doc in response]
-
-        # then load the documents for the returned ids
-        documents = get_documents(document_ids, model, locale_model, lang)
         total = response.hits.total
-
-    return {
-        'count': len(documents),
-        'total': total,
-        'documents': [
-            to_json_dict(
-                doc,
-                schema if not adapt_schema else adapt_schema(schema, doc)
-            ) for doc in documents
-        ]
-    }
+        results_for_type.append((document_ids, total))
+    return results_for_type
 
 
 def get_documents(document_ids, model, locale_model, lang):
