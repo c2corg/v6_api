@@ -11,7 +11,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, load_only, joinedload
 from sqlalchemy.schema import PrimaryKeyConstraint
 from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import and_, or_
+from sqlalchemy.sql.expression import and_, or_, select
 
 
 class AreaAssociation(Base):
@@ -65,6 +65,8 @@ def update_area(area, reset=False):
         # ignore forwarded areas
         return
 
+    area_geom = select([DocumentGeometry.geom_detail]). \
+        where(DocumentGeometry.document_id == area.document_id)
     intersecting_documents = DBSession. \
         query(
             DocumentGeometry.document_id,  # id of a document
@@ -77,12 +79,10 @@ def update_area(area, reset=False):
         filter(Document.redirects_to.is_(None)). \
         filter(
             or_(
-                DocumentGeometry.geom.intersects(
-                    DBSession.query(DocumentGeometry.geom_detail).filter(
-                        DocumentGeometry.document_id == area.document_id)),
-                DocumentGeometry.geom_detail.intersects(
-                    DBSession.query(DocumentGeometry.geom_detail).filter(
-                        DocumentGeometry.document_id == area.document_id))
+                DocumentGeometry.geom.ST_Intersects(
+                    area_geom.label('t1')),
+                DocumentGeometry.geom_detail.ST_Intersects(
+                    area_geom.label('t2'))
             ))
 
     DBSession.execute(
@@ -107,6 +107,10 @@ def update_areas_for_document(document, reset=False):
         # ignore forwarded areas
         return
 
+    document_geom = select([DocumentGeometry.geom]). \
+        where(DocumentGeometry.document_id == document.document_id)
+    document_geom_detail = select([DocumentGeometry.geom_detail]). \
+        where(DocumentGeometry.document_id == document.document_id)
     intersecting_areas = DBSession. \
         query(
             DocumentGeometry.document_id,  # id of an area
@@ -117,12 +121,10 @@ def update_areas_for_document(document, reset=False):
         filter(Area.redirects_to.is_(None)). \
         filter(
             or_(
-                DocumentGeometry.geom_detail.intersects(
-                    DBSession.query(DocumentGeometry.geom).filter(
-                        DocumentGeometry.document_id == document.document_id)),
-                DocumentGeometry.geom_detail.intersects(
-                    DBSession.query(DocumentGeometry.geom_detail).filter(
-                        DocumentGeometry.document_id == document.document_id))
+                DocumentGeometry.geom_detail.ST_Intersects(
+                    document_geom.label('t1')),
+                DocumentGeometry.geom_detail.ST_Intersects(
+                    document_geom_detail.label('t2'))
             ))
 
     DBSession.execute(
