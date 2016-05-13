@@ -181,6 +181,38 @@ class TestAssociationRest(BaseTestRest):
             (self.waypoint1.document_id, self.waypoint2.document_id))
         self.assertIsNone(association)
 
+    def test_delete_association_main_waypoint(self):
+        request_body = {
+            'parent_document_id': self.waypoint2.document_id,
+            'child_document_id': self.route1.document_id
+        }
+        headers = self.add_authorization_header(username='contributor')
+
+        # add association
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=200)
+
+        # make the wp the main waypoint of the route
+        self.route1.main_waypoint_id = self.waypoint2.document_id
+        self.session.flush()
+
+        # then try to delete the association
+        response = self.app.delete_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=400)
+
+        body = response.json
+        self.assertEqual(body.get('status'), 'error')
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+
+        self.assertEqual(errors[0].get('name'), 'Bad Request')
+        self.assertEqual(
+            errors[0].get('description'),
+            'as the main waypoint of the route, this waypoint can not '
+            'be disassociated')
+
     def _add_test_data(self):
         self.waypoint1 = Waypoint(
             waypoint_type='summit', elevation=2203)
