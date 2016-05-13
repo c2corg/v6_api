@@ -14,7 +14,7 @@ from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.route import schema_association_route
 from c2corg_api.models.topo_map import get_maps, schema_listing_topo_map
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.models.waypoint import schema_association_waypoint
+from c2corg_api.models.waypoint import schema_association_waypoint, Waypoint
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import cors_policy
@@ -168,14 +168,14 @@ class DocumentRest(object):
 
         set_available_langs([document])
 
-        include_associations = self.request.GET.get('a', '1') == '1'
-        if include_associations:
-            self._set_associations(document, lang)
-            if set_custom_associations:
-                set_custom_associations(document, lang)
+        editing_view = self.request.GET.get('e', '0') != '0'
+        self._set_associations(document, lang, clazz)
 
-            if include_areas:
-                self._set_areas(document, lang)
+        if not editing_view and set_custom_associations:
+            set_custom_associations(document, lang)
+
+        if not editing_view and include_areas:
+            self._set_areas(document, lang)
 
         if include_maps:
             self._set_maps(document, lang)
@@ -185,18 +185,30 @@ class DocumentRest(object):
 
         return to_json_dict(document, schema)
 
-    def _set_associations(self, document, lang):
-        linked_waypoints, linked_routes = get_associations(document, lang)
+    def _set_associations(self, document, lang, clazz):
+        linked_parent_waypoints, linked_child_waypoints, linked_routes = \
+            get_associations(document, lang)
         document.associations = {
-            'waypoints': [
-                to_json_dict(wp, schema_association_waypoint)
-                for wp in linked_waypoints
-            ],
             'routes': [
                 to_json_dict(r, schema_association_route)
                 for r in linked_routes
             ]
         }
+
+        if clazz == Waypoint:
+            document.associations['waypoint_parents'] = [
+                to_json_dict(wp, schema_association_waypoint)
+                for wp in linked_parent_waypoints
+            ]
+            document.associations['waypoint_children'] = [
+                to_json_dict(wp, schema_association_waypoint)
+                for wp in linked_child_waypoints
+            ]
+        else:
+            document.associations['waypoints'] = [
+                to_json_dict(wp, schema_association_waypoint)
+                for wp in linked_parent_waypoints + linked_child_waypoints
+            ]
 
     def _set_maps(self, document, lang):
         topo_maps = get_maps(document, lang)

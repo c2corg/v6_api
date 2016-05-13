@@ -101,7 +101,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertIn('associations', body)
         associations = body.get('associations')
 
-        linked_waypoints = associations.get('waypoints')
+        linked_waypoints = associations.get('waypoint_children')
         self.assertEqual(1, len(linked_waypoints))
         self.assertEqual(
             self.waypoint4.document_id, linked_waypoints[0].get('document_id'))
@@ -150,11 +150,12 @@ class TestWaypointRest(BaseDocumentTestRest):
 
     def test_get_no_associations(self):
         response = self.app.get(self._prefix + '/' +
-                                str(self.waypoint.document_id) + '?a=0',
+                                str(self.waypoint.document_id) + '?e=1',
                                 status=200)
         body = response.json
 
-        self.assertNotIn('associations', body)
+        self.assertIn('associations', body)
+        self.assertNotIn('recent_outings', body['associations'])
         self.assertIn('maps', body)
         self.assertNotIn('areas', body)
 

@@ -145,7 +145,7 @@ def get_associations(document, lang):
         set_best_locale(child_waypoints, lang)
         set_best_locale(routes, lang)
 
-    return parent_waypoints + child_waypoints, routes
+    return parent_waypoints, child_waypoints, routes
 
 
 def exists_already(link):
