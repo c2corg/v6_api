@@ -612,7 +612,7 @@ class UserLogoutRest(object):
             try:
                 settings = request.registry.settings
                 client = get_discourse_client(settings)
-                result['discourse_user'] = client.logout(userid, settings)
+                result['logged_out_discourse_user'] = client.logout(userid)
             except:
                 # Any error with discourse should not prevent logout
                 log.warning(
