@@ -23,7 +23,8 @@ class TestImageRest(BaseDocumentTestRest):
     def test_get_collection(self):
         body = self.get_collection()
         doc = body['documents'][0]
-        self.assertNotIn('filename', doc)
+        self.assertIn('filename', doc)
+        self.assertNotIn('file_size', doc)
 
     def test_get_collection_paginated(self):
         self.app.get("/images?offset=invalid", status=400)
