@@ -84,8 +84,10 @@ Forum integration (discourse)
 
 See https://github.com/c2corg/v6_forum
 
+
 Run the tests
 --------------
+
 Create a database that will be used to run the tests:
 
     scripts/create_user_db_test.sh
@@ -110,6 +112,17 @@ To run a specific test:
 To see the debug output:
 
     .build/venv/bin/nosetests -s
+
+
+Production checks
+-----------------
+
+Check the Discourse forum is up and available to the client API:
+  
+    scripts/check_discourse_connection.sh [id]
+
+"id" is a v6 user id. The script should return a 200OK.
+
 
 Developer Tips
 --------------
