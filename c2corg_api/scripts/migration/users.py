@@ -30,9 +30,10 @@ class MigrateUsers(MigrateBase):
                      'from app_users_private_data order by id')
 
         def get_group_by_id(gid):
-            return self.connection_source.execute(text(
+            results = self.connection_source.execute(text(
                 'select user_id from app_users_groups where '
-                'group_id = ' + str(gid)))
+                'group_id = ' + str(gid))).fetchall()
+            return [r[0] for r in results]
 
         batch = SimpleBatch(self.session_target, self.batch_size, User)
         with transaction.manager, batch:
