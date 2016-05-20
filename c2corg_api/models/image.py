@@ -1,4 +1,5 @@
-from c2corg_api.models.schema_utils import restrict_schema
+from c2corg_api.models.schema_utils import restrict_schema,\
+    get_update_schema, get_create_schema
 from c2corg_common.fields_image import fields_image
 from sqlalchemy import (
     Boolean,
@@ -16,7 +17,7 @@ from colanderalchemy import SQLAlchemySchemaNode
 from c2corg_api.models import schema, enums
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, get_update_schema, geometry_schema_overrides,
+    ArchiveDocument, Document, geometry_schema_overrides,
     schema_document_locale, schema_attributes)
 from c2corg_common import document_types
 
@@ -123,6 +124,7 @@ schema_image = SQLAlchemySchemaNode(
         'geometry': geometry_schema_overrides
     })
 
+schema_create_image = get_create_schema(schema_image)
 schema_update_image = get_update_schema(schema_image)
 schema_listing_image = restrict_schema(
     schema_image, fields_image.get('listing'))

@@ -1,5 +1,7 @@
 import json
 
+from c2corg_api.models.association import Association
+from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
 from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, Point
@@ -111,7 +113,10 @@ class TestImageRest(BaseDocumentTestRest):
             },
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop'}
-            ]
+            ],
+            'associations': {
+                'waypoints': [{'document_id': self.waypoint.document_id}]
+            }
         }
         body, doc = self.post_success(body)
         self._assert_geometry(body)
@@ -129,6 +134,11 @@ class TestImageRest(BaseDocumentTestRest):
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
         self.assertIsNotNone(archive_geometry.geom)
+
+        # check that a link to the linked wp is created
+        association_wp = self.session.query(Association).get(
+            (self.waypoint.document_id, doc.document_id))
+        self.assertIsNotNone(association_wp)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -485,3 +495,13 @@ class TestImageRest(BaseDocumentTestRest):
         self.session.add(self.image4)
         self.session.flush()
         DocumentRest.create_new_version(self.image4, user_id)
+
+        self.waypoint = Waypoint(
+            waypoint_type='summit', elevation=4,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'))
+        self.waypoint.locales.append(WaypointLocale(
+            lang='en', title='Mont Granier (en)', description='...',
+            access='yep'))
+        self.session.add(self.waypoint)
+        self.session.flush()

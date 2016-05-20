@@ -312,7 +312,10 @@ class TestWaypointRest(BaseDocumentTestRest):
                 {'id': 3456, 'version': 4567,
                  'lang': 'en', 'title': 'Mont Pourri',
                  'access': 'y'}
-            ]
+            ],
+            'associations': {
+                'routes': [{'document_id': self.route1.document_id}]
+            }
         }
         body, doc = self.post_success(body)
         self._assert_geometry(body, 'geom')
@@ -349,6 +352,11 @@ class TestWaypointRest(BaseDocumentTestRest):
             all()
         self.assertEqual(len(links), 1)
         self.assertEqual(links[0].area_id, self.area1.document_id)
+
+        # check that a link to the route is created
+        association_route = self.session.query(Association).get(
+            (doc.document_id, self.route1.document_id))
+        self.assertIsNotNone(association_route)
 
     def test_put_wrong_document_id(self):
         body = {

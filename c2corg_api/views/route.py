@@ -9,7 +9,8 @@ from c2corg_api.models.utils import get_mid_point
 from cornice.resource import resource, view
 
 from c2corg_api.models.route import Route, schema_route, schema_update_route, \
-    ArchiveRoute, ArchiveRouteLocale, RouteLocale, ROUTE_TYPE
+    ArchiveRoute, ArchiveRouteLocale, RouteLocale, ROUTE_TYPE, \
+    schema_create_route
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, make_schema_adaptor, get_all_fields, \
@@ -18,7 +19,7 @@ from c2corg_api.views import cors_policy, restricted_json_view, \
     get_best_locale, to_json_dict, set_best_locale
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
-    validate_preferred_lang_param
+    validate_preferred_lang_param, validate_associations_create
 from c2corg_common.fields_route import fields_route
 from c2corg_common.attributes import activities
 from sqlalchemy.orm import load_only, joinedload
@@ -27,6 +28,31 @@ validate_route_create = make_validator_create(
     fields_route, 'activities', activities)
 validate_route_update = make_validator_update(
     fields_route, 'activities', activities)
+validate_associations = functools.partial(
+    validate_associations_create, ROUTE_TYPE)
+
+
+def validate_main_waypoint(request):
+    """ Check that the document given as main waypoint is also listed as
+    association.
+    """
+    doc = request.validated
+    main_waypoint_id = doc.get('main_waypoint_id', None)
+
+    if not main_waypoint_id:
+        return
+
+    associations = request.validated.get('associations', None)
+    if associations:
+        linked_waypoints = associations.get('waypoints', [])
+        for linked_wp in linked_waypoints:
+            if linked_wp['document_id'] == main_waypoint_id:
+                # there is an association for the main waypoint
+                return
+
+    # no association found
+    request.errors.add(
+        'body', 'main_waypoint_id', 'no association for the main waypoint')
 
 
 def adapt_schema_for_activities(activities, field_list_type):
@@ -60,12 +86,14 @@ class RouteRest(DocumentRest):
             adapt_schema=schema_adaptor, include_maps=True,
             set_custom_associations=RouteRest.set_recent_outings)
 
-    @restricted_json_view(schema=schema_route,
-                          validators=validate_route_create)
+    @restricted_json_view(schema=schema_create_route,
+                          validators=[validate_route_create,
+                                      validate_associations,
+                                      validate_main_waypoint])
     def collection_post(self):
         return self._collection_post(
             schema_route, before_add=set_default_geometry,
-            after_add=after_route_add)
+            after_add=init_title_prefix)
 
     @restricted_json_view(schema=schema_update_route,
                           validators=[validate_id, validate_route_update])
@@ -175,11 +203,6 @@ def main_waypoint_has_changed(route, old_main_waypoint_id):
         return old_main_waypoint_id != route.main_waypoint_id
 
 
-def after_route_add(route, user_id):
-    create_main_waypoint_association(route, user_id)
-    init_title_prefix(route)
-
-
 def create_main_waypoint_association(route, user_id, check_first=False):
     """Create an association between the newly created route and the main
     waypoint.
@@ -190,7 +213,7 @@ def create_main_waypoint_association(route, user_id, check_first=False):
             check_first=check_first)
 
 
-def init_title_prefix(route):
+def init_title_prefix(route, user_id):
     update_title_prefix(route, create=True)
 
 

@@ -1,9 +1,9 @@
 from c2corg_api.models import schema
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, get_update_schema, geometry_schema_overrides,
+    ArchiveDocument, Document, geometry_schema_overrides,
     schema_document_locale, schema_attributes, DocumentLocale)
 from c2corg_api.models.enums import user_category, activity_type
-from c2corg_api.models.schema_utils import restrict_schema
+from c2corg_api.models.schema_utils import restrict_schema, get_update_schema
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_common.fields_user_profile import fields_user_profile
 from colanderalchemy import SQLAlchemySchemaNode

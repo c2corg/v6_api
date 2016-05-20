@@ -1,3 +1,5 @@
+import functools
+
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import UpdateType, Document, DocumentLocale
@@ -9,7 +11,8 @@ from cornice.resource import resource, view
 
 from c2corg_api.models.waypoint import (
     Waypoint, schema_waypoint, schema_update_waypoint,
-    ArchiveWaypoint, ArchiveWaypointLocale, WAYPOINT_TYPE)
+    ArchiveWaypoint, ArchiveWaypointLocale, WAYPOINT_TYPE,
+    schema_create_waypoint)
 
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import (
@@ -19,7 +22,7 @@ from c2corg_api.views import cors_policy, restricted_json_view, \
     to_json_dict, set_best_locale
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
-    validate_preferred_lang_param
+    validate_preferred_lang_param, validate_associations_create
 from c2corg_common.fields_waypoint import fields_waypoint
 from c2corg_common.attributes import waypoint_types
 from functools import lru_cache
@@ -31,6 +34,8 @@ validate_waypoint_create = make_validator_create(
     fields_waypoint, 'waypoint_type', waypoint_types)
 validate_waypoint_update = make_validator_update(
     fields_waypoint, 'waypoint_type', waypoint_types)
+validate_associations = functools.partial(
+    validate_associations_create, WAYPOINT_TYPE)
 
 
 @lru_cache(maxsize=None)
@@ -127,8 +132,9 @@ class WaypointRest(DocumentRest):
             adapt_schema=schema_adaptor, include_maps=True,
             set_custom_associations=WaypointRest.set_recent_outings)
 
-    @restricted_json_view(schema=schema_waypoint,
-                          validators=validate_waypoint_create)
+    @restricted_json_view(schema=schema_create_waypoint,
+                          validators=[validate_waypoint_create,
+                                      validate_associations])
     def collection_post(self):
         return self._collection_post(schema_waypoint)
 

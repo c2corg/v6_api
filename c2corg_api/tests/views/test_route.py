@@ -235,7 +235,10 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop',
                  'gear': 'shoes'}
-            ]
+            ],
+            'associations': {
+                'waypoints': [{'document_id': self.waypoint.document_id}]
+            }
         }
         body, doc = self.post_success(body)
         self._assert_geometry(body)
@@ -305,7 +308,10 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop',
                  'gear': 'shoes'}
-            ]
+            ],
+            'associations': {
+                'waypoints': [{'document_id': self.waypoint.document_id}]
+            }
         }
         body, doc = self.post_success(body)
         self.assertIsNotNone(doc.geometry.geom)
@@ -324,12 +330,36 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop',
                  'gear': 'shoes'}
-            ]
+            ],
+            'associations': {
+                'waypoints': [{'document_id': self.waypoint.document_id}]
+            }
         }
         body, doc = self.post_success(body)
         self.assertIsNotNone(doc.geometry.geom)
         self.assertIsNone(doc.geometry.geom_detail)
         self._assert_default_geometry(body, x=635956, y=5723604)
+
+    def test_post_main_wp_without_association(self):
+        body_post = {
+            'main_waypoint_id': self.waypoint.document_id,
+            'activities': ['hiking', 'skitouring'],
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'gear': 'shoes'}
+            ]
+            # no association for the main waypoint
+        }
+        body = self.post_error(body_post)
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertError(
+            errors, 'main_waypoint_id', 'no association for the main waypoint')
 
     def test_put_wrong_document_id(self):
         body = {
