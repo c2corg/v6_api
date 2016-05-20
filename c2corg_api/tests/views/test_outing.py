@@ -131,48 +131,52 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
-        self.assertEqual(len(errors), 3)
-        self.assertCorniceMissing(errors[0], 'outing')
-        self.assertCorniceMissing(errors[1], 'route_id')
-        self.assertCorniceMissing(errors[2], 'user_ids')
+        self.assertEqual(len(errors), 5)
+        self.assertCorniceMissing(errors[0], 'activities')
+        self.assertCorniceMissing(errors[1], 'date_end')
+        self.assertCorniceMissing(errors[2], 'date_start')
+        self.assertError(
+            errors, 'associations.users', 'at least one user required')
+        self.assertError(
+            errors, 'associations.routes', 'at least one route required')
 
     def test_post_empty_activities_error(self):
         body = self.post_error({
-            'outing': {
-                'activities': [],
-                'date_start': '2016-01-01',
-                'date_end': '2016-01-02'
-            },
-            'route_id': self.route.document_id,
-            'user_ids': [self.global_userids['contributor']]
+            'activities': [],
+            'date_start': '2016-01-01',
+            'date_end': '2016-01-02',
+            'associations': {
+                'routes': [{'document_id': self.route.document_id}],
+                'users': [{'id': self.global_userids['contributor']}]
+            }
         })
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
         self.assertEqual(
             errors[0].get('description'), 'Shorter than minimum length 1')
-        self.assertEqual(errors[0].get('name'), 'outing.activities')
+        self.assertEqual(errors[0].get('name'), 'activities')
 
     def test_post_invalid_activity(self):
         body_post = {
-            'outing': {
-                'activities': ['cooking'],
-                'date_start': '2016-01-01',
-                'date_end': '2016-01-02',
-                'elevation_min': 700,
-                'elevation_max': 1500,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'geometry': {
-                    'id': 5678, 'version': 6789,
-                    'geom_detail': '{"type": "LineString", "coordinates": ' +
-                            '[[635956, 5723604], [635966, 5723644]]}'
-                },
-                'locales': [
-                    {'lang': 'en', 'title': 'Some nice loop'}
-                ]
+            'activities': ['cooking'],
+            'date_start': '2016-01-01',
+            'date_end': '2016-01-02',
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom_detail': '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635966, 5723644]]}'
             },
-            'route_id': self.route.document_id,
-            'user_ids': [self.global_userids['contributor']]
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop'}
+            ],
+            'associations': {
+                'routes': [{'document_id': self.route.document_id}],
+                'users': [{'id': self.global_userids['contributor']}]
+            }
         }
         body = self.post_error(body_post)
         errors = body.get('errors')
@@ -183,53 +187,54 @@ class TestOutingRest(BaseDocumentTestRest):
 
     def test_post_missing_title(self):
         body_post = {
-            'outing': {
-                'activities': ['skitouring'],
-                'date_start': '2016-01-01',
-                'date_end': '2016-01-02',
-                'elevation_min': 700,
-                'elevation_max': 1500,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'geometry': {
-                    'id': 5678, 'version': 6789,
-                    'geom_detail': '{"type": "LineString", "coordinates": ' +
-                            '[[635956, 5723604], [635966, 5723644]]}'
-                },
-                'locales': [
-                    {'lang': 'en'}
-                ]
+            'activities': ['skitouring'],
+            'date_start': '2016-01-01',
+            'date_end': '2016-01-02',
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom_detail': '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635966, 5723644]]}'
             },
-            'route_id': self.route.document_id,
-            'user_ids': [self.global_userids['contributor']]
+            'locales': [
+                {'lang': 'en'}
+            ],
+            'associations': {
+                'routes': [{'document_id': self.route.document_id}],
+                'users': [{'id': self.global_userids['contributor']}]
+            }
         }
-        body = self.post_missing_title(body_post, prefix='outing.')
+        body = self.post_missing_title(body_post)
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
+        self.assertEqual(len(errors), 2)
+        self.assertCorniceRequired(errors[1], 'locales')
 
     def test_post_non_whitelisted_attribute(self):
         body = {
-            'outing': {
-                'activities': ['skitouring'],
-                'protected': True,
-                'date_start': '2016-01-01',
-                'date_end': '2016-01-02',
-                'elevation_min': 700,
-                'elevation_max': 1500,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'geometry': {
-                    'id': 5678, 'version': 6789,
-                    'geom_detail': '{"type": "LineString", "coordinates": ' +
-                            '[[635956, 5723604], [635966, 5723644]]}'
-                },
-                'locales': [
-                    {'lang': 'en', 'title': 'Some nice loop',
-                     'weather': 'sunny'}
-                ]
+            'activities': ['skitouring'],
+            'protected': True,
+            'date_start': '2016-01-01',
+            'date_end': '2016-01-02',
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom_detail': '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635966, 5723644]]}'
             },
-            'route_id': self.route.document_id,
-            'user_ids': [self.global_userids['contributor']]
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'weather': 'sunny'}
+            ],
+            'associations': {
+                'routes': [{'document_id': self.route.document_id}],
+                'users': [{'id': self.global_userids['contributor']}]
+            }
         }
         self.post_non_whitelisted_attribute(body)
 
@@ -238,26 +243,26 @@ class TestOutingRest(BaseDocumentTestRest):
 
     def test_post_missing_route_user_id(self):
         request_body = {
-            'outing': {
-                'activities': ['skitouring'],
-                'date_start': '2016-01-01',
-                'date_end': '2016-01-02',
-                'elevation_min': 700,
-                'elevation_max': 1500,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'geometry': {
-                    'id': 5678, 'version': 6789,
-                    'geom_detail': '{"type": "LineString", "coordinates": ' +
-                            '[[635956, 5723604], [635966, 5723644]]}'
-                },
-                'locales': [
-                    {'lang': 'en', 'title': 'Some nice loop',
-                     'weather': 'sunny'}
-                ]
+            'activities': ['skitouring'],
+            'date_start': '2016-01-01',
+            'date_end': '2016-01-02',
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom_detail': '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635966, 5723644]]}'
             },
-            # missing route_id,
-            'user_ids': []
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'weather': 'sunny'}
+            ],
+            'associations': {
+                # missing route_id,
+                'users': []
+            }
         }
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(self._prefix, request_body,
@@ -267,34 +272,33 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
         self.assertEqual(len(errors), 2)
-        self.assertCorniceMissing(errors[0], 'route_id')
-        self.assertEqual(
-            errors[1].get('description'), 'Shorter than minimum length 1')
-        self.assertEqual(errors[1].get('name'), 'user_ids')
+        self.assertError(errors, 'associations.users',
+                         'at least one user required')
+        self.assertError(errors, 'associations.routes',
+                         'at least one route required')
 
     def test_post_invalid_route_id(self):
         request_body = {
-            'outing': {
-                'activities': ['skitouring'],
-                'date_start': '2016-01-01',
-                'date_end': '2016-01-02',
-                'elevation_min': 700,
-                'elevation_max': 1500,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'geometry': {
-                    'id': 5678, 'version': 6789,
-                    'geom_detail': '{"type": "LineString", "coordinates": ' +
-                            '[[635956, 5723604], [635966, 5723644]]}'
-                },
-                'locales': [
-                    {'lang': 'en', 'title': 'Some nice loop',
-                     'weather': 'sunny'}
-                ]
+            'activities': ['skitouring'],
+            'date_start': '2016-01-01',
+            'date_end': '2016-01-02',
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom_detail': '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635966, 5723644]]}'
             },
-            # invalid ids
-            'route_id': self.waypoint.document_id,
-            'user_ids': [-999]
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'weather': 'sunny'}
+            ],
+            'associations': {
+                'routes': [{'document_id': self.waypoint.document_id}],
+                'users': [{'id': -999}]
+            }
         }
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(self._prefix, request_body,
@@ -303,37 +307,42 @@ class TestOutingRest(BaseDocumentTestRest):
         body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
-        self.assertEqual(len(errors), 2)
+        self.assertEqual(len(errors), 4)
 
-        self.assertEqual(
-            errors[0].get('description'), 'route does not exist')
-        self.assertEqual(errors[0].get('name'), 'route_id')
-        self.assertEqual(
-            errors[1].get('description'), 'user "-999" does not exist')
-        self.assertEqual(errors[1].get('name'), 'user_ids')
+        self.assertError(errors, 'associations.routes',
+                         'document "' + str(self.waypoint.document_id) +
+                         '" is not of type "r"')
+        self.assertError(errors, 'associations.users',
+                         'document "-999" does not exist')
+        self.assertError(errors, 'associations.users',
+                         'at least one user required')
+        self.assertError(errors, 'associations.routes',
+                         'at least one route required')
 
     def test_post_success(self):
         body = {
-            'outing': {
-                'activities': ['skitouring'],
-                'date_start': '2016-01-01',
-                'date_end': '2016-01-02',
-                'elevation_min': 700,
-                'elevation_max': 1500,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'geometry': {
-                    'id': 5678, 'version': 6789,
-                    'geom_detail': '{"type": "LineString", "coordinates": ' +
-                            '[[635956, 5723604], [635966, 5723644]]}'
-                },
-                'locales': [
-                    {'lang': 'en', 'title': 'Some nice loop',
-                     'weather': 'sunny'}
-                ]
+            'activities': ['skitouring'],
+            'date_start': '2016-01-01',
+            'date_end': '2016-01-02',
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom_detail': '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635966, 5723644]]}'
             },
-            'route_id': self.route.document_id,
-            'user_ids': [self.global_userids['contributor']]
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'weather': 'sunny'}
+            ],
+            'associations': {
+                'users': [{'id': self.global_userids['contributor']}],
+                'routes': [{'document_id': self.route.document_id}],
+                # images are ignored
+                'images': [{'document_id': self.route.document_id}]
+            }
         }
         body, doc = self.post_success(body)
         self._assert_geometry(body)
@@ -379,21 +388,21 @@ class TestOutingRest(BaseDocumentTestRest):
 
     def test_post_set_default_geom_from_route(self):
         body = {
-            'outing': {
-                'activities': ['skitouring'],
-                'date_start': '2016-01-01',
-                'date_end': '2016-01-02',
-                'elevation_min': 700,
-                'elevation_max': 1500,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'locales': [
-                    {'lang': 'en', 'title': 'Some nice loop',
-                     'weather': 'sunny'}
-                ]
-            },
-            'route_id': self.route.document_id,
-            'user_ids': [self.global_userids['contributor']]
+            'activities': ['skitouring'],
+            'date_start': '2016-01-01',
+            'date_end': '2016-01-02',
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'weather': 'sunny'}
+            ],
+            'associations': {
+                'users': [{'id': self.global_userids['contributor']}],
+                'routes': [{'document_id': self.route.document_id}]
+            }
         }
         body, doc = self.post_success(body)
         self._assert_default_geometry(body, x=635961, y=5723624)

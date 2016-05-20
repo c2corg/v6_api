@@ -1,4 +1,17 @@
+import enum
+
+import abc
+import geoalchemy2
+from c2corg_api.ext import colander_ext
+from c2corg_api.models import Base, schema, DBSession, enums
+from c2corg_api.models.utils import copy_attributes, extend_dict
+from c2corg_common import document_types
+from c2corg_common.attributes import quality_types
+from colander import null
 from colanderalchemy.schema import SQLAlchemySchemaNode
+from geoalchemy2 import Geometry
+from pyramid.httpexceptions import HTTPInternalServerError
+from shapely import wkt
 from sqlalchemy import (
     Column,
     Integer,
@@ -7,23 +20,9 @@ from sqlalchemy import (
     ForeignKey,
     func
     )
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship, column_property
-from sqlalchemy.dialects import postgresql
-from geoalchemy2 import Geometry
-import geoalchemy2
-from shapely import wkt
-from colander import MappingSchema, SchemaNode, String as ColanderString, null
-
-import abc
-import enum
-
-from c2corg_api.models import Base, schema, DBSession, enums
-from c2corg_api.ext import colander_ext
-from c2corg_api.models.utils import copy_attributes, extend_dict
-from pyramid.httpexceptions import HTTPInternalServerError
-from c2corg_common import document_types
-from c2corg_common.attributes import quality_types
 
 UpdateType = enum.Enum(
     'UpdateType', 'FIGURES LANG GEOM')
@@ -410,17 +409,6 @@ geometry_schema_overrides = {
         }
     }
 }
-
-
-def get_update_schema(document_schema):
-    """Create a Colander schema for the update view which contains an update
-    message and the document.
-    """
-    class UpdateSchema(MappingSchema):
-        message = SchemaNode(ColanderString(), missing='')
-        document = document_schema.clone()
-
-    return UpdateSchema()
 
 
 def get_available_langs(document_id):

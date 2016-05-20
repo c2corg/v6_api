@@ -1,13 +1,13 @@
 import functools
 from c2corg_api.models import DBSession
-from c2corg_api.models.association import Association, add_association
+from c2corg_api.models.association import Association
 from c2corg_api.models.document import ArchiveDocument, Document, \
     DocumentGeometry
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.outing import schema_outing, Outing, \
     schema_create_outing, schema_update_outing, ArchiveOuting, \
     ArchiveOutingLocale, OUTING_TYPE
-from c2corg_api.models.route import Route, ROUTE_TYPE
+from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.user import User, schema_association_user
 from c2corg_api.models.utils import get_mid_point
@@ -16,7 +16,8 @@ from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, make_schema_adaptor, get_all_fields
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
-    validate_preferred_lang_param, check_get_for_integer_property
+    validate_preferred_lang_param, check_get_for_integer_property, \
+    validate_associations_create
 from c2corg_common.attributes import activities
 from c2corg_common.fields_outing import fields_outing
 from cornice.resource import resource, view
@@ -27,31 +28,37 @@ from sqlalchemy.sql.expression import exists, and_, over
 from sqlalchemy.sql.functions import func
 
 validate_outing_create = make_validator_create(
-    fields_outing, 'activities', activities, document_field='outing')
+    fields_outing, 'activities', activities)
 validate_outing_update = make_validator_update(
     fields_outing, 'activities', activities)
+validate_associations = functools.partial(
+    validate_associations_create, OUTING_TYPE)
 
 
-def validate_associations(request):
-    """Check if the given waypoint and route id are valid.
-    """
-    route_id = request.validated.get('route_id')
-    if route_id:
-        route_exists = DBSession.query(
-            exists().where(Route.document_id == route_id)).scalar()
-        if not route_exists:
-            request.errors.add(
-                'body', 'route_id', 'route does not exist')
+def validate_required_associations(request):
+    missing_user = False
+    missing_route = False
 
-    user_ids = request.validated.get('user_ids')
-    if user_ids:
-        for user_id in user_ids:
-            user_exists = DBSession.query(
-                exists().where(User.id == user_id)).scalar()
-            if not user_exists:
-                request.errors.add(
-                    'body', 'user_ids',
-                    'user "{0:n}" does not exist'.format(user_id))
+    associations = request.validated.get('associations', None)
+    if not associations:
+        missing_user = True
+        missing_route = True
+    else:
+        linked_routes = associations.get('routes', [])
+        if not linked_routes:
+            missing_route = True
+
+        linked_users = associations.get('users', [])
+        if not linked_users:
+            missing_user = True
+
+    if missing_user:
+        request.errors.add(
+            'body', 'associations.users', 'at least one user required')
+
+    if missing_route:
+        request.errors.add(
+            'body', 'associations.routes', 'at least one route required')
 
 
 def validate_filter_params(request):
@@ -107,21 +114,15 @@ class OutingRest(DocumentRest):
 
     @restricted_json_view(schema=schema_create_outing,
                           validators=[validate_outing_create,
-                                      validate_associations])
+                                      validate_associations,
+                                      validate_required_associations])
     def collection_post(self):
-        create_associations = functools.partial(
-            add_associations,
-            self.request.validated['route_id'],
-            self.request.validated['user_ids']
-        )
         set_default_geom = functools.partial(
             set_default_geometry,
-            self.request.validated['route_id']
+            self.request.validated['associations']['routes']
         )
         return self._collection_post(
-            schema_outing, document_field='outing',
-            before_add=set_default_geom,
-            after_add=create_associations)
+            schema_outing, before_add=set_default_geom)
 
     @restricted_json_view(schema=schema_update_outing,
                           validators=[validate_id, validate_outing_update])
@@ -239,9 +240,9 @@ def set_author(outings, lang):
         outing.author = author_for_outings.get(outing.document_id)
 
 
-def set_default_geometry(route_id, outing, user_id):
+def set_default_geometry(linked_routes, outing, user_id):
     """When creating a new outing, set the default geometry to the middle point
-    of a given track, if not to the geometry of the associated route.
+    of a given track, if not to the geometry of an associated route.
     """
     if outing.geometry is not None and outing.geometry.geom is not None:
         # default geometry already set
@@ -250,7 +251,8 @@ def set_default_geometry(route_id, outing, user_id):
     if outing.geometry is not None and outing.geometry.geom_detail is not None:
         # track is given, obtain a default point from the track
         outing.geometry.geom = get_mid_point(outing.geometry.geom_detail)
-    elif route_id:
+    elif linked_routes:
+        route_id = linked_routes[0]['document_id']
         # get default point from route
         route_point = DBSession.query(DocumentGeometry.geom).filter(
             DocumentGeometry.document_id == route_id).scalar()
@@ -278,12 +280,3 @@ class OutingVersionRest(DocumentRest):
     def get(self):
         return self._get_version(
             ArchiveOuting, ArchiveOutingLocale, schema_outing, schema_adaptor)
-
-
-def add_associations(route_id, user_ids, outing, user_id):
-    """When creating a new outing, associations to the linked route
-    and users are set up at the same time.
-    """
-    add_association(route_id, outing.document_id, user_id)
-    for user_id in user_ids:
-        add_association(user_id, outing.document_id, user_id)

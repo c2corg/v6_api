@@ -182,3 +182,18 @@ def add_association(
 
     DBSession.add(association)
     DBSession.add(association.get_log(user_id, is_creation=True))
+
+
+def create_associations(document, associations_for_document, user_id):
+    """ Create associations for a document that were provided when creating
+    a document.
+    """
+    main_id = document.document_id
+    for doc_key, docs in associations_for_document.items():
+        for doc in docs:
+            linked_document_id = doc['document_id']
+            is_parent = doc['is_parent']
+
+            parent_id = linked_document_id if is_parent else main_id
+            child_id = main_id if is_parent else linked_document_id
+            add_association(parent_id, child_id, user_id, check_first=False)

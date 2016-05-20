@@ -6,7 +6,7 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
 from c2corg_api.models.area_association import update_areas_for_document, \
     get_areas
-from c2corg_api.models.association import get_associations
+from c2corg_api.models.association import get_associations, create_associations
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
     ArchiveDocumentGeometry, set_available_langs, get_available_langs)
@@ -233,11 +233,9 @@ class DocumentRest(object):
             ]
 
     def _collection_post(
-            self, schema, before_add=None, after_add=None,
-            document_field=None):
+            self, schema, before_add=None, after_add=None):
         user_id = self.request.authenticated_userid
-        document_in = self.request.validated if document_field is None else \
-            self.request.validated[document_field]
+        document_in = self.request.validated
         document = schema.objectify(document_in)
         document.document_id = None
 
@@ -253,6 +251,9 @@ class DocumentRest(object):
 
         if after_add:
             after_add(document, user_id=user_id)
+
+        if document_in.get('associations', None):
+            create_associations(document, document_in['associations'], user_id)
 
         notify_es_syncer(self.request.registry.queue_config)
 
@@ -637,18 +638,16 @@ def validate_document(document, request, fields, updating):
 
 
 def make_validator_create(
-        fields, type_field=None, valid_type_values=None, document_field=None):
+        fields, type_field=None, valid_type_values=None):
     """Returns a validator function used for the creation of documents.
     """
     if type_field is None or valid_type_values is None:
         def f(request):
-            document = request.validated if document_field is None else \
-                request.validated.get(document_field, {})
+            document = request.validated
             validate_document(document, request, fields, updating=False)
     else:
         def f(request):
-            document = request.validated if document_field is None else \
-                request.validated.get(document_field, {})
+            document = request.validated
             validate_document_for_type(
                 document, request, fields, type_field, valid_type_values,
                 updating=False)
