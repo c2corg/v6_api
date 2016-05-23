@@ -314,7 +314,9 @@ class TestWaypointRest(BaseDocumentTestRest):
                  'access': 'y'}
             ],
             'associations': {
-                'routes': [{'document_id': self.route1.document_id}]
+                'waypoint_children': [
+                    {'document_id': self.waypoint2.document_id}
+                ]
             }
         }
         body, doc = self.post_success(body)
@@ -353,10 +355,10 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(len(links), 1)
         self.assertEqual(links[0].area_id, self.area1.document_id)
 
-        # check that a link to the route is created
-        association_route = self.session.query(Association).get(
-            (doc.document_id, self.route1.document_id))
-        self.assertIsNotNone(association_route)
+        # check that a link to the child waypoint is created
+        association_wp = self.session.query(Association).get(
+            (doc.document_id, self.waypoint2.document_id))
+        self.assertIsNotNone(association_wp)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -452,6 +454,14 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'geometry': {
                     'version': self.waypoint.geometry.version,
                     'geom': '{"type": "Point", "coordinates": [635957, 5723605]}'  # noqa
+                },
+                'associations': {
+                    'waypoint_children': [
+                        {'document_id': self.waypoint2.document_id}
+                    ],
+                    'routes': [
+                        {'document_id': self.route1.document_id}
+                    ]
                 }
             }
         }
@@ -502,6 +512,11 @@ class TestWaypointRest(BaseDocumentTestRest):
             all()
         self.assertEqual(len(links), 1)
         self.assertEqual(links[0].area_id, self.area1.document_id)
+
+        # check that a link to the child waypoint is created
+        association_wp = self.session.query(Association).get(
+            (waypoint.document_id, self.waypoint2.document_id))
+        self.assertIsNotNone(association_wp)
 
     def test_put_success_figures_and_lang_only(self):
         body_put = {

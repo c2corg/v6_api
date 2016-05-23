@@ -278,7 +278,10 @@ class TestImageRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': 'New description',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                }
             }
         }
         (body, image) = self.put_success_all(body, self.image)
@@ -304,6 +307,11 @@ class TestImageRest(BaseDocumentTestRest):
         version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Mont Blanc du ciel')
+
+        # check that a link to the linked wp is created
+        association_wp = self.session.query(Association).get(
+            (self.waypoint.document_id, image.document_id))
+        self.assertIsNotNone(association_wp)
 
     def test_put_success_figures_only(self):
         body = {

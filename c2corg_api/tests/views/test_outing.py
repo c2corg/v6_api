@@ -423,7 +423,11 @@ class TestOutingRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'weather': 'mostly sunny',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'users': [{'id': self.global_userids['contributor']}],
+                    'routes': [{'document_id': self.route.document_id}]
+                }
             }
         }
         self.put_wrong_document_id(body, user='moderator')
@@ -444,7 +448,11 @@ class TestOutingRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'weather': 'mostly sunny',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'users': [{'id': self.global_userids['contributor']}],
+                    'routes': [{'document_id': self.route.document_id}]
+                }
             }
         }
         self.put_wrong_version(body, self.outing.document_id, user='moderator')
@@ -465,7 +473,11 @@ class TestOutingRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'weather': 'mostly sunny',
                      'version': -9999}
-                ]
+                ],
+                'associations': {
+                    'users': [{'id': self.global_userids['contributor']}],
+                    'routes': [{'document_id': self.route.document_id}]
+                }
             }
         }
         self.put_wrong_version(body, self.outing.document_id, user='moderator')
@@ -486,7 +498,11 @@ class TestOutingRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'weather': 'mostly sunny',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'users': [{'id': self.global_userids['contributor']}],
+                    'routes': [{'document_id': self.route.document_id}]
+                }
             }
         }
         self.put_wrong_ids(body, self.outing.document_id, user='moderator')
@@ -514,7 +530,11 @@ class TestOutingRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'weather': 'mostly sunny',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'users': [{'id': self.global_userids['contributor']}],
+                    'routes': [{'document_id': self.route.document_id}]
+                }
             }
         }
         headers = self.add_authorization_header(username='contributor2')
@@ -543,7 +563,11 @@ class TestOutingRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'weather': 'mostly sunny',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'users': [{'id': self.global_userids['contributor']}],
+                    'routes': [{'document_id': self.route.document_id}]
+                }
             }
         }
         headers = self.add_authorization_header(username='contributor')
@@ -575,6 +599,13 @@ class TestOutingRest(BaseDocumentTestRest):
                     'geom_detail':
                         '{"type": "LineString", "coordinates": ' +
                         '[[635956, 5723604], [635976, 5723654]]}'
+                },
+                'associations': {
+                    'users': [
+                        {'id': self.global_userids['contributor']},
+                        {'id': self.global_userids['contributor2']}
+                    ],
+                    'routes': [{'document_id': self.route.document_id}]
                 }
             }
         }
@@ -609,6 +640,14 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(archive_locale.title, 'Mont Blanc du ciel')
         self.assertEqual(archive_locale.weather, 'grand beau')
 
+        # test that there are now 2 associated users
+        association_user = self.session.query(Association).get(
+            (self.global_userids['contributor'], outing.document_id))
+        self.assertIsNotNone(association_user)
+        association_user2 = self.session.query(Association).get(
+            (self.global_userids['contributor2'], outing.document_id))
+        self.assertIsNotNone(association_user2)
+
     def test_put_success_figures_only(self):
         body = {
             'message': 'Changing figures',
@@ -627,7 +666,11 @@ class TestOutingRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'weather': 'sunny',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'users': [{'id': self.global_userids['contributor']}],
+                    'routes': [{'document_id': self.route.document_id}]
+                }
             }
         }
         (body, route) = self.put_success_figures_only(
@@ -663,6 +706,10 @@ class TestOutingRest(BaseDocumentTestRest):
                         '[[635956, 5723604], [635976, 5723654]]}',
                     'geom':
                         '{"type": "Point", "coordinates": [635000, 5723000]}'
+                },
+                'associations': {
+                    'users': [{'id': self.global_userids['contributor']}],
+                    'routes': [{'document_id': self.route.document_id}]
                 }
             }
         }
@@ -688,7 +735,11 @@ class TestOutingRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'weather': 'mostly sunny',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'users': [{'id': self.global_userids['contributor']}],
+                    'routes': [{'document_id': self.route.document_id}]
+                }
             }
         }
         (body, route) = self.put_success_lang_only(
@@ -715,7 +766,11 @@ class TestOutingRest(BaseDocumentTestRest):
                 'locales': [
                     {'lang': 'es', 'title': 'Mont Blanc del cielo',
                      'description': '...', 'weather': 'soleado'}
-                ]
+                ],
+                'associations': {
+                    'users': [{'id': self.global_userids['contributor']}],
+                    'routes': [{'document_id': self.route.document_id}]
+                }
             }
         }
         (body, route) = self.put_success_new_lang(

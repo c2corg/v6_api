@@ -9,7 +9,7 @@ from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.views.route import update_title_prefix
+from c2corg_api.views.route import check_title_prefix
 from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, LineString
 
@@ -579,7 +579,12 @@ class TestRouteRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'paraglider',
                      'version': self.route2.locales[0].version}
-                ]
+                ],
+                'associations': {
+                    'waypoints': [
+                        {'document_id': self.waypoint.document_id}
+                    ]
+                }
             }
         }
         (body, route) = self.put_success_figures_only(body, self.route2)
@@ -603,7 +608,12 @@ class TestRouteRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'paraglider',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'waypoints': [
+                        {'document_id': self.waypoint2.document_id}
+                    ]
+                }
             }
         }
         (body, route) = self.put_success_figures_only(body, self.route)
@@ -736,7 +746,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.route.main_waypoint_id = self.waypoint.document_id
         self.session.flush()
         self.session.refresh(self.route)
-        update_title_prefix(self.route, create=False)
+        check_title_prefix(self.route, create=False)
         self.session.expire_all()
 
         route = self.session.query(Route).get(self.route.document_id)
