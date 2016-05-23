@@ -17,7 +17,7 @@ from c2corg_api.views.document import DocumentRest, make_validator_create, \
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param, check_get_for_integer_property, \
-    validate_associations_create
+    validate_associations
 from c2corg_common.attributes import activities
 from c2corg_common.fields_outing import fields_outing
 from cornice.resource import resource, view
@@ -31,8 +31,10 @@ validate_outing_create = make_validator_create(
     fields_outing, 'activities', activities)
 validate_outing_update = make_validator_update(
     fields_outing, 'activities', activities)
-validate_associations = functools.partial(
-    validate_associations_create, OUTING_TYPE)
+validate_associations_create = functools.partial(
+    validate_associations, OUTING_TYPE, True)
+validate_associations_update = functools.partial(
+    validate_associations, OUTING_TYPE, False)
 
 
 def validate_required_associations(request):
@@ -114,7 +116,7 @@ class OutingRest(DocumentRest):
 
     @restricted_json_view(schema=schema_create_outing,
                           validators=[validate_outing_create,
-                                      validate_associations,
+                                      validate_associations_create,
                                       validate_required_associations])
     def collection_post(self):
         set_default_geom = functools.partial(
@@ -125,7 +127,10 @@ class OutingRest(DocumentRest):
             schema_outing, before_add=set_default_geom)
 
     @restricted_json_view(schema=schema_update_outing,
-                          validators=[validate_id, validate_outing_update])
+                          validators=[validate_id,
+                                      validate_outing_update,
+                                      validate_associations_update,
+                                      validate_required_associations])
     def put(self):
         if not self.request.has_permission('moderator'):
             # moderators can change every outing
@@ -264,6 +269,7 @@ def update_default_geometry(outing, outing_in, user_id):
     """When updating an outing, set the default geometry to the middle point
     of a new track, or directly update with a given geometry.
     """
+    # TODO also use geometry of main waypoint when main waypoint has changed?
     geometry_in = outing_in.geometry
     if geometry_in is not None and geometry_in.geom is not None:
         # default geom is manually set in the request

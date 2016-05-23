@@ -6,7 +6,8 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
 from c2corg_api.models.area_association import update_areas_for_document, \
     get_areas
-from c2corg_api.models.association import get_associations, create_associations
+from c2corg_api.models.association import get_associations, \
+    create_associations, synchronize_associations
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
     ArchiveDocumentGeometry, set_available_langs, get_available_langs)
@@ -312,6 +313,10 @@ class DocumentRest(object):
 
             # And the search updated
             notify_es_syncer(self.request.registry.queue_config)
+
+        associations = self.request.validated.get('associations', None)
+        if associations:
+            synchronize_associations(document, associations, user_id)
 
         return {}
 

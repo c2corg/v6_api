@@ -143,8 +143,13 @@ def validate_required_json_string(key, request):
         request.errors.add('body', key, 'Invalid')
 
 
-def validate_associations_create(document_type, request):
-    associations_in = request.validated.get('associations', None)
+def validate_associations(document_type, is_on_create, request):
+    if is_on_create:
+        associations_in = request.validated.get('associations', None)
+    else:
+        associations_in = request.validated. \
+            get('document', {}).get('associations', None)
+
     if not associations_in:
         return
 

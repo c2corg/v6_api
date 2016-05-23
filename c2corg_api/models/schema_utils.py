@@ -96,10 +96,12 @@ def get_create_schema(document_schema):
 
 def get_update_schema(document_schema):
     """Create a Colander schema for the update view which contains an update
-    message and the document.
+    message and the document (with associations).
     """
+    document_schema_with_associations = get_create_schema(document_schema)
+
     class UpdateSchema(MappingSchema):
         message = SchemaNode(String(), missing='')
-        document = document_schema.clone()
+        document = document_schema_with_associations
 
     return UpdateSchema()
