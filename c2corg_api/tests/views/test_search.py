@@ -120,6 +120,14 @@ class TestSearchRest(BaseTestRest):
         users = body['users']
         self.assertIn('total', users)
 
+    def test_search_user_unauthenticated(self):
+        """Tests that user results are not included when not authenticated.
+        """
+        response = self.app.get(self._prefix + '?q=alex&t=u', status=200)
+        body = response.json
+
+        self.assertNotIn('users', body)
+
     def test_search_limit_types(self):
         response = self.app.get(self._prefix + '?q=crolles&t=w,r', status=200)
         body = response.json

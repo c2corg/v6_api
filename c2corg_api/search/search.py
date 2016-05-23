@@ -11,6 +11,9 @@ from c2corg_api.views import to_json_dict, set_best_locale
 def search_for_types(search_types, search_term, limit, lang):
     """Get results for all given types.
     """
+    if not search_types:
+        return {}
+
     document_id = try_to_parse_document_id(search_term)
 
     if document_id is not None:
