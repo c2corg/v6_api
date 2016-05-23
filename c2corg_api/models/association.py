@@ -1,7 +1,9 @@
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user import User
-from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.models.waypoint import Waypoint, WaypointLocale, WAYPOINT_TYPE
 from c2corg_api.views import set_best_locale
+from c2corg_api.views.validation import updatable_associations, \
+    association_keys, association_keys_for_types
 from colanderalchemy.schema import SQLAlchemySchemaNode
 from sqlalchemy import (
     Boolean,
@@ -15,7 +17,8 @@ from sqlalchemy.orm import relationship, joinedload, load_only
 
 from c2corg_api.models import Base, schema, users_schema, DBSession
 from c2corg_api.models.document import Document
-from sqlalchemy.sql.expression import or_, and_
+from sqlalchemy.sql.elements import literal_column
+from sqlalchemy.sql.expression import or_, and_, union
 from sqlalchemy.sql.functions import func
 
 
@@ -184,6 +187,24 @@ def add_association(
     DBSession.add(association.get_log(user_id, is_creation=True))
 
 
+def remove_association(
+        parent_document_id, child_document_id, user_id, check_first=False):
+    """Remove an association between the two documents and create a log entry
+    in the association history table with the given user id.
+    """
+    association = Association(
+        parent_document_id=parent_document_id,
+        child_document_id=child_document_id)
+
+    if check_first and not exists_already(association):
+        return
+
+    DBSession.query(Association).filter_by(
+        parent_document_id=parent_document_id,
+        child_document_id=child_document_id).delete()
+    DBSession.add(association.get_log(user_id, is_creation=False))
+
+
 def create_associations(document, associations_for_document, user_id):
     """ Create associations for a document that were provided when creating
     a document.
@@ -197,3 +218,111 @@ def create_associations(document, associations_for_document, user_id):
             parent_id = linked_document_id if is_parent else main_id
             child_id = main_id if is_parent else linked_document_id
             add_association(parent_id, child_id, user_id, check_first=False)
+
+
+def synchronize_associations(document, new_associations, user_id):
+    """ Synchronize the associations when updating a document.
+    """
+    current_associations = _get_current_associations(
+        document, new_associations)
+    to_add, to_remove = _diff_associations(
+        new_associations, current_associations)
+
+    document_id = document.document_id
+    _apply_operation(to_add, add_association, document_id, user_id)
+    _apply_operation(to_remove, remove_association, document_id, user_id)
+
+
+def _apply_operation(docs, add_or_remove, document_id, user_id):
+    for doc in docs:
+        is_parent = doc['is_parent']
+        parent_id = doc['document_id'] if is_parent else document_id
+        child_id = document_id if is_parent else doc['document_id']
+        add_or_remove(parent_id, child_id, user_id, check_first=False)
+
+
+def _get_current_associations(document, new_associations):
+    """ Load the current associations of a document (only those association
+    types are loaded that are also given in `new_association`).
+    """
+    updatable_types = updatable_associations.get(document.type, set())
+    types_to_load = updatable_types.intersection(new_associations.keys())
+    doc_types_to_load = {association_keys[t] for t in types_to_load}
+
+    if not doc_types_to_load:
+        return {}
+
+    current_associations = {t: [] for t in types_to_load}
+    query = _get_load_associations_query(document, doc_types_to_load)
+
+    for document_id, doc_type, parent in query:
+        is_parent = parent == 1
+
+        association_type = association_keys_for_types[doc_type]
+        if doc_type == WAYPOINT_TYPE and document.type == WAYPOINT_TYPE:
+            association_type = 'waypoint_parents' if is_parent \
+                else 'waypoint_children'
+
+        current_associations[association_type].append({
+            'document_id': document_id,
+            'is_parent': is_parent
+        })
+
+    return current_associations
+
+
+def _get_load_associations_query(document, doc_types_to_load):
+    query_parents = DBSession. \
+        query(
+            Association.parent_document_id.label('id'),
+            Document.type.label('t'),
+            literal_column('1').label('p')). \
+        join(
+            Document,
+            and_(
+                Association.child_document_id == document.document_id,
+                Association.parent_document_id == Document.document_id,
+                Document.type.in_(doc_types_to_load))). \
+        subquery()
+    query_children = DBSession. \
+        query(
+            Association.child_document_id.label('id'),
+            Document.type.label('t'),
+            literal_column('0').label('p')). \
+        join(
+            Document,
+            and_(
+                Association.child_document_id == Document.document_id,
+                Association.parent_document_id == document.document_id,
+                Document.type.in_(doc_types_to_load))). \
+        subquery()
+
+    return DBSession \
+        .query('id', 't', 'p') \
+        .select_from(union(query_parents.select(), query_children.select()))
+
+
+def _diff_associations(new_associations, current_associations):
+    """ Given two dicts with associated documents for each association type,
+    detect which associations have to be added or removed.
+    """
+    to_add = _get_associations_to_add(
+        new_associations, current_associations)
+    to_remove = _get_associations_to_add(
+        current_associations, new_associations)
+    return to_add, to_remove
+
+
+def _get_associations_to_add(new_associations, current_associations):
+    to_add = []
+
+    for typ, docs in new_associations.items():
+        existing_docs = {
+            d['document_id'] for d in current_associations.get(typ, [])
+        }
+
+        for doc in docs:
+            if doc['document_id'] not in existing_docs:
+                to_add.append(doc)
+
+    return to_add
