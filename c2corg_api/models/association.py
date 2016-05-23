@@ -1,4 +1,6 @@
-from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.models.image import IMAGE_TYPE, Image
+from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale, WAYPOINT_TYPE
 from c2corg_api.views import set_best_locale
@@ -16,7 +18,7 @@ from sqlalchemy.schema import PrimaryKeyConstraint
 from sqlalchemy.orm import relationship, joinedload, load_only
 
 from c2corg_api.models import Base, schema, users_schema, DBSession
-from c2corg_api.models.document import Document
+from c2corg_api.models.document import Document, DocumentLocale
 from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import or_, and_, union
 from sqlalchemy.sql.functions import func
@@ -93,26 +95,62 @@ schema_association = SQLAlchemySchemaNode(
     overrides={})
 
 
-def get_associations(document, lang):
+def get_associations(document, lang, editing_view):
     """Load and return associated documents.
     """
-    def limit_waypoint_fields(query):
-        return query. \
-            options(load_only(
-                Waypoint.waypoint_type, Waypoint.document_id,
-                Waypoint.elevation, Waypoint.version, Waypoint.protected)). \
-            options(joinedload(Waypoint.locales).load_only(
-                WaypointLocale.lang, WaypointLocale.title,
-                WaypointLocale.version))
+    types_to_include = associations_to_include.get(document.type, set())
 
-    parent_waypoints = limit_waypoint_fields(
+    if editing_view:
+        edit_types = updatable_associations.get(document.type, set())
+        types_to_include = types_to_include.intersection(edit_types)
+
+    associations = {}
+    if 'waypoints' in types_to_include:
+        waypoint_parents = get_linked_waypoint_parents(document)
+        waypoint_children = get_linked_waypoint_children(document)
+        associations['waypoints'] = waypoint_parents + waypoint_children
+    elif 'waypoint_parents' in types_to_include:
+        associations['waypoint_parents'] = \
+            get_linked_waypoint_parents(document)
+        associations['waypoint_children'] = \
+            get_linked_waypoint_children(document)
+    if 'routes' in types_to_include:
+        associations['routes'] = get_linked_routes(document)
+    if 'users' in types_to_include:
+        associations['users'] = get_linked_users(document)
+    if 'images' in types_to_include:
+        associations['images'] = get_linked_images(document)
+
+    if lang:
+        for typ, docs in associations.items():
+            if typ != 'users':
+                set_best_locale(docs, lang)
+
+    return associations
+
+
+def _limit_waypoint_fields(query):
+    return query. \
+        options(load_only(
+            Waypoint.waypoint_type, Waypoint.document_id,
+            Waypoint.elevation, Waypoint.version, Waypoint.protected)). \
+        options(joinedload(Waypoint.locales).load_only(
+            WaypointLocale.lang, WaypointLocale.title,
+            WaypointLocale.version))
+
+
+def get_linked_waypoint_parents(document):
+    return _limit_waypoint_fields(
         DBSession.query(Waypoint).
         filter(Waypoint.redirects_to.is_(None)).
         join(Association,
              Association.parent_document_id == Waypoint.document_id).
         filter(Association.child_document_id == document.document_id)). \
         all()
-    child_waypoints = limit_waypoint_fields(
+
+
+def get_linked_waypoint_children(document):
+    return _limit_waypoint_fields(
         DBSession.query(Waypoint).
         filter(Waypoint.redirects_to.is_(None)).
         join(Association,
@@ -120,6 +158,8 @@ def get_associations(document, lang):
         filter(Association.parent_document_id == document.document_id)). \
         all()
 
+
+def get_linked_routes(document):
     def limit_route_fields(query):
         return query.\
             options(load_only(
@@ -129,7 +169,7 @@ def get_associations(document, lang):
                 RouteLocale.lang, RouteLocale.title, RouteLocale.title_prefix,
                 RouteLocale.version))
 
-    routes = limit_route_fields(
+    return limit_route_fields(
         DBSession.query(Route).
         filter(Route.redirects_to.is_(None)).
         join(
@@ -143,12 +183,38 @@ def get_associations(document, lang):
                     Association.parent_document_id == Route.document_id)))). \
         all()
 
-    if lang is not None:
-        set_best_locale(parent_waypoints, lang)
-        set_best_locale(child_waypoints, lang)
-        set_best_locale(routes, lang)
 
-    return parent_waypoints, child_waypoints, routes
+def get_linked_users(document):
+    return DBSession.query(User). \
+        join(Association, Association.parent_document_id == User.id). \
+        filter(Association.child_document_id == document.document_id). \
+        options(load_only(User.id, User.username)). \
+        all()
+
+
+def get_linked_images(document):
+    def limit_route_fields(query):
+        return query.\
+            options(load_only(
+                Image.document_id, Image.filename, Image.author, Image.version,
+                Image.protected)). \
+            options(joinedload(Image.locales).load_only(
+                DocumentLocale.lang, DocumentLocale.title,
+                DocumentLocale.version))
+
+    return limit_route_fields(
+        DBSession.query(Image).
+        filter(Image.redirects_to.is_(None)).
+        join(
+            Association,
+            or_(
+                and_(
+                    Association.child_document_id == Image.document_id,
+                    Association.parent_document_id == document.document_id),
+                and_(
+                    Association.child_document_id == document.document_id,
+                    Association.parent_document_id == Image.document_id)))). \
+        all()
 
 
 def exists_already(link):
@@ -326,3 +392,14 @@ def _get_associations_to_add(new_associations, current_associations):
                 to_add.append(doc)
 
     return to_add
+
+associations_to_include = {
+    WAYPOINT_TYPE: {
+        'waypoint_parents', 'waypoint_children', 'routes', 'images'},
+    ROUTE_TYPE:
+        {'waypoints', 'routes', 'images'},
+    OUTING_TYPE:
+        {'waypoints', 'routes', 'images', 'users'},
+    IMAGE_TYPE:
+        {'waypoints', 'routes', 'images', 'users', 'outings'}
+}

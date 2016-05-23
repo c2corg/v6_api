@@ -3,6 +3,7 @@ import json
 
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing, ArchiveOuting, \
     ArchiveOutingLocale, OutingLocale, OUTING_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
@@ -11,7 +12,7 @@ from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, LineString
 
 from c2corg_api.models.route import Route, RouteLocale
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
@@ -115,6 +116,26 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(len(linked_users), 1)
         self.assertEqual(
             linked_users[0]['id'], self.global_userids['contributor'])
+
+        linked_images = associations.get('images')
+        self.assertEqual(len(linked_images), 1)
+        self.assertEqual(
+            linked_images[0]['document_id'], self.image.document_id)
+
+    def test_get_edit(self):
+        response = self.app.get(self._prefix + '/' +
+                                str(self.outing.document_id) + '?e=1',
+                                status=200)
+        body = response.json
+
+        self.assertNotIn('maps', body)
+        self.assertNotIn('areas', body)
+        self.assertIn('associations', body)
+        associations = body['associations']
+        self.assertIn('waypoints', associations)
+        self.assertIn('routes', associations)
+        self.assertIn('users', associations)
+        self.assertNotIn('images', associations)
 
     def test_get_version(self):
         self.get_version(self.outing, self.outing_version)
@@ -889,6 +910,10 @@ class TestOutingRest(BaseDocumentTestRest):
             lang='fr', title='Mont Granier (fr)', description='...',
             access='ouai'))
         self.session.add(self.waypoint)
+
+        self.image = Image(filename='20160101-00:00:00.jpg')
+        self.image.locales.append(DocumentLocale(lang='en', title='...'))
+        self.session.add(self.image)
         self.session.flush()
 
         # add some associations
@@ -917,4 +942,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self.session.add(Association(
             parent_document_id=user_id,
             child_document_id=self.outing.document_id))
+        self.session.add(Association(
+            parent_document_id=self.outing.document_id,
+            child_document_id=self.image.document_id))
         self.session.flush()

@@ -9,9 +9,9 @@ from c2corg_api.models.outing import schema_outing, Outing, \
     ArchiveOutingLocale, OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.schema_utils import restrict_schema
-from c2corg_api.models.user import User, schema_association_user
+from c2corg_api.models.user import User
 from c2corg_api.models.utils import get_mid_point
-from c2corg_api.views import cors_policy, restricted_json_view, to_json_dict
+from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, make_schema_adaptor, get_all_fields
 from c2corg_api.views.validation import validate_id, validate_pagination, \
@@ -22,7 +22,6 @@ from c2corg_common.attributes import activities
 from c2corg_common.fields_outing import fields_outing
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPForbidden
-from sqlalchemy.orm import load_only
 from sqlalchemy.orm.util import aliased
 from sqlalchemy.sql.expression import exists, and_, over
 from sqlalchemy.sql.functions import func
@@ -111,8 +110,7 @@ class OutingRest(DocumentRest):
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
         return self._get(
-            Outing, schema_outing, adapt_schema=schema_adaptor,
-            set_custom_associations=OutingRest.set_users)
+            Outing, schema_outing, adapt_schema=schema_adaptor)
 
     @restricted_json_view(schema=schema_create_outing,
                           validators=[validate_outing_create,
@@ -153,20 +151,6 @@ class OutingRest(DocumentRest):
                 Association.parent_document_id == user_id,
                 Association.child_document_id == outing_id
             ))).scalar()
-
-    @staticmethod
-    def set_users(outing, lang):
-        """Set all linked users on the given outing.
-        """
-        linked_users = DBSession.query(User). \
-            join(Association, Association.parent_document_id == User.id). \
-            filter(Association.child_document_id == outing.document_id). \
-            options(load_only(User.id, User.username)). \
-            all()
-        outing.associations['users'] = [
-            to_json_dict(user, schema_association_user)
-            for user in linked_users
-        ]
 
     def filter_on_route(self, route_id):
         def filter_query(query):

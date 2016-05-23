@@ -148,16 +148,22 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertIn('rock_types', body)
         self.assertEqual(body['rock_types'], [])
 
-    def test_get_no_associations(self):
+    def test_get_edit(self):
         response = self.app.get(self._prefix + '/' +
                                 str(self.waypoint.document_id) + '?e=1',
                                 status=200)
         body = response.json
 
-        self.assertIn('associations', body)
         self.assertNotIn('recent_outings', body['associations'])
         self.assertIn('maps', body)
         self.assertNotIn('areas', body)
+        self.assertIn('associations', body)
+        associations = body['associations']
+        self.assertIn('waypoint_parents', associations)
+        self.assertIn('waypoint_children', associations)
+        self.assertNotIn('waypoints', associations)
+        self.assertNotIn('routes', associations)
+        self.assertNotIn('images', associations)
 
     def test_get_version(self):
         self.get_version(self.waypoint, self.waypoint_version)

@@ -1,5 +1,6 @@
+from c2corg_api.models.image import schema_association_image
 from c2corg_api.models.outing import Outing
-from c2corg_api.models.user import User
+from c2corg_api.models.user import User, schema_association_user
 from functools import partial
 
 from c2corg_api.models import DBSession
@@ -15,7 +16,7 @@ from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.route import schema_association_route
 from c2corg_api.models.topo_map import get_maps, schema_listing_topo_map
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.models.waypoint import schema_association_waypoint, Waypoint
+from c2corg_api.models.waypoint import schema_association_waypoint
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import cors_policy
@@ -170,7 +171,7 @@ class DocumentRest(object):
         set_available_langs([document])
 
         editing_view = self.request.GET.get('e', '0') != '0'
-        self._set_associations(document, lang, clazz)
+        self._set_associations(document, lang, editing_view)
 
         if not editing_view and set_custom_associations:
             set_custom_associations(document, lang)
@@ -186,30 +187,18 @@ class DocumentRest(object):
 
         return to_json_dict(document, schema)
 
-    def _set_associations(self, document, lang, clazz):
-        linked_parent_waypoints, linked_child_waypoints, linked_routes = \
-            get_associations(document, lang)
-        document.associations = {
-            'routes': [
-                to_json_dict(r, schema_association_route)
-                for r in linked_routes
-            ]
-        }
+    def _set_associations(self, document, lang, editing_view):
+        linked_docs = get_associations(document, lang, editing_view)
 
-        if clazz == Waypoint:
-            document.associations['waypoint_parents'] = [
-                to_json_dict(wp, schema_association_waypoint)
-                for wp in linked_parent_waypoints
+        associations = {}
+        for typ, docs in linked_docs.items():
+            schema = association_schemas[typ]
+            associations[typ] = [
+                to_json_dict(d, schema)
+                for d in docs
             ]
-            document.associations['waypoint_children'] = [
-                to_json_dict(wp, schema_association_waypoint)
-                for wp in linked_child_waypoints
-            ]
-        else:
-            document.associations['waypoints'] = [
-                to_json_dict(wp, schema_association_waypoint)
-                for wp in linked_parent_waypoints + linked_child_waypoints
-            ]
+
+        document.associations = associations
 
     def _set_maps(self, document, lang):
         topo_maps = get_maps(document, lang)
@@ -724,6 +713,15 @@ def add_load_for_locales(
             subqueryload(getattr(clazz, 'locales').of_type(clazz_locale)))
     else:
         return base_query.options(subqueryload(getattr(clazz, 'locales')))
+
+association_schemas = {
+    'waypoints': schema_association_waypoint,
+    'waypoint_parents': schema_association_waypoint,
+    'waypoint_children': schema_association_waypoint,
+    'routes': schema_association_route,
+    'users': schema_association_user,
+    'images': schema_association_image
+}
 
 
 @resource(path='/document/{id}/history/{lang}', cors_policy=cors_policy)

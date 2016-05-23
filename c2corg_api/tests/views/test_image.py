@@ -67,6 +67,21 @@ class TestImageRest(BaseDocumentTestRest):
     def test_get_404(self):
         self.get_404()
 
+    def test_get_edit(self):
+        response = self.app.get(self._prefix + '/' +
+                                str(self.image.document_id) + '?e=1',
+                                status=200)
+        body = response.json
+
+        self.assertNotIn('maps', body)
+        self.assertNotIn('areas', body)
+        self.assertIn('associations', body)
+        associations = body['associations']
+        self.assertIn('waypoints', associations)
+        self.assertIn('routes', associations)
+        self.assertIn('images', associations)
+        self.assertIn('users', associations)
+
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
