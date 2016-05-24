@@ -116,7 +116,12 @@ def get_associations(document, lang, editing_view):
         associations['waypoint_children'] = \
             get_linked_waypoint_children(document)
     if 'routes' in types_to_include:
-        associations['routes'] = get_linked_routes(document)
+        if not editing_view and document.type == WAYPOINT_TYPE:
+            # for waypoints the routes of child waypoints should also be
+            # included (done in WaypointRest)
+            pass
+        else:
+            associations['routes'] = get_linked_routes(document)
     if 'users' in types_to_include:
         associations['users'] = get_linked_users(document)
     if 'images' in types_to_include:
@@ -160,16 +165,17 @@ def get_linked_waypoint_children(document):
         all()
 
 
-def get_linked_routes(document):
-    def limit_route_fields(query):
-        return query.\
-            options(load_only(
-                Route.document_id, Route.activities, Route.elevation_min,
-                Route.elevation_max, Route.version, Route.protected)). \
-            options(joinedload(Route.locales.of_type(RouteLocale)).load_only(
-                RouteLocale.lang, RouteLocale.title, RouteLocale.title_prefix,
-                RouteLocale.version))
+def limit_route_fields(query):
+    return query.\
+        options(load_only(
+            Route.document_id, Route.activities, Route.elevation_min,
+            Route.elevation_max, Route.version, Route.protected)). \
+        options(joinedload(Route.locales.of_type(RouteLocale)).load_only(
+            RouteLocale.lang, RouteLocale.title, RouteLocale.title_prefix,
+            RouteLocale.version))
 
+
+def get_linked_routes(document):
     return limit_route_fields(
         DBSession.query(Route).
         filter(Route.redirects_to.is_(None)).
