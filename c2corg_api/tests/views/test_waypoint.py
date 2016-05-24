@@ -131,8 +131,8 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(area.get('locales')[0].get('title'), 'France')
 
         recent_outings = associations.get('recent_outings')
-        self.assertEqual(1, recent_outings['total'])
-        self.assertEqual(1, len(recent_outings['outings']))
+        self.assertEqual(2, recent_outings['total'])
+        self.assertEqual(2, len(recent_outings['outings']))
         self.assertEqual(
             self.outing1.document_id,
             recent_outings['outings'][0].get('document_id'))
@@ -1023,11 +1023,25 @@ class TestWaypointRest(BaseDocumentTestRest):
                     weather='sunny')
             ]
         )
+
+        self.outing3 = Outing(
+            activities=['skitouring'], date_start=datetime.date(2015, 12, 31),
+            date_end=datetime.date(2016, 1, 1),
+            locales=[
+                OutingLocale(
+                    lang='en', title='...', description='...',
+                    weather='sunny')
+            ]
+        )
         self.session.add(self.outing2)
+        self.session.add(self.outing3)
         self.session.flush()
         self.session.add(Association(
             parent_document_id=self.route1.document_id,
             child_document_id=self.outing2.document_id))
+        self.session.add(Association(
+            parent_document_id=self.route3.document_id,
+            child_document_id=self.outing3.document_id))
 
         # add a map
         topo_map = TopoMap(

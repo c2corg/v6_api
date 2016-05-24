@@ -255,6 +255,7 @@ def set_recent_outings(waypoint, lang):
     t_outing_route = aliased(Association, name='a1')
     t_route_wp = aliased(Association, name='a2')
     t_route = aliased(Document, name='r')
+    with_query_waypoints = _get_select_children(waypoint)
 
     recent_outings = DBSession.query(Outing). \
         filter(Outing.redirects_to.is_(None)). \
@@ -268,9 +269,11 @@ def set_recent_outings(waypoint, lang):
                 t_route.type == ROUTE_TYPE)). \
         join(
             t_route_wp,
-            and_(
-                t_route_wp.parent_document_id == waypoint.document_id,
-                t_route_wp.child_document_id == t_route.document_id)). \
+            t_route_wp.child_document_id == t_route.document_id). \
+        join(
+            with_query_waypoints,
+            with_query_waypoints.c.document_id == t_route_wp.parent_document_id
+        ). \
         options(load_only(
             Outing.document_id, Outing.activities, Outing.date_start,
             Outing.date_end, Outing.version, Outing.protected)). \
@@ -297,9 +300,11 @@ def set_recent_outings(waypoint, lang):
                 t_route.type == ROUTE_TYPE)). \
         join(
             t_route_wp,
-            and_(
-                t_route_wp.parent_document_id == waypoint.document_id,
-                t_route_wp.child_document_id == t_route.document_id)). \
+            t_route_wp.child_document_id == t_route.document_id). \
+        join(
+            with_query_waypoints,
+            with_query_waypoints.c.document_id == t_route_wp.parent_document_id
+        ). \
         count()
 
     waypoint.associations['recent_outings'] = {
@@ -316,6 +321,54 @@ def set_linked_routes(waypoint, lang):
     Set associated routes for the given waypoint including associated routes
     of child and grandchild waypoints.
     Note that this function returns a dict and not a list!
+    """
+    with_query_waypoints = _get_select_children(waypoint)
+
+    total = DBSession.query(Route.document_id). \
+        select_from(with_query_waypoints). \
+        join(
+            Association,
+            with_query_waypoints.c.document_id ==
+            Association.parent_document_id). \
+        join(
+            Route,
+            Association.child_document_id == Route.document_id). \
+        filter(Route.redirects_to.is_(None)). \
+        count()
+
+    routes = limit_route_fields(
+        DBSession.query(Route).
+        select_from(with_query_waypoints).
+        join(
+            Association,
+            with_query_waypoints.c.document_id ==
+            Association.parent_document_id).
+        join(
+            Route,
+            Association.child_document_id == Route.document_id).
+        filter(Route.redirects_to.is_(None)).
+        order_by(Route.document_id.desc()).
+        limit(NUM_ROUTES)
+        ). \
+        all()
+
+    if lang is not None:
+        set_best_locale(routes, lang)
+
+    waypoint.associations['all_routes'] = {
+        'total': total,
+        'routes': [
+            to_json_dict(route, schema_association_route)
+            for route in routes
+        ]
+    }
+
+
+def _get_select_children(waypoint):
+    """
+    Return a WITH query that selects the document ids of the given waypoint,
+    the children and the grand-children of the waypoint.
+    See also: http://docs.sqlalchemy.org/en/latest/core/selectable.html#sqlalchemy.sql.expression.GenerativeSelect.cte  # noqa
     """
     select_waypoint = DBSession. \
         query(
@@ -341,52 +394,12 @@ def set_linked_routes(waypoint, lang):
             Waypoint,
             Association.child_document_id == Waypoint.document_id). \
         cte('waypoint_grandchildren')
-    # query returning the document ids of the waypoint, the child and the
-    # grand-child waypoints
-    select_all_waypoints = union(
+
+    return union(
             select_waypoint.select(),
             select_waypoint_children.select(),
             select_waypoint_grandchildren.select()). \
         cte('select_all_waypoints')
-
-    total = DBSession.query(Route.document_id). \
-        select_from(select_all_waypoints). \
-        join(
-            Association,
-            select_all_waypoints.c.document_id ==
-            Association.parent_document_id). \
-        join(
-            Route,
-            Association.child_document_id == Route.document_id). \
-        filter(Route.redirects_to.is_(None)). \
-        count()
-
-    routes = limit_route_fields(
-        DBSession.query(Route).
-        select_from(select_all_waypoints).
-        join(
-            Association,
-            select_all_waypoints.c.document_id ==
-            Association.parent_document_id).
-        join(
-            Route,
-            Association.child_document_id == Route.document_id).
-        filter(Route.redirects_to.is_(None)).
-        order_by(Route.document_id.desc()).
-        limit(NUM_ROUTES)
-        ). \
-        all()
-
-    if lang is not None:
-        set_best_locale(routes, lang)
-
-    waypoint.associations['all_routes'] = {
-        'total': total,
-        'routes': [
-            to_json_dict(route, schema_association_route)
-            for route in routes
-        ]
-    }
 
 
 @resource(path='/waypoints/{id}/{lang}/{version_id}', cors_policy=cors_policy)
