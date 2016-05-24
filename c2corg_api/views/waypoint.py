@@ -129,6 +129,22 @@ class WaypointRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
+        """
+        Get a single document.
+
+        Request:
+            `GET` `/waypoints/{document_id}?[l=...][&e=1]`
+
+        Parameters:
+            `l=...` (optional)
+            Document locale. Get the document in the given language. If not
+             provided, all document locales are returned.
+
+            `e=1` (optional)
+            Get the document for editing. Only the information needed for
+            editing the document is included in the response.
+
+        """
         return self._get(
             Waypoint, schema_waypoint,
             adapt_schema=schema_adaptor, include_maps=True,
@@ -138,6 +154,35 @@ class WaypointRest(DocumentRest):
                           validators=[validate_waypoint_create,
                                       validate_associations_create])
     def collection_post(self):
+        """
+        Create a new document.
+
+        Request:
+            `POST` `/waypoints`
+
+        Request body:
+            {
+                "geometry": {
+                    "geom": "{"type": "Point", "coordinates": ...}",
+                    "geom_detail": "{"type": "Point", "coordinates": ...}"
+                },
+                ...
+                "locales": [
+                    {"lang": "en", "title": "...", ...}
+                ],
+                "associations": {
+                    "routes": [
+                        {"document_id": ...}
+                    ]
+                }
+            }
+
+        Response:
+            {
+                "document_id": ...
+            }
+
+        """
         return self._collection_post(schema_waypoint)
 
     @restricted_json_view(schema=schema_update_waypoint,
@@ -145,6 +190,51 @@ class WaypointRest(DocumentRest):
                                       validate_waypoint_update,
                                       validate_associations_update])
     def put(self):
+        """
+        Update a document.
+
+        Request:
+            `PUT` `/waypoints/{document_id}`
+
+        Request body:
+            {
+                "message": "...",
+                "document": {
+                    "document_id": ...,
+                    "version": ...,
+                    "geometry": {
+                        "version": ...,
+                        "geom": "{"type": "Point", "coordinates": ...}",
+                        "geom_detail": "{"type": "Point", "coordinates": ...}"
+                    },
+                    ...
+                    "locales": [
+                        {"version": ..., "lang": "en", "title": "...", ...}
+                    ],
+                    "associations": {
+                        "routes": [
+                            {"document_id": ...}
+                        ]
+                    }
+                }
+            }
+
+            Notes:
+
+            - The version number of the document, of each provided locale and
+              of the geometry has to be given. If the versions do not match
+              the current ones, `409 Conflict` is returned.
+            - The geometry can be left out. In this case the geometry will not
+              be changed.
+            - Only the locales provided in the request will be update. If no
+              locale is given, no locale will be changed.
+            - Associations can be updated, by giving a list of document ids
+              for the different association types. If no list is provided for
+              an association type, these associations are not changed.
+              For example when updating a route, association to other routes
+              and waypoints can be provided. If only waypoint associations are
+              given, the route associations will not be changed.
+        """
         return self._put(
             Waypoint, schema_waypoint, after_update=update_linked_route_titles)
 

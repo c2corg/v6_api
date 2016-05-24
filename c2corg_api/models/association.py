@@ -109,7 +109,8 @@ def get_associations(document, lang, editing_view):
         waypoint_parents = get_linked_waypoint_parents(document)
         waypoint_children = get_linked_waypoint_children(document)
         associations['waypoints'] = waypoint_parents + waypoint_children
-    elif 'waypoint_parents' in types_to_include:
+    elif 'waypoint_parents' in types_to_include and \
+            'waypoint_children' in types_to_include:
         associations['waypoint_parents'] = \
             get_linked_waypoint_parents(document)
         associations['waypoint_children'] = \
