@@ -53,7 +53,7 @@ class TestOutingRest(BaseDocumentTestRest):
 
     def test_get_collection_for_waypoint(self):
         response = self.app.get(
-            self._prefix + '?wp=' + str(self.waypoint.document_id), status=200)
+            self._prefix + '?w=' + str(self.waypoint.document_id), status=200)
 
         documents = response.json['documents']
 
