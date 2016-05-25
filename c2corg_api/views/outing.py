@@ -59,7 +59,7 @@ def validate_filter_params(request):
     Checks if a given optional waypoint id is an integer,
     if a given optional route id is an integer.
     """
-    check_get_for_integer_property(request, 'wp', False)
+    check_get_for_integer_property(request, 'w', False)
     check_get_for_integer_property(request, 'r', False)
 
 
@@ -86,10 +86,10 @@ class OutingRest(DocumentRest):
         validate_filter_params])
     def collection_get(self):
         custom_filter = None
-        if self.request.validated.get('wp'):
+        if self.request.validated.get('w'):
             # only show outings for the given waypoint
             custom_filter = self.filter_on_waypoint(
-                self.request.validated['wp'])
+                self.request.validated['w'])
         elif self.request.validated.get('r'):
             # only show outings for the given route
             custom_filter = self.filter_on_route(self.request.validated['r'])
