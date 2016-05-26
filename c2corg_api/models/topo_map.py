@@ -1,5 +1,5 @@
 from c2corg_api.models.enums import map_editor, map_scale
-from c2corg_api.models.schema_utils import restrict_schema
+from c2corg_api.models.schema_utils import restrict_schema, get_update_schema
 from c2corg_api.views import set_best_locale
 from c2corg_common.fields_topo_map import fields_topo_map
 from sqlalchemy import (
@@ -14,7 +14,7 @@ from colanderalchemy import SQLAlchemySchemaNode
 from c2corg_api.models import schema, DBSession
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, get_update_schema, geometry_schema_overrides,
+    ArchiveDocument, Document, geometry_schema_overrides,
     schema_document_locale, schema_attributes, DocumentGeometry,
     DocumentLocale)
 from sqlalchemy.orm import load_only, joinedload

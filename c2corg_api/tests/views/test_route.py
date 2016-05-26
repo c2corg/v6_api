@@ -9,7 +9,7 @@ from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.views.route import update_title_prefix
+from c2corg_api.views.route import check_title_prefix
 from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, LineString
 
@@ -128,6 +128,21 @@ class TestRouteRest(BaseDocumentTestRest):
     def test_get_404(self):
         self.get_404()
 
+    def test_get_edit(self):
+        response = self.app.get(self._prefix + '/' +
+                                str(self.route.document_id) + '?e=1',
+                                status=200)
+        body = response.json
+
+        self.assertIn('maps', body)
+        self.assertNotIn('areas', body)
+        self.assertIn('associations', body)
+        associations = body['associations']
+        self.assertIn('waypoints', associations)
+        self.assertIn('routes', associations)
+        self.assertNotIn('images', associations)
+        self.assertNotIn('users', associations)
+
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
@@ -235,7 +250,10 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop',
                  'gear': 'shoes'}
-            ]
+            ],
+            'associations': {
+                'waypoints': [{'document_id': self.waypoint.document_id}]
+            }
         }
         body, doc = self.post_success(body)
         self._assert_geometry(body)
@@ -305,7 +323,10 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop',
                  'gear': 'shoes'}
-            ]
+            ],
+            'associations': {
+                'waypoints': [{'document_id': self.waypoint.document_id}]
+            }
         }
         body, doc = self.post_success(body)
         self.assertIsNotNone(doc.geometry.geom)
@@ -324,12 +345,36 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop',
                  'gear': 'shoes'}
-            ]
+            ],
+            'associations': {
+                'waypoints': [{'document_id': self.waypoint.document_id}]
+            }
         }
         body, doc = self.post_success(body)
         self.assertIsNotNone(doc.geometry.geom)
         self.assertIsNone(doc.geometry.geom_detail)
         self._assert_default_geometry(body, x=635956, y=5723604)
+
+    def test_post_main_wp_without_association(self):
+        body_post = {
+            'main_waypoint_id': self.waypoint.document_id,
+            'activities': ['hiking', 'skitouring'],
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'gear': 'shoes'}
+            ]
+            # no association for the main waypoint
+        }
+        body = self.post_error(body_post)
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertError(
+            errors, 'main_waypoint_id', 'no association for the main waypoint')
 
     def test_put_wrong_document_id(self):
         body = {
@@ -549,7 +594,12 @@ class TestRouteRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'paraglider',
                      'version': self.route2.locales[0].version}
-                ]
+                ],
+                'associations': {
+                    'waypoints': [
+                        {'document_id': self.waypoint.document_id}
+                    ]
+                }
             }
         }
         (body, route) = self.put_success_figures_only(body, self.route2)
@@ -573,7 +623,12 @@ class TestRouteRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'paraglider',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'waypoints': [
+                        {'document_id': self.waypoint2.document_id}
+                    ]
+                }
             }
         }
         (body, route) = self.put_success_figures_only(body, self.route)
@@ -706,7 +761,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.route.main_waypoint_id = self.waypoint.document_id
         self.session.flush()
         self.session.refresh(self.route)
-        update_title_prefix(self.route, create=False)
+        check_title_prefix(self.route, create=False)
         self.session.expire_all()
 
         route = self.session.query(Route).get(self.route.document_id)

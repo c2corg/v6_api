@@ -1,12 +1,14 @@
+from c2corg_api.models.image import schema_association_image
 from c2corg_api.models.outing import Outing
-from c2corg_api.models.user import User
+from c2corg_api.models.user import User, schema_association_user
 from functools import partial
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
 from c2corg_api.models.area_association import update_areas_for_document, \
     get_areas
-from c2corg_api.models.association import get_associations
+from c2corg_api.models.association import get_associations, \
+    create_associations, synchronize_associations
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
     ArchiveDocumentGeometry, set_available_langs, get_available_langs)
@@ -168,14 +170,14 @@ class DocumentRest(object):
 
         set_available_langs([document])
 
-        include_associations = self.request.GET.get('a', '1') == '1'
-        if include_associations:
-            self._set_associations(document, lang)
-            if set_custom_associations:
-                set_custom_associations(document, lang)
+        editing_view = self.request.GET.get('e', '0') != '0'
+        self._set_associations(document, lang, editing_view)
 
-            if include_areas:
-                self._set_areas(document, lang)
+        if not editing_view and set_custom_associations:
+            set_custom_associations(document, lang)
+
+        if not editing_view and include_areas:
+            self._set_areas(document, lang)
 
         if include_maps:
             self._set_maps(document, lang)
@@ -185,18 +187,18 @@ class DocumentRest(object):
 
         return to_json_dict(document, schema)
 
-    def _set_associations(self, document, lang):
-        linked_waypoints, linked_routes = get_associations(document, lang)
-        document.associations = {
-            'waypoints': [
-                to_json_dict(wp, schema_association_waypoint)
-                for wp in linked_waypoints
-            ],
-            'routes': [
-                to_json_dict(r, schema_association_route)
-                for r in linked_routes
+    def _set_associations(self, document, lang, editing_view):
+        linked_docs = get_associations(document, lang, editing_view)
+
+        associations = {}
+        for typ, docs in linked_docs.items():
+            schema = association_schemas[typ]
+            associations[typ] = [
+                to_json_dict(d, schema)
+                for d in docs
             ]
-        }
+
+        document.associations = associations
 
     def _set_maps(self, document, lang):
         topo_maps = get_maps(document, lang)
@@ -221,11 +223,9 @@ class DocumentRest(object):
             ]
 
     def _collection_post(
-            self, schema, before_add=None, after_add=None,
-            document_field=None):
+            self, schema, before_add=None, after_add=None):
         user_id = self.request.authenticated_userid
-        document_in = self.request.validated if document_field is None else \
-            self.request.validated[document_field]
+        document_in = self.request.validated
         document = schema.objectify(document_in)
         document.document_id = None
 
@@ -241,6 +241,9 @@ class DocumentRest(object):
 
         if after_add:
             after_add(document, user_id=user_id)
+
+        if document_in.get('associations', None):
+            create_associations(document, document_in['associations'], user_id)
 
         notify_es_syncer(self.request.registry.queue_config)
 
@@ -299,6 +302,10 @@ class DocumentRest(object):
 
             # And the search updated
             notify_es_syncer(self.request.registry.queue_config)
+
+        associations = self.request.validated.get('associations', None)
+        if associations:
+            synchronize_associations(document, associations, user_id)
 
         return {}
 
@@ -625,18 +632,16 @@ def validate_document(document, request, fields, updating):
 
 
 def make_validator_create(
-        fields, type_field=None, valid_type_values=None, document_field=None):
+        fields, type_field=None, valid_type_values=None):
     """Returns a validator function used for the creation of documents.
     """
     if type_field is None or valid_type_values is None:
         def f(request):
-            document = request.validated if document_field is None else \
-                request.validated.get(document_field, {})
+            document = request.validated
             validate_document(document, request, fields, updating=False)
     else:
         def f(request):
-            document = request.validated if document_field is None else \
-                request.validated.get(document_field, {})
+            document = request.validated
             validate_document_for_type(
                 document, request, fields, type_field, valid_type_values,
                 updating=False)
@@ -708,6 +713,15 @@ def add_load_for_locales(
             subqueryload(getattr(clazz, 'locales').of_type(clazz_locale)))
     else:
         return base_query.options(subqueryload(getattr(clazz, 'locales')))
+
+association_schemas = {
+    'waypoints': schema_association_waypoint,
+    'waypoint_parents': schema_association_waypoint,
+    'waypoint_children': schema_association_waypoint,
+    'routes': schema_association_route,
+    'users': schema_association_user,
+    'images': schema_association_image
+}
 
 
 @resource(path='/document/{id}/history/{lang}', cors_policy=cors_policy)

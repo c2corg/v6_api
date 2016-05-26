@@ -1,4 +1,5 @@
-from c2corg_api.models.schema_utils import restrict_schema
+from c2corg_api.models.schema_utils import restrict_schema,\
+    get_update_schema, get_create_schema
 from sqlalchemy import (
     Column,
     Integer,
@@ -16,8 +17,7 @@ from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
-    get_update_schema, geometry_schema_overrides, schema_locale_attributes,
-    schema_attributes)
+    geometry_schema_overrides, schema_locale_attributes, schema_attributes)
 from c2corg_api.models import enums
 from sqlalchemy.orm import relationship
 from c2corg_common import document_types
@@ -312,6 +312,7 @@ schema_route = SQLAlchemySchemaNode(
         'geometry': geometry_schema_overrides
     })
 
+schema_create_route = get_create_schema(schema_route)
 schema_update_route = get_update_schema(schema_route)
 schema_association_route = restrict_schema(schema_route, [
     'locales.title', 'locales.title_prefix', 'elevation_min', 'elevation_max',

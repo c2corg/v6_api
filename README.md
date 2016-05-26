@@ -78,6 +78,11 @@ Updating a waypoint:
     -d '{"message": "Comment about change", "document": {"elevation": 4633, "maps_info": null, "version": 1, "document_id": 1, "waypoint_type": "summit", "locales": [{"lang": "fr", "version": 1, "title": "Mont Rose", "access": null, "description": null}]}}' \
     http://localhost:6543/waypoints/1
 
+API documentation
+-----------------
+
+- [Simple search](./c2corg_api/views/search.py)
+- [Guidebook API](./c2corg_api/views/waypoint.py)
 
 Forum integration (discourse)
 --------------------------

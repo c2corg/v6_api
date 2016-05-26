@@ -101,7 +101,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertIn('associations', body)
         associations = body.get('associations')
 
-        linked_waypoints = associations.get('waypoints')
+        linked_waypoints = associations.get('waypoint_children')
         self.assertEqual(1, len(linked_waypoints))
         self.assertEqual(
             self.waypoint4.document_id, linked_waypoints[0].get('document_id'))
@@ -148,15 +148,22 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertIn('rock_types', body)
         self.assertEqual(body['rock_types'], [])
 
-    def test_get_no_associations(self):
+    def test_get_edit(self):
         response = self.app.get(self._prefix + '/' +
-                                str(self.waypoint.document_id) + '?a=0',
+                                str(self.waypoint.document_id) + '?e=1',
                                 status=200)
         body = response.json
 
-        self.assertNotIn('associations', body)
+        self.assertNotIn('recent_outings', body['associations'])
         self.assertIn('maps', body)
         self.assertNotIn('areas', body)
+        self.assertIn('associations', body)
+        associations = body['associations']
+        self.assertIn('waypoint_parents', associations)
+        self.assertIn('waypoint_children', associations)
+        self.assertNotIn('waypoints', associations)
+        self.assertNotIn('routes', associations)
+        self.assertNotIn('images', associations)
 
     def test_get_version(self):
         self.get_version(self.waypoint, self.waypoint_version)
@@ -311,7 +318,12 @@ class TestWaypointRest(BaseDocumentTestRest):
                 {'id': 3456, 'version': 4567,
                  'lang': 'en', 'title': 'Mont Pourri',
                  'access': 'y'}
-            ]
+            ],
+            'associations': {
+                'waypoint_children': [
+                    {'document_id': self.waypoint2.document_id}
+                ]
+            }
         }
         body, doc = self.post_success(body)
         self._assert_geometry(body, 'geom')
@@ -348,6 +360,11 @@ class TestWaypointRest(BaseDocumentTestRest):
             all()
         self.assertEqual(len(links), 1)
         self.assertEqual(links[0].area_id, self.area1.document_id)
+
+        # check that a link to the child waypoint is created
+        association_wp = self.session.query(Association).get(
+            (doc.document_id, self.waypoint2.document_id))
+        self.assertIsNotNone(association_wp)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -443,6 +460,14 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'geometry': {
                     'version': self.waypoint.geometry.version,
                     'geom': '{"type": "Point", "coordinates": [635957, 5723605]}'  # noqa
+                },
+                'associations': {
+                    'waypoint_children': [
+                        {'document_id': self.waypoint2.document_id}
+                    ],
+                    'routes': [
+                        {'document_id': self.route1.document_id}
+                    ]
                 }
             }
         }
@@ -493,6 +518,11 @@ class TestWaypointRest(BaseDocumentTestRest):
             all()
         self.assertEqual(len(links), 1)
         self.assertEqual(links[0].area_id, self.area1.document_id)
+
+        # check that a link to the child waypoint is created
+        association_wp = self.session.query(Association).get(
+            (waypoint.document_id, self.waypoint2.document_id))
+        self.assertIsNotNone(association_wp)
 
     def test_put_success_figures_and_lang_only(self):
         body_put = {

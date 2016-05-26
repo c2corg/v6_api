@@ -1,3 +1,5 @@
+from colander import MappingSchema, SchemaNode, String, Integer, Sequence
+
 default_fields_doc = ['document_id', 'version', 'waypoint_type']
 default_fields_locale = ['version', 'lang']
 default_fields_geometry = ['version']
@@ -58,3 +60,48 @@ def filter_node(node, fields, default_fields):
         if child_node.name in fields or child_node.name in default_fields:
             children.append(child_node)
     node.children = children
+
+
+class SchemaAssociationDoc(MappingSchema):
+    document_id = SchemaNode(Integer())
+
+
+class SchemaAssociationUser(MappingSchema):
+    id = SchemaNode(Integer())
+
+
+class SchemaAssociations(MappingSchema):
+    users = SchemaNode(
+        Sequence(), SchemaAssociationUser(), missing=None)
+    routes = SchemaNode(
+        Sequence(), SchemaAssociationDoc(), missing=None)
+    waypoints = SchemaNode(
+        Sequence(), SchemaAssociationDoc(), missing=None)
+    waypoint_parents = SchemaNode(
+        Sequence(), SchemaAssociationDoc(), missing=None)
+    waypoint_children = SchemaNode(
+        Sequence(), SchemaAssociationDoc(), missing=None)
+    images = SchemaNode(
+        Sequence(), SchemaAssociationDoc(), missing=None)
+
+
+def get_create_schema(document_schema):
+    """ Create a Colander schema for the create view which contains
+    associations for the document.
+    """
+    schema = document_schema.clone()
+    schema.add(SchemaAssociations(name='associations', missing=None))
+    return schema
+
+
+def get_update_schema(document_schema):
+    """Create a Colander schema for the update view which contains an update
+    message and the document (with associations).
+    """
+    document_schema_with_associations = get_create_schema(document_schema)
+
+    class UpdateSchema(MappingSchema):
+        message = SchemaNode(String(), missing='')
+        document = document_schema_with_associations
+
+    return UpdateSchema()

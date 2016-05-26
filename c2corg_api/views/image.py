@@ -1,7 +1,9 @@
+import functools
+
 from c2corg_api.models import DBSession
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.image import Image, schema_image, schema_update_image, \
-    schema_listing_image, IMAGE_TYPE
+    schema_listing_image, IMAGE_TYPE, schema_create_image
 from c2corg_common.fields_image import fields_image
 from cornice.resource import resource, view
 
@@ -9,12 +11,17 @@ from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
-    validate_lang_param, validate_preferred_lang_param
+    validate_lang_param, validate_preferred_lang_param, \
+    validate_associations
 
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, HTTPBadRequest
 
 validate_image_create = make_validator_create(fields_image.get('required'))
 validate_image_update = make_validator_update(fields_image.get('required'))
+validate_associations_create = functools.partial(
+    validate_associations, IMAGE_TYPE, True)
+validate_associations_update = functools.partial(
+    validate_associations, IMAGE_TYPE, False)
 
 
 @resource(collection_path='/images', path='/images/{id}',
@@ -30,13 +37,16 @@ class ImageRest(DocumentRest):
         return self._get(Image, schema_image)
 
     @restricted_json_view(
-            schema=schema_image, validators=validate_image_create)
+            schema=schema_create_image,
+            validators=[validate_image_create, validate_associations_create])
     def collection_post(self):
         return self._collection_post(schema_image)
 
     @restricted_json_view(
             schema=schema_update_image,
-            validators=[validate_id, validate_image_update])
+            validators=[validate_id,
+                        validate_image_update,
+                        validate_associations_update])
     def put(self):
         if not self.request.has_permission('moderator'):
             image_id = self.request.validated['id']

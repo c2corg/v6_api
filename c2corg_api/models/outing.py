@@ -1,5 +1,6 @@
 import colander
-from c2corg_api.models.schema_utils import restrict_schema
+from c2corg_api.models.schema_utils import restrict_schema, \
+    get_update_schema, get_create_schema
 from sqlalchemy import (
     Column,
     Integer,
@@ -11,15 +12,13 @@ from sqlalchemy import (
     )
 
 from colanderalchemy import SQLAlchemySchemaNode
-from colander import MappingSchema, SchemaNode, Integer as ColanderInteger, \
-    Sequence
 
 from c2corg_api.models import schema
 from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
-    get_update_schema, geometry_schema_overrides, schema_locale_attributes,
+    geometry_schema_overrides, schema_locale_attributes,
     schema_attributes)
 from c2corg_api.models import enums
 from c2corg_common import document_types
@@ -227,17 +226,7 @@ schema_outing = SQLAlchemySchemaNode(
         'geometry': geometry_schema_overrides
     })
 
-
-class CreateOutingSchema(MappingSchema):
-    """The schema used for the web-service to create a new outing.
-    """
-    route_id = SchemaNode(ColanderInteger())
-    user_ids = SchemaNode(Sequence(),
-                          SchemaNode(ColanderInteger()),
-                          validator=colander.Length(min=1))
-    outing = schema_outing.clone()
-
-schema_create_outing = CreateOutingSchema()
+schema_create_outing = get_create_schema(schema_outing)
 schema_update_outing = get_update_schema(schema_outing)
 schema_association_outing = restrict_schema(schema_outing, [
     'locales.title', 'activities', 'date_start', 'date_end'
