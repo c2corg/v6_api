@@ -1,10 +1,11 @@
 import functools
 
 from c2corg_api.models import DBSession
-from c2corg_api.models.association import Association
+from c2corg_api.models.association import Association, limit_route_fields
 from c2corg_api.models.document import UpdateType, Document, DocumentLocale
 from c2corg_api.models.outing import Outing, schema_association_outing
-from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
+from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE, \
+    schema_association_route
 from c2corg_api.views.outing import set_author
 from c2corg_api.views.route import set_route_title_prefix
 from cornice.resource import resource, view
@@ -28,7 +29,11 @@ from c2corg_common.attributes import waypoint_types
 from functools import lru_cache
 from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.orm.util import aliased
-from sqlalchemy.sql.expression import and_
+from sqlalchemy.sql.elements import literal_column
+from sqlalchemy.sql.expression import and_, union
+
+# the number of routes that are included for waypoints
+NUM_ROUTES = 30
 
 validate_waypoint_create = make_validator_create(
     fields_waypoint, 'waypoint_type', waypoint_types)
@@ -148,7 +153,7 @@ class WaypointRest(DocumentRest):
         return self._get(
             Waypoint, schema_waypoint,
             adapt_schema=schema_adaptor, include_maps=True,
-            set_custom_associations=WaypointRest.set_recent_outings)
+            set_custom_associations=set_custom_associations)
 
     @restricted_json_view(schema=schema_create_waypoint,
                           validators=[validate_waypoint_create,
@@ -238,67 +243,163 @@ class WaypointRest(DocumentRest):
         return self._put(
             Waypoint, schema_waypoint, after_update=update_linked_route_titles)
 
-    @staticmethod
-    def set_recent_outings(waypoint, lang):
-        """Set last 10 outings on routes associated to the given waypoint.
-        """
-        t_outing_route = aliased(Association, name='a1')
-        t_route_wp = aliased(Association, name='a2')
-        t_route = aliased(Document, name='r')
 
-        recent_outings = DBSession.query(Outing). \
-            filter(Outing.redirects_to.is_(None)). \
-            join(
-                t_outing_route,
-                Outing.document_id == t_outing_route.child_document_id). \
-            join(
-                t_route,
-                and_(
-                    t_outing_route.parent_document_id == t_route.document_id,
-                    t_route.type == ROUTE_TYPE)). \
-            join(
-                t_route_wp,
-                and_(
-                    t_route_wp.parent_document_id == waypoint.document_id,
-                    t_route_wp.child_document_id == t_route.document_id)). \
-            options(load_only(
-                Outing.document_id, Outing.activities, Outing.date_start,
-                Outing.date_end, Outing.version, Outing.protected)). \
-            options(joinedload(Outing.locales).load_only(
-                DocumentLocale.lang, DocumentLocale.title,
-                DocumentLocale.version)). \
-            order_by(Outing.date_end.desc()). \
-            limit(NUM_RECENT_OUTINGS). \
-            all()
+def set_custom_associations(waypoint, lang):
+    set_recent_outings(waypoint, lang)
+    set_linked_routes(waypoint, lang)
 
-        set_author(recent_outings, None)
-        if lang is not None:
-            set_best_locale(recent_outings, lang)
 
-        total = DBSession.query(Outing.document_id). \
-            filter(Outing.redirects_to.is_(None)). \
-            join(
-                t_outing_route,
-                Outing.document_id == t_outing_route.child_document_id). \
-            join(
-                t_route,
-                and_(
-                    t_outing_route.parent_document_id == t_route.document_id,
-                    t_route.type == ROUTE_TYPE)). \
-            join(
-                t_route_wp,
-                and_(
-                    t_route_wp.parent_document_id == waypoint.document_id,
-                    t_route_wp.child_document_id == t_route.document_id)). \
-            count()
+def set_recent_outings(waypoint, lang):
+    """Set last 10 outings on routes associated to the given waypoint.
+    """
+    t_outing_route = aliased(Association, name='a1')
+    t_route_wp = aliased(Association, name='a2')
+    t_route = aliased(Document, name='r')
+    with_query_waypoints = _get_select_children(waypoint)
 
-        waypoint.associations['recent_outings'] = {
-            'outings': [
-                to_json_dict(user, schema_association_outing)
-                for user in recent_outings
-            ],
-            'total': total
-        }
+    recent_outings = DBSession.query(Outing). \
+        filter(Outing.redirects_to.is_(None)). \
+        join(
+            t_outing_route,
+            Outing.document_id == t_outing_route.child_document_id). \
+        join(
+            t_route,
+            and_(
+                t_outing_route.parent_document_id == t_route.document_id,
+                t_route.type == ROUTE_TYPE)). \
+        join(
+            t_route_wp,
+            t_route_wp.child_document_id == t_route.document_id). \
+        join(
+            with_query_waypoints,
+            with_query_waypoints.c.document_id == t_route_wp.parent_document_id
+        ). \
+        options(load_only(
+            Outing.document_id, Outing.activities, Outing.date_start,
+            Outing.date_end, Outing.version, Outing.protected)). \
+        options(joinedload(Outing.locales).load_only(
+            DocumentLocale.lang, DocumentLocale.title,
+            DocumentLocale.version)). \
+        order_by(Outing.date_end.desc()). \
+        limit(NUM_RECENT_OUTINGS). \
+        all()
+
+    set_author(recent_outings, None)
+    if lang is not None:
+        set_best_locale(recent_outings, lang)
+
+    total = DBSession.query(Outing.document_id). \
+        filter(Outing.redirects_to.is_(None)). \
+        join(
+            t_outing_route,
+            Outing.document_id == t_outing_route.child_document_id). \
+        join(
+            t_route,
+            and_(
+                t_outing_route.parent_document_id == t_route.document_id,
+                t_route.type == ROUTE_TYPE)). \
+        join(
+            t_route_wp,
+            t_route_wp.child_document_id == t_route.document_id). \
+        join(
+            with_query_waypoints,
+            with_query_waypoints.c.document_id == t_route_wp.parent_document_id
+        ). \
+        count()
+
+    waypoint.associations['recent_outings'] = {
+        'total': total,
+        'outings': [
+            to_json_dict(outing, schema_association_outing)
+            for outing in recent_outings
+        ]
+    }
+
+
+def set_linked_routes(waypoint, lang):
+    """
+    Set associated routes for the given waypoint including associated routes
+    of child and grandchild waypoints.
+    Note that this function returns a dict and not a list!
+    """
+    with_query_waypoints = _get_select_children(waypoint)
+
+    total = DBSession.query(Route.document_id). \
+        select_from(with_query_waypoints). \
+        join(
+            Association,
+            with_query_waypoints.c.document_id ==
+            Association.parent_document_id). \
+        join(
+            Route,
+            Association.child_document_id == Route.document_id). \
+        filter(Route.redirects_to.is_(None)). \
+        count()
+
+    routes = limit_route_fields(
+        DBSession.query(Route).
+        select_from(with_query_waypoints).
+        join(
+            Association,
+            with_query_waypoints.c.document_id ==
+            Association.parent_document_id).
+        join(
+            Route,
+            Association.child_document_id == Route.document_id).
+        filter(Route.redirects_to.is_(None)).
+        order_by(Route.document_id.desc()).
+        limit(NUM_ROUTES)
+        ). \
+        all()
+
+    if lang is not None:
+        set_best_locale(routes, lang)
+
+    waypoint.associations['all_routes'] = {
+        'total': total,
+        'routes': [
+            to_json_dict(route, schema_association_route)
+            for route in routes
+        ]
+    }
+
+
+def _get_select_children(waypoint):
+    """
+    Return a WITH query that selects the document ids of the given waypoint,
+    the children and the grand-children of the waypoint.
+    See also: http://docs.sqlalchemy.org/en/latest/core/selectable.html#sqlalchemy.sql.expression.GenerativeSelect.cte  # noqa
+    """
+    select_waypoint = DBSession. \
+        query(
+            literal_column(str(waypoint.document_id)).label('document_id')). \
+        cte('waypoint')
+    # query to get the direct child waypoints
+    select_waypoint_children = DBSession. \
+        query(Waypoint.document_id). \
+        join(
+            Association,
+            and_(Association.child_document_id == Waypoint.document_id,
+                 Association.parent_document_id == waypoint.document_id)). \
+        cte('waypoint_children')
+    # query to get the grand-child waypoints
+    select_waypoint_grandchildren = DBSession. \
+        query(Waypoint.document_id). \
+        select_from(select_waypoint_children). \
+        join(
+            Association,
+            Association.parent_document_id ==
+            select_waypoint_children.c.document_id). \
+        join(
+            Waypoint,
+            Association.child_document_id == Waypoint.document_id). \
+        cte('waypoint_grandchildren')
+
+    return union(
+            select_waypoint.select(),
+            select_waypoint_children.select(),
+            select_waypoint_grandchildren.select()). \
+        cte('select_all_waypoints')
 
 
 @resource(path='/waypoints/{id}/{lang}/{version_id}', cors_policy=cors_policy)

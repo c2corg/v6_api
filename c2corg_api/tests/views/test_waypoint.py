@@ -107,12 +107,13 @@ class TestWaypointRest(BaseDocumentTestRest):
             self.waypoint4.document_id, linked_waypoints[0].get('document_id'))
         self.assertIn('type', linked_waypoints[0])
 
-        linked_routes = associations.get('routes')
-        self.assertEqual(1, len(linked_routes))
+        all_linked_routes = associations.get('all_routes')
+        linked_routes = all_linked_routes['routes']
+        self.assertEqual(2, len(linked_routes))
         linked_route = linked_routes[0]
         self.assertIn('type', linked_route)
-        self.assertEqual(
-            self.route1.document_id, linked_route.get('document_id'))
+        self.assertTrue(linked_route.get('document_id') in
+                        {self.route1.document_id, self.route3.document_id})
         self.assertEqual(
             linked_route.get('locales')[0].get('title_prefix'), 'Mont Blanc :')
 
@@ -130,8 +131,8 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(area.get('locales')[0].get('title'), 'France')
 
         recent_outings = associations.get('recent_outings')
-        self.assertEqual(1, recent_outings['total'])
-        self.assertEqual(1, len(recent_outings['outings']))
+        self.assertEqual(2, recent_outings['total'])
+        self.assertEqual(2, len(recent_outings['outings']))
         self.assertEqual(
             self.outing1.document_id,
             recent_outings['outings'][0].get('document_id'))
@@ -971,7 +972,15 @@ class TestWaypointRest(BaseDocumentTestRest):
             height_diff_up=800, height_diff_down=800, durations='1',
             main_waypoint_id=self.waypoint.document_id
         )
+        self.route3 = Route(
+            activities=['skitouring'], elevation_max=1500, elevation_min=700,
+            height_diff_up=800, height_diff_down=800, durations='1'
+        )
+        self.route3.locales.append(RouteLocale(
+            lang='en', title='Mont Blanc from the air', description='...',
+            title_prefix='Mont Blanc :', gear='paraglider'))
         self.session.add(self.route2)
+        self.session.add(self.route3)
         self.session.flush()
         self.session.add(Association(
             parent_document_id=self.waypoint.document_id,
@@ -985,6 +994,9 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(Association(
             parent_document_id=self.waypoint.document_id,
             child_document_id=self.route2.document_id))
+        self.session.add(Association(
+            parent_document_id=self.waypoint4.document_id,
+            child_document_id=self.route3.document_id))
 
         self.outing1 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
@@ -1011,11 +1023,25 @@ class TestWaypointRest(BaseDocumentTestRest):
                     weather='sunny')
             ]
         )
+
+        self.outing3 = Outing(
+            activities=['skitouring'], date_start=datetime.date(2015, 12, 31),
+            date_end=datetime.date(2016, 1, 1),
+            locales=[
+                OutingLocale(
+                    lang='en', title='...', description='...',
+                    weather='sunny')
+            ]
+        )
         self.session.add(self.outing2)
+        self.session.add(self.outing3)
         self.session.flush()
         self.session.add(Association(
             parent_document_id=self.route1.document_id,
             child_document_id=self.outing2.document_id))
+        self.session.add(Association(
+            parent_document_id=self.route3.document_id,
+            child_document_id=self.outing3.document_id))
 
         # add a map
         topo_map = TopoMap(
