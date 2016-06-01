@@ -2,7 +2,7 @@ import functools
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association, limit_route_fields
-from c2corg_api.models.document import UpdateType, Document, DocumentLocale
+from c2corg_api.models.document import UpdateType, DocumentLocale
 from c2corg_api.models.outing import Outing, schema_association_outing
 from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE, \
     schema_association_route
@@ -254,7 +254,6 @@ def set_recent_outings(waypoint, lang):
     """
     t_outing_route = aliased(Association, name='a1')
     t_route_wp = aliased(Association, name='a2')
-    t_route = aliased(Document, name='r')
     with_query_waypoints = _get_select_children(waypoint)
 
     recent_outings = DBSession.query(Outing). \
@@ -263,13 +262,12 @@ def set_recent_outings(waypoint, lang):
             t_outing_route,
             Outing.document_id == t_outing_route.child_document_id). \
         join(
-            t_route,
-            and_(
-                t_outing_route.parent_document_id == t_route.document_id,
-                t_route.type == ROUTE_TYPE)). \
-        join(
             t_route_wp,
-            t_route_wp.child_document_id == t_route.document_id). \
+            and_(
+                t_route_wp.child_document_id ==
+                t_outing_route.parent_document_id,
+                t_route_wp.child_document_type == ROUTE_TYPE,
+            )). \
         join(
             with_query_waypoints,
             with_query_waypoints.c.document_id == t_route_wp.parent_document_id
@@ -294,13 +292,12 @@ def set_recent_outings(waypoint, lang):
             t_outing_route,
             Outing.document_id == t_outing_route.child_document_id). \
         join(
-            t_route,
-            and_(
-                t_outing_route.parent_document_id == t_route.document_id,
-                t_route.type == ROUTE_TYPE)). \
-        join(
             t_route_wp,
-            t_route_wp.child_document_id == t_route.document_id). \
+            and_(
+                t_route_wp.child_document_id ==
+                t_outing_route.parent_document_id,
+                t_route_wp.child_document_type == ROUTE_TYPE,
+            )). \
         join(
             with_query_waypoints,
             with_query_waypoints.c.document_id == t_route_wp.parent_document_id
@@ -380,26 +377,25 @@ def _get_select_children(waypoint):
     # query to get the direct child waypoints
     select_waypoint_children = DBSession. \
         query(
-            Waypoint.document_id,
+            Association.child_document_id.label('document_id'),
             literal_column('0').label('priority')). \
-        join(
-            Association,
-            and_(Association.child_document_id == Waypoint.document_id,
+        filter(
+            and_(Association.child_document_type == WAYPOINT_TYPE,
                  Association.parent_document_id == waypoint.document_id)). \
         cte('waypoint_children')
     # query to get the grand-child waypoints
     select_waypoint_grandchildren = DBSession. \
         query(
-            Waypoint.document_id,
+            Association.child_document_id.label('document_id'),
             literal_column('0').label('priority')). \
         select_from(select_waypoint_children). \
         join(
             Association,
-            Association.parent_document_id ==
-            select_waypoint_children.c.document_id). \
-        join(
-            Waypoint,
-            Association.child_document_id == Waypoint.document_id). \
+            and_(
+                Association.parent_document_id ==
+                select_waypoint_children.c.document_id,
+                Association.child_document_type == WAYPOINT_TYPE
+            )). \
         cte('waypoint_grandchildren')
 
     return union(

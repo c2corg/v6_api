@@ -384,26 +384,26 @@ def _get_load_associations_query(document, doc_types_to_load):
     query_parents = DBSession. \
         query(
             Association.parent_document_id.label('id'),
-            Document.type.label('t'),
+            Association.parent_document_type.label('t'),
             literal_column('1').label('p')). \
-        join(
-            Document,
+        filter(
             and_(
                 Association.child_document_id == document.document_id,
-                Association.parent_document_id == Document.document_id,
-                Document.type.in_(doc_types_to_load))). \
+                Association.parent_document_type.in_(doc_types_to_load)
+            )
+        ). \
         subquery()
     query_children = DBSession. \
         query(
             Association.child_document_id.label('id'),
-            Document.type.label('t'),
+            Association.child_document_type.label('t'),
             literal_column('0').label('p')). \
-        join(
-            Document,
+        filter(
             and_(
-                Association.child_document_id == Document.document_id,
                 Association.parent_document_id == document.document_id,
-                Document.type.in_(doc_types_to_load))). \
+                Association.child_document_type.in_(doc_types_to_load)
+            )
+        ). \
         subquery()
 
     return DBSession \
