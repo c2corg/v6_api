@@ -6,6 +6,7 @@ from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing, ArchiveOuting, \
     ArchiveOutingLocale, OutingLocale, OUTING_TYPE
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
 from c2corg_common.attributes import quality_types
@@ -932,17 +933,19 @@ class TestOutingRest(BaseDocumentTestRest):
             gear='paraglider'))
         self.session.add(self.route)
         self.session.flush()
-        self.session.add(Association(
-            parent_document_id=self.waypoint.document_id,
-            child_document_id=self.route.document_id))
-        self.session.add(Association(
-            parent_document_id=self.route.document_id,
-            child_document_id=self.outing.document_id))
+        self.session.add(Association.create(
+            parent_document=self.waypoint,
+            child_document=self.route))
+        self.session.add(Association.create(
+            parent_document=self.route,
+            child_document=self.outing))
 
         self.session.add(Association(
             parent_document_id=user_id,
-            child_document_id=self.outing.document_id))
-        self.session.add(Association(
-            parent_document_id=self.outing.document_id,
-            child_document_id=self.image.document_id))
+            parent_document_type=USERPROFILE_TYPE,
+            child_document_id=self.outing.document_id,
+            child_document_type=OUTING_TYPE))
+        self.session.add(Association.create(
+            parent_document=self.outing,
+            child_document=self.image))
         self.session.flush()

@@ -868,15 +868,15 @@ class TestRouteRest(BaseDocumentTestRest):
             access='yep'))
         self.session.add(self.waypoint2)
         self.session.flush()
-        self.session.add(Association(
-            parent_document_id=self.route.document_id,
-            child_document_id=self.route4.document_id))
-        self.session.add(Association(
-            parent_document_id=self.route4.document_id,
-            child_document_id=self.route.document_id))
-        self.session.add(Association(
-            parent_document_id=self.waypoint.document_id,
-            child_document_id=self.route.document_id))
+        self.session.add(Association.create(
+            parent_document=self.route,
+            child_document=self.route4))
+        self.session.add(Association.create(
+            parent_document=self.route4,
+            child_document=self.route))
+        self.session.add(Association.create(
+            parent_document=self.waypoint,
+            child_document=self.route))
 
         self.outing1 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
@@ -889,9 +889,9 @@ class TestRouteRest(BaseDocumentTestRest):
         )
         self.session.add(self.outing1)
         self.session.flush()
-        self.session.add(Association(
-            parent_document_id=self.route.document_id,
-            child_document_id=self.outing1.document_id))
+        self.session.add(Association.create(
+            parent_document=self.route,
+            child_document=self.outing1))
 
         self.outing2 = Outing(
             redirects_to=self.outing1.document_id,
@@ -905,9 +905,9 @@ class TestRouteRest(BaseDocumentTestRest):
         )
         self.session.add(self.outing2)
         self.session.flush()
-        self.session.add(Association(
-            parent_document_id=self.route.document_id,
-            child_document_id=self.outing2.document_id))
+        self.session.add(Association.create(
+            parent_document=self.route,
+            child_document=self.outing2))
         self.session.flush()
 
         # add areas

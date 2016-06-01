@@ -35,6 +35,9 @@ def validate_association(request):
                 'body', 'child_document_id', 'child document does not exist')
 
     if parent_document_type and child_document_type:
+        request.validated['parent_document_type'] = parent_document_type
+        request.validated['child_document_type'] = child_document_type
+
         association_type = (parent_document_type, child_document_type)
         if association_type not in valid_associations:
             request.errors.add(
@@ -52,6 +55,10 @@ class AssociationRest(object):
         schema=schema_association, validators=[validate_association])
     def collection_post(self):
         association = schema_association.objectify(self.request.validated)
+        association.parent_document_type = \
+            self.request.validated['parent_document_type']
+        association.child_document_type = \
+            self.request.validated['child_document_type']
 
         if exists_already(association):
             raise HTTPBadRequest(

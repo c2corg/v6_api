@@ -985,21 +985,21 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(self.route2)
         self.session.add(self.route3)
         self.session.flush()
-        self.session.add(Association(
-            parent_document_id=self.waypoint.document_id,
-            child_document_id=self.waypoint4.document_id))
-        self.session.add(Association(
-            parent_document_id=self.waypoint.document_id,
-            child_document_id=self.waypoint5.document_id))
-        self.session.add(Association(
-            parent_document_id=self.waypoint.document_id,
-            child_document_id=self.route1.document_id))
-        self.session.add(Association(
-            parent_document_id=self.waypoint.document_id,
-            child_document_id=self.route2.document_id))
-        self.session.add(Association(
-            parent_document_id=self.waypoint4.document_id,
-            child_document_id=self.route3.document_id))
+        self.session.add(Association.create(
+            parent_document=self.waypoint,
+            child_document=self.waypoint4))
+        self.session.add(Association.create(
+            parent_document=self.waypoint,
+            child_document=self.waypoint5))
+        self.session.add(Association.create(
+            parent_document=self.waypoint,
+            child_document=self.route1))
+        self.session.add(Association.create(
+            parent_document=self.waypoint,
+            child_document=self.route2))
+        self.session.add(Association.create(
+            parent_document=self.waypoint4,
+            child_document=self.route3))
 
         self.outing1 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
@@ -1012,9 +1012,9 @@ class TestWaypointRest(BaseDocumentTestRest):
         )
         self.session.add(self.outing1)
         self.session.flush()
-        self.session.add(Association(
-            parent_document_id=self.route1.document_id,
-            child_document_id=self.outing1.document_id))
+        self.session.add(Association.create(
+            parent_document=self.route1,
+            child_document=self.outing1))
 
         self.outing2 = Outing(
             redirects_to=self.outing1.document_id,
@@ -1039,12 +1039,12 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(self.outing2)
         self.session.add(self.outing3)
         self.session.flush()
-        self.session.add(Association(
-            parent_document_id=self.route1.document_id,
-            child_document_id=self.outing2.document_id))
-        self.session.add(Association(
-            parent_document_id=self.route3.document_id,
-            child_document_id=self.outing3.document_id))
+        self.session.add(Association.create(
+            parent_document=self.route1,
+            child_document=self.outing2))
+        self.session.add(Association.create(
+            parent_document=self.route3,
+            child_document=self.outing3))
 
         # add a map
         topo_map = TopoMap(
