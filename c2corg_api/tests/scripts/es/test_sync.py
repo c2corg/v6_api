@@ -2,6 +2,7 @@ import datetime
 from unittest.mock import patch
 
 from c2corg_api.models import es_sync
+from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user import User
@@ -9,7 +10,7 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.sync import get_changed_documents, \
     get_documents_per_type,  sync_documents, create_search_documents, \
-    get_changed_users
+    get_changed_users, get_changed_documents_for_associations
 from c2corg_api.tests import BaseTestCase, global_userids
 from c2corg_api.views.document import DocumentRest
 
@@ -30,6 +31,20 @@ class SyncTest(BaseTestCase):
 
         self.assertEqual(
             len(get_changed_documents(
+                self.session, last_update + datetime.timedelta(0, 1))),
+            0)
+
+    def test_get_changed_documents_for_associations(self):
+        last_update, _ = es_sync.get_status(self.session)
+
+        changed_documents = get_changed_documents_for_associations(
+            self.session, last_update)
+        self.assertEqual(len(changed_documents), 2)
+        self.assertEqual(changed_documents[0][0], self.route1.document_id)
+        self.assertEqual(changed_documents[1][0], self.route1.document_id)
+
+        self.assertEqual(
+            len(get_changed_documents_for_associations(
                 self.session, last_update + datetime.timedelta(0, 1))),
             0)
 
@@ -124,6 +139,17 @@ class SyncTest(BaseTestCase):
         self.assertAlmostEqual(waypoint1_doc['geom'][0], 5.71288995)
         self.assertAlmostEqual(waypoint1_doc['geom'][1], 45.64476395)
 
+        route_doc = next(
+            filter(
+                lambda doc: doc['_id'] == self.route1.document_id,
+                search_documents),
+            None)
+        self.assertEqual(route_doc['title_en'], 'Mont Blanc : Face N')
+        self.assertEqual(
+            set(route_doc['waypoints']),
+            {self.waypoint1.document_id, self.waypoint2.document_id}
+        )
+
     def _create_mock_match(self, actions):
         class MockBatch(object):
             def __init__(self, client, batch_size):
@@ -202,3 +228,13 @@ class SyncTest(BaseTestCase):
         DocumentRest.create_new_version(self.waypoint2, user_id)
         DocumentRest.create_new_version(self.waypoint3, user_id)
         DocumentRest.create_new_version(self.route1, user_id)
+
+        association_wr = Association.create(self.waypoint1, self.route1)
+        association_ww = Association.create(self.waypoint2, self.waypoint1)
+        self.session.add_all([
+            association_wr,
+            association_ww,
+            association_wr.get_log(user_id),
+            association_ww.get_log(user_id)
+        ])
+        self.session.flush()

@@ -138,8 +138,14 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(2, recent_outings['total'])
         self.assertEqual(2, len(recent_outings['outings']))
         self.assertEqual(
-            self.outing1.document_id,
-            recent_outings['outings'][0].get('document_id'))
+            {
+                self.outing1.document_id,
+                self.outing3.document_id
+            },
+            {
+                recent_outings['outings'][0].get('document_id'),
+                recent_outings['outings'][1].get('document_id')
+            })
         self.assertIn('type', recent_outings['outings'][0])
 
     def test_get_with_empty_arrays(self):

@@ -1,5 +1,6 @@
 from c2corg_api.models import es_sync, document_types, document_locale_types
 from c2corg_api.models.area import Area
+from c2corg_api.models.association import AssociationLog, Association
 from c2corg_api.models.document import Document, DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.route import Route, ROUTE_TYPE
@@ -15,6 +16,7 @@ from sqlalchemy.orm import joinedload
 import logging
 
 from sqlalchemy.sql.elements import literal
+from sqlalchemy.sql.expression import or_, and_, union
 
 log = logging.getLogger(__name__)
 
@@ -27,9 +29,10 @@ def sync_es(session):
                         'initial import into ElasticSearch')
 
     # get all documents that have changed since the last update
-    # TODO also check changes to associations
-    changed_documents = get_changed_documents(session, last_update) + \
-        get_changed_users(session, last_update)
+    changed_documents = \
+        get_changed_documents(session, last_update) + \
+        get_changed_users(session, last_update) + \
+        get_changed_documents_for_associations(session, last_update)
 
     if changed_documents:
         sync_documents(session, changed_documents)
@@ -62,6 +65,113 @@ def get_changed_users(session, last_update):
     """
     return session.query(User.id, literal(USERPROFILE_TYPE)). \
         filter(User.last_modified >= last_update). \
+        all()
+
+
+def get_changed_documents_for_associations(session, last_update):
+    """ Check if associations have been created/removed. If so return the
+    documents that have to be updated.
+    """
+    association_types_to_check = {
+        # needed to update waypoint ids for routes
+        (WAYPOINT_TYPE, ROUTE_TYPE),
+        (WAYPOINT_TYPE, WAYPOINT_TYPE),
+    }
+
+    associations_changed = session.query(AssociationLog). \
+        filter(or_(*[
+            and_(
+                AssociationLog.parent_document_type == parent_type,
+                AssociationLog.child_document_type == child_type
+            ) for (parent_type, child_type) in association_types_to_check
+        ])). \
+        filter(AssociationLog.written_at >= last_update). \
+        exists()
+
+    if not session.query(associations_changed).scalar():
+        return []
+
+    return get_changed_routes_from_associations(session, last_update)
+
+
+def get_changed_routes_from_associations(session, last_update):
+    return \
+        get_changed_routes_wr(session, last_update) + \
+        get_changed_routes_ww(session, last_update)
+
+
+def get_changed_routes_wr(session, last_update):
+    """ Returns the routes when associations between waypoint and route have
+    been created/removed.
+
+    E.g. when an association between waypoint W1 and route R1 is created,
+    route R1 has to be updated so that W1 is listed under
+    `associated_waypoints_ids`.
+    """
+    return session. \
+        query(AssociationLog.child_document_id, literal(ROUTE_TYPE)). \
+        filter(and_(
+            AssociationLog.parent_document_type == WAYPOINT_TYPE,
+            AssociationLog.child_document_type == ROUTE_TYPE
+        )). \
+        filter(AssociationLog.written_at >= last_update). \
+        all()
+
+
+def get_changed_routes_ww(session, last_update):
+    """ Returns the routes when associations between waypoint and waypoint have
+    been created/removed.
+    E.g. when an association between waypoint W1 and W2 is created,
+    all routes associated to W2 and all routes associated to the direct
+    children of W2 have to be updated.
+
+    For example given the following associations:
+    W1 -> W2, W2 -> W3, W3 -> R1
+    Route R1 has the following `associated_waypoint_ids`: W3, W2, W1
+
+    When association W1 -> W2 is deleted, all routes linked to W2 and all
+    routes linked to the direct waypoint children of W2 (in this case W3) have
+    to be updated.
+    After the update, `associated_waypoint_ids` of R1 is: W3, W2
+    """
+    select_changed_waypoints = session. \
+        query(AssociationLog.child_document_id.label('waypoint_id')). \
+        filter(and_(
+            AssociationLog.parent_document_type == WAYPOINT_TYPE,
+            AssociationLog.child_document_type == WAYPOINT_TYPE
+        )). \
+        filter(AssociationLog.written_at >= last_update). \
+        cte('changed_waypoints')
+    select_changed_waypoint_children = session. \
+        query(Association.child_document_id.label('waypoint_id')). \
+        select_from(select_changed_waypoints). \
+        join(
+            Association,
+            and_(
+                Association.parent_document_id ==
+                select_changed_waypoints.c.waypoint_id,
+                Association.child_document_type == WAYPOINT_TYPE
+            )). \
+        cte('changed_waypoint_children')
+
+    select_all_changed_waypoints = union(
+        select_changed_waypoints.select(),
+        select_changed_waypoint_children.select()). \
+        cte('all_changed_waypoints')
+
+    return session. \
+        query(
+            Association.child_document_id.label('route_id'),
+            literal(ROUTE_TYPE).label('type')). \
+        select_from(select_all_changed_waypoints). \
+        join(
+            Association,
+            and_(
+                Association.parent_document_id ==
+                select_all_changed_waypoints.c.waypoint_id,
+                Association.child_document_type == ROUTE_TYPE
+            )). \
+        group_by('route_id', 'type'). \
         all()
 
 
@@ -118,6 +228,12 @@ def get_documents(session, doc_type, document_ids=None):
     if clazz != Area:
         base_query = base_query. \
             options(joinedload(clazz._areas).load_only('document_id'))
+
+    if clazz == Route:
+        base_query = base_query. \
+            options(
+                joinedload(Route.associated_waypoints_ids).
+                load_only('waypoint_ids'))
 
     base_query = add_load_for_profiles(base_query, clazz)
 

@@ -55,6 +55,17 @@ class TestRouteRest(BaseDocumentTestRest):
     def test_get_collection_lang(self):
         self.get_collection_lang()
 
+    def test_get_collection_for_waypoint(self):
+        reset_search_index(self.session)
+
+        response = self.app.get(
+            self._prefix + '?w=' + str(self.waypoint.document_id), status=200)
+
+        documents = response.json['documents']
+
+        self.assertEqual(response.json['total'], 1)
+        self.assertEqual(documents[0]['document_id'], self.route.document_id)
+
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
