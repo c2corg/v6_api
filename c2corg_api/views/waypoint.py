@@ -347,7 +347,9 @@ def set_linked_routes(waypoint, lang):
             Route,
             Association.child_document_id == Route.document_id).
         filter(Route.redirects_to.is_(None)).
-        order_by(Route.document_id.desc()).
+        order_by(
+            with_query_waypoints.c.priority.desc(),
+            Route.document_id.desc()).
         limit(NUM_ROUTES)
         ). \
         all()
@@ -372,11 +374,14 @@ def _get_select_children(waypoint):
     """
     select_waypoint = DBSession. \
         query(
-            literal_column(str(waypoint.document_id)).label('document_id')). \
+            literal_column(str(waypoint.document_id)).label('document_id'),
+            literal_column('1').label('priority')). \
         cte('waypoint')
     # query to get the direct child waypoints
     select_waypoint_children = DBSession. \
-        query(Waypoint.document_id). \
+        query(
+            Waypoint.document_id,
+            literal_column('0').label('priority')). \
         join(
             Association,
             and_(Association.child_document_id == Waypoint.document_id,
@@ -384,7 +389,9 @@ def _get_select_children(waypoint):
         cte('waypoint_children')
     # query to get the grand-child waypoints
     select_waypoint_grandchildren = DBSession. \
-        query(Waypoint.document_id). \
+        query(
+            Waypoint.document_id,
+            literal_column('0').label('priority')). \
         select_from(select_waypoint_children). \
         join(
             Association,
