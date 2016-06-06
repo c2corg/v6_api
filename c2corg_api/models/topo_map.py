@@ -11,7 +11,7 @@ from sqlalchemy import (
 
 from colanderalchemy import SQLAlchemySchemaNode
 
-from c2corg_api.models import schema, DBSession
+from c2corg_api.models import schema, DBSession, Base
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
     ArchiveDocument, Document, geometry_schema_overrides,
@@ -73,6 +73,8 @@ class ArchiveTopoMap(_MapMixin, ArchiveDocument):
         'polymorphic_identity': MAP_TYPE,
         'inherit_condition': ArchiveDocument.id == id
     }
+
+    __table_args__ = Base.__table_args__
 
 
 schema_topo_map = SQLAlchemySchemaNode(

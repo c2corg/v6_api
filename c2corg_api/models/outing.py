@@ -13,7 +13,7 @@ from sqlalchemy import (
 
 from colanderalchemy import SQLAlchemySchemaNode
 
-from c2corg_api.models import schema
+from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
@@ -132,6 +132,8 @@ class ArchiveOuting(_OutingMixin, ArchiveDocument):
         'inherit_condition': ArchiveDocument.id == id
     }
 
+    __table_args__ = Base.__table_args__
+
 
 class _OutingLocaleMixin(object):
 
@@ -194,6 +196,8 @@ class ArchiveOutingLocale(_OutingLocaleMixin, ArchiveDocumentLocale):
         Integer,
         ForeignKey(schema + '.documents_locales_archives.id'),
         primary_key=True)
+
+    __table_args__ = Base.__table_args__
 
 
 schema_outing_locale = SQLAlchemySchemaNode(

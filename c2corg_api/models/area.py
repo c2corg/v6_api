@@ -1,4 +1,4 @@
-from c2corg_api.models import schema
+from c2corg_api.models import schema, Base
 from c2corg_api.models.document import (
     ArchiveDocument, Document, geometry_schema_overrides,
     schema_document_locale, schema_attributes)
@@ -62,6 +62,8 @@ class ArchiveArea(_AreaMixin, ArchiveDocument):
         'polymorphic_identity': AREA_TYPE,
         'inherit_condition': ArchiveDocument.id == id
     }
+
+    __table_args__ = Base.__table_args__
 
 
 schema_area = SQLAlchemySchemaNode(

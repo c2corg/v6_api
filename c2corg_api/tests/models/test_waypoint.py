@@ -1,5 +1,6 @@
 import json
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import StaleDataError
 from shapely.geometry import Point
@@ -407,6 +408,62 @@ class TestWaypoint(BaseTestCase):
 
         self.session.refresh(waypoint)
         self.assertEqual(waypoint.rock_types, None)
+
+    def test_archive_unique_version_document_id(self):
+        """ Tests that there can be only one entry for each version of a
+        document.
+        """
+        waypoint = self._get_waypoint()
+        self.session.add(waypoint)
+        self.session.flush()
+
+        archive = waypoint.to_archive()
+        self.session.add(archive)
+        self.session.flush()
+
+        # to try add an archive with the same version
+        archive = waypoint.to_archive()
+        with self.assertRaises(IntegrityError):
+            self.session.add(archive)
+            self.session.flush()
+
+    def test_locale_archive_unique_version_document_id(self):
+        """ Tests that there can be only one entry for each version and lang
+        of a document locale.
+        """
+        waypoint = self._get_waypoint()
+        self.session.add(waypoint)
+        self.session.flush()
+
+        locale = waypoint.get_locale('en')
+        archive = locale.to_archive()
+        self.session.add(archive)
+        self.session.flush()
+
+        # to try add an archive with the same version
+        archive = locale.to_archive()
+        with self.assertRaises(IntegrityError):
+            self.session.add(archive)
+            self.session.flush()
+
+    def test_geometry_unique_version_document_id(self):
+        """ Tests that there can be only one entry for each version of a
+        document geometry.
+        """
+        waypoint = self._get_waypoint()
+        self.session.add(waypoint)
+        self.session.flush()
+
+        geometry = waypoint.geometry
+        archive = geometry.to_archive()
+        self.session.add(archive)
+        self.session.flush()
+
+        # to try add an archive with the same version
+        archive = geometry.to_archive()
+        with self.assertRaises(IntegrityError):
+            self.session.add(archive)
+            self.session.flush()
 
     def _get_waypoint(self):
         return Waypoint(
