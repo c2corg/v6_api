@@ -160,9 +160,8 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertNotIn('areas', body)
         self.assertIn('associations', body)
         associations = body['associations']
-        self.assertIn('waypoint_parents', associations)
+        self.assertIn('waypoints', associations)
         self.assertIn('waypoint_children', associations)
-        self.assertNotIn('waypoints', associations)
         self.assertNotIn('routes', associations)
         self.assertNotIn('images', associations)
 
