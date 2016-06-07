@@ -3,6 +3,7 @@ from c2corg_api.models import Base, schema
 from c2corg_api.models.association import Association
 from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import relationship
@@ -162,5 +163,47 @@ Outing.associated_waypoints_ids = relationship(
     uselist=False,
     primaryjoin=Outing.document_id == WaypointsForOutingsView.outing_id,
     foreign_keys=WaypointsForOutingsView.outing_id,
+    viewonly=True, cascade='expunge'
+)
+
+
+def _get_select_users_for_outings_aggregated():
+    """ Returns a select which retrieves for every outing the ids of
+    associated users.
+    """
+    outing_type = text('\'' + OUTING_TYPE + '\'')
+    user_type = text('\'' + USERPROFILE_TYPE + '\'')
+    return \
+        select([
+            Association.child_document_id.label('outing_id'),
+            func.array_agg(
+                Association.parent_document_id,
+                type_=postgresql.ARRAY(Integer)).label('user_ids')
+        ]). \
+        select_from(Association). \
+        where(and_(
+            Association.parent_document_type == user_type,
+            Association.child_document_type == outing_type
+        )). \
+        group_by(Association.child_document_id)
+
+
+class UsersForOutingsView(Base):
+    """ A (non-materialized) view which contains the associated users
+     for each outing. This view is used when filling the search index for
+     outings.
+    """
+    __table__ = sqa_view.view(
+        'users_for_outings',
+        schema,
+        Base.metadata,
+        _get_select_users_for_outings_aggregated())
+
+
+Outing.associated_users_ids = relationship(
+    UsersForOutingsView,
+    uselist=False,
+    primaryjoin=Outing.document_id == UsersForOutingsView.outing_id,
+    foreign_keys=UsersForOutingsView.outing_id,
     viewonly=True, cascade='expunge'
 )
