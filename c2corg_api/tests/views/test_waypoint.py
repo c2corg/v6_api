@@ -112,10 +112,14 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(2, len(linked_routes))
         linked_route = linked_routes[0]
         self.assertIn('type', linked_route)
-        self.assertTrue(linked_route.get('document_id') in
-                        {self.route1.document_id, self.route3.document_id})
+        self.assertEqual(
+            linked_route['document_id'], self.route1.document_id)
         self.assertEqual(
             linked_route.get('locales')[0].get('title_prefix'), 'Mont Blanc :')
+        # the route associated to a child waypoint comes after the route
+        # directly associated to the waypoint
+        self.assertEqual(
+            linked_routes[1]['document_id'], self.route3.document_id)
 
         self.assertIn('maps', body)
         self.assertEqual(1, len(body.get('maps')))
@@ -160,9 +164,8 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertNotIn('areas', body)
         self.assertIn('associations', body)
         associations = body['associations']
-        self.assertIn('waypoint_parents', associations)
+        self.assertIn('waypoints', associations)
         self.assertIn('waypoint_children', associations)
-        self.assertNotIn('waypoints', associations)
         self.assertNotIn('routes', associations)
         self.assertNotIn('images', associations)
 
@@ -1000,7 +1003,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         self.outing1 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
-            date_end=datetime.date(2016, 1, 1),
+            date_end=datetime.date(2016, 1, 3),
             locales=[
                 OutingLocale(
                     lang='en', title='...', description='...',

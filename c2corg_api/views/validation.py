@@ -179,8 +179,6 @@ def _validate_associations(associations_in, document_type, errors):
     _add_associations(associations, associations_in, document_type,
                       'images', IMAGE_TYPE, new_errors)
     _add_associations(associations, associations_in, document_type,
-                      'waypoint_parents', WAYPOINT_TYPE, new_errors)
-    _add_associations(associations, associations_in, document_type,
                       'waypoint_children', WAYPOINT_TYPE, new_errors)
 
     if new_errors:
@@ -254,7 +252,7 @@ def _add_associations(
                 'body', 'associations.' + document_key,
                 'invalid association type')
         else:
-            if document_key == 'waypoint_parents':
+            if document_key == 'waypoints':
                 is_parent = True
             elif document_key == 'waypoint_children':
                 is_parent = False
@@ -280,7 +278,6 @@ def _is_parent_of_association(main_document_type, other_document_type):
 association_keys = {
     'routes': ROUTE_TYPE,
     'waypoints': WAYPOINT_TYPE,
-    'waypoint_parents': WAYPOINT_TYPE,
     'waypoint_children': WAYPOINT_TYPE,
     'users': USERPROFILE_TYPE,
     'images': IMAGE_TYPE
@@ -297,7 +294,7 @@ association_keys_for_types = {
 # e.g. when creating a route, route and waypoint associations can be created
 updatable_associations = {
     ROUTE_TYPE: {'routes', 'waypoints'},
-    WAYPOINT_TYPE: {'waypoint_parents', 'waypoint_children'},
+    WAYPOINT_TYPE: {'waypoints', 'waypoint_children'},
     OUTING_TYPE: {'routes', 'users', 'waypoints'},
     IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users'}
 }

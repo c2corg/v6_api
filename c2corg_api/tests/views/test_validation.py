@@ -64,7 +64,7 @@ class TestValidation(BaseTestCase):
             'routes': [
                 {'document_id': self.route1.document_id}
             ],
-            'waypoint_parents': [
+            'waypoints': [
                 {'document_id': self.waypoint1.document_id}
             ],
             'waypoint_children': [
@@ -82,7 +82,7 @@ class TestValidation(BaseTestCase):
         self.assertEquals(len(errors), 0)
 
         expected_associations = {
-            'waypoint_parents': [
+            'waypoints': [
                 {'document_id': self.waypoint1.document_id, 'is_parent': True}
             ],
             'waypoint_children': [
@@ -136,7 +136,7 @@ class TestValidation(BaseTestCase):
 
     def test_validate_associations_invalid_document_id(self):
         associations_in = {
-            'waypoint_parents': [
+            'waypoints': [
                 {'document_id': -99999}
             ]
         }
@@ -148,7 +148,7 @@ class TestValidation(BaseTestCase):
         self.assertIsNone(associations)
         self.assertEquals(len(errors), 1)
         error = errors[0]
-        self.assertEqual(error['name'], 'associations.waypoint_parents')
+        self.assertEqual(error['name'], 'associations.waypoints')
         self.assertEqual(
             error['description'], 'document "-99999" does not exist')
 

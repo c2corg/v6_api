@@ -108,7 +108,7 @@ class TestAssociation(BaseTestCase):
                 {'document_id': 1, 'is_parent': True},
                 {'document_id': 2, 'is_parent': True}
             ],
-            'waypoint_parents': [
+            'waypoints': [
                 {'document_id': 3, 'is_parent': True}
             ],
             'waypoint_children': [
@@ -120,7 +120,7 @@ class TestAssociation(BaseTestCase):
             self.waypoint1, new_associations)
 
         expected_current_associations = {
-            'waypoint_parents': [
+            'waypoints': [
                 {
                     'document_id': self.waypoint3.document_id,
                     'is_parent': True

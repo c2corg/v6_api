@@ -105,16 +105,15 @@ def get_associations(document, lang, editing_view):
         types_to_include = types_to_include.intersection(edit_types)
 
     associations = {}
-    if 'waypoints' in types_to_include:
+    if 'waypoints' in types_to_include and \
+            'waypoint_children' in types_to_include:
+        associations['waypoints'] = get_linked_waypoint_parents(document)
+        associations['waypoint_children'] = \
+            get_linked_waypoint_children(document)
+    elif 'waypoints' in types_to_include:
         waypoint_parents = get_linked_waypoint_parents(document)
         waypoint_children = get_linked_waypoint_children(document)
         associations['waypoints'] = waypoint_parents + waypoint_children
-    elif 'waypoint_parents' in types_to_include and \
-            'waypoint_children' in types_to_include:
-        associations['waypoint_parents'] = \
-            get_linked_waypoint_parents(document)
-        associations['waypoint_children'] = \
-            get_linked_waypoint_children(document)
     if 'routes' in types_to_include:
         if not editing_view and document.type == WAYPOINT_TYPE:
             # for waypoints the routes of child waypoints should also be
@@ -333,7 +332,7 @@ def _get_current_associations(document, new_associations):
 
         association_type = association_keys_for_types[doc_type]
         if doc_type == WAYPOINT_TYPE and document.type == WAYPOINT_TYPE:
-            association_type = 'waypoint_parents' if is_parent \
+            association_type = 'waypoints' if is_parent \
                 else 'waypoint_children'
 
         current_associations[association_type].append({
@@ -402,7 +401,7 @@ def _get_associations_to_add(new_associations, current_associations):
 
 associations_to_include = {
     WAYPOINT_TYPE: {
-        'waypoint_parents', 'waypoint_children', 'routes', 'images'},
+        'waypoints', 'waypoint_children', 'routes', 'images'},
     ROUTE_TYPE:
         {'waypoints', 'routes', 'images'},
     OUTING_TYPE:

@@ -77,8 +77,6 @@ class SchemaAssociations(MappingSchema):
         Sequence(), SchemaAssociationDoc(), missing=None)
     waypoints = SchemaNode(
         Sequence(), SchemaAssociationDoc(), missing=None)
-    waypoint_parents = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
     waypoint_children = SchemaNode(
         Sequence(), SchemaAssociationDoc(), missing=None)
     images = SchemaNode(

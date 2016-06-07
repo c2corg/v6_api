@@ -716,7 +716,6 @@ def add_load_for_locales(
 
 association_schemas = {
     'waypoints': schema_association_waypoint,
-    'waypoint_parents': schema_association_waypoint,
     'waypoint_children': schema_association_waypoint,
     'routes': schema_association_route,
     'users': schema_association_user,
