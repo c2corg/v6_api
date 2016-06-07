@@ -7,8 +7,9 @@ log = logging.getLogger(__name__)
 
 
 def notify_es_syncer(queue_config):
-    """Notify the syncer script that a document has changed by pushing a
-    friendly message into the Redis queue.
+    """When the current transaction is committed successfully, notify the
+    syncer script that a document has changed by pushing a friendly message
+    into the Redis queue.
     """
     def push_notification():
         with producers[queue_config.connection].acquire(

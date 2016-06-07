@@ -185,6 +185,7 @@ class BaseTestCase(unittest.TestCase):
         self.session = self.Session(bind=self.connection)
 
         self.queue_config = registry.queue_config
+        reset_queue(self.queue_config)
 
     def tearDown(self):  # noqa
         # rollback - everything that happened with the Session above
@@ -220,3 +221,9 @@ class BaseTestCase(unittest.TestCase):
                 status,
                 errors))
         return res
+
+
+def reset_queue(queue_config):
+    queue = queue_config.queue(queue_config.connection)
+    while queue.get():
+        pass

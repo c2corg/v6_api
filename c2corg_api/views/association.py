@@ -1,6 +1,8 @@
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import Document
 from c2corg_api.models.route import Route
+from c2corg_api.scripts.es import sync
+from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_common.associations import valid_associations
 from cornice.resource import resource
 from pyramid.httpexceptions import HTTPBadRequest
@@ -68,6 +70,8 @@ class AssociationRest(object):
         DBSession.add(
             association.get_log(self.request.authenticated_userid))
 
+        notify_es_syncer_if_needed(association, self.request)
+
         return {}
 
     @restricted_json_view(schema=schema_association)
@@ -96,6 +100,8 @@ class AssociationRest(object):
         DBSession.delete(association)
         DBSession.add(log)
 
+        notify_es_syncer_if_needed(association, self.request)
+
         return {}
 
     def _load(self, association_in):
@@ -110,3 +116,8 @@ def is_main_waypoint_association(association):
         where(Route.document_id == association.child_document_id).
         where(Route.main_waypoint_id == association.parent_document_id)
     ).scalar()
+
+
+def notify_es_syncer_if_needed(association, request):
+    if sync.requires_updates(association):
+        notify_es_syncer(request.registry.queue_config)

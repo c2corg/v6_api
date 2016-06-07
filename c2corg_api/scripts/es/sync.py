@@ -73,17 +73,6 @@ def get_changed_documents_for_associations(session, last_update):
     """ Check if associations have been created/removed. If so return the
     documents that have to be updated.
     """
-    association_types_to_check = {
-        # needed to update waypoint ids for routes
-        (WAYPOINT_TYPE, ROUTE_TYPE),
-        (WAYPOINT_TYPE, WAYPOINT_TYPE),
-        # needed to update waypoint ids for outings (+ the 2 types above)
-        # also needed to update route ids for outings
-        (ROUTE_TYPE, OUTING_TYPE),
-        # needed to update user ids for outings
-        (USERPROFILE_TYPE, OUTING_TYPE)
-    }
-
     associations_changed = session.query(AssociationLog). \
         filter(or_(*[
             and_(
@@ -322,3 +311,21 @@ def create_search_documents(doc_type, documents, batch):
         batch.add(to_search_document(doc, index))
         n += 1
     log.info('Sent {} document(s) of type {}'.format(n, doc_type))
+
+# association types that require an update
+association_types_to_check = {
+    # needed to update waypoint ids for routes
+    (WAYPOINT_TYPE, ROUTE_TYPE),
+    (WAYPOINT_TYPE, WAYPOINT_TYPE),
+    # needed to update waypoint ids for outings (+ the 2 types above)
+    # also needed to update route ids for outings
+    (ROUTE_TYPE, OUTING_TYPE),
+    # needed to update user ids for outings
+    (USERPROFILE_TYPE, OUTING_TYPE)
+}
+
+
+def requires_updates(association):
+    association_type = \
+        (association.parent_document_type, association.child_document_type)
+    return association_type in association_types_to_check
