@@ -37,17 +37,17 @@ class Association(Base):
 
     parent_document_id = Column(
         Integer, ForeignKey(schema + '.documents.document_id'),
-        nullable=False)
+        nullable=False, index=True)
     parent_document = relationship(
         Document, primaryjoin=parent_document_id == Document.document_id)
-    parent_document_type = Column(String(1), nullable=False)
+    parent_document_type = Column(String(1), nullable=False, index=True)
 
     child_document_id = Column(
         Integer, ForeignKey(schema + '.documents.document_id'),
-        nullable=False)
+        nullable=False, index=True)
     child_document = relationship(
         Document, primaryjoin=child_document_id == Document.document_id)
-    child_document_type = Column(String(1), nullable=False)
+    child_document_type = Column(String(1), nullable=False, index=True)
 
     __table_args__ = (
         PrimaryKeyConstraint(parent_document_id, child_document_id),
