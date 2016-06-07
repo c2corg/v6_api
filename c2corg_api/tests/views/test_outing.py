@@ -63,6 +63,17 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(documents[0]['document_id'], self.outing.document_id)
         self.assertEqual(response.json['total'], 1)
 
+    def test_get_collection_for_user(self):
+        reset_search_index(self.session)
+        response = self.app.get(
+            self._prefix + '?u=' + str(self.global_userids['contributor']),
+            status=200)
+
+        documents = response.json['documents']
+
+        self.assertEqual(documents[0]['document_id'], self.outing.document_id)
+        self.assertEqual(response.json['total'], 1)
+
     def test_get_collection_paginated(self):
         self.app.get("/outings?offset=invalid", status=400)
 

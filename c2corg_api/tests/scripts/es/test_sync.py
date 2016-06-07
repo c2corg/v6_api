@@ -258,12 +258,17 @@ class SyncTest(BaseTestCase):
         association_wr = Association.create(self.waypoint1, self.route1)
         association_ww = Association.create(self.waypoint2, self.waypoint1)
         association_ro = Association.create(self.route1, self.outing1)
+        user = self.session.query(UserProfile).get(
+            self.global_userids['contributor'])
+        association_uo = Association.create(user, self.outing1)
         self.session.add_all([
             association_wr,
             association_ww,
             association_ro,
+            association_uo,
             association_wr.get_log(user_id),
             association_ww.get_log(user_id),
-            association_ro.get_log(user_id)
+            association_ro.get_log(user_id),
+            association_uo.get_log(user_id)
         ])
         self.session.flush()

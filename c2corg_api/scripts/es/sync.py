@@ -79,6 +79,8 @@ def get_changed_documents_for_associations(session, last_update):
         (WAYPOINT_TYPE, WAYPOINT_TYPE),
         # needed to update waypoint ids for outings (+ the 2 types above)
         (ROUTE_TYPE, OUTING_TYPE),
+        # needed to update user ids for outings
+        (USERPROFILE_TYPE, OUTING_TYPE)
     }
 
     associations_changed = session.query(AssociationLog). \
@@ -101,7 +103,7 @@ def get_changed_routes_from_associations(session, last_update):
     return \
         get_changed_routes_wr(session, last_update) + \
         get_changed_routes_and_outings_ww(session, last_update) + \
-        get_changed_outings_ro(session, last_update)
+        get_changed_outings_ro_uo(session, last_update)
 
 
 def get_changed_routes_wr(session, last_update):
@@ -212,21 +214,30 @@ def get_changed_routes_and_outings_ww(session, last_update):
         all()
 
 
-def get_changed_outings_ro(session, last_update):
-    """ Returns the outings when associations between outing and route have
-    been created/removed.
+def get_changed_outings_ro_uo(session, last_update):
+    """ Returns the outings when associations between outing and route, or
+    between outing and user have been created/removed.
 
     E.g. when an association between outing O1 and route R1 is created,
     outing O1 has to be updated so that all waypoints associated to R1 are
     listed under `associated_waypoints_ids`.
     """
     return session. \
-        query(AssociationLog.child_document_id, literal(OUTING_TYPE)). \
-        filter(and_(
-            AssociationLog.parent_document_type == ROUTE_TYPE,
-            AssociationLog.child_document_type == OUTING_TYPE
+        query(
+            AssociationLog.child_document_id.label('outing_id'),
+            literal(OUTING_TYPE).label('type')). \
+        filter(or_(
+            and_(
+                AssociationLog.parent_document_type == ROUTE_TYPE,
+                AssociationLog.child_document_type == OUTING_TYPE
+            ),
+            and_(
+                AssociationLog.parent_document_type == USERPROFILE_TYPE,
+                AssociationLog.child_document_type == OUTING_TYPE
+            )
         )). \
         filter(AssociationLog.written_at >= last_update). \
+        group_by('outing_id', 'type'). \
         all()
 
 
