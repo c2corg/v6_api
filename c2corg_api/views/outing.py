@@ -6,7 +6,6 @@ from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.outing import schema_outing, Outing, \
     schema_create_outing, schema_update_outing, ArchiveOuting, \
     ArchiveOutingLocale, OUTING_TYPE
-from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.user import User
 from c2corg_api.models.utils import get_mid_point
@@ -21,7 +20,6 @@ from c2corg_common.attributes import activities
 from c2corg_common.fields_outing import fields_outing
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPForbidden
-from sqlalchemy.orm.util import aliased
 from sqlalchemy.sql.expression import exists, and_, over
 from sqlalchemy.sql.functions import func
 
@@ -63,10 +61,8 @@ def validate_required_associations(request):
 
 def validate_filter_params(request):
     """
-    Checks if a given optional waypoint id is an integer,
-    if a given optional route id is an integer.
+    Checks if a given optional route id is an integer.
     """
-    check_get_for_integer_property(request, 'w', False)
     check_get_for_integer_property(request, 'r', False)
 
 
@@ -93,11 +89,7 @@ class OutingRest(DocumentRest):
         validate_filter_params])
     def collection_get(self):
         custom_filter = None
-        if self.request.validated.get('w'):
-            # only show outings for the given waypoint
-            custom_filter = self.filter_on_waypoint(
-                self.request.validated['w'])
-        elif self.request.validated.get('r'):
+        if self.request.validated.get('r'):
             # only show outings for the given route
             custom_filter = self.filter_on_route(self.request.validated['r'])
 
@@ -158,25 +150,6 @@ class OutingRest(DocumentRest):
                     Association,
                     Outing.document_id == Association.child_document_id). \
                 filter(Association.parent_document_id == route_id)
-        return filter_query
-
-    def filter_on_waypoint(self, waypoint_id):
-        def filter_query(query):
-            t_outing_route = aliased(Association, name='a1')
-            t_route_wp = aliased(Association, name='a2')
-
-            return query. \
-                join(
-                    t_outing_route,
-                    Outing.document_id == t_outing_route.child_document_id). \
-                join(
-                    t_route_wp,
-                    and_(
-                        t_route_wp.child_document_id ==
-                        t_outing_route.parent_document_id,
-                        t_route_wp.child_document_type == ROUTE_TYPE,
-                        t_route_wp.parent_document_id == waypoint_id
-                    ))
         return filter_query
 
 

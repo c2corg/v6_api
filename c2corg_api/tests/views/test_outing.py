@@ -54,6 +54,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(response.json['total'], 1)
 
     def test_get_collection_for_waypoint(self):
+        reset_search_index(self.session)
         response = self.app.get(
             self._prefix + '?w=' + str(self.waypoint.document_id), status=200)
 

@@ -3,6 +3,7 @@ from c2corg_api.models.area import Area
 from c2corg_api.models.association import AssociationLog, Association
 from c2corg_api.models.document import Document, DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
+from c2corg_api.models.outing import Outing, OUTING_TYPE
 from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
@@ -76,6 +77,8 @@ def get_changed_documents_for_associations(session, last_update):
         # needed to update waypoint ids for routes
         (WAYPOINT_TYPE, ROUTE_TYPE),
         (WAYPOINT_TYPE, WAYPOINT_TYPE),
+        # needed to update waypoint ids for outings (+ the 2 types above)
+        (ROUTE_TYPE, OUTING_TYPE),
     }
 
     associations_changed = session.query(AssociationLog). \
@@ -97,7 +100,8 @@ def get_changed_documents_for_associations(session, last_update):
 def get_changed_routes_from_associations(session, last_update):
     return \
         get_changed_routes_wr(session, last_update) + \
-        get_changed_routes_ww(session, last_update)
+        get_changed_routes_and_outings_ww(session, last_update) + \
+        get_changed_outings_ro(session, last_update)
 
 
 def get_changed_routes_wr(session, last_update):
@@ -118,12 +122,13 @@ def get_changed_routes_wr(session, last_update):
         all()
 
 
-def get_changed_routes_ww(session, last_update):
-    """ Returns the routes when associations between waypoint and waypoint have
-    been created/removed.
+def get_changed_routes_and_outings_ww(session, last_update):
+    """ Returns the routes and outings when associations between waypoint
+    and waypoint have been created/removed.
     E.g. when an association between waypoint W1 and W2 is created,
-    all routes associated to W2 and all routes associated to the direct
-    children of W2 have to be updated.
+    all routes associated to W2, all routes associated to the direct
+    children of W2 and all outings associated to these routes have to be
+    updated.
 
     For example given the following associations:
     W1 -> W2, W2 -> W3, W3 -> R1
@@ -159,10 +164,10 @@ def get_changed_routes_ww(session, last_update):
         select_changed_waypoint_children.select()). \
         cte('all_changed_waypoints')
 
-    return session. \
+    select_changed_routes = session. \
         query(
-            Association.child_document_id.label('route_id'),
-            literal(ROUTE_TYPE).label('type')). \
+            Association.child_document_id.label('route_id')
+            ). \
         select_from(select_all_changed_waypoints). \
         join(
             Association,
@@ -171,7 +176,57 @@ def get_changed_routes_ww(session, last_update):
                 select_all_changed_waypoints.c.waypoint_id,
                 Association.child_document_type == ROUTE_TYPE
             )). \
-        group_by('route_id', 'type'). \
+        group_by(Association.child_document_id). \
+        cte('changed_routes')
+
+    select_changed_outings = session. \
+        query(
+            Association.child_document_id.label('outing_id')). \
+        select_from(select_changed_routes). \
+        join(
+            Association,
+            and_(
+                Association.parent_document_id ==
+                select_changed_routes.c.route_id,
+                Association.child_document_type == OUTING_TYPE
+            )). \
+        group_by(Association.child_document_id). \
+        cte('changed_outings')
+
+    select_changed_routes_and_outings = union(
+        session.query(
+            select_changed_routes.c.route_id.label('document_id'),
+            literal(ROUTE_TYPE).label('type')
+        ).select_from(select_changed_routes),
+        session.query(
+            select_changed_outings.c.outing_id.label('document_id'),
+            literal(OUTING_TYPE).label('type')
+        ).select_from(select_changed_outings)). \
+        cte('changed_routes_and_outings')
+
+    return session. \
+        query(
+            select_changed_routes_and_outings.c.document_id,
+            select_changed_routes_and_outings.c.type). \
+        select_from(select_changed_routes_and_outings). \
+        all()
+
+
+def get_changed_outings_ro(session, last_update):
+    """ Returns the outings when associations between outing and route have
+    been created/removed.
+
+    E.g. when an association between outing O1 and route R1 is created,
+    outing O1 has to be updated so that all waypoints associated to R1 are
+    listed under `associated_waypoints_ids`.
+    """
+    return session. \
+        query(AssociationLog.child_document_id, literal(OUTING_TYPE)). \
+        filter(and_(
+            AssociationLog.parent_document_type == ROUTE_TYPE,
+            AssociationLog.child_document_type == OUTING_TYPE
+        )). \
+        filter(AssociationLog.written_at >= last_update). \
         all()
 
 
@@ -233,6 +288,12 @@ def get_documents(session, doc_type, document_ids=None):
         base_query = base_query. \
             options(
                 joinedload(Route.associated_waypoints_ids).
+                load_only('waypoint_ids'))
+
+    if clazz == Outing:
+        base_query = base_query. \
+            options(
+                joinedload(Outing.associated_waypoints_ids).
                 load_only('waypoint_ids'))
 
     base_query = add_load_for_profiles(base_query, clazz)
