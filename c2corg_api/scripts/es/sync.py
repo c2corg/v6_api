@@ -78,6 +78,7 @@ def get_changed_documents_for_associations(session, last_update):
         (WAYPOINT_TYPE, ROUTE_TYPE),
         (WAYPOINT_TYPE, WAYPOINT_TYPE),
         # needed to update waypoint ids for outings (+ the 2 types above)
+        # also needed to update route ids for outings
         (ROUTE_TYPE, OUTING_TYPE),
         # needed to update user ids for outings
         (USERPROFILE_TYPE, OUTING_TYPE)
@@ -220,7 +221,8 @@ def get_changed_outings_ro_uo(session, last_update):
 
     E.g. when an association between outing O1 and route R1 is created,
     outing O1 has to be updated so that all waypoints associated to R1 are
-    listed under `associated_waypoints_ids`.
+    listed under `associated_waypoints_ids`, and so that R1 is listed under
+    `associated_routes_ids`.
     """
     return session. \
         query(

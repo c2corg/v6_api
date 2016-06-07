@@ -45,6 +45,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self._add_test_data()
 
     def test_get_collection_for_route(self):
+        reset_search_index(self.session)
         response = self.app.get(
             self._prefix + '?r=' + str(self.route.document_id), status=200)
 

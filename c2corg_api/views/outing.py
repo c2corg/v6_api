@@ -14,8 +14,7 @@ from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, make_schema_adaptor, get_all_fields
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
-    validate_preferred_lang_param, check_get_for_integer_property, \
-    validate_associations
+    validate_preferred_lang_param, validate_associations
 from c2corg_common.attributes import activities
 from c2corg_common.fields_outing import fields_outing
 from cornice.resource import resource, view
@@ -59,13 +58,6 @@ def validate_required_associations(request):
             'body', 'associations.routes', 'at least one route required')
 
 
-def validate_filter_params(request):
-    """
-    Checks if a given optional route id is an integer.
-    """
-    check_get_for_integer_property(request, 'r', False)
-
-
 def adapt_schema_for_activities(activities, field_list_type):
     """Get the schema for a set of activities.
     `field_list_type` should be either "fields" or "listing".
@@ -85,18 +77,11 @@ listing_schema_adaptor = make_schema_adaptor(
 class OutingRest(DocumentRest):
 
     @view(validators=[
-        validate_pagination, validate_preferred_lang_param,
-        validate_filter_params])
+        validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        custom_filter = None
-        if self.request.validated.get('r'):
-            # only show outings for the given route
-            custom_filter = self.filter_on_route(self.request.validated['r'])
-
         return self._collection_get(
             Outing, schema_outing, OUTING_TYPE,
-            adapt_schema=listing_schema_adaptor,
-            custom_filter=custom_filter, set_custom_fields=set_author)
+            adapt_schema=listing_schema_adaptor, set_custom_fields=set_author)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
@@ -142,15 +127,6 @@ class OutingRest(DocumentRest):
                 Association.parent_document_id == user_id,
                 Association.child_document_id == outing_id
             ))).scalar()
-
-    def filter_on_route(self, route_id):
-        def filter_query(query):
-            return query. \
-                join(
-                    Association,
-                    Outing.document_id == Association.child_document_id). \
-                filter(Association.parent_document_id == route_id)
-        return filter_query
 
 
 def set_author(outings, lang):
