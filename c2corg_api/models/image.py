@@ -14,7 +14,7 @@ from sqlalchemy import (
 
 from colanderalchemy import SQLAlchemySchemaNode
 
-from c2corg_api.models import schema, enums
+from c2corg_api.models import schema, enums, Base
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.document import (
     ArchiveDocument, Document, geometry_schema_overrides,
@@ -105,6 +105,8 @@ class ArchiveImage(_ImageMixin, ArchiveDocument):
         'polymorphic_identity': IMAGE_TYPE,
         'inherit_condition': ArchiveDocument.id == id
     }
+
+    __table_args__ = Base.__table_args__
 
 
 schema_image = SQLAlchemySchemaNode(

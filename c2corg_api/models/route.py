@@ -12,7 +12,7 @@ from sqlalchemy import (
 from colanderalchemy import SQLAlchemySchemaNode
 import colander
 
-from c2corg_api.models import schema
+from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
@@ -213,6 +213,8 @@ class ArchiveRoute(_RouteMixin, ArchiveDocument):
         'inherit_condition': ArchiveDocument.id == id
     }
 
+    __table_args__ = Base.__table_args__
+
 
 class _RouteLocaleMixin(object):
 
@@ -280,6 +282,8 @@ class ArchiveRouteLocale(_RouteLocaleMixin, ArchiveDocumentLocale):
         'polymorphic_identity': ROUTE_TYPE,
         'inherit_condition': ArchiveDocumentLocale.id == id
     }
+
+    __table_args__ = Base.__table_args__
 
 
 schema_route_locale = SQLAlchemySchemaNode(

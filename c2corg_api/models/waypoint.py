@@ -11,7 +11,7 @@ from sqlalchemy import (
 
 from colanderalchemy import SQLAlchemySchemaNode
 
-from c2corg_api.models import schema
+from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
@@ -221,6 +221,8 @@ class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
         'inherit_condition': ArchiveDocument.id == id
     }
 
+    __table_args__ = Base.__table_args__
+
 
 class _WaypointLocaleMixin(object):
 
@@ -280,6 +282,8 @@ class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
         'polymorphic_identity': WAYPOINT_TYPE,
         'inherit_condition': ArchiveDocumentLocale.id == id
     }
+
+    __table_args__ = Base.__table_args__
 
 
 schema_waypoint_locale = SQLAlchemySchemaNode(

@@ -23,6 +23,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship, column_property
+from sqlalchemy.sql.schema import UniqueConstraint
 
 UpdateType = enum.Enum(
     'UpdateType', 'FIGURES LANG GEOM')
@@ -188,6 +189,7 @@ class ArchiveDocument(Base, _DocumentMixin):
     The base class for the archive documents.
     """
     __tablename__ = 'documents_archives'
+
     id = Column(Integer, primary_key=True)
 
     @declared_attr
@@ -195,6 +197,14 @@ class ArchiveDocument(Base, _DocumentMixin):
         return Column(
             Integer, ForeignKey(schema + '.documents.document_id'),
             nullable=False)
+
+    __table_args__ = (
+        # only one entry per document id and version
+        UniqueConstraint(
+            'version', 'document_id',
+            name='uq_documents_archives_document_id_version'),
+        Base.__table_args__
+    )
 
 
 # Locales for documents
@@ -259,6 +269,14 @@ class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
         'polymorphic_identity': DOCUMENT_TYPE,
         'polymorphic_on': _DocumentLocaleMixin.type
     }
+
+    __table_args__ = (
+        # only one entry per document id, version and lang
+        UniqueConstraint(
+            'version', 'document_id', 'lang',
+            name='uq_documents_locales_archives_document_id_version_lang'),
+        Base.__table_args__
+    )
 
 
 class _DocumentGeometryMixin(object):
@@ -381,6 +399,14 @@ class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
     document_id = Column(
             Integer, ForeignKey(schema + '.documents.document_id'),
             nullable=False)
+
+    __table_args__ = (
+        # only one entry per document id and version
+        UniqueConstraint(
+            'version', 'document_id',
+            name='uq_documents_geometries_archives_document_id_version_lang'),
+        Base.__table_args__
+    )
 
 
 schema_attributes = [

@@ -1,4 +1,4 @@
-from c2corg_api.models import schema
+from c2corg_api.models import schema, Base
 from c2corg_api.models.document import (
     ArchiveDocument, Document, geometry_schema_overrides,
     schema_document_locale, schema_attributes, DocumentLocale)
@@ -68,6 +68,8 @@ class ArchiveUserProfile(_UserProfileMixin, ArchiveDocument):
         'polymorphic_identity': USERPROFILE_TYPE,
         'inherit_condition': ArchiveDocument.id == id
     }
+
+    __table_args__ = Base.__table_args__
 
 
 # user profiles use a special schema for the locales which ignores the 'title'
