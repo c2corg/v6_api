@@ -11,7 +11,11 @@ from sqlalchemy.sql.expression import and_, union, select, text, join
 from sqlalchemy.sql.functions import func
 from sqlalchemy import Integer
 
+# this file contains definitions for database views that are used when filling
+# the search index.
 
+
+# waypoints for routes
 def _get_select_waypoints_for_routes():
     waypoint_type = text('\'' + WAYPOINT_TYPE + '\'')
     route_type = text('\'' + ROUTE_TYPE + '\'')
@@ -107,6 +111,7 @@ Route.associated_waypoints_ids = relationship(
 )
 
 
+# waypoints for outings
 def _get_select_waypoints_for_outings_aggregated():
     """ Returns a select which retrieves for every outing the ids for the
     waypoints that are associated to routes associated to the outing. It
@@ -167,6 +172,7 @@ Outing.associated_waypoints_ids = relationship(
 )
 
 
+# users for outings
 def _get_select_users_for_outings_aggregated():
     """ Returns a select which retrieves for every outing the ids of
     associated users.
@@ -205,5 +211,48 @@ Outing.associated_users_ids = relationship(
     uselist=False,
     primaryjoin=Outing.document_id == UsersForOutingsView.outing_id,
     foreign_keys=UsersForOutingsView.outing_id,
+    viewonly=True, cascade='expunge'
+)
+
+
+# routes for outings
+def _get_select_routes_for_outings_aggregated():
+    """ Returns a select which retrieves for every outing the ids of
+    associated routes.
+    """
+    outing_type = text('\'' + OUTING_TYPE + '\'')
+    route_type = text('\'' + ROUTE_TYPE + '\'')
+    return \
+        select([
+            Association.child_document_id.label('outing_id'),
+            func.array_agg(
+                Association.parent_document_id,
+                type_=postgresql.ARRAY(Integer)).label('route_ids')
+        ]). \
+        select_from(Association). \
+        where(and_(
+            Association.parent_document_type == route_type,
+            Association.child_document_type == outing_type
+        )). \
+        group_by(Association.child_document_id)
+
+
+class RoutesForOutingsView(Base):
+    """ A (non-materialized) view which contains the associated routes
+     for each outing. This view is used when filling the search index for
+     outings.
+    """
+    __table__ = sqa_view.view(
+        'routes_for_outings',
+        schema,
+        Base.metadata,
+        _get_select_routes_for_outings_aggregated())
+
+
+Outing.associated_routes_ids = relationship(
+    RoutesForOutingsView,
+    uselist=False,
+    primaryjoin=Outing.document_id == RoutesForOutingsView.outing_id,
+    foreign_keys=RoutesForOutingsView.outing_id,
     viewonly=True, cascade='expunge'
 )
