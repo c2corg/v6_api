@@ -12,7 +12,8 @@ from sqlalchemy import (
     Column,
     Integer,
     DateTime,
-    ForeignKey
+    ForeignKey,
+    String
     )
 from sqlalchemy.schema import PrimaryKeyConstraint
 from sqlalchemy.orm import relationship, joinedload, load_only
@@ -39,22 +40,34 @@ class Association(Base):
         nullable=False)
     parent_document = relationship(
         Document, primaryjoin=parent_document_id == Document.document_id)
+    parent_document_type = Column(String(1), nullable=False)
 
     child_document_id = Column(
         Integer, ForeignKey(schema + '.documents.document_id'),
         nullable=False)
     child_document = relationship(
         Document, primaryjoin=child_document_id == Document.document_id)
+    child_document_type = Column(String(1), nullable=False)
 
     __table_args__ = (
         PrimaryKeyConstraint(parent_document_id, child_document_id),
         Base.__table_args__
     )
 
+    @staticmethod
+    def create(parent_document, child_document):
+        return Association(
+            parent_document=parent_document,
+            parent_document_type=parent_document.type,
+            child_document=child_document,
+            child_document_type=child_document.type)
+
     def get_log(self, user_id, is_creation=True):
         return AssociationLog(
             parent_document_id=self.parent_document_id,
+            parent_document_type=self.parent_document_type,
             child_document_id=self.child_document_id,
+            child_document_type=self.child_document_type,
             user_id=user_id,
             is_creation=is_creation
         )
@@ -73,12 +86,14 @@ class AssociationLog(Base):
         nullable=False)
     parent_document = relationship(
         Document, primaryjoin=parent_document_id == Document.document_id)
+    parent_document_type = Column(String(1))
 
     child_document_id = Column(
         Integer, ForeignKey(schema + '.documents.document_id'),
         nullable=False)
     child_document = relationship(
         Document, primaryjoin=child_document_id == Document.document_id)
+    child_document_type = Column(String(1))
 
     user_id = Column(
         Integer, ForeignKey(users_schema + '.user.id'), nullable=False)
@@ -244,13 +259,16 @@ def exists_already(link):
 
 
 def add_association(
-        parent_document_id, child_document_id, user_id, check_first=False):
+        parent_document_id, parent_document_type,
+        child_document_id, child_document_type, user_id, check_first=False):
     """Create an association between the two documents and create a log entry
     in the association history table with the given user id.
     """
     association = Association(
         parent_document_id=parent_document_id,
-        child_document_id=child_document_id)
+        parent_document_type=parent_document_type,
+        child_document_id=child_document_id,
+        child_document_type=child_document_type)
 
     if check_first and exists_already(association):
         return
@@ -282,14 +300,20 @@ def create_associations(document, associations_for_document, user_id):
     a document.
     """
     main_id = document.document_id
+    main_doc_type = document.type
     for doc_key, docs in associations_for_document.items():
+        doc_type = association_keys[doc_key]
         for doc in docs:
             linked_document_id = doc['document_id']
             is_parent = doc['is_parent']
 
             parent_id = linked_document_id if is_parent else main_id
+            parent_type = doc_type if is_parent else main_doc_type
             child_id = main_id if is_parent else linked_document_id
-            add_association(parent_id, child_id, user_id, check_first=False)
+            child_type = main_doc_type if is_parent else doc_type
+            add_association(
+                parent_id, parent_type, child_id, child_type,
+                user_id, check_first=False)
 
 
 def synchronize_associations(document, new_associations, user_id):
@@ -300,17 +324,30 @@ def synchronize_associations(document, new_associations, user_id):
     to_add, to_remove = _diff_associations(
         new_associations, current_associations)
 
-    document_id = document.document_id
-    _apply_operation(to_add, add_association, document_id, user_id)
-    _apply_operation(to_remove, remove_association, document_id, user_id)
+    _add_associations(to_add, document, user_id)
+    _remove_associations(to_remove, document, user_id)
 
 
-def _apply_operation(docs, add_or_remove, document_id, user_id):
-    for doc in docs:
+def _add_associations(to_add, document, user_id):
+    main_doc_type = document.type
+    for doc in to_add:
         is_parent = doc['is_parent']
-        parent_id = doc['document_id'] if is_parent else document_id
-        child_id = document_id if is_parent else doc['document_id']
-        add_or_remove(parent_id, child_id, user_id, check_first=False)
+        parent_id = doc['document_id'] if is_parent else document.document_id
+        parent_type = doc['doc_type'] if is_parent else main_doc_type
+        child_id = document.document_id if is_parent else doc['document_id']
+        child_type = main_doc_type if is_parent else doc['doc_type']
+
+        add_association(
+            parent_id, parent_type, child_id, child_type,
+            user_id, check_first=False)
+
+
+def _remove_associations(to_remove, document, user_id):
+    for doc in to_remove:
+        is_parent = doc['is_parent']
+        parent_id = doc['document_id'] if is_parent else document.document_id
+        child_id = document.document_id if is_parent else doc['document_id']
+        remove_association(parent_id, child_id, user_id, check_first=False)
 
 
 def _get_current_associations(document, new_associations):
@@ -347,26 +384,26 @@ def _get_load_associations_query(document, doc_types_to_load):
     query_parents = DBSession. \
         query(
             Association.parent_document_id.label('id'),
-            Document.type.label('t'),
+            Association.parent_document_type.label('t'),
             literal_column('1').label('p')). \
-        join(
-            Document,
+        filter(
             and_(
                 Association.child_document_id == document.document_id,
-                Association.parent_document_id == Document.document_id,
-                Document.type.in_(doc_types_to_load))). \
+                Association.parent_document_type.in_(doc_types_to_load)
+            )
+        ). \
         subquery()
     query_children = DBSession. \
         query(
             Association.child_document_id.label('id'),
-            Document.type.label('t'),
+            Association.child_document_type.label('t'),
             literal_column('0').label('p')). \
-        join(
-            Document,
+        filter(
             and_(
-                Association.child_document_id == Document.document_id,
                 Association.parent_document_id == document.document_id,
-                Document.type.in_(doc_types_to_load))). \
+                Association.child_document_type.in_(doc_types_to_load)
+            )
+        ). \
         subquery()
 
     return DBSession \
@@ -389,12 +426,14 @@ def _get_associations_to_add(new_associations, current_associations):
     to_add = []
 
     for typ, docs in new_associations.items():
+        doc_type = association_keys[typ]
         existing_docs = {
             d['document_id'] for d in current_associations.get(typ, [])
         }
 
         for doc in docs:
             if doc['document_id'] not in existing_docs:
+                doc['doc_type'] = doc_type
                 to_add.append(doc)
 
     return to_add

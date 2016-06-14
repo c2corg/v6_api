@@ -1,3 +1,8 @@
+from c2corg_api.models.image import IMAGE_TYPE
+from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.route import ROUTE_TYPE
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
+from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from sqlalchemy.sql import text
 import transaction
 import zope
@@ -15,14 +20,16 @@ associations_query_count =\
     '  ) u on u.id = a.main_id and u.redirects_to is null ' \
     '  inner join (' + tables_union + \
     '  ) v on v.id = a.linked_id and v.redirects_to is null ' \
+    '  where a.type not in (\'ai\', \'mi\') ' \
     '  group by a.main_id, a.linked_id) t;'
 
 associations_query = \
-    'select main_id, linked_id from app_documents_associations a ' \
+    'select main_id, linked_id, type from app_documents_associations a ' \
     'inner join (' + tables_union + \
     ') u on u.id = a.main_id and u.redirects_to is null ' \
     'inner join (' + tables_union + \
     ') v on v.id = a.linked_id and v.redirects_to is null ' \
+    'where type not in (\'ai\', \'mi\') ' \
     'group by a.main_id, a.linked_id;'
 
 association_log_query_count =\
@@ -32,16 +39,18 @@ association_log_query_count =\
     '  ) u on u.id = a.main_id and u.redirects_to is null ' \
     '  inner join (' + tables_union + \
     '  ) v on v.id = a.linked_id and v.redirects_to is null ' \
+    '  where a.type not in (\'ai\', \'mi\') ' \
     '  group by associations_log_id) t;'
 
 association_log_query = \
     'select ' \
-    '  associations_log_id, main_id, linked_id, user_id, is_creation, ' \
+    '  associations_log_id, main_id, linked_id, type, user_id, is_creation, ' \
     '  written_at from app_associations_log a ' \
     'inner join (' + tables_union + \
     ') u on u.id = a.main_id and u.redirects_to is null ' \
     'inner join (' + tables_union + \
     ') v on v.id = a.linked_id and v.redirects_to is null ' \
+    'where type not in (\'ai\', \'mi\') ' \
     'group by associations_log_id;'
 
 
@@ -63,15 +72,21 @@ class MigrateAssociations(MigrateBase):
         self._set_route_locale_title_prefix()
 
     def get_association(self, row):
+        parent_type, child_type = self._convert_type(row)
         return dict(
             parent_document_id=row.main_id,
-            child_document_id=row.linked_id
+            parent_document_type=parent_type,
+            child_document_id=row.linked_id,
+            child_document_type=child_type
         )
 
     def get_log(self, row):
+        parent_type, child_type = self._convert_type(row)
         return dict(
             parent_document_id=row.main_id,
+            parent_document_type=parent_type,
             child_document_id=row.linked_id,
+            child_document_type=child_type,
             user_id=row.user_id,
             is_creation=row.is_creation,
             written_at=row.written_at
@@ -140,6 +155,32 @@ class MigrateAssociations(MigrateBase):
             zope.sqlalchemy.mark_changed(self.session_target)
         print('Done')
 
+    def _convert_type(self, row):
+        old_type = row.type
+        old_parent_type = old_type[0]
+        old_child_type = old_type[1]
+        parent_type = ASSOCIATION_TYPES[old_parent_type]
+        child_type = ASSOCIATION_TYPES[old_child_type]
+
+        return parent_type, child_type
+
+ASSOCIATION_TYPES = {
+    # 'x': REPORT_TYPE,
+    'p': WAYPOINT_TYPE,     # parking
+    'u': USERPROFILE_TYPE,  # user
+    # 'b': BOOK_TYPE,       # book
+    'i': IMAGE_TYPE,        # image
+    # 'a': AREA_TYPE,       # area: ignored
+    'o': OUTING_TYPE,       # outing
+    'f': WAYPOINT_TYPE,     # product
+    # 'c': ARTICLE_TYPE,    # article
+    'h': WAYPOINT_TYPE,     # hut
+    'r': ROUTE_TYPE,        # route
+    # 'w': ?,               # portal?
+    's': WAYPOINT_TYPE,     # summit
+    't': WAYPOINT_TYPE,     # site
+    # 'm': MAP_TYPE         # map: ignored
+}
 
 SQL_SET_MAIN_WAYPOINT_ID = """
 with v as (select t.r_id, t.w_id

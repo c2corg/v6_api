@@ -1,8 +1,8 @@
 from c2corg_api.models.association import _get_current_associations, \
     Association, _diff_associations, synchronize_associations
-from c2corg_api.models.route import Route
+from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.models.waypoint import Waypoint
+from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
 from c2corg_api.tests import BaseTestCase
 
 
@@ -24,11 +24,11 @@ class TestAssociation(BaseTestCase):
 
     def _add_test_data_routes(self):
         self.session.add_all([
-            Association(
+            Association.create(
                 parent_document=self.route1, child_document=self.route2),
-            Association(
+            Association.create(
                 parent_document=self.waypoint1, child_document=self.route1),
-            Association(
+            Association.create(
                 parent_document=self.waypoint2, child_document=self.route1),
         ])
         self.session.flush()
@@ -91,13 +91,13 @@ class TestAssociation(BaseTestCase):
     def test_get_current_associations_waypoints(self):
         self.waypoint3 = Waypoint(waypoint_type='summit')
         self.session.add_all([
-            Association(
+            Association.create(
                 parent_document=self.waypoint1, child_document=self.waypoint2),
-            Association(
+            Association.create(
                 parent_document=self.waypoint3, child_document=self.waypoint1),
-            Association(
+            Association.create(
                 parent_document=self.waypoint1, child_document=self.route1),
-            Association(
+            Association.create(
                 parent_document=self.waypoint1, child_document=self.route2),
         ])
         self.session.flush()
@@ -136,7 +136,7 @@ class TestAssociation(BaseTestCase):
         self.assertEqual(current_associations, expected_current_associations)
 
     def test_get_current_associations_waypoints_partial(self):
-        self.session.add(Association(
+        self.session.add(Association.create(
             parent_document=self.waypoint1, child_document=self.waypoint2)
         )
         self.session.flush()
@@ -170,12 +170,12 @@ class TestAssociation(BaseTestCase):
             new_associations, current_associations)
 
         expected_to_add = [
-            {'document_id': 2, 'is_parent': True},
-            {'document_id': 3, 'is_parent': False}
+            {'document_id': 2, 'is_parent': True, 'doc_type': ROUTE_TYPE},
+            {'document_id': 3, 'is_parent': False, 'doc_type': WAYPOINT_TYPE}
         ]
 
         expected_to_remove = [
-            {'document_id': 4, 'is_parent': True}
+            {'document_id': 4, 'is_parent': True, 'doc_type': ROUTE_TYPE}
         ]
 
         self.assertEqual(
@@ -189,10 +189,11 @@ class TestAssociation(BaseTestCase):
         self.route3 = Route(activities=['hiking'])
         self.route4 = Route(activities=['hiking'])
         self.session.add_all([self.route3, self.route4])
+        self.session.flush()
         self.session.add_all([
-            Association(
+            Association.create(
                 parent_document=self.route1, child_document=self.route2),
-            Association(
+            Association.create(
                 parent_document=self.route1, child_document=self.route3)
         ])
         self.session.flush()

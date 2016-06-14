@@ -1,8 +1,7 @@
 import functools
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
-from c2corg_api.models.document import ArchiveDocument, Document, \
-    DocumentGeometry
+from c2corg_api.models.document import ArchiveDocument, DocumentGeometry
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.outing import schema_outing, Outing, \
     schema_create_outing, schema_update_outing, ArchiveOuting, \
@@ -165,23 +164,19 @@ class OutingRest(DocumentRest):
         def filter_query(query):
             t_outing_route = aliased(Association, name='a1')
             t_route_wp = aliased(Association, name='a2')
-            t_route = aliased(Document, name='r')
 
             return query. \
                 join(
                     t_outing_route,
                     Outing.document_id == t_outing_route.child_document_id). \
                 join(
-                    t_route,
-                    and_(
-                        t_outing_route.parent_document_id ==
-                        t_route.document_id,
-                        t_route.type == ROUTE_TYPE)). \
-                join(
                     t_route_wp,
                     and_(
-                        t_route_wp.parent_document_id == waypoint_id,
-                        t_route_wp.child_document_id == t_route.document_id))
+                        t_route_wp.child_document_id ==
+                        t_outing_route.parent_document_id,
+                        t_route_wp.child_document_type == ROUTE_TYPE,
+                        t_route_wp.parent_document_id == waypoint_id
+                    ))
         return filter_query
 
 
