@@ -304,7 +304,8 @@ class TestUserProfileRest(BaseDocumentTestRest):
 
         self.assertEquals(profile.get_locale('es').description, 'Yo')
         search_doc = self._check_es_index()
-        self.assertEqual(search_doc['title_es'], 'contributor Contributor')
+        self.assertEqual(
+            search_doc['title_es'], 'contributor Contributor contributor')
 
     def _check_es_index(self):
         sync_es(self.session)
@@ -312,8 +313,10 @@ class TestUserProfileRest(BaseDocumentTestRest):
             id=self.profile1.document_id,
             index=elasticsearch_config['index'])
         self.assertEqual(search_doc['doc_type'], self.profile1.type)
-        self.assertEqual(search_doc['title_en'], 'contributor Contributor')
-        self.assertEqual(search_doc['title_fr'], 'contributor Contributor')
+        self.assertEqual(
+            search_doc['title_en'], 'contributor Contributor contributor')
+        self.assertEqual(
+            search_doc['title_fr'], 'contributor Contributor contributor')
         return search_doc
 
     def _assert_geometry(self, body):

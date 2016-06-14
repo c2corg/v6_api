@@ -230,7 +230,7 @@ class TestUserRest(BaseTestRest):
         self.assertIsNotNone(search_doc)
 
         self.assertIsNotNone(search_doc['doc_type'])
-        self.assertEqual(search_doc['title_fr'], 'test Max Mustermann')
+        self.assertEqual(search_doc['title_fr'], 'test Max Mustermann testf')
 
     def test_register_discourse_down(self):
         self.set_discourse_down()
@@ -536,7 +536,8 @@ class TestUserRest(BaseTestRest):
             index=elasticsearch_config['index'])
 
         self.assertIsNotNone(search_doc['doc_type'])
-        self.assertEqual(search_doc['title_en'], 'contributor changed')
+        self.assertEqual(
+            search_doc['title_en'], 'contributor changed contributor')
 
     def test_update_account_name_discourse_down(self):
         self._update_account_field_discourse_down('name', 'changed')

@@ -103,9 +103,11 @@ class SyncTest(BaseTestCase):
 
         self.assertEqual(doc['_op_type'], 'index')
         self.assertEqual(doc['_id'], document_id)
-        self.assertEqual(doc['title_en'], 'contributor Contributor')
+        self.assertEqual(
+            doc['title_en'], 'contributor Contributor contributor')
         self.assertEqual(doc['description_en'], 'Me')
-        self.assertEqual(doc['title_fr'], 'contributor Contributor')
+        self.assertEqual(
+            doc['title_fr'], 'contributor Contributor contributor')
         self.assertEqual(doc['description_fr'], 'Moi')
 
     @patch('c2corg_api.scripts.es.sync.ElasticBatch')
