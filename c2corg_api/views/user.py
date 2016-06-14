@@ -430,6 +430,8 @@ class UserAccountRest(object):
             request.errors.add('body', 'currentpassword', 'Invalid password')
             return
 
+        sync_sso = False
+
         # update password if a new password is provided
         if 'newpassword' in validated:
             user.password = validated['newpassword']
@@ -448,21 +450,24 @@ class UserAccountRest(object):
             email_link = link
             result['email'] = validated['email']
             result['sent_email'] = True
+            sync_sso = True
 
         update_search_index = False
         if 'name' in validated:
             user.name = validated['name']
             result['name'] = user.name
             update_search_index = True
+            sync_sso = True
 
         if 'forum_username' in validated:
             user.forum_username = validated['forum_username']
             result['forum_username'] = user.forum_username
             update_search_index = True
+            sync_sso = True
 
         # Synchronize everything except the new email (still stored
         # in the email_to_validate attribute while validation is pending).
-        if email_link:
+        if sync_sso:
             try:
                 client = get_discourse_client(request.registry.settings)
                 client.sync_sso(user)
