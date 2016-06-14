@@ -45,6 +45,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self._add_test_data()
 
     def test_get_collection_for_route(self):
+        reset_search_index(self.session)
         response = self.app.get(
             self._prefix + '?r=' + str(self.route.document_id), status=200)
 
@@ -54,8 +55,20 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(response.json['total'], 1)
 
     def test_get_collection_for_waypoint(self):
+        reset_search_index(self.session)
         response = self.app.get(
             self._prefix + '?w=' + str(self.waypoint.document_id), status=200)
+
+        documents = response.json['documents']
+
+        self.assertEqual(documents[0]['document_id'], self.outing.document_id)
+        self.assertEqual(response.json['total'], 1)
+
+    def test_get_collection_for_user(self):
+        reset_search_index(self.session)
+        response = self.app.get(
+            self._prefix + '?u=' + str(self.global_userids['contributor']),
+            status=200)
 
         documents = response.json['documents']
 
@@ -799,6 +812,74 @@ class TestOutingRest(BaseDocumentTestRest):
             body, self.outing, user='moderator')
 
         self.assertEquals(route.get_locale('es').weather, 'soleado')
+
+    def test_put_success_association_update(self):
+        """Test updating a document by updating associations.
+        """
+        request_body = {
+            'message': 'Changing associations',
+            'document': {
+                'document_id': self.outing.document_id,
+                'version': self.outing.version,
+                'quality': quality_types[1],
+                'activities': ['skitouring'],
+                'date_start': '2016-01-01',
+                'date_end': '2016-01-01',
+                'elevation_min': 700,
+                'elevation_max': 1500,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...', 'weather': 'sunny',
+                     'version': self.locale_en.version}
+                ],
+                'associations': {
+                    'users': [{'id': self.global_userids['contributor2']}],
+                    'routes': [{'document_id': self.route.document_id}]
+                }
+            }
+        }
+
+        headers = self.add_authorization_header(username='moderator')
+        self.app_put_json(
+            self._prefix + '/' + str(self.outing.document_id), request_body,
+            headers=headers, status=200)
+
+        response = self.app.get(
+            self._prefix + '/' + str(self.outing.document_id), headers=headers,
+            status=200)
+        self.assertEqual(response.content_type, 'application/json')
+
+        body = response.json
+        document_id = body.get('document_id')
+        # document version does not change!
+        self.assertEquals(body.get('version'), self.outing.version)
+        self.assertEquals(body.get('document_id'), document_id)
+
+        # check that the document was updated correctly
+        self.session.expire_all()
+        document = self.session.query(self._model).get(document_id)
+        self.assertEquals(len(document.locales), 2)
+
+        # check that no new archive_document was created
+        archive_count = self.session.query(self._model_archive). \
+            filter(
+                getattr(self._model_archive, 'document_id') == document_id). \
+            count()
+        self.assertEqual(archive_count, 1)
+
+        # check that no new archive_document_locale was created
+        archive_locale_count = \
+            self.session.query(self._model_archive_locale). \
+            filter(
+                document_id == getattr(
+                    self._model_archive_locale, 'document_id')
+            ). \
+            count()
+        self.assertEqual(archive_locale_count, 2)
+
+        self.assertNotifiedEs()
 
     def test_history(self):
         id = self.outing.document_id

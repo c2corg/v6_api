@@ -1,13 +1,16 @@
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.search.mapping import SearchDocument, BaseMeta
 from c2corg_api.search.mapping_types import QueryableMixin, QInteger,\
-    QEnumArray, QEnum
+    QEnumArray, QEnum, QLong
 from c2corg_api.search.utils import get_title
 
 
 class SearchRoute(SearchDocument):
     class Meta(BaseMeta):
         doc_type = ROUTE_TYPE
+
+    # array of waypoint ids
+    waypoints = QLong('w', is_id=True)
 
     activities = QEnumArray(
         'act', model_field=Route.activities)
@@ -116,6 +119,12 @@ class SearchRoute(SearchDocument):
         for locale in document.locales:
             search_document['title_' + locale.lang] = \
                 get_title(locale.title, locale.title_prefix)
+
+        if document.associated_waypoints_ids:
+            # add the document ids of associated waypoints and of the parent
+            # and grand-parents of these waypoints
+            search_document['waypoints'] = \
+                document.associated_waypoints_ids.waypoint_ids
 
         return search_document
 

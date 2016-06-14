@@ -2,7 +2,7 @@ from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.search.mapping import SearchDocument, BaseMeta, \
     QEnumArray, QEnum
 from c2corg_api.search.mapping_types import QueryableMixin, QDateRange, \
-    QInteger, QBoolean
+    QInteger, QBoolean, QLong
 from elasticsearch_dsl import Date
 
 
@@ -12,6 +12,15 @@ class SearchOuting(SearchDocument):
 
     date_start = Date()
     date_end = Date()
+
+    # array of waypoint ids
+    waypoints = QLong('w', is_id=True)
+
+    # array of user ids
+    users = QLong('u', is_id=True)
+
+    # array of route ids
+    routes = QLong('r', is_id=True)
 
     activities = QEnumArray(
         'act', model_field=Outing.activities)
@@ -61,6 +70,22 @@ class SearchOuting(SearchDocument):
 
         SearchDocument.copy_fields(
             search_document, document, SearchOuting.FIELDS)
+
+        if document.associated_waypoints_ids:
+            # add the document ids of associated waypoints and of the parent
+            # and grand-parents of these waypoints
+            search_document['waypoints'] = \
+                document.associated_waypoints_ids.waypoint_ids
+
+        if document.associated_users_ids:
+            # add the document ids of associated users
+            search_document['users'] = \
+                document.associated_users_ids.user_ids
+
+        if document.associated_routes_ids:
+            # add the document ids of associated routes
+            search_document['routes'] = \
+                document.associated_routes_ids.route_ids
 
         return search_document
 

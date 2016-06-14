@@ -300,12 +300,13 @@ class DocumentRest(object):
             if after_update:
                 after_update(document, update_types, user_id=user_id)
 
-            # And the search updated
-            notify_es_syncer(self.request.registry.queue_config)
-
         associations = self.request.validated.get('associations', None)
         if associations:
             synchronize_associations(document, associations, user_id)
+
+        if update_types or associations:
+            # update search index
+            notify_es_syncer(self.request.registry.queue_config)
 
         return {}
 

@@ -70,9 +70,17 @@ class BaseTestRest(BaseTestCase):
         r = self.app_post_json(url, body, headers=headers, status=status)
         return r.json
 
-    def sync_es(self):
+    def assertNotifiedEs(self):  # noqa
         queue = self.queue_config.queue(self.queue_config.connection)
         self.assertIsNotNone(queue.get(), 'no sync. notification sent for ES')
+
+    def assertNotNotifiedEs(self):  # noqa
+        queue = self.queue_config.queue(self.queue_config.connection)
+        self.assertIsNone(
+            queue.get(), 'unexpected sync. notification sent for ES')
+
+    def sync_es(self):
+        self.assertNotifiedEs()
         sync_es(self.session)
 
     def get_latest_version(self, lang, versions):

@@ -37,17 +37,17 @@ class Association(Base):
 
     parent_document_id = Column(
         Integer, ForeignKey(schema + '.documents.document_id'),
-        nullable=False)
+        nullable=False, index=True)
     parent_document = relationship(
         Document, primaryjoin=parent_document_id == Document.document_id)
-    parent_document_type = Column(String(1), nullable=False)
+    parent_document_type = Column(String(1), nullable=False, index=True)
 
     child_document_id = Column(
         Integer, ForeignKey(schema + '.documents.document_id'),
-        nullable=False)
+        nullable=False, index=True)
     child_document = relationship(
         Document, primaryjoin=child_document_id == Document.document_id)
-    child_document_type = Column(String(1), nullable=False)
+    child_document_type = Column(String(1), nullable=False, index=True)
 
     __table_args__ = (
         PrimaryKeyConstraint(parent_document_id, child_document_id),
@@ -57,9 +57,9 @@ class Association(Base):
     @staticmethod
     def create(parent_document, child_document):
         return Association(
-            parent_document=parent_document,
+            parent_document_id=parent_document.document_id,
             parent_document_type=parent_document.type,
-            child_document=child_document,
+            child_document_id=child_document.document_id,
             child_document_type=child_document.type)
 
     def get_log(self, user_id, is_creation=True):
@@ -86,14 +86,14 @@ class AssociationLog(Base):
         nullable=False)
     parent_document = relationship(
         Document, primaryjoin=parent_document_id == Document.document_id)
-    parent_document_type = Column(String(1))
+    parent_document_type = Column(String(1), nullable=False)
 
     child_document_id = Column(
         Integer, ForeignKey(schema + '.documents.document_id'),
         nullable=False)
     child_document = relationship(
         Document, primaryjoin=child_document_id == Document.document_id)
-    child_document_type = Column(String(1))
+    child_document_type = Column(String(1), nullable=False)
 
     user_id = Column(
         Integer, ForeignKey(users_schema + '.user.id'), nullable=False)
@@ -278,13 +278,16 @@ def add_association(
 
 
 def remove_association(
-        parent_document_id, child_document_id, user_id, check_first=False):
+        parent_document_id, parent_document_type,
+        child_document_id, child_document_type, user_id, check_first=False):
     """Remove an association between the two documents and create a log entry
     in the association history table with the given user id.
     """
     association = Association(
         parent_document_id=parent_document_id,
-        child_document_id=child_document_id)
+        parent_document_type=parent_document_type,
+        child_document_id=child_document_id,
+        child_document_type=child_document_type)
 
     if check_first and not exists_already(association):
         return
@@ -324,30 +327,22 @@ def synchronize_associations(document, new_associations, user_id):
     to_add, to_remove = _diff_associations(
         new_associations, current_associations)
 
-    _add_associations(to_add, document, user_id)
-    _remove_associations(to_remove, document, user_id)
+    _apply_operation(to_add, add_association, document, user_id)
+    _apply_operation(to_remove, remove_association, document, user_id)
 
 
-def _add_associations(to_add, document, user_id):
+def _apply_operation(docs, add_or_remove, document, user_id):
     main_doc_type = document.type
-    for doc in to_add:
+    for doc in docs:
         is_parent = doc['is_parent']
         parent_id = doc['document_id'] if is_parent else document.document_id
         parent_type = doc['doc_type'] if is_parent else main_doc_type
         child_id = document.document_id if is_parent else doc['document_id']
         child_type = main_doc_type if is_parent else doc['doc_type']
 
-        add_association(
+        add_or_remove(
             parent_id, parent_type, child_id, child_type,
             user_id, check_first=False)
-
-
-def _remove_associations(to_remove, document, user_id):
-    for doc in to_remove:
-        is_parent = doc['is_parent']
-        parent_id = doc['document_id'] if is_parent else document.document_id
-        child_id = document.document_id if is_parent else doc['document_id']
-        remove_association(parent_id, child_id, user_id, check_first=False)
 
 
 def _get_current_associations(document, new_associations):

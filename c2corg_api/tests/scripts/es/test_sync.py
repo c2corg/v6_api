@@ -2,14 +2,16 @@ import datetime
 from unittest.mock import patch
 
 from c2corg_api.models import es_sync
+from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.sync import get_changed_documents, \
     get_documents_per_type,  sync_documents, create_search_documents, \
-    get_changed_users
+    get_changed_users, get_changed_documents_for_associations
 from c2corg_api.tests import BaseTestCase, global_userids
 from c2corg_api.views.document import DocumentRest
 
@@ -24,12 +26,29 @@ class SyncTest(BaseTestCase):
         last_update, _ = es_sync.get_status(self.session)
 
         changed_documents = get_changed_documents(self.session, last_update)
-        self.assertEqual(len(changed_documents), 4)
-        self.assertEqual('r', changed_documents[0][1])
-        self.assertEqual('w', changed_documents[1][1])
+        self.assertEqual(len(changed_documents), 5)
+        self.assertEqual('o', changed_documents[0][1])
+        self.assertEqual('r', changed_documents[1][1])
+        self.assertEqual('w', changed_documents[2][1])
 
         self.assertEqual(
             len(get_changed_documents(
+                self.session, last_update + datetime.timedelta(0, 1))),
+            0)
+
+    def test_get_changed_documents_for_associations(self):
+        last_update, _ = es_sync.get_status(self.session)
+
+        changed_documents = get_changed_documents_for_associations(
+            self.session, last_update)
+        self.assertEqual(len(changed_documents), 4)
+        self.assertEqual(changed_documents[0][0], self.route1.document_id)
+        self.assertEqual(changed_documents[1][0], self.outing1.document_id)
+        self.assertEqual(changed_documents[2][0], self.route1.document_id)
+        self.assertEqual(changed_documents[3][0], self.outing1.document_id)
+
+        self.assertEqual(
+            len(get_changed_documents_for_associations(
                 self.session, last_update + datetime.timedelta(0, 1))),
             0)
 
@@ -105,9 +124,10 @@ class SyncTest(BaseTestCase):
             (self.waypoint2.document_id, 'w'),
             (self.waypoint3.document_id, 'w'),
             (self.route1.document_id, 'r'),
+            (self.outing1.document_id, 'o'),
             (user_id, 'u')]
         sync_documents(self.session, changed_documents)
-        self.assertEqual(len(search_documents), 4)
+        self.assertEqual(len(search_documents), 5)
 
         redirected_doc = next(
             filter(
@@ -123,6 +143,26 @@ class SyncTest(BaseTestCase):
             None)
         self.assertAlmostEqual(waypoint1_doc['geom'][0], 5.71288995)
         self.assertAlmostEqual(waypoint1_doc['geom'][1], 45.64476395)
+
+        route_doc = next(
+            filter(
+                lambda doc: doc['_id'] == self.route1.document_id,
+                search_documents),
+            None)
+        self.assertEqual(route_doc['title_en'], 'Mont Blanc : Face N')
+        self.assertEqual(
+            set(route_doc['waypoints']),
+            {self.waypoint1.document_id, self.waypoint2.document_id})
+
+        outing_doc = next(
+            filter(
+                lambda doc: doc['_id'] == self.outing1.document_id,
+                search_documents),
+            None)
+        self.assertEqual(outing_doc['title_en'], '...')
+        self.assertEqual(
+            set(outing_doc['waypoints']),
+            {self.waypoint1.document_id, self.waypoint2.document_id})
 
     def _create_mock_match(self, actions):
         class MockBatch(object):
@@ -193,8 +233,19 @@ class SyncTest(BaseTestCase):
                     description='...',
                     summary='The heighest point in Europe')
             ])
+        self.outing1 = Outing(
+            activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
+            date_end=datetime.date(2016, 1, 1),
+            locales=[
+                OutingLocale(
+                    lang='en', title='...', description='...',
+                    weather='sunny')
+            ]
+        )
         self.session.add_all([
-            self.waypoint1, self.waypoint2, self.waypoint3, self.route1])
+            self.waypoint1, self.waypoint2, self.waypoint3, self.route1,
+            self.outing1
+        ])
         self.session.flush()
 
         user_id = self.global_userids['contributor']
@@ -202,3 +253,22 @@ class SyncTest(BaseTestCase):
         DocumentRest.create_new_version(self.waypoint2, user_id)
         DocumentRest.create_new_version(self.waypoint3, user_id)
         DocumentRest.create_new_version(self.route1, user_id)
+        DocumentRest.create_new_version(self.outing1, user_id)
+
+        association_wr = Association.create(self.waypoint1, self.route1)
+        association_ww = Association.create(self.waypoint2, self.waypoint1)
+        association_ro = Association.create(self.route1, self.outing1)
+        user = self.session.query(UserProfile).get(
+            self.global_userids['contributor'])
+        association_uo = Association.create(user, self.outing1)
+        self.session.add_all([
+            association_wr,
+            association_ww,
+            association_ro,
+            association_uo,
+            association_wr.get_log(user_id),
+            association_ww.get_log(user_id),
+            association_ro.get_log(user_id),
+            association_uo.get_log(user_id)
+        ])
+        self.session.flush()

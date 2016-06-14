@@ -90,6 +90,8 @@ class TestAssociation(BaseTestCase):
 
     def test_get_current_associations_waypoints(self):
         self.waypoint3 = Waypoint(waypoint_type='summit')
+        self.session.add(self.waypoint3)
+        self.session.flush()
         self.session.add_all([
             Association.create(
                 parent_document=self.waypoint1, child_document=self.waypoint2),

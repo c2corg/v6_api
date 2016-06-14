@@ -6,7 +6,7 @@ from elasticsearch_dsl import String, Long, Integer, Boolean
 meta_param_keys = ('pl', 'limit', 'offset')
 
 # parameters used for the search service that can not be used as query fields
-reserved_query_fields = meta_param_keys + ('q', 'bbox', 'r', 'w')
+reserved_query_fields = meta_param_keys + ('q', 'bbox')
 
 
 class QueryableMixin(object):

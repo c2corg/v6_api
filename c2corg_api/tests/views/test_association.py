@@ -1,4 +1,5 @@
 from c2corg_api.models.association import Association, AssociationLog
+from c2corg_api.models.image import Image
 from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.views import BaseTestRest
@@ -37,6 +38,8 @@ class TestAssociationRest(BaseTestRest):
             one()
         self.assertEqual(association_log.is_creation, True)
         self.assertIsNotNone(association_log.user_id)
+
+        self.assertNotifiedEs()
 
     def test_add_association_duplicate(self):
         """ Test that there is only one association between two documents.
@@ -108,6 +111,21 @@ class TestAssociationRest(BaseTestRest):
         self.assertEqual(
             errors[1].get('description'), 'child document does not exist')
 
+    def test_add_association_no_es_update(self):
+        """Tests that the search index is only updated for specific association
+        types.
+        """
+        request_body = {
+            'parent_document_id': self.waypoint1.document_id,
+            'child_document_id': self.image1.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor')
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=200)
+
+        self.assertNotNotifiedEs()
+
     def test_delete_association_unauthorized(self):
         self.app.delete_json(TestAssociationRest.prefix, {}, status=403)
 
@@ -152,6 +170,8 @@ class TestAssociationRest(BaseTestRest):
             all()
         self.assertEqual(logs[0].is_creation, True)
         self.assertEqual(logs[1].is_creation, False)
+
+        self.assertNotifiedEs()
 
     def test_delete_association_fuzzy(self):
         """Test that an association {parent: x, child: y} can be
@@ -224,4 +244,7 @@ class TestAssociationRest(BaseTestRest):
 
         self.route1 = Route(activities=['skitouring'])
         self.session.add(self.route1)
+
+        self.image1 = Image()
+        self.session.add(self.image1)
         self.session.flush()
