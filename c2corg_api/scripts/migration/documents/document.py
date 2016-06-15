@@ -1,3 +1,4 @@
+from sqlalchemy.orm.base import class_mapper
 from sqlalchemy.sql import text
 import transaction
 import zope
@@ -88,9 +89,18 @@ class MigrateDocuments(MigrateBase):
         print('Total: {0} rows'.format(total_count))
 
         query = text(self.get_query_locales() if locales else self.get_query())
+
+        model_document = self.get_model_document(locales)
+        # make sure that the version is not managed by SQAlchemy, the value
+        # that is provided as version should be used
+        document_mapper = class_mapper(model_document)
+        document_mapper.version_id_prop = None
+        document_mapper.version_id_col = None
+        document_mapper.version_id_generator = None
+
         batch = DocumentBatch(
             self.session_target, self.batch_size,
-            self.get_model_document(locales),
+            model_document,
             self.get_model_archive_document(locales),
             self.get_model_geometry(),
             self.get_model_archive_geometry())
