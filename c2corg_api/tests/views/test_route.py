@@ -275,6 +275,7 @@ class TestRouteRest(BaseDocumentTestRest):
         archive_route = version.document_archive
         self.assertEqual(archive_route.activities, ['hiking', 'skitouring'])
         self.assertEqual(archive_route.elevation_max, 1500)
+        self.assertEqual(archive_route.durations, ['1'])
 
         archive_locale = version.document_locales_archive
         self.assertEqual(archive_locale.lang, 'en')
