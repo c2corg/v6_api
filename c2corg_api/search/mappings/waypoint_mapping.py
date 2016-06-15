@@ -10,6 +10,8 @@ class SearchWaypoint(SearchDocument):
 
     elevation = QInteger(
         'walt', range=True)
+    prominence = QInteger(
+        'prom', range=True)
     waypoint_type = QEnum(
         'wtyp', model_field=Waypoint.waypoint_type)
     rock_types = QEnumArray(
@@ -46,6 +48,10 @@ class SearchWaypoint(SearchDocument):
         'chil', model_field=Waypoint.children_proof)
     rain_proof = QEnum(
         'rain', model_field=Waypoint.rain_proof)
+    climbing_outdoor_types = QEnumArray(
+        'ctout', model_field=Waypoint.climbing_outdoor_types)
+    climbing_indoor_types = QEnumArray(
+        'ctin', model_field=Waypoint.climbing_indoor_types)
     paragliding_rating = QEnum(
         'pgrat', model_field=Waypoint.paragliding_rating)
     exposition_rating = QEnum(
@@ -70,7 +76,8 @@ class SearchWaypoint(SearchDocument):
         'ftyp', model_field=Waypoint.product_types)
 
     FIELDS = [
-        'elevation', 'waypoint_type', 'rock_types', 'orientations',
+        'elevation', 'prominence', 'waypoint_type', 'rock_types',
+        'orientations', 'climbing_outdoor_types', 'climbing_indoor_types',
         'best_periods', 'lift_access', 'custodianship', 'climbing_styles',
         'access_time', 'climbing_rating_max', 'climbing_rating_min',
         'climbing_rating_median', 'height_max', 'height_min', 'height_median',
