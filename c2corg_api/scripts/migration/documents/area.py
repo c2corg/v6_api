@@ -57,7 +57,7 @@ class MigrateAreas(MigrateDocuments):
             '   aa.culture, aa.name, aa.description '
             'from app_areas_i18n_archives aa join areas a on aa.id = a.id '
             'where a.redirects_to is null '
-            'order by aa.id, aa.document_i18n_archive_id;'
+            'order by aa.id, aa.culture, aa.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

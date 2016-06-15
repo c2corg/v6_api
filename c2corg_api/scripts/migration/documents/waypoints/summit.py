@@ -39,7 +39,7 @@ class MigrateSummits(MigrateWaypoints):
             'sa.culture, sa.name, sa.description '
             'from app_summits_i18n_archives sa join summits s on sa.id = s.id '
             'where s.redirects_to is null '
-            'order by sa.id, sa.document_i18n_archive_id;'
+            'order by sa.id, sa.culture, sa.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

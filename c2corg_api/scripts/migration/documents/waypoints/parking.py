@@ -47,7 +47,7 @@ class MigrateParkings(MigrateWaypoints):
             'from app_parkings_i18n_archives pa '
             '  join parkings p on pa.id = p.id '
             'where p.redirects_to is null '
-            'order by pa.id, pa.document_i18n_archive_id;'
+            'order by pa.id, pa.culture, pa.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

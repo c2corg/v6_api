@@ -68,7 +68,7 @@ class MigrateRoutes(MigrateDocuments):
             '   ra.route_history, r.slope '
             'from app_routes_i18n_archives ra join routes r on ra.id = r.id '
             'where r.redirects_to is null '
-            'order by ra.id, ra.document_i18n_archive_id;'
+            'order by ra.id, ra.culture, ra.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

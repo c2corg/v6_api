@@ -56,7 +56,7 @@ class MigrateMaps(MigrateDocuments):
             '   ma.culture, ma.name, ma.description '
             'from app_maps_i18n_archives ma join maps m on ma.id = m.id '
             'where m.redirects_to is null  '
-            'order by ma.id, ma.document_i18n_archive_id;'
+            'order by ma.id, ma.culture, ma.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):
