@@ -42,6 +42,7 @@ class UserProfile(_UserProfileMixin, Document):
 
     username = association_proxy('user', 'username')
     name = association_proxy('user', 'name')
+    forum_username = association_proxy('user', 'forum_username')
 
     def to_archive(self):
         user_profile = ArchiveUserProfile()
