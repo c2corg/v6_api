@@ -24,3 +24,19 @@ class PrivateMessageRest(object):
             client.discourse_public_url, d_username)
 
         return {link: link, count: count}
+
+
+@resource(path='/forum/get-topic/{topic}', cors_policy=cors_policy)
+class ThreadTopic(object):
+    def __init__(self, request):
+        self.request = request
+
+    @restricted_view(renderer='json')
+    def get(self):
+        settings = self.request.registry.settings
+        id_lang = self.request.matchdict['topic']
+
+        client = get_discourse_client(settings)
+        thread = client.client.topic(id_lang)
+
+        return {'thread': thread}
