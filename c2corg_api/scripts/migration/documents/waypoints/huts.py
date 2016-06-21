@@ -47,7 +47,7 @@ class MigrateHuts(MigrateWaypoints):
             '   ha.staffed_period '
             'from app_huts_i18n_archives ha join huts h on ha.id = h.id '
             'where h.redirects_to is null '
-            'order by ha.id, ha.document_i18n_archive_id;'
+            'order by ha.id, ha.culture, ha.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

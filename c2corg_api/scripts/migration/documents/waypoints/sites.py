@@ -49,7 +49,7 @@ class MigrateSites(MigrateWaypoints):
             '   sa.external_resources '
             'from app_sites_i18n_archives sa join sites s on sa.id = s.id '
             'where s.redirects_to is null '
-            'order by sa.id, sa.document_i18n_archive_id;'
+            'order by sa.id, sa.culture, sa.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

@@ -60,7 +60,7 @@ class MigrateImages(MigrateDocuments):
             '   ia.culture, ia.name, ia.description '
             'from app_images_i18n_archives ia join images i on ia.id = i.id '
             'where i.redirects_to is null '
-            'order by ia.id, ia.document_i18n_archive_id;'
+            'order by ia.id, ia.culture, ia.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

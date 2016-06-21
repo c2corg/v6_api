@@ -44,7 +44,7 @@ class MigrateProducts(MigrateWaypoints):
             'from app_products_i18n_archives pa '
             '  join products p on pa.id = p.id '
             'where p.redirects_to is null '
-            'order by pa.id, pa.document_i18n_archive_id;'
+            'order by pa.id, pa.culture, pa.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

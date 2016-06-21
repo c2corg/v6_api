@@ -68,7 +68,7 @@ class MigrateUserProfiles(MigrateDocuments):
             '  join users u on ua.id = u.id '
             '  join app_users_private_data au on ua.id = au.id '
             'where u.redirects_to is null '
-            'order by ua.id, ua.document_i18n_archive_id;'
+            'order by ua.id, ua.culture, ua.document_i18n_archive_id;'
         )
 
     query_profileless_users = (

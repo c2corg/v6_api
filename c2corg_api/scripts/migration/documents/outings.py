@@ -69,7 +69,7 @@ class MigrateOutings(MigrateDocuments):
             '   oa.outing_route_desc '
             'from app_outings_i18n_archives oa join outings o on oa.id = o.id '
             'where o.redirects_to is null '
-            'order by oa.id, oa.document_i18n_archive_id;'
+            'order by oa.id, oa.culture, oa.document_i18n_archive_id;'
         )
 
     def get_document(self, document_in, version):

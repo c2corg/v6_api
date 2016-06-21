@@ -1,3 +1,4 @@
+from sqlalchemy.orm.base import class_mapper
 from sqlalchemy.sql import text
 import transaction
 import zope
@@ -88,15 +89,25 @@ class MigrateDocuments(MigrateBase):
         print('Total: {0} rows'.format(total_count))
 
         query = text(self.get_query_locales() if locales else self.get_query())
+
+        model_document = self.get_model_document(locales)
+        # make sure that the version is not managed by SQLAlchemy, the value
+        # that is provided as version should be used
+        document_mapper = class_mapper(model_document)
+        document_mapper.version_id_prop = None
+        document_mapper.version_id_col = None
+        document_mapper.version_id_generator = None
+
         batch = DocumentBatch(
             self.session_target, self.batch_size,
-            self.get_model_document(locales),
+            model_document,
             self.get_model_archive_document(locales),
             self.get_model_geometry(),
             self.get_model_archive_geometry())
         with transaction.manager, batch:
             count = 0
             current_document_id = None
+            current_locale = None
             version = 1
             archives = []
             geometry_archives = []
@@ -105,6 +116,9 @@ class MigrateDocuments(MigrateBase):
                 count += 1
                 if current_document_id is None:
                     current_document_id = document_in.id
+                    version = 1
+                    if locales:
+                        current_locale = document_in.culture
                 else:
                     if current_document_id != document_in.id:
                         print('WARNING: no latest version for {0}'.format(
@@ -113,6 +127,8 @@ class MigrateDocuments(MigrateBase):
                         geometry_archives = []
                         version = 1
                         current_document_id = document_in.id
+                        if locales:
+                            current_locale = document_in.culture
 
                 if locales:
                     document_archive = self.get_document_locale_archive(
@@ -126,10 +142,12 @@ class MigrateDocuments(MigrateBase):
                 archives.append(document_archive)
 
                 if document_in.is_latest_version:
-                    version = 1
-                    current_document_id = None
-
                     if locales:
+                        if current_locale != document_in.culture:
+                            raise Exception(
+                                'locale of the latest version does not match '
+                                'locale of the first version {0}'.format(
+                                    current_document_id))
                         document = self.get_document_locale(
                             document_in, version)
                     else:
@@ -141,8 +159,12 @@ class MigrateDocuments(MigrateBase):
                     batch.add_geometry_archives(geometry_archives)
                     batch.add_archive_documents(archives)
                     batch.add_document(document)
+
                     archives = []
                     geometry_archives = []
+                    version = 1
+                    current_document_id = None
+                    current_locale = None
                 else:
                     version += 1
                 self.progress(count, total_count)
