@@ -28,8 +28,8 @@ class MappingTest(BaseTestCase):
         self.assertIsNotNone(queryable_fields['wtyp']._enum)
         self.assertIn('wrock', queryable_fields)
         self.assertIsNotNone(queryable_fields['wrock']._enum)
-        self.assertIn('phone', queryable_fields)
-        self.assertTrue(queryable_fields['phone']._is_bool)
+        self.assertIn('plift', queryable_fields)
+        self.assertTrue(queryable_fields['plift']._is_bool)
 
     def test_route_mapping(self):
         self._test_mapping(SearchRoute, Route)

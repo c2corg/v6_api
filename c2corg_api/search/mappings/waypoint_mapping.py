@@ -20,8 +20,6 @@ class SearchWaypoint(SearchDocument):
         'wfac', model_field=Waypoint.orientations)
     best_periods = QEnumArray(
         'period', model_field=Waypoint.best_periods)
-    has_phone = QBoolean(
-        'phone', is_bool=True)
     lift_access = QBoolean(
         'plift', is_bool=True)
     custodianship = QEnum(
@@ -98,8 +96,6 @@ class SearchWaypoint(SearchDocument):
 
         SearchDocument.copy_fields(
             search_document, document, SearchWaypoint.FIELDS)
-        search_document['has_phone'] = not(not(
-            document.phone or document.phone_custodian))
 
         return search_document
 
