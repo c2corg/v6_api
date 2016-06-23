@@ -98,6 +98,12 @@ class MigrateDocuments(MigrateBase):
         document_mapper.version_id_col = None
         document_mapper.version_id_generator = None
 
+        if not locales:
+            document_mapper = class_mapper(DocumentGeometry)
+            document_mapper.version_id_prop = None
+            document_mapper.version_id_col = None
+            document_mapper.version_id_generator = None
+
         batch = DocumentBatch(
             self.session_target, self.batch_size,
             model_document,
