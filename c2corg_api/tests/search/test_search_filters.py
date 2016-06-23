@@ -1,10 +1,12 @@
 from c2corg_api.search import create_search, get_text_query
+from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.search_filters import create_filter, build_query, \
     create_bbox_filter
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.tests import BaseTestCase
-from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox
+from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox, \
+    Missing
 
 
 class AdvancedSearchTest(BaseTestCase):
@@ -150,6 +152,98 @@ class AdvancedSearchTest(BaseTestCase):
         self.assertEqual(
             create_filter('walt', '1500,NaN', SearchWaypoint),
             Range(elevation={'gte': 1500}))
+
+    def test_create_filter_enum_range(self):
+        self.assertEqual(
+            create_filter(
+                'not a valid field', 'medium,excellent', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('qa', '', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('qa', 'not a, valid enum', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('qa', 'medium,excellent', SearchWaypoint),
+            Range(quality={'gte': 2, 'lte': 4}))
+        self.assertEqual(
+            create_filter('qa', 'medium,', SearchWaypoint),
+            Range(quality={'gte': 2}))
+        self.assertEqual(
+            create_filter('qa', 'medium', SearchWaypoint),
+            Range(quality={'gte': 2}))
+        self.assertEqual(
+            create_filter('qa', ',excellent', SearchWaypoint),
+            Range(quality={'lte': 4}))
+        self.assertEqual(
+            create_filter('qa', 'invalid enum,excellent', SearchWaypoint),
+            Range(quality={'lte': 4}))
+        self.assertEqual(
+            create_filter('qa', 'medium,invalid enum', SearchWaypoint),
+            Range(quality={'gte': 2}))
+
+    def test_create_filter_enum_range_min_max(self):
+        self.assertEqual(
+            create_filter(
+                'not a valid field', '4b,6c', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('crat', '', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('crat', 'invalid term', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('crat', '4b', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('crat', '4b,invalid term', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('crat', 'invalid term,6c', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('crat', '4b,6c', SearchWaypoint),
+            Bool(must_not=Bool(should=[
+                Range(climbing_rating_min={'gt': 17}),
+                Range(climbing_rating_max={'lt': 5}),
+                Bool(must=[
+                    Missing(field='climbing_rating_min'),
+                    Missing(field='climbing_rating_max')
+                ])
+            ])))
+
+    def test_create_filter_integer_range(self):
+        self.assertEqual(
+            create_filter(
+                'not a valid field', '1200,2400', SearchRoute),
+            None)
+        self.assertEqual(
+            create_filter('ele', '', SearchRoute),
+            None)
+        self.assertEqual(
+            create_filter('ele', 'invalid term', SearchRoute),
+            None)
+        self.assertEqual(
+            create_filter('ele', '1200', SearchRoute),
+            None)
+        self.assertEqual(
+            create_filter('ele', '1200,invalid term', SearchRoute),
+            None)
+        self.assertEqual(
+            create_filter('ele', 'invalid term,2400', SearchRoute),
+            None)
+        self.assertEqual(
+            create_filter('ele', '1200,2400', SearchRoute),
+            Bool(must_not=Bool(should=[
+                Range(elevation_min={'gt': 2400}),
+                Range(elevation_max={'lt': 1200}),
+                Bool(must=[
+                    Missing(field='elevation_min'),
+                    Missing(field='elevation_max')
+                ])
+            ])))
 
     def test_create_filter_enum(self):
         self.assertEqual(

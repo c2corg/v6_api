@@ -32,6 +32,15 @@ class QueryableMixin(object):
         if 'date_range' in kwargs:
             self._date_range = kwargs['date_range']
             del kwargs['date_range']
+        if 'integer_range' in kwargs:
+            self._integer_range = kwargs['integer_range']
+            del kwargs['integer_range']
+        if 'enum_range' in kwargs:
+            self._enum_range = kwargs['enum_range']
+            del kwargs['enum_range']
+        if 'enum_range_min_max' in kwargs:
+            self._enum_range_min_max = kwargs['enum_range_min_max']
+            del kwargs['enum_range_min_max']
         if 'is_bool' in kwargs:
             self._is_bool = kwargs['is_bool']
             del kwargs['is_bool']
@@ -96,3 +105,45 @@ class QDateRange(QueryableMixin):
         self.field_date_end = field_date_end
         kwargs['date_range'] = True
         super(QDateRange, self).__init__(query_name, *args, **kwargs)
+
+
+class QNumberRange(QueryableMixin):
+    """Search field for number ranges. Used for elevation_min/elevation_max
+    for routes.
+    """
+    def __init__(self, query_name, field_min, field_max, *args, **kwargs):
+        self.field_min = field_min
+        self.field_max = field_max
+        kwargs['integer_range'] = True
+        super(QNumberRange, self).__init__(query_name, *args, **kwargs)
+
+
+class QEnumRange(QueryableMixin, Integer):
+    """Search field for enum ranges. To make it more convenient to search
+    for ranges with enum fields (e.g. to search a route with a rating between
+    'AD' and 'ED') the enum values are converted to integer values and
+    stored as such in ElasticSearch. When doing a search, a filter using these
+    numbers is used.
+    The enums are converted to integers using the mappers defined in
+    `c2corg_common.sortable_search_attributes`.
+    """
+    def __init__(self, query_name, model_field, enum_mapper,
+                 *args, **kwargs):
+        self._enum_mapper = enum_mapper
+        kwargs['model_field'] = model_field
+        kwargs['enum_range'] = True
+        super(QEnumRange, self).__init__(query_name, *args, **kwargs)
+
+
+class QEnumRangeMinMax(QueryableMixin):
+    """Search field for combined enums. For example the fields
+    `climbing_rating_min` and `climbing_rating_max` are combined into a single
+    search field.
+    """
+    def __init__(self, query_name, field_min, field_max, enum_mapper,
+                 *args, **kwargs):
+        self.field_min = field_min
+        self.field_max = field_max
+        self._enum_mapper = enum_mapper
+        kwargs['enum_range_min_max'] = True
+        super(QEnumRangeMinMax, self).__init__(query_name, *args, **kwargs)

@@ -76,6 +76,24 @@ class MappingTest(BaseTestCase):
                 if hasattr(mapping_field, '_model_field'):
                     self.assertTrue(
                         mapping_field._model_field is getattr(model, field))
+                if hasattr(mapping_field, '_enum_range'):
+                    self.assertFalse(
+                        mapping_field._enum_range,
+                        'Field {0} should be listed as ENUM_RANGE_FIELDS'.
+                        format(field)
+                    )
+
+        enum_range_fields = search_model.ENUM_RANGE_FIELDS \
+            if hasattr(search_model, 'ENUM_RANGE_FIELDS') else []
+        for field in enum_range_fields:
+            self.assertTrue(hasattr(model, field))
+            self.assertIn(field, mapping_fields)
+            mapping_field = mapping_fields[field]
+
+            if isinstance(mapping_field, QueryableMixin):
+                if hasattr(mapping_field, '_model_field'):
+                    self.assertTrue(
+                        mapping_field._model_field is getattr(model, field))
 
         queryable_fields = search_model.queryable_fields
         self.assertIn('qa', queryable_fields)

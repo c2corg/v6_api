@@ -1,8 +1,10 @@
 from c2corg_api.models.outing import OUTING_TYPE, Outing
-from c2corg_api.search.mapping import SearchDocument, BaseMeta, \
-    QEnumArray, QEnum
+from c2corg_api.search.mapping import SearchDocument, BaseMeta
 from c2corg_api.search.mapping_types import QueryableMixin, QDateRange, \
-    QInteger, QBoolean, QLong
+    QInteger, QBoolean, QLong, QEnumArray, QEnumRange
+from c2corg_common.sortable_search_attributes import \
+    sortable_frequentation_types, sortable_condition_ratings, \
+    sortable_glacier_ratings
 from elasticsearch_dsl import Date
 
 
@@ -24,8 +26,9 @@ class SearchOuting(SearchDocument):
 
     activities = QEnumArray(
         'act', model_field=Outing.activities)
-    frequentation = QEnum(
-        'ofreq', model_field=Outing.frequentation)
+    frequentation = QEnumRange(
+        'ofreq', model_field=Outing.frequentation,
+        enum_mapper=sortable_frequentation_types)
     elevation_max = QInteger(
         'oalt', range=True)
     height_diff_up = QInteger(
@@ -40,23 +43,31 @@ class SearchOuting(SearchDocument):
         'swlu', range=True)
     elevation_down_snow = QInteger(
         'swld', range=True)
-    condition_rating = QEnum(
-        'ocond', model_field=Outing.condition_rating)
-    snow_quantity = QEnum(
-        'swquan', model_field=Outing.snow_quantity)
-    snow_quality = QEnum(
-        'swqual', model_field=Outing.snow_quality)
-    glacier_rating = QEnum(
-        'oglac', model_field=Outing.glacier_rating)
+    condition_rating = QEnumRange(
+        'ocond', model_field=Outing.condition_rating,
+        enum_mapper=sortable_condition_ratings)
+    snow_quantity = QEnumRange(
+        'swquan', model_field=Outing.snow_quantity,
+        enum_mapper=sortable_condition_ratings)
+    snow_quality = QEnumRange(
+        'swqual', model_field=Outing.snow_quality,
+        enum_mapper=sortable_condition_ratings)
+    glacier_rating = QEnumRange(
+        'oglac', model_field=Outing.glacier_rating,
+        enum_mapper=sortable_glacier_ratings)
     avalanche_signs = QEnumArray(
         'avdate', model_field=Outing.avalanche_signs)
 
     FIELDS = [
-        'activities', 'date_start', 'date_end', 'frequentation',
+        'activities', 'date_start', 'date_end',
         'elevation_max', 'height_diff_up', 'length_total', 'public_transport',
         'elevation_access', 'elevation_up_snow', 'elevation_down_snow',
-        'condition_rating', 'snow_quantity', 'snow_quality',
-        'glacier_rating', 'avalanche_signs'
+        'avalanche_signs'
+    ]
+
+    ENUM_RANGE_FIELDS = [
+        'frequentation', 'condition_rating', 'snow_quantity', 'snow_quality',
+        'glacier_rating'
     ]
 
     @staticmethod
@@ -68,6 +79,10 @@ class SearchOuting(SearchDocument):
 
         SearchDocument.copy_fields(
             search_document, document, SearchOuting.FIELDS)
+
+        SearchDocument.copy_enum_range_fields(
+            search_document, document, SearchOuting.ENUM_RANGE_FIELDS,
+            SearchOuting)
 
         if document.associated_waypoints_ids:
             # add the document ids of associated waypoints and of the parent

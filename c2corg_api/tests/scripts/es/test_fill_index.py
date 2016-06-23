@@ -1,7 +1,11 @@
+import datetime
+
 from c2corg_api.models import es_sync
 from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.tests import BaseTestCase
@@ -15,7 +19,8 @@ class FillIndexTest(BaseTestCase):
         """
         self.session.add(Waypoint(
             document_id=71171,
-            waypoint_type='summit', elevation=2000,
+            waypoint_type='summit', elevation=2000, quality='medium',
+            access_time='15min',
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
@@ -42,7 +47,7 @@ class FillIndexTest(BaseTestCase):
         self.session.add(Route(
             document_id=71173,
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
-            height_diff_up=800, height_diff_down=800, durations='1',
+            height_diff_up=800, height_diff_down=800, durations=['1'],
             locales=[
                 RouteLocale(
                     lang='en', title='Face N',
@@ -63,6 +68,16 @@ class FillIndexTest(BaseTestCase):
                     description='...',
                     summary='The heighest point in Europe')
             ]))
+        self.session.add(Outing(
+            document_id=71175,
+            activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
+            date_end=datetime.date(2016, 1, 1), frequentation='overcrowded',
+            locales=[
+                OutingLocale(
+                    lang='en', title='Mont Blanc : Face N !',
+                    description='...', weather='sunny')
+            ]
+        ))
         self.session.flush()
 
         # fill the ElasticSearch index
@@ -74,6 +89,8 @@ class FillIndexTest(BaseTestCase):
         self.assertEqual(waypoint1.title_fr, 'Mont Granier')
         self.assertEqual(waypoint1.summary_fr, 'Le Mont  Granier ')
         self.assertEqual(waypoint1.doc_type, 'w')
+        self.assertEqual(waypoint1.quality, 2)
+        self.assertEqual(waypoint1.access_time, 3)
         self.assertAlmostEqual(waypoint1.geom[0], 5.71288994)
         self.assertAlmostEqual(waypoint1.geom[1], 45.64476395)
 
@@ -88,6 +105,14 @@ class FillIndexTest(BaseTestCase):
         self.assertEqual(route.title_en, 'Mont Blanc : Face N')
         self.assertEqual(route.title_fr, '')
         self.assertEqual(route.doc_type, 'r')
+        self.assertEqual(route.durations, [0])
+
+        outing = SearchOuting.get(id=71175)
+        self.assertIsNotNone(outing)
+        self.assertEqual(outing.title_en, 'Mont Blanc : Face N !')
+        self.assertEqual(outing.title_fr, '')
+        self.assertEqual(outing.doc_type, 'o')
+        self.assertEqual(outing.frequentation, 3)
 
         # merged document is ignored
         self.assertIsNone(SearchWaypoint.get(id=71174, ignore=404))

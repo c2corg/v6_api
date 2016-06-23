@@ -1,9 +1,11 @@
 import json
 
 from c2corg_api.models.document import Document
-from c2corg_api.search.mapping_types import Enum, QEnum, QEnumArray, QLong
+from c2corg_api.search.mapping_types import Enum, QEnumArray, QLong, \
+    QEnumRange
 from c2corg_api.search.utils import strip_bbcodes
 from c2corg_common.attributes import default_langs
+from c2corg_common.sortable_search_attributes import sortable_quality_types
 from elasticsearch_dsl import DocType, String, MetaField, Long, GeoPoint
 
 
@@ -33,7 +35,8 @@ class SearchDocument(DocType):
 
     id = Long()
     doc_type = Enum()
-    quality = QEnum('qa', model_field=Document.quality)
+    quality = QEnumRange(
+        'qa', model_field=Document.quality, enum_mapper=sortable_quality_types)
     available_locales = QEnumArray('l', enum=default_langs)
     geom = GeoPoint()
 
@@ -122,6 +125,10 @@ class SearchDocument(DocType):
                     strip_bbcodes(locale.description)
             search_document['available_locales'] = available_locales
 
+            if document.quality:
+                search_document['quality'] = \
+                    sortable_quality_types[document.quality]
+
             if document.geometry:
                 search_document['geom'] = SearchDocument.get_geometry(
                     document.geometry)
@@ -146,6 +153,21 @@ class SearchDocument(DocType):
     def copy_fields(search_document, document, fields):
         for field in fields:
             search_document[field] = getattr(document, field)
+
+    @staticmethod
+    def copy_enum_range_fields(
+            search_document, document, fields, search_model):
+        search_fields = search_model._doc_type.mapping
+        for field in fields:
+            search_field = search_fields[field]
+            enum_mapper = search_field._enum_mapper
+            val = getattr(document, field)
+
+            if val:
+                if not isinstance(val, str):
+                    search_document[field] = [enum_mapper[v] for v in val]
+                else:
+                    search_document[field] = enum_mapper[val]
 
 
 """To support partial-matching required for the autocomplete search, we
