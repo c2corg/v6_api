@@ -181,6 +181,33 @@ class AdvancedSearchTest(BaseTestCase):
             create_filter('qa', 'medium,invalid enum', SearchWaypoint),
             Range(quality={'gte': 2}))
 
+    def test_create_filter_enum_range_climbing_rating(self):
+        self.assertEqual(
+            create_filter(
+                'not a valid field', '4b,6c', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('crat', '', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('crat', 'invalid term', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('crat', '4b', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('crat', '4b,invalid term', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('crat', 'invalid term,6c', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('crat', '4b,6c', SearchWaypoint),
+            Bool(must_not=Bool(should=[
+                Range(climbing_rating_min={'gt': 17}),
+                Range(climbing_rating_max={'lt': 5})
+            ])))
+
     def test_create_filter_enum(self):
         self.assertEqual(
             create_filter('wtyp', '', SearchWaypoint),

@@ -35,6 +35,9 @@ class QueryableMixin(object):
         if 'enum_range' in kwargs:
             self._enum_range = kwargs['enum_range']
             del kwargs['enum_range']
+        if 'enum_range_min_max' in kwargs:
+            self._enum_range_min_max = kwargs['enum_range_min_max']
+            del kwargs['enum_range_min_max']
         if 'is_bool' in kwargs:
             self._is_bool = kwargs['is_bool']
             del kwargs['is_bool']
@@ -116,3 +119,17 @@ class QEnumRange(QueryableMixin, Integer):
         kwargs['model_field'] = model_field
         kwargs['enum_range'] = True
         super(QEnumRange, self).__init__(query_name, *args, **kwargs)
+
+
+class QEnumRangeMinMax(QueryableMixin):
+    """Search field for combined enums. For example the fields
+    `climbing_rating_min` and `climbing_rating_max` are combined into a single
+    search field.
+    """
+    def __init__(self, query_name, field_min, field_max, enum_mapper,
+                 *args, **kwargs):
+        self.field_min = field_min
+        self.field_max = field_max
+        self._enum_mapper = enum_mapper
+        kwargs['enum_range_min_max'] = True
+        super(QEnumRangeMinMax, self).__init__(query_name, *args, **kwargs)

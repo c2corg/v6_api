@@ -1,7 +1,7 @@
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.search.mapping import SearchDocument, BaseMeta
 from c2corg_api.search.mapping_types import QueryableMixin, QInteger,\
-    QEnumArray, QEnum, QBoolean, QEnumRange
+    QEnumArray, QEnum, QBoolean, QEnumRange, QEnumRangeMinMax
 from c2corg_common.sortable_search_attributes import sortable_access_times, \
     sortable_climbing_ratings, sortable_paragliding_ratings, \
     sortable_exposition_ratings, sortable_equipment_ratings
@@ -118,3 +118,6 @@ class SearchWaypoint(SearchDocument):
 
 SearchWaypoint.queryable_fields = QueryableMixin.get_queryable_fields(
     SearchWaypoint)
+SearchWaypoint.queryable_fields['crat'] = QEnumRangeMinMax(
+    'climbing_rating', 'climbing_rating_min', 'climbing_rating_max',
+    sortable_climbing_ratings)
