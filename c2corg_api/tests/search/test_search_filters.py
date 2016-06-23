@@ -204,29 +204,29 @@ class AdvancedSearchTest(BaseTestCase):
 
     def test_create_filter_bool(self):
         self.assertEqual(
-            create_filter('phone', '', SearchWaypoint),
+            create_filter('plift', '', SearchWaypoint),
             None)
         self.assertEqual(
-            create_filter('phone', 'invalid value', SearchWaypoint),
+            create_filter('plift', 'invalid value', SearchWaypoint),
             None)
         self.assertEqual(
-            create_filter('phone', 'true', SearchWaypoint),
-            Term(has_phone=True))
+            create_filter('plift', 'true', SearchWaypoint),
+            Term(lift_access=True))
         self.assertEqual(
-            create_filter('phone', 'True', SearchWaypoint),
-            Term(has_phone=True))
+            create_filter('plift', 'True', SearchWaypoint),
+            Term(lift_access=True))
         self.assertEqual(
-            create_filter('phone', '1', SearchWaypoint),
-            Term(has_phone=True))
+            create_filter('plift', '1', SearchWaypoint),
+            Term(lift_access=True))
         self.assertEqual(
-            create_filter('phone', 'false', SearchWaypoint),
-            Term(has_phone=False))
+            create_filter('plift', 'false', SearchWaypoint),
+            Term(lift_access=False))
         self.assertEqual(
-            create_filter('phone', 'False', SearchWaypoint),
-            Term(has_phone=False))
+            create_filter('plift', 'False', SearchWaypoint),
+            Term(lift_access=False))
         self.assertEqual(
-            create_filter('phone', '0', SearchWaypoint),
-            Term(has_phone=False))
+            create_filter('plift', '0', SearchWaypoint),
+            Term(lift_access=False))
 
     def test_create_filter_area_ids(self):
         self.assertEqual(

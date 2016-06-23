@@ -40,8 +40,6 @@ class SearchOuting(SearchDocument):
         'swlu', range=True)
     elevation_down_snow = QInteger(
         'swld', range=True)
-    awesomeness = QEnum(
-        'ofun', model_field=Outing.awesomeness)
     condition_rating = QEnum(
         'ocond', model_field=Outing.condition_rating)
     snow_quantity = QEnum(
@@ -57,7 +55,7 @@ class SearchOuting(SearchDocument):
         'activities', 'date_start', 'date_end', 'frequentation',
         'elevation_max', 'height_diff_up', 'length_total', 'public_transport',
         'elevation_access', 'elevation_up_snow', 'elevation_down_snow',
-        'awesomeness', 'condition_rating', 'snow_quantity', 'snow_quality',
+        'condition_rating', 'snow_quantity', 'snow_quality',
         'glacier_rating', 'avalanche_signs'
     ]
 
