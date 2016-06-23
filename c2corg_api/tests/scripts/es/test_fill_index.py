@@ -1,7 +1,11 @@
+import datetime
+
 from c2corg_api.models import es_sync
 from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.tests import BaseTestCase
@@ -64,6 +68,16 @@ class FillIndexTest(BaseTestCase):
                     description='...',
                     summary='The heighest point in Europe')
             ]))
+        self.session.add(Outing(
+            document_id=71175,
+            activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
+            date_end=datetime.date(2016, 1, 1), frequentation='overcrowded',
+            locales=[
+                OutingLocale(
+                    lang='en', title='Mont Blanc : Face N !',
+                    description='...', weather='sunny')
+            ]
+        ))
         self.session.flush()
 
         # fill the ElasticSearch index
@@ -92,6 +106,13 @@ class FillIndexTest(BaseTestCase):
         self.assertEqual(route.title_fr, '')
         self.assertEqual(route.doc_type, 'r')
         self.assertEqual(route.durations, [0])
+
+        outing = SearchOuting.get(id=71175)
+        self.assertIsNotNone(outing)
+        self.assertEqual(outing.title_en, 'Mont Blanc : Face N !')
+        self.assertEqual(outing.title_fr, '')
+        self.assertEqual(outing.doc_type, 'o')
+        self.assertEqual(outing.frequentation, 3)
 
         # merged document is ignored
         self.assertIsNone(SearchWaypoint.get(id=71174, ignore=404))
