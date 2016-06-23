@@ -43,7 +43,7 @@ class FillIndexTest(BaseTestCase):
         self.session.add(Route(
             document_id=71173,
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
-            height_diff_up=800, height_diff_down=800, durations='1',
+            height_diff_up=800, height_diff_down=800, durations=['1'],
             locales=[
                 RouteLocale(
                     lang='en', title='Face N',
@@ -91,6 +91,7 @@ class FillIndexTest(BaseTestCase):
         self.assertEqual(route.title_en, 'Mont Blanc : Face N')
         self.assertEqual(route.title_fr, '')
         self.assertEqual(route.doc_type, 'r')
+        self.assertEqual(route.durations, [0])
 
         # merged document is ignored
         self.assertIsNone(SearchWaypoint.get(id=71174, ignore=404))

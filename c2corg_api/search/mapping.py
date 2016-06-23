@@ -164,7 +164,10 @@ class SearchDocument(DocType):
             val = getattr(document, field)
 
             if val:
-                search_document[field] = enum_mapper[val]
+                if not isinstance(val, str):
+                    search_document[field] = [enum_mapper[v] for v in val]
+                else:
+                    search_document[field] = enum_mapper[val]
 
 
 """To support partial-matching required for the autocomplete search, we
