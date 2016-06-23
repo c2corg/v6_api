@@ -8,7 +8,8 @@ from functools import partial
 
 from c2corg_api.search import create_search, search_documents, \
     get_text_query
-from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox
+from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox, \
+    Missing
 
 
 def build_query(url_params, meta_params, doc_type):
@@ -156,7 +157,11 @@ def create_enum_range_min_max_filter(field, query_term):
     kwargs_end = {field.field_max: {'lt': range_values[0]}}
     return Bool(must_not=Bool(should=[
         Range(**kwargs_start),
-        Range(**kwargs_end)
+        Range(**kwargs_end),
+        Bool(must=[
+            Missing(field=field.field_min),
+            Missing(field=field.field_max)
+        ])
     ]))
 
 
@@ -264,7 +269,11 @@ def create_number_range_filter(field, query_term):
     kwargs_end = {field.field_max: {'lt': range_values[0]}}
     return Bool(must_not=Bool(should=[
         Range(**kwargs_start),
-        Range(**kwargs_end)
+        Range(**kwargs_end),
+        Bool(must=[
+            Missing(field=field.field_min),
+            Missing(field=field.field_max)
+        ])
     ]))
 
 

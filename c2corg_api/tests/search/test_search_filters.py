@@ -5,7 +5,8 @@ from c2corg_api.search.search_filters import create_filter, build_query, \
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.tests import BaseTestCase
-from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox
+from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox, \
+    Missing
 
 
 class AdvancedSearchTest(BaseTestCase):
@@ -206,7 +207,11 @@ class AdvancedSearchTest(BaseTestCase):
             create_filter('crat', '4b,6c', SearchWaypoint),
             Bool(must_not=Bool(should=[
                 Range(climbing_rating_min={'gt': 17}),
-                Range(climbing_rating_max={'lt': 5})
+                Range(climbing_rating_max={'lt': 5}),
+                Bool(must=[
+                    Missing(field='climbing_rating_min'),
+                    Missing(field='climbing_rating_max')
+                ])
             ])))
 
     def test_create_filter_integer_range(self):
@@ -233,7 +238,11 @@ class AdvancedSearchTest(BaseTestCase):
             create_filter('ele', '1200,2400', SearchRoute),
             Bool(must_not=Bool(should=[
                 Range(elevation_min={'gt': 2400}),
-                Range(elevation_max={'lt': 1200})
+                Range(elevation_max={'lt': 1200}),
+                Bool(must=[
+                    Missing(field='elevation_min'),
+                    Missing(field='elevation_max')
+                ])
             ])))
 
     def test_create_filter_enum(self):
