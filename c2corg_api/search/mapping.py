@@ -1,9 +1,11 @@
 import json
 
 from c2corg_api.models.document import Document
-from c2corg_api.search.mapping_types import Enum, QEnum, QEnumArray, QLong
+from c2corg_api.search.mapping_types import Enum, QEnumArray, QLong, \
+    QEnumRange
 from c2corg_api.search.utils import strip_bbcodes
 from c2corg_common.attributes import default_langs
+from c2corg_common.sortable_search_attributes import sortable_quality_types
 from elasticsearch_dsl import DocType, String, MetaField, Long, GeoPoint
 
 
@@ -33,7 +35,8 @@ class SearchDocument(DocType):
 
     id = Long()
     doc_type = Enum()
-    quality = QEnum('qa', model_field=Document.quality)
+    quality = QEnumRange(
+        'qa', model_field=Document.quality, enum_mapper=sortable_quality_types)
     available_locales = QEnumArray('l', enum=default_langs)
     geom = GeoPoint()
 
@@ -121,6 +124,10 @@ class SearchDocument(DocType):
                 search_document['description_' + locale.lang] = \
                     strip_bbcodes(locale.description)
             search_document['available_locales'] = available_locales
+
+            if document.quality:
+                search_document['quality'] = \
+                    sortable_quality_types[document.quality]
 
             if document.geometry:
                 search_document['geom'] = SearchDocument.get_geometry(

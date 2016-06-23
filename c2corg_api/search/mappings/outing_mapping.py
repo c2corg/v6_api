@@ -1,8 +1,7 @@
 from c2corg_api.models.outing import OUTING_TYPE, Outing
-from c2corg_api.search.mapping import SearchDocument, BaseMeta, \
-    QEnumArray, QEnum
+from c2corg_api.search.mapping import SearchDocument, BaseMeta
 from c2corg_api.search.mapping_types import QueryableMixin, QDateRange, \
-    QInteger, QBoolean, QLong
+    QInteger, QBoolean, QLong, QEnum, QEnumArray
 from elasticsearch_dsl import Date
 
 

@@ -151,6 +151,36 @@ class AdvancedSearchTest(BaseTestCase):
             create_filter('walt', '1500,NaN', SearchWaypoint),
             Range(elevation={'gte': 1500}))
 
+    def test_create_filter_enum_range(self):
+        self.assertEqual(
+            create_filter(
+                'not a valid field', 'medium,excellent', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('qa', '', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('qa', 'not a, valid enum', SearchWaypoint),
+            None)
+        self.assertEqual(
+            create_filter('qa', 'medium,excellent', SearchWaypoint),
+            Range(quality={'gte': 2, 'lte': 4}))
+        self.assertEqual(
+            create_filter('qa', 'medium,', SearchWaypoint),
+            Range(quality={'gte': 2}))
+        self.assertEqual(
+            create_filter('qa', 'medium', SearchWaypoint),
+            Range(quality={'gte': 2}))
+        self.assertEqual(
+            create_filter('qa', ',excellent', SearchWaypoint),
+            Range(quality={'lte': 4}))
+        self.assertEqual(
+            create_filter('qa', 'invalid enum,excellent', SearchWaypoint),
+            Range(quality={'lte': 4}))
+        self.assertEqual(
+            create_filter('qa', 'medium,invalid enum', SearchWaypoint),
+            Range(quality={'gte': 2}))
+
     def test_create_filter_enum(self):
         self.assertEqual(
             create_filter('wtyp', '', SearchWaypoint),

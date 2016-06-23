@@ -63,6 +63,8 @@ def create_filter(field_name, query_term, search_model):
     field = search_model.queryable_fields.get(field_name)
     if hasattr(field, '_range') and field._range:
         return create_range_filter(field, query_term)
+    if hasattr(field, '_enum_range') and field._enum_range:
+        return create_enum_range_filter(field, query_term)
     elif hasattr(field, '_enum'):
         return create_term_filter(field, query_term)
     elif hasattr(field, '_is_bool') and field._is_bool:
@@ -96,6 +98,34 @@ def create_range_filter(field, query_term):
     if range_from is not None and not math.isnan(range_from):
         range_params['gte'] = range_from
     if range_to is not None and not math.isnan(range_to):
+        range_params['lte'] = range_to
+
+    kwargs = {field._name: range_params}
+    return Range(**kwargs)
+
+
+def create_enum_range_filter(field, query_term):
+    """Creates an ElasticSearch enum range filter.
+
+    E.g. the call `create_enum_range_filter(quality, 'medium,excellent')
+    creates the following filter:
+        {'range': {'quality': {'gte': 2, 'lte': 4}}}
+    """
+    query_terms = query_term.split(',')
+    map_enum = partial(map_enum_to_int, field._enum_mapper)
+    range_values = list(map(map_enum, query_terms))
+
+    n = len(range_values)
+    range_from = range_values[0] if n > 0 else None
+    range_to = range_values[1] if n > 1 else None
+
+    if range_from is None and range_to is None:
+        return None
+
+    range_params = {}
+    if range_from is not None:
+        range_params['gte'] = range_from
+    if range_to is not None:
         range_params['lte'] = range_to
 
     kwargs = {field._name: range_params}
@@ -211,6 +241,17 @@ transform = partial(
         pyproj.transform,
         pyproj.Proj(init='epsg:3857'),
         pyproj.Proj(init='epsg:4326'))
+
+
+def map_enum_to_int(enum_mapper, s):
+    """
+    Maps an enum value to an integer using an `enum_mapper` (one of the
+    objects in `c2corg_common.sortable_search_attributes`.
+    """
+    if s in enum_mapper:
+        return enum_mapper[s]
+    else:
+        return None
 
 
 def parse_num(s):

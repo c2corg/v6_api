@@ -15,7 +15,7 @@ class FillIndexTest(BaseTestCase):
         """
         self.session.add(Waypoint(
             document_id=71171,
-            waypoint_type='summit', elevation=2000,
+            waypoint_type='summit', elevation=2000, quality='medium',
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
@@ -74,6 +74,7 @@ class FillIndexTest(BaseTestCase):
         self.assertEqual(waypoint1.title_fr, 'Mont Granier')
         self.assertEqual(waypoint1.summary_fr, 'Le Mont  Granier ')
         self.assertEqual(waypoint1.doc_type, 'w')
+        self.assertEqual(waypoint1.quality, 2)
         self.assertAlmostEqual(waypoint1.geom[0], 5.71288994)
         self.assertAlmostEqual(waypoint1.geom[1], 45.64476395)
 

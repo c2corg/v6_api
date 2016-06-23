@@ -32,6 +32,9 @@ class QueryableMixin(object):
         if 'date_range' in kwargs:
             self._date_range = kwargs['date_range']
             del kwargs['date_range']
+        if 'enum_range' in kwargs:
+            self._enum_range = kwargs['enum_range']
+            del kwargs['enum_range']
         if 'is_bool' in kwargs:
             self._is_bool = kwargs['is_bool']
             del kwargs['is_bool']
@@ -96,3 +99,20 @@ class QDateRange(QueryableMixin):
         self.field_date_end = field_date_end
         kwargs['date_range'] = True
         super(QDateRange, self).__init__(query_name, *args, **kwargs)
+
+
+class QEnumRange(QueryableMixin, Integer):
+    """Search field for enum ranges. To make it more convenient to search
+    for ranges with enum fields (e.g. to search a route with a rating between
+    'AD' and 'ED') the enum values are converted to integer values and
+    stored as such in ElasticSearch. When doing a search, a filter using these
+    numbers is used.
+    The enums are converted to integers using the mappers defined in
+    `c2corg_common.sortable_search_attributes`.
+    """
+    def __init__(self, query_name, model_field, enum_mapper,
+                 *args, **kwargs):
+        self._enum_mapper = enum_mapper
+        kwargs['model_field'] = model_field
+        kwargs['enum_range'] = True
+        super(QEnumRange, self).__init__(query_name, *args, **kwargs)
