@@ -154,6 +154,18 @@ class SearchDocument(DocType):
         for field in fields:
             search_document[field] = getattr(document, field)
 
+    @staticmethod
+    def copy_enum_range_fields(
+            search_document, document, fields, search_model):
+        search_fields = search_model._doc_type.mapping
+        for field in fields:
+            search_field = search_fields[field]
+            enum_mapper = search_field._enum_mapper
+            val = getattr(document, field)
+
+            if val:
+                search_document[field] = enum_mapper[val]
+
 
 """To support partial-matching required for the autocomplete search, we
 have to set up a n-gram filter for each language analyzer. See also:
