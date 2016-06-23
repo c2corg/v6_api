@@ -1,7 +1,7 @@
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.search.mapping import SearchDocument, BaseMeta
 from c2corg_api.search.mapping_types import QueryableMixin, QInteger,\
-    QEnumArray, QEnum, QLong, QEnumRange
+    QEnumArray, QEnum, QLong, QEnumRange, QNumberRange
 from c2corg_api.search.utils import get_title
 from c2corg_common.sortable_search_attributes import \
     sortable_route_duration_types, sortable_ski_ratings, \
@@ -169,3 +169,5 @@ class SearchRoute(SearchDocument):
 
 SearchRoute.queryable_fields = QueryableMixin.get_queryable_fields(
     SearchRoute)
+SearchRoute.queryable_fields['ele'] = QNumberRange(
+    'elevation', 'elevation_min', 'elevation_max')

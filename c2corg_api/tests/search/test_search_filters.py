@@ -1,4 +1,5 @@
 from c2corg_api.search import create_search, get_text_query
+from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.search_filters import create_filter, build_query, \
     create_bbox_filter
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
@@ -181,7 +182,7 @@ class AdvancedSearchTest(BaseTestCase):
             create_filter('qa', 'medium,invalid enum', SearchWaypoint),
             Range(quality={'gte': 2}))
 
-    def test_create_filter_enum_range_climbing_rating(self):
+    def test_create_filter_enum_range_min_max(self):
         self.assertEqual(
             create_filter(
                 'not a valid field', '4b,6c', SearchWaypoint),
@@ -206,6 +207,33 @@ class AdvancedSearchTest(BaseTestCase):
             Bool(must_not=Bool(should=[
                 Range(climbing_rating_min={'gt': 17}),
                 Range(climbing_rating_max={'lt': 5})
+            ])))
+
+    def test_create_filter_integer_range(self):
+        self.assertEqual(
+            create_filter(
+                'not a valid field', '1200,2400', SearchRoute),
+            None)
+        self.assertEqual(
+            create_filter('ele', '', SearchRoute),
+            None)
+        self.assertEqual(
+            create_filter('ele', 'invalid term', SearchRoute),
+            None)
+        self.assertEqual(
+            create_filter('ele', '1200', SearchRoute),
+            None)
+        self.assertEqual(
+            create_filter('ele', '1200,invalid term', SearchRoute),
+            None)
+        self.assertEqual(
+            create_filter('ele', 'invalid term,2400', SearchRoute),
+            None)
+        self.assertEqual(
+            create_filter('ele', '1200,2400', SearchRoute),
+            Bool(must_not=Bool(should=[
+                Range(elevation_min={'gt': 2400}),
+                Range(elevation_max={'lt': 1200})
             ])))
 
     def test_create_filter_enum(self):

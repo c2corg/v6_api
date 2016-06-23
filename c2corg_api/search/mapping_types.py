@@ -32,6 +32,9 @@ class QueryableMixin(object):
         if 'date_range' in kwargs:
             self._date_range = kwargs['date_range']
             del kwargs['date_range']
+        if 'integer_range' in kwargs:
+            self._integer_range = kwargs['integer_range']
+            del kwargs['integer_range']
         if 'enum_range' in kwargs:
             self._enum_range = kwargs['enum_range']
             del kwargs['enum_range']
@@ -102,6 +105,17 @@ class QDateRange(QueryableMixin):
         self.field_date_end = field_date_end
         kwargs['date_range'] = True
         super(QDateRange, self).__init__(query_name, *args, **kwargs)
+
+
+class QNumberRange(QueryableMixin):
+    """Search field for number ranges. Used for elevation_min/elevation_max
+    for routes.
+    """
+    def __init__(self, query_name, field_min, field_max, *args, **kwargs):
+        self.field_min = field_min
+        self.field_max = field_max
+        kwargs['integer_range'] = True
+        super(QNumberRange, self).__init__(query_name, *args, **kwargs)
 
 
 class QEnumRange(QueryableMixin, Integer):

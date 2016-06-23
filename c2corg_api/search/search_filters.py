@@ -63,9 +63,9 @@ def create_filter(field_name, query_term, search_model):
     field = search_model.queryable_fields.get(field_name)
     if hasattr(field, '_range') and field._range:
         return create_range_filter(field, query_term)
-    if hasattr(field, '_enum_range') and field._enum_range:
+    elif hasattr(field, '_enum_range') and field._enum_range:
         return create_enum_range_filter(field, query_term)
-    if hasattr(field, '_enum_range_min_max') and field._enum_range_min_max:
+    elif hasattr(field, '_enum_range_min_max') and field._enum_range_min_max:
         return create_enum_range_min_max_filter(field, query_term)
     elif hasattr(field, '_enum'):
         return create_term_filter(field, query_term)
@@ -75,6 +75,8 @@ def create_filter(field_name, query_term, search_model):
         return create_id_filter(field, query_term)
     elif hasattr(field, '_date_range') and field._date_range:
         return create_date_range_filter(field, query_term)
+    elif hasattr(field, '_integer_range') and field._integer_range:
+        return create_number_range_filter(field, query_term)
 
     return None
 
@@ -244,6 +246,26 @@ def create_date_range_filter(field, query_term):
             Range(**kwargs_start),
             Range(**kwargs_end)
         ]))
+
+
+def create_number_range_filter(field, query_term):
+    """Creates an ElasticSearch number range filter.
+    Used for `elevation_min`/`elevation_max` for routes.
+    """
+    query_terms = query_term.split(',')
+    range_values = list(map(parse_num, query_terms))
+    range_values = [t for t in range_values if t is not None]
+
+    n = len(range_values)
+    if n != 2:
+        return None
+
+    kwargs_start = {field.field_min: {'gt': range_values[1]}}
+    kwargs_end = {field.field_max: {'lt': range_values[0]}}
+    return Bool(must_not=Bool(should=[
+        Range(**kwargs_start),
+        Range(**kwargs_end)
+    ]))
 
 
 def create_bbox_filter(query_term):
