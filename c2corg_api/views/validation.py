@@ -153,11 +153,11 @@ def validate_associations(document_type, is_on_create, request):
     if not associations_in:
         return
 
-    request.validated['associations'] = _validate_associations(
+    request.validated['associations'] = validate_associations_in(
         associations_in, document_type, request.errors)
 
 
-def _validate_associations(associations_in, document_type, errors):
+def validate_associations_in(associations_in, document_type, errors):
     """Validate the provided associations:
 
         - Check that the linked documents exist.

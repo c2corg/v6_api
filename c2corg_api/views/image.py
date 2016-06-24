@@ -4,16 +4,17 @@ import requests
 from c2corg_api.models import DBSession
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.image import Image, schema_image, schema_update_image, \
-    schema_listing_image, IMAGE_TYPE, schema_create_image
+    schema_listing_image, IMAGE_TYPE, schema_create_image, \
+    schema_create_image_list
 from c2corg_common.fields_image import fields_image
 from cornice.resource import resource, view
 
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
-    make_validator_update
+    make_validator_update, validate_document
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
-    validate_associations
+    validate_associations, validate_associations_in
 
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, \
     HTTPBadRequest, HTTPInternalServerError
@@ -66,6 +67,24 @@ validate_associations_create = functools.partial(
     validate_associations, IMAGE_TYPE, True)
 validate_associations_update = functools.partial(
     validate_associations, IMAGE_TYPE, False)
+
+
+def validate_list_image_create(request):
+    for image in request.validated['images']:
+        validate_document(image, request, fields_image.get('required'),
+                          updating=False)
+        check_filename_unique(image, request, updating=False)
+
+
+def validate_list_associations_create(request):
+    for document in request.validated['images']:
+        associations_in = document.get('associations', None)
+
+    if not associations_in:
+        return
+
+    document['associations'] = validate_associations_in(
+        associations_in, IMAGE_TYPE, request.errors)
 
 
 def create_image(self, document_in):
@@ -127,3 +146,21 @@ class ImageRest(DocumentRest):
                                          self.request.authenticated_userid):
                 raise HTTPForbidden('No permission to change this image')
         return self._put(Image, schema_image)
+
+
+# Here path is required by cornice but related routes are not implemented
+# as far as we only need collection_post to post list of images
+@resource(collection_path='/images/list', path='/images/list/{id}',
+          cors_policy=cors_policy)
+class ImageListRest(DocumentRest):
+
+    @restricted_json_view(
+            schema=schema_create_image_list,
+            validators=[validate_list_image_create,
+                        validate_list_associations_create])
+    def collection_post(self):
+        images = []
+        for document_in in self.request.validated['images']:
+            document = create_image(self, document_in)
+            images.append({'document_id': document.document_id})
+        return {'images': images}
