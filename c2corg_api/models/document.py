@@ -285,7 +285,9 @@ class _DocumentGeometryMixin(object):
     @declared_attr
     def geom(self):
         return Column(
-            Geometry(geometry_type='POINT', srid=3857, management=True),
+            Geometry(
+                geometry_type='POINT', srid=3857, management=True,
+                spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
             info={
                 'colanderalchemy': {
                     'typ': colander_ext.Geometry('POINT', srid=3857)
@@ -297,7 +299,9 @@ class _DocumentGeometryMixin(object):
     @declared_attr
     def geom_detail(self):
         return Column(
-            Geometry(geometry_type='GEOMETRY', srid=3857, management=True),
+            Geometry(
+                geometry_type='GEOMETRY', srid=3857, management=True,
+                spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
             info={
                 'colanderalchemy': {
                     'typ': colander_ext.Geometry('GEOMETRY', srid=3857)
