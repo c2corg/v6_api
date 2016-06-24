@@ -101,7 +101,8 @@ class AssociationLog(Base):
         User, primaryjoin=user_id == User.id, viewonly=True)
 
     is_creation = Column(Boolean, default=True, nullable=False)
-    written_at = Column(DateTime, default=func.now(), nullable=False)
+    written_at = Column(
+        DateTime, default=func.now(), nullable=False, index=True)
 
 schema_association = SQLAlchemySchemaNode(
     Association,

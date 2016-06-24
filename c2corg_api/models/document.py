@@ -57,7 +57,7 @@ class _DocumentMixin(object):
     quality = Column(
         enums.quality_type, nullable=False, server_default=quality_types[1])
 
-    type = Column(String(1))
+    type = Column(String(1), index=True)
     __mapper_args__ = {
         'polymorphic_identity': DOCUMENT_TYPE,
         'polymorphic_on': type
