@@ -244,6 +244,16 @@ class AdvancedSearchTest(BaseTestCase):
                     Missing(field='elevation_max')
                 ])
             ])))
+        self.assertEqual(
+            create_filter('height', '1200,2400', SearchWaypoint),
+            Bool(must_not=Bool(should=[
+                Range(height_min={'gt': 2400}),
+                Range(height_max={'lt': 1200}),
+                Bool(must=[
+                    Missing(field='height_min'),
+                    Missing(field='height_max')
+                ])
+            ])))
 
     def test_create_filter_enum(self):
         self.assertEqual(
