@@ -25,7 +25,8 @@ class HistoryMetaData(Base):
     user = relationship(
         User, primaryjoin=user_id == User.id, viewonly=True)
     comment = Column(String(200))
-    written_at = Column(DateTime, default=func.now(), nullable=False)
+    written_at = Column(
+        DateTime, default=func.now(), nullable=False, index=True)
 
 
 class DocumentVersion(Base):
@@ -34,7 +35,7 @@ class DocumentVersion(Base):
     id = Column(Integer, primary_key=True)
     document_id = Column(
         Integer, ForeignKey(schema + '.documents.document_id'),
-        nullable=False)
+        nullable=False, index=True)
     document = relationship(
         Document, primaryjoin=document_id == Document.document_id,
         backref=backref(
@@ -63,7 +64,8 @@ class DocumentVersion(Base):
         primaryjoin=document_geometry_archive_id == ArchiveDocumentGeometry.id)
 
     history_metadata_id = Column(
-        Integer, ForeignKey(schema + '.history_metadata.id'), nullable=False)
+        Integer, ForeignKey(schema + '.history_metadata.id'), nullable=False,
+        index=True)
     history_metadata = relationship(
         HistoryMetaData, primaryjoin=history_metadata_id == HistoryMetaData.id)
 

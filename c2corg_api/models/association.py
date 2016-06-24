@@ -101,7 +101,8 @@ class AssociationLog(Base):
         User, primaryjoin=user_id == User.id, viewonly=True)
 
     is_creation = Column(Boolean, default=True, nullable=False)
-    written_at = Column(DateTime, default=func.now(), nullable=False)
+    written_at = Column(
+        DateTime, default=func.now(), nullable=False, index=True)
 
 schema_association = SQLAlchemySchemaNode(
     Association,
@@ -190,18 +191,24 @@ def limit_route_fields(query):
 
 
 def get_linked_routes(document):
+    condition_as_child = and_(
+        Association.child_document_id == Route.document_id,
+        Association.parent_document_id == document.document_id)
+    condition_as_parent = and_(
+        Association.child_document_id == document.document_id,
+        Association.parent_document_id == Route.document_id)
+
+    if document.type == WAYPOINT_TYPE:
+        condition = condition_as_child
+    elif document.type in [OUTING_TYPE, IMAGE_TYPE]:
+        condition = condition_as_parent
+    else:
+        condition = or_(condition_as_child, condition_as_parent)
+
     return limit_route_fields(
         DBSession.query(Route).
         filter(Route.redirects_to.is_(None)).
-        join(
-            Association,
-            or_(
-                and_(
-                    Association.child_document_id == Route.document_id,
-                    Association.parent_document_id == document.document_id),
-                and_(
-                    Association.child_document_id == document.document_id,
-                    Association.parent_document_id == Route.document_id)))). \
+        join(Association, condition)). \
         all()
 
 
@@ -228,13 +235,10 @@ def get_linked_images(document):
         filter(Image.redirects_to.is_(None)).
         join(
             Association,
-            or_(
-                and_(
-                    Association.child_document_id == Image.document_id,
-                    Association.parent_document_id == document.document_id),
-                and_(
-                    Association.child_document_id == document.document_id,
-                    Association.parent_document_id == Image.document_id)))). \
+            and_(
+                Association.child_document_id == Image.document_id,
+                Association.parent_document_id == document.document_id)
+            )). \
         all()
 
 

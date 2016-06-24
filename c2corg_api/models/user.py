@@ -91,7 +91,8 @@ class User(Base):
     validation_nonce_expire = Column(DateTime, nullable=True, unique=False)
     _password = Column('password', String(255), nullable=False)
     last_modified = Column(
-        DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+        DateTime, default=func.now(), onupdate=func.now(), nullable=False,
+        index=True)
 
     lang = Column(
             String(2), ForeignKey(schema + '.langs.lang'),
