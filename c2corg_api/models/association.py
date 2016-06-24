@@ -228,13 +228,10 @@ def get_linked_images(document):
         filter(Image.redirects_to.is_(None)).
         join(
             Association,
-            or_(
-                and_(
-                    Association.child_document_id == Image.document_id,
-                    Association.parent_document_id == document.document_id),
-                and_(
-                    Association.child_document_id == document.document_id,
-                    Association.parent_document_id == Image.document_id)))). \
+            and_(
+                Association.child_document_id == Image.document_id,
+                Association.parent_document_id == document.document_id)
+            )). \
         all()
 
 
