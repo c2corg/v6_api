@@ -1,4 +1,5 @@
 import functools
+import requests
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.document_history import has_been_created_by
@@ -16,8 +17,50 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
 
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, HTTPBadRequest
 
-validate_image_create = make_validator_create(fields_image.get('required'))
-validate_image_update = make_validator_update(fields_image.get('required'))
+
+def check_filename_unique(image, request, updating):
+    """Checks that filename is unique
+    """
+    if 'filename' not in image:
+        return
+    sql = DBSession.query(Image) \
+        .filter(Image.filename == image['filename'])
+    if updating:
+        sql = sql.filter(Image.document_id != image['document_id'])
+    if sql.count() > 0:
+        request.errors.add('body', 'filename', 'Unique')
+
+
+def make_validator_filename_unique(updating):
+    if updating:
+        def f(request):
+            image = request.validated
+            check_filename_unique(image, request, updating=True)
+    else:
+        def f(request):
+            image = request.validated
+            check_filename_unique(image, request, updating=False)
+    return f
+
+
+base_validate_image_create = make_validator_create(
+        fields_image.get('required'))
+base_validate_image_update = make_validator_update(
+        fields_image.get('required'))
+validate_filename_create = make_validator_filename_unique(updating=False)
+validate_filename_update = make_validator_filename_unique(updating=True)
+
+
+def validate_image_create(request):
+    base_validate_image_create(request)
+    validate_filename_create(request)
+
+
+def validate_image_update(request):
+    base_validate_image_update(request)
+    validate_filename_update(request)
+
+
 validate_associations_create = functools.partial(
     validate_associations, IMAGE_TYPE, True)
 validate_associations_update = functools.partial(
