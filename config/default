@@ -23,6 +23,7 @@ export redis_url = redis://localhost:6379/
 export redis_exchange = c2corg_$(instanceid)
 export redis_queue_es = c2corg_$(instanceid)_es_sync
 
+export image_backend_url = http://c2corgv6-demo.gis.internal:8480
 export discourse_url = http://c2corgv6-discourse.demo-camptocamp.com
 
 # database to run the unit tests
@@ -61,6 +62,7 @@ export mail_debug = 0
 # FIXME
 export discourse_sso_secret = d836444a9e4084d5b224a60c208dce14
 export discourse_api_key = 4647c0d98e8beb793da099ff103b9793d8d4f94fff7cdd52d58391c6fa025845
+export image_backend_secret_key = test
 
 export skip_captcha_validation = False
 export recaptcha_secret_key = 6LdWkR4TAAAAALcZLh54HFlAWFHiMQhZR5jR4p3F

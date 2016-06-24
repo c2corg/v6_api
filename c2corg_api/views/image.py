@@ -15,7 +15,8 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
     validate_associations
 
-from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, HTTPBadRequest
+from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, \
+    HTTPBadRequest, HTTPInternalServerError
 
 
 def check_filename_unique(image, request, updating):
@@ -67,6 +68,22 @@ validate_associations_update = functools.partial(
     validate_associations, IMAGE_TYPE, False)
 
 
+def create_image(self, document_in):
+    document = self._create_document(document_in, schema_image)
+
+    settings = self.request.registry.settings
+    url = '{}/{}'.format(settings['image_backend.url'], 'publish')
+    response = requests.post(
+            url,
+            data={'secret': settings['image_backend.secret_key'],
+                  'filename': document.filename})
+    if response.status_code != 200:
+        raise HTTPInternalServerError('Image backend returns : {} {}'.
+                                      format(response.status_code,
+                                             response.reason))
+    return document
+
+
 @resource(collection_path='/images', path='/images/{id}',
           cors_policy=cors_policy)
 class ImageRest(DocumentRest):
@@ -83,7 +100,9 @@ class ImageRest(DocumentRest):
             schema=schema_create_image,
             validators=[validate_image_create, validate_associations_create])
     def collection_post(self):
-        return self._collection_post(schema_image)
+        document_in = self.request.validated
+        document = create_image(self, document_in)
+        return {'document_id': document.document_id}
 
     @restricted_json_view(
             schema=schema_update_image,
