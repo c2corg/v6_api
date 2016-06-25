@@ -59,7 +59,7 @@ template: $(TEMPLATE_FILES)
 .PHONY: serve
 serve: install development.ini
 	echo "#\n# Also remember to start the ElasticSearch syncer script with:\n# make -f ... run-syncer\n#"
-	.build/venv/bin/gunicorn --paste --reload development.ini
+	.build/venv/bin/gunicorn --paste development.ini --reload
 
 .PHONY: run-syncer
 run-syncer: install development.ini
