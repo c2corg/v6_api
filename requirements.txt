@@ -24,6 +24,7 @@ kombu==3.0.35
 redis==2.10.5
 apscheduler==3.1.0
 requests==2.9.1
+gunicorn==19.6.0
 
 # ColanderAlchemy>=0.3.2
 # needed for ColanderAlchemy: https://github.com/stefanofontanelli/ColanderAlchemy/pull/90

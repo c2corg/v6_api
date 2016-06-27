@@ -19,7 +19,7 @@ help:
 	@echo "- clean			Remove generated files"
 	@echo "- cleanall		Remove all the build artefacts"
 	@echo "- install		Install and build the project"
-	@echo "- serve			Run the development server (pserve)"
+	@echo "- serve			Run the development server"
 	@echo "- run-syncer		Run the ElasticSearch syncer script."
 	@echo "- template		Replace the config vars in the .in templates"
 	@echo
@@ -59,7 +59,7 @@ template: $(TEMPLATE_FILES)
 .PHONY: serve
 serve: install development.ini
 	echo "#\n# Also remember to start the ElasticSearch syncer script with:\n# make -f ... run-syncer\n#"
-	.build/venv/bin/pserve --reload development.ini
+	.build/venv/bin/gunicorn --paste development.ini --reload
 
 .PHONY: run-syncer
 run-syncer: install development.ini
