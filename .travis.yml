@@ -15,6 +15,10 @@ python:
 
 addons:
   postgresql: "9.4"
+  apt:
+    packages:
+    - postgresql-9.4-postgis-scripts
+    - postgresql-9.4-postgis-2.2
 
 install:
 - mkdir /tmp/elasticsearch
