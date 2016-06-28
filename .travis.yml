@@ -1,5 +1,8 @@
-sudo: false
+sudo: required
 language: python
+
+services:
+- docker
 
 python:
 - 3.4
@@ -21,6 +24,9 @@ before_script:
 
 script:
 - make -f config/travis check
+
+after_success:
+- make cleanall publish
 
 notifications:
   email: false
