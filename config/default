@@ -1,7 +1,7 @@
 export instanceid = main
 export base_url = /
 
-export version = $(shell git rev-parse --short HEAD)
+export version = $(shell git rev-parse --short HEAD 2>/dev/null || echo "0")
 export debug_port = 6543
 
 host = c2corgv6.demo-camptocamp.com
