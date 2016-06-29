@@ -11,7 +11,9 @@ from sqlalchemy import (
     SmallInteger,
     String
     )
+from sqlalchemy.ext.declarative import declared_attr
 
+from colander import MappingSchema, SchemaNode, Sequence
 from colanderalchemy import SQLAlchemySchemaNode
 
 from c2corg_api.models import schema, enums, Base
@@ -44,7 +46,11 @@ class _ImageMixin(object):
 
     file_size = Column(Integer)
 
-    filename = Column(String(30))
+    @declared_attr
+    def filename(self):
+        return Column(String(30),
+                      nullable=False,
+                      unique=(self.__name__ == 'Image'))
 
     date_time = Column(DateTime)
 
@@ -133,3 +139,9 @@ schema_listing_image = restrict_schema(
 schema_association_image = restrict_schema(schema_image, [
     'filename', 'locales.title'
 ])
+
+
+class SchemaImageList(MappingSchema):
+    images = SchemaNode(
+        Sequence(), schema_create_image, missing=None)
+schema_create_image_list = SchemaImageList()

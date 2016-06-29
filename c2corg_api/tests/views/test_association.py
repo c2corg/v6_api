@@ -245,6 +245,6 @@ class TestAssociationRest(BaseTestRest):
         self.route1 = Route(activities=['skitouring'])
         self.session.add(self.route1)
 
-        self.image1 = Image()
+        self.image1 = Image(filename='image.jpg')
         self.session.add(self.image1)
         self.session.flush()

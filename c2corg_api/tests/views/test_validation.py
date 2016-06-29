@@ -3,7 +3,7 @@ from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
 from c2corg_api.tests import BaseTestCase
-from c2corg_api.views.validation import _validate_associations
+from c2corg_api.views.validation import validate_associations_in
 from cornice.errors import Errors
 
 
@@ -38,7 +38,7 @@ class TestValidation(BaseTestCase):
         }
 
         errors = Errors()
-        associations = _validate_associations(
+        associations = validate_associations_in(
             associations_in, OUTING_TYPE, errors)
 
         self.assertEquals(len(errors), 0)
@@ -76,7 +76,7 @@ class TestValidation(BaseTestCase):
         }
 
         errors = Errors()
-        associations = _validate_associations(
+        associations = validate_associations_in(
             associations_in, WAYPOINT_TYPE, errors)
 
         self.assertEquals(len(errors), 0)
@@ -103,7 +103,7 @@ class TestValidation(BaseTestCase):
         }
 
         errors = Errors()
-        associations = _validate_associations(
+        associations = validate_associations_in(
             associations_in, ROUTE_TYPE, errors)
 
         self.assertEquals(len(errors), 0)
@@ -128,7 +128,7 @@ class TestValidation(BaseTestCase):
         }
 
         errors = Errors()
-        associations = _validate_associations(
+        associations = validate_associations_in(
             associations_in, WAYPOINT_TYPE, errors)
 
         # users are ignored for waypoints
@@ -142,7 +142,7 @@ class TestValidation(BaseTestCase):
         }
 
         errors = Errors()
-        associations = _validate_associations(
+        associations = validate_associations_in(
             associations_in, WAYPOINT_TYPE, errors)
 
         self.assertIsNone(associations)
@@ -160,7 +160,7 @@ class TestValidation(BaseTestCase):
         }
 
         errors = Errors()
-        associations = _validate_associations(
+        associations = validate_associations_in(
             associations_in, ROUTE_TYPE, errors)
 
         self.assertIsNone(associations)

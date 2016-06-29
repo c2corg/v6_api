@@ -224,8 +224,15 @@ class DocumentRest(object):
 
     def _collection_post(
             self, schema, before_add=None, after_add=None):
-        user_id = self.request.authenticated_userid
         document_in = self.request.validated
+        document = self._create_document(
+                document_in, schema, before_add, after_add)
+        return {'document_id': document.document_id}
+
+    def _create_document(
+            self, document_in, schema, before_add=None, after_add=None):
+        user_id = self.request.authenticated_userid
+
         document = schema.objectify(document_in)
         document.document_id = None
 
@@ -246,8 +253,7 @@ class DocumentRest(object):
             create_associations(document, document_in['associations'], user_id)
 
         notify_es_syncer(self.request.registry.queue_config)
-
-        return {'document_id': document.document_id}
+        return document
 
     def _put(
             self, clazz, schema, clazz_locale=None, before_update=None,

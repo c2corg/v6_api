@@ -424,6 +424,9 @@ class BaseDocumentTestRest(BaseTestRest):
                                       headers=headers, status=200)
 
         body = response.json
+        return self._validate_document(body)
+
+    def _validate_document(self, body):
         document_id = body.get('document_id')
         self.assertIsNotNone(document_id)
 

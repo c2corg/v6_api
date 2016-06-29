@@ -42,7 +42,6 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(author['username'], 'contributor')
         self.assertEqual(author['name'], 'Contributor')
         self.assertEqual(author['user_id'], self.global_userids['contributor'])
-        self._add_test_data()
 
     def test_get_collection_for_route(self):
         reset_search_index(self.session)
