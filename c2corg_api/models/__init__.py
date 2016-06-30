@@ -34,6 +34,7 @@ from c2corg_api.models import user_profile  # noqa
 from c2corg_api.models import outing  # noqa
 from c2corg_api.models import es_sync  # noqa
 from c2corg_api.models import association_views  # noqa
+from c2corg_api.models import cache_version  # noqa
 
 document_types = {
     waypoint.WAYPOINT_TYPE: waypoint.Waypoint,

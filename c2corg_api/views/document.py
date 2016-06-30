@@ -1,3 +1,4 @@
+from c2corg_api.models.cache_version import update_cache_version
 from c2corg_api.models.image import schema_association_image
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.user import User, schema_association_user
@@ -305,6 +306,8 @@ class DocumentRest(object):
 
             if after_update:
                 after_update(document, update_types, user_id=user_id)
+
+            update_cache_version(document)
 
         associations = self.request.validated.get('associations', None)
         if associations:

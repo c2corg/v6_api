@@ -485,7 +485,8 @@ class TestWaypointRest(BaseDocumentTestRest):
                 }
             }
         }
-        (body, waypoint) = self.put_success_all(body, self.waypoint)
+        (body, waypoint) = self.put_success_all(
+            body, self.waypoint, cache_version=3)
 
         self.assertEquals(waypoint.elevation, 1234)
         locale_en = waypoint.get_locale('en')
@@ -555,7 +556,8 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'geometry': None
             }
         }
-        (body, waypoint) = self.put_success_all(body_put, self.waypoint)
+        (body, waypoint) = self.put_success_all(
+            body_put, self.waypoint, cache_version=3)
         document_id = body.get('document_id')
         self.assertEquals(body.get('version'), 2)
 
