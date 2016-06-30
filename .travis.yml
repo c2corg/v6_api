@@ -1,11 +1,24 @@
-sudo: false
+env:
+  global:
+  - secure: MmG0Dk0DIryjIeYw1wIxME+dkYweCfHhRSPpLeUTAWBOP5AveNkwySH/Or0vvEvUQIqtPZi6qIC9JtY3qPPUgcvWgdvVScbqUFVo4N8s/OwKoxvIJ+aak4E0rAKUYG4Pk6/gKAk4u79XWW702NmRqGjrhzMMy65ofdnUt1bvemMx//B+XmIjMilujRPO8pMaiki17aJ73rRZUX+c7fEFwJZzrGHr/g1F3qFJRsjpN/cDM1KSQR2GB5VHSLCcE53Yanzy2H1kc9ghfaRCy7vmBe/7n1UMZjlFf7OiiCGz8O+syP2Uz4HukOJHrIzgT2b1a7EpOwnHOj0snDTOjVpo9GKxufDyi4vd8h1GytUghWFAdLw/IMzIfQdp7676tUe3jZV7flOceMTG2HF61XY3EUfJpV7zmIRZZPgPoo3uXB852g2EXcNCkbwX4b6rQt5CmM/e/Vqu8Gvqtck0aQDzIsv1gAOHfGleRjM15ag7nvzwvb1qj1SUHP2XnIIEuxIQeSxA5r5N7k1S1DtxmEsWQWFQITUqLAkbn4lAoRzxlMvDTintEpiA91ohN1mhxckWcmED/YhWrZ48Qx+xbxXvvlGk69bDak7uyj7W+OduOEtXxB63YeKKRf7OZdMPcIhVncxMjXeALl7T7+0WYKoQoKKSe2peNH81B0kwirGwJdc=
+  - secure: mbLLt1lPnR0Eo8Cmngjr/cB+bod66x09ENRPuxVOMmd5HWXSv8FgICdK64gqHOVVsPl/F59VgN8OJc762LfTn4ZtzxzR/dbpf6cfSmEqdk/tTY/ObX5BXk/bPMJirMVcOgxvsBDQkBZKG9Gl/fiGWZLP303z9haw3g6T1/aK0AOVV0WkjBc3iEBl5NQf7UFetdTnKzA6zQbA7hl3CKSDc8JVh4zhgrea3IwLhuj4jIoFTWCegXzsk9dnpvC/fQcohN4ezmZFWv3f7Ouf2tLdRZah3qRVt/aneCv9LwfkzzK6AprJ9qabHxde0w7QqBiL/4b5qiBedSwaZGS3sfysLEdJYT0W5lc1x8z3FY7j3gzRAs+OaQBjyp/4zDqkHk6IjFFzDHAFBWtvOmDmdCReLhUi1rctsctHn+7+eTE+xYefpQsO9vGnPXwt2tTuIhBJPGK4hQBGpZjab9SxjXfcLUz6G9RkoFfbkgi7BBeR01+zyeXNK7e238ippEyb1S0wsVg1ZE1aO4QyTVERmfoCRJxK0Yi1rpFtNisIasbIYNf5N0Sh1m/nxx7Bv6JnQtSq7u4j58Fj1DJY/Fub4Vr3gBJJfb+aUd+en72+HXZDIPOj7nLfY/py31c7DERHemzwIdJPejBuQHGURk0wIhG+xHs4N/CTQto9/oF+r+GeScc=
+  - secure: 5JXOMjeTuOLcfv52OTjJO+UZC6WxRfKwLg5zrcy4AzHqVGVXgsdSrd1XAx7iZ7edyoMnDan5Ua1Eg+ZB3LaojqvKUXvHo1ughWq6fNWdIVaPvuaz4PwNHxFpcRijgzUBCqQdN3cIIc0Ab2MXpYrxd3ddXkVm6tgck5TIgtxzHnPM170qVmVr9RdRg448ciRWXemxK2mcUcmFpfcK9L0hQ4a3tXz6BCI4gL6OmJs5sobGmc7o8/ASUO29wA+ijCocQuroYjPhvqEqRxYVihswD2lmyj+JgEmu3l3LCTWVmJQRE5NtSkfGLU2/RuxYHw09nJOtt2R5nX2ILr34PfuuqoU2GWh64TVjQKnj0vQ9fEpBDchSNWxfZQNGfOTgHtXY+GTFypcC5mLHg7RraCBHElCcGgW1SaP6WSbMIKOhH5kHB7TJ8T7nrkwIfvmOostce6fpFpfsqpySYX6voP0a19gdKdm/7wpwnv4r/fP1TWqQB6DSGbqczEWSDbiJPhtYtiSue4+qrEp1RvJyqc1x/4VyYeN9UckQxlz9mOpT3sRSw4cae1O6CeZAAyxytFD2Y0YF8G0Q0S792IvHVWAtLbqx4f8YfNtRxK5sm6pnfyWsFR2GqQcn1aY9CRN88T3YrwBZ4mDw2j/x9wVMwolW8AOw4WiOBoJjXTIB6s7tQe0=
+
+sudo: required
 language: python
+
+services:
+- docker
 
 python:
 - 3.4
 
 addons:
   postgresql: "9.4"
+  apt:
+    packages:
+    - postgresql-9.4-postgis-scripts
+    - postgresql-9.4-postgis-2.2
 
 install:
 - mkdir /tmp/elasticsearch
@@ -21,6 +34,9 @@ before_script:
 
 script:
 - make -f config/travis check
+
+after_success:
+- make cleanall publish
 
 notifications:
   email: false

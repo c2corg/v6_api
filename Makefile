@@ -28,6 +28,7 @@ help:
 	@echo "- lint			Run flake8 checker on the Python code"
 	@echo "- upgrade		Upgrade the dependencies."
 	@echo "- upgrade-dev		Upgrade the dev. dependencies."
+	@echo "- publish		Push docker image to dockerhub from travis-ci"
 
 .PHONY: check
 check: lint test
@@ -111,3 +112,8 @@ apache/wsgi.conf: apache/app-c2corg_api.wsgi
 $(TEMPLATE_FILES): %: %.in
 	scripts/env_replace < $< > $@
 	chmod --reference $< $@
+
+.PHONY: publish
+publish: template
+	scripts/travis-build.sh
+	scripts/travis-publish.sh
