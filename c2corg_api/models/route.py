@@ -173,7 +173,8 @@ class Route(_RouteMixin, Document):
         ForeignKey(schema + '.documents.document_id'), primary_key=True)
 
     main_waypoint_id = Column(
-        Integer, ForeignKey(schema + '.documents.document_id'), nullable=True)
+        Integer, ForeignKey(schema + '.documents.document_id'), nullable=True,
+        index=True)
     main_waypoint = relationship(
         Document, primaryjoin=main_waypoint_id == Document.document_id)
 
