@@ -19,7 +19,7 @@ from webtest import TestApp
 from c2corg_api.emails.email_service import EmailService
 
 from c2corg_api import main
-from c2corg_api.models import *  # noqa
+from c2corg_api.models import DBSession, sessionmaker, Base
 from c2corg_api.models.user import User
 from c2corg_api.security.roles import create_claims, add_or_retrieve_token
 from c2corg_api.scripts import initializedb, initializees

@@ -1,6 +1,7 @@
 import os
 import sys
 import transaction
+from c2corg_api.models import DBSession, Base, document
 from c2corg_api.models.es_sync import ESSyncStatus
 
 from sqlalchemy import engine_from_config
@@ -11,8 +12,6 @@ from pyramid.paster import (
     )
 
 from pyramid.scripts.common import parse_vars
-
-from c2corg_api.models import *  # noqa
 from c2corg_common.attributes import default_langs
 
 

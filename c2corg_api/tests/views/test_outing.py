@@ -1010,8 +1010,7 @@ class TestOutingRest(BaseDocumentTestRest):
             height_diff_up=800, height_diff_down=800, durations='1',
             geometry=DocumentGeometry(
                 geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',  # noqa
-                geom='SRID=3857;POINT(635961 5723624)'
-        ))
+                geom='SRID=3857;POINT(635961 5723624)'))
         self.route.locales.append(RouteLocale(
             lang='en', title='Mont Blanc from the air', description='...',
             gear='paraglider', title_prefix='Main waypoint title'))
