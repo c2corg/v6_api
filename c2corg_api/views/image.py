@@ -79,12 +79,10 @@ def validate_list_image_create(request):
 def validate_list_associations_create(request):
     for document in request.validated['images']:
         associations_in = document.get('associations', None)
-
-    if not associations_in:
-        return
-
-    document['associations'] = validate_associations_in(
-        associations_in, IMAGE_TYPE, request.errors)
+        if not associations_in:
+            continue
+        document['associations'] = validate_associations_in(
+            associations_in, IMAGE_TYPE, request.errors)
 
 
 def create_image(self, document_in):
