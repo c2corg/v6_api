@@ -94,6 +94,11 @@ class BaseTestRest(BaseTestCase):
             filter(lambda locale: locale['lang'] == lang, locales),
             None)
 
+    def check_cache_version(self, document_id, version):
+        cache_version = self.session.query(CacheVersion).get(document_id)
+        self.assertIsNotNone(cache_version)
+        self.assertEqual(cache_version.version, version)
+
 
 class BaseDocumentTestRest(BaseTestRest):
 
@@ -663,11 +668,6 @@ class BaseDocumentTestRest(BaseTestRest):
         self.check_cache_version(document_id, cache_version)
 
         return (body, document)
-
-    def check_cache_version(self, document_id, version):
-        cache_version = self.session.query(CacheVersion).get(document_id)
-        self.assertIsNotNone(cache_version)
-        self.assertEqual(cache_version.version, version)
 
     def put_success_figures_only(
             self, request_body, document, user='contributor', check_es=True):

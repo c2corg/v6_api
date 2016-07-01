@@ -486,7 +486,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             }
         }
         (body, waypoint) = self.put_success_all(
-            body, self.waypoint, cache_version=3)
+            body, self.waypoint, cache_version=4)
 
         self.assertEquals(waypoint.elevation, 1234)
         locale_en = waypoint.get_locale('en')

@@ -1,5 +1,8 @@
 from c2corg_api.models import Base, schema, DBSession
 from c2corg_api.models.document import Document
+from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.route import ROUTE_TYPE
+from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.schema import Column, ForeignKey
 from sqlalchemy.sql.sqltypes import Integer
@@ -47,15 +50,17 @@ EXECUTE PROCEDURE guidebook.create_cache_version();
 event.listen(Document.__table__, 'after_create', trigger_ddl)
 
 
-# Function to update all dependent documents if a document changes
+# functions to update the cache version if a document or associations
+# have changed
 update_cache_version_ddl = DDL("""
 CREATE OR REPLACE FUNCTION guidebook.update_cache_version(p_document_id integer, p_document_type character varying(1)) --  # noqa: E501
   RETURNS void AS
 $BODY$
 BEGIN
+  -- function to update all dependent documents if a document changes
+
   -- update the version of the document itself
-  UPDATE guidebook.cache_versions v SET version = version + 1
-  WHERE v.document_id = p_document_id;
+  PERFORM guidebook.increment_cache_version(p_document_id);
 
   -- update the version of linked documents (direct associations)
   PERFORM guidebook.update_cache_version_of_linked_documents(p_document_id);
@@ -73,6 +78,28 @@ BEGIN
      -- (and their parent and grand-parent waypoints) have to be updated
     PERFORM guidebook.update_cache_version_of_outing(p_document_id);
   end if;
+END;
+$BODY$
+language plpgsql;
+
+
+CREATE OR REPLACE FUNCTION guidebook.increment_cache_version(p_document_id integer) --  # noqa: E501
+  RETURNS void AS
+$BODY$
+BEGIN
+  UPDATE guidebook.cache_versions v SET version = version + 1
+  WHERE v.document_id = p_document_id;
+END;
+$BODY$
+language plpgsql;
+
+
+CREATE OR REPLACE FUNCTION guidebook.increment_cache_versions(p_document_ids integer[]) --  # noqa: E501
+  RETURNS void AS
+$BODY$
+BEGIN
+  PERFORM guidebook.increment_cache_version(document_id)
+  from unnest(p_document_ids) as document_id;
 END;
 $BODY$
 language plpgsql;
@@ -159,6 +186,47 @@ $BODY$
 language plpgsql;
 
 
+CREATE OR REPLACE FUNCTION guidebook.update_cache_version_of_routes(p_route_ids integer[]) --   # noqa: E501
+  RETURNS void AS
+$BODY$
+BEGIN
+  -- update the cache versions of waypoints (and the parent and grand-parent
+  -- waypoints) associated to the given routes.
+  PERFORM guidebook.update_cache_version_of_route(route_id)
+  from unnest(p_route_ids) as route_id;
+END;
+$BODY$
+language plpgsql;
+
+
+CREATE OR REPLACE FUNCTION guidebook.update_cache_version_of_waypoints(p_waypoints_ids integer[]) --   # noqa: E501
+  RETURNS void AS
+$BODY$
+BEGIN
+  -- update the cache versions of the parent and grand-parent waypoints
+  -- of the given waypoints.
+  with waypoints as (
+    select waypoint_id from unnest(p_waypoints_ids) as waypoint_id ),
+  waypoint_parents as (
+    select a.parent_document_id as waypoint_id
+    from waypoints w join guidebook.associations a
+    on a.child_document_id = w.waypoint_id and a.parent_document_type = 'w'),
+  waypoint_grandparents as (
+    select a.parent_document_id as waypoint_id
+    from waypoint_parents w join guidebook.associations a
+    on a.child_document_id = w.waypoint_id and a.parent_document_type = 'w'),
+  v as (
+    select waypoint_id
+    from waypoint_parents
+    union select waypoint_id from waypoint_grandparents)
+  update guidebook.cache_versions cv SET version = version + 1
+  from v
+  where cv.document_id = v.waypoint_id;
+END;
+$BODY$
+language plpgsql;
+
+
 CREATE OR REPLACE FUNCTION guidebook.update_cache_version_of_outing(p_outing_id integer) --   # noqa: E501
   RETURNS void AS
 $BODY$
@@ -184,3 +252,46 @@ def update_cache_version(document):
         text('SELECT guidebook.update_cache_version(:document_id, :type)'),
         {'document_id': document.document_id, 'type': document.type}
     )
+
+
+def update_cache_version_associations(
+        added_associations, removed_associations):
+    changed_associations = added_associations + removed_associations
+    documents_to_update = set()
+    waypoints_to_update = set()
+    routes_to_update = set()
+
+    for association in changed_associations:
+        documents_to_update.add(association['parent_id'])
+        documents_to_update.add(association['child_id'])
+
+        if association['parent_type'] == WAYPOINT_TYPE and \
+                association['child_type'] == ROUTE_TYPE:
+            waypoints_to_update.add(association['parent_id'])
+        elif association['parent_type'] == ROUTE_TYPE and \
+                association['child_type'] == OUTING_TYPE:
+            routes_to_update.add(association['parent_id'])
+
+    if documents_to_update:
+        # update the cache version of the documents of removed associations
+        DBSession.execute(
+            text('SELECT guidebook.increment_cache_versions(:document_ids)'),
+            {'document_ids': list(documents_to_update)}
+        )
+
+    if waypoints_to_update:
+        # if an association between waypoint and route was removed/added,
+        # the waypoint parents and grand-parents have to be updated
+        DBSession.execute(
+            text('SELECT guidebook.update_cache_version_of_waypoints(:waypoint_ids)'),  # noqa: E501
+            {'waypoint_ids': list(waypoints_to_update)}
+        )
+
+    if routes_to_update:
+        # if an association between route and outing was removed/added,
+        # waypoints (and parents and grand-parents) associated to the route
+        # have to be updated
+        DBSession.execute(
+            text('SELECT guidebook.update_cache_version_of_routes(:route_ids)'),  # noqa: E501
+            {'route_ids': list(routes_to_update)}
+        )

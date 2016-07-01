@@ -41,6 +41,9 @@ class TestAssociationRest(BaseTestRest):
 
         self.assertNotifiedEs()
 
+        self.check_cache_version(self.waypoint1.document_id, 2)
+        self.check_cache_version(self.waypoint2.document_id, 2)
+
     def test_add_association_duplicate(self):
         """ Test that there is only one association between two documents.
         """
@@ -172,6 +175,9 @@ class TestAssociationRest(BaseTestRest):
         self.assertEqual(logs[1].is_creation, False)
 
         self.assertNotifiedEs()
+
+        self.check_cache_version(self.waypoint1.document_id, 3)
+        self.check_cache_version(self.waypoint2.document_id, 3)
 
     def test_delete_association_fuzzy(self):
         """Test that an association {parent: x, child: y} can be

@@ -1,4 +1,5 @@
 from c2corg_api.models import DBSession
+from c2corg_api.models.cache_version import update_cache_version_associations
 from c2corg_api.models.document import Document
 from c2corg_api.models.route import Route
 from c2corg_api.scripts.es import sync
@@ -70,6 +71,12 @@ class AssociationRest(object):
         DBSession.add(
             association.get_log(self.request.authenticated_userid))
 
+        update_cache_version_associations(
+            [{'parent_id': association.parent_document_id,
+              'parent_type': association.parent_document_type,
+              'child_id': association.child_document_id,
+              'child_type': association.child_document_type}], [])
+
         notify_es_syncer_if_needed(association, self.request)
 
         return {}
@@ -99,6 +106,13 @@ class AssociationRest(object):
 
         DBSession.delete(association)
         DBSession.add(log)
+
+        update_cache_version_associations(
+            [],
+            [{'parent_id': association.parent_document_id,
+              'parent_type': association.parent_document_type,
+              'child_id': association.child_document_id,
+              'child_type': association.child_document_type}])
 
         notify_es_syncer_if_needed(association, self.request)
 

@@ -648,7 +648,7 @@ class TestOutingRest(BaseDocumentTestRest):
             }
         }
         (body, outing) = self.put_success_all(
-            body, self.outing, user='moderator')
+            body, self.outing, user='moderator', cache_version=3)
 
         # default geom is updated with the new track
         self._assert_default_geometry(body, x=635966, y=5723629)

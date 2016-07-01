@@ -1,4 +1,5 @@
-from c2corg_api.models.cache_version import update_cache_version
+from c2corg_api.models.cache_version import update_cache_version, \
+    update_cache_version_associations
 from c2corg_api.models.image import schema_association_image
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.user import User, schema_association_user
@@ -311,11 +312,15 @@ class DocumentRest(object):
 
         associations = self.request.validated.get('associations', None)
         if associations:
-            synchronize_associations(document, associations, user_id)
+            added_associations, removed_associations = \
+                synchronize_associations(document, associations, user_id)
 
         if update_types or associations:
             # update search index
             notify_es_syncer(self.request.registry.queue_config)
+        if associations and (removed_associations or added_associations):
+            update_cache_version_associations(
+                added_associations, removed_associations)
 
         return {}
 
