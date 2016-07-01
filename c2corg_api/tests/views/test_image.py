@@ -71,8 +71,8 @@ class BaseTestImage(BaseDocumentTestRest):
         self.session.add(self.waypoint)
         self.session.flush()
 
-    def _post_success_document(self):
-        return {
+    def _post_success_document(self, overrides={}):
+        doc = {
             'filename': 'post_image.jpg',
             'activities': ['paragliding'],
             'image_type': 'collaborative',
@@ -88,6 +88,8 @@ class BaseTestImage(BaseDocumentTestRest):
                 'waypoints': [{'document_id': self.waypoint.document_id}]
             }
         }
+        doc.update(overrides)
+        return doc
 
     def _validate_post_success(self, body, doc):
         self._assert_geometry(body)
@@ -618,6 +620,17 @@ class TestImageListRest(BaseTestImage):
     def test_post_success(self, post_mock):
         body = {
             'images': [self._post_success_document()]
+        }
+        body, doc = self.post_success(body)
+        self._validate_post_success(body, doc)
+
+    @patch('c2corg_api.views.image.requests.post',
+           return_value=Mock(status_code=200))
+    def test_post_multiple(self, post_mock):
+        body = {
+            'images': [
+                self._post_success_document({'filename': 'post_image1.jpg'}),
+                self._post_success_document({'filename': 'post_image2.jpg'})]
         }
         body, doc = self.post_success(body)
         self._validate_post_success(body, doc)
