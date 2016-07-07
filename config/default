@@ -31,6 +31,7 @@ export version = $(shell git rev-parse --short HEAD 2>/dev/null || echo "0")
 
 export image_backend_url = http://c2corgv6-images.demo-camptocamp.com
 export discourse_url = http://c2corgv6-discourse.demo-camptocamp.com
+export discourse_category = 28
 
 # database to run the unit tests
 export tests_db_host = localhost
