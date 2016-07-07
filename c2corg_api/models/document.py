@@ -22,6 +22,7 @@ from sqlalchemy import (
     )
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship, column_property
 from sqlalchemy.sql.schema import UniqueConstraint
 
@@ -248,6 +249,8 @@ class DocumentLocale(Base, _DocumentLocaleMixin):
         'document_id', 'version', 'lang', 'title', 'description',
         'summary'
     ]
+
+    topic_id = association_proxy('document_topic', 'topic_id')
 
     def to_archive(self):
         locale = ArchiveDocumentLocale()
