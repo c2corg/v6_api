@@ -104,8 +104,6 @@ access_condition = enum(
     'access_condition', attributes.access_conditions)
 lift_status = enum(
     'lift_status', attributes.lift_status)
-awesomeness = enum(
-    'awesomeness', attributes.awesomeness)
 condition_rating = enum(
     'condition_rating', attributes.condition_ratings)
 glacier_rating = enum(

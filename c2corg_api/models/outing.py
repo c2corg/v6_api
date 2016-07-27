@@ -64,8 +64,6 @@ class _OutingMixin(object):
 
     lift_status = Column(enums.lift_status)
 
-    awesomeness = Column(enums.awesomeness)
-
     duration = Column(SmallInteger)
 
     duration_difficulties = Column(SmallInteger)
@@ -83,7 +81,7 @@ class _OutingMixin(object):
     hut_status = Column(enums.hut_status)
 
 attributes = [
-    'access_condition', 'activities', 'avalanche_signs', 'awesomeness',
+    'access_condition', 'activities', 'avalanche_signs',
     'condition_rating', 'date_end', 'date_start', 'duration',
     'duration_difficulties', 'elevation_access', 'elevation_down_snow',
     'elevation_max', 'elevation_min', 'elevation_up_snow', 'frequentation',
