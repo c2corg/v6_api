@@ -1,5 +1,5 @@
 from c2corg_api.models.cache_version import update_cache_version, \
-    update_cache_version_associations
+    update_cache_version_associations, get_cache_key
 from c2corg_api.models.image import schema_association_image
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.user import User, schema_association_user
@@ -21,7 +21,7 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import schema_association_waypoint
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.views import cors_policy
+from c2corg_api.views import cors_policy, etag_cache
 from c2corg_api.views import to_json_dict, to_seconds, set_best_locale
 from c2corg_api.views.validation import check_required_fields, \
     check_duplicate_locales, validate_id, validate_lang
@@ -153,11 +153,17 @@ class DocumentRest(object):
              set_custom_associations=None):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')
-        return self._get_in_lang(
-            id, lang, clazz, schema, clazz_locale, adapt_schema, include_maps,
-            include_areas, set_custom_associations)
+        editing_view = self.request.GET.get('e', '0') != '0'
 
-    def _get_in_lang(self, id, lang, clazz, schema,
+        if not editing_view:
+            cache_key = get_cache_key(id, lang)
+            etag_cache(self.request, cache_key)
+
+        return self._get_in_lang(
+            id, lang, clazz, schema, editing_view, clazz_locale, adapt_schema,
+            include_maps, include_areas, set_custom_associations)
+
+    def _get_in_lang(self, id, lang, clazz, schema, editing_view,
                      clazz_locale=None, adapt_schema=None,
                      include_maps=True, include_areas=True,
                      set_custom_associations=None):
@@ -172,7 +178,6 @@ class DocumentRest(object):
 
         set_available_langs([document])
 
-        editing_view = self.request.GET.get('e', '0') != '0'
         self._set_associations(document, lang, editing_view)
 
         if not editing_view and set_custom_associations:

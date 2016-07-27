@@ -205,6 +205,24 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(body['redirects_to'], self.waypoint.document_id)
         self.assertEqual(set(body['available_langs']), set(['en', 'fr']))
 
+    def test_get_etag(self):
+        response = self.app.get(self._prefix + '/' +
+                                str(self.waypoint.document_id),
+                                status=200)
+
+        # check that the ETag header is set
+        headers = response.headers
+        etag = headers.get('ETag')
+        self.assertIsNotNone(etag)
+
+        # then request the document again with the etag
+        headers = {
+            'If-None-Match': etag
+        }
+        response = self.app.get(self._prefix + '/' +
+                                str(self.waypoint.document_id),
+                                status=304, headers=headers)
+
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')

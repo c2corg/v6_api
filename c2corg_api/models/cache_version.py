@@ -1,3 +1,5 @@
+import logging
+
 from c2corg_api.models import Base, schema, DBSession
 from c2corg_api.models.document import Document
 from c2corg_api.models.outing import OUTING_TYPE
@@ -7,6 +9,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql.schema import Column, ForeignKey
 from sqlalchemy.sql.sqltypes import Integer
 from sqlalchemy import event, DDL, text
+
+log = logging.getLogger(__name__)
 
 
 class CacheVersion(Base):
@@ -295,3 +299,19 @@ def update_cache_version_associations(
             text('SELECT guidebook.update_cache_version_of_routes(:route_ids)'),  # noqa: E501
             {'route_ids': list(routes_to_update)}
         )
+
+
+def get_cache_key(document_id, lang):
+    version = DBSession.query(CacheVersion.version). \
+        filter(CacheVersion.document_id == document_id). \
+        first()
+
+    if not version:
+        # no version for this document id, the document should not exist
+        log.debug('no version for document id {0}'.format(document_id))
+        return
+
+    if not lang:
+        return '{0}-{1}'.format(document_id, version[0])
+    else:
+        return '{0}-{1}-{2}'.format(document_id, lang, version[0])
