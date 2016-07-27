@@ -381,6 +381,8 @@ class TestOutingRest(BaseDocumentTestRest):
         body, doc = self.post_success(body)
         self._assert_geometry(body)
         self._assert_default_geometry(body)
+        self.assertEqual(doc.date_start, datetime.date(2016, 1, 1))
+        self.assertEqual(doc.date_end, datetime.date(2016, 1, 2))
 
         version = doc.versions[0]
 
