@@ -31,7 +31,7 @@ from c2corg_api.views.validation import check_required_fields, \
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
     HTTPBadRequest, HTTPForbidden
-from sqlalchemy.orm import joinedload, contains_eager, subqueryload
+from sqlalchemy.orm import joinedload, contains_eager, subqueryload, load_only
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.orm.util import with_polymorphic
 from sqlalchemy.sql.expression import literal_column, union
@@ -67,20 +67,20 @@ class DocumentRest(object):
         if not custom_filter and \
                 advanced_search.contains_search_params(self.request.GET):
             # search with ElasticSearch
-            load_documents = advanced_search.get_load_documents(
-                self.request.GET, meta_params, doc_type, clazz)
+            search_documents = advanced_search.get_search_documents(
+                self.request.GET, meta_params, doc_type)
         else:
             # if no search parameters, directly load documents from the db
-            load_documents = partial(
-                self._load_documents_paginated, meta_params)
+            search_documents = partial(
+                self._search_documents_paginated, meta_params)
 
         return self._get_documents(
             clazz, schema, clazz_locale, adapt_schema, custom_filter,
-            include_areas, set_custom_fields, meta_params, load_documents)
+            include_areas, set_custom_fields, meta_params, search_documents)
 
     def _get_documents(
             self, clazz, schema, clazz_locale, adapt_schema, custom_filter,
-            include_areas, set_custom_fields, meta_params, load_documents):
+            include_areas, set_custom_fields, meta_params, search_documents):
         base_query = DBSession.query(clazz).\
             filter(getattr(clazz, 'redirects_to').is_(None))
         base_total_query = DBSession.query(getattr(clazz, 'document_id')).\
@@ -89,9 +89,8 @@ class DocumentRest(object):
         if custom_filter:
             base_query = custom_filter(base_query)
             base_total_query = custom_filter(base_total_query)
-
-        base_query = add_load_for_locales(base_query, clazz, clazz_locale)
-        base_query = base_query.options(joinedload(getattr(clazz, 'geometry')))
+        base_total_query = add_profile_filter(base_total_query, clazz)
+        base_query = add_load_for_profiles(base_query, clazz)
 
         if clazz == Outing:
             base_query = base_query. \
@@ -100,8 +99,23 @@ class DocumentRest(object):
         else:
             base_query = base_query.order_by(clazz.document_id.desc())
 
-        base_query = add_load_for_profiles(base_query, clazz)
-        base_total_query = add_profile_filter(base_total_query, clazz)
+        document_ids, total = search_documents(base_query, base_total_query)
+        documents = self._get_documents_from_ids(
+            document_ids, base_query, clazz, schema, clazz_locale,
+            adapt_schema, include_areas, set_custom_fields, meta_params)
+
+        return {
+            'documents': documents,
+            'total': total
+        }
+
+    def _get_documents_from_ids(
+            self, document_ids, base_query, clazz, schema, clazz_locale,
+            adapt_schema, include_areas, set_custom_fields, meta_params):
+        """ Load the documents for the ids and return them as json dict.
+        """
+        base_query = add_load_for_locales(base_query, clazz, clazz_locale)
+        base_query = base_query.options(joinedload(getattr(clazz, 'geometry')))
 
         if include_areas:
             base_query = base_query. \
@@ -116,7 +130,7 @@ class DocumentRest(object):
                         'version')
                 )
 
-        documents, total = load_documents(base_query, base_total_query)
+        documents = self._load_documents(document_ids, clazz, base_query)
 
         set_available_langs(documents, loaded=True)
         lang = meta_params['lang']
@@ -129,29 +143,46 @@ class DocumentRest(object):
         if set_custom_fields:
             set_custom_fields(documents, lang)
 
-        return {
-            'documents': [
-                to_json_dict(
-                    doc,
-                    schema if not adapt_schema else adapt_schema(schema, doc)
-                ) for doc in documents
-            ],
-            'total': total
-        }
+        return [
+            to_json_dict(
+                doc,
+                schema if not adapt_schema else adapt_schema(schema, doc)
+            ) for doc in documents
+        ]
 
-    def _load_documents_paginated(
+    def _load_documents(self, document_ids, clazz, base_query):
+        """ Load documents given a list of document ids.
+        """
+        if not document_ids:
+            return []
+
+        documents = base_query. \
+            filter(clazz.document_id.in_(document_ids)).\
+            all()
+
+        # make sure the documents are returned in the same order
+        document_index = {doc.document_id: doc for doc in documents}
+        documents = [
+            document_index[id] for id in document_ids if id in document_index]
+
+        return documents
+
+    def _search_documents_paginated(
             self, meta_params, base_query, base_total_query):
-        """Return a batch of documents with the given `offset` and `limit`.
+        """Return a batch of document ids with the given `offset` and `limit`.
         """
         offset = meta_params['offset']
         limit = meta_params['limit']
         documents = base_query. \
+            options(load_only('document_id', 'type', 'version')). \
             slice(offset, offset + limit). \
             limit(limit). \
             all()
         total = base_total_query.count()
 
-        return documents, total
+        document_ids = [doc.document_id for doc in documents]
+
+        return document_ids, total
 
     def _get(self, clazz, schema, clazz_locale=None, adapt_schema=None,
              include_maps=False, include_areas=True,
