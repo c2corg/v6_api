@@ -1,9 +1,11 @@
 import datetime
 import json
 
+from c2corg_api.caching import cache_document_detail
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
+from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
@@ -11,6 +13,7 @@ from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.tests.search import reset_search_index
 from c2corg_common.attributes import quality_types
+from dogpile.cache.api import NO_VALUE
 from shapely.geometry import shape, Point
 
 from c2corg_api.models.route import Route, RouteLocale
@@ -222,6 +225,28 @@ class TestWaypointRest(BaseDocumentTestRest):
         response = self.app.get(self._prefix + '/' +
                                 str(self.waypoint.document_id),
                                 status=304, headers=headers)
+
+    def test_get_caching(self):
+        waypoint_id = self.waypoint.document_id
+        cache_key = get_cache_key(waypoint_id, None)
+
+        cache_value = cache_document_detail.get(cache_key)
+        self.assertEqual(cache_value, NO_VALUE)
+
+        # check that the response is cached
+        self.app.get(self._prefix + '/' + str(waypoint_id), status=200)
+
+        cache_value = cache_document_detail.get(cache_key)
+        self.assertNotEqual(cache_value, NO_VALUE)
+
+        # check that values are returned from the cache
+        fake_cache_value = {'document_id': 'fake_id'}
+        cache_document_detail.set(cache_key, fake_cache_value)
+
+        response = self.app.get(
+            self._prefix + '/' + str(waypoint_id), status=200)
+        body = response.json
+        self.assertEqual(body, fake_cache_value)
 
     def test_post_error(self):
         body = self.post_error({})

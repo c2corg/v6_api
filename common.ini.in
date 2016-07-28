@@ -17,6 +17,7 @@ elasticsearch.index = {elasticsearch_index}
 redis.url = {redis_url}
 redis.exchange = {redis_exchange}
 redis.queue_es_sync = {redis_queue_es}
+redis.cache_key_prefix = {redis_cache_key_prefix}
 
 logging.level = {logging_level}
 

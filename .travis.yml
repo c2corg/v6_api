@@ -9,6 +9,7 @@ language: python
 
 services:
 - docker
+- redis-server
 
 python:
 - 3.4

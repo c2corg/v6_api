@@ -25,6 +25,7 @@ redis==2.10.5
 apscheduler==3.1.0
 requests==2.9.1
 gunicorn==19.6.0
+dogpile.cache==0.6.1
 
 # ColanderAlchemy>=0.3.2
 # needed for ColanderAlchemy: https://github.com/stefanofontanelli/ColanderAlchemy/pull/90

@@ -302,6 +302,10 @@ def update_cache_version_associations(
 
 
 def get_cache_key(document_id, lang):
+    """ Returns an identifier which reflects the version of a document and
+    all its associated documents. This identifier is used as cache key
+    and as ETag value.
+    """
     version = DBSession.query(CacheVersion.version). \
         filter(CacheVersion.document_id == document_id). \
         first()
@@ -309,7 +313,7 @@ def get_cache_key(document_id, lang):
     if not version:
         # no version for this document id, the document should not exist
         log.debug('no version for document id {0}'.format(document_id))
-        return
+        return None
 
     if not lang:
         return '{0}-{1}'.format(document_id, version[0])

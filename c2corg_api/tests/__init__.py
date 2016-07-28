@@ -5,6 +5,7 @@ import transaction
 import os
 import logging
 
+from c2corg_api.caching import cache_document_detail
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.scripts.es.fill_index import fill_index
@@ -186,6 +187,7 @@ class BaseTestCase(unittest.TestCase):
 
         self.queue_config = registry.queue_config
         reset_queue(self.queue_config)
+        invalidate_caches()
 
     def tearDown(self):  # noqa
         # rollback - everything that happened with the Session above
@@ -227,3 +229,8 @@ def reset_queue(queue_config):
     queue = queue_config.queue(queue_config.connection)
     while queue.get():
         pass
+
+
+def invalidate_caches():
+    for cache in [cache_document_detail]:
+        cache.invalidate()

@@ -1,3 +1,6 @@
+import logging
+
+from c2corg_api.caching import cache_document_detail
 from c2corg_api.models.cache_version import update_cache_version, \
     update_cache_version_associations, get_cache_key
 from c2corg_api.models.image import schema_association_image
@@ -32,6 +35,8 @@ from sqlalchemy.orm import joinedload, contains_eager, subqueryload
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.orm.util import with_polymorphic
 from sqlalchemy.sql.expression import literal_column, union
+
+log = logging.getLogger(__name__)
 
 # the maximum number of documents that can be returned in a request
 LIMIT_MAX = 100
@@ -155,13 +160,25 @@ class DocumentRest(object):
         lang = self.request.validated.get('lang')
         editing_view = self.request.GET.get('e', '0') != '0'
 
+        def create_response():
+            return self._get_in_lang(
+                id, lang, clazz, schema, editing_view, clazz_locale,
+                adapt_schema, include_maps, include_areas,
+                set_custom_associations)
+
         if not editing_view:
             cache_key = get_cache_key(id, lang)
-            etag_cache(self.request, cache_key)
 
-        return self._get_in_lang(
-            id, lang, clazz, schema, editing_view, clazz_locale, adapt_schema,
-            include_maps, include_areas, set_custom_associations)
+            if cache_key:
+                # set and check the etag: if the etag value provided in the
+                # request equals the current etag, return 'NotModified'
+                etag_cache(self.request, cache_key)
+
+                return cache_document_detail.get_or_create(
+                    cache_key, create_response, expiration_time=-1)
+
+        # don't cache if requesting a document for editing
+        return create_response()
 
     def _get_in_lang(self, id, lang, clazz, schema, editing_view,
                      clazz_locale=None, adapt_schema=None,
