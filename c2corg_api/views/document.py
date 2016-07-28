@@ -1,8 +1,9 @@
 import logging
 
-from c2corg_api.caching import cache_document_detail
+from c2corg_api.caching import cache_document_detail, cache_document_listing
 from c2corg_api.models.cache_version import update_cache_version, \
-    update_cache_version_associations, get_cache_key
+    update_cache_version_associations, get_cache_key, get_document_id, \
+    get_cache_keys
 from c2corg_api.models.image import schema_association_image
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.user import User, schema_association_user
@@ -81,6 +82,7 @@ class DocumentRest(object):
     def _get_documents(
             self, clazz, schema, clazz_locale, adapt_schema, custom_filter,
             include_areas, set_custom_fields, meta_params, search_documents):
+        lang = meta_params['lang']
         base_query = DBSession.query(clazz).\
             filter(getattr(clazz, 'redirects_to').is_(None))
         base_total_query = DBSession.query(getattr(clazz, 'document_id')).\
@@ -100,19 +102,40 @@ class DocumentRest(object):
             base_query = base_query.order_by(clazz.document_id.desc())
 
         document_ids, total = search_documents(base_query, base_total_query)
-        documents = self._get_documents_from_ids(
-            document_ids, base_query, clazz, schema, clazz_locale,
-            adapt_schema, include_areas, set_custom_fields, meta_params)
+        cache_keys = get_cache_keys(document_ids, lang)
+
+        def get_documents_from_cache_keys(*cache_keys):
+            """ This method is called from dogpile.cache with the cache keys
+            for the documents that are not cached yet.
+            """
+            ids = [get_document_id(cache_key) for cache_key in cache_keys]
+
+            docs = self._get_documents_from_ids(
+                ids, base_query, clazz, schema, clazz_locale,
+                adapt_schema, include_areas, set_custom_fields, lang)
+
+            assert len(cache_keys) == len(docs), \
+                'the number of returned documents must match ' + \
+                'the number of keys'
+
+            return docs
+
+        # get the documents from the cache or from the database
+        documents = cache_document_listing.get_or_create_multi(
+            cache_keys, get_documents_from_cache_keys, expiration_time=-1,
+            should_cache_fn=lambda v: v is not None)
 
         return {
-            'documents': documents,
+            'documents': [doc for doc in documents if doc],
             'total': total
         }
 
     def _get_documents_from_ids(
             self, document_ids, base_query, clazz, schema, clazz_locale,
-            adapt_schema, include_areas, set_custom_fields, meta_params):
+            adapt_schema, include_areas, set_custom_fields, lang):
         """ Load the documents for the ids and return them as json dict.
+        The returned list contains None values for documents that could not be
+        loaded, and the list has the same order has the document id list.
         """
         base_query = add_load_for_locales(base_query, clazz, clazz_locale)
         base_query = base_query.options(joinedload(getattr(clazz, 'geometry')))
@@ -133,7 +156,6 @@ class DocumentRest(object):
         documents = self._load_documents(document_ids, clazz, base_query)
 
         set_available_langs(documents, loaded=True)
-        lang = meta_params['lang']
         if lang is not None:
             set_best_locale(documents, lang)
 
@@ -143,15 +165,21 @@ class DocumentRest(object):
         if set_custom_fields:
             set_custom_fields(documents, lang)
 
+        # make sure the documents are returned in the same order
+        document_index = {doc.document_id: doc for doc in documents}
+        documents = [document_index.get(id) for id in document_ids]
+
         return [
             to_json_dict(
                 doc,
                 schema if not adapt_schema else adapt_schema(schema, doc)
-            ) for doc in documents
+            ) if doc else None for doc in documents
         ]
 
     def _load_documents(self, document_ids, clazz, base_query):
-        """ Load documents given a list of document ids.
+        """ Load documents given a list of document ids. Note that the
+        returned list does not contain the documents in the same order as
+        the passed in document id list.
         """
         if not document_ids:
             return []
@@ -159,11 +187,6 @@ class DocumentRest(object):
         documents = base_query. \
             filter(clazz.document_id.in_(document_ids)).\
             all()
-
-        # make sure the documents are returned in the same order
-        document_index = {doc.document_id: doc for doc in documents}
-        documents = [
-            document_index[id] for id in document_ids if id in document_index]
 
         return documents
 

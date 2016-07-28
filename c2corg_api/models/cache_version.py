@@ -301,6 +301,18 @@ def update_cache_version_associations(
         )
 
 
+def _format_cache_key(document_id, lang, version):
+    if not version:
+        # no version for this document id, the document should not exist
+        log.debug('no version for document id {0}'.format(document_id))
+        return None
+
+    if not lang:
+        return '{0}-{1}'.format(document_id, version)
+    else:
+        return '{0}-{1}-{2}'.format(document_id, lang, version)
+
+
 def get_cache_key(document_id, lang):
     """ Returns an identifier which reflects the version of a document and
     all its associated documents. This identifier is used as cache key
@@ -310,12 +322,33 @@ def get_cache_key(document_id, lang):
         filter(CacheVersion.document_id == document_id). \
         first()
 
-    if not version:
-        # no version for this document id, the document should not exist
-        log.debug('no version for document id {0}'.format(document_id))
-        return None
+    return _format_cache_key(
+        document_id, lang, version[0] if version else None)
 
-    if not lang:
-        return '{0}-{1}'.format(document_id, version[0])
-    else:
-        return '{0}-{1}-{2}'.format(document_id, lang, version[0])
+
+def get_cache_keys(document_ids, lang):
+    """ Get a cache key for all given document ids.
+    """
+    if not document_ids:
+        return []
+
+    versions = DBSession.query(CacheVersion). \
+        filter(CacheVersion.document_id.in_(document_ids)). \
+        join(Document,
+             Document.document_id == CacheVersion.document_id). \
+        filter(Document.redirects_to.is_(None)). \
+        all()
+    version_for_documents = {v.document_id: v.version for v in versions}
+
+    return [
+        _format_cache_key(
+            document_id,
+            lang,
+            version_for_documents.get(document_id)
+        ) for document_id in document_ids
+        if version_for_documents.get(document_id)
+    ]
+
+
+def get_document_id(cache_key):
+    return int(cache_key.split('-')[0])

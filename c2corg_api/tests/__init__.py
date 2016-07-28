@@ -5,7 +5,6 @@ import transaction
 import os
 import logging
 
-from c2corg_api.caching import cache_document_detail
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.scripts.es.fill_index import fill_index
@@ -19,7 +18,7 @@ from webtest import TestApp
 
 from c2corg_api.emails.email_service import EmailService
 
-from c2corg_api import main
+from c2corg_api import main, caching
 from c2corg_api.models import DBSession, sessionmaker, Base
 from c2corg_api.models.user import User
 from c2corg_api.security.roles import create_claims, add_or_retrieve_token
@@ -232,5 +231,5 @@ def reset_queue(queue_config):
 
 
 def invalidate_caches():
-    for cache in [cache_document_detail]:
+    for cache in caching.caches:
         cache.invalidate()
