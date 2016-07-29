@@ -25,17 +25,15 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import schema_association_waypoint
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.views import cors_policy, etag_cache
-from c2corg_api.views import to_json_dict, to_seconds, set_best_locale
+from c2corg_api.views import etag_cache
+from c2corg_api.views import to_json_dict, set_best_locale
 from c2corg_api.views.validation import check_required_fields, \
-    check_duplicate_locales, validate_id, validate_lang
-from cornice.resource import resource, view
+    check_duplicate_locales
 from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
     HTTPBadRequest, HTTPForbidden
 from sqlalchemy.orm import joinedload, contains_eager, subqueryload, load_only
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.orm.util import with_polymorphic
-from sqlalchemy.sql.expression import literal_column, union
 
 log = logging.getLogger(__name__)
 
@@ -596,97 +594,6 @@ class DocumentRest(object):
             if document.geometry.version != document_in.geometry.version:
                 raise HTTPConflict('version of geometry has changed')
 
-    def _get_version(self, clazz, locale_clazz, schema, adapt_schema=None):
-        id = self.request.validated['id']
-        lang = self.request.validated['lang']
-        version_id = self.request.validated['version_id']
-
-        version = DBSession.query(DocumentVersion) \
-            .options(joinedload('history_metadata').joinedload('user')) \
-            .options(joinedload(
-                DocumentVersion.document_archive.of_type(clazz))) \
-            .options(joinedload(
-                DocumentVersion.document_locales_archive.of_type(
-                    locale_clazz))) \
-            .options(joinedload(DocumentVersion.document_geometry_archive)) \
-            .filter(DocumentVersion.id == version_id) \
-            .filter(DocumentVersion.document_id == id) \
-            .filter(DocumentVersion.lang == lang) \
-            .first()
-        if version is None:
-            raise HTTPNotFound('invalid version')
-
-        archive_document = version.document_archive
-        archive_document.geometry = version.document_geometry_archive
-        archive_document.locales = [version.document_locales_archive]
-
-        if adapt_schema:
-            schema = adapt_schema(schema, archive_document)
-
-        previous_version_id, next_version_id = get_neighbour_version_ids(
-            version_id, id, lang
-        )
-
-        return {
-            'document': to_json_dict(archive_document, schema),
-            'version': self._serialize_version(version),
-            'previous_version_id': previous_version_id,
-            'next_version_id': next_version_id,
-        }
-
-    def _serialize_version(self, version):
-        return {
-            'version_id': version.id,
-            'user_id': version.history_metadata.user_id,
-            'username': version.history_metadata.user.username,
-            'name': version.history_metadata.user.name,
-            'comment': version.history_metadata.comment,
-            'written_at': to_seconds(version.history_metadata.written_at)
-        }
-
-
-def get_neighbour_version_ids(version_id, document_id, lang):
-    """
-    Get the previous and next version for a version of a document with a
-    specific language.
-    """
-    next_version = DBSession \
-        .query(
-            DocumentVersion.id.label('id'),
-            literal_column('1').label('t')) \
-        .filter(DocumentVersion.id > version_id) \
-        .filter(DocumentVersion.document_id == document_id) \
-        .filter(DocumentVersion.lang == lang) \
-        .order_by(DocumentVersion.id) \
-        .limit(1) \
-        .subquery()
-
-    previous_version = DBSession \
-        .query(
-            DocumentVersion.id.label('id'),
-            literal_column('-1').label('t')) \
-        .filter(DocumentVersion.id < version_id) \
-        .filter(DocumentVersion.document_id == document_id) \
-        .filter(DocumentVersion.lang == lang) \
-        .order_by(DocumentVersion.id.desc()) \
-        .limit(1) \
-        .subquery()
-
-    query = DBSession \
-        .query('id', 't') \
-        .select_from(union(
-            next_version.select(), previous_version.select()))
-
-    previous_version_id = None
-    next_version_id = None
-    for version, typ in query:
-        if typ == -1:
-            previous_version_id = version
-        else:
-            next_version_id = version
-
-    return previous_version_id, next_version_id
-
 
 def validate_document_for_type(document, request, fields, type_field,
                                valid_type_values, updating):
@@ -813,41 +720,3 @@ association_schemas = {
     'users': schema_association_user,
     'images': schema_association_image
 }
-
-
-@resource(path='/document/{id}/history/{lang}', cors_policy=cors_policy)
-class HistoryDocumentRest(DocumentRest):
-    """Unique class for returning history of a document.
-    """
-
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        id = self.request.validated['id']
-        lang = self.request.validated['lang']
-
-        # FIXME conditional permission check (when outings implemented)
-        # is_outing = DBSession.query(Outing) \
-        #       .filter(Outing.document_id == id).count()
-        # if is_outing > 0:
-        #    # validate permission (authenticated + associated)
-        #    # return 403 if not correct
-
-        title = DBSession.query(DocumentLocale.title) \
-            .filter(DocumentLocale.document_id == id) \
-            .filter(DocumentLocale.lang == lang) \
-            .first()
-
-        if not title:
-            raise HTTPNotFound('no locale document for ' + lang)
-
-        versions = DBSession.query(DocumentVersion) \
-            .options(joinedload('history_metadata').joinedload('user')) \
-            .filter(DocumentVersion.document_id == id) \
-            .filter(DocumentVersion.lang == lang) \
-            .order_by(DocumentVersion.id) \
-            .all()
-
-        return {
-            'title': title.title,
-            'versions': [self._serialize_version(v) for v in versions]
-        }
