@@ -14,10 +14,18 @@ elasticsearch.host = {elasticsearch_host}
 elasticsearch.port = {elasticsearch_port}
 elasticsearch.index = {elasticsearch_index}
 
+# Redis is used as queue to notify the syncer script of changed documents
+# and also as cache
 redis.url = {redis_url}
+
+# queue configuration
 redis.exchange = {redis_exchange}
 redis.queue_es_sync = {redis_queue_es}
+redis.queue_pool = 20
+
+# cache configuration
 redis.cache_key_prefix = {redis_cache_key_prefix}
+redis.cache_pool = 50
 
 logging.level = {logging_level}
 

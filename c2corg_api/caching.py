@@ -1,5 +1,6 @@
 import logging
 from dogpile.cache import make_region
+from redis.connection import BlockingConnectionPool
 
 log = logging.getLogger(__name__)
 
@@ -30,17 +31,22 @@ def configure_caches(settings):
     global KEY_PREFIX
     KEY_PREFIX = settings['redis.cache_key_prefix']
 
-    log.debug('Redis: {0}'.format(settings['redis.url']))
+    log.debug('Cache Redis: {0}'.format(settings['redis.url']))
+
+    redis_pool = BlockingConnectionPool.from_url(
+        settings['redis.url'],
+        max_connections=int(settings['redis.cache_pool']),
+        timeout=3,  # 3 seconds (waiting for connection)
+        socket_timeout=3  # 3 seconds (timeout on open socket)
+    )
 
     for cache in caches:
-        # TODO use connection pool
         cache.configure(
             'dogpile.cache.redis',
             arguments={
-                'url': settings['redis.url'],
+                'connection_pool': redis_pool,
                 'distributed_lock': True,
-                'socket_timeout': 3,  # 3 seconds
-                'lock_timeout': 5  # 5 seconds
+                'lock_timeout': 5  # 5 seconds (dogpile lock)
             },
             replace_existing_backend=True
         )
