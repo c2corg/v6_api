@@ -1,7 +1,8 @@
 import datetime
 import json
 
-from c2corg_api.caching import cache_document_detail, cache_document_listing
+from c2corg_api.caching import cache_document_detail, cache_document_listing, \
+    cache_document_history
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
@@ -979,6 +980,47 @@ class TestWaypointRest(BaseDocumentTestRest):
                 self.assertEqual(r['user_id'], user_id)
                 self.assertIn('written_at', r)
                 self.assertIn('version_id', r)
+
+    def test_history_etag(self):
+        id = self.waypoint.document_id
+
+        response = self.app.get('/document/%d/history/%s' % (id, 'fr'))
+
+        # check that the ETag header is set
+        headers = response.headers
+        etag = headers.get('ETag')
+        self.assertIsNotNone(etag)
+
+        # then request the document again with the etag
+        headers = {
+            'If-None-Match': etag
+        }
+        self.app.get(
+            '/document/%d/history/%s' % (id, 'fr'),
+            status=304, headers=headers)
+
+    def test_history_caching(self):
+        waypoint_id = self.waypoint.document_id
+        cache_key = get_cache_key(waypoint_id, 'fr')
+
+        cache_value = cache_document_history.get(cache_key)
+        self.assertEqual(cache_value, NO_VALUE)
+
+        # check that the response is cached
+        self.app.get(
+            '/document/%d/history/%s' % (waypoint_id, 'fr'), status=200)
+
+        cache_value = cache_document_history.get(cache_key)
+        self.assertNotEqual(cache_value, NO_VALUE)
+
+        # check that values are returned from the cache
+        fake_cache_value = {'title': 'fake title'}
+        cache_document_history.set(cache_key, fake_cache_value)
+
+        response = self.app.get(
+            '/document/%d/history/%s' % (waypoint_id, 'fr'), status=200)
+        body = response.json
+        self.assertEqual(body, fake_cache_value)
 
     def test_get_documents_no_version(self):
         """ Test that documents that do not have a version are skipped.
