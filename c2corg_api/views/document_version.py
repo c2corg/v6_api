@@ -1,6 +1,8 @@
+from c2corg_api.caching import cache_document_version
 from c2corg_api.models import DBSession
+from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document_history import DocumentVersion
-from c2corg_api.views import to_json_dict, to_seconds
+from c2corg_api.views import to_json_dict, to_seconds, etag_cache
 from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.elements import literal_column
@@ -15,10 +17,31 @@ class DocumentVersionRest(object):
         self.request = request
 
     def _get_version(self, clazz, locale_clazz, schema, adapt_schema=None):
-        id = self.request.validated['id']
+        document_id = self.request.validated['id']
         lang = self.request.validated['lang']
         version_id = self.request.validated['version_id']
 
+        def create_response():
+            return self._load_version(
+                document_id, lang, version_id, clazz, locale_clazz, schema,
+                adapt_schema)
+
+        base_cache_key = get_cache_key(document_id, lang)
+        if not base_cache_key:
+            raise HTTPNotFound(
+                'no version for document {0}'.format(document_id))
+        else:
+            cache_key = '{0}-{1}'.format(base_cache_key, version_id)
+            # set and check the etag: if the etag value provided in the
+            # request equals the current etag, return 'NotModified'
+            etag_cache(self.request, cache_key)
+
+            return cache_document_version.get_or_create(
+                cache_key, create_response, expiration_time=-1)
+
+    def _load_version(
+            self, document_id, lang, version_id, clazz, locale_clazz, schema,
+            adapt_schema):
         version = DBSession.query(DocumentVersion) \
             .options(joinedload('history_metadata').joinedload('user')) \
             .options(joinedload(
@@ -28,7 +51,7 @@ class DocumentVersionRest(object):
                     locale_clazz))) \
             .options(joinedload(DocumentVersion.document_geometry_archive)) \
             .filter(DocumentVersion.id == version_id) \
-            .filter(DocumentVersion.document_id == id) \
+            .filter(DocumentVersion.document_id == document_id) \
             .filter(DocumentVersion.lang == lang) \
             .first()
         if version is None:
@@ -42,7 +65,7 @@ class DocumentVersionRest(object):
             schema = adapt_schema(schema, archive_document)
 
         previous_version_id, next_version_id = get_neighbour_version_ids(
-            version_id, id, lang
+            version_id, document_id, lang
         )
 
         return {

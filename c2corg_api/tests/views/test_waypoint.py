@@ -2,7 +2,7 @@ import datetime
 import json
 
 from c2corg_api.caching import cache_document_detail, cache_document_listing, \
-    cache_document_history
+    cache_document_history, cache_document_version
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
@@ -214,6 +214,48 @@ class TestWaypointRest(BaseDocumentTestRest):
 
     def test_get_version(self):
         self.get_version(self.waypoint, self.waypoint_version)
+
+    def test_get_version_etag(self):
+        url = '{0}/{1}/en/{2}'.format(
+                self._prefix, str(self.waypoint.document_id),
+                str(self.waypoint_version.id))
+        response = self.app.get(url, status=200)
+
+        # check that the ETag header is set
+        headers = response.headers
+        etag = headers.get('ETag')
+        self.assertIsNotNone(etag)
+
+        # then request the document again with the etag
+        headers = {
+            'If-None-Match': etag
+        }
+        self.app.get(url, status=304, headers=headers)
+
+    def test_get_version_caching(self):
+        url = '{0}/{1}/en/{2}'.format(
+                self._prefix, str(self.waypoint.document_id),
+                str(self.waypoint_version.id))
+        cache_key = '{0}-{1}'.format(
+            get_cache_key(self.waypoint.document_id, 'en'),
+            self.waypoint_version.id)
+
+        cache_value = cache_document_version.get(cache_key)
+        self.assertEqual(cache_value, NO_VALUE)
+
+        # check that the response is cached
+        self.app.get(url, status=200)
+
+        cache_value = cache_document_version.get(cache_key)
+        self.assertNotEqual(cache_value, NO_VALUE)
+
+        # check that values are returned from the cache
+        fake_cache_value = {'document': 'fake doc'}
+        cache_document_version.set(cache_key, fake_cache_value)
+
+        response = self.app.get(url, status=200)
+        body = response.json
+        self.assertEqual(body, fake_cache_value)
 
     def test_get_lang(self):
         body = self.get_lang(self.waypoint)
