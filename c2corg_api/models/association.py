@@ -225,7 +225,10 @@ def get_linked_images(document):
         return query.\
             options(load_only(
                 Image.document_id, Image.filename, Image.author, Image.version,
-                Image.protected)). \
+                Image.protected, Image.activities, Image.categories,
+                Image.image_type, Image.date_time, Image.camera_name,
+                Image.exposure_time, Image.focal_length,
+                Image.fnumber, Image.iso_speed)). \
             options(joinedload(Image.locales).load_only(
                 DocumentLocale.lang, DocumentLocale.title,
                 DocumentLocale.version))
