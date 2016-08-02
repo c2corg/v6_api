@@ -137,7 +137,8 @@ schema_update_image = get_update_schema(schema_image)
 schema_listing_image = restrict_schema(
     schema_image, fields_image.get('listing'))
 schema_association_image = restrict_schema(schema_image, [
-    'filename', 'locales.title'
+    'filename', 'locales.title', 'activities', 'categories', 'image_type', 'date_time',
+    'camera_name', 'exposure_time', 'focal_length', 'fnumber', 'iso_speed'
 ])
 
 
