@@ -3,6 +3,7 @@ from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale, WAYPOINT_TYPE
+from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.views import set_best_locale
 from c2corg_api.views.validation import updatable_associations, \
     association_keys, association_keys_for_types
@@ -163,6 +164,8 @@ def _limit_waypoint_fields(query):
 def get_linked_waypoint_parents(document):
     return _limit_waypoint_fields(
         DBSession.query(Waypoint).
+        options(joinedload(Waypoint.geometry).load_only(
+            DocumentGeometry.geom)).
         filter(Waypoint.redirects_to.is_(None)).
         join(Association,
              Association.parent_document_id == Waypoint.document_id).
@@ -173,6 +176,8 @@ def get_linked_waypoint_parents(document):
 def get_linked_waypoint_children(document):
     return _limit_waypoint_fields(
         DBSession.query(Waypoint).
+        options(joinedload(Waypoint.geometry).load_only(
+            DocumentGeometry.geom)).
         filter(Waypoint.redirects_to.is_(None)).
         join(Association,
              Association.child_document_id == Waypoint.document_id).

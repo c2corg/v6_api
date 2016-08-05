@@ -101,6 +101,8 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(1, len(linked_waypoints))
         self.assertEqual(
             self.waypoint.document_id, linked_waypoints[0].get('document_id'))
+        self.assertIn('geometry', linked_waypoints[0])
+        self.assertIn('geom', linked_waypoints[0].get('geometry'))
 
         linked_routes = associations.get('routes')
         self.assertEqual(1, len(linked_routes))

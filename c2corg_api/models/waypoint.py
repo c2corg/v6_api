@@ -317,5 +317,5 @@ schema_waypoint = SQLAlchemySchemaNode(
 schema_create_waypoint = get_create_schema(schema_waypoint)
 schema_update_waypoint = get_update_schema(schema_waypoint)
 schema_association_waypoint = restrict_schema(schema_waypoint, [
-    'elevation', 'locales.title'
+    'elevation', 'locales.title', 'geometry.geom'
 ])
