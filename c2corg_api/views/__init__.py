@@ -166,7 +166,7 @@ def get_best_locale(available_locales, preferred_lang):
 
 def etag_cache(request, key):
     """Use the HTTP Entity Tag cache for Browser side caching
-    If a "If-None-Match" header is found, and equivilant to ``key``,
+    If a "If-None-Match" header is found, and equivalent to ``key``,
     then a ``304`` HTTP message will be returned with the ETag to tell
     the browser that it should use its current cache of the page.
     Otherwise, the ETag header will be added to the response headers.

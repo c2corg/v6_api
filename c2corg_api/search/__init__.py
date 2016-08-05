@@ -59,7 +59,10 @@ def get_queue_config(settings):
 
     class QueueConfiguration(object):
         def __init__(self, settings):
-            self.connection = Connection(settings['redis.url'])
+            self.connection = Connection(
+                settings['redis.url'],
+                virtual_host=settings['redis.db_queue']
+            )
             self.exchange = Exchange(settings['redis.exchange'], type='direct')
             self.queue = Queue(settings['redis.queue_es_sync'], self.exchange)
 

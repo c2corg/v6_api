@@ -17,6 +17,8 @@ elasticsearch.index = {elasticsearch_index}
 # Redis is used as queue to notify the syncer script of changed documents
 # and also as cache
 redis.url = {redis_url}
+redis.db_queue = {redis_db_queue}
+redis.db_cache = {redis_db_cache}
 
 # queue configuration
 redis.exchange = {redis_exchange}
@@ -26,6 +28,9 @@ redis.queue_pool = 20
 # cache configuration
 redis.cache_key_prefix = {redis_cache_key_prefix}
 redis.cache_pool = 50
+
+cache_version = {version}
+cache_version_timestamp = False
 
 logging.level = {logging_level}
 

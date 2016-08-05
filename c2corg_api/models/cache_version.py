@@ -1,5 +1,6 @@
 import logging
 
+from c2corg_api import caching
 from c2corg_api.models import Base, schema, DBSession
 from c2corg_api.models.document import Document
 from c2corg_api.models.outing import OUTING_TYPE
@@ -25,6 +26,7 @@ class CacheVersion(Base):
     document_id = Column(
         Integer, ForeignKey(schema + '.documents.document_id'),
         primary_key=True)
+
     document = relationship(
         Document, primaryjoin=document_id == Document.document_id
     )
@@ -308,9 +310,11 @@ def _format_cache_key(document_id, lang, version):
         return None
 
     if not lang:
-        return '{0}-{1}'.format(document_id, version)
+        return '{0}-{1}-{2}'.format(
+            document_id, version, caching.CACHE_VERSION)
     else:
-        return '{0}-{1}-{2}'.format(document_id, lang, version)
+        return '{0}-{1}-{2}-{3}'.format(
+            document_id, lang, version, caching.CACHE_VERSION)
 
 
 def get_cache_key(document_id, lang):

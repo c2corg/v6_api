@@ -1,4 +1,5 @@
 import logging
+import time
 from dogpile.cache import make_region
 from redis.connection import BlockingConnectionPool
 
@@ -6,6 +7,10 @@ log = logging.getLogger(__name__)
 
 # prefix for all cache keys
 KEY_PREFIX = 'c2corg'
+
+# cache version (for production the current git revisions, for development
+# the git revision and a timestamp).
+CACHE_VERSION = None
 
 
 def create_region(name):
@@ -29,12 +34,25 @@ caches = [
 
 def configure_caches(settings):
     global KEY_PREFIX
+    global CACHE_VERSION
     KEY_PREFIX = settings['redis.cache_key_prefix']
 
-    log.debug('Cache Redis: {0}'.format(settings['redis.url']))
+    # append a timestamp to the cache key when running in dev. mode
+    # (to make sure that the cache values are invalidated when the dev.
+    # server reloads when the code changes)
+    cache_version = settings['cache_version']
+    if settings['cache_version_timestamp'] == 'True':
+        cache_version = '{0}-{1}'.format(cache_version, int(time.time()))
+    CACHE_VERSION = cache_version
+
+    log.debug('Cache version {0}'.format(CACHE_VERSION))
+
+    redis_url = '{0}?db={1}'.format(
+        settings['redis.url'], settings['redis.db_cache'])
+    log.debug('Cache Redis: {0}'.format(redis_url))
 
     redis_pool = BlockingConnectionPool.from_url(
-        settings['redis.url'],
+        redis_url,
         max_connections=int(settings['redis.cache_pool']),
         timeout=3,  # 3 seconds (waiting for connection)
         socket_timeout=3  # 3 seconds (timeout on open socket)

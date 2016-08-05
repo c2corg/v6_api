@@ -1,6 +1,7 @@
 include Makefile
 
-export version = 0
-
 host = c2corgv6-demo.gis.internal
 export recaptcha_secret_key = 6LdWkR4TAAAAALcZLh54HFlAWFHiMQhZR5jR4p3F
+
+export redis_db_queue = 6
+export redis_db_cache = 7
