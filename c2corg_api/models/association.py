@@ -225,17 +225,20 @@ def get_linked_users(document):
         all()
 
 
-def get_linked_images(document):
-    def limit_route_fields(query):
-        return query.\
-            options(load_only(
-                Image.document_id, Image.filename, Image.author, Image.version,
-                Image.protected)). \
-            options(joinedload(Image.locales).load_only(
-                DocumentLocale.lang, DocumentLocale.title,
-                DocumentLocale.version))
+def _limit_image_fields(query):
+    return query.\
+        options(load_only(
+            Image.document_id, Image.filename, Image.author, Image.version,
+            Image.protected)). \
+        options(joinedload(Image.locales).load_only(
+            DocumentLocale.lang, DocumentLocale.title,
+            DocumentLocale.version)). \
+        options(joinedload(Image.geometry).load_only(
+            DocumentGeometry.geom))
 
-    return limit_route_fields(
+
+def get_linked_images(document):
+    return _limit_image_fields(
         DBSession.query(Image).
         filter(Image.redirects_to.is_(None)).
         join(
