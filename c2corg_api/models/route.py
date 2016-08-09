@@ -322,3 +322,7 @@ schema_association_route = restrict_schema(schema_route, [
     'locales.title', 'locales.title_prefix', 'elevation_min', 'elevation_max',
     'activities'
 ])
+schema_association_waypoint_route = restrict_schema(schema_route, [
+    'locales.title', 'locales.title_prefix', 'elevation_min', 'elevation_max',
+    'activities', 'geometry.geom_detail'
+])

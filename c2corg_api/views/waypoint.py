@@ -2,10 +2,11 @@ import functools
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association, limit_route_fields
-from c2corg_api.models.document import UpdateType, DocumentLocale
+from c2corg_api.models.document import UpdateType, DocumentLocale, \
+    DocumentGeometry
 from c2corg_api.models.outing import Outing, schema_association_outing
 from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE, \
-    schema_association_route
+    schema_association_waypoint_route
 from c2corg_api.views.outing import set_author
 from c2corg_api.views.route import set_route_title_prefix
 from cornice.resource import resource, view
@@ -335,6 +336,8 @@ def set_linked_routes(waypoint, lang):
 
     routes = limit_route_fields(
         DBSession.query(Route).
+        options(joinedload(Route.geometry).load_only(
+            DocumentGeometry.geom_detail)).
         select_from(with_query_waypoints).
         join(
             Association,
@@ -357,7 +360,7 @@ def set_linked_routes(waypoint, lang):
     waypoint.associations['all_routes'] = {
         'total': total,
         'routes': [
-            to_json_dict(route, schema_association_route)
+            to_json_dict(route, schema_association_waypoint_route)
             for route in routes
         ]
     }
