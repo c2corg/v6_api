@@ -134,6 +134,8 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(len(linked_images), 1)
         self.assertEqual(
             linked_images[0]['document_id'], self.image.document_id)
+        self.assertIn('geometry', linked_images[0])
+        self.assertIn('geom', linked_images[0].get('geometry'))
 
     def test_get_edit(self):
         response = self.app.get(self._prefix + '/' +
@@ -994,7 +996,10 @@ class TestOutingRest(BaseDocumentTestRest):
             access='ouai'))
         self.session.add(self.waypoint)
 
-        self.image = Image(filename='20160101-00:00:00.jpg')
+        self.image = Image(
+            filename='20160101-00:00:00.jpg',
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'))
         self.image.locales.append(DocumentLocale(lang='en', title='...'))
         self.session.add(self.image)
         self.session.flush()

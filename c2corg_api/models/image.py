@@ -137,7 +137,7 @@ schema_update_image = get_update_schema(schema_image)
 schema_listing_image = restrict_schema(
     schema_image, fields_image.get('listing'))
 schema_association_image = restrict_schema(schema_image, [
-    'filename', 'locales.title'
+    'filename', 'locales.title', 'geometry.geom'
 ])
 
 

@@ -106,6 +106,8 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(
             self.waypoint4.document_id, linked_waypoints[0].get('document_id'))
         self.assertIn('type', linked_waypoints[0])
+        self.assertIn('geometry', linked_waypoints[0])
+        self.assertIn('geom', linked_waypoints[0].get('geometry'))
 
         all_linked_routes = associations.get('all_routes')
         linked_routes = all_linked_routes['routes']
@@ -120,6 +122,8 @@ class TestWaypointRest(BaseDocumentTestRest):
         # directly associated to the waypoint
         self.assertEqual(
             linked_routes[1]['document_id'], self.route3.document_id)
+        self.assertIn('geometry', linked_routes[0])
+        self.assertIn('geom_detail', linked_routes[0].get('geometry'))
 
         self.assertIn('maps', body)
         self.assertEqual(1, len(body.get('maps')))
@@ -965,10 +969,14 @@ class TestWaypointRest(BaseDocumentTestRest):
             self.waypoint5, self.global_userids['contributor'])
 
         # add some associations
+        route1_geometry = DocumentGeometry(
+            geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
+            geom='SRID=3857;POINT(635961 5723624)')
         self.route1 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
             height_diff_up=800, height_diff_down=800, durations='1',
-            main_waypoint_id=self.waypoint.document_id
+            main_waypoint_id=self.waypoint.document_id,
+            geometry=route1_geometry
         )
         self.route1.locales.append(RouteLocale(
             lang='en', title='Mont Blanc from the air', description='...',
