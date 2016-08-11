@@ -1,5 +1,6 @@
 import logging
 
+from c2corg_api.caching import configure_caches
 from pyramid.config import Configurator
 from sqlalchemy import engine_from_config
 from pyramid.httpexceptions import HTTPUnauthorized
@@ -86,6 +87,8 @@ def main(global_config, **settings):
         config.set_root_factory(RootFactory)
     else:
         log.warning('Bypassing authorization')
+
+    configure_caches(settings)
 
     # Scan MUST be the last call otherwise ACLs will not be set
     # and the permissions would be bypassed

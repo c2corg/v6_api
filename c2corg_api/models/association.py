@@ -339,11 +339,16 @@ def synchronize_associations(document, new_associations, user_id):
     to_add, to_remove = _diff_associations(
         new_associations, current_associations)
 
-    _apply_operation(to_add, add_association, document, user_id)
-    _apply_operation(to_remove, remove_association, document, user_id)
+    added_associations = _apply_operation(
+        to_add, add_association, document, user_id)
+    removed_associations = _apply_operation(
+        to_remove, remove_association, document, user_id)
+
+    return added_associations, removed_associations
 
 
 def _apply_operation(docs, add_or_remove, document, user_id):
+    associations = []
     main_doc_type = document.type
     for doc in docs:
         is_parent = doc['is_parent']
@@ -355,6 +360,14 @@ def _apply_operation(docs, add_or_remove, document, user_id):
         add_or_remove(
             parent_id, parent_type, child_id, child_type,
             user_id, check_first=False)
+        associations.append({
+            'parent_id': parent_id,
+            'parent_type': parent_type,
+            'child_id': child_id,
+            'child_type': child_type
+        })
+
+    return associations
 
 
 def _get_current_associations(document, new_associations):

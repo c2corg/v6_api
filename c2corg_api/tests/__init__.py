@@ -18,8 +18,8 @@ from webtest import TestApp
 
 from c2corg_api.emails.email_service import EmailService
 
-from c2corg_api import main
-from c2corg_api.models import *  # noqa
+from c2corg_api import main, caching
+from c2corg_api.models import DBSession, sessionmaker, Base
 from c2corg_api.models.user import User
 from c2corg_api.security.roles import create_claims, add_or_retrieve_token
 from c2corg_api.scripts import initializedb, initializees
@@ -186,6 +186,7 @@ class BaseTestCase(unittest.TestCase):
 
         self.queue_config = registry.queue_config
         reset_queue(self.queue_config)
+        invalidate_caches()
 
     def tearDown(self):  # noqa
         # rollback - everything that happened with the Session above
@@ -227,3 +228,8 @@ def reset_queue(queue_config):
     queue = queue_config.queue(queue_config.connection)
     while queue.get():
         pass
+
+
+def invalidate_caches():
+    for cache in caching.caches:
+        cache.invalidate()

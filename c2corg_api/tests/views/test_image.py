@@ -416,7 +416,7 @@ class TestImageRest(BaseTestImage):
                 }
             }
         }
-        (body, image) = self.put_success_all(body, self.image)
+        (body, image) = self.put_success_all(body, self.image, cache_version=3)
 
         self.assertEquals(image.height, 2000)
         locale_en = image.get_locale('en')

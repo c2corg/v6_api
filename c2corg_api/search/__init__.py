@@ -55,11 +55,14 @@ def configure_es_from_config(settings):
 
 def get_queue_config(settings):
     # set the number of connections to Redis
-    pools.set_limit(20)
+    pools.set_limit(int(settings['redis.queue_pool']))
 
     class QueueConfiguration(object):
         def __init__(self, settings):
-            self.connection = Connection(settings['redis.url'])
+            self.connection = Connection(
+                settings['redis.url'],
+                virtual_host=settings['redis.db_queue']
+            )
             self.exchange = Exchange(settings['redis.exchange'], type='direct')
             self.queue = Queue(settings['redis.queue_es_sync'], self.exchange)
 

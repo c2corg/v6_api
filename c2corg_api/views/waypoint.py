@@ -7,6 +7,7 @@ from c2corg_api.models.document import UpdateType, DocumentLocale, \
 from c2corg_api.models.outing import Outing, schema_association_outing
 from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE, \
     schema_association_waypoint_route
+from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.outing import set_author
 from c2corg_api.views.route import set_route_title_prefix
 from cornice.resource import resource, view
@@ -409,7 +410,7 @@ def _get_select_children(waypoint):
 
 
 @resource(path='/waypoints/{id}/{lang}/{version_id}', cors_policy=cors_policy)
-class WaypointVersionRest(DocumentRest):
+class WaypointVersionRest(DocumentVersionRest):
 
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):

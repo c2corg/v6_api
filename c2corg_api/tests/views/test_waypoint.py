@@ -1,24 +1,30 @@
 import datetime
 import json
 
+from c2corg_api.caching import cache_document_detail, cache_document_listing, \
+    cache_document_history, cache_document_version
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
+from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.tests.search import reset_search_index
+from c2corg_api.views.waypoint import WaypointRest, listing_schema_adaptor
 from c2corg_common.attributes import quality_types
+from dogpile.cache.api import NO_VALUE
+from pyramid.testing import DummyRequest
 from shapely.geometry import shape, Point
 
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import (
     Waypoint, WaypointLocale, ArchiveWaypoint, ArchiveWaypointLocale,
-    WAYPOINT_TYPE)
+    WAYPOINT_TYPE, schema_waypoint)
 from c2corg_api.models.document import (
-    DocumentGeometry, ArchiveDocumentGeometry, DocumentLocale)
+    DocumentGeometry, ArchiveDocumentGeometry, DocumentLocale, Document)
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
@@ -64,6 +70,33 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertResultsEqual(
             self.get_collection({'offset': 1, 'limit': 2}),
             [self.waypoint3.document_id, self.waypoint2.document_id], 4)
+
+    def test_get_collection_caching(self):
+        cache_key_2 = get_cache_key(self.waypoint2.document_id, None)
+        cache_key_3 = get_cache_key(self.waypoint3.document_id, None)
+        cache_key_4 = get_cache_key(self.waypoint4.document_id, None)
+
+        self.assertEqual(cache_document_listing.get(cache_key_2), NO_VALUE)
+        self.assertEqual(cache_document_listing.get(cache_key_3), NO_VALUE)
+        self.assertEqual(cache_document_listing.get(cache_key_4), NO_VALUE)
+
+        # check that documents returned in the response are cached
+        self.assertResultsEqual(
+            self.get_collection({'offset': 0, 'limit': 2}),
+            [self.waypoint4.document_id, self.waypoint3.document_id], 4)
+
+        self.assertNotEqual(cache_document_listing.get(cache_key_3), NO_VALUE)
+        self.assertNotEqual(cache_document_listing.get(cache_key_4), NO_VALUE)
+
+        # check that values are returned from the cache
+        fake_cache_value = {'document_id': 'fake_id'}
+        cache_document_listing.set(cache_key_3, fake_cache_value)
+
+        body = self.get_collection({'offset': 1, 'limit': 2})
+        self.assertResultsEqual(
+            body,
+            ['fake_id', self.waypoint2.document_id], 4)
+        self.assertNotEqual(cache_document_listing.get(cache_key_2), NO_VALUE)
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
@@ -182,6 +215,48 @@ class TestWaypointRest(BaseDocumentTestRest):
     def test_get_version(self):
         self.get_version(self.waypoint, self.waypoint_version)
 
+    def test_get_version_etag(self):
+        url = '{0}/{1}/en/{2}'.format(
+                self._prefix, str(self.waypoint.document_id),
+                str(self.waypoint_version.id))
+        response = self.app.get(url, status=200)
+
+        # check that the ETag header is set
+        headers = response.headers
+        etag = headers.get('ETag')
+        self.assertIsNotNone(etag)
+
+        # then request the document again with the etag
+        headers = {
+            'If-None-Match': etag
+        }
+        self.app.get(url, status=304, headers=headers)
+
+    def test_get_version_caching(self):
+        url = '{0}/{1}/en/{2}'.format(
+                self._prefix, str(self.waypoint.document_id),
+                str(self.waypoint_version.id))
+        cache_key = '{0}-{1}'.format(
+            get_cache_key(self.waypoint.document_id, 'en'),
+            self.waypoint_version.id)
+
+        cache_value = cache_document_version.get(cache_key)
+        self.assertEqual(cache_value, NO_VALUE)
+
+        # check that the response is cached
+        self.app.get(url, status=200)
+
+        cache_value = cache_document_version.get(cache_key)
+        self.assertNotEqual(cache_value, NO_VALUE)
+
+        # check that values are returned from the cache
+        fake_cache_value = {'document': 'fake doc'}
+        cache_document_version.set(cache_key, fake_cache_value)
+
+        response = self.app.get(url, status=200)
+        body = response.json
+        self.assertEqual(body, fake_cache_value)
+
     def test_get_lang(self):
         body = self.get_lang(self.waypoint)
 
@@ -204,6 +279,46 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertIn('redirects_to', body)
         self.assertEqual(body['redirects_to'], self.waypoint.document_id)
         self.assertEqual(set(body['available_langs']), set(['en', 'fr']))
+
+    def test_get_etag(self):
+        response = self.app.get(self._prefix + '/' +
+                                str(self.waypoint.document_id),
+                                status=200)
+
+        # check that the ETag header is set
+        headers = response.headers
+        etag = headers.get('ETag')
+        self.assertIsNotNone(etag)
+
+        # then request the document again with the etag
+        headers = {
+            'If-None-Match': etag
+        }
+        response = self.app.get(self._prefix + '/' +
+                                str(self.waypoint.document_id),
+                                status=304, headers=headers)
+
+    def test_get_caching(self):
+        waypoint_id = self.waypoint.document_id
+        cache_key = get_cache_key(waypoint_id, None)
+
+        cache_value = cache_document_detail.get(cache_key)
+        self.assertEqual(cache_value, NO_VALUE)
+
+        # check that the response is cached
+        self.app.get(self._prefix + '/' + str(waypoint_id), status=200)
+
+        cache_value = cache_document_detail.get(cache_key)
+        self.assertNotEqual(cache_value, NO_VALUE)
+
+        # check that values are returned from the cache
+        fake_cache_value = {'document_id': 'fake_id'}
+        cache_document_detail.set(cache_key, fake_cache_value)
+
+        response = self.app.get(
+            self._prefix + '/' + str(waypoint_id), status=200)
+        body = response.json
+        self.assertEqual(body, fake_cache_value)
 
     def test_post_error(self):
         body = self.post_error({})
@@ -485,7 +600,8 @@ class TestWaypointRest(BaseDocumentTestRest):
                 }
             }
         }
-        (body, waypoint) = self.put_success_all(body, self.waypoint)
+        (body, waypoint) = self.put_success_all(
+            body, self.waypoint, cache_version=4)
 
         self.assertEquals(waypoint.elevation, 1234)
         locale_en = waypoint.get_locale('en')
@@ -555,7 +671,8 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'geometry': None
             }
         }
-        (body, waypoint) = self.put_success_all(body_put, self.waypoint)
+        (body, waypoint) = self.put_success_all(
+            body_put, self.waypoint, cache_version=3)
         document_id = body.get('document_id')
         self.assertEquals(body.get('version'), 2)
 
@@ -905,6 +1022,149 @@ class TestWaypointRest(BaseDocumentTestRest):
                 self.assertEqual(r['user_id'], user_id)
                 self.assertIn('written_at', r)
                 self.assertIn('version_id', r)
+
+    def test_history_etag(self):
+        id = self.waypoint.document_id
+
+        response = self.app.get('/document/%d/history/%s' % (id, 'fr'))
+
+        # check that the ETag header is set
+        headers = response.headers
+        etag = headers.get('ETag')
+        self.assertIsNotNone(etag)
+
+        # then request the document again with the etag
+        headers = {
+            'If-None-Match': etag
+        }
+        self.app.get(
+            '/document/%d/history/%s' % (id, 'fr'),
+            status=304, headers=headers)
+
+    def test_history_caching(self):
+        waypoint_id = self.waypoint.document_id
+        cache_key = get_cache_key(waypoint_id, 'fr')
+
+        cache_value = cache_document_history.get(cache_key)
+        self.assertEqual(cache_value, NO_VALUE)
+
+        # check that the response is cached
+        self.app.get(
+            '/document/%d/history/%s' % (waypoint_id, 'fr'), status=200)
+
+        cache_value = cache_document_history.get(cache_key)
+        self.assertNotEqual(cache_value, NO_VALUE)
+
+        # check that values are returned from the cache
+        fake_cache_value = {'title': 'fake title'}
+        cache_document_history.set(cache_key, fake_cache_value)
+
+        response = self.app.get(
+            '/document/%d/history/%s' % (waypoint_id, 'fr'), status=200)
+        body = response.json
+        self.assertEqual(body, fake_cache_value)
+
+    def test_get_documents_no_version(self):
+        """ Test that documents that do not have a version are skipped.
+        """
+        waypoint_view = WaypointRest(DummyRequest())
+
+        def search_documents(_, __):
+            documents_ids = [
+                self.waypoint.document_id, 999, self.waypoint2.document_id]
+            return documents_ids, 3
+
+        body = waypoint_view._get_documents(
+            Waypoint, schema_waypoint, DocumentLocale,
+            adapt_schema=listing_schema_adaptor, custom_filter=None,
+            include_areas=None, set_custom_fields=None,
+            meta_params={'lang': None}, search_documents=search_documents)
+
+        documents = body.get('documents')
+        self.assertEqual(len(documents), 2)
+
+        self.assertEqual(
+            documents[0]['document_id'], self.waypoint.document_id)
+        self.assertEqual(
+            documents[1]['document_id'], self.waypoint2.document_id)
+
+    def test_get_documents_redirect(self):
+        """ Test that redirected documents are handled correctly.
+        """
+        waypoint_view = WaypointRest(DummyRequest())
+
+        def search_documents(_, __):
+            documents_ids = [
+                self.waypoint.document_id,
+                self.waypoint5.document_id,  # with a redirect
+                self.waypoint2.document_id]
+            return documents_ids, 3
+
+        body = waypoint_view._get_documents(
+            Waypoint, schema_waypoint, DocumentLocale,
+            adapt_schema=listing_schema_adaptor, custom_filter=None,
+            include_areas=None, set_custom_fields=None,
+            meta_params={'lang': None}, search_documents=search_documents)
+
+        documents = body.get('documents')
+        self.assertEqual(len(documents), 2)
+
+        self.assertEqual(
+            documents[0]['document_id'], self.waypoint.document_id)
+        self.assertEqual(
+            documents[1]['document_id'], self.waypoint2.document_id)
+
+    def test_get_documents_none_documents(self):
+        """ Test that documents that have a cache key and are not redirected,
+        but that are not returned in the document query (e.g. because of a
+        custom filter) are handled correctly (not included in the response and
+        not cached).
+        """
+        waypoint_view = WaypointRest(DummyRequest())
+
+        def search_documents(_, __):
+            documents_ids = [
+                self.waypoint.document_id,
+                self.waypoint3.document_id,  # not included in the result
+                self.waypoint2.document_id]
+            return documents_ids, 3
+
+        def custom_filter(query):
+            # fake filter
+            return query. \
+                filter(Document.document_id != self.waypoint3.document_id)
+
+        body = waypoint_view._get_documents(
+            Waypoint, schema_waypoint, DocumentLocale,
+            adapt_schema=listing_schema_adaptor, custom_filter=custom_filter,
+            include_areas=None, set_custom_fields=None,
+            meta_params={'lang': None}, search_documents=search_documents)
+
+        documents = body.get('documents')
+        self.assertEqual(len(documents), 2)
+
+        # only valid documents are returned
+        self.assertEqual(
+            documents[0]['document_id'], self.waypoint.document_id)
+        self.assertEqual(
+            documents[1]['document_id'], self.waypoint2.document_id)
+
+        # the valid documents are cached
+        self.assertNotEqual(
+            cache_document_listing.get(
+                get_cache_key(self.waypoint.document_id, None)),
+            NO_VALUE)
+
+        self.assertNotEqual(
+            cache_document_listing.get(
+                get_cache_key(self.waypoint2.document_id, None)),
+            NO_VALUE)
+
+        # the ignored document is not cached
+        self.assertEqual(
+            cache_document_listing.get(
+                get_cache_key(self.waypoint3.document_id, None)),
+            NO_VALUE)
 
     def _add_test_data(self):
         self.waypoint = Waypoint(

@@ -12,6 +12,7 @@ from c2corg_api.models.utils import get_mid_point
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, make_schema_adaptor, get_all_fields
+from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param, validate_associations
@@ -208,7 +209,7 @@ def update_default_geometry(outing, outing_in, user_id):
 
 
 @resource(path='/outings/{id}/{lang}/{version_id}', cors_policy=cors_policy)
-class OutingVersionRest(DocumentRest):
+class OutingVersionRest(DocumentVersionRest):
 
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):

@@ -19,6 +19,10 @@ pyramid.includes =
 # disable version in dev mode
 version =
 
+# in dev. mode, append the timestamp to the cache key, so that the cache is
+# invalidated when the debug server reloads
+cache_version_timestamp = True
+
 sqlalchemy.url = postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}
 
 # By default, the toolbar only appears for clients from IP addresses

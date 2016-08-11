@@ -3,6 +3,7 @@ import urllib.request
 import urllib.parse
 import urllib.error
 
+from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.route import Route
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
@@ -92,6 +93,11 @@ class BaseTestRest(BaseTestCase):
         return next(
             filter(lambda locale: locale['lang'] == lang, locales),
             None)
+
+    def check_cache_version(self, document_id, version):
+        cache_version = self.session.query(CacheVersion).get(document_id)
+        self.assertIsNotNone(cache_version)
+        self.assertEqual(cache_version.version, version)
 
 
 class BaseDocumentTestRest(BaseTestRest):
@@ -479,6 +485,10 @@ class BaseDocumentTestRest(BaseTestRest):
         else:
             self.assertEqual(search_doc['title_en'], waypoint_locale_en.title)
 
+        cache_version = self.session.query(CacheVersion).get(document_id)
+        self.assertIsNotNone(cache_version)
+        self.assertEqual(cache_version.version, 1)
+
         return (body, doc)
 
     def put_wrong_document_id(self, request_body, user='contributor'):
@@ -556,7 +566,8 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertCorniceRequired(errors[0], field)
 
     def put_success_all(
-            self, request_body, document, user='contributor', check_es=True):
+            self, request_body, document, user='contributor', check_es=True,
+            cache_version=2):
         """Test updating a document with changes to the figures and locales.
         """
         response = self.app_put_json(
@@ -653,6 +664,8 @@ class BaseDocumentTestRest(BaseTestRest):
             self.assertEqual(search_doc['doc_type'], document.type)
             self.assertEqual(search_doc['title_en'], archive_locale.title)
             self.assertEqual(search_doc['title_fr'], archive_locale_fr.title)
+
+        self.check_cache_version(document_id, cache_version)
 
         return (body, document)
 

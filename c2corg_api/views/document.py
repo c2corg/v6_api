@@ -1,3 +1,9 @@
+import logging
+
+from c2corg_api.caching import cache_document_detail, cache_document_listing
+from c2corg_api.models.cache_version import update_cache_version, \
+    update_cache_version_associations, get_cache_key, get_document_id, \
+    get_cache_keys
 from c2corg_api.models.image import schema_association_image
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.user import User, schema_association_user
@@ -19,17 +25,17 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import schema_association_waypoint
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.views import cors_policy
-from c2corg_api.views import to_json_dict, to_seconds, set_best_locale
+from c2corg_api.views import etag_cache
+from c2corg_api.views import to_json_dict, set_best_locale
 from c2corg_api.views.validation import check_required_fields, \
-    check_duplicate_locales, validate_id, validate_lang
-from cornice.resource import resource, view
+    check_duplicate_locales
 from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
     HTTPBadRequest, HTTPForbidden
-from sqlalchemy.orm import joinedload, contains_eager, subqueryload
+from sqlalchemy.orm import joinedload, contains_eager, subqueryload, load_only
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.orm.util import with_polymorphic
-from sqlalchemy.sql.expression import literal_column, union
+
+log = logging.getLogger(__name__)
 
 # the maximum number of documents that can be returned in a request
 LIMIT_MAX = 100
@@ -60,20 +66,21 @@ class DocumentRest(object):
         if not custom_filter and \
                 advanced_search.contains_search_params(self.request.GET):
             # search with ElasticSearch
-            load_documents = advanced_search.get_load_documents(
-                self.request.GET, meta_params, doc_type, clazz)
+            search_documents = advanced_search.get_search_documents(
+                self.request.GET, meta_params, doc_type)
         else:
             # if no search parameters, directly load documents from the db
-            load_documents = partial(
-                self._load_documents_paginated, meta_params)
+            search_documents = partial(
+                self._search_documents_paginated, meta_params)
 
         return self._get_documents(
             clazz, schema, clazz_locale, adapt_schema, custom_filter,
-            include_areas, set_custom_fields, meta_params, load_documents)
+            include_areas, set_custom_fields, meta_params, search_documents)
 
     def _get_documents(
             self, clazz, schema, clazz_locale, adapt_schema, custom_filter,
-            include_areas, set_custom_fields, meta_params, load_documents):
+            include_areas, set_custom_fields, meta_params, search_documents):
+        lang = meta_params['lang']
         base_query = DBSession.query(clazz).\
             filter(getattr(clazz, 'redirects_to').is_(None))
         base_total_query = DBSession.query(getattr(clazz, 'document_id')).\
@@ -82,9 +89,8 @@ class DocumentRest(object):
         if custom_filter:
             base_query = custom_filter(base_query)
             base_total_query = custom_filter(base_total_query)
-
-        base_query = add_load_for_locales(base_query, clazz, clazz_locale)
-        base_query = base_query.options(joinedload(getattr(clazz, 'geometry')))
+        base_total_query = add_profile_filter(base_total_query, clazz)
+        base_query = add_load_for_profiles(base_query, clazz)
 
         if clazz == Outing:
             base_query = base_query. \
@@ -93,8 +99,44 @@ class DocumentRest(object):
         else:
             base_query = base_query.order_by(clazz.document_id.desc())
 
-        base_query = add_load_for_profiles(base_query, clazz)
-        base_total_query = add_profile_filter(base_total_query, clazz)
+        document_ids, total = search_documents(base_query, base_total_query)
+        cache_keys = get_cache_keys(document_ids, lang)
+
+        def get_documents_from_cache_keys(*cache_keys):
+            """ This method is called from dogpile.cache with the cache keys
+            for the documents that are not cached yet.
+            """
+            ids = [get_document_id(cache_key) for cache_key in cache_keys]
+
+            docs = self._get_documents_from_ids(
+                ids, base_query, clazz, schema, clazz_locale,
+                adapt_schema, include_areas, set_custom_fields, lang)
+
+            assert len(cache_keys) == len(docs), \
+                'the number of returned documents must match ' + \
+                'the number of keys'
+
+            return docs
+
+        # get the documents from the cache or from the database
+        documents = cache_document_listing.get_or_create_multi(
+            cache_keys, get_documents_from_cache_keys, expiration_time=-1,
+            should_cache_fn=lambda v: v is not None)
+
+        return {
+            'documents': [doc for doc in documents if doc],
+            'total': total
+        }
+
+    def _get_documents_from_ids(
+            self, document_ids, base_query, clazz, schema, clazz_locale,
+            adapt_schema, include_areas, set_custom_fields, lang):
+        """ Load the documents for the ids and return them as json dict.
+        The returned list contains None values for documents that could not be
+        loaded, and the list has the same order has the document id list.
+        """
+        base_query = add_load_for_locales(base_query, clazz, clazz_locale)
+        base_query = base_query.options(joinedload(getattr(clazz, 'geometry')))
 
         if include_areas:
             base_query = base_query. \
@@ -109,10 +151,9 @@ class DocumentRest(object):
                         'version')
                 )
 
-        documents, total = load_documents(base_query, base_total_query)
+        documents = self._load_documents(document_ids, clazz, base_query)
 
         set_available_langs(documents, loaded=True)
-        lang = meta_params['lang']
         if lang is not None:
             set_best_locale(documents, lang)
 
@@ -122,40 +163,76 @@ class DocumentRest(object):
         if set_custom_fields:
             set_custom_fields(documents, lang)
 
-        return {
-            'documents': [
-                to_json_dict(
-                    doc,
-                    schema if not adapt_schema else adapt_schema(schema, doc)
-                ) for doc in documents
-            ],
-            'total': total
-        }
+        # make sure the documents are returned in the same order
+        document_index = {doc.document_id: doc for doc in documents}
+        documents = [document_index.get(id) for id in document_ids]
 
-    def _load_documents_paginated(
+        return [
+            to_json_dict(
+                doc,
+                schema if not adapt_schema else adapt_schema(schema, doc)
+            ) if doc else None for doc in documents
+        ]
+
+    def _load_documents(self, document_ids, clazz, base_query):
+        """ Load documents given a list of document ids. Note that the
+        returned list does not contain the documents in the same order as
+        the passed in document id list.
+        """
+        if not document_ids:
+            return []
+
+        documents = base_query. \
+            filter(clazz.document_id.in_(document_ids)).\
+            all()
+
+        return documents
+
+    def _search_documents_paginated(
             self, meta_params, base_query, base_total_query):
-        """Return a batch of documents with the given `offset` and `limit`.
+        """Return a batch of document ids with the given `offset` and `limit`.
         """
         offset = meta_params['offset']
         limit = meta_params['limit']
         documents = base_query. \
+            options(load_only('document_id', 'type', 'version')). \
             slice(offset, offset + limit). \
             limit(limit). \
             all()
         total = base_total_query.count()
 
-        return documents, total
+        document_ids = [doc.document_id for doc in documents]
+
+        return document_ids, total
 
     def _get(self, clazz, schema, clazz_locale=None, adapt_schema=None,
              include_maps=False, include_areas=True,
              set_custom_associations=None):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')
-        return self._get_in_lang(
-            id, lang, clazz, schema, clazz_locale, adapt_schema, include_maps,
-            include_areas, set_custom_associations)
+        editing_view = self.request.GET.get('e', '0') != '0'
 
-    def _get_in_lang(self, id, lang, clazz, schema,
+        def create_response():
+            return self._get_in_lang(
+                id, lang, clazz, schema, editing_view, clazz_locale,
+                adapt_schema, include_maps, include_areas,
+                set_custom_associations)
+
+        if not editing_view:
+            cache_key = get_cache_key(id, lang)
+
+            if cache_key:
+                # set and check the etag: if the etag value provided in the
+                # request equals the current etag, return 'NotModified'
+                etag_cache(self.request, cache_key)
+
+                return cache_document_detail.get_or_create(
+                    cache_key, create_response, expiration_time=-1)
+
+        # don't cache if requesting a document for editing
+        return create_response()
+
+    def _get_in_lang(self, id, lang, clazz, schema, editing_view,
                      clazz_locale=None, adapt_schema=None,
                      include_maps=True, include_areas=True,
                      set_custom_associations=None):
@@ -170,7 +247,6 @@ class DocumentRest(object):
 
         set_available_langs([document])
 
-        editing_view = self.request.GET.get('e', '0') != '0'
         self._set_associations(document, lang, editing_view)
 
         if not editing_view and set_custom_associations:
@@ -306,13 +382,19 @@ class DocumentRest(object):
             if after_update:
                 after_update(document, update_types, user_id=user_id)
 
+            update_cache_version(document)
+
         associations = self.request.validated.get('associations', None)
         if associations:
-            synchronize_associations(document, associations, user_id)
+            added_associations, removed_associations = \
+                synchronize_associations(document, associations, user_id)
 
         if update_types or associations:
             # update search index
             notify_es_syncer(self.request.registry.queue_config)
+        if associations and (removed_associations or added_associations):
+            update_cache_version_associations(
+                added_associations, removed_associations)
 
         return {}
 
@@ -512,97 +594,6 @@ class DocumentRest(object):
             if document.geometry.version != document_in.geometry.version:
                 raise HTTPConflict('version of geometry has changed')
 
-    def _get_version(self, clazz, locale_clazz, schema, adapt_schema=None):
-        id = self.request.validated['id']
-        lang = self.request.validated['lang']
-        version_id = self.request.validated['version_id']
-
-        version = DBSession.query(DocumentVersion) \
-            .options(joinedload('history_metadata').joinedload('user')) \
-            .options(joinedload(
-                DocumentVersion.document_archive.of_type(clazz))) \
-            .options(joinedload(
-                DocumentVersion.document_locales_archive.of_type(
-                    locale_clazz))) \
-            .options(joinedload(DocumentVersion.document_geometry_archive)) \
-            .filter(DocumentVersion.id == version_id) \
-            .filter(DocumentVersion.document_id == id) \
-            .filter(DocumentVersion.lang == lang) \
-            .first()
-        if version is None:
-            raise HTTPNotFound('invalid version')
-
-        archive_document = version.document_archive
-        archive_document.geometry = version.document_geometry_archive
-        archive_document.locales = [version.document_locales_archive]
-
-        if adapt_schema:
-            schema = adapt_schema(schema, archive_document)
-
-        previous_version_id, next_version_id = get_neighbour_version_ids(
-            version_id, id, lang
-        )
-
-        return {
-            'document': to_json_dict(archive_document, schema),
-            'version': self._serialize_version(version),
-            'previous_version_id': previous_version_id,
-            'next_version_id': next_version_id,
-        }
-
-    def _serialize_version(self, version):
-        return {
-            'version_id': version.id,
-            'user_id': version.history_metadata.user_id,
-            'username': version.history_metadata.user.username,
-            'name': version.history_metadata.user.name,
-            'comment': version.history_metadata.comment,
-            'written_at': to_seconds(version.history_metadata.written_at)
-        }
-
-
-def get_neighbour_version_ids(version_id, document_id, lang):
-    """
-    Get the previous and next version for a version of a document with a
-    specific language.
-    """
-    next_version = DBSession \
-        .query(
-            DocumentVersion.id.label('id'),
-            literal_column('1').label('t')) \
-        .filter(DocumentVersion.id > version_id) \
-        .filter(DocumentVersion.document_id == document_id) \
-        .filter(DocumentVersion.lang == lang) \
-        .order_by(DocumentVersion.id) \
-        .limit(1) \
-        .subquery()
-
-    previous_version = DBSession \
-        .query(
-            DocumentVersion.id.label('id'),
-            literal_column('-1').label('t')) \
-        .filter(DocumentVersion.id < version_id) \
-        .filter(DocumentVersion.document_id == document_id) \
-        .filter(DocumentVersion.lang == lang) \
-        .order_by(DocumentVersion.id.desc()) \
-        .limit(1) \
-        .subquery()
-
-    query = DBSession \
-        .query('id', 't') \
-        .select_from(union(
-            next_version.select(), previous_version.select()))
-
-    previous_version_id = None
-    next_version_id = None
-    for version, typ in query:
-        if typ == -1:
-            previous_version_id = version
-        else:
-            next_version_id = version
-
-    return previous_version_id, next_version_id
-
 
 def validate_document_for_type(document, request, fields, type_field,
                                valid_type_values, updating):
@@ -729,41 +720,3 @@ association_schemas = {
     'users': schema_association_user,
     'images': schema_association_image
 }
-
-
-@resource(path='/document/{id}/history/{lang}', cors_policy=cors_policy)
-class HistoryDocumentRest(DocumentRest):
-    """Unique class for returning history of a document.
-    """
-
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        id = self.request.validated['id']
-        lang = self.request.validated['lang']
-
-        # FIXME conditional permission check (when outings implemented)
-        # is_outing = DBSession.query(Outing) \
-        #       .filter(Outing.document_id == id).count()
-        # if is_outing > 0:
-        #    # validate permission (authenticated + associated)
-        #    # return 403 if not correct
-
-        title = DBSession.query(DocumentLocale.title) \
-            .filter(DocumentLocale.document_id == id) \
-            .filter(DocumentLocale.lang == lang) \
-            .first()
-
-        if not title:
-            raise HTTPNotFound('no locale document for ' + lang)
-
-        versions = DBSession.query(DocumentVersion) \
-            .options(joinedload('history_metadata').joinedload('user')) \
-            .filter(DocumentVersion.document_id == id) \
-            .filter(DocumentVersion.lang == lang) \
-            .order_by(DocumentVersion.id) \
-            .all()
-
-        return {
-            'title': title.title,
-            'versions': [self._serialize_version(v) for v in versions]
-        }
