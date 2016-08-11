@@ -555,6 +555,7 @@ class DocumentRest(object):
             'version_id': version.id,
             'user_id': version.history_metadata.user_id,
             'username': version.history_metadata.user.username,
+            'name': version.history_metadata.user.name,
             'comment': version.history_metadata.comment,
             'written_at': to_seconds(version.history_metadata.written_at)
         }
