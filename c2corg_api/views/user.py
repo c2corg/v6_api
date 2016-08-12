@@ -1,3 +1,4 @@
+from c2corg_api.models.cache_version import update_cache_version
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_common.attributes import default_langs
 from pyramid.settings import asbool
@@ -487,6 +488,9 @@ class UserAccountRest(object):
         if update_search_index:
             # when user name changes, the search index has to be updated
             notify_es_syncer(self.request.registry.queue_config)
+
+            # also update the cache version of the user profile
+            update_cache_version(user.profile)
 
         return result
 

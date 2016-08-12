@@ -83,6 +83,10 @@ BEGIN
      -- if the document is an outing, associated waypoints of associates routes
      -- (and their parent and grand-parent waypoints) have to be updated
     PERFORM guidebook.update_cache_version_of_outing(p_document_id);
+  elsif p_document_type = 'u' then
+     -- if the document is an user profile, all documents that this user has
+     -- edited have to be updated (to refresh the user name)
+    PERFORM guidebook.update_cache_version_for_user(p_document_id);
   end if;
 END;
 $BODY$
@@ -245,6 +249,27 @@ BEGIN
   update guidebook.cache_versions cv SET version = version + 1
   from v
   where cv.document_id = v.waypoint_id;
+END;
+$BODY$
+language plpgsql;
+
+
+CREATE OR REPLACE FUNCTION guidebook.update_cache_version_for_user(p_user_id integer) --   # noqa: E501
+  RETURNS void AS
+$BODY$
+BEGIN
+  -- function to update all documents that the given user edited
+  with v as (
+    select dv.document_id as document_id
+    from guidebook.documents_versions dv
+      inner join guidebook.history_metadata h
+    on dv.history_metadata_id = h.id
+    where h.user_id = p_user_id
+    group by dv.document_id
+  )
+  update guidebook.cache_versions cv SET version = version + 1
+  from v
+  where cv.document_id = v.document_id;
 END;
 $BODY$
 language plpgsql;

@@ -204,7 +204,8 @@ class TestUserProfileRest(BaseDocumentTestRest):
             }
         }
         (body, profile) = self.put_success_all(
-            body, self.profile1, user='moderator', check_es=False)
+            body, self.profile1, user='moderator', check_es=False,
+            cache_version=3)
 
         # version with lang 'en'
         version_en = profile.versions[2]

@@ -535,6 +535,9 @@ class TestUserRest(BaseTestRest):
             id=user_id,
             index=elasticsearch_config['index'])
 
+        # and check that the cache version of the user profile was updated
+        self.check_cache_version(user_id, 2)
+
         self.assertIsNotNone(search_doc['doc_type'])
         self.assertEqual(
             search_doc['title_en'], 'contributor changed contributor')
