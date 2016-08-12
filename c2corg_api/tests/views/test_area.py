@@ -144,7 +144,9 @@ class TestAreaRest(BaseDocumentTestRest):
             all()
         self.assertEqual(len(links), 2)
         self.assertEqual(links[0].document_id, self.waypoint1.document_id)
+        self.check_cache_version(self.waypoint1.document_id, 2)
         self.assertEqual(links[1].document_id, self.route.document_id)
+        self.check_cache_version(self.route.document_id, 2)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -307,7 +309,11 @@ class TestAreaRest(BaseDocumentTestRest):
             all()
         self.assertEqual(len(links), 2)
         self.assertEqual(links[0].document_id, self.waypoint1.document_id)
+        self.check_cache_version(self.waypoint1.document_id, 2)
         self.assertEqual(links[1].document_id, self.route.document_id)
+        self.check_cache_version(self.route.document_id, 2)
+        # waypoint 2 is no longer associated, the cache key was incremented
+        self.check_cache_version(self.waypoint2.document_id, 2)
 
     def test_put_success_figures_only(self):
         body = {

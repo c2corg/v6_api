@@ -1,6 +1,7 @@
 from c2corg_api.models.area import schema_area, Area, schema_update_area, \
     schema_listing_area, AREA_TYPE
 from c2corg_api.models.area_association import update_area
+from c2corg_api.models.cache_version import update_cache_version_for_area
 from c2corg_api.models.document import UpdateType
 from c2corg_common.fields_area import fields_area
 from cornice.resource import resource, view
@@ -59,5 +60,9 @@ def update_associations(area, update_types, user_id):
     """Update the links between this area and documents when the geometry
     has changed.
     """
+    if update_types:
+        # update cache key for currently associated docs
+        update_cache_version_for_area(area)
+
     if UpdateType.GEOM in update_types:
         update_area(area, reset=True)

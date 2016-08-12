@@ -273,6 +273,24 @@ BEGIN
 END;
 $BODY$
 language plpgsql;
+
+
+CREATE OR REPLACE FUNCTION guidebook.update_cache_version_for_area(p_area_id integer) --   # noqa: E501
+  RETURNS void AS
+$BODY$
+BEGIN
+  -- function to update all documents that are associated with the given area
+  with v as (
+    select aa.document_id as document_id
+    from guidebook.area_associations aa
+    where aa.area_id = p_area_id
+  )
+  update guidebook.cache_versions cv SET version = version + 1
+  from v
+  where cv.document_id = v.document_id;
+END;
+$BODY$
+language plpgsql;
 """)
 event.listen(CacheVersion.__table__, 'after_create', update_cache_version_ddl)
 
@@ -282,6 +300,18 @@ def update_cache_version(document):
     DBSession.execute(
         text('SELECT guidebook.update_cache_version(:document_id, :type)'),
         {'document_id': document.document_id, 'type': document.type}
+    )
+
+
+def update_cache_version_for_area(area):
+    """ Invalidate the cache keys of all documents that are currently
+    associated to the given area.
+    Note that the cache key of the area itself is not changed when calling this
+    function.
+    """
+    DBSession.execute(
+        text('SELECT guidebook.update_cache_version_for_area(:document_id)'),
+        {'document_id': area.document_id}
     )
 
 
