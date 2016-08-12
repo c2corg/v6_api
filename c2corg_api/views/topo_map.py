@@ -1,6 +1,8 @@
+from c2corg_api.models.document import UpdateType
 from c2corg_api.models.topo_map import (
     TopoMap, schema_topo_map, schema_update_topo_map, schema_listing_topo_map,
     MAP_TYPE)
+from c2corg_api.models.topo_map_association import update_map
 from c2corg_common.fields_topo_map import fields_topo_map
 from cornice.resource import resource, view
 
@@ -31,11 +33,33 @@ class TopoMapRest(DocumentRest):
             schema=schema_topo_map, validators=validate_map_create,
             permission='moderator')
     def collection_post(self):
-        return self._collection_post(schema_topo_map)
+        return self._collection_post(
+            schema_topo_map, after_add=insert_associations)
 
     @restricted_json_view(
             schema=schema_update_topo_map,
             validators=[validate_id, validate_map_update],
             permission='moderator')
     def put(self):
-        return self._put(TopoMap, schema_topo_map)
+        return self._put(
+            TopoMap, schema_topo_map, after_update=update_associations)
+
+
+def insert_associations(topo_map, user_id):
+    """Create links between this new map and documents.
+    """
+    update_map(topo_map, reset=False)
+
+
+def update_associations(topo_map, update_types, user_id):
+    """Update the links between this mapq and documents when the geometry
+    has changed.
+    """
+    if update_types:
+        # update cache key for currently associated docs
+        # TODO
+        # update_cache_version_for_map(topo_map)
+        pass
+
+    if UpdateType.GEOM in update_types:
+        update_map(topo_map, reset=True)
