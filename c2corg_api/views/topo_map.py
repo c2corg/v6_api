@@ -1,3 +1,4 @@
+from c2corg_api.models.cache_version import update_cache_version_for_map
 from c2corg_api.models.document import UpdateType
 from c2corg_api.models.topo_map import (
     TopoMap, schema_topo_map, schema_update_topo_map, schema_listing_topo_map,
@@ -57,9 +58,7 @@ def update_associations(topo_map, update_types, user_id):
     """
     if update_types:
         # update cache key for currently associated docs
-        # TODO
-        # update_cache_version_for_map(topo_map)
-        pass
+        update_cache_version_for_map(topo_map)
 
     if UpdateType.GEOM in update_types:
         update_map(topo_map, reset=True)

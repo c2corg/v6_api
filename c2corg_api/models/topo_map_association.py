@@ -1,4 +1,5 @@
 from c2corg_api.models import Base, schema, DBSession
+from c2corg_api.models.cache_version import update_cache_version_for_map
 from c2corg_api.models.document import Document, DocumentGeometry, \
     DocumentLocale
 from c2corg_api.models.topo_map import TopoMap, MAP_TYPE
@@ -91,8 +92,7 @@ def update_map(topo_map, reset=False):
             intersecting_documents))
 
     # update cache key for now associated docs
-    # TODO
-    # update_cache_version_for_map(topo_map)
+    update_cache_version_for_map(topo_map)
 
 
 def update_maps_for_document(document, reset=False):
@@ -115,7 +115,7 @@ def update_maps_for_document(document, reset=False):
         where(DocumentGeometry.document_id == document.document_id)
     document_geom_detail = select([DocumentGeometry.geom_detail]). \
         where(DocumentGeometry.document_id == document.document_id)
-    intersecting_areas = DBSession. \
+    intersecting_maps = DBSession. \
         query(
             DocumentGeometry.document_id,  # id of a map
             literal_column(str(document.document_id))). \
@@ -134,7 +134,7 @@ def update_maps_for_document(document, reset=False):
     DBSession.execute(
         TopoMapAssociation.__table__.insert().from_select(
             [TopoMapAssociation.topo_map_id, TopoMapAssociation.document_id],
-            intersecting_areas))
+            intersecting_maps))
 
 
 def get_maps(document, lang):

@@ -1,6 +1,9 @@
 import json
 
+from c2corg_api.models.route import Route
 from c2corg_api.models.topo_map import ArchiveTopoMap, TopoMap, MAP_TYPE
+from c2corg_api.models.topo_map_association import TopoMapAssociation
+from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
 from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, Point
@@ -123,14 +126,14 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'code': '3432OT',
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom_detail': '{"type": "Point", "coordinates": [635956, 5723604]}'  # noqa
+                'geom_detail': '{"type":"Polygon","coordinates":[[[668518.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668518.249382151,5728802.39591739]]]}'  # noqa
             },
             'locales': [
                 {'lang': 'en', 'title': 'Lac d\'Annecy'}
             ]
         }
         body, doc = self.post_success(body, user='moderator')
-        self._assert_geometry(body)
+        self.assertIsNotNone(body['geometry'].get('geom_detail'))
 
         version = doc.versions[0]
 
@@ -146,6 +149,18 @@ class TestTopoMapRest(BaseDocumentTestRest):
         archive_geometry = version.document_geometry_archive
         self.assertEqual(archive_geometry.version, doc.geometry.version)
         self.assertIsNotNone(archive_geometry.geom_detail)
+        self.assertIsNotNone(archive_geometry.geom_detail)
+
+        # check that a link for intersecting documents is created
+        links = self.session.query(TopoMapAssociation). \
+            filter(
+                TopoMapAssociation.topo_map_id == doc.document_id). \
+            all()
+        self.assertEqual(len(links), 2)
+        self.assertEqual(links[0].document_id, self.waypoint1.document_id)
+        self.check_cache_version(self.waypoint1.document_id, 2)
+        self.assertEqual(links[1].document_id, self.route.document_id)
+        self.check_cache_version(self.route.document_id, 2)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -226,7 +241,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 'code': '3433OT',
                 'geometry': {
                     'version': self.map1.geometry.version,
-                    'geom_detail': '{"type": "Point", "coordinates": [1, 2]}'  # noqa
+                    'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
                 },
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
@@ -257,6 +272,19 @@ class TestTopoMapRest(BaseDocumentTestRest):
         version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Lac d\'Annecy')
+
+        # check that the links to intersecting documents are updated
+        links = self.session.query(TopoMapAssociation). \
+            filter(
+                TopoMapAssociation.topo_map_id == self.map1.document_id). \
+            all()
+        self.assertEqual(len(links), 2)
+        self.assertEqual(links[0].document_id, self.waypoint1.document_id)
+        self.check_cache_version(self.waypoint1.document_id, 2)
+        self.assertEqual(links[1].document_id, self.route.document_id)
+        self.check_cache_version(self.route.document_id, 2)
+        # waypoint 2 is no longer associated, the cache key was incremented
+        self.check_cache_version(self.waypoint2.document_id, 2)
 
     def test_put_success_figures_only(self):
         body = {
@@ -366,4 +394,24 @@ class TestTopoMapRest(BaseDocumentTestRest):
         self.map4.locales.append(DocumentLocale(
             lang='fr', title='Lac d\'Annecy'))
         self.session.add(self.map4)
+        self.session.flush()
+
+        self.waypoint1 = Waypoint(
+            waypoint_type='summit',
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(677461.381691516 5740879.44638645)')
+        )
+        self.waypoint2 = Waypoint(
+            waypoint_type='summit',
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(693666.031687976 5741108.7574713)')
+        )
+        route_geom = 'SRID=3857;LINESTRING(668518 5728802, 668528 5728812)'
+        self.route = Route(
+            activities=['skitouring'],
+            geometry=DocumentGeometry(geom_detail=route_geom))
+
+        self.session.add_all([self.waypoint1, self.waypoint2, self.route])
+        self.session.add(TopoMapAssociation(
+            document=self.waypoint2, topo_map=self.map1))
         self.session.flush()

@@ -291,12 +291,29 @@ BEGIN
 END;
 $BODY$
 language plpgsql;
+
+
+CREATE OR REPLACE FUNCTION guidebook.update_cache_version_for_map(p_map_id integer) --   # noqa: E501
+  RETURNS void AS
+$BODY$
+BEGIN
+  -- function to update all documents that are associated with the given map
+  with v as (
+    select ma.document_id as document_id
+    from guidebook.map_associations ma
+    where ma.topo_map_id = p_map_id
+  )
+  update guidebook.cache_versions cv SET version = version + 1
+  from v
+  where cv.document_id = v.document_id;
+END;
+$BODY$
+language plpgsql;
 """)
 event.listen(CacheVersion.__table__, 'after_create', update_cache_version_ddl)
 
 
 def update_cache_version(document):
-    # TODO check for areas/map
     DBSession.execute(
         text('SELECT guidebook.update_cache_version(:document_id, :type)'),
         {'document_id': document.document_id, 'type': document.type}
@@ -312,6 +329,18 @@ def update_cache_version_for_area(area):
     DBSession.execute(
         text('SELECT guidebook.update_cache_version_for_area(:document_id)'),
         {'document_id': area.document_id}
+    )
+
+
+def update_cache_version_for_map(topo_map):
+    """ Invalidate the cache keys of all documents that are currently
+    associated to the given map.
+    Note that the cache key of the map itself is not changed when calling this
+    function.
+    """
+    DBSession.execute(
+        text('SELECT guidebook.update_cache_version_for_map(:document_id)'),
+        {'document_id': topo_map.document_id}
     )
 
 
