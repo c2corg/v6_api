@@ -5,6 +5,7 @@ from c2corg_api.models.cache_version import CacheVersion, \
     update_cache_version, update_cache_version_associations
 from c2corg_api.models.outing import Outing, OUTING_TYPE
 from c2corg_api.models.route import Route, ROUTE_TYPE
+from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
 
 from c2corg_api.tests import BaseTestCase
@@ -176,6 +177,29 @@ class TestCacheVersion(BaseTestCase):
         self.assertEqual(cache_version_wp1.version, 2)
         self.assertEqual(cache_version_wp2.version, 2)
         self.assertEqual(cache_version_untouched.version, 1)
+
+    def test_update_cache_version_user(self):
+        """ Test that outings are invalidated if an user name changes.
+        """
+        outing = Outing(
+            activities=['skitouring'],
+            date_start=datetime.date(2016, 2, 1),
+            date_end=datetime.date(2016, 2, 1))
+        user_profile = UserProfile()
+        self.session.add_all([outing, user_profile])
+        self.session.flush()
+
+        self.session.add(Association.create(user_profile, outing))
+        self.session.flush()
+
+        update_cache_version(user_profile)
+        cache_version_user_profile = self.session.query(CacheVersion).get(
+            user_profile.document_id)
+        cache_version_outing = self.session.query(CacheVersion).get(
+            outing.document_id)
+
+        self.assertEqual(cache_version_outing.version, 2)
+        self.assertEqual(cache_version_user_profile.version, 2)
 
     def test_update_cache_version_associations_removed_wp(self):
         waypoint1 = Waypoint(waypoint_type='summit')
