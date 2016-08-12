@@ -78,6 +78,14 @@ run-background-jobs: install development.ini
 run-background-jobs-prod: install production.ini
 	.build/venv/bin/python c2corg_api/scripts/jobs/scheduler.py production.ini
 
+.PHONY: clear-cache
+clear-cache: install development.ini
+	.build/venv/bin/python c2corg_api/scripts/redis-flushdb.py development.ini
+
+.PHONY: clear-cache-prod
+clear-cache-prod: install production.ini
+	.build/venv/bin/python c2corg_api/scripts/redis-flushdb.py production.ini
+
 .PHONY: upgrade
 upgrade: .build/venv/bin/pip
 	.build/venv/bin/pip install --upgrade -r requirements.txt
