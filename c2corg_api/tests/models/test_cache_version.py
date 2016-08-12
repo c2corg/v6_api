@@ -5,10 +5,12 @@ from c2corg_api.models.cache_version import CacheVersion, \
     update_cache_version, update_cache_version_associations
 from c2corg_api.models.outing import Outing, OUTING_TYPE
 from c2corg_api.models.route import Route, ROUTE_TYPE
+from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
+from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE, WaypointLocale
 
 from c2corg_api.tests import BaseTestCase
+from c2corg_api.views.document import DocumentRest
 
 
 class TestCacheVersion(BaseTestCase):
@@ -199,6 +201,34 @@ class TestCacheVersion(BaseTestCase):
             outing.document_id)
 
         self.assertEqual(cache_version_outing.version, 2)
+        self.assertEqual(cache_version_user_profile.version, 2)
+
+    def test_update_cache_version_user_document_version(self):
+        """ Test that a document is invalidated if a user name of a user that
+         edited one of the document versions is changed.
+        """
+        waypoint = Waypoint(
+            waypoint_type='summit', elevation=2203, locales=[
+                WaypointLocale(lang='en', title='...', description='...')])
+
+        user_profile = UserProfile()
+        user = User(
+            name='test_user',
+            username='test_user', email='test_user@camptocamp.org',
+            forum_username='testuser', password='test_user',
+            email_validated=True, profile=user_profile)
+        self.session.add_all([waypoint, user_profile, user])
+        self.session.flush()
+
+        DocumentRest.create_new_version(waypoint, user.id)
+
+        update_cache_version(user_profile)
+        cache_version_user_profile = self.session.query(CacheVersion).get(
+            user_profile.document_id)
+        cache_version_waypoint = self.session.query(CacheVersion).get(
+            waypoint.document_id)
+
+        self.assertEqual(cache_version_waypoint.version, 2)
         self.assertEqual(cache_version_user_profile.version, 2)
 
     def test_update_cache_version_associations_removed_wp(self):
