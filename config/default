@@ -29,7 +29,7 @@ export redis_cache_key_prefix = c2corg_$(instanceid)
 # version used for the cache
 export version = $(shell git rev-parse --short HEAD 2>/dev/null || echo "0")
 
-export image_backend_url = http://c2corgv6-demo.gis.internal:8480
+export image_backend_url = http://c2corgv6-images.demo-camptocamp.com
 export discourse_url = http://c2corgv6-discourse.demo-camptocamp.com
 
 # database to run the unit tests
