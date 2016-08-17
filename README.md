@@ -50,13 +50,18 @@ that synchronizes the database with ElasticSearch and a background jobs script t
 purges the database of non activated accounts and expired tokens. The three have to
 be started separately.
 
-To start the background jobs script (run-background-jobs-prod for production):
+To start the background jobs script:
 
     make -f config/$USER run-background-jobs
 
-To start the syncer script (run-syncher-prod for production):
+To start the syncer script:
 
     make -f config/$USER run-syncer
+
+In production, the scripts should be started using
+
+    make -f config/$USER run-background-jobs-prod
+    make -f config/$USER run-syncer-prod
 
 To start the web-application:
 
