@@ -6,6 +6,8 @@ from c2corg_api.models.cache_version import update_cache_version, \
     get_cache_keys
 from c2corg_api.models.image import schema_association_image
 from c2corg_api.models.outing import Outing
+from c2corg_api.models.topo_map_association import update_maps_for_document, \
+    get_maps
 from c2corg_api.models.user import User, schema_association_user
 from functools import partial
 
@@ -20,7 +22,8 @@ from c2corg_api.models.document import (
     ArchiveDocumentGeometry, set_available_langs, get_available_langs)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.route import schema_association_route
-from c2corg_api.models.topo_map import get_maps, schema_listing_topo_map
+from c2corg_api.models.topo_map import schema_listing_topo_map, \
+    MAP_TYPE
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import schema_association_waypoint
 from c2corg_api.search import advanced_search
@@ -322,6 +325,9 @@ class DocumentRest(object):
         if document.type != AREA_TYPE:
             update_areas_for_document(document, reset=False)
 
+        if document.type != MAP_TYPE:
+            update_maps_for_document(document, reset=False)
+
         if after_add:
             after_add(document, user_id=user_id)
 
@@ -378,6 +384,9 @@ class DocumentRest(object):
 
             if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
                 update_areas_for_document(document, reset=True)
+
+            if document.type != MAP_TYPE and UpdateType.GEOM in update_types:
+                update_maps_for_document(document, reset=True)
 
             if after_update:
                 after_update(document, update_types, user_id=user_id)

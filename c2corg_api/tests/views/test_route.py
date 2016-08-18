@@ -7,6 +7,7 @@ from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
+from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.views.route import check_title_prefix
@@ -853,15 +854,6 @@ class TestRouteRest(BaseDocumentTestRest):
             gear='paraglider'))
         self.session.add(self.route4)
 
-        # add a map
-        self.session.add(TopoMap(
-            code='3232ET', editor='IGN', scale='25000',
-            locales=[
-                DocumentLocale(lang='fr', title='Belley')
-            ],
-            geometry=DocumentGeometry(geom_detail='SRID=3857;POLYGON((635900 5723600, 635900 5723700, 636000 5723700, 636000 5723600, 635900 5723600))')  # noqa
-        ))
-
         # add some associations
         self.waypoint = Waypoint(
             waypoint_type='summit', elevation=4,
@@ -892,6 +884,19 @@ class TestRouteRest(BaseDocumentTestRest):
         self.session.add(Association.create(
             parent_document=self.waypoint,
             child_document=self.route))
+
+        # add a map
+        topo_map = TopoMap(
+            code='3232ET', editor='IGN', scale='25000',
+            locales=[
+                DocumentLocale(lang='fr', title='Belley')
+            ],
+            geometry=DocumentGeometry(geom_detail='SRID=3857;POLYGON((635900 5723600, 635900 5723700, 636000 5723700, 636000 5723600, 635900 5723600))')  # noqa
+        )
+        self.session.add(topo_map)
+        self.session.flush()
+        self.session.add(TopoMapAssociation(
+            document=self.route, topo_map=topo_map))
 
         self.outing1 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),

@@ -1,6 +1,5 @@
-from c2corg_api.models.document import DocumentLocale, DocumentGeometry
-from c2corg_api.models.topo_map import TopoMap, get_maps
-from c2corg_api.models.waypoint import Waypoint
+from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models.topo_map import TopoMap
 
 from c2corg_api.tests import BaseTestCase
 
@@ -36,45 +35,3 @@ class TestMap(BaseTestCase):
         self.assertIsNone(locale_archive.id)
         self.assertEqual(locale_archive.lang, locale.lang)
         self.assertEqual(locale_archive.title, locale.title)
-
-    def test_get_maps(self):
-        map1 = TopoMap(
-            locales=[
-                DocumentLocale(lang='en', title='Passo del Maloja'),
-                DocumentLocale(lang='fr', title='Passo del Maloja')
-            ],
-            geometry=DocumentGeometry(geom_detail='SRID=3857;POLYGON((1060345.67641127 5869598.161661,1161884.8271513 5866294.47946546,1159243.3608776 5796747.98963817,1058506.68785187 5800000.03655724,1060345.67641127 5869598.161661))')  # noqa
-        )
-        map2 = TopoMap(
-            locales=[
-                DocumentLocale(lang='fr', title='Monte Disgrazia')
-            ],
-            geometry=DocumentGeometry(geom_detail='SRID=3857;POLYGON((1059422.5474971 5834730.45170096,1110000.12573506 5833238.36363707,1108884.30979916 5798519.62445622,1058506.68785187 5800000.03655724,1059422.5474971 5834730.45170096))')  # noqa
-        )
-        map3 = TopoMap(
-            locales=[
-                DocumentLocale(lang='fr', title='Sciora')
-            ],
-            geometry=DocumentGeometry(geom_detail='SRID=3857;POLYGON((1059422.5474971 5834730.45170096,1084713.47958582 5834021.11961652,1084204.54539729 5816641.60293193,1058963.71520182 5817348.14989301,1059422.5474971 5834730.45170096))')  # noqa
-        )
-        map4 = TopoMap(
-            locales=[
-                DocumentLocale(lang='fr', title='...')
-            ],
-            geometry=DocumentGeometry(geom_detail='SRID=3857;POLYGON((753678.422528324 6084684.82967302,857818.351438369 6084952.58494753,857577.289072432 6013614.93425228,754282.556732048 6013351.52692378,753678.422528324 6084684.82967302))')  # noqa
-        )
-        waypoint = Waypoint(
-            waypoint_type='summit',
-            geometry=DocumentGeometry(geom='SRID=3857;POINT(1069913.22199537 5830556.39234855)')  # noqa
-        )
-        self.session.add_all([waypoint, map1, map2, map3, map4])
-        self.session.flush()
-
-        maps = get_maps(waypoint, 'en')
-        self.assertEqual(
-            set([m.document_id for m in maps]),
-            set([map1.document_id, map2.document_id, map3.document_id]))
-
-        for m in maps:
-            # check that the "best" locale is set
-            self.assertEqual(len(m.locales), 1)

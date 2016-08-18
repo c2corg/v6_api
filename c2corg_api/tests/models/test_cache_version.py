@@ -1,10 +1,15 @@
 import datetime
 
+from c2corg_api.models.area import Area
+from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import CacheVersion, \
-    update_cache_version, update_cache_version_associations
+    update_cache_version, update_cache_version_associations, \
+    update_cache_version_for_area, update_cache_version_for_map
 from c2corg_api.models.outing import Outing, OUTING_TYPE
 from c2corg_api.models.route import Route, ROUTE_TYPE
+from c2corg_api.models.topo_map import TopoMap
+from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE, WaypointLocale
@@ -341,3 +346,54 @@ class TestCacheVersion(BaseTestCase):
         self.assertEqual(cache_version_route.version, 2)
         self.assertEqual(cache_version_outing.version, 2)
         self.assertEqual(cache_version_untouched.version, 1)
+
+    def test_update_cache_version_for_area(self):
+        waypoint = Waypoint(waypoint_type='summit')
+        waypoint_unrelated = Waypoint(waypoint_type='summit')
+        area = Area()
+        self.session.add_all([waypoint, waypoint_unrelated, area])
+        self.session.flush()
+
+        self.session.add(AreaAssociation(
+            document_id=waypoint.document_id, area_id=area.document_id))
+        self.session.flush()
+
+        update_cache_version_for_area(area)
+
+        cache_version_waypoint = self.session.query(CacheVersion).get(
+            waypoint.document_id)
+        cache_version_untouched = self.session.query(CacheVersion).get(
+            waypoint_unrelated.document_id)
+        cache_version_area = self.session.query(CacheVersion).get(
+            area.document_id)
+
+        self.assertEqual(cache_version_waypoint.version, 2)
+        self.assertEqual(cache_version_untouched.version, 1)
+        # the cache key of the area is also not updated!
+        self.assertEqual(cache_version_area.version, 1)
+
+    def test_update_cache_version_for_map(self):
+        waypoint = Waypoint(waypoint_type='summit')
+        waypoint_unrelated = Waypoint(waypoint_type='summit')
+        topo_map = TopoMap()
+        self.session.add_all([waypoint, waypoint_unrelated, topo_map])
+        self.session.flush()
+
+        self.session.add(TopoMapAssociation(
+            document_id=waypoint.document_id,
+            topo_map_id=topo_map.document_id))
+        self.session.flush()
+
+        update_cache_version_for_map(topo_map)
+
+        cache_version_waypoint = self.session.query(CacheVersion).get(
+            waypoint.document_id)
+        cache_version_untouched = self.session.query(CacheVersion).get(
+            waypoint_unrelated.document_id)
+        cache_version_map = self.session.query(CacheVersion).get(
+            topo_map.document_id)
+
+        self.assertEqual(cache_version_waypoint.version, 2)
+        self.assertEqual(cache_version_untouched.version, 1)
+        # the cache key of the map is also not updated!
+        self.assertEqual(cache_version_map.version, 1)

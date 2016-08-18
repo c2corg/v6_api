@@ -1,5 +1,6 @@
 from c2corg_api.models import Base, schema, DBSession
 from c2corg_api.models.area import Area, AREA_TYPE
+from c2corg_api.models.cache_version import update_cache_version_for_area
 from c2corg_api.models.document import Document, DocumentGeometry, \
     DocumentLocale
 from c2corg_api.views import set_best_locale
@@ -89,6 +90,9 @@ def update_area(area, reset=False):
         AreaAssociation.__table__.insert().from_select(
             [AreaAssociation.document_id, AreaAssociation.area_id],
             intersecting_documents))
+
+    # update cache key for now associated docs
+    update_cache_version_for_area(area)
 
 
 def update_areas_for_document(document, reset=False):

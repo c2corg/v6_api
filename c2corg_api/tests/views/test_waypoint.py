@@ -10,6 +10,7 @@ from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
+from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.tests.search import reset_search_index
@@ -490,6 +491,14 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(len(links), 1)
         self.assertEqual(links[0].area_id, self.area1.document_id)
 
+        # check that a link for intersecting maps is created
+        links = self.session.query(TopoMapAssociation). \
+            filter(
+            TopoMapAssociation.document_id == doc.document_id). \
+            all()
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].topo_map_id, self.topo_map1.document_id)
+
         # check that a link to the child waypoint is created
         association_wp = self.session.query(Association).get(
             (doc.document_id, self.waypoint2.document_id))
@@ -648,6 +657,14 @@ class TestWaypointRest(BaseDocumentTestRest):
             all()
         self.assertEqual(len(links), 1)
         self.assertEqual(links[0].area_id, self.area1.document_id)
+
+        # check that the links for intersecting maps are updated
+        links = self.session.query(TopoMapAssociation). \
+            filter(
+            TopoMapAssociation.document_id == self.waypoint.document_id). \
+            all()
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].topo_map_id, self.topo_map1.document_id)
 
         # check that a link to the child waypoint is created
         association_wp = self.session.query(Association).get(
@@ -1322,23 +1339,32 @@ class TestWaypointRest(BaseDocumentTestRest):
             child_document=self.outing3))
 
         # add a map
-        topo_map = TopoMap(
+        self.topo_map1 = TopoMap(
             code='3232ET', editor='IGN', scale='25000',
             locales=[
                 DocumentLocale(lang='fr', title='Belley')
             ],
             geometry=DocumentGeometry(geom_detail='SRID=3857;POLYGON((611774.917032556 5706934.10657514,611774.917032556 5744215.5846397,642834.402570357 5744215.5846397,642834.402570357 5706934.10657514,611774.917032556 5706934.10657514))')  # noqa
         )
-        self.session.add(topo_map)
+        self.topo_map2 = TopoMap(
+            code='3232ET', editor='IGN', scale='25000',
+            locales=[
+                DocumentLocale(lang='fr', title='Belley')
+            ]
+        )
+        self.session.add_all([self.topo_map1, self.topo_map2])
         self.session.flush()
         self.session.add(TopoMap(
-            redirects_to=topo_map.document_id,
+            redirects_to=self.topo_map1.document_id,
             code='3232ET', editor='IGN', scale='25000',
             locales=[
                 DocumentLocale(lang='fr', title='Belley')
             ],
             geometry=DocumentGeometry(geom_detail='SRID=3857;POLYGON((611774.917032556 5706934.10657514,611774.917032556 5744215.5846397,642834.402570357 5744215.5846397,642834.402570357 5706934.10657514,611774.917032556 5706934.10657514))')  # noqa
         ))
+        self.session.add(TopoMapAssociation(
+            document=self.waypoint, topo_map=self.topo_map2))
+        self.session.flush()
 
         # add areas
         self.area1 = Area(
