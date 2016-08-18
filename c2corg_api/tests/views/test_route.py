@@ -17,6 +17,7 @@ from shapely.geometry import shape, LineString
 from c2corg_api.models.route import (
     Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale, ROUTE_TYPE)
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
+from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
@@ -93,6 +94,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(
             'Main waypoint title',
             locale_en.get('title_prefix'))
+        self.assertEqual(1, locale_en.get('topic_id'))
 
         self.assertIn('main_waypoint_id', body)
         self.assertIn('associations', body)
@@ -801,7 +803,8 @@ class TestRouteRest(BaseDocumentTestRest):
 
         self.locale_en = RouteLocale(
             lang='en', title='Mont Blanc from the air', description='...',
-            gear='paraglider', title_prefix='Main waypoint title')
+            gear='paraglider', title_prefix='Main waypoint title',
+            document_topic=DocumentTopic(topic_id=1))
 
         self.locale_fr = RouteLocale(
             lang='fr', title='Mont Blanc du ciel', description='...',

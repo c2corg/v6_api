@@ -26,6 +26,7 @@ from c2corg_api.models.waypoint import (
     WAYPOINT_TYPE, schema_waypoint)
 from c2corg_api.models.document import (
     DocumentGeometry, ArchiveDocumentGeometry, DocumentLocale, Document)
+from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
@@ -185,6 +186,9 @@ class TestWaypointRest(BaseDocumentTestRest):
                 recent_outings['outings'][1].get('document_id')
             })
         self.assertIn('type', recent_outings['outings'][0])
+
+        locale_en = self.get_locale('en', body.get('locales'))
+        self.assertEqual(1, locale_en.get('topic_id'))
 
     def test_get_with_empty_arrays(self):
         """Test-case for https://github.com/c2corg/v6_api/issues/231
@@ -1189,7 +1193,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         self.locale_en = WaypointLocale(
             lang='en', title='Mont Granier', description='...',
-            access='yep')
+            access='yep', document_topic=DocumentTopic(topic_id=1))
 
         self.locale_fr = WaypointLocale(
             lang='fr', title='Mont Granier', description='...',

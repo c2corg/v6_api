@@ -10,6 +10,7 @@ from shapely.geometry import shape, Point
 from c2corg_api.models.image import Image, ArchiveImage, IMAGE_TYPE
 from c2corg_api.models.document import (
     DocumentGeometry, ArchiveDocumentLocale, DocumentLocale)
+from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
@@ -24,7 +25,8 @@ class BaseTestImage(BaseDocumentTestRest):
             image_type='collaborative')
 
         self.locale_en = DocumentLocale(
-            lang='en', title='Mont Blanc from the air', description='...')
+            lang='en', title='Mont Blanc from the air', description='...',
+            document_topic=DocumentTopic(topic_id=1))
 
         self.locale_fr = DocumentLocale(
             lang='fr', title='Mont Blanc du ciel', description='...')
@@ -170,6 +172,8 @@ class TestImageRest(BaseTestImage):
         body = self.get(self.image)
         self._assert_geometry(body)
         self.assertNotIn('maps', body)
+        locale_en = self.get_locale('en', body.get('locales'))
+        self.assertEqual(1, locale_en.get('topic_id'))
 
     def test_get_lang(self):
         self.get_lang(self.image)

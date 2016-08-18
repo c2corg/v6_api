@@ -100,6 +100,17 @@ def to_json_dict(obj, schema):
         if hasattr(obj, attr):
             obj_dict[attr] = getattr(obj, attr)
 
+    locale_special_attributes = [
+        'topic_id'
+    ]
+    if hasattr(obj, 'locales'):
+        for i in range(0, len(obj.locales)):
+            locale = obj.locales[i]
+            locale_dict = obj_dict['locales'][i]
+            for attr in locale_special_attributes:
+                if hasattr(locale, attr):
+                    locale_dict[attr] = getattr(locale, attr)
+
     return obj_dict
 
 

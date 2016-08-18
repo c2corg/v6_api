@@ -14,6 +14,7 @@ from shapely.geometry import shape, LineString
 
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
+from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
@@ -136,6 +137,9 @@ class TestOutingRest(BaseDocumentTestRest):
             linked_images[0]['document_id'], self.image.document_id)
         self.assertIn('geometry', linked_images[0])
         self.assertIn('geom', linked_images[0].get('geometry'))
+
+        locale_en = self.get_locale('en', body.get('locales'))
+        self.assertEqual(1, locale_en.get('topic_id'))
 
     def test_get_edit(self):
         response = self.app.get(self._prefix + '/' +
@@ -943,7 +947,7 @@ class TestOutingRest(BaseDocumentTestRest):
         )
         self.locale_en = OutingLocale(
             lang='en', title='Mont Blanc from the air', description='...',
-            weather='sunny')
+            weather='sunny', document_topic=DocumentTopic(topic_id=1))
 
         self.locale_fr = OutingLocale(
             lang='fr', title='Mont Blanc du ciel', description='...',
