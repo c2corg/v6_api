@@ -1,6 +1,7 @@
 import colander
 
 from c2corg_api.models import DBSession
+from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.security.discourse_client import get_discourse_client
@@ -98,6 +99,7 @@ class ForumTopicRest(object):
         if "topic_id" in response:
             document_topic = DocumentTopic(topic_id=response['topic_id'])
             locale.document_topic = document_topic
+            update_cache_version_direct(locale.document_id)
             DBSession.flush()
 
         return response

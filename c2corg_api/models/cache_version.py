@@ -320,6 +320,16 @@ def update_cache_version(document):
     )
 
 
+def update_cache_version_direct(document_id):
+    """ Update the cache version for the document with the given id
+    without updating any dependencies.
+    """
+    DBSession.execute(
+        text('SELECT guidebook.increment_cache_version(:document_id)'),
+        {'document_id': document_id}
+    )
+
+
 def update_cache_version_for_area(area):
     """ Invalidate the cache keys of all documents that are currently
     associated to the given area.

@@ -1,4 +1,6 @@
 from unittest.mock import patch
+
+from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.tests.views import BaseTestRest
 
 from c2corg_api.models.document import DocumentGeometry
@@ -86,3 +88,7 @@ class TestForumTopicRest(BaseTestRest):
         self.assertEqual(10, self.locale_en.topic_id)
         self.assertEqual(version, self.locale_en.version)
         self.assertEqual(10, json.get('topic_id'))
+
+        cache_version = self.session.query(CacheVersion).get(
+            self.waypoint.document_id)
+        self.assertEqual(cache_version.version, 2)
