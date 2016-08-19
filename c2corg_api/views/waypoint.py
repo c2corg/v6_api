@@ -338,7 +338,7 @@ def set_linked_routes(waypoint, lang):
     routes = limit_route_fields(
         DBSession.query(Route).
         options(joinedload(Route.geometry).load_only(
-            DocumentGeometry.geom_detail)).
+            DocumentGeometry.geom_detail, DocumentGeometry.version)).
         select_from(with_query_waypoints).
         join(
             Association,
