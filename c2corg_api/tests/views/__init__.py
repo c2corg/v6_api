@@ -240,6 +240,29 @@ class BaseDocumentTestRest(BaseTestRest):
             body['version']['version_id'], reference_version.id)
         return body
 
+    def get_info(self, reference, lang):
+        response = self.app.get(
+            '{0}/{1}/{2}/info'.format(
+                self._prefix, str(reference.document_id),
+                lang),
+            status=200)
+        self.assertEqual(response.content_type, 'application/json')
+
+        body = response.json
+        self.assertIn('document_id', body)
+        self.assertIn('locales', body)
+        self.assertEqual(
+            body['document_id'], reference.document_id)
+        self.assertEqual(len(body['locales']), 1)
+        locale = body['locales'][0]
+        self.assertIn('lang', locale)
+        self.assertIn('title_prefix', locale)
+        self.assertIn('title', locale)
+        return body, locale
+
+    def get_info_404(self):
+        self.app.get(self._prefix + '/-9999/en/info', status=404)
+
     def get_lang(self, reference, user=None):
         headers = {} if not user else \
             self.add_authorization_header(username=user)

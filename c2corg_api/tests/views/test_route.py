@@ -160,6 +160,19 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertNotIn('images', associations)
         self.assertNotIn('users', associations)
 
+    def test_get_info(self):
+        body, locale = self.get_info(self.route, 'en')
+        self.assertEqual(locale.get('lang'), 'en')
+        self.assertEqual(
+            locale.get('title_prefix'), self.locale_en.title_prefix)
+
+    def test_get_info_best_lang(self):
+        body, locale = self.get_info(self.route, 'es')
+        self.assertEqual(locale.get('lang'), 'fr')
+
+    def test_get_info_404(self):
+        self.get_info_404()
+
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
