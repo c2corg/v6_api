@@ -165,7 +165,7 @@ def get_linked_waypoint_parents(document):
     return _limit_waypoint_fields(
         DBSession.query(Waypoint).
         options(joinedload(Waypoint.geometry).load_only(
-            DocumentGeometry.geom)).
+            DocumentGeometry.geom, DocumentGeometry.version)).
         filter(Waypoint.redirects_to.is_(None)).
         join(Association,
              Association.parent_document_id == Waypoint.document_id).
@@ -177,7 +177,7 @@ def get_linked_waypoint_children(document):
     return _limit_waypoint_fields(
         DBSession.query(Waypoint).
         options(joinedload(Waypoint.geometry).load_only(
-            DocumentGeometry.geom)).
+            DocumentGeometry.geom, DocumentGeometry.version)).
         filter(Waypoint.redirects_to.is_(None)).
         join(Association,
              Association.child_document_id == Waypoint.document_id).
@@ -234,7 +234,7 @@ def _limit_image_fields(query):
             DocumentLocale.lang, DocumentLocale.title,
             DocumentLocale.version)). \
         options(joinedload(Image.geometry).load_only(
-            DocumentGeometry.geom))
+            DocumentGeometry.geom, DocumentGeometry.version))
 
 
 def get_linked_images(document):

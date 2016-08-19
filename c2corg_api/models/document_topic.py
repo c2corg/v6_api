@@ -23,4 +23,4 @@ class DocumentTopic(Base):
 
     document_locale = relationship(
             DocumentLocale,
-            backref=backref("document_topic", uselist=False, lazy='joined'))
+            backref=backref("document_topic", uselist=False, lazy='select'))

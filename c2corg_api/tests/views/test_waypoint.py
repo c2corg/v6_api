@@ -325,6 +325,28 @@ class TestWaypointRest(BaseDocumentTestRest):
         body = response.json
         self.assertEqual(body, fake_cache_value)
 
+    def test_get_info(self):
+        body, locale = self.get_info(self.waypoint, 'en')
+        self.assertEqual(locale.get('lang'), 'en')
+
+    def test_get_info_best_lang(self):
+        body, locale = self.get_info(self.waypoint, 'es')
+        self.assertEqual(locale.get('lang'), 'fr')
+
+    def test_get_info_404(self):
+        self.get_info_404()
+
+    def test_get_info_redirect(self):
+        response = self.app.get(self._prefix + '/' +
+                                str(self.waypoint5.document_id) +
+                                '/en/info',
+                                status=200)
+        body = response.json
+
+        self.assertIn('redirects_to', body)
+        self.assertEqual(body['redirects_to'], self.waypoint.document_id)
+        self.assertEqual(set(body['available_langs']), set(['en', 'fr']))
+
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')

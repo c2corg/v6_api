@@ -264,7 +264,7 @@ class DocumentRest(object):
         if adapt_schema:
             schema = adapt_schema(schema, document)
 
-        return to_json_dict(document, schema)
+        return to_json_dict(document, schema, with_special_locales_attrs=True)
 
     def _set_associations(self, document, lang, editing_view):
         linked_docs = get_associations(document, lang, editing_view)

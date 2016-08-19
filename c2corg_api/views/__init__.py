@@ -86,7 +86,7 @@ def restricted_view(**kw):
     return view(**kw)
 
 
-def to_json_dict(obj, schema):
+def to_json_dict(obj, schema, with_special_locales_attrs=False):
     obj_dict = serialize(schema.dictify(obj))
 
     # manually copy certain attributes that were set on the object (it would be
@@ -103,7 +103,7 @@ def to_json_dict(obj, schema):
     locale_special_attributes = [
         'topic_id'
     ]
-    if hasattr(obj, 'locales'):
+    if with_special_locales_attrs and hasattr(obj, 'locales'):
         for i in range(0, len(obj.locales)):
             locale = obj.locales[i]
             locale_dict = obj_dict['locales'][i]

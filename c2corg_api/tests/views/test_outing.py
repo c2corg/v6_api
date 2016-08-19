@@ -168,6 +168,17 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_get_404(self):
         self.get_404()
 
+    def test_get_info(self):
+        body, locale = self.get_info(self.outing, 'en')
+        self.assertEqual(locale.get('lang'), 'en')
+
+    def test_get_info_best_lang(self):
+        body, locale = self.get_info(self.outing, 'es')
+        self.assertEqual(locale.get('lang'), 'fr')
+
+    def test_get_info_404(self):
+        self.get_info_404()
+
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')

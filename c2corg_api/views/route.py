@@ -4,6 +4,7 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.outing import schema_association_outing, Outing
+from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.outing import set_author
 from c2corg_api.models.utils import get_mid_point
@@ -163,6 +164,14 @@ class RouteVersionRest(DocumentVersionRest):
     def get(self):
         return self._get_version(
             ArchiveRoute, ArchiveRouteLocale, schema_route, schema_adaptor)
+
+
+@resource(path='/routes/{id}/{lang}/info', cors_policy=cors_policy)
+class RouteInfoRest(DocumentInfoRest):
+
+    @view(validators=[validate_id, validate_lang])
+    def get(self):
+        return self._get_document_info(Route)
 
 
 def set_default_geometry(route, user_id):
