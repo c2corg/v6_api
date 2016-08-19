@@ -12,6 +12,7 @@ from c2corg_api.models.utils import get_mid_point
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, make_schema_adaptor, get_all_fields
+from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
@@ -128,6 +129,14 @@ class OutingRest(DocumentRest):
                 Association.parent_document_id == user_id,
                 Association.child_document_id == outing_id
             ))).scalar()
+
+
+@resource(path='/outings/{id}/{lang}/info', cors_policy=cors_policy)
+class OutingInfoRest(DocumentInfoRest):
+
+    @view(validators=[validate_id, validate_lang])
+    def get(self):
+        return self._get_document_info(Outing)
 
 
 def set_author(outings, lang):

@@ -7,6 +7,7 @@ from c2corg_api.models.document import UpdateType, DocumentLocale, \
 from c2corg_api.models.outing import Outing, schema_association_outing
 from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE, \
     schema_association_waypoint_route
+from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.outing import set_author
 from c2corg_api.views.route import set_route_title_prefix
@@ -417,6 +418,14 @@ class WaypointVersionRest(DocumentVersionRest):
         return self._get_version(
             ArchiveWaypoint, ArchiveWaypointLocale, schema_waypoint,
             schema_adaptor)
+
+
+@resource(path='/waypoints/{id}/{lang}/info', cors_policy=cors_policy)
+class WaypointInfoRest(DocumentInfoRest):
+
+    @view(validators=[validate_id, validate_lang])
+    def get(self):
+        return self._get_document_info(Waypoint)
 
 
 def update_linked_route_titles(waypoint, update_types, user_id):
