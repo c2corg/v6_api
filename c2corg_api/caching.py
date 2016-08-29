@@ -66,7 +66,7 @@ def configure_caches(settings):
             arguments={
                 'connection_pool': redis_pool,
                 'distributed_lock': True,
-                'lock_timeout': 5  # 5 seconds (dogpile lock)
+                'lock_timeout': 15  # 15 seconds (dogpile lock)
             },
             replace_existing_backend=True
         )
