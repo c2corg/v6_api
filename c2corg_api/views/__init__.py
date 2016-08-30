@@ -45,6 +45,7 @@ def http_error_handler(exc, request):
             ]
         }
     """
+
     if isinstance(exc, _JSONError):
         # if it is an error from Cornice, just return it
         return exc
@@ -52,7 +53,13 @@ def http_error_handler(exc, request):
     errors = Errors(request, exc.code)
     errors.add('request', exc.title, exc.detail)
 
-    return json_error(errors)
+    response = json_error(errors)
+
+    if not isinstance(exc, HTTPNotFound):
+        # only cache 404 errors
+        set_no_cache_headers(response)
+
+    return response
 
 
 @view_config(context=AccountNotValidated)
@@ -206,3 +213,8 @@ def etag_cache(request, key):
     else:
         request.response.headers['ETag'] = etag
         log.debug("ETag didn't match, returning response object")
+
+
+def set_no_cache_headers(response):
+    response.headers['Cache-Control'] = \
+        'no-cache, no-store, max-age=0, must-revalidate'

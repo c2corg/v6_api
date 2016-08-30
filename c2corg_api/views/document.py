@@ -28,7 +28,7 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import schema_association_waypoint
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.views import etag_cache
+from c2corg_api.views import etag_cache, set_no_cache_headers
 from c2corg_api.views import to_json_dict, set_best_locale
 from c2corg_api.views.validation import check_required_fields, \
     check_duplicate_locales
@@ -233,6 +233,7 @@ class DocumentRest(object):
                     cache_key, create_response, expiration_time=-1)
 
         # don't cache if requesting a document for editing
+        set_no_cache_headers(self.request.response)
         return create_response()
 
     def _get_in_lang(self, id, lang, clazz, schema, editing_view,
