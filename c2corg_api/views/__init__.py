@@ -4,7 +4,9 @@ import collections
 import datetime
 
 from c2corg_api.models import DBSession
-from c2corg_api.models.user import AccountNotValidated
+from c2corg_api.models.document import ArchiveDocument
+from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
+from c2corg_api.models.user import AccountNotValidated, User
 from c2corg_common.attributes import langs_priority
 from colander import null
 from pyramid.httpexceptions import HTTPError, HTTPNotFound, HTTPForbidden, \
@@ -19,6 +21,8 @@ from shapely.geometry import mapping
 import json
 
 from sqlalchemy.inspection import inspect
+from sqlalchemy.sql.expression import over, and_
+from sqlalchemy.sql.functions import func
 
 log = logging.getLogger(__name__)
 
@@ -94,7 +98,7 @@ def to_json_dict(obj, schema, with_special_locales_attrs=False):
     # it because it's not a real column)
     special_attributes = [
         'available_langs', 'associations', 'maps', 'areas', 'author',
-        'protected', 'type', 'name', 'username'
+        'protected', 'type', 'name', 'username', 'creator'
     ]
     for attr in special_attributes:
         if hasattr(obj, attr):
@@ -173,6 +177,52 @@ def get_best_locale(available_locales, preferred_lang):
                 (available_locales[lang] for lang in langs_priority
                  if lang in available_locales), None)
     return best_locale
+
+
+def set_creator(documents, field_name):
+    """Set the creator (the user who created the first version of a document)
+    on a list of documents.
+    """
+    if not documents:
+        return
+    document_ids = [o.document_id for o in documents]
+
+    t = DBSession.query(
+        ArchiveDocument.document_id.label('document_id'),
+        User.id.label('user_id'),
+        User.username.label('username'),
+        User.name.label('name'),
+        over(
+            func.rank(), partition_by=ArchiveDocument.document_id,
+            order_by=HistoryMetaData.id).label('rank')). \
+        select_from(ArchiveDocument). \
+        join(
+            DocumentVersion,
+            and_(
+                ArchiveDocument.document_id == DocumentVersion.document_id,
+                ArchiveDocument.version == 1)). \
+        join(HistoryMetaData,
+             DocumentVersion.history_metadata_id == HistoryMetaData.id). \
+        join(User,
+             HistoryMetaData.user_id == User.id). \
+        filter(ArchiveDocument.document_id.in_(document_ids)). \
+        subquery('t')
+    query = DBSession.query(
+            t.c.document_id, t.c.user_id, t.c.username, t.c.name). \
+        filter(t.c.rank == 1)
+
+    author_for_documents = {
+        document_id: {
+            'username': username,
+            'name': name,
+            'user_id': user_id
+        } for document_id, user_id, username, name in query
+    }
+
+    for document in documents:
+        setattr(
+            document, field_name,
+            author_for_documents.get(document.document_id))
 
 
 def etag_cache(request, key):
