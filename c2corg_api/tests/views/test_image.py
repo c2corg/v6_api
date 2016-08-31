@@ -175,6 +175,11 @@ class TestImageRest(BaseTestImage):
         locale_en = self.get_locale('en', body.get('locales'))
         self.assertEqual(1, locale_en.get('topic_id'))
 
+        self.assertIn('creator', body)
+        creator = body.get('creator')
+        self.assertEqual(
+            self.global_userids['contributor'], creator.get('user_id'))
+
     def test_get_lang(self):
         self.get_lang(self.image)
 
