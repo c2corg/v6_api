@@ -1,4 +1,5 @@
 from c2corg_api.search import create_search, get_text_query
+from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.search_filters import create_filter, build_query, \
     create_bbox_filter
@@ -380,6 +381,26 @@ class AdvancedSearchTest(BaseTestCase):
                 Range(date_start={'gt': '2016-01-03'}),
                 Range(date_end={'lt': '2016-01-01'})
             ])))
+
+    def test_create_filter_date(self):
+        self.assertEqual(
+            create_filter('idate', '', SearchImage),
+            None)
+        self.assertEqual(
+            create_filter('idate', 'invalid date', SearchImage),
+            None)
+        self.assertEqual(
+            create_filter('idate', '2016-01-01', SearchImage),
+            Range(date_time={'gte': '2016-01-01', 'lte': '2016-01-01'}))
+        self.assertEqual(
+            create_filter('idate', '2016-01-01,invalid date', SearchImage),
+            Range(date_time={'gte': '2016-01-01', 'lte': '2016-01-01'}))
+        self.assertEqual(
+            create_filter('idate', '2016-01-01,2016-01-01', SearchImage),
+            Range(date_time={'gte': '2016-01-01', 'lte': '2016-01-01'}))
+        self.assertEqual(
+            create_filter('idate', '2016-01-01,2016-01-03', SearchImage),
+            Range(date_time={'gte': '2016-01-01', 'lte': '2016-01-03'}))
 
     def test_create_bbox_filter(self):
         self.assertEqual(create_bbox_filter(''), None)

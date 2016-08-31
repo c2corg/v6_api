@@ -76,6 +76,8 @@ def create_filter(field_name, query_term, search_model):
         return create_id_filter(field, query_term)
     elif hasattr(field, '_date_range') and field._date_range:
         return create_date_range_filter(field, query_term)
+    elif hasattr(field, '_date') and field._date:
+        return create_date_filter(field, query_term)
     elif hasattr(field, '_integer_range') and field._integer_range:
         return create_number_range_filter(field, query_term)
 
@@ -251,6 +253,33 @@ def create_date_range_filter(field, query_term):
             Range(**kwargs_start),
             Range(**kwargs_end)
         ]))
+
+
+def create_date_filter(field, query_term):
+    """Creates an ElasticSearch date-range filter for a single field.
+
+    This filter type is currently only used for Image.date_time
+
+    Valid query terms are:
+        2016-01-01
+        2016-01-01,2016-01-01
+        2016-01-01,2016-01-03
+
+    """
+    query_terms = query_term.split(',')
+    range_values = list(map(parse_date, query_terms))
+    range_values = [t for t in range_values if t is not None]
+
+    n = len(range_values)
+    if n == 0:
+        return None
+    elif n == 1:
+        range_values.append(range_values[0])
+
+    kwargs = {
+        field._field_date: {'gte': range_values[0], 'lte': range_values[1]}
+    }
+    return Range(**kwargs)
 
 
 def create_number_range_filter(field, query_term):
