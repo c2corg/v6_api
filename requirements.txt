@@ -26,6 +26,9 @@ apscheduler==3.1.0
 requests==2.9.1
 gunicorn==19.6.0
 dogpile.cache==0.6.1
+# Not using the latest version of 'zope.interface' because of:
+# https://github.com/Pylons/pyramid/issues/2758
+zope.interface==4.2.0
 
 # ColanderAlchemy>=0.3.2
 # needed for ColanderAlchemy: https://github.com/stefanofontanelli/ColanderAlchemy/pull/90
