@@ -168,6 +168,11 @@ class TestImageRest(BaseTestImage):
             self.get_collection_search({'l': 'en'}),
             [self.image4.document_id, self.image.document_id], 2)
 
+        self.assertResultsEqual(
+            self.get_collection_search({'act': 'paragliding'}),
+            [self.image4.document_id, self.image3.document_id,
+             self.image2.document_id, self.image.document_id], 4)
+
     def test_get(self):
         body = self.get(self.image)
         self._assert_geometry(body)

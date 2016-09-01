@@ -55,6 +55,12 @@ class MappingTest(BaseTestCase):
     def test_image_mapping(self):
         self._test_mapping(SearchImage, Image)
 
+        queryable_fields = SearchImage.queryable_fields
+        self.assertIn('idate', queryable_fields)
+        self.assertTrue(queryable_fields['idate']._date)
+        self.assertIn('act', queryable_fields)
+        self.assertIsNotNone(queryable_fields['act']._enum)
+
     def test_map_mapping(self):
         self._test_mapping(SearchTopoMap, TopoMap)
 

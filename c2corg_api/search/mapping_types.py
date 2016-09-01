@@ -1,4 +1,4 @@
-from elasticsearch_dsl import String, Long, Integer, Boolean
+from elasticsearch_dsl import String, Long, Integer, Boolean, Date
 
 # this module contains classes to mark the fields of a mapping that can be
 # used in a search.
@@ -32,6 +32,9 @@ class QueryableMixin(object):
         if 'date_range' in kwargs:
             self._date_range = kwargs['date_range']
             del kwargs['date_range']
+        if 'date' in kwargs:
+            self._date = kwargs['date']
+            del kwargs['date']
         if 'integer_range' in kwargs:
             self._integer_range = kwargs['integer_range']
             del kwargs['integer_range']
@@ -96,8 +99,8 @@ QBoolean = get_as_queryable(Boolean)
 
 
 class QDateRange(QueryableMixin):
-    """Search field for date-ranges. Used for date_start/date_end for
-    outings.
+    """Search field for date-ranges with two fields (start/end). Used for
+    `date_start`/`date_end` for outings.
     """
     def __init__(self, query_name, field_date_start, field_date_end,
                  *args, **kwargs):
@@ -105,6 +108,16 @@ class QDateRange(QueryableMixin):
         self.field_date_end = field_date_end
         kwargs['date_range'] = True
         super(QDateRange, self).__init__(query_name, *args, **kwargs)
+
+
+class QDate(QueryableMixin, Date):
+    """Search field for date-ranges with a single field. Used for `date` for
+    images.
+    """
+    def __init__(self, query_name, field_date, *args, **kwargs):
+        self._field_date = field_date
+        kwargs['date'] = True
+        super(QDate, self).__init__(query_name, *args, **kwargs)
 
 
 class QNumberRange(QueryableMixin):
