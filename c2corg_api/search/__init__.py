@@ -16,7 +16,7 @@ from c2corg_common.attributes import default_langs
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import Search
-from elasticsearch_dsl.query import MultiMatch
+from elasticsearch_dsl.query import MultiMatch, Bool
 from kombu.connection import Connection
 from kombu import Exchange, Queue, pools
 
@@ -77,16 +77,19 @@ def create_search(document_type):
         doc_type=search_documents[document_type])
 
 
-def get_text_query(search_term):
+def get_text_query(search_term, lang=None):
     # search in all title* (title_en, title_fr, ...), summary* and
     # description* fields. "boost" title fields and summary fields.
-    return MultiMatch(
-        query=search_term,
-        fields=['title*^3', 'summary*^2', 'description*']
-    )
+    return Bool(
+        should=[
+            MultiMatch(
+                query=search_term,
+                fields=['summary*^2', 'description*'], boost=0.5),
+            get_text_query_on_title(search_term, lang)
+        ])
 
 
-def get_text_query_on_title(search_term, search_lang):
+def get_text_query_on_title(search_term, search_lang=None):
     # search in all title* (title_en, title_fr, ...) fields.
     if not search_lang:
         return MultiMatch(

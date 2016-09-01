@@ -21,7 +21,8 @@ def build_query(url_params, meta_params, doc_type):
 
     search = create_search(doc_type)
     if search_term:
-        search = search.query(get_text_query(search_term))
+        search = search.query(
+            get_text_query(search_term, meta_params.get('lang')))
 
     search_model = search_documents[doc_type]
     for param in url_params:

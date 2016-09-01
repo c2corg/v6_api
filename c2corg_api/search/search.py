@@ -3,8 +3,8 @@ from elasticsearch_dsl.search import MultiSearch
 from sqlalchemy.orm import joinedload
 
 from c2corg_api.models import DBSession
-from c2corg_api.search import create_search, get_text_query, \
-    elasticsearch_config, get_text_query_on_title
+from c2corg_api.search import create_search, elasticsearch_config, \
+    get_text_query_on_title
 from c2corg_api.views import to_json_dict, set_best_locale
 
 
