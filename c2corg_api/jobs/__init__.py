@@ -17,22 +17,24 @@ def configure_scheduler_from_config(settings):
     scheduler = BackgroundScheduler()
     scheduler.start()
 
+    # run `purge_account` job at 0:00
     scheduler.add_job(
         purge_account,
         id='purge_account',
         name='Purge accounts which where not activated',
         trigger='cron',
-        minute=0,
-        hour=0
+        hour=0,
+        minute=0
     )
 
+    # run `purge_token` job at 0:30
     scheduler.add_job(
         purge_token,
         id='purge_token',
         name='Purge expired tokens',
         trigger='cron',
-        minute=30,
-        hour=0
+        hour=0,
+        minute=30
     )
 
     scheduler.add_listener(exception_listener, EVENT_JOB_ERROR)
