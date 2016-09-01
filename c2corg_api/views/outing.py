@@ -1,15 +1,13 @@
 import functools
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
-from c2corg_api.models.document import ArchiveDocument, DocumentGeometry
-from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
+from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.outing import schema_outing, Outing, \
     schema_create_outing, schema_update_outing, ArchiveOuting, \
     ArchiveOutingLocale, OUTING_TYPE
 from c2corg_api.models.schema_utils import restrict_schema
-from c2corg_api.models.user import User
 from c2corg_api.models.utils import get_mid_point
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import cors_policy, restricted_json_view, set_creator
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, make_schema_adaptor, get_all_fields
 from c2corg_api.views.document_info import DocumentInfoRest
@@ -21,8 +19,7 @@ from c2corg_common.attributes import activities
 from c2corg_common.fields_outing import fields_outing
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPForbidden
-from sqlalchemy.sql.expression import exists, and_, over
-from sqlalchemy.sql.functions import func
+from sqlalchemy.sql.expression import exists, and_
 
 validate_outing_create = make_validator_create(
     fields_outing, 'activities', activities)
@@ -143,44 +140,7 @@ def set_author(outings, lang):
     """Set the author (the user who created an outing) on a list of
     outings.
     """
-    if not outings:
-        return
-    outing_ids = [o.document_id for o in outings]
-
-    t = DBSession.query(
-        ArchiveDocument.document_id.label('document_id'),
-        User.id.label('user_id'),
-        User.username.label('username'),
-        User.name.label('name'),
-        over(
-            func.rank(), partition_by=ArchiveDocument.document_id,
-            order_by=HistoryMetaData.id).label('rank')). \
-        select_from(ArchiveDocument). \
-        join(
-            DocumentVersion,
-            and_(
-                ArchiveDocument.document_id == DocumentVersion.document_id,
-                ArchiveDocument.version == 1)). \
-        join(HistoryMetaData,
-             DocumentVersion.history_metadata_id == HistoryMetaData.id). \
-        join(User,
-             HistoryMetaData.user_id == User.id). \
-        filter(ArchiveDocument.document_id.in_(outing_ids)). \
-        subquery('t')
-    query = DBSession.query(
-            t.c.document_id, t.c.user_id, t.c.username, t.c.name). \
-        filter(t.c.rank == 1)
-
-    author_for_outings = {
-        document_id: {
-            'username': username,
-            'name': name,
-            'user_id': user_id
-        } for document_id, user_id, username, name in query
-    }
-
-    for outing in outings:
-        outing.author = author_for_outings.get(outing.document_id)
+    set_creator(outings, 'author')
 
 
 def set_default_geometry(linked_routes, outing, user_id):

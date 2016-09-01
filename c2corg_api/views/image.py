@@ -12,6 +12,7 @@ from cornice.resource import resource, view
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, validate_document
 from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
     validate_associations, validate_associations_in
@@ -111,7 +112,7 @@ class ImageRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
-        return self._get(Image, schema_image)
+        return self._get(Image, schema_image, set_custom_fields=set_creator)
 
     @restricted_json_view(
             schema=schema_create_image,
@@ -162,3 +163,9 @@ class ImageListRest(DocumentRest):
             document = create_image(self, document_in)
             images.append({'document_id': document.document_id})
         return {'images': images}
+
+
+def set_creator(image):
+    """Set the creator (the user who created an image) on an image.
+    """
+    set_creator_on_documents([image], 'creator')

@@ -210,7 +210,7 @@ class DocumentRest(object):
 
     def _get(self, clazz, schema, clazz_locale=None, adapt_schema=None,
              include_maps=False, include_areas=True,
-             set_custom_associations=None):
+             set_custom_associations=None, set_custom_fields=None):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')
         editing_view = self.request.GET.get('e', '0') != '0'
@@ -219,7 +219,7 @@ class DocumentRest(object):
             return self._get_in_lang(
                 id, lang, clazz, schema, editing_view, clazz_locale,
                 adapt_schema, include_maps, include_areas,
-                set_custom_associations)
+                set_custom_associations, set_custom_fields)
 
         if not editing_view:
             cache_key = get_cache_key(id, lang)
@@ -238,7 +238,7 @@ class DocumentRest(object):
     def _get_in_lang(self, id, lang, clazz, schema, editing_view,
                      clazz_locale=None, adapt_schema=None,
                      include_maps=True, include_areas=True,
-                     set_custom_associations=None):
+                     set_custom_associations=None, set_custom_fields=None):
         document = self._get_document(
             clazz, id, clazz_locale=clazz_locale, lang=lang)
 
@@ -260,6 +260,9 @@ class DocumentRest(object):
 
         if include_maps:
             self._set_maps(document, lang)
+
+        if set_custom_fields:
+            set_custom_fields(document)
 
         if adapt_schema:
             schema = adapt_schema(schema, document)
