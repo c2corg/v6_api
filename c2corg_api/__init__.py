@@ -2,7 +2,8 @@ import logging
 
 from c2corg_api.caching import configure_caches
 from pyramid.config import Configurator
-from sqlalchemy import engine_from_config
+from sqlalchemy import engine_from_config, exc, event
+from sqlalchemy.pool import Pool
 from pyramid.httpexceptions import HTTPUnauthorized
 
 from c2corg_api.models import (
@@ -94,3 +95,16 @@ def main(global_config, **settings):
     # and the permissions would be bypassed
     config.scan(ignore='c2corg_api.tests')
     return config.make_wsgi_app()
+
+
+# validate db connection before using it
+@event.listens_for(Pool, 'checkout')
+def ping_connection(dbapi_connection, connection_record, connection_proxy):
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute('SELECT 1')
+    except:
+        # raise DisconnectionError - pool will try
+        # connecting again up to three times before raising.
+        raise exc.DisconnectionError()
+    cursor.close()

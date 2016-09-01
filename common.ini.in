@@ -10,6 +10,10 @@ pyramid.default_locale_name = en
 
 version = {version}
 
+# size of the connection pool for the database. note that this number is
+# per application instance.
+sqlalchemy.pool_size=20
+
 elasticsearch.host = {elasticsearch_host}
 elasticsearch.port = {elasticsearch_port}
 elasticsearch.index = {elasticsearch_index}
