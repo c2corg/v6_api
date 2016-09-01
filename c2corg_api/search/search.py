@@ -4,7 +4,7 @@ from sqlalchemy.orm import joinedload
 
 from c2corg_api.models import DBSession
 from c2corg_api.search import create_search, get_text_query, \
-    elasticsearch_config
+    elasticsearch_config, get_text_query_on_title
 from c2corg_api.views import to_json_dict, set_best_locale
 
 
@@ -22,7 +22,7 @@ def search_for_types(search_types, search_term, limit, lang):
     else:
         # search in ElasticSearch
         results_for_type = do_multi_search_for_types(
-            search_types, search_term, limit)
+            search_types, search_term, limit, lang)
 
     # load the documents using the document ids returned from the search
     results = {}
@@ -49,7 +49,7 @@ def search_for_types(search_types, search_term, limit, lang):
     return results
 
 
-def do_multi_search_for_types(search_types, search_term, limit):
+def do_multi_search_for_types(search_types, search_term, limit, lang):
     """ Executes a multi-search for all document types in a single request
     and returns a list of tuples (document_ids, total) containing the results
     for each type.
@@ -59,7 +59,7 @@ def do_multi_search_for_types(search_types, search_term, limit):
     for search_type in search_types:
         (_, document_type, _, _, _, _) = search_type
         search = create_search(document_type).\
-            query(get_text_query(search_term)).\
+            query(get_text_query_on_title(search_term, lang)).\
             fields([]).\
             extra(from_=0, size=limit)
         multi_search = multi_search.add(search)

@@ -12,6 +12,7 @@ from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
+from c2corg_common.attributes import default_langs
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import Search
@@ -83,6 +84,27 @@ def get_text_query(search_term):
         query=search_term,
         fields=['title*^3', 'summary*^2', 'description*']
     )
+
+
+def get_text_query_on_title(search_term, search_lang):
+    # search in all title* (title_en, title_fr, ...) fields.
+    if not search_lang:
+        return MultiMatch(
+            query=search_term,
+            fields=['title_*.ngram', 'title_*.raw^2']
+        )
+    else:
+        # if a language is given, boost the fields for the language
+        fields = []
+        for lang in default_langs:
+            if lang == search_lang:
+                fields.append('title_{0}.ngram^2'.format(lang))
+                fields.append('title_{0}.raw^3'.format(lang))
+            else:
+                fields.append('title_{0}.ngram'.format(lang))
+                fields.append('title_{0}.raw^2'.format(lang))
+
+        return MultiMatch(query=search_term, fields=fields)
 
 search_documents = {
     AREA_TYPE: SearchArea,

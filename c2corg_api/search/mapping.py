@@ -15,6 +15,21 @@ class BaseMeta:
     all = MetaField(enabled=False)
 
 
+# for the title fields a simpler analyzer is used.
+# the configuration is based on the one by Photon:
+# https://github.com/komoot/photon/blob/master/es/mappings.json
+# https://github.com/komoot/photon/blob/master/es/index_settings.json
+def default_title_field():
+    return String(
+        index='not_analyzed',
+        similarity='c2corgsimilarity',
+        fields={
+            'ngram': String(
+                analyzer='index_ngram', search_analyzer='search_ngram'),
+            'raw': String(
+                analyzer='index_raw', search_analyzer='search_raw')})
+
+
 class SearchDocument(DocType):
     """The base ElasticSearch mapping for documents. Each document type has
     its own specific mapping.
@@ -44,56 +59,49 @@ class SearchDocument(DocType):
     areas = QLong('a', is_id=True)
 
     # fr
-    title_fr = String(
-        analyzer='index_french', search_analyzer='search_french')
+    title_fr = default_title_field()
     summary_fr = String(
         analyzer='index_french', search_analyzer='search_french')
     description_fr = String(
         analyzer='index_french', search_analyzer='search_french')
 
     # it
-    title_it = String(
-        analyzer='index_italian', search_analyzer='search_italian')
+    title_it = default_title_field()
     summary_it = String(
         analyzer='index_italian', search_analyzer='search_italian')
     description_it = String(
         analyzer='index_italian', search_analyzer='search_italian')
 
     # de
-    title_de = String(
-        analyzer='index_german', search_analyzer='search_german')
+    title_de = default_title_field()
     summary_de = String(
         analyzer='index_german', search_analyzer='search_german')
     description_de = String(
         analyzer='index_german', search_analyzer='search_german')
 
     # en
-    title_en = String(
-        analyzer='index_english', search_analyzer='search_english')
+    title_en = default_title_field()
     summary_en = String(
         analyzer='index_english', search_analyzer='search_english')
     description_en = String(
         analyzer='index_english', search_analyzer='search_english')
 
     # es
-    title_es = String(
-        analyzer='index_spanish', search_analyzer='search_spanish')
+    title_es = default_title_field()
     summary_es = String(
         analyzer='index_spanish', search_analyzer='search_spanish')
     description_es = String(
         analyzer='index_spanish', search_analyzer='search_spanish')
 
     # ca
-    title_ca = String(
-        analyzer='index_catalan', search_analyzer='search_catalan')
+    title_ca = default_title_field()
     summary_ca = String(
         analyzer='index_catalan', search_analyzer='search_catalan')
     description_ca = String(
         analyzer='index_catalan', search_analyzer='search_catalan')
 
     # eu
-    title_eu = String(
-        analyzer='index_basque', search_analyzer='search_basque')
+    title_eu = default_title_field()
     summary_eu = String(
         analyzer='index_basque', search_analyzer='search_basque')
     description_eu = String(
@@ -173,6 +181,8 @@ class SearchDocument(DocType):
 """To support partial-matching required for the autocomplete search, we
 have to set up a n-gram filter for each language analyzer. See also:
 https://www.elastic.co/guide/en/elasticsearch/guide/current/_index_time_search_as_you_type.html
+The original definitions of the analyzers are taken from here:
+https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-lang-analyzer.html
 """
 analysis_settings = {
     "filter": {
@@ -197,6 +207,7 @@ analysis_settings = {
         # filters for the french analyzers
         "french_elision": {
             "type": "elision",
+            "articles_case": True,
             "articles": [
                 "l", "m", "t", "qu", "n", "s",
                 "j", "d", "c", "jusqu", "quoiqu",
@@ -223,6 +234,7 @@ analysis_settings = {
         # filters for the italian analyzers
         "italian_elision": {
             "type": "elision",
+            "articles_case": True,
             "articles": [
                 "c", "l", "all", "dall", "dell",
                 "nell", "sull", "coll", "pell",
@@ -250,6 +262,7 @@ analysis_settings = {
         # filters for the catalan analyzers
         "catalan_elision": {
             "type": "elision",
+            "articles_case": True,
             "articles": ["d", "l", "m", "n", "s", "t"]
         },
         "catalan_stop": {
@@ -270,7 +283,43 @@ analysis_settings = {
             "language": "basque"
         }
     },
+    "similarity": {
+        "c2corgsimilarity": {
+            "type": "BM25"
+        }
+    },
+    "char_filter": {
+        "punctuationgreedy": {
+            "type": "pattern_replace",
+            "pattern": "[\\.,]"
+        }
+    },
     "analyzer": {
+        "index_ngram": {
+            "char_filter": ["punctuationgreedy"],
+            "filter": [
+                "word_delimiter", "lowercase", "asciifolding", "unique",
+                "autocomplete_filter"],
+            "tokenizer": "standard"
+        },
+        "search_ngram": {
+            "char_filter": ["punctuationgreedy"],
+            "filter": [
+                "word_delimiter", "lowercase", "asciifolding", "unique"],
+            "tokenizer": "standard"
+        },
+        "index_raw": {
+            "char_filter": ["punctuationgreedy"],
+            "filter": [
+                "word_delimiter", "lowercase", "asciifolding", "unique"],
+            "tokenizer": "standard"
+        },
+        "search_raw": {
+            "char_filter": ["punctuationgreedy"],
+            "filter": [
+                "word_delimiter", "lowercase", "asciifolding", "unique"],
+            "tokenizer": "standard"
+        },
         "index_english": {
             "type": "custom",
             "tokenizer": "standard",
