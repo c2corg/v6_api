@@ -101,9 +101,12 @@ class AdvancedSearchTest(BaseTestCase):
             bool2 = q2['query']['bool']
             if 'must' in bool1 or 'must' in bool2:
                 self.assertEqual(bool1['must'], bool2['must'])
-            filters1 = bool1['filter']
-            filters2 = bool2['filter']
-            self.assertFiltersEqual(filters1, filters2)
+            if 'should' in bool1 or 'should' in bool2:
+                self.assertEqual(bool1['should'], bool2['should'])
+            if 'filter' in bool1 or 'filter' in bool2:
+                filters1 = bool1['filter']
+                filters2 = bool2['filter']
+                self.assertFiltersEqual(filters1, filters2)
         else:
             self.assertEqual(q1['query'], q2['query'])
 
