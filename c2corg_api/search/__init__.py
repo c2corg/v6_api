@@ -40,7 +40,7 @@ def client_from_config(settings):
     return Elasticsearch([{
         'host': settings['elasticsearch.host'],
         'port': int(settings['elasticsearch.port'])
-    }])
+    }], maxsize=int(settings['elasticsearch.pool']))
 
 
 def configure_es_from_config(settings):
