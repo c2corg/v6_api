@@ -42,6 +42,12 @@ To set up ElasticSearch
 
     .build/venv/bin/initialize_c2corg_api_es development.ini
 
+Run the migration script
+------------------------
+
+See [/c2corg_api/scripts/migration/README.md](/c2corg_api/scripts/migration/README.md).
+
+
 Run the application
 -------------------
 
