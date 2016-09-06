@@ -57,8 +57,8 @@ class DocumentRest(object):
         self.request = request
 
     def _collection_get(self, clazz, schema, doc_type, clazz_locale=None,
-                        adapt_schema=None, custom_filter=None,
-                        include_areas=True, set_custom_fields=None):
+                        adapt_schema=None, include_areas=True,
+                        set_custom_fields=None):
         validated = self.request.validated
         meta_params = {
             'offset': validated.get('offset', 0),
@@ -66,8 +66,7 @@ class DocumentRest(object):
             'lang': validated.get('lang')
         }
 
-        if not custom_filter and \
-                advanced_search.contains_search_params(self.request.GET):
+        if advanced_search.contains_search_params(self.request.GET):
             # search with ElasticSearch
             search_documents = advanced_search.get_search_documents(
                 self.request.GET, meta_params, doc_type)
@@ -77,11 +76,11 @@ class DocumentRest(object):
                 self._search_documents_paginated, meta_params)
 
         return self._get_documents(
-            clazz, schema, clazz_locale, adapt_schema, custom_filter,
+            clazz, schema, clazz_locale, adapt_schema,
             include_areas, set_custom_fields, meta_params, search_documents)
 
     def _get_documents(
-            self, clazz, schema, clazz_locale, adapt_schema, custom_filter,
+            self, clazz, schema, clazz_locale, adapt_schema,
             include_areas, set_custom_fields, meta_params, search_documents):
         lang = meta_params['lang']
         base_query = DBSession.query(clazz).\
@@ -89,9 +88,6 @@ class DocumentRest(object):
         base_total_query = DBSession.query(getattr(clazz, 'document_id')).\
             filter(getattr(clazz, 'redirects_to').is_(None))
 
-        if custom_filter:
-            base_query = custom_filter(base_query)
-            base_total_query = custom_filter(base_total_query)
         base_total_query = add_profile_filter(base_total_query, clazz)
         base_query = add_load_for_profiles(base_query, clazz)
 

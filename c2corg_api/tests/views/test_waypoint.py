@@ -25,7 +25,7 @@ from c2corg_api.models.waypoint import (
     Waypoint, WaypointLocale, ArchiveWaypoint, ArchiveWaypointLocale,
     WAYPOINT_TYPE, schema_waypoint)
 from c2corg_api.models.document import (
-    DocumentGeometry, ArchiveDocumentGeometry, DocumentLocale, Document)
+    DocumentGeometry, ArchiveDocumentGeometry, DocumentLocale)
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.views.document import DocumentRest
 
@@ -1127,7 +1127,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         body = waypoint_view._get_documents(
             Waypoint, schema_waypoint, DocumentLocale,
-            adapt_schema=listing_schema_adaptor, custom_filter=None,
+            adapt_schema=listing_schema_adaptor,
             include_areas=None, set_custom_fields=None,
             meta_params={'lang': None}, search_documents=search_documents)
 
@@ -1153,7 +1153,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         body = waypoint_view._get_documents(
             Waypoint, schema_waypoint, DocumentLocale,
-            adapt_schema=listing_schema_adaptor, custom_filter=None,
+            adapt_schema=listing_schema_adaptor,
             include_areas=None, set_custom_fields=None,
             meta_params={'lang': None}, search_documents=search_documents)
 
@@ -1164,58 +1164,6 @@ class TestWaypointRest(BaseDocumentTestRest):
             documents[0]['document_id'], self.waypoint.document_id)
         self.assertEqual(
             documents[1]['document_id'], self.waypoint2.document_id)
-
-    def test_get_documents_none_documents(self):
-        """ Test that documents that have a cache key and are not redirected,
-        but that are not returned in the document query (e.g. because of a
-        custom filter) are handled correctly (not included in the response and
-        not cached).
-        """
-        waypoint_view = WaypointRest(DummyRequest())
-
-        def search_documents(_, __):
-            documents_ids = [
-                self.waypoint.document_id,
-                self.waypoint3.document_id,  # not included in the result
-                self.waypoint2.document_id]
-            return documents_ids, 3
-
-        def custom_filter(query):
-            # fake filter
-            return query. \
-                filter(Document.document_id != self.waypoint3.document_id)
-
-        body = waypoint_view._get_documents(
-            Waypoint, schema_waypoint, DocumentLocale,
-            adapt_schema=listing_schema_adaptor, custom_filter=custom_filter,
-            include_areas=None, set_custom_fields=None,
-            meta_params={'lang': None}, search_documents=search_documents)
-
-        documents = body.get('documents')
-        self.assertEqual(len(documents), 2)
-
-        # only valid documents are returned
-        self.assertEqual(
-            documents[0]['document_id'], self.waypoint.document_id)
-        self.assertEqual(
-            documents[1]['document_id'], self.waypoint2.document_id)
-
-        # the valid documents are cached
-        self.assertNotEqual(
-            cache_document_listing.get(
-                get_cache_key(self.waypoint.document_id, None)),
-            NO_VALUE)
-
-        self.assertNotEqual(
-            cache_document_listing.get(
-                get_cache_key(self.waypoint2.document_id, None)),
-            NO_VALUE)
-
-        # the ignored document is not cached
-        self.assertEqual(
-            cache_document_listing.get(
-                get_cache_key(self.waypoint3.document_id, None)),
-            NO_VALUE)
 
     def _add_test_data(self):
         self.waypoint = Waypoint(
