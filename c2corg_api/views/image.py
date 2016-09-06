@@ -11,7 +11,7 @@ from c2corg_common.fields_image import fields_image
 from cornice.resource import resource, view
 
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
-    make_validator_update, validate_document
+    make_validator_update, validate_document, GetDocumentsConfig
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.validation import validate_id, validate_pagination, \
@@ -109,7 +109,7 @@ class ImageRest(DocumentRest):
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        return self._collection_get(Image, schema_listing_image, IMAGE_TYPE)
+        return self._collection_get(IMAGE_TYPE, image_documents_config)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
@@ -164,6 +164,9 @@ class ImageListRest(DocumentRest):
             document = create_image(self, document_in)
             images.append({'document_id': document.document_id})
         return {'images': images}
+
+image_documents_config = GetDocumentsConfig(
+    IMAGE_TYPE, Image, schema_listing_image)
 
 
 @resource(path='/images/{id}/{lang}/info', cors_policy=cors_policy)

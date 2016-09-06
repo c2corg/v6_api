@@ -21,7 +21,7 @@ from c2corg_api.models.waypoint import (
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import (
     DocumentRest, make_validator_create, make_validator_update,
-    make_schema_adaptor, NUM_RECENT_OUTINGS)
+    make_schema_adaptor, NUM_RECENT_OUTINGS, GetDocumentsConfig)
 from c2corg_api.views import cors_policy, restricted_json_view, \
     to_json_dict, set_best_locale
 from c2corg_api.views.validation import validate_id, validate_pagination, \
@@ -131,9 +131,7 @@ class WaypointRest(DocumentRest):
             Dates must be given as `yyyy-mm-dd`, e.g `2016-12-31`. If only one
             date is given, from and to are both set to that date.
         """
-        return self._collection_get(
-            Waypoint, schema_waypoint, WAYPOINT_TYPE,
-            adapt_schema=listing_schema_adaptor)
+        return self._collection_get(WAYPOINT_TYPE, waypoint_documents_config)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
@@ -245,6 +243,11 @@ class WaypointRest(DocumentRest):
         """
         return self._put(
             Waypoint, schema_waypoint, after_update=update_linked_route_titles)
+
+
+waypoint_documents_config = GetDocumentsConfig(
+    WAYPOINT_TYPE, Waypoint, schema_waypoint,
+    adapt_schema=listing_schema_adaptor)
 
 
 def set_custom_associations(waypoint, lang):

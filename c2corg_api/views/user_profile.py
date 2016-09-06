@@ -4,7 +4,7 @@ from c2corg_api.models.user_profile import schema_update_user_profile, \
     schema_listing_user_profile, USERPROFILE_TYPE
 from cornice.resource import resource
 
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import DocumentRest, GetDocumentsConfig
 from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param
@@ -18,8 +18,8 @@ class UserProfileRest(DocumentRest):
     @restricted_view(
         validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        return self._collection_get(UserProfile, schema_listing_user_profile,
-                                    USERPROFILE_TYPE)
+        return self._collection_get(
+            USERPROFILE_TYPE, user_profile_documents_config)
 
     @restricted_view(validators=[validate_id, validate_lang_param])
     def get(self):
@@ -50,3 +50,7 @@ class UserProfileRest(DocumentRest):
         if locales:
             for locale in locales:
                 locale['title'] = ''
+
+
+user_profile_documents_config = GetDocumentsConfig(
+    USERPROFILE_TYPE, UserProfile, schema_listing_user_profile)

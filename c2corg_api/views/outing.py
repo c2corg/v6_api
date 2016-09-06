@@ -9,7 +9,8 @@ from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.utils import get_mid_point
 from c2corg_api.views import cors_policy, restricted_json_view, set_creator
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
-    make_validator_update, make_schema_adaptor, get_all_fields
+    make_validator_update, make_schema_adaptor, get_all_fields, \
+    GetDocumentsConfig
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.validation import validate_id, validate_pagination, \
@@ -78,9 +79,7 @@ class OutingRest(DocumentRest):
     @view(validators=[
         validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        return self._collection_get(
-            Outing, schema_outing, OUTING_TYPE,
-            adapt_schema=listing_schema_adaptor, set_custom_fields=set_author)
+        return self._collection_get(OUTING_TYPE, outing_documents_config)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
@@ -141,6 +140,10 @@ def set_author(outings, lang):
     outings.
     """
     set_creator(outings, 'author')
+
+outing_documents_config = GetDocumentsConfig(
+    OUTING_TYPE, Outing, schema_outing,
+    adapt_schema=listing_schema_adaptor, set_custom_fields=set_author)
 
 
 def set_default_geometry(linked_routes, outing, user_id):

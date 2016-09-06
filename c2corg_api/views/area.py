@@ -8,7 +8,7 @@ from c2corg_common.fields_area import fields_area
 from cornice.resource import resource, view
 
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
-    make_validator_update
+    make_validator_update, GetDocumentsConfig
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, validate_lang
@@ -24,8 +24,7 @@ class AreaRest(DocumentRest):
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        return self._collection_get(
-            Area, schema_listing_area, AREA_TYPE, include_areas=False)
+        return self._collection_get(AREA_TYPE, area_documents_config)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
@@ -49,6 +48,9 @@ class AreaRest(DocumentRest):
                 raise HTTPBadRequest('No permission to change the geometry')
 
         return self._put(Area, schema_area, after_update=update_associations)
+
+area_documents_config = GetDocumentsConfig(
+    AREA_TYPE, Area, schema_listing_area, include_areas=False)
 
 
 @resource(path='/areas/{id}/{lang}/info', cors_policy=cors_policy)

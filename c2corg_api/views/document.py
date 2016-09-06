@@ -56,9 +56,7 @@ class DocumentRest(object):
     def __init__(self, request):
         self.request = request
 
-    def _collection_get(self, clazz, schema, doc_type, clazz_locale=None,
-                        adapt_schema=None, include_areas=True,
-                        set_custom_fields=None):
+    def _collection_get(self, doc_type, documents_config):
         validated = self.request.validated
         meta_params = {
             'offset': validated.get('offset', 0),
@@ -75,28 +73,29 @@ class DocumentRest(object):
             search_documents = partial(
                 self._search_documents_paginated, meta_params)
 
-        return self._get_documents(
-            clazz, schema, clazz_locale, adapt_schema,
-            include_areas, set_custom_fields, meta_params, search_documents)
+        return DocumentRest.get_documents(
+            documents_config, meta_params, search_documents)
 
-    def _get_documents(
-            self, clazz, schema, clazz_locale, adapt_schema,
-            include_areas, set_custom_fields, meta_params, search_documents):
+    @staticmethod
+    def get_documents(documents_config, meta_params, search_documents):
         lang = meta_params['lang']
-        base_query = DBSession.query(clazz).\
-            filter(getattr(clazz, 'redirects_to').is_(None))
-        base_total_query = DBSession.query(getattr(clazz, 'document_id')).\
-            filter(getattr(clazz, 'redirects_to').is_(None))
+        base_query = DBSession.query(documents_config.clazz).\
+            filter(getattr(documents_config.clazz, 'redirects_to').is_(None))
+        base_total_query = DBSession. \
+            query(getattr(documents_config.clazz, 'document_id')).\
+            filter(getattr(documents_config.clazz, 'redirects_to').is_(None))
 
-        base_total_query = add_profile_filter(base_total_query, clazz)
-        base_query = add_load_for_profiles(base_query, clazz)
+        base_total_query = add_profile_filter(
+            base_total_query, documents_config.clazz)
+        base_query = add_load_for_profiles(base_query, documents_config.clazz)
 
-        if clazz == Outing:
+        if documents_config.clazz == Outing:
             base_query = base_query. \
-                order_by(clazz.date_end.desc()). \
-                order_by(clazz.document_id.desc())
+                order_by(documents_config.clazz.date_end.desc()). \
+                order_by(documents_config.clazz.document_id.desc())
         else:
-            base_query = base_query.order_by(clazz.document_id.desc())
+            base_query = base_query.order_by(
+                documents_config.clazz.document_id.desc())
 
         document_ids, total = search_documents(base_query, base_total_query)
         cache_keys = get_cache_keys(document_ids, lang)
@@ -107,9 +106,8 @@ class DocumentRest(object):
             """
             ids = [get_document_id(cache_key) for cache_key in cache_keys]
 
-            docs = self._get_documents_from_ids(
-                ids, base_query, clazz, schema, clazz_locale,
-                adapt_schema, include_areas, set_custom_fields, lang)
+            docs = DocumentRest._get_documents_from_ids(
+                ids, base_query, documents_config, lang)
 
             assert len(cache_keys) == len(docs), \
                 'the number of returned documents must match ' + \
@@ -122,25 +120,30 @@ class DocumentRest(object):
             cache_keys, get_documents_from_cache_keys, expiration_time=-1,
             should_cache_fn=lambda v: v is not None)
 
+        documents = [doc for doc in documents if doc]
+        total = total if total is not None else len(documents)
+
         return {
-            'documents': [doc for doc in documents if doc],
+            'documents': documents,
             'total': total
         }
 
+    @staticmethod
     def _get_documents_from_ids(
-            self, document_ids, base_query, clazz, schema, clazz_locale,
-            adapt_schema, include_areas, set_custom_fields, lang):
+            document_ids, base_query, documents_config, lang):
         """ Load the documents for the ids and return them as json dict.
         The returned list contains None values for documents that could not be
         loaded, and the list has the same order has the document id list.
         """
-        base_query = add_load_for_locales(base_query, clazz, clazz_locale)
-        base_query = base_query.options(joinedload(getattr(clazz, 'geometry')))
+        base_query = add_load_for_locales(
+            base_query, documents_config.clazz, documents_config.clazz_locale)
+        base_query = base_query.options(
+            joinedload(getattr(documents_config.clazz, 'geometry')))
 
-        if include_areas:
+        if documents_config.include_areas:
             base_query = base_query. \
                 options(
-                    joinedload(getattr(clazz, '_areas')).
+                    joinedload(getattr(documents_config.clazz, '_areas')).
                     load_only(
                         'document_id', 'area_type', 'version', 'protected',
                         'type').
@@ -150,17 +153,18 @@ class DocumentRest(object):
                         'version')
                 )
 
-        documents = self._load_documents(document_ids, clazz, base_query)
+        documents = DocumentRest._load_documents(
+            document_ids, documents_config.clazz, base_query)
 
         set_available_langs(documents, loaded=True)
         if lang is not None:
             set_best_locale(documents, lang)
 
-        if include_areas:
-            self._set_areas_for_documents(documents, lang)
+        if documents_config.include_areas:
+            DocumentRest._set_areas_for_documents(documents, lang)
 
-        if set_custom_fields:
-            set_custom_fields(documents, lang)
+        if documents_config.set_custom_fields:
+            documents_config.set_custom_fields(documents, lang)
 
         # make sure the documents are returned in the same order
         document_index = {doc.document_id: doc for doc in documents}
@@ -169,11 +173,14 @@ class DocumentRest(object):
         return [
             to_json_dict(
                 doc,
-                schema if not adapt_schema else adapt_schema(schema, doc)
+                documents_config.schema if not documents_config.adapt_schema
+                else documents_config.adapt_schema(
+                    documents_config.schema, doc)
             ) if doc else None for doc in documents
         ]
 
-    def _load_documents(self, document_ids, clazz, base_query):
+    @staticmethod
+    def _load_documents(document_ids, clazz, base_query):
         """ Load documents given a list of document ids. Note that the
         returned list does not contain the documents in the same order as
         the passed in document id list.
@@ -290,7 +297,8 @@ class DocumentRest(object):
             to_json_dict(m, schema_listing_area) for m in areas
         ]
 
-    def _set_areas_for_documents(self, documents, lang):
+    @staticmethod
+    def _set_areas_for_documents(documents, lang):
         for document in documents:
             # expunge is set to False because the parent document of the areas
             # was already disconnected from the session at this point
@@ -731,3 +739,17 @@ association_schemas = {
     'users': schema_association_user,
     'images': schema_association_image
 }
+
+
+class GetDocumentsConfig:
+
+    def __init__(
+            self, document_type, clazz, schema, clazz_locale=None,
+            adapt_schema=None, include_areas=True, set_custom_fields=None):
+        self.document_type = document_type
+        self.clazz = clazz
+        self.schema = schema
+        self.clazz_locale = clazz_locale
+        self.adapt_schema = adapt_schema
+        self.include_areas = include_areas
+        self.set_custom_fields = set_custom_fields

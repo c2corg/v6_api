@@ -14,16 +14,15 @@ from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.views.waypoint import WaypointRest, listing_schema_adaptor
+from c2corg_api.views.waypoint import waypoint_documents_config
 from c2corg_common.attributes import quality_types
 from dogpile.cache.api import NO_VALUE
-from pyramid.testing import DummyRequest
 from shapely.geometry import shape, Point
 
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import (
     Waypoint, WaypointLocale, ArchiveWaypoint, ArchiveWaypointLocale,
-    WAYPOINT_TYPE, schema_waypoint)
+    WAYPOINT_TYPE)
 from c2corg_api.models.document import (
     DocumentGeometry, ArchiveDocumentGeometry, DocumentLocale)
 from c2corg_api.models.document_topic import DocumentTopic
@@ -1118,17 +1117,13 @@ class TestWaypointRest(BaseDocumentTestRest):
     def test_get_documents_no_version(self):
         """ Test that documents that do not have a version are skipped.
         """
-        waypoint_view = WaypointRest(DummyRequest())
-
         def search_documents(_, __):
             documents_ids = [
                 self.waypoint.document_id, 999, self.waypoint2.document_id]
             return documents_ids, 3
 
-        body = waypoint_view._get_documents(
-            Waypoint, schema_waypoint, DocumentLocale,
-            adapt_schema=listing_schema_adaptor,
-            include_areas=None, set_custom_fields=None,
+        body = DocumentRest.get_documents(
+            waypoint_documents_config,
             meta_params={'lang': None}, search_documents=search_documents)
 
         documents = body.get('documents')
@@ -1142,8 +1137,6 @@ class TestWaypointRest(BaseDocumentTestRest):
     def test_get_documents_redirect(self):
         """ Test that redirected documents are handled correctly.
         """
-        waypoint_view = WaypointRest(DummyRequest())
-
         def search_documents(_, __):
             documents_ids = [
                 self.waypoint.document_id,
@@ -1151,10 +1144,8 @@ class TestWaypointRest(BaseDocumentTestRest):
                 self.waypoint2.document_id]
             return documents_ids, 3
 
-        body = waypoint_view._get_documents(
-            Waypoint, schema_waypoint, DocumentLocale,
-            adapt_schema=listing_schema_adaptor,
-            include_areas=None, set_custom_fields=None,
+        body = DocumentRest.get_documents(
+            waypoint_documents_config,
             meta_params={'lang': None}, search_documents=search_documents)
 
         documents = body.get('documents')
