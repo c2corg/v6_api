@@ -22,6 +22,8 @@ help:
 	@echo "- serve			Run the development server"
 	@echo "- run-syncer		Run the ElasticSearch syncer script."
 	@echo "- template		Replace the config vars in the .in templates"
+	@echo "- clear-cache		Reset the server cache container"
+	@echo "- clear-cache-prod	Reset the server cache container in prod environment"
 	@echo
 	@echo "Secondary targets:"
 	@echo
