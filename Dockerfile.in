@@ -11,6 +11,7 @@ COPY requirements.txt \
      setup.py \
      Makefile \
      common.ini.in \
+     development.ini.in \
      production.ini.in \
      README.md \
      CHANGES.txt \
