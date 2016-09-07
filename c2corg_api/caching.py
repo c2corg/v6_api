@@ -70,4 +70,3 @@ def configure_caches(settings):
             },
             replace_existing_backend=True
         )
-        cache.invalidate()
