@@ -73,9 +73,12 @@ class TestWaypointRest(BaseDocumentTestRest):
             [self.waypoint3.document_id, self.waypoint2.document_id], 4)
 
     def test_get_collection_caching(self):
-        cache_key_2 = get_cache_key(self.waypoint2.document_id, None)
-        cache_key_3 = get_cache_key(self.waypoint3.document_id, None)
-        cache_key_4 = get_cache_key(self.waypoint4.document_id, None)
+        cache_key_2 = get_cache_key(
+            self.waypoint2.document_id, None, WAYPOINT_TYPE)
+        cache_key_3 = get_cache_key(
+            self.waypoint3.document_id, None, WAYPOINT_TYPE)
+        cache_key_4 = get_cache_key(
+            self.waypoint4.document_id, None, WAYPOINT_TYPE)
 
         self.assertEqual(cache_document_listing.get(cache_key_2), NO_VALUE)
         self.assertEqual(cache_document_listing.get(cache_key_3), NO_VALUE)

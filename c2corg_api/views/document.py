@@ -98,7 +98,8 @@ class DocumentRest(object):
                 documents_config.clazz.document_id.desc())
 
         document_ids, total = search_documents(base_query, base_total_query)
-        cache_keys = get_cache_keys(document_ids, lang)
+        cache_keys = get_cache_keys(
+            document_ids, lang, documents_config.document_type)
 
         def get_documents_from_cache_keys(*cache_keys):
             """ This method is called from dogpile.cache with the cache keys
