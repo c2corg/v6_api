@@ -180,7 +180,8 @@ class UserRegistrationRest(object):
         email_service = get_email_service(self.request)
         nonce = user.validation_nonce
         settings = self.request.registry.settings
-        link = settings['mail.validate_register_url_template'] % nonce
+        link = settings['mail.validate_register_url_template'].format(
+            '#', nonce)
         email_service.send_registration_confirmation(user, link)
 
         return to_json_dict(user, schema_user)
@@ -284,7 +285,8 @@ class UserRequestChangePasswordRest(object):
         email_service = get_email_service(request)
         nonce = user.validation_nonce
         settings = request.registry.settings
-        link = settings['mail.request_password_change_url_template'] % nonce
+        link = settings['mail.request_password_change_url_template'].format(
+            '#', nonce)
         email_service.send_request_change_password(user, link)
 
         return {}
@@ -447,7 +449,8 @@ class UserAccountRest(object):
             email_service = get_email_service(self.request)
             nonce = user.validation_nonce
             settings = request.registry.settings
-            link = settings['mail.validate_change_email_url_template'] % nonce
+            link = settings['mail.validate_change_email_url_template'].format(
+                '#', nonce)
             email_link = link
             result['email'] = validated['email']
             result['sent_email'] = True

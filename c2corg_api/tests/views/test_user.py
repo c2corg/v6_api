@@ -11,7 +11,7 @@ from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.security.discourse_client import (
     APIDiscourseClient, get_discourse_client, set_discourse_client)
 
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 
 import re
 
@@ -54,12 +54,13 @@ class TestUserRest(BaseTestRest):
         self.set_discourse_client_mock(mock)
 
     def extract_urls(self, data):
-        return re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+[0-9a-zA-Z]', data)  # noqa
+        return re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@#.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+[0-9a-zA-Z]', data)  # noqa
 
     def extract_nonce(self, key):
-        validation_url = self.extract_urls(self.get_last_email().body)[0]
-        query = parse_qs(urlparse(validation_url).query)
-        nonce = query[key][0]
+        match = self.extract_urls(self.get_last_email().body)
+        validation_url = match[0]
+        fragment = urlparse(validation_url).fragment
+        nonce = fragment.replace(key + '=',  '')
         return nonce
 
     def test_always_register_non_validated_users(self):
