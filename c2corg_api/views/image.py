@@ -6,6 +6,7 @@ from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.image import Image, schema_image, schema_update_image, \
     schema_listing_image, IMAGE_TYPE, schema_create_image, \
     schema_create_image_list
+from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_common.fields_image import fields_image
 from cornice.resource import resource, view
 
@@ -15,7 +16,7 @@ from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
-    validate_associations, validate_associations_in
+    validate_associations, validate_associations_in, validate_lang
 
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, \
     HTTPBadRequest, HTTPInternalServerError
@@ -163,6 +164,14 @@ class ImageListRest(DocumentRest):
             document = create_image(self, document_in)
             images.append({'document_id': document.document_id})
         return {'images': images}
+
+
+@resource(path='/images/{id}/{lang}/info', cors_policy=cors_policy)
+class ImageInfoRest(DocumentInfoRest):
+
+    @view(validators=[validate_id, validate_lang])
+    def get(self):
+        return self._get_document_info(Image)
 
 
 def set_creator(image):
