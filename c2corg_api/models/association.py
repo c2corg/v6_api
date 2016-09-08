@@ -314,6 +314,7 @@ def create_associations(document, associations_for_document, user_id):
     """ Create associations for a document that were provided when creating
     a document.
     """
+    added_associations = []
     main_id = document.document_id
     main_doc_type = document.type
     for doc_key, docs in associations_for_document.items():
@@ -329,6 +330,13 @@ def create_associations(document, associations_for_document, user_id):
             add_association(
                 parent_id, parent_type, child_id, child_type,
                 user_id, check_first=False)
+            added_associations.append({
+                'parent_id': parent_id,
+                'parent_type': parent_type,
+                'child_id': child_id,
+                'child_type': child_type
+            })
+    return added_associations
 
 
 def synchronize_associations(document, new_associations, user_id):

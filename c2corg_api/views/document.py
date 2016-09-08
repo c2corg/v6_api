@@ -335,7 +335,10 @@ class DocumentRest(object):
             after_add(document, user_id=user_id)
 
         if document_in.get('associations', None):
-            create_associations(document, document_in['associations'], user_id)
+            added_associations = create_associations(
+                document, document_in['associations'], user_id)
+            update_cache_version_associations(
+                added_associations, [], document.document_id)
 
         notify_es_syncer(self.request.registry.queue_config)
         return document
