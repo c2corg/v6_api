@@ -4,6 +4,7 @@ from c2corg_api.models.topo_map import (
     TopoMap, schema_topo_map, schema_update_topo_map, schema_listing_topo_map,
     MAP_TYPE)
 from c2corg_api.models.topo_map_association import update_map
+from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_common.fields_topo_map import fields_topo_map
 from cornice.resource import resource, view
 
@@ -11,8 +12,7 @@ from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
-    validate_lang_param, validate_preferred_lang_param
-
+    validate_lang_param, validate_preferred_lang_param, validate_lang
 
 validate_map_create = make_validator_create(fields_topo_map.get('required'))
 validate_map_update = make_validator_update(fields_topo_map.get('required'))
@@ -44,6 +44,14 @@ class TopoMapRest(DocumentRest):
     def put(self):
         return self._put(
             TopoMap, schema_topo_map, after_update=update_associations)
+
+
+@resource(path='/maps/{id}/{lang}/info', cors_policy=cors_policy)
+class TopoMapInfoRest(DocumentInfoRest):
+
+    @view(validators=[validate_id, validate_lang])
+    def get(self):
+        return self._get_document_info(TopoMap)
 
 
 def insert_associations(topo_map, user_id):

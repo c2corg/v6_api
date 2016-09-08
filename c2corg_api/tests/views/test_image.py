@@ -218,6 +218,10 @@ class TestImageRest(BaseTestImage):
         self.assertCorniceRequired(errors[1], 'locales')
         self.assertCorniceRequired(errors[2], 'image_type')
 
+    def test_get_info(self):
+        body, locale = self.get_info(self.image, 'en')
+        self.assertEqual(locale.get('lang'), 'en')
+
     def test_post_missing_title(self):
         body_post = {
             'filename': 'post_missing_title.jpg',
