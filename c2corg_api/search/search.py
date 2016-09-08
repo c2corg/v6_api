@@ -1,6 +1,6 @@
 from c2corg_api.search import create_search, elasticsearch_config, \
     get_text_query_on_title
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document_listings import get_documents
 from elasticsearch_dsl.search import MultiSearch
 
 
@@ -29,7 +29,7 @@ def search_for_types(search_types, search_term, limit, lang):
         def search_documents(_, __):
             return document_ids, total
 
-        results[key] = DocumentRest.get_documents(
+        results[key] = get_documents(
             get_documents_config, {'lang': lang}, search_documents)
 
     return results

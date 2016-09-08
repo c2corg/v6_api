@@ -128,8 +128,9 @@ class TestOutingRest(BaseDocumentTestRest):
 
         linked_users = associations.get('users')
         self.assertEqual(len(linked_users), 1)
+        # TODO id -> document_id
         self.assertEqual(
-            linked_users[0]['id'], self.global_userids['contributor'])
+            linked_users[0]['document_id'], self.global_userids['contributor'])
 
         linked_images = associations.get('images')
         self.assertEqual(len(linked_images), 1)
