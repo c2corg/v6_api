@@ -68,6 +68,10 @@ class TestTopoMapRest(BaseDocumentTestRest):
     def test_get_404(self):
         self.get_404()
 
+    def test_get_info(self):
+        body, locale = self.get_info(self.map1, 'en')
+        self.assertEqual(locale.get('lang'), 'en')
+
     def test_post_not_moderator(self):
         headers = self.add_authorization_header(username='contributor')
         self.app_post_json(
