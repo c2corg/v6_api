@@ -116,11 +116,12 @@ class TestRouteRest(BaseDocumentTestRest):
 
         recent_outings = associations.get('recent_outings')
         self.assertEqual(1, recent_outings['total'])
-        self.assertEqual(1, len(recent_outings['outings']))
+        # TODO documents are now in `documents` and not `outings`
+        self.assertEqual(1, len(recent_outings['documents']))
         self.assertEqual(
             self.outing1.document_id,
-            recent_outings['outings'][0].get('document_id'))
-        self.assertIn('type', recent_outings['outings'][0])
+            recent_outings['documents'][0].get('document_id'))
+        self.assertIn('type', recent_outings['documents'][0])
 
         self.assertIn('maps', body)
         topo_map = body.get('maps')[0]

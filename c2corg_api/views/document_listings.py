@@ -12,9 +12,9 @@ from c2corg_api.views import to_json_dict, set_best_locale
 from sqlalchemy.orm import joinedload, contains_eager, subqueryload
 
 
-def get_documents_for_ids(document_ids, lang, documents_config):
+def get_documents_for_ids(document_ids, lang, documents_config, total=None):
     def search_documents(_, __):
-        return document_ids, None
+        return document_ids, total
 
     return get_documents(
         documents_config, {'lang': lang}, search_documents)

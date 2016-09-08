@@ -57,7 +57,7 @@ def get_associations(document, lang, editing_view):
 
 
 def get_linked_waypoint_parents(document, lang):
-    waypoint_ids = _get_first_column(
+    waypoint_ids = get_first_column(
         DBSession.query(Waypoint.document_id).
         filter(Waypoint.redirects_to.is_(None)).
         join(Association,
@@ -71,7 +71,7 @@ def get_linked_waypoint_parents(document, lang):
 
 
 def get_linked_waypoint_children(document, lang):
-    waypoint_ids = _get_first_column(
+    waypoint_ids = get_first_column(
         DBSession.query(Waypoint.document_id).
         filter(Waypoint.redirects_to.is_(None)).
         join(Association,
@@ -85,7 +85,7 @@ def get_linked_waypoint_children(document, lang):
 
 
 def get_linked_waypoints(document, lang):
-    waypoint_ids = _get_first_column(
+    waypoint_ids = get_first_column(
         DBSession.query(Waypoint.document_id).
         filter(Waypoint.redirects_to.is_(None)).
         join(Association,
@@ -118,7 +118,7 @@ def get_linked_routes(document, lang):
     else:
         condition = or_(condition_as_child, condition_as_parent)
 
-    route_ids = _get_first_column(
+    route_ids = get_first_column(
         DBSession.query(Route.document_id).
         filter(Route.redirects_to.is_(None)).
         join(Association, condition).
@@ -130,7 +130,7 @@ def get_linked_routes(document, lang):
 
 
 def get_linked_users(document, lang):
-    user_ids = _get_first_column(
+    user_ids = get_first_column(
         DBSession.query(User.id).
         join(Association, Association.parent_document_id == User.id).
         filter(Association.child_document_id == document.document_id).
@@ -142,7 +142,7 @@ def get_linked_users(document, lang):
 
 
 def get_linked_images(document, lang):
-    image_ids = _get_first_column(
+    image_ids = get_first_column(
         DBSession.query(Image.document_id).
         filter(Image.redirects_to.is_(None)).
         join(
@@ -158,5 +158,5 @@ def get_linked_images(document, lang):
         image_ids, lang, image_documents_config).get('documents')
 
 
-def _get_first_column(rows):
+def get_first_column(rows):
     return [r for (r, ) in rows]
