@@ -6,7 +6,7 @@ from c2corg_api.caching import cache_document_detail, cache_document_listing, \
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
-from c2corg_api.models.cache_version import get_cache_key
+from c2corg_api.models.cache_version import get_cache_key, CacheVersion
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
@@ -481,6 +481,9 @@ class TestWaypointRest(BaseDocumentTestRest):
                 ]
             }
         }
+        waypoint2_cache_key = self.session.query(CacheVersion).get(
+            self.waypoint2.document_id).version
+
         body, doc = self.post_success(body)
         self._assert_geometry(body, 'geom')
 
@@ -529,6 +532,11 @@ class TestWaypointRest(BaseDocumentTestRest):
         association_wp = self.session.query(Association).get(
             (doc.document_id, self.waypoint2.document_id))
         self.assertIsNotNone(association_wp)
+
+        # check that the cache key for wp 2 is incremented, which was included
+        # as association
+        self.check_cache_version(
+            self.waypoint2.document_id, waypoint2_cache_key + 1)
 
     def test_put_wrong_document_id(self):
         body = {

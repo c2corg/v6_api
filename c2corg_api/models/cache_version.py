@@ -355,7 +355,7 @@ def update_cache_version_for_map(topo_map):
 
 
 def update_cache_version_associations(
-        added_associations, removed_associations):
+        added_associations, removed_associations, ignore_document_id=None):
     changed_associations = added_associations + removed_associations
     documents_to_update = set()
     waypoints_to_update = set()
@@ -372,8 +372,12 @@ def update_cache_version_associations(
                 association['child_type'] == OUTING_TYPE:
             routes_to_update.add(association['parent_id'])
 
+    if ignore_document_id is not None:
+        documents_to_update.remove(ignore_document_id)
+
     if documents_to_update:
-        # update the cache version of the documents of removed associations
+        # update the cache version of the documents of added and removed
+        # associations
         DBSession.execute(
             text('SELECT guidebook.increment_cache_versions(:document_ids)'),
             {'document_ids': list(documents_to_update)}

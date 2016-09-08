@@ -2,6 +2,7 @@ import json
 from unittest.mock import patch, Mock
 
 from c2corg_api.models.association import Association
+from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
 from c2corg_common.attributes import quality_types
@@ -276,8 +277,12 @@ class TestImageRest(BaseTestImage):
     @patch('c2corg_api.views.image.requests.post',
            return_value=Mock(status_code=200))
     def test_post_success(self, post_mock):
+        waypoint_cache_key = self.session.query(CacheVersion).get(
+            self.waypoint.document_id).version
         body, doc = self.post_success(self._post_success_document())
         self._validate_post_success(body, doc)
+        self.check_cache_version(
+            self.waypoint.document_id, waypoint_cache_key + 1)
 
     def test_put_wrong_document_id(self):
         body = {
