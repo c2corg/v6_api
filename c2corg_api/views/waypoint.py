@@ -1,15 +1,15 @@
 import functools
 
 from c2corg_api.models import DBSession
-from c2corg_api.models.association import Association, limit_route_fields
-from c2corg_api.models.document import UpdateType, DocumentLocale, \
-    DocumentGeometry
-from c2corg_api.models.outing import Outing, schema_association_outing
-from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE, \
-    schema_association_waypoint_route
+from c2corg_api.models.association import Association
+from c2corg_api.models.document import UpdateType
+from c2corg_api.models.outing import Outing
+from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
+from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import waypoint_documents_config, \
-    waypoint_schema_adaptor
+    waypoint_schema_adaptor, outing_documents_config, route_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.route import set_route_title_prefix
 from cornice.resource import resource, view
@@ -22,8 +22,7 @@ from c2corg_api.models.waypoint import (
 from c2corg_api.views.document import (
     DocumentRest, make_validator_create, make_validator_update,
     NUM_RECENT_OUTINGS)
-from c2corg_api.views import cors_policy, restricted_json_view, \
-    to_json_dict, set_best_locale, set_author
+from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param, validate_associations
@@ -240,35 +239,26 @@ def set_recent_outings(waypoint, lang):
     t_route_wp = aliased(Association, name='a2')
     with_query_waypoints = _get_select_children(waypoint)
 
-    recent_outings = DBSession.query(Outing). \
-        filter(Outing.redirects_to.is_(None)). \
+    recent_outing_ids = get_first_column(
+        DBSession.query(Outing.document_id).
+        filter(Outing.redirects_to.is_(None)).
         join(
             t_outing_route,
-            Outing.document_id == t_outing_route.child_document_id). \
+            Outing.document_id == t_outing_route.child_document_id).
         join(
             t_route_wp,
             and_(
                 t_route_wp.child_document_id ==
                 t_outing_route.parent_document_id,
                 t_route_wp.child_document_type == ROUTE_TYPE,
-            )). \
+            )).
         join(
             with_query_waypoints,
             with_query_waypoints.c.document_id == t_route_wp.parent_document_id
-        ). \
-        options(load_only(
-            Outing.document_id, Outing.activities, Outing.date_start,
-            Outing.date_end, Outing.version, Outing.protected)). \
-        options(joinedload(Outing.locales).load_only(
-            DocumentLocale.lang, DocumentLocale.title,
-            DocumentLocale.version)). \
-        order_by(Outing.date_end.desc()). \
-        limit(NUM_RECENT_OUTINGS). \
-        all()
-
-    set_author(recent_outings, None)
-    if lang is not None:
-        set_best_locale(recent_outings, lang)
+        ).
+        order_by(Outing.date_end.desc()).
+        limit(NUM_RECENT_OUTINGS).
+        all())
 
     total = DBSession.query(Outing.document_id). \
         filter(Outing.redirects_to.is_(None)). \
@@ -288,13 +278,8 @@ def set_recent_outings(waypoint, lang):
         ). \
         count()
 
-    waypoint.associations['recent_outings'] = {
-        'total': total,
-        'outings': [
-            to_json_dict(outing, schema_association_outing)
-            for outing in recent_outings
-        ]
-    }
+    waypoint.associations['recent_outings'] = get_documents_for_ids(
+        recent_outing_ids, lang, outing_documents_config, total)
 
 
 def set_linked_routes(waypoint, lang):
@@ -304,6 +289,23 @@ def set_linked_routes(waypoint, lang):
     Note that this function returns a dict and not a list!
     """
     with_query_waypoints = _get_select_children(waypoint)
+
+    route_ids = get_first_column(
+        DBSession.query(Route.document_id).
+        select_from(with_query_waypoints).
+        join(
+            Association,
+            with_query_waypoints.c.document_id ==
+            Association.parent_document_id).
+        join(
+            Route,
+            Association.child_document_id == Route.document_id).
+        filter(Route.redirects_to.is_(None)).
+        order_by(
+            with_query_waypoints.c.priority.desc(),
+            Route.document_id.desc()).
+        limit(NUM_ROUTES).
+        all())
 
     total = DBSession.query(Route.document_id). \
         select_from(with_query_waypoints). \
@@ -317,36 +319,8 @@ def set_linked_routes(waypoint, lang):
         filter(Route.redirects_to.is_(None)). \
         count()
 
-    routes = limit_route_fields(
-        DBSession.query(Route).
-        options(joinedload(Route.geometry).load_only(
-            DocumentGeometry.geom_detail, DocumentGeometry.version)).
-        select_from(with_query_waypoints).
-        join(
-            Association,
-            with_query_waypoints.c.document_id ==
-            Association.parent_document_id).
-        join(
-            Route,
-            Association.child_document_id == Route.document_id).
-        filter(Route.redirects_to.is_(None)).
-        order_by(
-            with_query_waypoints.c.priority.desc(),
-            Route.document_id.desc()).
-        limit(NUM_ROUTES)
-        ). \
-        all()
-
-    if lang is not None:
-        set_best_locale(routes, lang)
-
-    waypoint.associations['all_routes'] = {
-        'total': total,
-        'routes': [
-            to_json_dict(route, schema_association_waypoint_route)
-            for route in routes
-        ]
-    }
+    waypoint.associations['all_routes'] = get_documents_for_ids(
+        route_ids, lang, route_documents_config, total)
 
 
 def _get_select_children(waypoint):

@@ -1,4 +1,3 @@
-from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user import User
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.views.validation import updatable_associations, \
@@ -13,7 +12,7 @@ from sqlalchemy import (
     String
     )
 from sqlalchemy.schema import PrimaryKeyConstraint
-from sqlalchemy.orm import relationship, joinedload, load_only
+from sqlalchemy.orm import relationship
 
 from c2corg_api.models import Base, schema, users_schema, DBSession
 from c2corg_api.models.document import Document
@@ -106,16 +105,6 @@ schema_association = SQLAlchemySchemaNode(
     # whitelisted attributes
     includes=['parent_document_id', 'child_document_id'],
     overrides={})
-
-
-def limit_route_fields(query):
-    return query.\
-        options(load_only(
-            Route.document_id, Route.activities, Route.elevation_min,
-            Route.elevation_max, Route.version, Route.protected)). \
-        options(joinedload(Route.locales.of_type(RouteLocale)).load_only(
-            RouteLocale.lang, RouteLocale.title, RouteLocale.title_prefix,
-            RouteLocale.version))
 
 
 def exists_already(link):

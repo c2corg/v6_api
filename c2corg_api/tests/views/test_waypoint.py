@@ -148,7 +148,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertIn('geom', linked_waypoints[0].get('geometry'))
 
         all_linked_routes = associations.get('all_routes')
-        linked_routes = all_linked_routes['routes']
+        linked_routes = all_linked_routes['documents']
         self.assertEqual(2, len(linked_routes))
         linked_route = linked_routes[0]
         self.assertIn('type', linked_route)
@@ -161,7 +161,8 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(
             linked_routes[1]['document_id'], self.route3.document_id)
         self.assertIn('geometry', linked_routes[0])
-        self.assertIn('geom_detail', linked_routes[0].get('geometry'))
+        # TODO not returning `geom_detail` anymore
+        self.assertIn('geom', linked_routes[0].get('geometry'))
 
         self.assertIn('maps', body)
         self.assertEqual(1, len(body.get('maps')))
@@ -176,19 +177,20 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(area.get('area_type'), 'range')
         self.assertEqual(area.get('locales')[0].get('title'), 'France')
 
+        # TODO `outings` renamed to `documents`
         recent_outings = associations.get('recent_outings')
         self.assertEqual(2, recent_outings['total'])
-        self.assertEqual(2, len(recent_outings['outings']))
+        self.assertEqual(2, len(recent_outings['documents']))
         self.assertEqual(
             {
                 self.outing1.document_id,
                 self.outing3.document_id
             },
             {
-                recent_outings['outings'][0].get('document_id'),
-                recent_outings['outings'][1].get('document_id')
+                recent_outings['documents'][0].get('document_id'),
+                recent_outings['documents'][1].get('document_id')
             })
-        self.assertIn('type', recent_outings['outings'][0])
+        self.assertIn('type', recent_outings['documents'][0])
 
         locale_en = self.get_locale('en', body.get('locales'))
         self.assertEqual(1, locale_en.get('topic_id'))
