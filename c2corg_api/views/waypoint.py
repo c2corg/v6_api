@@ -8,8 +8,9 @@ from c2corg_api.models.outing import Outing, schema_association_outing
 from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE, \
     schema_association_waypoint_route
 from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import waypoint_documents_config, \
+    waypoint_schema_adaptor
 from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.outing import set_author
 from c2corg_api.views.route import set_route_title_prefix
 from cornice.resource import resource, view
 
@@ -18,18 +19,16 @@ from c2corg_api.models.waypoint import (
     ArchiveWaypoint, ArchiveWaypointLocale, WAYPOINT_TYPE,
     schema_create_waypoint)
 
-from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import (
     DocumentRest, make_validator_create, make_validator_update,
-    make_schema_adaptor, NUM_RECENT_OUTINGS, GetDocumentsConfig)
+    NUM_RECENT_OUTINGS)
 from c2corg_api.views import cors_policy, restricted_json_view, \
-    to_json_dict, set_best_locale
+    to_json_dict, set_best_locale, set_author
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param, validate_associations
 from c2corg_common.fields_waypoint import fields_waypoint
 from c2corg_common.attributes import waypoint_types
-from functools import lru_cache
 from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.orm.util import aliased
 from sqlalchemy.sql.elements import literal_column
@@ -46,22 +45,6 @@ validate_associations_create = functools.partial(
     validate_associations, WAYPOINT_TYPE, True)
 validate_associations_update = functools.partial(
     validate_associations, WAYPOINT_TYPE, False)
-
-
-@lru_cache(maxsize=None)
-def adapt_schema_for_type(waypoint_type, field_list_type):
-    """Get the schema for a waypoint type.
-    `field_list_type` should be either "fields" or "listing".
-    All schemas are cached using memoization with @lru_cache.
-    """
-    fields = fields_waypoint.get(waypoint_type).get(field_list_type)
-    return restrict_schema(schema_waypoint, fields)
-
-
-schema_adaptor = make_schema_adaptor(
-    adapt_schema_for_type, 'waypoint_type', 'fields')
-listing_schema_adaptor = make_schema_adaptor(
-    adapt_schema_for_type, 'waypoint_type', 'listing')
 
 
 @resource(collection_path='/waypoints', path='/waypoints/{id}',
@@ -153,7 +136,7 @@ class WaypointRest(DocumentRest):
         """
         return self._get(
             Waypoint, schema_waypoint,
-            adapt_schema=schema_adaptor, include_maps=True,
+            adapt_schema=waypoint_schema_adaptor, include_maps=True,
             set_custom_associations=set_custom_associations)
 
     @restricted_json_view(schema=schema_create_waypoint,
@@ -243,11 +226,6 @@ class WaypointRest(DocumentRest):
         """
         return self._put(
             Waypoint, schema_waypoint, after_update=update_linked_route_titles)
-
-
-waypoint_documents_config = GetDocumentsConfig(
-    WAYPOINT_TYPE, Waypoint, schema_waypoint,
-    adapt_schema=listing_schema_adaptor)
 
 
 def set_custom_associations(waypoint, lang):
@@ -420,7 +398,7 @@ class WaypointVersionRest(DocumentVersionRest):
     def get(self):
         return self._get_version(
             ArchiveWaypoint, ArchiveWaypointLocale, schema_waypoint,
-            schema_adaptor)
+            waypoint_schema_adaptor)
 
 
 @resource(path='/waypoints/{id}/{lang}/info', cors_policy=cors_policy)

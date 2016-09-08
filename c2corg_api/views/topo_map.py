@@ -1,15 +1,15 @@
 from c2corg_api.models.cache_version import update_cache_version_for_map
 from c2corg_api.models.document import UpdateType
 from c2corg_api.models.topo_map import (
-    TopoMap, schema_topo_map, schema_update_topo_map, schema_listing_topo_map,
-    MAP_TYPE)
+    TopoMap, schema_topo_map, schema_update_topo_map, MAP_TYPE)
 from c2corg_api.models.topo_map_association import update_map
 from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import topo_map_documents_config
 from c2corg_common.fields_topo_map import fields_topo_map
 from cornice.resource import resource, view
 
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
-    make_validator_update, GetDocumentsConfig
+    make_validator_update
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, validate_lang
@@ -44,10 +44,6 @@ class TopoMapRest(DocumentRest):
     def put(self):
         return self._put(
             TopoMap, schema_topo_map, after_update=update_associations)
-
-
-topo_map_documents_config = GetDocumentsConfig(
-    MAP_TYPE, TopoMap, schema_listing_topo_map)
 
 
 @resource(path='/maps/{id}/{lang}/info', cors_policy=cors_policy)

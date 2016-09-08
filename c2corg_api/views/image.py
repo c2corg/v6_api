@@ -4,14 +4,14 @@ import requests
 from c2corg_api.models import DBSession
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.image import Image, schema_image, schema_update_image, \
-    schema_listing_image, IMAGE_TYPE, schema_create_image, \
-    schema_create_image_list
+    IMAGE_TYPE, schema_create_image, schema_create_image_list
 from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import image_documents_config
 from c2corg_common.fields_image import fields_image
 from cornice.resource import resource, view
 
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
-    make_validator_update, validate_document, GetDocumentsConfig
+    make_validator_update, validate_document
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.validation import validate_id, validate_pagination, \
@@ -164,9 +164,6 @@ class ImageListRest(DocumentRest):
             document = create_image(self, document_in)
             images.append({'document_id': document.document_id})
         return {'images': images}
-
-image_documents_config = GetDocumentsConfig(
-    IMAGE_TYPE, Image, schema_listing_image)
 
 
 @resource(path='/images/{id}/{lang}/info', cors_policy=cors_policy)

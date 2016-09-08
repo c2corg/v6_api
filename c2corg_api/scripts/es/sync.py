@@ -12,7 +12,7 @@ from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import elasticsearch_config, batch_size, \
     search_documents
-from c2corg_api.views.document import add_load_for_profiles
+from c2corg_api.views.document_listings import add_load_for_profiles
 from sqlalchemy.orm import joinedload
 import logging
 

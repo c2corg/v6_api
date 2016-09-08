@@ -5,13 +5,13 @@ from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.outing import schema_outing, Outing, \
     schema_create_outing, schema_update_outing, ArchiveOuting, \
     ArchiveOutingLocale, OUTING_TYPE
-from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.utils import get_mid_point
-from c2corg_api.views import cors_policy, restricted_json_view, set_creator
+from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
-    make_validator_update, make_schema_adaptor, get_all_fields, \
-    GetDocumentsConfig
+    make_validator_update
 from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import outing_documents_config, \
+    outing_schema_adaptor
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
@@ -58,20 +58,6 @@ def validate_required_associations(request):
             'body', 'associations.routes', 'at least one route required')
 
 
-def adapt_schema_for_activities(activities, field_list_type):
-    """Get the schema for a set of activities.
-    `field_list_type` should be either "fields" or "listing".
-    """
-    fields = get_all_fields(fields_outing, activities, field_list_type)
-    return restrict_schema(schema_outing, fields)
-
-
-schema_adaptor = make_schema_adaptor(
-    adapt_schema_for_activities, 'activities', 'fields')
-listing_schema_adaptor = make_schema_adaptor(
-    adapt_schema_for_activities, 'activities', 'listing')
-
-
 @resource(collection_path='/outings', path='/outings/{id}',
           cors_policy=cors_policy)
 class OutingRest(DocumentRest):
@@ -84,7 +70,7 @@ class OutingRest(DocumentRest):
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
         return self._get(
-            Outing, schema_outing, adapt_schema=schema_adaptor)
+            Outing, schema_outing, adapt_schema=outing_schema_adaptor)
 
     @restricted_json_view(schema=schema_create_outing,
                           validators=[validate_outing_create,
@@ -135,17 +121,6 @@ class OutingInfoRest(DocumentInfoRest):
         return self._get_document_info(Outing)
 
 
-def set_author(outings, lang):
-    """Set the author (the user who created an outing) on a list of
-    outings.
-    """
-    set_creator(outings, 'author')
-
-outing_documents_config = GetDocumentsConfig(
-    OUTING_TYPE, Outing, schema_outing,
-    adapt_schema=listing_schema_adaptor, set_custom_fields=set_author)
-
-
 def set_default_geometry(linked_routes, outing, user_id):
     """When creating a new outing, set the default geometry to the middle point
     of a given track, if not to the geometry of an associated route.
@@ -186,4 +161,5 @@ class OutingVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveOuting, ArchiveOutingLocale, schema_outing, schema_adaptor)
+            ArchiveOuting, ArchiveOutingLocale, schema_outing,
+            outing_schema_adaptor)

@@ -14,6 +14,7 @@ from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.tests.search import reset_search_index
+from c2corg_api.views.document_listings import get_documents
 from c2corg_api.views.waypoint import waypoint_documents_config
 from c2corg_common.attributes import quality_types
 from dogpile.cache.api import NO_VALUE
@@ -1125,7 +1126,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 self.waypoint.document_id, 999, self.waypoint2.document_id]
             return documents_ids, 3
 
-        body = DocumentRest.get_documents(
+        body = get_documents(
             waypoint_documents_config,
             meta_params={'lang': None}, search_documents=search_documents)
 
@@ -1147,7 +1148,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 self.waypoint2.document_id]
             return documents_ids, 3
 
-        body = DocumentRest.get_documents(
+        body = get_documents(
             waypoint_documents_config,
             meta_params={'lang': None}, search_documents=search_documents)
 

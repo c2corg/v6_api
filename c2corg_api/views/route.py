@@ -5,20 +5,19 @@ from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.outing import schema_association_outing, Outing
 from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import route_documents_config, \
+    route_schema_adaptor
 from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.outing import set_author
 from c2corg_api.models.utils import get_mid_point
 from cornice.resource import resource, view
 
 from c2corg_api.models.route import Route, schema_route, schema_update_route, \
     ArchiveRoute, ArchiveRouteLocale, RouteLocale, ROUTE_TYPE, \
     schema_create_route
-from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
-    make_validator_update, make_schema_adaptor, get_all_fields, \
-    NUM_RECENT_OUTINGS, GetDocumentsConfig
+    make_validator_update, NUM_RECENT_OUTINGS
 from c2corg_api.views import cors_policy, restricted_json_view, \
-    get_best_locale, to_json_dict, set_best_locale
+    get_best_locale, to_json_dict, set_best_locale, set_author
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param, validate_associations
@@ -60,20 +59,6 @@ def validate_main_waypoint(is_on_create, request):
         'body', 'main_waypoint_id', 'no association for the main waypoint')
 
 
-def adapt_schema_for_activities(activities, field_list_type):
-    """Get the schema for a set of activities.
-    `field_list_type` should be either "fields" or "listing".
-    """
-    fields = get_all_fields(fields_route, activities, field_list_type)
-    return restrict_schema(schema_route, fields)
-
-
-schema_adaptor = make_schema_adaptor(
-    adapt_schema_for_activities, 'activities', 'fields')
-listing_schema_adaptor = make_schema_adaptor(
-    adapt_schema_for_activities, 'activities', 'listing')
-
-
 @resource(collection_path='/routes', path='/routes/{id}',
           cors_policy=cors_policy)
 class RouteRest(DocumentRest):
@@ -86,7 +71,7 @@ class RouteRest(DocumentRest):
     def get(self):
         return self._get(
             Route, schema_route, clazz_locale=RouteLocale,
-            adapt_schema=schema_adaptor, include_maps=True,
+            adapt_schema=route_schema_adaptor, include_maps=True,
             set_custom_associations=RouteRest.set_recent_outings)
 
     @restricted_json_view(
@@ -161,7 +146,8 @@ class RouteVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveRoute, ArchiveRouteLocale, schema_route, schema_adaptor)
+            ArchiveRoute, ArchiveRouteLocale, schema_route,
+            route_schema_adaptor)
 
 
 @resource(path='/routes/{id}/{lang}/info', cors_policy=cors_policy)
@@ -170,10 +156,6 @@ class RouteInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):
         return self._get_document_info(Route)
-
-route_documents_config = GetDocumentsConfig(
-    ROUTE_TYPE, Route, schema_route, clazz_locale=RouteLocale,
-    adapt_schema=listing_schema_adaptor)
 
 
 def set_default_geometry(route, user_id):
