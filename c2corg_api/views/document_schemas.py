@@ -13,14 +13,19 @@ from c2corg_api.views import set_author
 from c2corg_common.fields_outing import fields_outing
 from c2corg_common.fields_route import fields_route
 from c2corg_common.fields_waypoint import fields_waypoint
+from c2corg_common.fields_area import fields_area
+from c2corg_common.fields_image import fields_image
+from c2corg_common.fields_topo_map import fields_topo_map
+from c2corg_common.fields_user_profile import fields_user_profile
 from functools import lru_cache
 
 
 class GetDocumentsConfig:
 
     def __init__(
-            self, document_type, clazz, schema, clazz_locale=None,
-            adapt_schema=None, include_areas=True, set_custom_fields=None):
+            self, document_type, clazz, schema, clazz_locale=None, fields=None,
+            listing_fields=None, adapt_schema=None, include_areas=True,
+            set_custom_fields=None):
         self.document_type = document_type
         self.clazz = clazz
         self.schema = schema
@@ -28,6 +33,50 @@ class GetDocumentsConfig:
         self.adapt_schema = adapt_schema
         self.include_areas = include_areas
         self.set_custom_fields = set_custom_fields
+
+        self._set_load_only_fields(fields, listing_fields)
+
+    def _set_load_only_fields(self, fields, listing_fields):
+        if not listing_fields:
+            listing_fields = self._collect_listing_fields(fields)
+
+        self.fields_document = set(['version', 'protected'])
+        self.fields_geometry = set(['version'])
+        self.fields_locales = set(['version', 'lang'])
+
+        for field in listing_fields:
+            if field.startswith('locales.'):
+                self.fields_locales.add(field.replace('locales.', ''))
+            elif field.startswith('geometry.'):
+                self.fields_geometry.add(field.replace('geometry.', ''))
+            else:
+                self.fields_document.add(field)
+
+    def _collect_listing_fields(self, fields):
+        listing_fields = set()
+
+        for _, type_config in fields.items():
+            listing_fields = listing_fields.union(type_config['listing'])
+
+        return listing_fields
+
+    def get_load_only_fields(self):
+        """ Return the fields for a document type that are needed to query
+        documents for the listing views.
+        """
+        return self.fields_document
+
+    def get_load_only_fields_locales(self):
+        """ Return the locales fields for a document type that are needed to
+        query documents for the listing views.
+        """
+        return self.fields_locales
+
+    def get_load_only_fields_geometry(self):
+        """ Return the geometry fields for a document type that are needed to
+        query documents for the listing views.
+        """
+        return self.fields_geometry
 
 
 def make_schema_adaptor(adapt_schema_for_type, type_field, field_list_type):
@@ -57,14 +106,16 @@ def get_all_fields(fields, activities, field_list_type):
 
 
 area_documents_config = GetDocumentsConfig(
-    AREA_TYPE, Area, schema_listing_area, include_areas=False)
+    AREA_TYPE, Area, schema_listing_area,
+    listing_fields=fields_area['listing'], include_areas=False)
 
 
 # images
 
 
 image_documents_config = GetDocumentsConfig(
-    IMAGE_TYPE, Image, schema_listing_image)
+    IMAGE_TYPE, Image, schema_listing_image,
+    listing_fields=fields_image['listing'])
 
 
 # outings
@@ -81,8 +132,9 @@ outing_schema_adaptor = make_schema_adaptor(
     adapt_outing_schema_for_activities, 'activities', 'fields')
 outing_listing_schema_adaptor = make_schema_adaptor(
     adapt_outing_schema_for_activities, 'activities', 'listing')
+
 outing_documents_config = GetDocumentsConfig(
-    OUTING_TYPE, Outing, schema_outing,
+    OUTING_TYPE, Outing, schema_outing, fields=fields_outing,
     adapt_schema=outing_listing_schema_adaptor, set_custom_fields=set_author)
 
 
@@ -104,21 +156,23 @@ route_listing_schema_adaptor = make_schema_adaptor(
 
 route_documents_config = GetDocumentsConfig(
     ROUTE_TYPE, Route, schema_route, clazz_locale=RouteLocale,
-    adapt_schema=route_listing_schema_adaptor)
+    fields=fields_route, adapt_schema=route_listing_schema_adaptor)
 
 
 # topo map
 
 
 topo_map_documents_config = GetDocumentsConfig(
-    MAP_TYPE, TopoMap, schema_listing_topo_map)
+    MAP_TYPE, TopoMap, schema_listing_topo_map,
+    listing_fields=fields_topo_map['listing'])
 
 
 # user profile
 
 
 user_profile_documents_config = GetDocumentsConfig(
-    USERPROFILE_TYPE, UserProfile, schema_listing_user_profile)
+    USERPROFILE_TYPE, UserProfile, schema_listing_user_profile,
+    listing_fields=fields_user_profile['listing'])
 
 
 # waypoint
@@ -140,5 +194,5 @@ waypoint_listing_schema_adaptor = make_schema_adaptor(
     adapt_waypoint_schema_for_type, 'waypoint_type', 'listing')
 
 waypoint_documents_config = GetDocumentsConfig(
-    WAYPOINT_TYPE, Waypoint, schema_waypoint,
+    WAYPOINT_TYPE, Waypoint, schema_waypoint, fields=fields_waypoint,
     adapt_schema=waypoint_listing_schema_adaptor)

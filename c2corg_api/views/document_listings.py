@@ -9,7 +9,7 @@ from c2corg_api.models.outing import Outing
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.views import to_json_dict, set_best_locale
-from sqlalchemy.orm import joinedload, contains_eager, subqueryload
+from sqlalchemy.orm import joinedload, contains_eager, subqueryload, load_only
 
 
 def get_documents_for_ids(document_ids, lang, documents_config, total=None):
@@ -79,10 +79,20 @@ def _get_documents_from_ids(
     The returned list contains None values for documents that could not be
     loaded, and the list has the same order has the document id list.
     """
-    base_query = add_load_for_locales(
-        base_query, documents_config.clazz, documents_config.clazz_locale)
     base_query = base_query.options(
-        joinedload(getattr(documents_config.clazz, 'geometry')))
+        load_only(*documents_config.get_load_only_fields())
+    )
+    base_query = add_load_for_locales(
+        base_query, documents_config.clazz, documents_config.clazz_locale,
+        documents_config.get_load_only_fields_locales())
+
+    if len(documents_config.get_load_only_fields_geometry()) > 1:
+        # only load the geometry if the fields list contains other columns than
+        # 'version'
+        base_query = base_query.options(
+            joinedload(getattr(documents_config.clazz, 'geometry')).
+            load_only(*documents_config.get_load_only_fields_geometry())
+        )
 
     if documents_config.include_areas:
         base_query = base_query. \
@@ -156,12 +166,17 @@ def add_profile_filter(document_query, clazz):
 
 
 def add_load_for_locales(
-        base_query, clazz, clazz_locale):
+        base_query, clazz, clazz_locale, load_only_fields=None):
     if clazz_locale:
-        return base_query.options(
-            subqueryload(getattr(clazz, 'locales').of_type(clazz_locale)))
+        locales_load = subqueryload(
+            getattr(clazz, 'locales').of_type(clazz_locale))
     else:
-        return base_query.options(subqueryload(getattr(clazz, 'locales')))
+        locales_load = subqueryload(getattr(clazz, 'locales'))
+
+    if load_only_fields:
+        locales_load = locales_load.load_only(*load_only_fields)
+
+    return base_query.options(locales_load)
 
 
 def _set_areas_for_documents(documents, lang):
