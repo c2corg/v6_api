@@ -1,27 +1,22 @@
-from c2corg_api.models.area import AREA_TYPE, Area, \
-    schema_listing_area
-from c2corg_api.models.document import DocumentLocale
-from c2corg_api.models.image import IMAGE_TYPE, Image, schema_listing_image
-from c2corg_api.models.outing import OUTING_TYPE, Outing, schema_outing
-from c2corg_api.models.topo_map import MAP_TYPE, TopoMap, \
-    schema_listing_topo_map
-from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile, \
-    schema_listing_user_profile
-from cornice.resource import resource, view
-
+from c2corg_api.models.area import AREA_TYPE
+from c2corg_api.models.image import IMAGE_TYPE
+from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.route import ROUTE_TYPE
+from c2corg_api.models.topo_map import MAP_TYPE
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
+from c2corg_api.models.waypoint import WAYPOINT_TYPE
+from c2corg_api.search import search, SEARCH_LIMIT_DEFAULT, SEARCH_LIMIT_MAX
+from c2corg_api.views import cors_policy
+from c2corg_api.views.area import area_documents_config
+from c2corg_api.views.image import image_documents_config
+from c2corg_api.views.outing import outing_documents_config
+from c2corg_api.views.route import route_documents_config
+from c2corg_api.views.topo_map import topo_map_documents_config
+from c2corg_api.views.user_profile import user_profile_documents_config
 from c2corg_api.views.validation import validate_pagination, \
     validate_preferred_lang_param
-from c2corg_api.models.route import Route, ROUTE_TYPE, schema_route, \
-    RouteLocale
-from c2corg_api.views import cors_policy
-from c2corg_api.search import search, SEARCH_LIMIT_DEFAULT, SEARCH_LIMIT_MAX
-from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE, schema_waypoint
-from c2corg_api.views.route import listing_schema_adaptor \
-    as route_adaptor
-from c2corg_api.views.waypoint import listing_schema_adaptor \
-    as waypoint_adaptor
-from c2corg_api.views.outing import listing_schema_adaptor \
-    as outing_adaptor
+from c2corg_api.views.waypoint import waypoint_documents_config
+from cornice.resource import resource, view
 
 
 @resource(path='/search', cors_policy=cors_policy)
@@ -64,40 +59,26 @@ class SearchRest(object):
 
         search_types = []
         if self._include_type(WAYPOINT_TYPE, types_to_include):
-            search_types.append(
-                ('waypoints', WAYPOINT_TYPE, Waypoint, DocumentLocale,
-                 schema_waypoint, waypoint_adaptor))
+            search_types.append(('waypoints', waypoint_documents_config))
 
         if self._include_type(ROUTE_TYPE, types_to_include):
-            search_types.append(
-                ('routes', ROUTE_TYPE, Route, RouteLocale,
-                 schema_route, route_adaptor))
+            search_types.append(('routes', route_documents_config))
 
         if self._include_type(OUTING_TYPE, types_to_include):
-            search_types.append(
-                ('outings', OUTING_TYPE, Outing, DocumentLocale,
-                 schema_outing, outing_adaptor))
+            search_types.append(('outings', outing_documents_config))
 
         if self._include_type(AREA_TYPE, types_to_include):
-            search_types.append(
-                ('areas', AREA_TYPE, Area, DocumentLocale,
-                 schema_listing_area, None))
+            search_types.append(('areas', area_documents_config))
 
         if self._include_type(MAP_TYPE, types_to_include):
-            search_types.append(
-                ('maps', MAP_TYPE, TopoMap, DocumentLocale,
-                 schema_listing_topo_map, None))
+            search_types.append(('maps', topo_map_documents_config))
 
         if self._include_type(IMAGE_TYPE, types_to_include):
-            search_types.append(
-                ('images', IMAGE_TYPE, Image, DocumentLocale,
-                 schema_listing_image, None))
+            search_types.append(('images', image_documents_config))
 
         if self._include_type(USERPROFILE_TYPE, types_to_include) and \
                 self.request.has_permission('authenticated'):
-            search_types.append(
-                ('users', USERPROFILE_TYPE, UserProfile, DocumentLocale,
-                 schema_listing_user_profile, None))
+            search_types.append(('users', user_profile_documents_config))
 
         return search.search_for_types(search_types, search_term, limit, lang)
 

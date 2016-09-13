@@ -1,9 +1,10 @@
 from c2corg_api.models.area import schema_area, Area, schema_update_area, \
-    schema_listing_area, AREA_TYPE
+    AREA_TYPE
 from c2corg_api.models.area_association import update_area
 from c2corg_api.models.cache_version import update_cache_version_for_area
 from c2corg_api.models.document import UpdateType
 from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import area_documents_config
 from c2corg_common.fields_area import fields_area
 from cornice.resource import resource, view
 
@@ -24,8 +25,7 @@ class AreaRest(DocumentRest):
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        return self._collection_get(
-            Area, schema_listing_area, AREA_TYPE, include_areas=False)
+        return self._collection_get(AREA_TYPE, area_documents_config)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):

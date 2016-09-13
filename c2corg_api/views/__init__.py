@@ -225,6 +225,13 @@ def set_creator(documents, field_name):
             author_for_documents.get(document.document_id))
 
 
+def set_author(outings, lang):
+    """Set the author (the user who created an outing) on a list of
+    outings.
+    """
+    set_creator(outings, 'author')
+
+
 def etag_cache(request, key):
     """Use the HTTP Entity Tag cache for Browser side caching
     If a "If-None-Match" header is found, and equivalent to ``key``,

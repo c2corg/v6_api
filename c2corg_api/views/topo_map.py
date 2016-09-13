@@ -1,10 +1,10 @@
 from c2corg_api.models.cache_version import update_cache_version_for_map
 from c2corg_api.models.document import UpdateType
 from c2corg_api.models.topo_map import (
-    TopoMap, schema_topo_map, schema_update_topo_map, schema_listing_topo_map,
-    MAP_TYPE)
+    TopoMap, schema_topo_map, schema_update_topo_map, MAP_TYPE)
 from c2corg_api.models.topo_map_association import update_map
 from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import topo_map_documents_config
 from c2corg_common.fields_topo_map import fields_topo_map
 from cornice.resource import resource, view
 
@@ -24,7 +24,7 @@ class TopoMapRest(DocumentRest):
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        return self._collection_get(TopoMap, schema_listing_topo_map, MAP_TYPE)
+        return self._collection_get(MAP_TYPE, topo_map_documents_config)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):

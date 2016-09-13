@@ -401,21 +401,27 @@ def update_cache_version_associations(
         )
 
 
-def _format_cache_key(document_id, lang, version):
+def _format_cache_key(document_id, lang, version, doc_type=None):
     if not version:
         # no version for this document id, the document should not exist
         log.debug('no version for document id {0}'.format(document_id))
         return None
 
+    cache_key = None
     if not lang:
-        return '{0}-{1}-{2}'.format(
+        cache_key = '{0}-{1}-{2}'.format(
             document_id, version, caching.CACHE_VERSION)
     else:
-        return '{0}-{1}-{2}-{3}'.format(
+        cache_key = '{0}-{1}-{2}-{3}'.format(
             document_id, lang, version, caching.CACHE_VERSION)
 
+    if doc_type:
+        cache_key = '{0}-{1}'.format(cache_key, doc_type)
 
-def get_cache_key(document_id, lang):
+    return cache_key
+
+
+def get_cache_key(document_id, lang, document_type=None):
     """ Returns an identifier which reflects the version of a document and
     all its associated documents. This identifier is used as cache key
     and as ETag value.
@@ -425,10 +431,10 @@ def get_cache_key(document_id, lang):
         first()
 
     return _format_cache_key(
-        document_id, lang, version[0] if version else None)
+        document_id, lang, version[0] if version else None, document_type)
 
 
-def get_cache_keys(document_ids, lang):
+def get_cache_keys(document_ids, lang, document_type):
     """ Get a cache key for all given document ids.
     """
     if not document_ids:
@@ -446,7 +452,8 @@ def get_cache_keys(document_ids, lang):
         _format_cache_key(
             document_id,
             lang,
-            version_for_documents.get(document_id)
+            version_for_documents.get(document_id),
+            document_type
         ) for document_id in document_ids
         if version_for_documents.get(document_id)
     ]

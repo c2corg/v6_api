@@ -1,9 +1,12 @@
+import time
+
 import jwt
 import datetime
 
 import transaction
 import os
 import logging
+from random import randint
 
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.user_profile import UserProfile
@@ -186,7 +189,7 @@ class BaseTestCase(unittest.TestCase):
 
         self.queue_config = registry.queue_config
         reset_queue(self.queue_config)
-        invalidate_caches()
+        reset_cache_key()
 
     def tearDown(self):  # noqa
         # rollback - everything that happened with the Session above
@@ -230,6 +233,7 @@ def reset_queue(queue_config):
         pass
 
 
-def invalidate_caches():
-    for cache in caching.caches:
-        cache.invalidate()
+def reset_cache_key():
+    cache_version = settings['cache_version']
+    caching.CACHE_VERSION = '{0}-{1}-{2}'.format(
+        cache_version, int(time.time()), randint(0, 10**9))

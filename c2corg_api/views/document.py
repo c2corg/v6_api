@@ -1,40 +1,35 @@
 import logging
 
-from c2corg_api.caching import cache_document_detail, cache_document_listing
-from c2corg_api.models.cache_version import update_cache_version, \
-    update_cache_version_associations, get_cache_key, get_document_id, \
-    get_cache_keys
-from c2corg_api.models.image import schema_association_image
-from c2corg_api.models.outing import Outing
-from c2corg_api.models.topo_map_association import update_maps_for_document, \
-    get_maps
-from c2corg_api.models.user import User, schema_association_user
-from functools import partial
-
+from c2corg_api.caching import cache_document_detail
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
 from c2corg_api.models.area_association import update_areas_for_document, \
     get_areas
-from c2corg_api.models.association import get_associations, \
-    create_associations, synchronize_associations
+from c2corg_api.models.association import create_associations,\
+    synchronize_associations
+from c2corg_api.models.cache_version import update_cache_version, \
+    update_cache_version_associations, get_cache_key
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
     ArchiveDocumentGeometry, set_available_langs, get_available_langs)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
-from c2corg_api.models.route import schema_association_route
 from c2corg_api.models.topo_map import schema_listing_topo_map, \
     MAP_TYPE
-from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.models.waypoint import schema_association_waypoint
+from c2corg_api.models.topo_map_association import update_maps_for_document, \
+    get_maps
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import etag_cache
-from c2corg_api.views import to_json_dict, set_best_locale
+from c2corg_api.views import to_json_dict
+import c2corg_api.views.document_associations as doc_associations
+from c2corg_api.views.document_listings import add_load_for_locales, \
+    add_load_for_profiles, get_documents
 from c2corg_api.views.validation import check_required_fields, \
     check_duplicate_locales
+from functools import partial
 from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
     HTTPBadRequest, HTTPForbidden
-from sqlalchemy.orm import joinedload, contains_eager, subqueryload, load_only
+from sqlalchemy.orm import joinedload, contains_eager, load_only
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.orm.util import with_polymorphic
 
@@ -56,9 +51,7 @@ class DocumentRest(object):
     def __init__(self, request):
         self.request = request
 
-    def _collection_get(self, clazz, schema, doc_type, clazz_locale=None,
-                        adapt_schema=None, custom_filter=None,
-                        include_areas=True, set_custom_fields=None):
+    def _collection_get(self, doc_type, documents_config):
         validated = self.request.validated
         meta_params = {
             'offset': validated.get('offset', 0),
@@ -66,8 +59,7 @@ class DocumentRest(object):
             'lang': validated.get('lang')
         }
 
-        if not custom_filter and \
-                advanced_search.contains_search_params(self.request.GET):
+        if advanced_search.contains_search_params(self.request.GET):
             # search with ElasticSearch
             search_documents = advanced_search.get_search_documents(
                 self.request.GET, meta_params, doc_type)
@@ -76,120 +68,8 @@ class DocumentRest(object):
             search_documents = partial(
                 self._search_documents_paginated, meta_params)
 
-        return self._get_documents(
-            clazz, schema, clazz_locale, adapt_schema, custom_filter,
-            include_areas, set_custom_fields, meta_params, search_documents)
-
-    def _get_documents(
-            self, clazz, schema, clazz_locale, adapt_schema, custom_filter,
-            include_areas, set_custom_fields, meta_params, search_documents):
-        lang = meta_params['lang']
-        base_query = DBSession.query(clazz).\
-            filter(getattr(clazz, 'redirects_to').is_(None))
-        base_total_query = DBSession.query(getattr(clazz, 'document_id')).\
-            filter(getattr(clazz, 'redirects_to').is_(None))
-
-        if custom_filter:
-            base_query = custom_filter(base_query)
-            base_total_query = custom_filter(base_total_query)
-        base_total_query = add_profile_filter(base_total_query, clazz)
-        base_query = add_load_for_profiles(base_query, clazz)
-
-        if clazz == Outing:
-            base_query = base_query. \
-                order_by(clazz.date_end.desc()). \
-                order_by(clazz.document_id.desc())
-        else:
-            base_query = base_query.order_by(clazz.document_id.desc())
-
-        document_ids, total = search_documents(base_query, base_total_query)
-        cache_keys = get_cache_keys(document_ids, lang)
-
-        def get_documents_from_cache_keys(*cache_keys):
-            """ This method is called from dogpile.cache with the cache keys
-            for the documents that are not cached yet.
-            """
-            ids = [get_document_id(cache_key) for cache_key in cache_keys]
-
-            docs = self._get_documents_from_ids(
-                ids, base_query, clazz, schema, clazz_locale,
-                adapt_schema, include_areas, set_custom_fields, lang)
-
-            assert len(cache_keys) == len(docs), \
-                'the number of returned documents must match ' + \
-                'the number of keys'
-
-            return docs
-
-        # get the documents from the cache or from the database
-        documents = cache_document_listing.get_or_create_multi(
-            cache_keys, get_documents_from_cache_keys, expiration_time=-1,
-            should_cache_fn=lambda v: v is not None)
-
-        return {
-            'documents': [doc for doc in documents if doc],
-            'total': total
-        }
-
-    def _get_documents_from_ids(
-            self, document_ids, base_query, clazz, schema, clazz_locale,
-            adapt_schema, include_areas, set_custom_fields, lang):
-        """ Load the documents for the ids and return them as json dict.
-        The returned list contains None values for documents that could not be
-        loaded, and the list has the same order has the document id list.
-        """
-        base_query = add_load_for_locales(base_query, clazz, clazz_locale)
-        base_query = base_query.options(joinedload(getattr(clazz, 'geometry')))
-
-        if include_areas:
-            base_query = base_query. \
-                options(
-                    joinedload(getattr(clazz, '_areas')).
-                    load_only(
-                        'document_id', 'area_type', 'version', 'protected',
-                        'type').
-                    joinedload('locales').
-                    load_only(
-                        'lang', 'title',
-                        'version')
-                )
-
-        documents = self._load_documents(document_ids, clazz, base_query)
-
-        set_available_langs(documents, loaded=True)
-        if lang is not None:
-            set_best_locale(documents, lang)
-
-        if include_areas:
-            self._set_areas_for_documents(documents, lang)
-
-        if set_custom_fields:
-            set_custom_fields(documents, lang)
-
-        # make sure the documents are returned in the same order
-        document_index = {doc.document_id: doc for doc in documents}
-        documents = [document_index.get(id) for id in document_ids]
-
-        return [
-            to_json_dict(
-                doc,
-                schema if not adapt_schema else adapt_schema(schema, doc)
-            ) if doc else None for doc in documents
-        ]
-
-    def _load_documents(self, document_ids, clazz, base_query):
-        """ Load documents given a list of document ids. Note that the
-        returned list does not contain the documents in the same order as
-        the passed in document id list.
-        """
-        if not document_ids:
-            return []
-
-        documents = base_query. \
-            filter(clazz.document_id.in_(document_ids)).\
-            all()
-
-        return documents
+        return get_documents(
+            documents_config, meta_params, search_documents)
 
     def _search_documents_paginated(
             self, meta_params, base_query, base_total_query):
@@ -270,17 +150,8 @@ class DocumentRest(object):
         return to_json_dict(document, schema, with_special_locales_attrs=True)
 
     def _set_associations(self, document, lang, editing_view):
-        linked_docs = get_associations(document, lang, editing_view)
-
-        associations = {}
-        for typ, docs in linked_docs.items():
-            schema = association_schemas[typ]
-            associations[typ] = [
-                to_json_dict(d, schema)
-                for d in docs
-            ]
-
-        document.associations = associations
+        document.associations = doc_associations.get_associations(
+            document, lang, editing_view)
 
     def _set_maps(self, document, lang):
         topo_maps = get_maps(document, lang)
@@ -293,16 +164,6 @@ class DocumentRest(object):
         document.areas = [
             to_json_dict(m, schema_listing_area) for m in areas
         ]
-
-    def _set_areas_for_documents(self, documents, lang):
-        for document in documents:
-            # expunge is set to False because the parent document of the areas
-            # was already disconnected from the session at this point
-            set_best_locale(document._areas, lang, expunge=False)
-
-            document.areas = [
-                to_json_dict(m, schema_listing_area) for m in document._areas
-            ]
 
     def _collection_post(
             self, schema, before_add=None, after_add=None):
@@ -678,60 +539,3 @@ def make_validator_update(fields, type_field=None, valid_type_values=None):
                     document, request, fields, type_field, valid_type_values,
                     updating=True)
     return f
-
-
-def make_schema_adaptor(adapt_schema_for_type, type_field, field_list_type):
-    """Returns a function which adapts a base schema to a specific document
-    type, e.g. it returns a function which turns the base schema for waypoints
-    into a schema which contains only the fields for the waypoint type
-    "summit".
-    """
-    def adapt_schema(_base_schema, document):
-        return adapt_schema_for_type(
-            getattr(document, type_field), field_list_type)
-    return adapt_schema
-
-
-def get_all_fields(fields, activities, field_list_type):
-    """Returns all fields needed for the given list of activities.
-    """
-    fields_list = [
-        fields.get(activity).get(field_list_type) for activity in activities
-    ]
-    # turn a list of lists [['a', 'b'], ['b', 'c'], ['d']] into a flat set
-    # ['a', 'b', 'c', 'd']
-    return set(sum(fields_list, []))
-
-
-def add_load_for_profiles(document_query, clazz):
-    if clazz == UserProfile:
-        # for profiles load username/name together from the associated user
-        document_query = add_profile_filter(document_query, clazz). \
-            options(contains_eager('user'))
-    return document_query
-
-
-def add_profile_filter(document_query, clazz):
-    if clazz == UserProfile:
-        # make sure only confirmed accounts are returned
-        document_query = document_query. \
-            join(User). \
-            filter(User.email_validated)
-    return document_query
-
-
-def add_load_for_locales(
-        base_query, clazz, clazz_locale):
-    if clazz_locale:
-        return base_query.options(
-            subqueryload(getattr(clazz, 'locales').of_type(clazz_locale)))
-    else:
-        return base_query.options(subqueryload(getattr(clazz, 'locales')))
-
-association_schemas = {
-    'waypoints': schema_association_waypoint,
-    'waypoint_children': schema_association_waypoint,
-    'routes': schema_association_route,
-    'users': schema_association_user,
-    'images': schema_association_image
-}
