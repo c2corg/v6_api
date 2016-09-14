@@ -2,6 +2,7 @@ import os
 import sys
 
 from c2corg_api.search.mappings.area_mapping import SearchArea
+from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
@@ -67,6 +68,7 @@ def setup_es():
     index.doc_type(SearchTopoMap)
     index.doc_type(SearchUser)
     index.doc_type(SearchWaypoint)
+    index.doc_type(SearchArticle)
 
     index.create()
 

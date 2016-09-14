@@ -5,6 +5,7 @@ from c2corg_api.models.route import Route
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint
+from c2corg_api.models.article import Article
 from c2corg_api.search.mapping_types import QueryableMixin
 from c2corg_api.search.mappings.area_mapping import SearchArea
 from c2corg_api.search.mappings.image_mapping import SearchImage
@@ -13,6 +14,7 @@ from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
+from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.tests import BaseTestCase
 
 
@@ -60,6 +62,14 @@ class MappingTest(BaseTestCase):
         self.assertTrue(queryable_fields['idate']._date)
         self.assertIn('act', queryable_fields)
         self.assertIsNotNone(queryable_fields['act']._enum)
+
+    def test_article_mapping(self):
+        self._test_mapping(SearchArticle, Article)
+
+        queryable_fields = SearchArticle.queryable_fields
+        self.assertIn('act', queryable_fields)
+        self.assertIn('acat', queryable_fields)
+        self.assertIn('atyp', queryable_fields)
 
     def test_map_mapping(self):
         self._test_mapping(SearchTopoMap, TopoMap)

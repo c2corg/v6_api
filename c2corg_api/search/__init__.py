@@ -1,4 +1,5 @@
 from c2corg_api.models.area import AREA_TYPE
+from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
@@ -6,6 +7,7 @@ from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.search.mappings.area_mapping import SearchArea
+from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
@@ -111,6 +113,7 @@ def get_text_query_on_title(search_term, search_lang=None):
 
 search_documents = {
     AREA_TYPE: SearchArea,
+    ARTICLE_TYPE: SearchArticle,
     IMAGE_TYPE: SearchImage,
     OUTING_TYPE: SearchOuting,
     ROUTE_TYPE: SearchRoute,

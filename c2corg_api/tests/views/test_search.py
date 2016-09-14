@@ -1,4 +1,5 @@
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
+from c2corg_api.models.article import Article
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.fill_index import fill_index
@@ -12,6 +13,23 @@ class TestSearchRest(BaseTestRest):
         super(TestSearchRest, self).setUp()
         self._prefix = '/search'
 
+        self.article1 = Article(
+            document_id=534684,
+            categories=['site_info'], activities=['hiking'],
+            article_type='collab',
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'),
+            locales=[
+                DocumentLocale(
+                    lang='en', title='Lac d\'Annecy',
+                    description='...',
+                    summary='Lac d\'Annecy'),
+                DocumentLocale(
+                    lang='en', title='Lac d\'Annecy',
+                    description='...',
+                    summary='Lac d\'Annecy')
+            ])
+        self.session.add(self.article1)
         self.waypoint1 = Waypoint(
             document_id=534681,
             waypoint_type='summit', elevation=2000,
@@ -60,6 +78,7 @@ class TestSearchRest(BaseTestRest):
         self.assertIn('routes', body)
         self.assertIn('maps', body)
         self.assertIn('areas', body)
+        self.assertIn('articles', body)
         self.assertIn('images', body)
         self.assertIn('outings', body)
 
@@ -74,6 +93,16 @@ class TestSearchRest(BaseTestRest):
 
         # tests that user results are not included when not authenticated
         self.assertNotIn('users', body)
+
+    def test_search_by_article_title(self):
+        response = self.app.get(
+            self._prefix + '?q=' + str(self.article1.locales[0].title),
+            status=200)
+        body = response.json
+        articles = body['articles']
+
+        self.assertEquals(len(articles), 2)
+        self.assertNotEqual(articles['total'], 0)
 
     def test_search_lang(self):
         response = self.app.get(self._prefix + '?q=crolles&pl=fr', status=200)
@@ -109,11 +138,13 @@ class TestSearchRest(BaseTestRest):
         self.assertNotIn('users', body)
 
     def test_search_limit_types(self):
-        response = self.app.get(self._prefix + '?q=crolles&t=w,r', status=200)
+        response = self.app.get(self._prefix + '?q=crolles&t=w,r,c',
+                                status=200)
         body = response.json
 
         self.assertIn('waypoints', body)
         self.assertIn('routes', body)
+        self.assertIn('articles', body)
         self.assertNotIn('maps', body)
         self.assertNotIn('areas', body)
         self.assertNotIn('images', body)
