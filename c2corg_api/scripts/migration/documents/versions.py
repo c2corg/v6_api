@@ -11,7 +11,7 @@ from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
 # TODO only importing the versions of the tables listed below
 tables = [
-    'huts', 'parkings', 'products', 'sites', 'summits', 'routes',
+    'articles', 'huts', 'parkings', 'products', 'sites', 'summits', 'routes',
     'maps', 'areas', 'outings', 'images'
 ]
 tables_union = ' union '.join(
