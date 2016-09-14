@@ -1,4 +1,6 @@
 from c2corg_api.models.area import AREA_TYPE, Area, schema_listing_area
+from c2corg_api.models.article import ARTICLE_TYPE, Article, \
+    schema_listing_article
 from c2corg_api.models.image import IMAGE_TYPE, Image, schema_listing_image
 from c2corg_api.models.outing import OUTING_TYPE, Outing, schema_outing
 from c2corg_api.models.route import schema_route, ROUTE_TYPE, Route, \
@@ -14,6 +16,7 @@ from c2corg_common.fields_outing import fields_outing
 from c2corg_common.fields_route import fields_route
 from c2corg_common.fields_waypoint import fields_waypoint
 from c2corg_common.fields_area import fields_area
+from c2corg_common.fields_article import fields_article
 from c2corg_common.fields_image import fields_image
 from c2corg_common.fields_topo_map import fields_topo_map
 from c2corg_common.fields_user_profile import fields_user_profile
@@ -108,6 +111,14 @@ def get_all_fields(fields, activities, field_list_type):
 area_documents_config = GetDocumentsConfig(
     AREA_TYPE, Area, schema_listing_area,
     listing_fields=fields_area['listing'], include_areas=False)
+
+
+# articles
+
+
+article_documents_config = GetDocumentsConfig(
+    ARTICLE_TYPE, Article, schema_listing_article,
+    listing_fields=fields_article['listing'])
 
 
 # images
