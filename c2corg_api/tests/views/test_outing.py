@@ -199,7 +199,7 @@ class TestOutingRest(BaseDocumentTestRest):
             'date_end': '2016-01-02',
             'associations': {
                 'routes': [{'document_id': self.route.document_id}],
-                'users': [{'id': self.global_userids['contributor']}]
+                'users': [{'document_id': self.global_userids['contributor']}]
             }
         })
         errors = body.get('errors')
@@ -227,7 +227,7 @@ class TestOutingRest(BaseDocumentTestRest):
             ],
             'associations': {
                 'routes': [{'document_id': self.route.document_id}],
-                'users': [{'id': self.global_userids['contributor']}]
+                'users': [{'document_id': self.global_userids['contributor']}]
             }
         }
         body = self.post_error(body_post)
@@ -256,7 +256,7 @@ class TestOutingRest(BaseDocumentTestRest):
             ],
             'associations': {
                 'routes': [{'document_id': self.route.document_id}],
-                'users': [{'id': self.global_userids['contributor']}]
+                'users': [{'document_id': self.global_userids['contributor']}]
             }
         }
         body = self.post_missing_title(body_post)
@@ -285,7 +285,7 @@ class TestOutingRest(BaseDocumentTestRest):
             ],
             'associations': {
                 'routes': [{'document_id': self.route.document_id}],
-                'users': [{'id': self.global_userids['contributor']}]
+                'users': [{'document_id': self.global_userids['contributor']}]
             }
         }
         self.post_non_whitelisted_attribute(body)
@@ -349,7 +349,7 @@ class TestOutingRest(BaseDocumentTestRest):
             ],
             'associations': {
                 'routes': [{'document_id': self.waypoint.document_id}],
-                'users': [{'id': -999}]
+                'users': [{'document_id': -999}]
             }
         }
         headers = self.add_authorization_header(username='contributor')
@@ -390,7 +390,7 @@ class TestOutingRest(BaseDocumentTestRest):
                  'weather': 'sunny'}
             ],
             'associations': {
-                'users': [{'id': self.global_userids['contributor']}],
+                'users': [{'document_id': self.global_userids['contributor']}],
                 'routes': [{'document_id': self.route.document_id}],
                 # images are ignored
                 'images': [{'document_id': self.route.document_id}]
@@ -454,7 +454,7 @@ class TestOutingRest(BaseDocumentTestRest):
                  'weather': 'sunny'}
             ],
             'associations': {
-                'users': [{'id': self.global_userids['contributor']}],
+                'users': [{'document_id': self.global_userids['contributor']}],
                 'routes': [{'document_id': self.route.document_id}]
             }
         }
@@ -479,7 +479,9 @@ class TestOutingRest(BaseDocumentTestRest):
                      'version': self.locale_en.version}
                 ],
                 'associations': {
-                    'users': [{'id': self.global_userids['contributor']}],
+                    'users': [{
+                        'document_id': self.global_userids['contributor']
+                    }],
                     'routes': [{'document_id': self.route.document_id}]
                 }
             }
@@ -504,7 +506,9 @@ class TestOutingRest(BaseDocumentTestRest):
                      'version': self.locale_en.version}
                 ],
                 'associations': {
-                    'users': [{'id': self.global_userids['contributor']}],
+                    'users': [{
+                        'document_id': self.global_userids['contributor']
+                    }],
                     'routes': [{'document_id': self.route.document_id}]
                 }
             }
@@ -529,7 +533,9 @@ class TestOutingRest(BaseDocumentTestRest):
                      'version': -9999}
                 ],
                 'associations': {
-                    'users': [{'id': self.global_userids['contributor']}],
+                    'users': [{
+                        'document_id': self.global_userids['contributor']
+                    }],
                     'routes': [{'document_id': self.route.document_id}]
                 }
             }
@@ -554,7 +560,9 @@ class TestOutingRest(BaseDocumentTestRest):
                      'version': self.locale_en.version}
                 ],
                 'associations': {
-                    'users': [{'id': self.global_userids['contributor']}],
+                    'users': [{
+                        'document_id': self.global_userids['contributor']
+                    }],
                     'routes': [{'document_id': self.route.document_id}]
                 }
             }
@@ -586,7 +594,9 @@ class TestOutingRest(BaseDocumentTestRest):
                      'version': self.locale_en.version}
                 ],
                 'associations': {
-                    'users': [{'id': self.global_userids['contributor']}],
+                    'users': [{
+                        'document_id': self.global_userids['contributor']
+                    }],
                     'routes': [{'document_id': self.route.document_id}]
                 }
             }
@@ -619,7 +629,9 @@ class TestOutingRest(BaseDocumentTestRest):
                      'version': self.locale_en.version}
                 ],
                 'associations': {
-                    'users': [{'id': self.global_userids['contributor']}],
+                    'users': [{
+                        'document_id': self.global_userids['contributor']
+                    }],
                     'routes': [{'document_id': self.route.document_id}]
                 }
             }
@@ -656,8 +668,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 },
                 'associations': {
                     'users': [
-                        {'id': self.global_userids['contributor']},
-                        {'id': self.global_userids['contributor2']}
+                        {'document_id': self.global_userids['contributor']},
+                        {'document_id': self.global_userids['contributor2']}
                     ],
                     'routes': [{'document_id': self.route.document_id}]
                 }
@@ -722,7 +734,9 @@ class TestOutingRest(BaseDocumentTestRest):
                      'version': self.locale_en.version}
                 ],
                 'associations': {
-                    'users': [{'id': self.global_userids['contributor']}],
+                    'users': [{
+                        'document_id': self.global_userids['contributor']
+                    }],
                     'routes': [{'document_id': self.route.document_id}]
                 }
             }
@@ -762,7 +776,9 @@ class TestOutingRest(BaseDocumentTestRest):
                         '{"type": "Point", "coordinates": [635000, 5723000]}'
                 },
                 'associations': {
-                    'users': [{'id': self.global_userids['contributor']}],
+                    'users': [{
+                        'document_id': self.global_userids['contributor']
+                    }],
                     'routes': [{'document_id': self.route.document_id}]
                 }
             }
@@ -791,7 +807,9 @@ class TestOutingRest(BaseDocumentTestRest):
                      'version': self.locale_en.version}
                 ],
                 'associations': {
-                    'users': [{'id': self.global_userids['contributor']}],
+                    'users': [{
+                        'document_id': self.global_userids['contributor']
+                    }],
                     'routes': [{'document_id': self.route.document_id}]
                 }
             }
@@ -822,7 +840,9 @@ class TestOutingRest(BaseDocumentTestRest):
                      'description': '...', 'weather': 'soleado'}
                 ],
                 'associations': {
-                    'users': [{'id': self.global_userids['contributor']}],
+                    'users': [{
+                        'document_id': self.global_userids['contributor']
+                    }],
                     'routes': [{'document_id': self.route.document_id}]
                 }
             }
@@ -854,7 +874,9 @@ class TestOutingRest(BaseDocumentTestRest):
                      'version': self.locale_en.version}
                 ],
                 'associations': {
-                    'users': [{'id': self.global_userids['contributor2']}],
+                    'users': [{
+                        'document_id': self.global_userids['contributor2']
+                    }],
                     'routes': [{'document_id': self.route.document_id}]
                 }
             }

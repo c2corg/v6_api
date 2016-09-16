@@ -30,7 +30,7 @@ class TestValidation(BaseTestCase):
                 {'document_id': self.route2.document_id}
             ],
             'users': [
-                {'id': self.user_profile1.document_id}
+                {'document_id': self.user_profile1.document_id}
             ],
             'waypoints': [
                 {'document_id': self.waypoint1.document_id}
