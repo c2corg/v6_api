@@ -5,23 +5,11 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN echo 'APT::Install-Recommends "0";' > /etc/apt/apt.conf.d/50no-install-recommends
 RUN echo 'APT::Install-Suggests "0";' > /etc/apt/apt.conf.d/50no-install-suggests
 
+COPY project.tar /tmp
+
 WORKDIR /var/www/
 
-COPY requirements.txt \
-     setup.py \
-     Makefile \
-     common.ini.in \
-     development.ini.in \
-     production.ini.in \
-     README.md \
-     CHANGES.txt \
-     ./
-COPY c2corg_api c2corg_api
-COPY scripts scripts
-
-COPY config/default \
-     config/dev \
-     config/
+RUN tar -xvf /tmp/project.tar && chown -R root:root /var/www
 
 RUN apt-get update \
  && apt-get -y upgrade \
