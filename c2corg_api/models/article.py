@@ -94,6 +94,6 @@ schema_article = SQLAlchemySchemaNode(
 schema_update_article = get_update_schema(schema_article)
 schema_listing_article = restrict_schema(
     schema_article, fields_article.get('listing'))
-# schema_association_article = restrict_schema(schema_article, [
-#     'document_id', 'username', 'name'
-# ])
+schema_association_article = restrict_schema(schema_article, [
+    'document_id', 'title'
+])

@@ -1,5 +1,6 @@
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import Document
+from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
@@ -278,7 +279,8 @@ association_keys = {
     'waypoints': WAYPOINT_TYPE,
     'waypoint_children': WAYPOINT_TYPE,
     'users': USERPROFILE_TYPE,
-    'images': IMAGE_TYPE
+    'images': IMAGE_TYPE,
+    'articles': ARTICLE_TYPE
 }
 
 association_keys_for_types = {
@@ -294,5 +296,6 @@ updatable_associations = {
     ROUTE_TYPE: {'routes', 'waypoints'},
     WAYPOINT_TYPE: {'waypoints', 'waypoint_children'},
     OUTING_TYPE: {'routes', 'users', 'waypoints'},
-    IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users'}
+    IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users'},
+    ARTICLE_TYPE: {'articles', 'images', 'users'}
 }

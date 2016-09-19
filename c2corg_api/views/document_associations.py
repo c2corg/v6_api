@@ -1,4 +1,5 @@
 from c2corg_api.models import DBSession
+from c2corg_api.models.article import ARTICLE_TYPE, Article
 from c2corg_api.models.association import Association
 from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import OUTING_TYPE
@@ -8,7 +9,7 @@ from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import waypoint_documents_config, \
     route_documents_config, user_profile_documents_config, \
-    image_documents_config
+    image_documents_config, article_documents_config
 from c2corg_api.views.validation import updatable_associations
 from sqlalchemy.sql.expression import or_, and_
 
@@ -20,6 +21,8 @@ associations_to_include = {
     OUTING_TYPE:
         {'waypoints', 'routes', 'images', 'users'},
     IMAGE_TYPE:
+        {'waypoints', 'routes', 'images', 'users', 'outings'},
+    ARTICLE_TYPE:
         {'waypoints', 'routes', 'images', 'users', 'outings'}
 }
 
@@ -52,6 +55,8 @@ def get_associations(document, lang, editing_view):
         associations['users'] = get_linked_users(document, lang)
     if 'images' in types_to_include:
         associations['images'] = get_linked_images(document, lang)
+    if 'articles' in types_to_include:
+        associations['articles'] = get_linked_articles(document, lang)
 
     return associations
 
@@ -154,8 +159,38 @@ def get_linked_images(document, lang):
         group_by(Image.document_id).
         all())
 
+    # print(DBSession.query(Image.document_id).
+    #     filter(Image.redirects_to.is_(None)).
+    #     join(
+    #         Association,
+    #         and_(
+    #             Association.child_document_id == Image.document_id,
+    #             Association.parent_document_id == document.document_id)
+    #         ).
+    #     group_by(Image.document_id)
+    #       )
+    # print("TEST LOG FOR THIS QUERY")
+
     return get_documents_for_ids(
         image_ids, lang, image_documents_config).get('documents')
+
+
+def get_linked_articles(document, lang):
+
+    article_ids = get_first_column(
+        DBSession.query(Article.document_id).
+        filter(Article.redirects_to.is_(None)).
+        join(
+            Association,
+            and_(
+                Association.child_document_id == Article.document_id,
+                Association.parent_document_id == document.document_id)
+            ).
+        group_by(Article.document_id).
+        all())
+
+    return get_documents_for_ids(
+        article_ids, lang, article_documents_config).get('documents')
 
 
 def get_first_column(rows):

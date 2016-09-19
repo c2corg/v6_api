@@ -5,6 +5,7 @@ from c2corg_api.caching import cache_document_detail, cache_document_listing, \
     cache_document_history, cache_document_version
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
+from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import get_cache_key, CacheVersion
 from c2corg_api.models.document_history import DocumentVersion
@@ -644,6 +645,9 @@ class TestWaypointRest(BaseDocumentTestRest):
                     ],
                     'routes': [
                         {'document_id': self.route1.document_id}
+                    ],
+                    'articles': [
+                        {'document_id': self.article1.document_id}
                     ]
                 }
             }
@@ -1271,6 +1275,32 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(Association.create(
             parent_document=self.waypoint4,
             child_document=self.route3))
+
+        # article
+        self.article1 = Article(
+            categories=['site_info'], activities=['hiking'],
+            article_type='collab')
+        self.session.add(self.article1)
+        self.session.flush()
+        self.article2 = Article(
+            categories=['site_info'], activities=['hiking'],
+            article_type='collab')
+        self.article3 = Article(
+            categories=['site_info'], activities=['hiking'],
+            article_type='collab')
+        self.session.add(self.article2)
+        self.session.add(self.article3)
+        self.session.flush()
+
+        self.session.add(Association.create(
+            parent_document=self.waypoint,
+            child_document=self.article1))
+        self.session.add(Association.create(
+            parent_document=self.waypoint2,
+            child_document=self.article2))
+        self.session.add(Association.create(
+            parent_document=self.waypoint3,
+            child_document=self.article3))
 
         self.outing1 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
