@@ -67,7 +67,7 @@ class SchemaAssociationDoc(MappingSchema):
 
 
 class SchemaAssociationUser(MappingSchema):
-    id = SchemaNode(Integer())
+    document_id = SchemaNode(Integer())
 
 
 class SchemaAssociations(MappingSchema):

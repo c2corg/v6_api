@@ -259,9 +259,7 @@ def _add_associations(
 
             associations[document_key] = [
                 {
-                    'document_id':
-                        doc['id'] if other_document_type == USERPROFILE_TYPE
-                        else doc['document_id'],
+                    'document_id': doc['document_id'],
                     'is_parent': is_parent
                 } for doc in associations_in[document_key]
             ]
