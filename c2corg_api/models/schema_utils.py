@@ -81,6 +81,8 @@ class SchemaAssociations(MappingSchema):
         Sequence(), SchemaAssociationDoc(), missing=None)
     images = SchemaNode(
         Sequence(), SchemaAssociationDoc(), missing=None)
+    articles = SchemaNode(
+        Sequence(), SchemaAssociationDoc(), missing=None)
 
 
 def get_create_schema(document_schema):

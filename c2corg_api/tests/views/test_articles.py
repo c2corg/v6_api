@@ -1,8 +1,10 @@
 from c2corg_api.models.article import ArchiveArticle, Article, ARTICLE_TYPE
+from c2corg_api.models.association import AssociationLog, Association
+from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
 
 from c2corg_api.models.document import (
-    ArchiveDocumentLocale, DocumentLocale)
+    ArchiveDocumentLocale, DocumentLocale, DocumentGeometry)
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
@@ -57,6 +59,8 @@ class TestArticleRest(BaseDocumentTestRest):
     def test_get(self):
         body = self.get(self.article1)
         self.assertNotIn('article', body)
+        self.assertNotIn('geometry', body)
+        self.assertIsNone(body.get('geometry'))
 
     def test_get_lang(self):
         self.get_lang(self.article1)
@@ -104,9 +108,25 @@ class TestArticleRest(BaseDocumentTestRest):
 
     def test_post_success(self):
         body = {
+            'document_id': 123456,
+            'version': 567890,
             'categories': ['site_info'],
             'activities': ['hiking'],
             'article_type': 'collab',
+            'associations': {
+                'waypoints': [
+                    {'document_id': self.waypoint2.document_id}
+                ],
+                'articles': [
+                    {'document_id': self.article2.document_id}
+                ]
+            },
+            'geometry': {
+                'version': 1,
+                'document_id': self.waypoint2.document_id,
+                'geom':
+                    '{"type": "Point", "coordinates": [635956, 5723604]}'
+            },
             'locales': [
                 {'lang': 'en', 'title': 'Lac d\'Annecy'}
             ]
@@ -122,6 +142,37 @@ class TestArticleRest(BaseDocumentTestRest):
         archive_locale = version.document_locales_archive
         self.assertEqual(archive_locale.lang, 'en')
         self.assertEqual(archive_locale.title, 'Lac d\'Annecy')
+
+        # check if geometry is not stored in database afterwards
+        query_article = self.session.query(Article).get(
+            doc.document_id)
+        self.assertIsNone(query_article.geometry)
+
+        # check that a link to the associated waypoint is created
+        association_main_wp = self.session.query(Association).get(
+            (self.waypoint2.document_id, doc.document_id))
+        self.assertIsNotNone(association_main_wp)
+
+        association_main_wp_log = self.session.query(AssociationLog). \
+            filter(AssociationLog.parent_document_id ==
+                   self.waypoint2.document_id). \
+            filter(AssociationLog.child_document_id ==
+                   doc.document_id). \
+            first()
+        self.assertIsNotNone(association_main_wp_log)
+
+        # check that a link to the associated article is created
+        association_main_art = self.session.query(Association).get(
+            (doc.document_id, self.article2.document_id))
+        self.assertIsNotNone(association_main_art)
+
+        association_main_art_log = self.session.query(AssociationLog). \
+            filter(AssociationLog.parent_document_id ==
+                   doc.document_id). \
+            filter(AssociationLog.child_document_id ==
+                   self.article2.document_id). \
+            first()
+        self.assertIsNotNone(association_main_art_log)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -202,6 +253,18 @@ class TestArticleRest(BaseDocumentTestRest):
                 'categories': ['site_info'],
                 'activities': ['hiking'],
                 'article_type': 'personal',
+                'associations': {
+                    'waypoints': [
+                        {'document_id': self.waypoint2.document_id}
+                    ],
+                    'articles': [
+                        {'document_id': self.article2.document_id}
+                    ]
+                },
+                'geometry': {
+                    'geom':
+                        '{"type": "Point", "coordinates": [635956, 5723604]}'
+                },
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
@@ -209,7 +272,7 @@ class TestArticleRest(BaseDocumentTestRest):
             }
         }
         (body, article1) = self.put_success_all(
-            body, self.article1, user='moderator')
+            body, self.article1, user='moderator', cache_version=3)
 
         self.assertEquals(article1.activities, ['hiking'])
         locale_en = article1.get_locale('en')
@@ -230,6 +293,37 @@ class TestArticleRest(BaseDocumentTestRest):
         version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Lac d\'Annecy')
+
+        # check if geometry is not stored in database afterwards
+        query_article = self.session.query(Article).get(
+            self.article1.document_id)
+        self.assertIsNone(query_article.geometry)
+
+        # check that a link to the associated waypoint is created
+        association_main_wp = self.session.query(Association).get(
+            (self.waypoint2.document_id, article1.document_id))
+        self.assertIsNotNone(association_main_wp)
+
+        association_main_wp_log = self.session.query(AssociationLog). \
+            filter(AssociationLog.parent_document_id ==
+                   self.waypoint2.document_id). \
+            filter(AssociationLog.child_document_id ==
+                   article1.document_id). \
+            first()
+        self.assertIsNotNone(association_main_wp_log)
+
+        # check that a link to the associated article is created
+        association_main_art = self.session.query(Association).get(
+            (article1.document_id, self.article2.document_id))
+        self.assertIsNotNone(association_main_art)
+
+        association_main_art_log = self.session.query(AssociationLog). \
+            filter(AssociationLog.parent_document_id ==
+                   article1.document_id). \
+            filter(AssociationLog.child_document_id ==
+                   self.article2.document_id). \
+            first()
+        self.assertIsNotNone(association_main_art_log)
 
     def test_put_success_figures_only(self):
         body = {
@@ -327,4 +421,15 @@ class TestArticleRest(BaseDocumentTestRest):
         self.article4.locales.append(DocumentLocale(
             lang='fr', title='Lac d\'Annecy'))
         self.session.add(self.article4)
+        self.waypoint1 = Waypoint(
+            waypoint_type='summit', elevation=2203)
+        self.session.add(self.waypoint1)
+        self.waypoint2 = Waypoint(
+            # document_id=456,
+            waypoint_type='climbing_outdoor', elevation=2,
+            rock_types=[],
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)')
+            )
+        self.session.add(self.waypoint2)
         self.session.flush()

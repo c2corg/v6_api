@@ -1,9 +1,9 @@
 from c2corg_api.models import schema, Base, enums
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, geometry_schema_overrides,
-    schema_attributes, DocumentLocale)  # schema_document_locale
+    ArchiveDocument, Document, DocumentLocale)
 from c2corg_api.models.enums import article_category, activity_type
-from c2corg_api.models.schema_utils import get_update_schema, restrict_schema
+from c2corg_api.models.schema_utils import get_update_schema, \
+    restrict_schema, get_create_schema
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_common.fields_article import fields_article
 from colanderalchemy import SQLAlchemySchemaNode
@@ -74,10 +74,11 @@ schema_article_locale = SQLAlchemySchemaNode(
         }
     })
 
+schema_article_attributes = ['document_id', 'version', 'locales', 'quality']
 schema_article = SQLAlchemySchemaNode(
     Article,
     # whitelisted attributes
-    includes=schema_attributes + attributes,
+    includes=schema_article_attributes + attributes,
     overrides={
         'document_id': {
             'missing': None
@@ -88,9 +89,9 @@ schema_article = SQLAlchemySchemaNode(
         'locales': {
             'children': [schema_article_locale]
         },
-        'geometry': geometry_schema_overrides
     })
 
+schema_create_article = get_create_schema(schema_article)
 schema_update_article = get_update_schema(schema_article)
 schema_listing_article = restrict_schema(
     schema_article, fields_article.get('listing'))

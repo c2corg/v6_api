@@ -180,6 +180,8 @@ def validate_associations_in(associations_in, document_type, errors):
     _add_associations(associations, associations_in, document_type,
                       'images', IMAGE_TYPE, new_errors)
     _add_associations(associations, associations_in, document_type,
+                      'articles', ARTICLE_TYPE, new_errors)
+    _add_associations(associations, associations_in, document_type,
                       'waypoint_children', WAYPOINT_TYPE, new_errors)
 
     if new_errors:
@@ -287,6 +289,7 @@ association_keys_for_types = {
     ROUTE_TYPE: 'routes',
     WAYPOINT_TYPE: 'waypoints',
     USERPROFILE_TYPE: 'users',
+    ARTICLE_TYPE: 'articles',
     IMAGE_TYPE: 'images'
 }
 
@@ -297,5 +300,6 @@ updatable_associations = {
     WAYPOINT_TYPE: {'waypoints', 'waypoint_children'},
     OUTING_TYPE: {'routes', 'users', 'waypoints'},
     IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users'},
-    ARTICLE_TYPE: {'articles', 'images', 'users'}
+    ARTICLE_TYPE: {'articles', 'images', 'users', 'routes', 'waypoints',
+                   'images', 'outings'}
 }
