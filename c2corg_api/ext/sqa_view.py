@@ -16,7 +16,7 @@ class CreateView(DDLElement):
 
 @compiler.compiles(CreateView)
 def compile_create_view(element, compiler, **kw):
-    return "CREATE VIEW %s.%s AS %s" % (
+    return "CREATE OR REPLACE VIEW %s.%s AS %s" % (
         element.schema,
         element.name,
         compiler.sql_compiler.process(element.selectable)
