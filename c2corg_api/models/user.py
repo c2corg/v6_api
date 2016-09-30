@@ -1,4 +1,5 @@
 import bcrypt
+from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_common.attributes import default_langs
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.user_profile import UserProfile
@@ -13,7 +14,7 @@ from sqlalchemy import (
 
 from colanderalchemy import SQLAlchemySchemaNode
 
-from c2corg_api.models import Base, users_schema, schema
+from c2corg_api.models import Base, users_schema, schema, enums
 
 import colander
 from sqlalchemy.orm import relationship, backref
@@ -97,6 +98,10 @@ class User(Base):
     lang = Column(
             String(2), ForeignKey(schema + '.langs.lang'),
             nullable=False, default='fr')
+
+    # the feed on the homepage for a user is filtered on this activities
+    feed_filter_activities = Column(
+        ArrayOfEnum(enums.activity_type), nullable=False, server_default='{}')
 
     def update_validation_nonce(self, purpose, days):
         """Generate and overwrite the nonce.

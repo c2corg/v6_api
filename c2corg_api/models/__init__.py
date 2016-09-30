@@ -38,6 +38,7 @@ from c2corg_api.models import es_sync  # noqa
 from c2corg_api.models import association_views  # noqa
 from c2corg_api.models import cache_version  # noqa
 from c2corg_api.models import article  # noqa
+from c2corg_api.models import feed  # noqa
 
 document_types = {
     article.ARTICLE_TYPE: article.Article,
