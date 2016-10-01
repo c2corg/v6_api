@@ -11,6 +11,7 @@ from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import Column, ForeignKey, PrimaryKeyConstraint, \
     CheckConstraint, Index
 from sqlalchemy.sql.sqltypes import Integer, String, DateTime, Boolean
+from sqlalchemy import event, DDL
 
 
 class FilterArea(Base):
@@ -107,7 +108,6 @@ class DocumentChange(Base):
         ArrayOfEnum(enums.activity_type), nullable=False, server_default='{}')
 
     # ids of the areas where this change happened
-    # TODO add triggers to areas/users to check pk-fk-relation
     area_ids = Column(ARRAY(Integer), nullable=False, server_default='{}')
 
     # ids of the users that were involved in this change (e.g. the user that
@@ -142,3 +142,82 @@ class DocumentChange(Base):
             postgresql_using='gin'),
         Base.__table_args__
     )
+
+# For performance reasons, areas and users are referenced in simple integer
+# arrays in 'feed_document_changes', no PK-FK relations are set up. To prevent
+# inconsistencies, triggers are used.
+trigger_ddl = DDL("""
+-- when creating a change, check that the given user and area ids are valid
+CREATE OR REPLACE FUNCTION guidebook.check_feed_ids() RETURNS TRIGGER AS
+$BODY$
+DECLARE
+  user_id int;
+  area_id int;
+BEGIN
+  -- check user ids
+  FOREACH user_id IN ARRAY new.user_ids LOOP
+    PERFORM id from users.user where id = user_id;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Invalid user id: %%', user_id;
+    END IF;
+  END LOOP;
+  -- check area ids
+  FOREACH area_id IN ARRAY new.area_ids LOOP
+    PERFORM document_id from guidebook.areas where document_id = area_id;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Invalid area id: %%', area_id;
+    END IF;
+  END LOOP;
+  RETURN null;
+END;
+$BODY$
+language plpgsql;
+
+CREATE TRIGGER guidebook_feed_document_changes_insert
+AFTER INSERT OR UPDATE ON guidebook.feed_document_changes
+FOR EACH ROW
+EXECUTE PROCEDURE guidebook.check_feed_ids();
+
+-- when deleting a user, check that there are no changes referencing the user
+CREATE OR REPLACE FUNCTION guidebook.check_feed_user_ids() RETURNS TRIGGER AS
+$BODY$
+BEGIN
+  -- check user ids
+  PERFORM change_id from guidebook.feed_document_changes
+    where user_ids @> ARRAY[OLD.id] limit 1;
+  IF FOUND THEN
+    RAISE EXCEPTION 'Row in feed_document_changes still references user id %%',
+      OLD.id;
+  END IF;
+  RETURN null;
+END;
+$BODY$
+language plpgsql;
+
+CREATE TRIGGER users_user_delete
+AFTER DELETE ON users.user
+FOR EACH ROW
+EXECUTE PROCEDURE guidebook.check_feed_user_ids();
+
+-- when deleting an area, check that there are no changes referencing the area
+CREATE OR REPLACE FUNCTION guidebook.check_feed_area_ids() RETURNS TRIGGER AS
+$BODY$
+BEGIN
+  -- check area ids
+  PERFORM change_id from guidebook.feed_document_changes
+    where area_ids @> ARRAY[OLD.document_id] limit 1;
+  IF FOUND THEN
+    RAISE EXCEPTION 'Row in feed_document_changes still references area id %%',
+      OLD.document_id;
+  END IF;
+  RETURN null;
+END;
+$BODY$
+language plpgsql;
+
+CREATE TRIGGER guidebook_areas_delete
+AFTER DELETE ON guidebook.areas
+FOR EACH ROW
+EXECUTE PROCEDURE guidebook.check_feed_area_ids();
+""")
+event.listen(DocumentChange.__table__, 'after_create', trigger_ddl)
