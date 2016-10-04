@@ -1,5 +1,8 @@
+from c2corg_api.caching import cache_document_version
 from c2corg_api.models.article import ArchiveArticle, Article, ARTICLE_TYPE
 from c2corg_api.models.association import AssociationLog, Association
+from c2corg_api.models.cache_version import get_cache_key
+from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
 
@@ -9,6 +12,7 @@ from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
 from c2corg_common.attributes import quality_types
+from dogpile.cache.api import NO_VALUE
 
 
 class TestArticleRest(BaseDocumentTestRest):
@@ -61,6 +65,15 @@ class TestArticleRest(BaseDocumentTestRest):
         self.assertNotIn('article', body)
         self.assertNotIn('geometry', body)
         self.assertIsNone(body.get('geometry'))
+        associations = body['associations']
+        self.assertIn('articles', associations)
+        self.assertIn('images', associations)
+        self.assertIn('waypoints', associations)
+        self.assertIn('routes', associations)
+        self.assertIn('users', associations)
+
+        linked_articles = associations.get('articles')
+        self.assertEqual(len(linked_articles), 2)
 
     def test_get_lang(self):
         self.get_lang(self.article1)
@@ -71,12 +84,67 @@ class TestArticleRest(BaseDocumentTestRest):
     def test_get_404(self):
         self.get_404()
 
+    def test_get_version(self):
+        self.get_version(self.article1, self.article1_version)
+
+    def test_get_version_etag(self):
+        url = '{0}/{1}/en/{2}'.format(
+                self._prefix, str(self.article1.document_id),
+                str(self.article1_version.id))
+        response = self.app.get(url, status=200)
+
+        # check that the ETag header is set
+        headers = response.headers
+        etag = headers.get('ETag')
+        self.assertIsNotNone(etag)
+
+        # then request the document again with the etag
+        headers = {
+            'If-None-Match': etag
+        }
+        self.app.get(url, status=304, headers=headers)
+
+    def test_get_version_caching(self):
+        url = '{0}/{1}/en/{2}'.format(
+                self._prefix, str(self.article1.document_id),
+                str(self.article1_version.id))
+        cache_key = '{0}-{1}'.format(
+            get_cache_key(self.article1.document_id, 'en'),
+            self.article1_version.id)
+
+        cache_value = cache_document_version.get(cache_key)
+        self.assertEqual(cache_value, NO_VALUE)
+
+        # check that the response is cached
+        self.app.get(url, status=200)
+
+        cache_value = cache_document_version.get(cache_key)
+        self.assertNotEqual(cache_value, NO_VALUE)
+
+        # check that values are returned from the cache
+        fake_cache_value = {'document': 'fake doc'}
+        cache_document_version.set(cache_key, fake_cache_value)
+
+        response = self.app.get(url, status=200)
+        body = response.json
+        self.assertEqual(body, fake_cache_value)
+
+    def test_get_info(self):
+        body, locale = self.get_info(self.article1, 'en')
+        self.assertEqual(locale.get('lang'), 'en')
+
+    def test_get_info_best_lang(self):
+        body, locale = self.get_info(self.article1, 'es')
+        self.assertEqual(locale.get('lang'), 'fr')
+
+    def test_get_info_404(self):
+        self.get_info_404()
+
     def test_post_error(self):
         body = self.post_error({}, user='moderator')
         errors = body.get('errors')
         self.assertEqual(len(errors), 2)
         self.assertCorniceRequired(errors[0], 'locales')
-        # self.assertCorniceRequired(errors[1], 'geometry')
 
     def test_post_missing_title(self):
         body_post = {
@@ -144,22 +212,20 @@ class TestArticleRest(BaseDocumentTestRest):
         self.assertEqual(archive_locale.title, 'Lac d\'Annecy')
 
         # check if geometry is not stored in database afterwards
-        query_article = self.session.query(Article).get(
-            doc.document_id)
-        self.assertIsNone(query_article.geometry)
+        self.assertIsNone(doc.geometry)
 
         # check that a link to the associated waypoint is created
-        association_main_wp = self.session.query(Association).get(
+        association_wp = self.session.query(Association).get(
             (self.waypoint2.document_id, doc.document_id))
-        self.assertIsNotNone(association_main_wp)
+        self.assertIsNotNone(association_wp)
 
-        association_main_wp_log = self.session.query(AssociationLog). \
+        association_wp_log = self.session.query(AssociationLog). \
             filter(AssociationLog.parent_document_id ==
                    self.waypoint2.document_id). \
             filter(AssociationLog.child_document_id ==
                    doc.document_id). \
             first()
-        self.assertIsNotNone(association_main_wp_log)
+        self.assertIsNotNone(association_wp_log)
 
         # check that a link to the associated article is created
         association_main_art = self.session.query(Association).get(
@@ -295,22 +361,19 @@ class TestArticleRest(BaseDocumentTestRest):
         self.assertEqual(archive_locale.title, 'Lac d\'Annecy')
 
         # check if geometry is not stored in database afterwards
-        query_article = self.session.query(Article).get(
-            self.article1.document_id)
-        self.assertIsNone(query_article.geometry)
-
+        self.assertIsNone(article1.geometry)
         # check that a link to the associated waypoint is created
-        association_main_wp = self.session.query(Association).get(
+        association_wp = self.session.query(Association).get(
             (self.waypoint2.document_id, article1.document_id))
-        self.assertIsNotNone(association_main_wp)
+        self.assertIsNotNone(association_wp)
 
-        association_main_wp_log = self.session.query(AssociationLog). \
+        association_wp_log = self.session.query(AssociationLog). \
             filter(AssociationLog.parent_document_id ==
                    self.waypoint2.document_id). \
             filter(AssociationLog.child_document_id ==
                    article1.document_id). \
             first()
-        self.assertIsNotNone(association_main_wp_log)
+        self.assertIsNotNone(association_wp_log)
 
         # check that a link to the associated article is created
         association_main_art = self.session.query(Association).get(
@@ -404,6 +467,9 @@ class TestArticleRest(BaseDocumentTestRest):
 
         user_id = self.global_userids['contributor']
         DocumentRest.create_new_version(self.article1, user_id)
+        self.article1_version = self.session.query(DocumentVersion). \
+            filter(DocumentVersion.document_id == self.article1.document_id). \
+            filter(DocumentVersion.lang == 'en').first()
 
         self.article2 = Article(
             categories=['site_info'], activities=['hiking'],
@@ -425,11 +491,18 @@ class TestArticleRest(BaseDocumentTestRest):
             waypoint_type='summit', elevation=2203)
         self.session.add(self.waypoint1)
         self.waypoint2 = Waypoint(
-            # document_id=456,
             waypoint_type='climbing_outdoor', elevation=2,
             rock_types=[],
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)')
             )
         self.session.add(self.waypoint2)
+        self.session.flush()
+
+        self.session.add(Association.create(
+            parent_document=self.article1,
+            child_document=self.article4))
+        self.session.add(Association.create(
+            parent_document=self.article3,
+            child_document=self.article1))
         self.session.flush()
