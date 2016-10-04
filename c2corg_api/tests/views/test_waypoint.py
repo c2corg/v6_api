@@ -139,6 +139,14 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         self.assertIn('associations', body)
         associations = body.get('associations')
+        self.assertIn('articles', associations)
+        self.assertIn('images', associations)
+        self.assertIn('waypoints', associations)
+
+        linked_articles = associations.get('articles')
+        self.assertEqual(len(linked_articles), 1)
+        self.assertEqual(
+            self.article1.document_id, linked_articles[0].get('document_id'))
 
         linked_waypoints = associations.get('waypoint_children')
         self.assertEqual(1, len(linked_waypoints))
@@ -714,6 +722,11 @@ class TestWaypointRest(BaseDocumentTestRest):
             (waypoint.document_id, self.waypoint2.document_id))
         self.assertIsNotNone(association_wp)
 
+        # check that a link to the child article is created
+        association_a = self.session.query(Association).get(
+            (waypoint.document_id, self.article1.document_id))
+        self.assertIsNotNone(association_a)
+
     def test_put_success_figures_and_lang_only(self):
         body_put = {
             'message': 'Update',
@@ -1282,25 +1295,9 @@ class TestWaypointRest(BaseDocumentTestRest):
             article_type='collab')
         self.session.add(self.article1)
         self.session.flush()
-        self.article2 = Article(
-            categories=['site_info'], activities=['hiking'],
-            article_type='collab')
-        self.article3 = Article(
-            categories=['site_info'], activities=['hiking'],
-            article_type='collab')
-        self.session.add(self.article2)
-        self.session.add(self.article3)
-        self.session.flush()
-
         self.session.add(Association.create(
             parent_document=self.waypoint,
             child_document=self.article1))
-        self.session.add(Association.create(
-            parent_document=self.waypoint2,
-            child_document=self.article2))
-        self.session.add(Association.create(
-            parent_document=self.waypoint3,
-            child_document=self.article3))
 
         self.outing1 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),

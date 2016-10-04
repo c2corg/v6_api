@@ -3,6 +3,7 @@ import json
 
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
+from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, OutingLocale
@@ -99,6 +100,11 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertIn('main_waypoint_id', body)
         self.assertIn('associations', body)
         associations = body.get('associations')
+        self.assertIn('waypoints', associations)
+        self.assertIn('routes', associations)
+        self.assertIn('recent_outings', associations)
+        self.assertIn('images', associations)
+        self.assertIn('articles', associations)
 
         linked_waypoints = associations.get('waypoints')
         self.assertEqual(1, len(linked_waypoints))
@@ -113,6 +119,11 @@ class TestRouteRest(BaseDocumentTestRest):
             self.route4.document_id, linked_routes[0].get('document_id'))
         # TODO with geometry now
         # self.assertNotIn('geometry', linked_routes[0])
+
+        linked_articles = associations.get('articles')
+        self.assertEqual(1, len(linked_articles))
+        self.assertEqual(
+            self.article1.document_id, linked_articles[0].get('document_id'))
 
         recent_outings = associations.get('recent_outings')
         self.assertEqual(1, recent_outings['total'])
@@ -841,6 +852,15 @@ class TestRouteRest(BaseDocumentTestRest):
         self.route_version = self.session.query(DocumentVersion). \
             filter(DocumentVersion.document_id == self.route.document_id). \
             filter(DocumentVersion.lang == 'en').first()
+
+        self.article1 = Article(categories=['site_info'],
+                                activities=['hiking'],
+                                article_type='collab')
+        self.session.add(self.article1)
+        self.session.flush()
+        self.session.add(Association.create(
+            parent_document=self.route,
+            child_document=self.article1))
 
         self.route2 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,

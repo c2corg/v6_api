@@ -1,6 +1,7 @@
 import datetime
 import json
 
+from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.image import Image
@@ -120,6 +121,16 @@ class TestOutingRest(BaseDocumentTestRest):
 
         self.assertIn('associations', body)
         associations = body.get('associations')
+        self.assertIn('waypoints', associations)
+        self.assertIn('routes', associations)
+        self.assertIn('images', associations)
+        self.assertIn('users', associations)
+        self.assertIn('articles', associations)
+
+        linked_articles = associations.get('articles')
+        self.assertEqual(len(linked_articles), 1)
+        self.assertEqual(
+            self.article1.document_id, linked_articles[0].get('document_id'))
 
         linked_routes = associations.get('routes')
         self.assertEqual(len(linked_routes), 1)
@@ -995,6 +1006,15 @@ class TestOutingRest(BaseDocumentTestRest):
 
         self.session.add(self.outing)
         self.session.flush()
+
+        self.article1 = Article(categories=['site_info'],
+                                activities=['hiking'],
+                                article_type='collab')
+        self.session.add(self.article1)
+        self.session.flush()
+        self.session.add(Association.create(
+            parent_document=self.outing,
+            child_document=self.article1))
 
         user_id = self.global_userids['contributor']
         DocumentRest.create_new_version(self.outing, user_id)

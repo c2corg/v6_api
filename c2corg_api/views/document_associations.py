@@ -5,6 +5,7 @@ from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.models.user import User
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import waypoint_documents_config, \
@@ -15,15 +16,15 @@ from sqlalchemy.sql.expression import or_, and_
 
 associations_to_include = {
     WAYPOINT_TYPE: {
-        'waypoints', 'waypoint_children', 'routes', 'images'},
+        'waypoints', 'waypoint_children', 'routes', 'images', 'articles'},
     ROUTE_TYPE:
-        {'waypoints', 'routes', 'images'},
+        {'waypoints', 'routes', 'images', 'articles'},
     OUTING_TYPE:
-        {'waypoints', 'routes', 'images', 'users'},
+        {'waypoints', 'routes', 'images', 'users', 'articles'},
     IMAGE_TYPE:
-        {'waypoints', 'routes', 'images', 'users', 'outings'},
+        {'waypoints', 'routes', 'images', 'users', 'outings', 'articles'},
     ARTICLE_TYPE:
-        {'waypoints', 'routes', 'images', 'users', 'outings'}
+        {'waypoints', 'routes', 'images', 'users', 'outings', 'articles'}
 }
 
 
@@ -159,33 +160,36 @@ def get_linked_images(document, lang):
         group_by(Image.document_id).
         all())
 
-    # print(DBSession.query(Image.document_id).
-    #     filter(Image.redirects_to.is_(None)).
-    #     join(
-    #         Association,
-    #         and_(
-    #             Association.child_document_id == Image.document_id,
-    #             Association.parent_document_id == document.document_id)
-    #         ).
-    #     group_by(Image.document_id)
-    #       )
-    # print("TEST LOG FOR THIS QUERY")
-
     return get_documents_for_ids(
         image_ids, lang, image_documents_config).get('documents')
 
 
 def get_linked_articles(document, lang):
+    condition_as_child = and_(
+        Association.child_document_id == Article.document_id,
+        Association.parent_document_id == document.document_id
+    )
+    condition_as_parent = and_(
+        Association.child_document_id == document.document_id,
+        Association.parent_document_id == Article.document_id
+    )
+
+    if document.type == IMAGE_TYPE:
+        condition = condition_as_parent
+    elif document.type in [WAYPOINT_TYPE,
+                           OUTING_TYPE,
+                           ROUTE_TYPE,
+                           USERPROFILE_TYPE]:
+        condition = condition_as_child
+
+    elif document.type == ARTICLE_TYPE:
+        condition = or_(condition_as_child, condition_as_parent)
 
     article_ids = get_first_column(
         DBSession.query(Article.document_id).
         filter(Article.redirects_to.is_(None)).
         join(
-            Association,
-            and_(
-                Association.child_document_id == Article.document_id,
-                Association.parent_document_id == document.document_id)
-            ).
+            Association, condition).
         group_by(Article.document_id).
         all())
 

@@ -296,10 +296,10 @@ association_keys_for_types = {
 # associations that can be updated/created when updating/creating a document
 # e.g. when creating a route, route and waypoint associations can be created
 updatable_associations = {
-    ROUTE_TYPE: {'routes', 'waypoints'},
-    WAYPOINT_TYPE: {'waypoints', 'waypoint_children'},
-    OUTING_TYPE: {'routes', 'users', 'waypoints'},
-    IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users'},
+    ROUTE_TYPE: {'articles', 'routes', 'waypoints'},
+    WAYPOINT_TYPE: {'articles', 'waypoints', 'waypoint_children'},
+    OUTING_TYPE: {'articles', 'routes', 'users', 'waypoints'},
+    IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users', 'articles'},
     ARTICLE_TYPE: {'articles', 'images', 'users', 'routes', 'waypoints',
-                   'images', 'outings'}
+                   'outings'}
 }

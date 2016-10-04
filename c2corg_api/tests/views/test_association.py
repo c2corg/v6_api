@@ -68,9 +68,6 @@ class TestAssociationRest(BaseTestRest):
         self.assertEqual(association_log.is_creation, True)
         self.assertIsNotNone(association_log.user_id)
 
-        # AssertionError: unexpectedly None : no sync. notification sent for ES
-        # self.assertNotifiedEs()
-
         self.check_cache_version(self.waypoint1.document_id, 2)
         self.check_cache_version(self.article1.document_id, 2)
 

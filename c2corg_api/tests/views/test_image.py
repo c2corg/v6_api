@@ -1,6 +1,7 @@
 import json
 from unittest.mock import patch, Mock
 
+from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
@@ -41,6 +42,15 @@ class BaseTestImage(BaseDocumentTestRest):
         self.session.add(self.image)
         self.session.flush()
 
+        self.article1 = Article(categories=['site_info'],
+                                activities=['hiking'],
+                                article_type='collab')
+        self.session.add(self.article1)
+        self.session.flush()
+        self.session.add(Association.create(
+            parent_document=self.article1,
+            child_document=self.image))
+
         user_id = self.global_userids['contributor']
         DocumentRest.create_new_version(self.image, user_id)
 
@@ -63,6 +73,10 @@ class BaseTestImage(BaseDocumentTestRest):
         self.session.add(self.image4)
         self.session.flush()
         DocumentRest.create_new_version(self.image4, user_id)
+
+        self.session.add(Association.create(
+            parent_document=self.image,
+            child_document=self.image2))
 
         self.waypoint = Waypoint(
             waypoint_type='summit', elevation=4,
@@ -186,6 +200,19 @@ class TestImageRest(BaseTestImage):
         self.assertEqual(
             self.global_userids['contributor'], creator.get('user_id'))
 
+        self.assertIn('associations', body)
+        associations = body['associations']
+        self.assertIn('waypoints', associations)
+        self.assertIn('routes', associations)
+        self.assertIn('images', associations)
+        self.assertIn('users', associations)
+        self.assertIn('articles', associations)
+
+        linked_articles = associations.get('articles')
+        self.assertEqual(len(linked_articles), 1)
+        self.assertEqual(
+            self.article1.document_id, linked_articles[0].get('document_id'))
+
     def test_get_lang(self):
         self.get_lang(self.image)
 
@@ -209,6 +236,7 @@ class TestImageRest(BaseTestImage):
         self.assertIn('routes', associations)
         self.assertIn('images', associations)
         self.assertIn('users', associations)
+        self.assertIn('articles', associations)
 
     def test_post_error(self):
         body = self.post_error({})
