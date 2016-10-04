@@ -1,8 +1,7 @@
 from c2corg_api.models.article import Article, ArchiveArticle, ARTICLE_TYPE
 from c2corg_api.models.document import DocumentLocale, ArchiveDocumentLocale, \
     DOCUMENT_TYPE
-from c2corg_api.scripts.migration.documents.document import MigrateDocuments, \
-    DEFAULT_QUALITY
+from c2corg_api.scripts.migration.documents.document import MigrateDocuments
 from c2corg_api.scripts.migration.documents.routes import MigrateRoutes
 
 
@@ -68,16 +67,16 @@ class MigrateArticles(MigrateDocuments):
             document_in.categories, MigrateArticles.article_categories)
         print(categories)
         if 'draft' in categories:
-            DEFAULT_QUALITY = 'draft'
+            default_quality = 'draft'
             categories.remove('draft')
         else:
-            DEFAULT_QUALITY = 'medium'
+            default_quality = 'medium'
         return dict(
             document_id=document_in.id,
             type=ARTICLE_TYPE,
             version=version,
 
-            quality=DEFAULT_QUALITY,
+            quality=default_quality,
             categories=categories,
             activities=self.convert_types(
                 document_in.activities, MigrateRoutes.activities),
