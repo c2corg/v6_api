@@ -118,7 +118,7 @@ area_documents_config = GetDocumentsConfig(
 
 article_documents_config = GetDocumentsConfig(
     ARTICLE_TYPE, Article, schema_listing_article,
-    listing_fields=fields_article['listing'])
+    listing_fields=fields_article['listing'], include_areas=False)
 
 
 # images

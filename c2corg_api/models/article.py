@@ -1,6 +1,6 @@
 from c2corg_api.models import schema, Base, enums
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, DocumentLocale)
+    ArchiveDocument, Document, schema_document_locale, schema_attributes)
 from c2corg_api.models.enums import article_category, activity_type
 from c2corg_api.models.schema_utils import get_update_schema, \
     restrict_schema, get_create_schema
@@ -63,18 +63,10 @@ class ArchiveArticle(_ArticleMixin, ArchiveDocument):
 
     __table_args__ = Base.__table_args__
 
+schema_article_locale = schema_document_locale
+schema_article_attributes = list(schema_attributes)  # .remove('geometry')
+schema_article_attributes.remove('geometry')
 
-schema_article_locale = SQLAlchemySchemaNode(
-    DocumentLocale,
-    # whitelisted attributes
-    includes=['version', 'lang', 'title', 'description', 'summary'],
-    overrides={
-        'version': {
-            'missing': None
-        }
-    })
-
-schema_article_attributes = ['document_id', 'version', 'locales', 'quality']
 schema_article = SQLAlchemySchemaNode(
     Article,
     # whitelisted attributes
@@ -95,6 +87,3 @@ schema_create_article = get_create_schema(schema_article)
 schema_update_article = get_update_schema(schema_article)
 schema_listing_article = restrict_schema(
     schema_article, fields_article.get('listing'))
-schema_association_article = restrict_schema(schema_article, [
-    'document_id', 'title'
-])

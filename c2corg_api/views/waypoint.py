@@ -1,7 +1,6 @@
 import functools
 
 from c2corg_api.models import DBSession
-from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import UpdateType
 from c2corg_api.models.outing import Outing
@@ -10,8 +9,7 @@ from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import waypoint_documents_config, \
-    waypoint_schema_adaptor, outing_documents_config, route_documents_config, \
-    article_documents_config
+    waypoint_schema_adaptor, outing_documents_config, route_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.route import set_route_title_prefix
 from cornice.resource import resource, view
@@ -232,7 +230,6 @@ class WaypointRest(DocumentRest):
 def set_custom_associations(waypoint, lang):
     set_recent_outings(waypoint, lang)
     set_linked_routes(waypoint, lang)
-    set_linked_articles(waypoint, lang)
 
 
 def set_recent_outings(waypoint, lang):
@@ -324,45 +321,6 @@ def set_linked_routes(waypoint, lang):
 
     waypoint.associations['all_routes'] = get_documents_for_ids(
         route_ids, lang, route_documents_config, total)
-
-
-def set_linked_articles(waypoint, lang):
-    """
-    comment
-    """
-    with_query_waypoints = _get_select_children(waypoint)
-
-    article_ids = get_first_column(
-        DBSession.query(Article.document_id).
-        select_from(with_query_waypoints).
-        join(
-            Association,
-            with_query_waypoints.c.document_id ==
-            Association.parent_document_id).
-        join(
-            Article,
-            Association.child_document_id == Article.document_id).
-        filter(Article.redirects_to.is_(None)).
-        order_by(
-            with_query_waypoints.c.priority.desc(),
-            Article.document_id.desc()).
-        # limit(NUM_ROUTES).
-        all())
-
-    total = DBSession.query(Article.document_id). \
-        select_from(with_query_waypoints). \
-        join(
-            Association,
-            with_query_waypoints.c.document_id ==
-            Association.parent_document_id). \
-        join(
-            Article,
-            Association.child_document_id == Article.document_id). \
-        filter(Article.redirects_to.is_(None)). \
-        count()
-
-    waypoint.associations['all_articles'] = get_documents_for_ids(
-        article_ids, lang, article_documents_config, total)
 
 
 def _get_select_children(waypoint):
