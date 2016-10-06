@@ -1,3 +1,4 @@
+from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
@@ -173,7 +174,7 @@ ASSOCIATION_TYPES = {
     # 'a': AREA_TYPE,       # area: ignored
     'o': OUTING_TYPE,       # outing
     'f': WAYPOINT_TYPE,     # product
-    # 'c': ARTICLE_TYPE,    # article
+    'c': ARTICLE_TYPE,      # article
     'h': WAYPOINT_TYPE,     # hut
     'r': ROUTE_TYPE,        # route
     # 'w': ?,               # portal?

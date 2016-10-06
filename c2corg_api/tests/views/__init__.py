@@ -207,6 +207,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(body.get('document_id'), reference.document_id)
         self.assertIsNotNone(body.get('version'))
         self.assertIn('type', body)
+        self.assertIsNotNone(body.get('associations'))
 
         locales = body.get('locales')
         self.assertEqual(len(locales), 2)

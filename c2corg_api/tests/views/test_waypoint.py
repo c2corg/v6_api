@@ -5,6 +5,7 @@ from c2corg_api.caching import cache_document_detail, cache_document_listing, \
     cache_document_history, cache_document_version
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
+from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import get_cache_key, CacheVersion
 from c2corg_api.models.document_history import DocumentVersion
@@ -138,6 +139,14 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         self.assertIn('associations', body)
         associations = body.get('associations')
+        self.assertIn('articles', associations)
+        self.assertIn('images', associations)
+        self.assertIn('waypoints', associations)
+
+        linked_articles = associations.get('articles')
+        self.assertEqual(len(linked_articles), 1)
+        self.assertEqual(
+            self.article1.document_id, linked_articles[0].get('document_id'))
 
         linked_waypoints = associations.get('waypoint_children')
         self.assertEqual(1, len(linked_waypoints))
@@ -644,6 +653,9 @@ class TestWaypointRest(BaseDocumentTestRest):
                     ],
                     'routes': [
                         {'document_id': self.route1.document_id}
+                    ],
+                    'articles': [
+                        {'document_id': self.article1.document_id}
                     ]
                 }
             }
@@ -709,6 +721,11 @@ class TestWaypointRest(BaseDocumentTestRest):
         association_wp = self.session.query(Association).get(
             (waypoint.document_id, self.waypoint2.document_id))
         self.assertIsNotNone(association_wp)
+
+        # check that a link to the child article is created
+        association_a = self.session.query(Association).get(
+            (waypoint.document_id, self.article1.document_id))
+        self.assertIsNotNone(association_a)
 
     def test_put_success_figures_and_lang_only(self):
         body_put = {
@@ -1271,6 +1288,16 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(Association.create(
             parent_document=self.waypoint4,
             child_document=self.route3))
+
+        # article
+        self.article1 = Article(
+            categories=['site_info'], activities=['hiking'],
+            article_type='collab')
+        self.session.add(self.article1)
+        self.session.flush()
+        self.session.add(Association.create(
+            parent_document=self.waypoint,
+            child_document=self.article1))
 
         self.outing1 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),

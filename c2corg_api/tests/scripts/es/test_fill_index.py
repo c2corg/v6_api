@@ -1,10 +1,12 @@
 import datetime
 
 from c2corg_api.models import es_sync
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.article import Article
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
@@ -78,6 +80,22 @@ class FillIndexTest(BaseTestCase):
                     description='...', weather='sunny')
             ]
         ))
+        self.session.add(Article(
+            document_id=71176,
+            categories=['site_info'], activities=['hiking'],
+            article_type='collab',
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'),
+            locales=[
+                DocumentLocale(
+                    lang='en', title='Lac d\'Annecy',
+                    description='...',
+                    summary=''),
+                DocumentLocale(
+                    lang='fr', title='Lac d\'Annecy',
+                    description='...',
+                    summary='')
+            ]))
         self.session.flush()
 
         # fill the ElasticSearch index
@@ -113,6 +131,12 @@ class FillIndexTest(BaseTestCase):
         self.assertEqual(outing.title_fr, '')
         self.assertEqual(outing.doc_type, 'o')
         self.assertEqual(outing.frequentation, 3)
+
+        article = SearchArticle.get(id=71176)
+        self.assertIsNotNone(article)
+        self.assertEqual(article.title_en, 'Lac d\'Annecy')
+        self.assertEqual(article.title_fr, 'Lac d\'Annecy')
+        self.assertEqual(article.doc_type, 'c')
 
         # merged document is ignored
         self.assertIsNone(SearchWaypoint.get(id=71174, ignore=404))

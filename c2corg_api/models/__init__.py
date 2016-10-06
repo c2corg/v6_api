@@ -37,8 +37,10 @@ from c2corg_api.models import outing  # noqa
 from c2corg_api.models import es_sync  # noqa
 from c2corg_api.models import association_views  # noqa
 from c2corg_api.models import cache_version  # noqa
+from c2corg_api.models import article  # noqa
 
 document_types = {
+    article.ARTICLE_TYPE: article.Article,
     waypoint.WAYPOINT_TYPE: waypoint.Waypoint,
     route.ROUTE_TYPE: route.Route,
     image.IMAGE_TYPE: image.Image,
@@ -49,6 +51,7 @@ document_types = {
 }
 
 document_locale_types = {
+    article.ARTICLE_TYPE: document.DocumentLocale,
     waypoint.WAYPOINT_TYPE: waypoint.WaypointLocale,
     route.ROUTE_TYPE: route.RouteLocale,
     image.IMAGE_TYPE: document.DocumentLocale,

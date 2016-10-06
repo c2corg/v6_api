@@ -118,3 +118,7 @@ image_type = enum(
     'image_type', attributes.image_types)
 custodianship_type = enum(
     'custodianship_type', attributes.custodianship_types)
+article_category = enum(
+    'article_category', attributes.article_categories)
+article_type = enum(
+    'article_type', attributes.article_types)

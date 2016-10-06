@@ -1,5 +1,6 @@
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import Document
+from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
@@ -179,6 +180,8 @@ def validate_associations_in(associations_in, document_type, errors):
     _add_associations(associations, associations_in, document_type,
                       'images', IMAGE_TYPE, new_errors)
     _add_associations(associations, associations_in, document_type,
+                      'articles', ARTICLE_TYPE, new_errors)
+    _add_associations(associations, associations_in, document_type,
                       'waypoint_children', WAYPOINT_TYPE, new_errors)
 
     if new_errors:
@@ -278,21 +281,25 @@ association_keys = {
     'waypoints': WAYPOINT_TYPE,
     'waypoint_children': WAYPOINT_TYPE,
     'users': USERPROFILE_TYPE,
-    'images': IMAGE_TYPE
+    'images': IMAGE_TYPE,
+    'articles': ARTICLE_TYPE
 }
 
 association_keys_for_types = {
     ROUTE_TYPE: 'routes',
     WAYPOINT_TYPE: 'waypoints',
     USERPROFILE_TYPE: 'users',
+    ARTICLE_TYPE: 'articles',
     IMAGE_TYPE: 'images'
 }
 
 # associations that can be updated/created when updating/creating a document
 # e.g. when creating a route, route and waypoint associations can be created
 updatable_associations = {
-    ROUTE_TYPE: {'routes', 'waypoints'},
-    WAYPOINT_TYPE: {'waypoints', 'waypoint_children'},
-    OUTING_TYPE: {'routes', 'users', 'waypoints'},
-    IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users'}
+    ROUTE_TYPE: {'articles', 'routes', 'waypoints'},
+    WAYPOINT_TYPE: {'articles', 'waypoints', 'waypoint_children'},
+    OUTING_TYPE: {'articles', 'routes', 'users', 'waypoints'},
+    IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users', 'articles'},
+    ARTICLE_TYPE: {'articles', 'images', 'users', 'routes', 'waypoints',
+                   'outings'}
 }
