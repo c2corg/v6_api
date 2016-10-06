@@ -103,6 +103,10 @@ class User(Base):
     feed_filter_activities = Column(
         ArrayOfEnum(enums.activity_type), nullable=False, server_default='{}')
 
+    # only show updates from followed users in the homepage feed
+    feed_followed_only = Column(
+        Boolean, server_default='FALSE', nullable=False)
+
     def update_validation_nonce(self, purpose, days):
         """Generate and overwrite the nonce.
         A nonce is a random number which is used for authentication when doing
