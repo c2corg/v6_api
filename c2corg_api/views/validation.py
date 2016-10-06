@@ -10,6 +10,8 @@ from c2corg_common.associations import valid_associations
 from c2corg_common.attributes import default_langs
 from colander import null
 from cornice.errors import Errors
+from webob.descriptors import parse_int_safe
+from dateutil import parser as datetime_parser
 
 
 # Validation functions
@@ -125,6 +127,43 @@ def validate_pagination(request):
     """
     check_get_for_integer_property(request, 'offset', False)
     check_get_for_integer_property(request, 'limit', False)
+
+
+def validate_token_pagination(request):
+    """
+    Validate token pagination parameters (limit and token) for feed.
+    """
+    check_get_for_integer_property(request, 'limit', False)
+    validate_token(request)
+
+
+def parse_datetime(time_raw):
+    if time_raw is None or time_raw == '':
+        return None
+    try:
+        return datetime_parser.parse(time_raw)
+    except ValueError:
+        return None
+
+
+def validate_token(request):
+    if request.GET.get('token'):
+        token = request.GET.get('token')
+
+        # the token should have the format '{id},{datetime in isoformat}'
+        if ',' in token:
+            token_parts = token.split(',')
+
+            if len(token_parts) == 2:
+                id = parse_int_safe(token_parts[0])
+                time = parse_datetime(token_parts[1])
+
+                if id is not None and time:
+                    # everything ok
+                    request.validated['token_id'] = id
+                    request.validated['token_time'] = time
+                    return
+        request.errors.add('querystring', 'token', 'invalid format')
 
 
 def validate_required_json_string(key, request):

@@ -114,3 +114,44 @@ class TestFeedRest(BaseTestRest):
         outing_locales = latest_change['document']['locales']
         self.assertEqual(1, len(outing_locales))
         self.assertEqual('en', outing_locales[0]['lang'])
+
+    def test_get_public_feed_pagination_invalid_format(self):
+        response = self.app.get(
+            self._prefix + '?token=123,invalid-token', status=400)
+
+        self.assertError(response.json['errors'], 'token', 'invalid format')
+
+    def test_get_public_feed_pagination(self):
+        # first 2 changes
+        response = self.app.get(self._prefix + '?limit=2', status=200)
+        body = response.json
+
+        document_ids = get_document_ids(body)
+        self.assertEqual(2, len(document_ids))
+        self.assertEqual(
+            document_ids, [self.outing.document_id, self.route.document_id])
+        pagination_token = body['pagination_token']
+
+        # last 2 changes
+        response = self.app.get(
+            self._prefix + '?limit=2&token=' + pagination_token, status=200)
+        body = response.json
+
+        document_ids = get_document_ids(body)
+        self.assertEqual(2, len(document_ids))
+        self.assertEqual(
+            document_ids,
+            [self.waypoint1.document_id, self.waypoint2.document_id])
+        pagination_token = body['pagination_token']
+
+        # empty response
+        response = self.app.get(
+            self._prefix + '?limit=2&token=' + pagination_token, status=200)
+        body = response.json
+
+        document_ids = get_document_ids(body)
+        self.assertEqual(0, len(document_ids))
+
+
+def get_document_ids(body):
+    return [c['document']['document_id'] for c in body['feed']]

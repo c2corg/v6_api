@@ -6,11 +6,14 @@ from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import document_configs
-from c2corg_api.views.validation import validate_preferred_lang_param
+from c2corg_api.views.validation import validate_preferred_lang_param, \
+    validate_token_pagination
 from cornice.resource import resource, view
 from c2corg_api.views import cors_policy
+from sqlalchemy.sql.expression import or_, and_
 
 DEFAULT_PAGE_LIMIT = 10
+MAX_PAGE_LIMIT = 50
 
 
 @resource(path='/feed', cors_policy=cors_policy)
@@ -19,20 +22,59 @@ class FeedRest(object):
     def __init__(self, request):
         self.request = request
 
-    @view(validators=[validate_preferred_lang_param])
+    @view(validators=[
+        validate_preferred_lang_param, validate_token_pagination])
     def get(self):
+        """Get the public feed.
+
+        Request:
+            `GET` `/search[?pl=...][&limit=...][&token=...]`
+
+        Parameters:
+
+            `pl=...` (optional)
+            When set only the given locale will be included (if available).
+            Otherwise all locales will be returned.
+
+            `limit=...` (optional)
+            How many entries should be returned (default: 10).
+            The maximum is 50.
+
+            `token=...` (optional)
+            The pagination token. When requesting a feed, the response includes
+            a `pagination_token`. This token is to be used to request the next
+            page.
+
+            For more information about "continuation token pagination", see:
+            http://www.servicedenuages.fr/pagination-continuation-token (fr)
+
+        """
         lang = self.request.validated.get('lang')
-        changes = get_changes_of_public_feed()
+        token_id = self.request.validated.get('token_id')
+        token_time = self.request.validated.get('token_time')
+        limit = self.request.validated.get('limit')
+        limit = min(
+            DEFAULT_PAGE_LIMIT if limit is None else limit,
+            MAX_PAGE_LIMIT)
+
+        changes = get_changes_of_public_feed(token_id, token_time, limit)
         return load_feed(changes, lang)
 
 
-def get_changes_of_public_feed():
-    changes = DBSession. \
+def get_changes_of_public_feed(token_id, token_time, limit):
+    query = DBSession. \
         query(DocumentChange). \
-        order_by(DocumentChange.time.desc(), DocumentChange.change_id). \
-        limit(DEFAULT_PAGE_LIMIT). \
-        all()
-    return changes
+        order_by(DocumentChange.time.desc(), DocumentChange.change_id)
+
+    if token_id is not None and token_time:
+        query = query.filter(
+            or_(
+                DocumentChange.time < token_time,
+                and_(
+                    DocumentChange.time == token_time,
+                    DocumentChange.change_id > token_id)))
+
+    return query.limit(limit).all()
 
 
 def load_feed(changes, lang):
@@ -45,7 +87,7 @@ def load_feed(changes, lang):
     documents = load_documents(documents_to_load, lang)
 
     last_change = changes[-1]
-    pagination_token = '{}-{}'.format(
+    pagination_token = '{},{}'.format(
         last_change.change_id, last_change.time.isoformat())
 
     return {
