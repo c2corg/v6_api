@@ -86,22 +86,6 @@ def validate_unique_attribute(attrname, request):
             request.errors.add('body', attrname, 'already used ' + attrname)
 
 
-@resource(path='/users/{id}', cors_policy=cors_policy)
-class UserRest(object):
-    def __init__(self, request):
-        self.request = request
-
-    @restricted_view(validators=validate_id)
-    def get(self):
-        id = self.request.validated['id']
-        user = DBSession. \
-            query(User). \
-            filter(User.id == id). \
-            first()
-
-        return to_json_dict(user, schema_user)
-
-
 def validate_captcha(request):
     """Validate the recaptcha sent by UI.
     """
