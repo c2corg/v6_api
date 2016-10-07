@@ -8,9 +8,10 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import document_configs
 from c2corg_api.views.validation import validate_preferred_lang_param, \
-    validate_token_pagination
+    validate_token_pagination, validate_user_id
 from cornice.resource import resource, view
 from c2corg_api.views import cors_policy, restricted_view
+from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy.orm import undefer
 from sqlalchemy.sql.expression import or_, and_
 from sqlalchemy.sql.functions import func
@@ -77,6 +78,36 @@ class PersonalFeedRest(object):
         user_id = self.request.authenticated_userid
         lang, token_id, token_time, limit = get_params(self.request)
         changes = get_changes_of_personal_feed(
+            user_id, token_id, token_time, limit)
+        return load_feed(changes, lang)
+
+
+@resource(path='/profile-feed', cors_policy=cors_policy)
+class ProfileFeedRest(object):
+
+    def __init__(self, request):
+        self.request = request
+
+    @restricted_view(validators=[
+        validate_preferred_lang_param, validate_token_pagination,
+        validate_user_id])
+    def get(self):
+        """Get the user profile feed for a user.
+
+        Request:
+            `GET` `/profile-feed?u={user_id}[&pl=...][&limit=...][&token=...]`
+
+        Parameters:
+
+            `u={user_id}` (required)
+            The id of the user whose profile feed is requested.
+
+            For the other parameters, see above for '/feed'.
+
+        """
+        lang, token_id, token_time, limit = get_params(self.request)
+        user_id = self.request.validated.get('u')
+        changes = get_changes_of_profile_feed(
             user_id, token_id, token_time, limit)
         return load_feed(changes, lang)
 
@@ -211,6 +242,20 @@ def create_activity_filter(user):
         return None
 
     return DocumentChange.activities.op('&&')(user.feed_filter_activities)
+
+
+def get_changes_of_profile_feed(user_id, token_id, token_time, limit):
+    user_exists_query = DBSession.query(User). \
+        filter(User.id == user_id). \
+        exists()
+    user_exists = DBSession.query(user_exists_query).scalar()
+
+    if not user_exists:
+        raise HTTPNotFound('user not found')
+
+    user_filter = DocumentChange.user_ids.op('&&')([user_id])
+
+    return get_changes_of_feed(token_id, token_time, limit, user_filter)
 
 
 def load_feed(changes, lang):

@@ -370,5 +370,94 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         self.assertEqual(0, len(feed))
 
 
+class TestProfileFeedRest(BaseFeedTestRest):
+
+    def test_get_feed_unauthenticated(self):
+        self.app.get('/profile-feed', status=403)
+
+    def test_get_feed_invalid_user_id(self):
+        headers = self.add_authorization_header(username='contributor')
+        self.app.get(
+            '/profile-feed?u=invalid-user-id', status=400, headers=headers)
+
+    def test_get_feed_non_existing_user(self):
+        headers = self.add_authorization_header(username='contributor')
+        self.app.get(
+            '/profile-feed?u=-1', status=404, headers=headers)
+
+    def test_get_profile_contributor(self):
+        """ Get profile feed for 'contributor'.
+        """
+        headers = self.add_authorization_header(username='contributor')
+        user_id = self.global_userids['contributor']
+        response = self.app.get(
+            '/profile-feed?u=' + str(user_id), status=200, headers=headers)
+        body = response.json
+
+        feed = body['feed']
+        self.assertEqual(3, len(feed))
+
+        self.assertEqual(
+            self.outing.document_id, feed[0]['document']['document_id'])
+        self.assertEqual(
+            self.route.document_id, feed[1]['document']['document_id'])
+        self.assertEqual(
+            self.waypoint1.document_id, feed[2]['document']['document_id'])
+
+    def test_get_profile_contributor2(self):
+        """ Get profile feed for 'contributor2'.
+        """
+        headers = self.add_authorization_header(username='contributor')
+        user_id = self.global_userids['contributor2']
+        response = self.app.get(
+            '/profile-feed?u=' + str(user_id), status=200, headers=headers)
+        body = response.json
+
+        feed = body['feed']
+        self.assertEqual(2, len(feed))
+
+        self.assertEqual(
+            self.outing.document_id, feed[0]['document']['document_id'])
+        self.assertEqual(
+            self.waypoint2.document_id, feed[1]['document']['document_id'])
+
+    def test_get_profile_contributor2_paginated(self):
+        """ Get profile feed for 'contributor2' (paginated).
+        """
+        headers = self.add_authorization_header(username='contributor')
+        user_id = self.global_userids['contributor2']
+        url = '/profile-feed?u=' + str(user_id) + '&limit=1'
+        response = self.app.get(url, status=200, headers=headers)
+        body = response.json
+
+        feed = body['feed']
+        self.assertEqual(1, len(feed))
+
+        self.assertEqual(
+            self.outing.document_id, feed[0]['document']['document_id'])
+        pagination_token = body['pagination_token']
+
+        # second page
+        url = '/profile-feed?u=' + str(user_id) + '&limit=1&token=' + \
+              pagination_token
+        response = self.app.get(url, status=200, headers=headers)
+        body = response.json
+
+        feed = body['feed']
+        self.assertEqual(1, len(feed))
+        self.assertEqual(
+            self.waypoint2.document_id, feed[0]['document']['document_id'])
+        pagination_token = body['pagination_token']
+
+        # empty response
+        url = '/profile-feed?u=' + str(user_id) + '&limit=1&token=' + \
+              pagination_token
+        response = self.app.get(url, status=200, headers=headers)
+        body = response.json
+
+        feed = body['feed']
+        self.assertEqual(0, len(feed))
+
+
 def get_document_ids(body):
     return [c['document']['document_id'] for c in body['feed']]

@@ -137,6 +137,13 @@ def validate_token_pagination(request):
     validate_token(request)
 
 
+def validate_user_id(request):
+    """
+    Checks for a required user id parameter.
+    """
+    check_get_for_integer_property(request, 'u', True)
+
+
 def parse_datetime(time_raw):
     if time_raw is None or time_raw == '':
         return None
