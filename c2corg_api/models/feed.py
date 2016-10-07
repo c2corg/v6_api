@@ -6,7 +6,8 @@ from c2corg_api.models.image import Image
 from c2corg_api.models.user import User
 from c2corg_api.models.utils import ArrayOfEnum
 from sqlalchemy.dialects.postgresql.base import ARRAY
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, column_property
+from sqlalchemy.sql.expression import select
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import Column, ForeignKey, PrimaryKeyConstraint, \
     CheckConstraint, Index
@@ -41,6 +42,14 @@ class FilterArea(Base):
     )
 
 
+User.has_area_filter = column_property(
+    select([func.count(FilterArea.area_id) > 0]).
+    where(FilterArea.user_id == User.id).
+    correlate_except(FilterArea),
+    deferred=True
+)
+
+
 class FollowedUser(Base):
     """Tracks which user follows which user.
 
@@ -70,6 +79,14 @@ class FollowedUser(Base):
             name='check_feed_followed_user_self_follow'),
         Base.__table_args__
     )
+
+
+User.is_following_users = column_property(
+    select([func.count(FollowedUser.followed_user_id) > 0]).
+    where(FollowedUser.follower_user_id == User.id).
+    correlate_except(FollowedUser),
+    deferred=True
+)
 
 
 class DocumentChange(Base):
