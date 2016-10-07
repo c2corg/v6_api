@@ -38,6 +38,7 @@ from c2corg_api.scripts.migration.documents.waypoints.sites import MigrateSites
 from c2corg_api.scripts.migration.documents.waypoints.summit import \
     MigrateSummits
 from c2corg_api.scripts.migration.sequences import UpdateSequences
+from c2corg_api.scripts.migration.init_feed import InitFeed
 
 
 # no-op function referenced from `migration.ini` (required for
@@ -65,6 +66,7 @@ def main(argv=sys.argv):
     connection_source = engine_source.connect()
 
     batch_size = 1000
+    MigrateAreas(connection_source, session, batch_size).migrate()
     MigrateUserProfiles(connection_source, session, batch_size).migrate()
     MigrateUsers(connection_source, session, batch_size).migrate()
     MigrateSummits(connection_source, session, batch_size).migrate()
@@ -74,7 +76,6 @@ def main(argv=sys.argv):
     MigrateHuts(connection_source, session, batch_size).migrate()
     MigrateRoutes(connection_source, session, batch_size).migrate()
     MigrateMaps(connection_source, session, batch_size).migrate()
-    MigrateAreas(connection_source, session, batch_size).migrate()
     MigrateOutings(connection_source, session, batch_size).migrate()
     MigrateImages(connection_source, session, batch_size).migrate()
     MigrateArticles(connection_source, session, batch_size).migrate()
@@ -84,6 +85,7 @@ def main(argv=sys.argv):
     MigrateAreaAssociations(connection_source, session, batch_size).migrate()
     MigrateMapAssociations(connection_source, session, batch_size).migrate()
     UpdateSequences(connection_source, session, batch_size).migrate()
+    InitFeed(connection_source, session, batch_size).migrate()
 
 if __name__ == "__main__":
     main()

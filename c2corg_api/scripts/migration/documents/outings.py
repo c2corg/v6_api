@@ -6,6 +6,8 @@ from c2corg_api.scripts.migration.documents.routes import MigrateRoutes
 import phpserialize
 import json
 
+from c2corg_api.scripts.migration.migrate_base import parse_php_object
+
 
 class MigrateOutings(MigrateDocuments):
 
@@ -206,9 +208,7 @@ def php_to_json(conditions_levels_serialized, id):
         return None
 
     try:
-        data = bytes(conditions_levels_serialized, encoding='utf-8')
-        levels = phpserialize.loads(
-            data, object_hook=phpserialize.phpobject, decode_strings=True)
+        levels = parse_php_object(conditions_levels_serialized)
         return json.dumps(phpserialize.dict_to_list(levels))
     except Exception as e:
         print(id)

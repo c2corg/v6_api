@@ -207,3 +207,13 @@ waypoint_listing_schema_adaptor = make_schema_adaptor(
 waypoint_documents_config = GetDocumentsConfig(
     WAYPOINT_TYPE, Waypoint, schema_waypoint, fields=fields_waypoint,
     adapt_schema=waypoint_listing_schema_adaptor)
+
+document_configs = {
+    WAYPOINT_TYPE: waypoint_documents_config,
+    ROUTE_TYPE: route_documents_config,
+    OUTING_TYPE: outing_documents_config,
+    IMAGE_TYPE: image_documents_config,
+    AREA_TYPE: area_documents_config,
+    MAP_TYPE: topo_map_documents_config,
+    USERPROFILE_TYPE: user_profile_documents_config
+}
