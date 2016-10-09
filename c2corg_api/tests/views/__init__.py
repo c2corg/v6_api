@@ -61,6 +61,12 @@ class BaseTestRest(BaseTestCase):
                 return
         self.fail('no error ({0}, {1})'.format(name, description))
 
+    def get_error(self, errors, name):  # noqa
+        for error in errors:
+            if name == error.get('name'):
+                return error
+        self.fail('no error for {0}'.format(name))
+
     def post_json_with_token(self, url, token, body={}, status=200):
         headers = self.add_authorization_header(token=token)
         r = self.app_post_json(url, body, headers=headers, status=status)
