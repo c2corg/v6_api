@@ -15,7 +15,7 @@ from c2corg_api.models.document import (
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.views.document import DocumentRest
 
-from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest, BaseTestRest
 
 
 class BaseTestImage(BaseDocumentTestRest):
@@ -685,3 +685,27 @@ class TestImageListRest(BaseTestImage):
         }
         body, doc = self.post_success(body)
         self._validate_post_success(body, doc)
+
+
+class TestImageProxyRest(BaseTestRest):
+
+    def setUp(self):  # noqa
+        BaseTestRest.setUp(self)
+        self._add_test_data()
+
+    def _add_test_data(self):
+        self.image = Image(
+            filename='image.jpg',
+            activities=['paragliding'], height=1500,
+            image_type='collaborative')
+        self.session.add(self.image)
+        self.session.flush()
+
+    def test_get_not_exists(self):
+        self.app.get('/images/proxy/{}'.format(999),
+                     status=404)
+
+    def test_success(self):
+        resp = self.app.get('/images/proxy/{}'.format(self.image.document_id),
+                            status=302)
+        self.assertIn('image.jpg', resp.headers['Location'])

@@ -71,3 +71,4 @@ skip.captcha.validation = {skip_captcha_validation}
 
 image_backend.url = {image_backend_url}
 image_backend.secret_key = {image_backend_secret_key}
+image_url = {image_url}

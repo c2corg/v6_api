@@ -19,7 +19,7 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_associations, validate_associations_in, validate_lang
 
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, \
-    HTTPBadRequest, HTTPInternalServerError
+    HTTPBadRequest, HTTPInternalServerError, HTTPFound
 
 
 def check_filename_unique(image, request, updating):
@@ -172,6 +172,25 @@ class ImageInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):
         return self._get_document_info(Image)
+
+
+@resource(path='/images/proxy/{id}', cors_policy=cors_policy)
+class ImageProxyRest(object):
+
+    def __init__(self, request):
+        self.request = request
+
+    @view(validators=[validate_id])
+    def get(self):
+        document_id = self.request.validated['id']
+        query = DBSession. \
+            query(Image.filename). \
+            filter(Image.document_id == document_id)
+        image = query.first()
+        if image is None:
+            raise HTTPNotFound()
+        image_url = self.request.registry.settings['image_url']
+        return HTTPFound("{}{}".format(image_url, image.filename))
 
 
 def set_creator(image):
