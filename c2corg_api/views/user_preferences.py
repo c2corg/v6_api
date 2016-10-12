@@ -12,7 +12,7 @@ from colander import MappingSchema, SchemaNode, String, Boolean, Sequence, \
 from sqlalchemy.orm import joinedload, load_only
 
 
-class FeedPreferencesSchema(MappingSchema):
+class FilterPreferencesSchema(MappingSchema):
     activities = SchemaNode(
         Sequence(),
         SchemaNode(String(), validator=OneOf(activities)),
@@ -22,8 +22,8 @@ class FeedPreferencesSchema(MappingSchema):
     followed_only = SchemaNode(Boolean(), missing=required)
 
 
-@resource(path='/users/feed-preferences', cors_policy=cors_policy)
-class UserFeedPreferencesRest(object):
+@resource(path='/users/preferences', cors_policy=cors_policy)
+class UserFilterPreferencesRest(object):
 
     def __init__(self, request):
         self.request = request
@@ -52,7 +52,7 @@ class UserFeedPreferencesRest(object):
         """Get the filter preferences of the authenticated user.
 
         Request:
-            `GET` `/users/feed-preferences[?pl=...]`
+            `GET` `/users/preferences[?pl=...]`
 
         Parameters:
 
@@ -78,7 +78,7 @@ class UserFeedPreferencesRest(object):
             ]
         }
 
-    @restricted_json_view(schema=FeedPreferencesSchema())
+    @restricted_json_view(schema=FilterPreferencesSchema())
     def post(self):
         user = self.get_user(with_area_locales=False)
 

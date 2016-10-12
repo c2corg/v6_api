@@ -5,11 +5,11 @@ from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
 
 
-class TestUserPreferencesRest(BaseTestRest):
+class TestUserFilterPreferencesRest(BaseTestRest):
 
     def setUp(self):  # noqa
-        super(TestUserPreferencesRest, self).setUp()
-        self._prefix = '/users/feed-preferences'
+        super(TestUserFilterPreferencesRest, self).setUp()
+        self._prefix = '/users/preferences'
 
         self.area1 = Area(
             area_type='range',
