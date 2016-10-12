@@ -171,6 +171,7 @@ class BaseTestCase(unittest.TestCase):
         registry = self.app.app.registry
         self.mailer = get_mailer(registry)
         self.email_service = EmailService(self.mailer, settings)
+        EmailService.instance = None
 
         self.config = testing.setUp()
 

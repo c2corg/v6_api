@@ -18,7 +18,7 @@ import re
 from unittest.mock import Mock, MagicMock
 
 
-class TestUserRest(BaseTestRest):
+class BaseUserTestRest(BaseTestRest):
 
     def __init__(self, *args, **kwargs):
         BaseTestRest.__init__(self, *args, **kwargs)
@@ -62,6 +62,9 @@ class TestUserRest(BaseTestRest):
         fragment = urlparse(validation_url).fragment
         nonce = fragment.replace(key + '=',  '')
         return nonce
+
+
+class TestUserRest(BaseUserTestRest):
 
     def test_always_register_non_validated_users(self):
         request_body = {
@@ -118,21 +121,6 @@ class TestUserRest(BaseTestRest):
         }
         url = self._prefix + '/register'
         self.app_post_json(url, request_body, status=400).json
-
-    def test_update_preferred_lang(self):
-        user_id = self.global_userids['contributor']
-        user = self.session.query(User).get(user_id)
-        self.assertEqual(user.lang, 'fr')
-
-        request_body = {
-            'lang': 'en'
-        }
-        url = self._prefix + '/update_preferred_language'
-        self.post_json_with_contributor(url, request_body, status=200)
-
-        self.session.expunge(user)
-        user = self.session.query(User).get(user_id)
-        self.assertEqual(user.lang, 'en')
 
     def test_register_discourse_up(self):
         request_body = {
@@ -423,7 +411,6 @@ class TestUserRest(BaseTestRest):
         body = self.post_json_with_token('/users/logout', token)
 
     def test_renew_success(self):
-        restricted_url = '/users/' + str(self.global_userids['contributor'])
         token = self.global_tokens['contributor']
 
         body = self.post_json_with_token('/users/renew', token)
@@ -431,13 +418,11 @@ class TestUserRest(BaseTestRest):
         self.assertExpireAlmostEqual(expire, 14, 5)
 
         token2 = body['token']
-        body = self.get_json_with_token(restricted_url, token2, status=200)
-        self.assertBodyEqual(body, 'username', 'contributor')
+        body = self.get_json_with_token('/users/account', token2, status=200)
+        self.assertBodyEqual(body, 'name', 'Contributor')
 
     def test_renew_token_different_success(self):
         # Tokens created in the same second are identical
-        restricted_url = '/users/' + str(self.global_userids['contributor'])
-
         token1 = self.login('contributor').json['token']
 
         import time
@@ -447,111 +432,8 @@ class TestUserRest(BaseTestRest):
         token2 = self.post_json_with_token('/users/renew', token1)['token']
         self.assertNotEquals(token1, token2)
 
-        body = self.get_json_with_token(restricted_url, token2, status=200)
-        self.assertBodyEqual(body, 'username', 'contributor')
+        body = self.get_json_with_token('/users/account', token2, status=200)
+        self.assertBodyEqual(body, 'name', 'Contributor')
 
         self.post_json_with_token('/users/logout', token1)
         self.post_json_with_token('/users/logout', token2)
-
-    def test_restricted_request(self):
-        url = '/users/' + str(self.global_userids['contributor'])
-        body = self.get_json_with_contributor(url, status=200)
-        self.assertBodyEqual(body, 'username', 'contributor')
-
-    def test_restricted_request_unauthenticated(self):
-        url = '/users/' + str(self.global_userids['contributor'])
-        self.app.get(url, status=403)
-
-    def test_read_account_info(self):
-        url = '/users/account'
-        body = self.get_json_with_contributor(url, status=200)
-        self.assertBodyEqual(body, 'name', 'Contributor')
-        self.assertBodyEqual(body, 'email', 'contributor@camptocamp.org')
-        self.assertBodyEqual(body, 'forum_username', 'contributor')
-
-    def _update_account_field_discourse_up(self, field, value):
-        url = '/users/account'
-        currentpassword = self.global_passwords['contributor']
-
-        data = {
-            'currentpassword': currentpassword
-        }
-        data[field] = value
-        self.post_json_with_contributor(url, data, status=200)
-
-        self.assertEqual(1, int(self.discourse_client.sso_sync.called_count))
-
-    def _update_account_field_discourse_down(self, field, value):
-        self.set_discourse_down()
-
-        url = '/users/account'
-        currentpassword = self.global_passwords['contributor']
-
-        data = {
-            'currentpassword': currentpassword
-        }
-        data[field] = value
-        self.post_json_with_contributor(url, data, status=500)
-
-        self.assertEqual(1, int(self.discourse_client.sso_sync.called_count))
-
-    def test_update_account_email_discourse_up(self):
-        email_count = self.get_email_box_length()
-
-        new_email = 'superemail@localhost.localhost'
-        self._update_account_field_discourse_up('email', new_email)
-
-        user_id = self.global_userids['contributor']
-        user = self.session.query(User).get(user_id)
-        self.assertEqual(user.email_to_validate, new_email)
-        self.assertNotEqual(user.email, new_email)
-
-        email_count_after = self.get_email_box_length()
-        self.assertEqual(email_count_after, email_count + 1)
-
-        # Simulate confirmation email validation
-        nonce = self.extract_nonce('validate_change_email')
-        url_api_validation = '/users/validate_change_email/%s' % nonce
-        self.app_post_json(url_api_validation, {}, status=200)
-
-        self.session.expunge(user)
-        user = self.session.query(User).get(user_id)
-        self.assertEqual(user.email, new_email)
-        self.assertIsNone(user.validation_nonce)
-
-    def test_update_account_email_discourse_down(self):
-        new_email = 'superemail@localhost.localhost'
-        self._update_account_field_discourse_down('email', new_email)
-
-    def test_update_account_name_discourse_up(self):
-        self._update_account_field_discourse_up('name', 'changed')
-
-        user_id = self.global_userids['contributor']
-        user = self.session.query(User).get(user_id)
-        self.assertEqual(user.name, 'changed')
-
-        # check that the search index is updated with the new name
-        self.sync_es()
-        search_doc = search_documents[USERPROFILE_TYPE].get(
-            id=user_id,
-            index=elasticsearch_config['index'])
-
-        # and check that the cache version of the user profile was updated
-        self.check_cache_version(user_id, 2)
-
-        self.assertIsNotNone(search_doc['doc_type'])
-        self.assertEqual(
-            search_doc['title_en'], 'contributor changed contributor')
-
-    def test_update_account_name_discourse_down(self):
-        self._update_account_field_discourse_down('name', 'changed')
-
-    def test_update_account_forum_username_discourse_up(self):
-        self._update_account_field_discourse_up('forum_username', 'changed')
-
-        user_id = self.global_userids['contributor']
-        user = self.session.query(User).get(user_id)
-        self.assertEqual(user.forum_username, 'changed')
-
-    def test_update_account_forum_username_discourse_down(self):
-        self._update_account_field_discourse_down('forum_username', 'changed')

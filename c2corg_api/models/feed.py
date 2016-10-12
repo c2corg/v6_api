@@ -48,6 +48,7 @@ User.has_area_filter = column_property(
     correlate_except(FilterArea),
     deferred=True
 )
+User.feed_filter_areas = relationship('Area', secondary=FilterArea.__table__)
 
 
 class FollowedUser(Base):
