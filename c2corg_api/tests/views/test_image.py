@@ -705,7 +705,20 @@ class TestImageProxyRest(BaseTestRest):
         self.app.get('/images/proxy/{}'.format(999),
                      status=404)
 
-    def test_success(self):
+    def test_bad_size(self):
+        resp = self.app.get('/images/proxy/{}?size=badsize'.
+                            format(self.image.document_id),
+                            status=400)
+        errors = resp.json.get('errors')
+        self.assertEqual('invalid size', errors[0].get('description'))
+
+    def test_success_without_size(self):
         resp = self.app.get('/images/proxy/{}'.format(self.image.document_id),
                             status=302)
         self.assertIn('image.jpg', resp.headers['Location'])
+
+    def test_success_with_size(self):
+        resp = self.app.get('/images/proxy/{}?size=BI'.
+                            format(self.image.document_id),
+                            status=302)
+        self.assertIn('imageBI.jpg', resp.headers['Location'])
