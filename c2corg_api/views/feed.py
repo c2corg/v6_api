@@ -70,15 +70,27 @@ class PersonalFeedRest(object):
         """Get the personal homepage feed for the authenticated user.
 
         Request:
-            `GET` `/personal-feed[?pl=...][&limit=...][&token=...]`
+            `GET` `/personal-feed[?pl=...][&limit=...][&token=...][&filter=...]`  # noqa
 
-        Parameters: See above for '/feed'.
+        Parameters:
+
+            `filter=(0|1)` (optional)
+            If `filter` is set to `0`, the filter preferences of the user will
+            be ignored and the default/public feed is returned.
+
+            For the other parameters see above for '/feed'.
 
         """
         user_id = self.request.authenticated_userid
         lang, token_id, token_time, limit = get_params(self.request)
-        changes = get_changes_of_personal_feed(
-            user_id, token_id, token_time, limit)
+
+        if self.request.GET.get('filter') == '0':
+            # return default feed if filters are disabled
+            changes = get_changes_of_feed(token_id, token_time, limit)
+        else:
+            changes = get_changes_of_personal_feed(
+                user_id, token_id, token_time, limit)
+
         return load_feed(changes, lang)
 
 
