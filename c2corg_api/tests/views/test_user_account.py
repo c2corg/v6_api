@@ -12,6 +12,7 @@ class TestUserAccountRest(BaseUserTestRest):
         self.assertBodyEqual(body, 'name', 'Contributor')
         self.assertBodyEqual(body, 'email', 'contributor@camptocamp.org')
         self.assertBodyEqual(body, 'forum_username', 'contributor')
+        self.assertBodyEqual(body, 'is_profile_public', False)
 
     def _update_account_field_discourse_up(self, field, value):
         url = '/users/account'
@@ -99,6 +100,17 @@ class TestUserAccountRest(BaseUserTestRest):
 
     def test_update_account_forum_username_discourse_down(self):
         self._update_account_field_discourse_down('forum_username', 'changed')
+
+    def test_update_is_profile_public_discourse_down(self):
+        data = {
+            'currentpassword': self.global_passwords['contributor'],
+            'is_profile_public': True
+        }
+        self.post_json_with_contributor('/users/account', data, status=200)
+
+        user_id = self.global_userids['contributor']
+        user = self.session.query(User).get(user_id)
+        self.assertEqual(user.is_profile_public, True)
 
     def test_update_preferred_lang(self):
         user_id = self.global_userids['contributor']
