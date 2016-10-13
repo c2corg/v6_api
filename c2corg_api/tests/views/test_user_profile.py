@@ -67,9 +67,34 @@ class TestUserProfileRest(BaseDocumentTestRest):
             [self.profile4.document_id, self.global_userids['contributor2'],
              self.profile1.document_id, self.global_userids['moderator']], 4)
 
-    def test_get_unauthenticated(self):
-        self.app.get(
-            self._prefix + '/' + str(self.profile1.document_id), status=403)
+    def test_get_unauthenticated_private_profile(self):
+        """Tests that only the user name is returned when requesting a private
+        profile unauthenticated.
+        """
+        response = self.app.get(self._prefix + '/' +
+                                str(self.profile1.document_id),
+                                status=200)
+        body = response.json
+
+        self.assertEqual(body.get('not_authorized'), True)
+        self.assertIn('username', body)
+        self.assertIn('name', body)
+        self.assertNotIn('locales', body)
+        self.assertNotIn('geometry', body)
+
+    def test_get_unauthenticated_public_profile(self):
+        """Tests that the full profile is returned when requesting a public
+        profile when unauthenticated.
+        """
+        contributor = self.profile1.user
+        contributor.is_profile_public = True
+        self.session.flush()
+
+        body = self.get(self.profile1, check_title=False)
+        self.assertIn('username', body)
+        self.assertIn('name', body)
+        self.assertIn('locales', body)
+        self.assertIn('geometry', body)
 
     def test_get(self):
         body = self.get(self.profile1, user='contributor', check_title=False)
@@ -77,6 +102,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.assertIsNone(body['locales'][0].get('title'))
         self.assertNotIn('maps', body)
         self.assertIn('username', body)
+        self.assertIn('name', body)
 
     def test_get_unconfirmed_user(self):
         headers = self.add_authorization_header(username='contributor')
