@@ -73,6 +73,10 @@ class UpdateAccountSchema(colander.MappingSchema):
             missing=colander.drop,
             validator=colander.Length(min=3))
 
+    is_profile_public = colander.SchemaNode(
+            colander.Boolean(),
+            missing=colander.drop)
+
 
 @resource(path='/users/account', cors_policy=cors_policy)
 class UserAccountRest(object):
@@ -92,7 +96,8 @@ class UserAccountRest(object):
             'email': user.email,
             'name': user.name,
             'forum_username': user.forum_username,
-            }
+            'is_profile_public': user.is_profile_public
+        }
 
     @restricted_json_view(renderer='json', schema=updateschema)
     def post(self):
@@ -143,6 +148,9 @@ class UserAccountRest(object):
             result['forum_username'] = user.forum_username
             update_search_index = True
             sync_sso = True
+
+        if 'is_profile_public' in validated:
+            user.is_profile_public = validated['is_profile_public']
 
         # Synchronize everything except the new email (still stored
         # in the email_to_validate attribute while validation is pending).
