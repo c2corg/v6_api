@@ -99,6 +99,9 @@ class User(Base):
             String(2), ForeignKey(schema + '.langs.lang'),
             nullable=False, default='fr')
 
+    is_profile_public = Column(
+        Boolean, nullable=False, default=False, server_default='FALSE')
+
     # the feed on the homepage for a user is filtered on this activities
     feed_filter_activities = Column(
         ArrayOfEnum(enums.activity_type), nullable=False, server_default='{}')

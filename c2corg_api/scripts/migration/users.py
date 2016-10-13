@@ -31,7 +31,8 @@ class MigrateUsers(MigrateBase):
         print('Total: {0} rows'.format(total_count))
 
         query = text('select id, login_name, topo_name, email, '
-                     'password, username as forum_username, pref_cookies '
+                     'password, username as forum_username, pref_cookies, '
+                     'is_profile_public '
                      'from app_users_private_data order by id')
 
         def get_group_by_id(gid):
@@ -71,7 +72,8 @@ class MigrateUsers(MigrateBase):
                     _password=user_in.password,
                     moderator=id in super_admins or id in admins,
                     email_validated=id not in pending,
-                    feed_filter_activities=filter_activities
+                    feed_filter_activities=filter_activities,
+                    is_profile_public=user_in.is_profile_public
                     ))
                 self.progress(count, total_count)
 
