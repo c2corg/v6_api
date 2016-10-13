@@ -13,6 +13,7 @@ from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
     ArchiveDocumentGeometry, set_available_langs, get_available_langs)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
+from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.topo_map import schema_listing_topo_map, \
     MAP_TYPE
 from c2corg_api.models.topo_map_association import update_maps_for_document, \
@@ -200,6 +201,8 @@ class DocumentRest(object):
                 document, document_in['associations'], user_id)
             update_cache_version_associations(
                 added_associations, [], document.document_id)
+
+        update_feed_document_create(document, user_id)
 
         notify_es_syncer(self.request.registry.queue_config)
         return document

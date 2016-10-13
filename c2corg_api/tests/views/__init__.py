@@ -4,6 +4,7 @@ import urllib.parse
 import urllib.error
 
 from c2corg_api.models.cache_version import CacheVersion
+from c2corg_api.models.feed import DocumentChange
 from c2corg_api.models.route import Route
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
@@ -974,6 +975,11 @@ class BaseDocumentTestRest(BaseTestRest):
                 search_doc['title_es'], document.get_locale('es').title)
 
         return (body, document)
+
+    def get_feed_change(self, document_id):
+        return self.session.query(DocumentChange). \
+            filter(DocumentChange.document_id == document_id). \
+            first()
 
 
 def get_locale(locales, lang):

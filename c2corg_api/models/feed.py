@@ -1,9 +1,15 @@
-from c2corg_api.models import Base, schema, users_schema, enums
-from c2corg_api.models.area import Area
+from c2corg_api.models import Base, schema, users_schema, enums, DBSession
+from c2corg_api.models.area import Area, AREA_TYPE
+from c2corg_api.models.area_association import AreaAssociation
+from c2corg_api.models.article import ARTICLE_TYPE
+from c2corg_api.models.association import Association
 from c2corg_api.models.document import Document
 from c2corg_api.models.enums import feed_change_type
-from c2corg_api.models.image import Image
+from c2corg_api.models.image import Image, IMAGE_TYPE
+from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import User
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.utils import ArrayOfEnum
 from sqlalchemy.dialects.postgresql.base import ARRAY
 from sqlalchemy.orm import relationship, column_property
@@ -239,3 +245,56 @@ FOR EACH ROW
 EXECUTE PROCEDURE guidebook.check_feed_area_ids();
 """)
 event.listen(DocumentChange.__table__, 'after_create', trigger_ddl)
+
+
+def update_feed_document_create(document, user_id):
+    """Creates a new entry in the feed table when creating a new document.
+    """
+    if document.redirects_to or \
+            document.type in [IMAGE_TYPE, USERPROFILE_TYPE, AREA_TYPE]:
+        return
+
+    # make sure all updates are written to the database, so that areas and
+    # users can be queried
+    DBSession.flush()
+
+    activities = []
+    if document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE]:
+        activities = document.activities
+
+    user_ids = [user_id]
+    if document.type == OUTING_TYPE:
+        participant_ids = _get_participants_of_outing(document)
+        user_ids = list(set(user_ids).union(participant_ids))
+
+    area_ids = []
+    if document.type != ARTICLE_TYPE:
+        area_ids = _get_area_ids(document)
+
+    change = DocumentChange(
+        user_id=user_id,
+        change_type='created',
+        document_id=document.document_id,
+        document_type=document.type,
+        activities=activities,
+        area_ids=area_ids,
+        user_ids=user_ids
+    )
+    DBSession.add(change)
+
+
+def _get_participants_of_outing(document):
+    participant_ids = DBSession. \
+        query(Association.parent_document_id). \
+        filter(Association.child_document_id == document.document_id). \
+        filter(Association.parent_document_type == USERPROFILE_TYPE). \
+        all()
+    return [user_id for (user_id,) in participant_ids]
+
+
+def _get_area_ids(document):
+    area_ids = DBSession. \
+        query(AreaAssociation.area_id). \
+        filter(AreaAssociation.document_id == document.document_id). \
+        all()
+    return [area_id for (area_id,) in area_ids]

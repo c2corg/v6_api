@@ -401,7 +401,10 @@ class TestOutingRest(BaseDocumentTestRest):
                  'weather': 'sunny'}
             ],
             'associations': {
-                'users': [{'document_id': self.global_userids['contributor']}],
+                'users': [
+                    {'document_id': self.global_userids['contributor']},
+                    {'document_id': self.global_userids['contributor2']}
+                ],
                 'routes': [{'document_id': self.route.document_id}],
                 # images are ignored
                 'images': [{'document_id': self.route.document_id}]
@@ -443,6 +446,10 @@ class TestOutingRest(BaseDocumentTestRest):
             (self.global_userids['contributor'], doc.document_id))
         self.assertIsNotNone(association_user)
 
+        association_user2 = self.session.query(Association).get(
+            (self.global_userids['contributor2'], doc.document_id))
+        self.assertIsNotNone(association_user2)
+
         association_user_log = self.session.query(AssociationLog). \
             filter(AssociationLog.parent_document_id ==
                    self.global_userids['contributor']). \
@@ -450,6 +457,16 @@ class TestOutingRest(BaseDocumentTestRest):
                    doc.document_id). \
             first()
         self.assertIsNotNone(association_user_log)
+
+        # check that a change is created in the feed
+        feed_change = self.get_feed_change(doc.document_id)
+        self.assertIsNotNone(feed_change)
+        self.assertEqual(feed_change.activities, ['skitouring'])
+        self.assertEqual(
+            feed_change.user_ids,
+            [self.global_userids['contributor'],
+             self.global_userids['contributor2']])
+        self.assertEqual(feed_change.area_ids, [])
 
     def test_post_set_default_geom_from_route(self):
         body = {

@@ -552,6 +552,15 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.check_cache_version(
             self.waypoint2.document_id, waypoint2_cache_key + 1)
 
+        # check that a change is created in the feed
+        feed_change = self.get_feed_change(doc.document_id)
+        self.assertIsNotNone(feed_change)
+        self.assertEqual(
+            feed_change.user_ids, [self.global_userids['contributor']])
+        self.assertEqual(
+            feed_change.area_ids, [self.area1.document_id]
+        )
+
     def test_put_wrong_document_id(self):
         body = {
             'document': {
