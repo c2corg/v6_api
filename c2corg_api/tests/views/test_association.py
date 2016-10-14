@@ -1,7 +1,12 @@
+import datetime
+
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.article import Article
+from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.image import Image
+from c2corg_api.models.outing import Outing, OUTING_TYPE
 from c2corg_api.models.route import Route
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.views import BaseTestRest
 
@@ -70,6 +75,30 @@ class TestAssociationRest(BaseTestRest):
 
         self.check_cache_version(self.waypoint1.document_id, 2)
         self.check_cache_version(self.article1.document_id, 2)
+
+    def test_add_association_uo(self):
+        contributor2 = self.global_userids['contributor2']
+        request_body = {
+            'parent_document_id': contributor2,
+            'child_document_id': self.outing.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor')
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=200)
+
+        association = self.session.query(Association).get(
+            (contributor2, self.outing.document_id))
+        self.assertIsNotNone(association)
+
+        # check that the feed change is updated
+        feed_change = self.get_feed_change(self.outing.document_id)
+        self.assertIsNotNone(feed_change)
+        self.assertEqual(feed_change.change_type, 'updated')
+        self.assertEqual(
+            feed_change.user_ids,
+            [self.global_userids['contributor'],
+             self.global_userids['contributor2']])
 
     def test_add_association_duplicate(self):
         """ Test that there is only one association between two documents.
@@ -286,4 +315,19 @@ class TestAssociationRest(BaseTestRest):
             article_type='collab')
         self.session.add(self.article1)
 
+        self.outing = Outing(
+            activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
+            date_end=datetime.date(2016, 1, 1)
+        )
+        self.session.add(self.outing)
+        self.session.flush()
+
+        user_id = self.global_userids['contributor']
+        self.session.add(Association(
+            parent_document_id=user_id,
+            parent_document_type=USERPROFILE_TYPE,
+            child_document_id=self.outing.document_id,
+            child_document_type=OUTING_TYPE))
+
+        update_feed_document_create(self.outing, user_id)
         self.session.flush()

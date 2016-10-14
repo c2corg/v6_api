@@ -106,6 +106,11 @@ class BaseTestRest(BaseTestCase):
         self.assertIsNotNone(cache_version)
         self.assertEqual(cache_version.version, version)
 
+    def get_feed_change(self, document_id):
+        return self.session.query(DocumentChange). \
+            filter(DocumentChange.document_id == document_id). \
+            first()
+
 
 class BaseDocumentTestRest(BaseTestRest):
 
@@ -975,11 +980,6 @@ class BaseDocumentTestRest(BaseTestRest):
                 search_doc['title_es'], document.get_locale('es').title)
 
         return (body, document)
-
-    def get_feed_change(self, document_id):
-        return self.session.query(DocumentChange). \
-            filter(DocumentChange.document_id == document_id). \
-            first()
 
 
 def get_locale(locales, lang):

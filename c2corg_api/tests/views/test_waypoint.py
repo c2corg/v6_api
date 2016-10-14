@@ -9,6 +9,7 @@ from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import get_cache_key, CacheVersion
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
@@ -736,6 +737,15 @@ class TestWaypointRest(BaseDocumentTestRest):
             (waypoint.document_id, self.article1.document_id))
         self.assertIsNotNone(association_a)
 
+        # check that the feed change is updated
+        feed_change = self.get_feed_change(waypoint.document_id)
+        self.assertIsNotNone(feed_change)
+        self.assertEqual(
+            feed_change.user_ids, [self.global_userids['contributor']])
+        self.assertEqual(
+            feed_change.area_ids, [self.area1.document_id]
+        )
+
     def test_put_success_figures_and_lang_only(self):
         body_put = {
             'message': 'Update',
@@ -1212,6 +1222,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.waypoint_version = self.session.query(DocumentVersion). \
             filter(DocumentVersion.document_id == self.waypoint.document_id). \
             filter(DocumentVersion.lang == 'en').first()
+        update_feed_document_create(self.waypoint, user_id)
 
         self.waypoint2 = Waypoint(
             waypoint_type='climbing_outdoor', elevation=2,

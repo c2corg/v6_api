@@ -13,7 +13,8 @@ from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
     ArchiveDocumentGeometry, set_available_langs, get_available_langs)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
-from c2corg_api.models.feed import update_feed_document_create
+from c2corg_api.models.feed import update_feed_document_create, \
+    update_feed_document_update
 from c2corg_api.models.topo_map import schema_listing_topo_map, \
     MAP_TYPE
 from c2corg_api.models.topo_map_association import update_maps_for_document, \
@@ -271,6 +272,7 @@ class DocumentRest(object):
         if update_types or associations:
             # update search index
             notify_es_syncer(self.request.registry.queue_config)
+            update_feed_document_update(document, user_id, update_types)
         if associations and (removed_associations or added_associations):
             update_cache_version_associations(
                 added_associations, removed_associations)

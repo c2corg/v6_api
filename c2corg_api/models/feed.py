@@ -1,9 +1,11 @@
+import logging
+
 from c2corg_api.models import Base, schema, users_schema, enums, DBSession
 from c2corg_api.models.area import Area, AREA_TYPE
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.association import Association
-from c2corg_api.models.document import Document
+from c2corg_api.models.document import Document, UpdateType
 from c2corg_api.models.enums import feed_change_type
 from c2corg_api.models.image import Image, IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
@@ -11,14 +13,18 @@ from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.utils import ArrayOfEnum
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql.base import ARRAY
 from sqlalchemy.orm import relationship, column_property
+from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import select
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import Column, ForeignKey, PrimaryKeyConstraint, \
     CheckConstraint, Index
 from sqlalchemy.sql.sqltypes import Integer, String, DateTime, Boolean
 from sqlalchemy import event, DDL
+
+log = logging.getLogger(__name__)
 
 
 class FilterArea(Base):
@@ -264,7 +270,7 @@ def update_feed_document_create(document, user_id):
 
     user_ids = [user_id]
     if document.type == OUTING_TYPE:
-        participant_ids = _get_participants_of_outing(document)
+        participant_ids = _get_participants_of_outing(document.document_id)
         user_ids = list(set(user_ids).union(participant_ids))
 
     area_ids = []
@@ -281,12 +287,90 @@ def update_feed_document_create(document, user_id):
         user_ids=user_ids
     )
     DBSession.add(change)
+    DBSession.flush()
 
 
-def _get_participants_of_outing(document):
+def update_feed_document_update(document, user_id, update_types):
+    """Update the feed entry for a document:
+
+    - update `area_ids` if the geometry has changed.
+    - update `activities` if figures have changed.
+    - update `user_ids` if the document is an outing and the participants
+      have changed.
+
+    Only when updating `user_ids`, the "actor" of the feed entry is changed.
+    And only then the time is updated and the `change_type` set to `updated`
+    to push the entry to the top of the feed.
+    """
+    if document.redirects_to:
+        # TODO delete existing feed entry?
+        return
+    if document.type in [IMAGE_TYPE, USERPROFILE_TYPE, AREA_TYPE]:
+        return
+
+    DBSession.flush()
+
+    # update areas
+    if UpdateType.GEOM in update_types:
+        update_areas_of_changes(document)
+
+    # updates activities
+    if document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE] and \
+            UpdateType.FIGURES in update_types:
+        update_activities_of_changes(document)
+
+    # update users_ids/participants (only for outings)
+    if document.type != OUTING_TYPE:
+        return
+
+    update_participants_of_outing(document.document_id, user_id)
+
+
+def update_participants_of_outing(outing_id, user_id):
+    existing_change = DBSession. \
+        query(DocumentChange). \
+        filter(DocumentChange.document_id == outing_id). \
+        filter(DocumentChange.change_type.in_(['created', 'updated'])). \
+        first()
+
+    if not existing_change:
+        log.warn('no feed change for document {}'.format(outing_id))
+        return
+
+    participant_ids = _get_participants_of_outing(outing_id)
+    if set(existing_change.user_ids) == set(participant_ids):
+        # participants have not changed, stop
+        return
+    existing_change.user_ids = participant_ids
+
+    if existing_change.user_id != user_id:
+        # a different user is doing this change, only set a different user id
+        # if the user is one of the participants (to ignore moderator edits)
+        if user_id in participant_ids:
+            existing_change.user_id = user_id
+
+    existing_change.change_type = 'updated'
+    existing_change.time = func.now()
+
+    DBSession.flush()
+
+
+def update_feed_association_update(
+        _parent_document_id, parent_document_type,
+        child_document_id, child_document_type, user_id):
+    """Update the feed entries when associations have been created or deleted.
+    Currently only associations between outings and users are considered.
+    """
+    if not (parent_document_type == USERPROFILE_TYPE and
+            child_document_type == OUTING_TYPE):
+        return
+    update_participants_of_outing(child_document_id, user_id)
+
+
+def _get_participants_of_outing(outing_id):
     participant_ids = DBSession. \
         query(Association.parent_document_id). \
-        filter(Association.child_document_id == document.document_id). \
+        filter(Association.child_document_id == outing_id). \
         filter(Association.parent_document_type == USERPROFILE_TYPE). \
         all()
     return [user_id for (user_id,) in participant_ids]
@@ -298,3 +382,34 @@ def _get_area_ids(document):
         filter(AreaAssociation.document_id == document.document_id). \
         all()
     return [area_id for (area_id,) in area_ids]
+
+
+def update_areas_of_changes(document):
+    """Update the area ids of all feed entries of the given document.
+    """
+    areas_select = select(
+            [
+                # concatenate with empty array to avoid null values
+                # select ARRAY[]::integer[] || array_agg(area_id)
+                literal_column('ARRAY[]::integer[]').op('||')(
+                    func.array_agg(
+                        AreaAssociation.area_id,
+                        type_=postgresql.ARRAY(Integer)))
+            ]).\
+        where(AreaAssociation.document_id == document.document_id)
+
+    DBSession.execute(
+        DocumentChange.__table__.update().
+        where(DocumentChange.document_id == document.document_id).
+        values(area_ids=areas_select.as_scalar())
+    )
+
+
+def update_activities_of_changes(document):
+    """Update the activities of all feed entries of the given document.
+    """
+    DBSession.execute(
+        DocumentChange.__table__.update().
+        where(DocumentChange.document_id == document.document_id).
+        values(activities=document.activities)
+    )

@@ -4,6 +4,7 @@ import json
 from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing, ArchiveOuting, \
     ArchiveOutingLocale, OutingLocale, OUTING_TYPE
@@ -676,7 +677,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'document_id': self.outing.document_id,
                 'version': self.outing.version,
                 'quality': quality_types[1],
-                'activities': ['skitouring'],
+                'activities': ['skitouring', 'hiking'],
                 'date_start': '2016-01-01',
                 'date_end': '2016-01-02',
                 'elevation_min': 700,
@@ -722,7 +723,8 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(archive_locale.weather, 'mostly sunny')
 
         archive_document_en = version_en.document_archive
-        self.assertEqual(archive_document_en.activities, ['skitouring'])
+        self.assertEqual(
+            archive_document_en.activities, ['skitouring', 'hiking'])
         self.assertEqual(archive_document_en.elevation_max, 1600)
 
         archive_geometry_en = version_en.document_geometry_archive
@@ -741,6 +743,16 @@ class TestOutingRest(BaseDocumentTestRest):
         association_user2 = self.session.query(Association).get(
             (self.global_userids['contributor2'], outing.document_id))
         self.assertIsNotNone(association_user2)
+
+        # check that the feed change is updated
+        feed_change = self.get_feed_change(outing.document_id)
+        self.assertIsNotNone(feed_change)
+        self.assertEqual(feed_change.activities, ['skitouring', 'hiking'])
+        self.assertEqual(feed_change.area_ids, [])
+        self.assertEqual(
+            feed_change.user_ids,
+            [self.global_userids['contributor'],
+             self.global_userids['contributor2']])
 
     def test_put_success_figures_only(self):
         body = {
@@ -1024,20 +1036,12 @@ class TestOutingRest(BaseDocumentTestRest):
         self.session.add(self.outing)
         self.session.flush()
 
-        self.article1 = Article(categories=['site_info'],
-                                activities=['hiking'],
-                                article_type='collab')
-        self.session.add(self.article1)
-        self.session.flush()
-        self.session.add(Association.create(
-            parent_document=self.outing,
-            child_document=self.article1))
-
         user_id = self.global_userids['contributor']
         DocumentRest.create_new_version(self.outing, user_id)
         self.outing_version = self.session.query(DocumentVersion). \
             filter(DocumentVersion.document_id == self.outing.document_id). \
             filter(DocumentVersion.lang == 'en').first()
+        update_feed_document_create(self.outing, user_id)
 
         self.outing2 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
@@ -1077,6 +1081,11 @@ class TestOutingRest(BaseDocumentTestRest):
                 geom='SRID=3857;POINT(635956 5723604)'))
         self.image.locales.append(DocumentLocale(lang='en', title='...'))
         self.session.add(self.image)
+
+        self.article1 = Article(categories=['site_info'],
+                                activities=['hiking'],
+                                article_type='collab')
+        self.session.add(self.article1)
         self.session.flush()
 
         # add some associations
@@ -1109,4 +1118,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self.session.add(Association.create(
             parent_document=self.outing,
             child_document=self.image))
+        self.session.add(Association.create(
+            parent_document=self.outing,
+            child_document=self.article1))
         self.session.flush()
