@@ -3,6 +3,7 @@ import requests
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.document_history import has_been_created_by
+from c2corg_api.models.feed import update_feed_images_upload
 from c2corg_api.models.image import Image, schema_image, schema_update_image, \
     IMAGE_TYPE, schema_create_image, schema_create_image_list
 from c2corg_api.views.document_info import DocumentInfoRest
@@ -148,8 +149,8 @@ class ImageRest(DocumentRest):
         return self._put(Image, schema_image)
 
 
-# Here path is required by cornice but related routes are not implemented
-# as far as we only need collection_post to post list of images
+# `path` is required by cornice but related routes are not implemented
+# because we only need `collection_post` to post a list of images
 @resource(collection_path='/images/list', path='/images/list/{id}',
           cors_policy=cors_policy)
 class ImageListRest(DocumentRest):
@@ -159,11 +160,19 @@ class ImageListRest(DocumentRest):
             validators=[validate_list_image_create,
                         validate_list_associations_create])
     def collection_post(self):
+        images_in = self.request.validated['images']
+
+        image_ids = []
         images = []
-        for document_in in self.request.validated['images']:
+        for document_in in images_in:
             document = create_image(self, document_in)
-            images.append({'document_id': document.document_id})
-        return {'images': images}
+            images.append(document)
+            image_ids.append({'document_id': document.document_id})
+
+        update_feed_images_upload(
+            images, images_in, self.request.authenticated_userid)
+
+        return {'images': image_ids}
 
 
 @resource(path='/images/{id}/{lang}/info', cors_policy=cors_policy)

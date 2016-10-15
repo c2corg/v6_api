@@ -92,13 +92,26 @@ class TestAssociationRest(BaseTestRest):
         self.assertIsNotNone(association)
 
         # check that the feed change is updated
-        feed_change = self.get_feed_change(self.outing.document_id)
+        feed_change = self.get_feed_change(
+            self.outing.document_id, change_type='updated')
         self.assertIsNotNone(feed_change)
         self.assertEqual(feed_change.change_type, 'updated')
         self.assertEqual(
-            feed_change.user_ids,
-            [self.global_userids['contributor'],
-             self.global_userids['contributor2']])
+            set(feed_change.user_ids),
+            set([
+                self.global_userids['contributor'],
+                self.global_userids['contributor2']]))
+
+        # check that the participants of the 2nd feed change are also updated
+        feed_change = self.get_feed_change(
+            self.outing.document_id, change_type='added_photos')
+        self.assertIsNotNone(feed_change)
+        self.assertEqual(
+            set(feed_change.user_ids),
+            set([
+                self.global_userids['contributor'],
+                self.global_userids['contributor2'],
+                self.global_userids['moderator']]))
 
     def test_add_association_duplicate(self):
         """ Test that there is only one association between two documents.
@@ -330,4 +343,15 @@ class TestAssociationRest(BaseTestRest):
             child_document_type=OUTING_TYPE))
 
         update_feed_document_create(self.outing, user_id)
+        self.session.flush()
+
+        # create a 2nd feed entry for the outing
+        feed_change = self.get_feed_change(self.outing.document_id)
+        user_id = self.global_userids['moderator']
+        feed_change2 = feed_change.copy()
+        feed_change2.change_type = 'added_photos'
+        feed_change2.user_id = user_id
+        feed_change2.user_ids = list(
+            set(feed_change.user_ids).union([user_id]))
+        self.session.add(feed_change2)
         self.session.flush()

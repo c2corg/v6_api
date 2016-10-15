@@ -106,10 +106,14 @@ class BaseTestRest(BaseTestCase):
         self.assertIsNotNone(cache_version)
         self.assertEqual(cache_version.version, version)
 
-    def get_feed_change(self, document_id):
-        return self.session.query(DocumentChange). \
-            filter(DocumentChange.document_id == document_id). \
-            first()
+    def get_feed_change(self, document_id, change_type=None):
+        q = self.session.query(DocumentChange). \
+            filter(DocumentChange.document_id == document_id)
+
+        if change_type:
+            q = q.filter(DocumentChange.change_type == change_type)
+
+        return q.first()
 
 
 class BaseDocumentTestRest(BaseTestRest):
