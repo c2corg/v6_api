@@ -1,3 +1,4 @@
+import os
 import functools
 import requests
 
@@ -174,15 +175,26 @@ class ImageInfoRest(DocumentInfoRest):
         return self._get_document_info(Image)
 
 
+def validate_size(request):
+    """Checks if size is one of the available sizes.
+    """
+    size = request.GET.get('size', None)
+    if size in (None, 'SI', 'MI', 'BI'):
+        request.validated['size'] = size
+    else:
+        request.errors.add('queryparams', 'size', 'invalid size')
+
+
 @resource(path='/images/proxy/{id}', cors_policy=cors_policy)
 class ImageProxyRest(object):
 
     def __init__(self, request):
         self.request = request
 
-    @view(validators=[validate_id])
+    @view(validators=[validate_id, validate_size])
     def get(self):
         document_id = self.request.validated['id']
+        size = self.request.validated['size']
         query = DBSession. \
             query(Image.filename). \
             filter(Image.document_id == document_id)
@@ -190,7 +202,11 @@ class ImageProxyRest(object):
         if image is None:
             raise HTTPNotFound()
         image_url = self.request.registry.settings['image_url']
-        return HTTPFound("{}{}".format(image_url, image.filename))
+        if size is None:
+            return HTTPFound("{}{}".format(image_url, image.filename))
+        else:
+            base, ext = os.path.splitext(image.filename)
+            return HTTPFound("{}{}{}{}".format(image_url, base, size, ext))
 
 
 def set_creator(image):
