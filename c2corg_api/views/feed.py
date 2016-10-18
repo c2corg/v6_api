@@ -276,10 +276,17 @@ def load_feed(changes, lang):
     if not changes:
         return {'feed': []}
 
-    # TODO deal with redirected documents
-
     documents_to_load = get_documents_to_load(changes)
     documents = load_documents(documents_to_load, lang)
+
+    # only return changes for which the document/user could be loaded
+    changes = [
+        c for c in changes
+        if documents.get(c.user_id) and documents.get(c.document_id)
+    ]
+
+    if not changes:
+        return {'feed': []}
 
     last_change = changes[-1]
     pagination_token = '{},{}'.format(
@@ -292,16 +299,24 @@ def load_feed(changes, lang):
                 'time': c.time.isoformat(),
                 'user': documents[c.user_id],
                 'participants': [
-                    documents[user_id] for user_id in c.user_ids
-                    if user_id != c.user_id
+                    documents[user_id]
+                    for user_id in c.user_ids
+                    if user_id != c.user_id and documents.get(user_id)
                 ],
                 'change_type': c.change_type,
                 'document': documents[c.document_id],
-                'image1': documents[c.image1_id] if c.image1_id else None,
-                'image2': documents[c.image2_id] if c.image2_id else None,
-                'image3': documents[c.image3_id] if c.image3_id else None,
+                'image1':
+                    documents[c.image1_id]
+                    if c.image1_id and documents.get(c.image1_id) else None,
+                'image2':
+                    documents[c.image2_id]
+                    if c.image2_id and documents.get(c.image2_id) else None,
+                'image3':
+                    documents[c.image3_id]
+                    if c.image3_id and documents.get(c.image3_id) else None,
                 'more_images': c.more_images
-            } for c in changes
+            }
+            for c in changes
         ],
         'pagination_token': pagination_token
     }

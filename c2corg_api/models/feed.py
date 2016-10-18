@@ -319,6 +319,7 @@ def update_feed_document_update(document, user_id, update_types):
     """
     if document.redirects_to:
         # TODO delete existing feed entry?
+        # see https://github.com/c2corg/v6_api/issues/386
         return
     if document.type in [IMAGE_TYPE, USERPROFILE_TYPE, AREA_TYPE]:
         return

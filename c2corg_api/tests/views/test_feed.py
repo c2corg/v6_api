@@ -175,6 +175,18 @@ class TestFeedRest(BaseFeedTestRest):
         document_ids = get_document_ids(body)
         self.assertEqual(0, len(document_ids))
 
+    def test_get_public_feed_redirected_document(self):
+        """ Test that redirected documents are ignored.
+        """
+        self.waypoint1.redirects_to = self.waypoint2.document_id
+        self.session.flush()
+
+        response = self.app.get(self._prefix, status=200)
+        body = response.json
+
+        feed = body['feed']
+        self.assertEqual(3, len(feed))
+
 
 class TestPersonalFeedRest(BaseFeedTestRest):
 
