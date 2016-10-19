@@ -3,13 +3,14 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import schema_update_user_profile, \
     UserProfile, schema_user_profile, schema_internal_user_profile, \
     USERPROFILE_TYPE
+from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import user_profile_documents_config
 from cornice.resource import resource, view
 
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
-    validate_lang_param, validate_preferred_lang_param
+    validate_lang_param, validate_preferred_lang_param, validate_lang
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
 from sqlalchemy.orm import load_only
 
@@ -76,3 +77,11 @@ class UserProfileRest(DocumentRest):
         if locales:
             for locale in locales:
                 locale['title'] = ''
+
+
+@resource(path='/profiles/{id}/{lang}/info', cors_policy=cors_policy)
+class UserProfileInfoRest(DocumentInfoRest):
+
+    @view(validators=[validate_id, validate_lang])
+    def get(self):
+        return self._get_document_info(UserProfile)

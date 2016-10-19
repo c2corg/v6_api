@@ -4,8 +4,10 @@ from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document import DocumentLocale, Document, \
     get_available_langs
 from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.views import etag_cache, \
     set_best_locale
+from c2corg_api.views.document_listings import add_load_for_profiles
 from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy.orm import contains_eager, load_only, joinedload
 from sqlalchemy.orm.util import with_polymorphic
@@ -65,6 +67,7 @@ class DocumentInfoRest(object):
             filter(DocumentLocale.lang == lang). \
             options(contains_eager(locales_type_eager, alias=locales_type).
                     load_only(*locales_load_only))
+        document_query = add_load_for_profiles(document_query, clazz)
         document = document_query.first()
 
         if not document:
@@ -78,6 +81,7 @@ class DocumentInfoRest(object):
                 filter(getattr(clazz, 'document_id') == document_id). \
                 options(joinedload(locales_type_eager).
                         load_only(*locales_load_only))
+            document_query = add_load_for_profiles(document_query, clazz)
             document = document_query.first()
 
             if not document:
@@ -99,7 +103,9 @@ class DocumentInfoRest(object):
             'document_id': document.document_id,
             'locales': [{
                 'lang': locale.lang,
-                'title': locale.title,
+                'title':
+                    locale.title
+                    if clazz != UserProfile else document.name,
                 'title_prefix': locale.title_prefix if is_route else None
             }]
         }
