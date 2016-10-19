@@ -113,7 +113,7 @@ class DocumentChange(Base):
 
     change_id = Column(Integer, primary_key=True)
 
-    time = Column(DateTime, default=func.now(), nullable=False, index=True)
+    time = Column(DateTime, default=func.now(), nullable=False)
 
     # the actor: who did the change?
     user_id = Column(
@@ -161,16 +161,12 @@ class DocumentChange(Base):
     more_images = Column(Boolean, server_default='FALSE', nullable=False)
 
     __table_args__ = (
-        # TODO index for enum array? as text?
-        # Index(
-        #     'ix_guidebook_feed_document_changes_activities', activities,
-        #     postgresql_using='gin'),
+        # the queries on the feed table always order by time (desc) and
+        # change_id, therefore create an index for these two columns.
         Index(
-            'ix_guidebook_feed_document_changes_area_ids', area_ids,
-            postgresql_using='gin'),
-        Index(
-            'ix_guidebook_feed_document_changes_user_ids', user_ids,
-            postgresql_using='gin'),
+            'ix_guidebook_feed_document_changes_time_and_change_id',
+            time.desc(), change_id,
+            postgresql_using='btree'),
         Base.__table_args__
     )
 
