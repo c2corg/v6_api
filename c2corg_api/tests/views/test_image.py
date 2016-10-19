@@ -4,6 +4,7 @@ from unittest.mock import patch, Mock
 from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import CacheVersion
+from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
 from c2corg_common.attributes import quality_types
@@ -86,6 +87,8 @@ class BaseTestImage(BaseDocumentTestRest):
             lang='en', title='Mont Granier (en)', description='...',
             access='yep'))
         self.session.add(self.waypoint)
+        self.session.flush()
+        update_feed_document_create(self.waypoint, user_id)
         self.session.flush()
 
     def _post_success_document(self, overrides={}):
@@ -675,6 +678,14 @@ class TestImageListRest(BaseTestImage):
         body, doc = self.post_success(body)
         self._validate_post_success(body, doc)
 
+        feed_change = self.get_feed_change(self.waypoint.document_id)
+        self.assertIsNotNone(feed_change)
+        self.assertEqual(feed_change.change_type, 'updated')
+        self.assertEqual(
+            feed_change.user_ids, [self.global_userids['contributor']])
+        self.assertIsNotNone(feed_change.image1_id)
+        self.assertIsNone(feed_change.image2_id)
+
     @patch('c2corg_api.views.image.requests.post',
            return_value=Mock(status_code=200))
     def test_post_multiple(self, post_mock):
@@ -685,6 +696,34 @@ class TestImageListRest(BaseTestImage):
         }
         body, doc = self.post_success(body)
         self._validate_post_success(body, doc)
+
+        feed_change = self.get_feed_change(self.waypoint.document_id)
+        self.assertIsNotNone(feed_change)
+        self.assertEqual(feed_change.change_type, 'updated')
+        self.assertEqual(
+            feed_change.user_ids, [self.global_userids['contributor']])
+        self.assertIsNotNone(feed_change.image1_id)
+        self.assertIsNotNone(feed_change.image2_id)
+
+    @patch('c2corg_api.views.image.requests.post',
+           return_value=Mock(status_code=200))
+    def test_post_multiple_as_contributor2(self, post_mock):
+        body = {
+            'images': [
+                self._post_success_document({'filename': 'post_image1.jpg'}),
+                self._post_success_document({'filename': 'post_image2.jpg'})]
+        }
+        body, doc = self.post_success(body, user='contributor2')
+        self._validate_post_success(body, doc)
+
+        feed_change = self.get_feed_change(
+            self.waypoint.document_id, change_type='added_photos')
+        self.assertIsNotNone(feed_change)
+        self.assertEqual(feed_change.change_type, 'added_photos')
+        self.assertEqual(
+            feed_change.user_ids, [self.global_userids['contributor2']])
+        self.assertIsNotNone(feed_change.image1_id)
+        self.assertIsNotNone(feed_change.image2_id)
 
 
 class TestImageProxyRest(BaseTestRest):

@@ -1,6 +1,7 @@
 from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import update_cache_version_associations
 from c2corg_api.models.document import Document
+from c2corg_api.models.feed import update_feed_association_update
 from c2corg_api.models.route import Route
 from c2corg_api.scripts.es import sync
 from c2corg_api.search.notify_sync import notify_es_syncer
@@ -78,6 +79,10 @@ class AssociationRest(object):
               'child_type': association.child_document_type}], [])
 
         notify_es_syncer_if_needed(association, self.request)
+        update_feed_association_update(
+            association.parent_document_id, association.parent_document_type,
+            association.child_document_id, association.child_document_type,
+            self.request.authenticated_userid)
 
         return {}
 
@@ -115,6 +120,10 @@ class AssociationRest(object):
               'child_type': association.child_document_type}])
 
         notify_es_syncer_if_needed(association, self.request)
+        update_feed_association_update(
+            association.parent_document_id, association.parent_document_type,
+            association.child_document_id, association.child_document_type,
+            self.request.authenticated_userid)
 
         return {}
 

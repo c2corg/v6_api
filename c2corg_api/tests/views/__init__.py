@@ -4,6 +4,7 @@ import urllib.parse
 import urllib.error
 
 from c2corg_api.models.cache_version import CacheVersion
+from c2corg_api.models.feed import DocumentChange
 from c2corg_api.models.route import Route
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
@@ -104,6 +105,15 @@ class BaseTestRest(BaseTestCase):
         cache_version = self.session.query(CacheVersion).get(document_id)
         self.assertIsNotNone(cache_version)
         self.assertEqual(cache_version.version, version)
+
+    def get_feed_change(self, document_id, change_type=None):
+        q = self.session.query(DocumentChange). \
+            filter(DocumentChange.document_id == document_id)
+
+        if change_type:
+            q = q.filter(DocumentChange.change_type == change_type)
+
+        return q.first()
 
 
 class BaseDocumentTestRest(BaseTestRest):

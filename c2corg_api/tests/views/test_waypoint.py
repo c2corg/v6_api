@@ -9,6 +9,7 @@ from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import get_cache_key, CacheVersion
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
@@ -552,6 +553,15 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.check_cache_version(
             self.waypoint2.document_id, waypoint2_cache_key + 1)
 
+        # check that a change is created in the feed
+        feed_change = self.get_feed_change(doc.document_id)
+        self.assertIsNotNone(feed_change)
+        self.assertEqual(
+            feed_change.user_ids, [self.global_userids['contributor']])
+        self.assertEqual(
+            feed_change.area_ids, [self.area1.document_id]
+        )
+
     def test_put_wrong_document_id(self):
         body = {
             'document': {
@@ -726,6 +736,15 @@ class TestWaypointRest(BaseDocumentTestRest):
         association_a = self.session.query(Association).get(
             (waypoint.document_id, self.article1.document_id))
         self.assertIsNotNone(association_a)
+
+        # check that the feed change is updated
+        feed_change = self.get_feed_change(waypoint.document_id)
+        self.assertIsNotNone(feed_change)
+        self.assertEqual(
+            feed_change.user_ids, [self.global_userids['contributor']])
+        self.assertEqual(
+            feed_change.area_ids, [self.area1.document_id]
+        )
 
     def test_put_success_figures_and_lang_only(self):
         body_put = {
@@ -1203,6 +1222,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.waypoint_version = self.session.query(DocumentVersion). \
             filter(DocumentVersion.document_id == self.waypoint.document_id). \
             filter(DocumentVersion.lang == 'en').first()
+        update_feed_document_create(self.waypoint, user_id)
 
         self.waypoint2 = Waypoint(
             waypoint_type='climbing_outdoor', elevation=2,
