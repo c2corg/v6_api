@@ -381,22 +381,6 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         feed = body['feed']
         self.assertEqual(0, len(feed))
 
-    def test_get_feed_filter_deactivated(self):
-        """ Get personal feed with filters deactivated (returns default feed).
-        """
-        # set an activity filter for the user
-        user = self.session.query(User).get(self.global_userids['contributor'])
-        user.feed_filter_activities = ['hiking']
-        self.session.flush()
-
-        headers = self.add_authorization_header(username='contributor')
-        response = self.app.get(
-            '/personal-feed?filter=0', status=200, headers=headers)
-        body = response.json
-
-        feed = body['feed']
-        self.assertEqual(4, len(feed))
-
 
 class TestProfileFeedRest(BaseFeedTestRest):
 
