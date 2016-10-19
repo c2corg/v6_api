@@ -2,6 +2,8 @@ import json
 
 from c2corg_api.models.area import Area, ArchiveArea, AREA_TYPE
 from c2corg_api.models.area_association import AreaAssociation
+from c2corg_api.models.association import Association
+from c2corg_api.models.image import Image
 from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
@@ -59,6 +61,13 @@ class TestAreaRest(BaseDocumentTestRest):
         body = self.get(self.area1)
         self._assert_geometry(body)
         self.assertNotIn('maps', body)
+
+        self.assertIn('associations', body)
+        associations = body.get('associations')
+        self.assertIn('images', associations)
+        images = associations.get('images')
+        self.assertEqual(1, len(images))
+        self.assertEqual(images[0].get('document_id'), self.image.document_id)
 
     def test_get_lang(self):
         self.get_lang(self.area1)
@@ -123,7 +132,12 @@ class TestAreaRest(BaseDocumentTestRest):
             },
             'locales': [
                 {'lang': 'en', 'title': 'Chartreuse'}
-            ]
+            ],
+            'associations': {
+                'images': [
+                    {'document_id': self.image.document_id}
+                ]
+            }
         }
         body, doc = self.post_success(body, user='moderator')
         self._assert_geometry(body)
@@ -151,6 +165,11 @@ class TestAreaRest(BaseDocumentTestRest):
         self.check_cache_version(self.waypoint1.document_id, 2)
         self.assertEqual(links[1].document_id, self.route.document_id)
         self.check_cache_version(self.route.document_id, 2)
+
+        # check that a link to the provided image is created
+        association_image = self.session.query(Association).get(
+            (doc.document_id, self.image.document_id))
+        self.assertIsNotNone(association_image)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -251,17 +270,20 @@ class TestAreaRest(BaseDocumentTestRest):
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'images': []
+                }
             }
         }
-        (body, map1) = self.put_success_all(body, self.area1)
+        (body, area) = self.put_success_all(body, self.area1, cache_version=3)
 
-        self.assertEquals(map1.area_type, 'admin_limits')
-        locale_en = map1.get_locale('en')
+        self.assertEquals(area.area_type, 'admin_limits')
+        locale_en = area.get_locale('en')
         self.assertEquals(locale_en.title, 'New title')
 
         # version with lang 'en'
-        versions = map1.versions
+        versions = area.versions
         version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.title, 'New title')
@@ -278,6 +300,11 @@ class TestAreaRest(BaseDocumentTestRest):
         version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Chartreuse')
+
+        # check that existing link to the image is removed
+        association_image = self.session.query(Association).get(
+            (area.document_id, self.image.document_id))
+        self.assertIsNone(association_image)
 
     def test_put_success_all_as_moderator(self):
         body = {
@@ -451,4 +478,18 @@ class TestAreaRest(BaseDocumentTestRest):
         self.session.add_all([self.waypoint1, self.waypoint2, self.route])
         self.session.add(AreaAssociation(
             document=self.waypoint2, area=self.area1))
+
+        self.image = Image(
+            filename='image.jpg',
+            activities=['paragliding'], height=1500,
+            image_type='collaborative', locales=[
+                DocumentLocale(
+                    lang='en', title='Mont Blanc from the air',
+                    description='...')
+            ])
+
+        self.session.add(self.image)
+        self.session.flush()
+
+        self.session.add(Association.create(self.area1, self.image))
         self.session.flush()

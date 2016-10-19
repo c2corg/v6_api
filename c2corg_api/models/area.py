@@ -3,7 +3,8 @@ from c2corg_api.models.document import (
     ArchiveDocument, Document, geometry_schema_overrides,
     schema_document_locale, schema_attributes)
 from c2corg_api.models.enums import area_type
-from c2corg_api.models.schema_utils import restrict_schema, get_update_schema
+from c2corg_api.models.schema_utils import restrict_schema, \
+    get_update_schema, get_create_schema
 from c2corg_api.models.utils import copy_attributes
 from c2corg_common.fields_area import fields_area
 from colanderalchemy import SQLAlchemySchemaNode
@@ -83,6 +84,7 @@ schema_area = SQLAlchemySchemaNode(
         'geometry': geometry_schema_overrides
     })
 
+schema_create_area = get_create_schema(schema_area)
 schema_update_area = get_update_schema(schema_area)
 schema_listing_area = restrict_schema(
     schema_area, fields_area.get('listing'))
