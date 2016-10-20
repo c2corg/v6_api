@@ -117,7 +117,7 @@ def check_get_for_integer_property(request, key, required):
 
     try:
         request.validated[key] = int(request.GET.get(key))
-    except ValueError:
+    except:
         request.errors.add('querystring', key, 'invalid ' + key)
 
 

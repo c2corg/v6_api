@@ -11,8 +11,8 @@ from c2corg_api.views.validation import validate_preferred_lang_param, \
     validate_token_pagination, validate_user_id
 from cornice.resource import resource, view
 from c2corg_api.views import cors_policy, restricted_view
-from pyramid.httpexceptions import HTTPNotFound
-from sqlalchemy.orm import undefer
+from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden
+from sqlalchemy.orm import undefer, load_only
 from sqlalchemy.sql.expression import or_, and_
 from sqlalchemy.sql.functions import func
 
@@ -88,7 +88,7 @@ class ProfileFeedRest(object):
     def __init__(self, request):
         self.request = request
 
-    @restricted_view(validators=[
+    @view(validators=[
         validate_preferred_lang_param, validate_token_pagination,
         validate_user_id])
     def get(self):
@@ -106,10 +106,26 @@ class ProfileFeedRest(object):
 
         """
         lang, token_id, token_time, limit = get_params(self.request)
-        user_id = self.request.validated.get('u')
-        changes = get_changes_of_profile_feed(
-            user_id, token_id, token_time, limit)
-        return load_feed(changes, lang)
+
+        # load the requested user
+        requested_user_id = self.request.validated['u']
+        requested_user = DBSession.query(User). \
+            filter(User.id == requested_user_id). \
+            filter(User.email_validated). \
+            options(load_only(User.id, User.is_profile_public)). \
+            first()
+
+        if not requested_user:
+            raise HTTPNotFound('user not found')
+        elif requested_user.is_profile_public or \
+                self.request.has_permission('authenticated'):
+            # only return the feed if authenticated or if the user marked
+            # the profile as public
+            changes = get_changes_of_profile_feed(
+                requested_user_id, token_id, token_time, limit)
+            return load_feed(changes, lang)
+        else:
+            raise HTTPForbidden('no permission to see the feed')
 
 
 def get_params(request):
