@@ -3,7 +3,7 @@ from c2corg_api.models.area import AREA_TYPE, Area
 from c2corg_api.models.article import ARTICLE_TYPE, Article
 from c2corg_api.models.association import Association
 from c2corg_api.models.image import IMAGE_TYPE, Image
-from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
@@ -11,7 +11,8 @@ from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import waypoint_documents_config, \
     route_documents_config, user_profile_documents_config, \
-    image_documents_config, article_documents_config, area_documents_config
+    image_documents_config, article_documents_config, area_documents_config, \
+    outing_documents_config
 from c2corg_api.views.validation import updatable_associations
 from sqlalchemy.sql.expression import or_, and_
 
@@ -63,6 +64,10 @@ def get_associations(document, lang, editing_view):
         associations['articles'] = get_linked_articles(document, lang)
     if 'areas' in types_to_include:
         associations['areas'] = get_linked_areas(document, lang)
+    if 'outings' in types_to_include:
+        # for waypoints and routes, only the latest x outings are included
+        # elsewhere (because there are potentially many)
+        associations['outings'] = get_linked_outings(document, lang)
 
     return associations
 
@@ -170,7 +175,7 @@ def get_linked_images(document, lang):
 
 
 def get_linked_areas(document, lang):
-    areas_ids = get_first_column(
+    area_ids = get_first_column(
         DBSession.query(Area.document_id).
         filter(Area.redirects_to.is_(None)).
         join(
@@ -183,7 +188,24 @@ def get_linked_areas(document, lang):
         all())
 
     return get_documents_for_ids(
-        areas_ids, lang, area_documents_config).get('documents')
+        area_ids, lang, area_documents_config).get('documents')
+
+
+def get_linked_outings(document, lang):
+    outing_ids = get_first_column(
+        DBSession.query(Outing.document_id).
+        filter(Outing.redirects_to.is_(None)).
+        join(
+            Association,
+            and_(
+                Association.parent_document_id == Outing.document_id,
+                Association.child_document_id == document.document_id)
+            ).
+        group_by(Outing.document_id).
+        all())
+
+    return get_documents_for_ids(
+        outing_ids, lang, outing_documents_config).get('documents')
 
 
 def get_linked_articles(document, lang):

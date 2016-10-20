@@ -1,3 +1,4 @@
+import datetime
 import json
 from unittest.mock import patch, Mock
 
@@ -6,6 +7,7 @@ from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.feed import update_feed_document_create
+from c2corg_api.models.outing import OutingLocale, Outing
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
 from c2corg_common.attributes import quality_types
@@ -102,6 +104,22 @@ class BaseTestImage(BaseDocumentTestRest):
         self.session.flush()
 
         self.session.add(Association.create(self.area, self.image))
+        self.session.flush()
+
+        self.outing1 = Outing(
+            activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
+            date_end=datetime.date(2016, 1, 1),
+            locales=[
+                OutingLocale(
+                    lang='en', title='...', description='...',
+                    weather='sunny')
+            ]
+        )
+        self.session.add(self.outing1)
+        self.session.flush()
+        self.session.add(Association.create(
+            parent_document=self.outing1,
+            child_document=self.image))
         self.session.flush()
 
     def _post_success_document(self, overrides={}):
@@ -224,6 +242,7 @@ class TestImageRest(BaseTestImage):
         self.assertIn('users', associations)
         self.assertIn('articles', associations)
         self.assertIn('areas', associations)
+        self.assertIn('outings', associations)
 
         linked_articles = associations.get('articles')
         self.assertEqual(len(linked_articles), 1)
@@ -234,6 +253,11 @@ class TestImageRest(BaseTestImage):
         self.assertEqual(len(linked_areas), 1)
         self.assertEqual(
             self.area.document_id, linked_areas[0].get('document_id'))
+
+        linked_outings = associations.get('outings')
+        self.assertEqual(len(linked_outings), 1)
+        self.assertEqual(
+            self.outing1.document_id, linked_outings[0].get('document_id'))
 
     def test_get_lang(self):
         self.get_lang(self.image)
