@@ -20,7 +20,8 @@ from c2corg_api.models import schema, enums, Base
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.document import (
     ArchiveDocument, Document, geometry_schema_overrides,
-    schema_document_locale, schema_attributes)
+    schema_attributes, DocumentLocale,
+    schema_locale_attributes)
 from c2corg_common import document_types
 
 IMAGE_TYPE = document_types.IMAGE_TYPE
@@ -114,6 +115,19 @@ class ArchiveImage(_ImageMixin, ArchiveDocument):
 
     __table_args__ = Base.__table_args__
 
+# special schema for image locales: images can be created without title
+schema_image_locale = SQLAlchemySchemaNode(
+    DocumentLocale,
+    # whitelisted attributes
+    includes=schema_locale_attributes,
+    overrides={
+        'version': {
+            'missing': None
+        },
+        'title': {
+            'missing': ''
+        }
+    })
 
 schema_image = SQLAlchemySchemaNode(
     Image,
@@ -127,7 +141,7 @@ schema_image = SQLAlchemySchemaNode(
             'missing': None
         },
         'locales': {
-            'children': [schema_document_locale]
+            'children': [schema_image_locale]
         },
         'geometry': geometry_schema_overrides
     })

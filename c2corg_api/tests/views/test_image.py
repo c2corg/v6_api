@@ -254,18 +254,17 @@ class TestImageRest(BaseTestImage):
         self.assertEqual(locale.get('lang'), 'en')
 
     def test_post_missing_title(self):
-        body_post = {
-            'filename': 'post_missing_title.jpg',
-            'activities': ['paragliding'],
-            'image_type': 'collaborative',
-            'height': 1500,
-            'locales': [
-                {'lang': 'en'}
-            ]
-        }
-        body = self.post_missing_title(body_post)
-        errors = body.get('errors')
-        self.assertEqual(len(errors), 2)
+        request_body = self._post_success_document()
+        del request_body['locales'][0]['title']
+
+        body, doc = self.post_success(request_body)
+        self.assertEqual(doc.locales[0].title, '')
+
+    def test_post_missing_title_none(self):
+        request_body = self._post_success_document()
+        request_body['locales'][0]['title'] = None
+
+        self.post_success(request_body)
 
     @patch('c2corg_api.views.image.requests.post',
            return_value=Mock(status_code=200))
@@ -434,7 +433,7 @@ class TestImageRest(BaseTestImage):
                 'image_type': 'personal',
                 'height': 2000,
                 'locales': [
-                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                    {'lang': 'en',
                      'description': 'A nice picture',
                      'version': self.image4.get_locale('en').version}
                 ]
@@ -691,8 +690,12 @@ class TestImageListRest(BaseTestImage):
     def test_post_multiple(self, post_mock):
         body = {
             'images': [
-                self._post_success_document({'filename': 'post_image1.jpg'}),
-                self._post_success_document({'filename': 'post_image2.jpg'})]
+                self._post_success_document({
+                    'filename': 'post_image2.jpg',
+                    'locales': [{'lang': 'en'}]
+                }),
+                self._post_success_document({'filename': 'post_image1.jpg'})
+            ]
         }
         body, doc = self.post_success(body)
         self._validate_post_success(body, doc)
