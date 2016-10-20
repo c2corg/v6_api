@@ -21,7 +21,7 @@ associations_query_count =\
     '  ) u on u.id = a.main_id and u.redirects_to is null ' \
     '  inner join (' + tables_union + \
     '  ) v on v.id = a.linked_id and v.redirects_to is null ' \
-    '  where a.type not in (\'ai\', \'mi\') ' \
+    '  where a.type != \'mi\' ' \
     '  group by a.main_id, a.linked_id) t;'
 
 associations_query = \
@@ -30,7 +30,7 @@ associations_query = \
     ') u on u.id = a.main_id and u.redirects_to is null ' \
     'inner join (' + tables_union + \
     ') v on v.id = a.linked_id and v.redirects_to is null ' \
-    'where type not in (\'ai\', \'mi\') ' \
+    'where type != \'mi\' ' \
     'group by a.main_id, a.linked_id;'
 
 association_log_query_count =\
@@ -40,7 +40,7 @@ association_log_query_count =\
     '  ) u on u.id = a.main_id and u.redirects_to is null ' \
     '  inner join (' + tables_union + \
     '  ) v on v.id = a.linked_id and v.redirects_to is null ' \
-    '  where a.type not in (\'ai\', \'mi\') ' \
+    '  where a.type != \'mi\' ' \
     '  group by associations_log_id) t;'
 
 association_log_query = \
@@ -51,7 +51,7 @@ association_log_query = \
     ') u on u.id = a.main_id and u.redirects_to is null ' \
     'inner join (' + tables_union + \
     ') v on v.id = a.linked_id and v.redirects_to is null ' \
-    'where type not in (\'ai\', \'mi\') ' \
+    'where type != \'mi\' ' \
     'group by associations_log_id;'
 
 

@@ -1,4 +1,5 @@
 from c2corg_api.models import DBSession
+from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.document import Document
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
@@ -229,6 +230,8 @@ def validate_associations_in(associations_in, document_type, errors):
                       'articles', ARTICLE_TYPE, new_errors)
     _add_associations(associations, associations_in, document_type,
                       'waypoint_children', WAYPOINT_TYPE, new_errors)
+    _add_associations(associations, associations_in, document_type,
+                      'areas', AREA_TYPE, new_errors)
 
     if new_errors:
         errors.extend(new_errors)
@@ -292,7 +295,15 @@ def _add_associations(
         associations, associations_in, main_document_type,
         document_key, other_document_type, errors):
     valid_types = updatable_associations.get(main_document_type, set())
-    if document_key in valid_types and associations_in.get(document_key, None):
+
+    if document_key not in valid_types:
+        return
+
+    associations_for_type = associations_in.get(document_key, None)
+    # skip if no associations are provided for this type. but if an empty list
+    # is given, create an entry (all existing associations of that type
+    # should be removed).
+    if associations_for_type is not None:
         is_parent = _is_parent_of_association(
             main_document_type, other_document_type)
 
@@ -328,7 +339,8 @@ association_keys = {
     'waypoint_children': WAYPOINT_TYPE,
     'users': USERPROFILE_TYPE,
     'images': IMAGE_TYPE,
-    'articles': ARTICLE_TYPE
+    'articles': ARTICLE_TYPE,
+    'areas': AREA_TYPE
 }
 
 association_keys_for_types = {
@@ -336,7 +348,8 @@ association_keys_for_types = {
     WAYPOINT_TYPE: 'waypoints',
     USERPROFILE_TYPE: 'users',
     ARTICLE_TYPE: 'articles',
-    IMAGE_TYPE: 'images'
+    IMAGE_TYPE: 'images',
+    AREA_TYPE: 'areas'
 }
 
 # associations that can be updated/created when updating/creating a document
@@ -345,7 +358,9 @@ updatable_associations = {
     ROUTE_TYPE: {'articles', 'routes', 'waypoints'},
     WAYPOINT_TYPE: {'articles', 'waypoints', 'waypoint_children'},
     OUTING_TYPE: {'articles', 'routes', 'users', 'waypoints'},
-    IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users', 'articles'},
+    IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users', 'articles',
+                 'areas'},
     ARTICLE_TYPE: {'articles', 'images', 'users', 'routes', 'waypoints',
-                   'outings'}
+                   'outings'},
+    AREA_TYPE: {'images'}
 }

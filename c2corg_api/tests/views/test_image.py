@@ -1,6 +1,7 @@
 import json
 from unittest.mock import patch, Mock
 
+from c2corg_api.models.area import Area
 from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import CacheVersion
@@ -89,6 +90,18 @@ class BaseTestImage(BaseDocumentTestRest):
         self.session.add(self.waypoint)
         self.session.flush()
         update_feed_document_create(self.waypoint, user_id)
+        self.session.flush()
+
+        self.area = Area(
+            area_type='range',
+            locales=[
+                DocumentLocale(lang='fr', title='France')
+            ]
+        )
+        self.session.add(self.area)
+        self.session.flush()
+
+        self.session.add(Association.create(self.area, self.image))
         self.session.flush()
 
     def _post_success_document(self, overrides={}):
@@ -210,11 +223,17 @@ class TestImageRest(BaseTestImage):
         self.assertIn('images', associations)
         self.assertIn('users', associations)
         self.assertIn('articles', associations)
+        self.assertIn('areas', associations)
 
         linked_articles = associations.get('articles')
         self.assertEqual(len(linked_articles), 1)
         self.assertEqual(
             self.article1.document_id, linked_articles[0].get('document_id'))
+
+        linked_areas = associations.get('areas')
+        self.assertEqual(len(linked_areas), 1)
+        self.assertEqual(
+            self.area.document_id, linked_areas[0].get('document_id'))
 
     def test_get_lang(self):
         self.get_lang(self.image)

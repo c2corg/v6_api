@@ -1,5 +1,7 @@
+import functools
+
 from c2corg_api.models.area import schema_area, Area, schema_update_area, \
-    AREA_TYPE
+    AREA_TYPE, schema_create_area
 from c2corg_api.models.area_association import update_area
 from c2corg_api.models.cache_version import update_cache_version_for_area
 from c2corg_api.models.document import UpdateType
@@ -12,11 +14,16 @@ from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
-    validate_lang_param, validate_preferred_lang_param, validate_lang
+    validate_lang_param, validate_preferred_lang_param, validate_lang, \
+    validate_associations
 from pyramid.httpexceptions import HTTPBadRequest
 
 validate_area_create = make_validator_create(fields_area.get('required'))
 validate_area_update = make_validator_update(fields_area.get('required'))
+validate_associations_create = functools.partial(
+    validate_associations, AREA_TYPE, True)
+validate_associations_update = functools.partial(
+    validate_associations, AREA_TYPE, False)
 
 
 @resource(collection_path='/areas', path='/areas/{id}',
@@ -32,7 +39,8 @@ class AreaRest(DocumentRest):
         return self._get(Area, schema_area, include_areas=False)
 
     @restricted_json_view(
-            schema=schema_area, validators=validate_area_create,
+            schema=schema_create_area,
+            validators=[validate_area_create, validate_associations_create],
             permission='moderator')
     def collection_post(self):
         return self._collection_post(
@@ -40,7 +48,8 @@ class AreaRest(DocumentRest):
 
     @restricted_json_view(
             schema=schema_update_area,
-            validators=[validate_id, validate_area_update])
+            validators=[validate_id, validate_area_update,
+                        validate_associations_update])
     def put(self):
         if not self.request.has_permission('moderator'):
             # the geometry of areas should not be modifiable for non-moderators

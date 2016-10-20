@@ -1,4 +1,5 @@
 from c2corg_api.models import DBSession
+from c2corg_api.models.area import AREA_TYPE, Area
 from c2corg_api.models.article import ARTICLE_TYPE, Article
 from c2corg_api.models.association import Association
 from c2corg_api.models.image import IMAGE_TYPE, Image
@@ -10,7 +11,7 @@ from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import waypoint_documents_config, \
     route_documents_config, user_profile_documents_config, \
-    image_documents_config, article_documents_config
+    image_documents_config, article_documents_config, area_documents_config
 from c2corg_api.views.validation import updatable_associations
 from sqlalchemy.sql.expression import or_, and_
 
@@ -22,9 +23,11 @@ associations_to_include = {
     OUTING_TYPE:
         {'waypoints', 'routes', 'images', 'users', 'articles'},
     IMAGE_TYPE:
-        {'waypoints', 'routes', 'images', 'users', 'outings', 'articles'},
+        {'waypoints', 'routes', 'images', 'users', 'outings', 'articles',
+         'areas'},
     ARTICLE_TYPE:
-        {'waypoints', 'routes', 'images', 'users', 'outings', 'articles'}
+        {'waypoints', 'routes', 'images', 'users', 'outings', 'articles'},
+    AREA_TYPE: {'images'}
 }
 
 
@@ -58,6 +61,8 @@ def get_associations(document, lang, editing_view):
         associations['images'] = get_linked_images(document, lang)
     if 'articles' in types_to_include:
         associations['articles'] = get_linked_articles(document, lang)
+    if 'areas' in types_to_include:
+        associations['areas'] = get_linked_areas(document, lang)
 
     return associations
 
@@ -162,6 +167,23 @@ def get_linked_images(document, lang):
 
     return get_documents_for_ids(
         image_ids, lang, image_documents_config).get('documents')
+
+
+def get_linked_areas(document, lang):
+    areas_ids = get_first_column(
+        DBSession.query(Area.document_id).
+        filter(Area.redirects_to.is_(None)).
+        join(
+            Association,
+            and_(
+                Association.parent_document_id == Area.document_id,
+                Association.child_document_id == document.document_id)
+            ).
+        group_by(Area.document_id).
+        all())
+
+    return get_documents_for_ids(
+        areas_ids, lang, area_documents_config).get('documents')
 
 
 def get_linked_articles(document, lang):
