@@ -384,13 +384,15 @@ class TestPersonalFeedRest(BaseFeedTestRest):
 
 class TestProfileFeedRest(BaseFeedTestRest):
 
-    def test_get_feed_unauthenticated(self):
-        self.app.get('/profile-feed', status=403)
-
     def test_get_feed_invalid_user_id(self):
         headers = self.add_authorization_header(username='contributor')
         self.app.get(
             '/profile-feed?u=invalid-user-id', status=400, headers=headers)
+
+    def test_get_feed_missing_user_id(self):
+        headers = self.add_authorization_header(username='contributor')
+        self.app.get(
+            '/profile-feed', status=400, headers=headers)
 
     def test_get_feed_non_existing_user(self):
         headers = self.add_authorization_header(username='contributor')
@@ -432,6 +434,26 @@ class TestProfileFeedRest(BaseFeedTestRest):
             self.outing.document_id, feed[0]['document']['document_id'])
         self.assertEqual(
             self.waypoint2.document_id, feed[1]['document']['document_id'])
+
+    def test_get_feed_unauthenticated_public_profile(self):
+        """ Get the public profile feed for 'contributor2'.
+        """
+        user_id = self.global_userids['contributor2']
+        user = self.session.query(User).get(user_id)
+        user.is_profile_public = True
+        self.session.flush()
+
+        response = self.app.get('/profile-feed?u=' + str(user_id), status=200)
+        body = response.json
+
+        feed = body['feed']
+        self.assertEqual(2, len(feed))
+
+    def test_get_feed_unauthenticated_non_public_profile(self):
+        """ Try to get the non-public profile feed for 'contributor2'.
+        """
+        user_id = self.global_userids['contributor2']
+        self.app.get('/profile-feed?u=' + str(user_id), status=403)
 
     def test_get_profile_contributor2_paginated(self):
         """ Get profile feed for 'contributor2' (paginated).
