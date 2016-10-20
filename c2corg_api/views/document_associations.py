@@ -28,7 +28,8 @@ associations_to_include = {
          'areas'},
     ARTICLE_TYPE:
         {'waypoints', 'routes', 'images', 'users', 'outings', 'articles'},
-    AREA_TYPE: {'images'}
+    AREA_TYPE: {'images'},
+    USERPROFILE_TYPE: {'images'}
 }
 
 
