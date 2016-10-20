@@ -215,5 +215,6 @@ document_configs = {
     IMAGE_TYPE: image_documents_config,
     AREA_TYPE: area_documents_config,
     MAP_TYPE: topo_map_documents_config,
+    ARTICLE_TYPE: article_documents_config,
     USERPROFILE_TYPE: user_profile_documents_config
 }
