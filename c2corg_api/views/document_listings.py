@@ -150,9 +150,9 @@ def _load_documents(document_ids, clazz, base_query):
 
 def add_load_for_profiles(document_query, clazz):
     if clazz == UserProfile:
-        # for profiles load username/name together from the associated user
+        # for profiles load name together from the associated user
         document_query = add_profile_filter(document_query, clazz). \
-            options(contains_eager('user'))
+            options(contains_eager('user').load_only(User.id, User.name))
     return document_query
 
 
