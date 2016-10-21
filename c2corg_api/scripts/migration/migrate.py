@@ -12,6 +12,7 @@ from c2corg_api.scripts.migration.documents.user_profiles import \
 from c2corg_api.scripts.migration.documents.outings import MigrateOutings
 from c2corg_api.scripts.migration.documents.images import MigrateImages
 from c2corg_api.scripts.migration.documents.articles import MigrateArticles
+from c2corg_api.scripts.migration.documents.books import MigrateBooks
 from c2corg_api.scripts.migration.map_associations import \
     MigrateMapAssociations
 from c2corg_api.scripts.migration.set_default_geometries import \
@@ -79,6 +80,7 @@ def main(argv=sys.argv):
     MigrateOutings(connection_source, session, batch_size).migrate()
     MigrateImages(connection_source, session, batch_size).migrate()
     MigrateArticles(connection_source, session, batch_size).migrate()
+    MigrateBooks(connection_source, session, batch_size).migrate()
     MigrateVersions(connection_source, session, batch_size).migrate()
     MigrateAssociations(connection_source, session, batch_size).migrate()
     SetDefaultGeometries(connection_source, session, batch_size).migrate()
