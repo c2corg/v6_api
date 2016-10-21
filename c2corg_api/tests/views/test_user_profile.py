@@ -104,6 +104,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.assertNotIn('maps', body)
         self.assertNotIn('username', body)
         self.assertIn('name', body)
+        self.assertIn('forum_username', body)
 
     def test_get_unconfirmed_user(self):
         headers = self.add_authorization_header(username='contributor')

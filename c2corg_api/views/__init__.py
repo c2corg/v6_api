@@ -98,7 +98,7 @@ def to_json_dict(obj, schema, with_special_locales_attrs=False):
     # it because it's not a real column)
     special_attributes = [
         'available_langs', 'associations', 'maps', 'areas', 'author',
-        'protected', 'type', 'name', 'creator'
+        'protected', 'type', 'name', 'forum_username', 'creator'
     ]
     for attr in special_attributes:
         if hasattr(obj, attr):
