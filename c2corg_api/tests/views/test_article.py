@@ -67,6 +67,7 @@ class TestArticleRest(BaseDocumentTestRest):
         self.assertIsNone(body.get('geometry'))
         associations = body['associations']
         self.assertIn('articles', associations)
+        self.assertIn('books', associations)
         self.assertIn('images', associations)
         self.assertIn('waypoints', associations)
         self.assertIn('routes', associations)

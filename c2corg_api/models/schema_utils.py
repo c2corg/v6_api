@@ -79,6 +79,8 @@ class SchemaAssociations(MappingSchema):
         Sequence(), SchemaAssociationDoc(), missing=None)
     waypoint_children = SchemaNode(
         Sequence(), SchemaAssociationDoc(), missing=None)
+    books = SchemaNode(
+        Sequence(), SchemaAssociationDoc(), missing=None)
     images = SchemaNode(
         Sequence(), SchemaAssociationDoc(), missing=None)
     articles = SchemaNode(
