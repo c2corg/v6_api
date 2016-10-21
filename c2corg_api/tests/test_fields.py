@@ -1,5 +1,7 @@
 import unittest
 
+from c2corg_api.models.book import Book
+from c2corg_common.fields_book import fields_book
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_common.fields_user_profile import fields_user_profile
 from c2corg_api.models.outing import Outing, OutingLocale
@@ -24,6 +26,13 @@ class TestFields(unittest.TestCase):
                 type, waypoint_types, 'invalid waypoint type: %s' % (type))
             self._test_fields_for_type(
                 type, fields_waypoint, Waypoint, WaypointLocale)
+
+    def test_book_fields(self):
+        """Test that the fields listed for the article are correct.
+        """
+
+        self._test_fields_for_model(
+            fields_book, Book, DocumentLocale)
 
     def test_route_fields(self):
         """Test that the fields listed for a route activity are correct.
