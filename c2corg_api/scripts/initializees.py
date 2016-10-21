@@ -3,6 +3,7 @@ import sys
 
 from c2corg_api.search.mappings.area_mapping import SearchArea
 from c2corg_api.search.mappings.article_mapping import SearchArticle
+from c2corg_api.search.mappings.book_mapping import SearchBook
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
@@ -62,6 +63,7 @@ def setup_es():
     index.settings(analysis=analysis_settings)
 
     index.doc_type(SearchArea)
+    index.doc_type(SearchBook)
     index.doc_type(SearchImage)
     index.doc_type(SearchOuting)
     index.doc_type(SearchRoute)

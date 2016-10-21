@@ -1,5 +1,6 @@
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.article import ARTICLE_TYPE
+from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
@@ -10,6 +11,7 @@ from c2corg_api.search import search, SEARCH_LIMIT_DEFAULT, SEARCH_LIMIT_MAX
 from c2corg_api.views import cors_policy
 from c2corg_api.views.area import area_documents_config
 from c2corg_api.views.article import article_documents_config
+from c2corg_api.views.book import book_documents_config
 from c2corg_api.views.image import image_documents_config
 from c2corg_api.views.outing import outing_documents_config
 from c2corg_api.views.route import route_documents_config
@@ -74,6 +76,9 @@ class SearchRest(object):
 
         if self._include_type(ARTICLE_TYPE, types_to_include):
             search_types.append(('articles', article_documents_config))
+
+        if self._include_type(BOOK_TYPE, types_to_include):
+            search_types.append(('books', book_documents_config))
 
         if self._include_type(MAP_TYPE, types_to_include):
             search_types.append(('maps', topo_map_documents_config))
