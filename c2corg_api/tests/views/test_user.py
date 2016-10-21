@@ -219,7 +219,7 @@ class TestUserRest(BaseUserTestRest):
         self.assertIsNotNone(search_doc)
 
         self.assertIsNotNone(search_doc['doc_type'])
-        self.assertEqual(search_doc['title_fr'], 'test Max Mustermann testf')
+        self.assertEqual(search_doc['title_fr'], 'Max Mustermann testf')
 
     def test_register_discourse_down(self):
         self.set_discourse_down()

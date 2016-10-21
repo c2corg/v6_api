@@ -33,7 +33,7 @@ class UserProfileRest(DocumentRest):
             filter(User.id == requested_user_id). \
             filter(User.email_validated). \
             options(load_only(
-                User.id, User.is_profile_public, User.name, User.username)). \
+                User.id, User.is_profile_public, User.name)). \
             first()
 
         if not requested_user:
@@ -48,8 +48,7 @@ class UserProfileRest(DocumentRest):
             return {
                 'not_authorized': True,
                 'document_id': requested_user.id,
-                'name': requested_user.name,
-                'username': requested_user.username
+                'name': requested_user.name
             }
 
     @restricted_json_view(

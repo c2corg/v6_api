@@ -760,7 +760,8 @@ class TestRouteRest(BaseDocumentTestRest):
             self.assertEqual(len(versions), 1)
             self.assertEqual(getattr(self, 'locale_' + lang).title, title)
             for r in versions:
-                self.assertEqual(r['username'], username)
+                self.assertEqual(r['name'], 'Contributor')
+                self.assertNotIn('username', r)
                 self.assertEqual(r['user_id'], user_id)
                 self.assertIn('written_at', r)
                 self.assertIn('version_id', r)

@@ -362,6 +362,7 @@ def token_to_response(user, token, request):
     return {
         'token': token.value,
         'username': user.username,
+        'name': user.name,
         'forum_username': user.forum_username,
         'expire': int(expire_time.total_seconds()),
         'roles': roles,

@@ -33,7 +33,8 @@ class TestUserProfileRest(BaseDocumentTestRest):
         body = self.get_collection(user='contributor')
         doc = body['documents'][0]
         self.assertIn('areas', doc)
-        self.assertIn('username', doc)
+        self.assertIn('name', doc)
+        self.assertNotIn('username', doc)
         self.assertNotIn('geometry', doc)
 
     def test_get_collection_paginated(self):
@@ -77,7 +78,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         body = response.json
 
         self.assertEqual(body.get('not_authorized'), True)
-        self.assertIn('username', body)
+        self.assertNotIn('username', body)
         self.assertIn('name', body)
         self.assertNotIn('locales', body)
         self.assertNotIn('geometry', body)
@@ -91,7 +92,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.session.flush()
 
         body = self.get(self.profile1, check_title=False)
-        self.assertIn('username', body)
+        self.assertNotIn('username', body)
         self.assertIn('name', body)
         self.assertIn('locales', body)
         self.assertIn('geometry', body)
@@ -101,7 +102,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self._assert_geometry(body)
         self.assertIsNone(body['locales'][0].get('title'))
         self.assertNotIn('maps', body)
-        self.assertIn('username', body)
+        self.assertNotIn('username', body)
         self.assertIn('name', body)
 
     def test_get_unconfirmed_user(self):
@@ -337,7 +338,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.assertEquals(profile.get_locale('es').description, 'Yo')
         search_doc = self._check_es_index()
         self.assertEqual(
-            search_doc['title_es'], 'contributor Contributor contributor')
+            search_doc['title_es'], 'Contributor contributor')
 
     def _check_es_index(self):
         sync_es(self.session)
@@ -346,9 +347,9 @@ class TestUserProfileRest(BaseDocumentTestRest):
             index=elasticsearch_config['index'])
         self.assertEqual(search_doc['doc_type'], self.profile1.type)
         self.assertEqual(
-            search_doc['title_en'], 'contributor Contributor contributor')
+            search_doc['title_en'], 'Contributor contributor')
         self.assertEqual(
-            search_doc['title_fr'], 'contributor Contributor contributor')
+            search_doc['title_fr'], 'Contributor contributor')
         return search_doc
 
     def _assert_geometry(self, body):
