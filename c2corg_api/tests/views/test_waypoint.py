@@ -141,6 +141,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertIn('associations', body)
         associations = body.get('associations')
         self.assertIn('articles', associations)
+        self.assertIn('books', associations)
         self.assertIn('images', associations)
         self.assertIn('waypoints', associations)
 
