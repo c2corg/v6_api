@@ -37,7 +37,6 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(len(body['documents']), 4)
         doc1 = body['documents'][0]
         self.assertNotIn('frequentation', doc1)
-        self.assertNotIn('duration_difficulties', doc1)
 
         doc4 = body['documents'][3]
         self.assertIn('author', doc4)
@@ -116,7 +115,6 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(
             body.get('activities'), self.outing.activities)
         self._assert_geometry(body)
-        self.assertNotIn('duration_difficulties', body)
         self.assertIn('frequentation', body)
         self.assertNotIn('maps', body)
 
