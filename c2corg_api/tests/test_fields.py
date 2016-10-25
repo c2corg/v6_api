@@ -7,10 +7,12 @@ from c2corg_common.fields_user_profile import fields_user_profile
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_common.fields_outing import fields_outing
 from c2corg_common.fields_waypoint import fields_waypoint
+from c2corg_common.fields_report import fields_report
 from c2corg_common.fields_route import fields_route
 from c2corg_common.fields_article import fields_article
 from c2corg_common.attributes import waypoint_types, activities
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.models.report import Report, ReportLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.article import Article
@@ -33,6 +35,12 @@ class TestFields(unittest.TestCase):
 
         self._test_fields_for_model(
             fields_book, Book, DocumentLocale)
+
+    def test_report_fields(self):
+        """Test that the fields listed for the report are correct.
+        """
+        self._test_fields_for_model(
+            fields_report, Report, ReportLocale)
 
     def test_route_fields(self):
         """Test that the fields listed for a route activity are correct.
