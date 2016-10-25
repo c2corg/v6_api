@@ -65,7 +65,7 @@ class MigrateRoutes(MigrateDocuments):
             'select '
             '   ra.id, ra.document_i18n_archive_id, ra.is_latest_version, '
             '   ra.culture, ra.name, ra.description, ra.remarks, ra.gear, '
-            '   ra.route_history, r.slope '
+            '   ra.route_history, ra.external_resources, r.slope '
             'from app_routes_i18n_archives ra join routes r on ra.id = r.id '
             'where r.redirects_to is null '
             'order by ra.id, ra.culture, ra.document_i18n_archive_id;'
@@ -192,6 +192,7 @@ class MigrateRoutes(MigrateDocuments):
             remarks=document_in.remarks,
             gear=document_in.gear,
             route_history=document_in.route_history,
+            external_resources=document_in.external_resources,
             slope=document_in.slope
         )
 
