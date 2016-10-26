@@ -6,6 +6,7 @@ from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.book_mapping import SearchBook
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
+from c2corg_api.search.mappings.report_mapping import SearchReport
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
 from c2corg_api.search.mappings.user_mapping import SearchUser
@@ -66,6 +67,7 @@ def setup_es():
     index.doc_type(SearchBook)
     index.doc_type(SearchImage)
     index.doc_type(SearchOuting)
+    index.doc_type(SearchReport)
     index.doc_type(SearchRoute)
     index.doc_type(SearchTopoMap)
     index.doc_type(SearchUser)

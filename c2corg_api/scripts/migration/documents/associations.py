@@ -4,6 +4,7 @@ from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
+from c2corg_api.models.report import REPORT_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from sqlalchemy.sql import text
@@ -152,7 +153,7 @@ class MigrateAssociations(MigrateBase):
         return parent_type, child_type
 
 ASSOCIATION_TYPES = {
-    # 'x': REPORT_TYPE,
+    'x': REPORT_TYPE,       # xreports - accidents
     'p': WAYPOINT_TYPE,     # parking
     'u': USERPROFILE_TYPE,  # user
     'b': BOOK_TYPE,         # book
