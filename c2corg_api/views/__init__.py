@@ -98,7 +98,7 @@ def to_json_dict(obj, schema, with_special_locales_attrs=False):
     # it because it's not a real column)
     special_attributes = [
         'available_langs', 'associations', 'maps', 'areas', 'author',
-        'protected', 'type', 'name', 'username', 'creator'
+        'protected', 'type', 'name', 'forum_username', 'creator'
     ]
     for attr in special_attributes:
         if hasattr(obj, attr):
@@ -190,7 +190,6 @@ def set_creator(documents, field_name):
     t = DBSession.query(
         ArchiveDocument.document_id.label('document_id'),
         User.id.label('user_id'),
-        User.username.label('username'),
         User.name.label('name'),
         over(
             func.rank(), partition_by=ArchiveDocument.document_id,
@@ -208,15 +207,14 @@ def set_creator(documents, field_name):
         filter(ArchiveDocument.document_id.in_(document_ids)). \
         subquery('t')
     query = DBSession.query(
-            t.c.document_id, t.c.user_id, t.c.username, t.c.name). \
+            t.c.document_id, t.c.user_id, t.c.name). \
         filter(t.c.rank == 1)
 
     author_for_documents = {
         document_id: {
-            'username': username,
             'name': name,
             'user_id': user_id
-        } for document_id, user_id, username, name in query
+        } for document_id, user_id, name in query
     }
 
     for document in documents:

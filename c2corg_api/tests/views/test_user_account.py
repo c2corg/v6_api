@@ -86,7 +86,7 @@ class TestUserAccountRest(BaseUserTestRest):
 
         self.assertIsNotNone(search_doc['doc_type'])
         self.assertEqual(
-            search_doc['title_en'], 'contributor changed contributor')
+            search_doc['title_en'], 'changed contributor')
 
     def test_update_account_name_discourse_down(self):
         self._update_account_field_discourse_down('name', 'changed')

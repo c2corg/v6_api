@@ -41,7 +41,7 @@ class TestOutingRest(BaseDocumentTestRest):
         doc4 = body['documents'][3]
         self.assertIn('author', doc4)
         author = doc4['author']
-        self.assertEqual(author['username'], 'contributor')
+        self.assertNotIn('username', author)
         self.assertEqual(author['name'], 'Contributor')
         self.assertEqual(author['user_id'], self.global_userids['contributor'])
 
@@ -973,7 +973,8 @@ class TestOutingRest(BaseDocumentTestRest):
             self.assertEqual(len(versions), 1)
             self.assertEqual(getattr(self, 'locale_' + lang).title, title)
             for r in versions:
-                self.assertEqual(r['username'], username)
+                self.assertEqual(r['name'], 'Contributor')
+                self.assertNotIn('username', r)
                 self.assertEqual(r['user_id'], user_id)
                 self.assertIn('written_at', r)
                 self.assertIn('version_id', r)

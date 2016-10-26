@@ -40,7 +40,6 @@ class UserProfile(_UserProfileMixin, Document):
         'inherit_condition': Document.document_id == document_id
     }
 
-    username = association_proxy('user', 'username')
     name = association_proxy('user', 'name')
     forum_username = association_proxy('user', 'forum_username')
 
