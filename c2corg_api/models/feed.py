@@ -527,7 +527,7 @@ def get_images(images, images_in, document_id, document_type):
         image_in = images_in[i]
 
         if is_linked_to_doc(image_in, document_id, document_type):
-            image_ids.append(images[0].document_id)
+            image_ids.append(images[i].document_id)
 
         if len(image_ids) > 3:
             break
