@@ -750,6 +750,7 @@ class TestImageListRest(BaseTestImage):
             feed_change.user_ids, [self.global_userids['contributor']])
         self.assertIsNotNone(feed_change.image1_id)
         self.assertIsNotNone(feed_change.image2_id)
+        self.assertNotEqual(feed_change.image1_id, feed_change.image2_id)
 
     @patch('c2corg_api.views.image.requests.post',
            return_value=Mock(status_code=200))
@@ -770,6 +771,7 @@ class TestImageListRest(BaseTestImage):
             feed_change.user_ids, [self.global_userids['contributor2']])
         self.assertIsNotNone(feed_change.image1_id)
         self.assertIsNotNone(feed_change.image2_id)
+        self.assertNotEqual(feed_change.image1_id, feed_change.image2_id)
 
 
 class TestImageProxyRest(BaseTestRest):
