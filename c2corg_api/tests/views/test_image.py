@@ -362,7 +362,7 @@ class TestImageRest(BaseTestImage):
     def test_put_wrong_document_id(self):
         body = {
             'document': {
-                'document_id': '-9999',
+                'document_id': '9999999',
                 'version': self.image.version,
                 'filename': 'put_wrong_document_id.jpg',
                 'activities': ['paragliding'],

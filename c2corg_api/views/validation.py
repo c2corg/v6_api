@@ -21,7 +21,10 @@ from dateutil import parser as datetime_parser
 def create_int_validator(field):
     def validator(request, **kwargs):
         try:
-            request.validated[field] = int(request.matchdict[field])
+            val = int(request.matchdict[field])
+            if val < 0:
+                raise ValueError
+            request.validated[field] = val
         except ValueError:
             request.errors.add('querystring', field, 'invalid ' + field)
     return validator

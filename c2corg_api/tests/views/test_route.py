@@ -420,7 +420,7 @@ class TestRouteRest(BaseDocumentTestRest):
     def test_put_wrong_document_id(self):
         body = {
             'document': {
-                'document_id': '-9999',
+                'document_id': '9999999',
                 'version': self.route.version,
                 'activities': ['hiking'],
                 'elevation_min': 700,

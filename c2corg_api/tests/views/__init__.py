@@ -278,7 +278,7 @@ class BaseDocumentTestRest(BaseTestRest):
         return body, locale
 
     def get_info_404(self):
-        self.app.get(self._prefix + '/-9999/en/info', status=404)
+        self.app.get(self._prefix + '/9999999/en/info', status=404)
 
     def get_lang(self, reference, user=None):
         headers = {} if not user else \
@@ -317,8 +317,10 @@ class BaseDocumentTestRest(BaseTestRest):
         headers = {} if not user else \
             self.add_authorization_header(username=user)
 
-        self.app.get(self._prefix + '/-9999', headers=headers, status=404)
-        self.app.get(self._prefix + '/-9999?l=es', headers=headers, status=404)
+        self.app.get(
+            self._prefix + '/9999999', headers=headers, status=404)
+        self.app.get(
+            self._prefix + '/9999999?l=es', headers=headers, status=404)
 
     def post_error(self, request_body, user='contributor'):
         response = self.app_post_json(self._prefix, request_body,
@@ -534,11 +536,12 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def put_wrong_document_id(self, request_body, user='contributor'):
         response = self.app_put_json(
-            self._prefix + '/-9999', request_body, status=403)
+            self._prefix + '/9999999', request_body, status=403)
 
         headers = self.add_authorization_header(username=user)
         response = self.app_put_json(
-            self._prefix + '/-9999', request_body, headers=headers, status=404)
+            self._prefix + '/9999999', request_body, headers=headers,
+            status=404)
 
         body = response.json
         self.assertEqual(body['status'], 'error')
