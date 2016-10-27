@@ -31,6 +31,8 @@ class TestCacheVersion(BaseTestCase):
         cache_version = self.session.query(CacheVersion).get(
             waypoint.document_id)
         self.assertIsNotNone(cache_version)
+        self.assertIsNotNone(cache_version.version)
+        self.assertIsNotNone(cache_version.last_updated)
 
     def test_update_cache_version_single_wp(self):
         waypoint = Waypoint(waypoint_type='summit')
@@ -40,11 +42,15 @@ class TestCacheVersion(BaseTestCase):
 
         cache_version = self.session.query(CacheVersion).get(
             waypoint.document_id)
+        cache_version.last_updated = datetime.datetime(2016, 1, 1, 12, 1, 0)
+        self.session.flush()
         current_version = cache_version.version
+        current_last_updated = cache_version.last_updated
 
         update_cache_version(waypoint)
         self.session.refresh(cache_version)
         self.assertEqual(cache_version.version, current_version + 1)
+        self.assertNotEqual(cache_version.last_updated, current_last_updated)
 
         cache_version_untouched = self.session.query(CacheVersion).get(
             waypoint_unrelated.document_id)
