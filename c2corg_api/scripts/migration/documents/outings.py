@@ -190,7 +190,7 @@ class MigrateOutings(MigrateDocuments):
     hut_status = {
         '2': 'open_guarded',
         '4': 'open_non_guarded',
-        '6': 'closed',
+        '6': 'closed_hut',
         '8': None
     }
 

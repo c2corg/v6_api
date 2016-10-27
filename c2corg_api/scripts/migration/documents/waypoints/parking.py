@@ -89,11 +89,11 @@ class MigrateParkings(MigrateWaypoints):
         )
 
     public_transportation_ratings = {
-        '1': 'good',
-        '2': 'poor',
-        '3': 'no',
-        '4': 'near',
-        '5': 'seasonal'
+        '1': 'good service',
+        '2': 'poor service',
+        '3': 'no service',
+        '4': 'nearby service',
+        '5': 'seasonal service'
     }
 
     snow_clearance_ratings = {
