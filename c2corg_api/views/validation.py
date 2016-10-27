@@ -9,6 +9,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_common.associations import valid_associations
 from c2corg_common.attributes import default_langs
+from c2corg_common import document_types
 from colander import null
 from cornice.errors import Errors
 from webob.descriptors import parse_int_safe
@@ -49,6 +50,18 @@ def validate_lang(request, **kwargs):
     """
     lang = request.matchdict['lang']
     validate_lang_(lang, request)
+
+
+def validate_document_type(request, **kwargs):
+    """Checks if the document type given in the url as match-parameter
+    is correct (".../{doc_type}").
+    """
+    doc_type = request.matchdict['doc_type']
+    if doc_type is not None:
+        if doc_type in document_types.ALL:
+            request.validated['doc_type'] = doc_type
+            return
+    request.errors.add('querystring', 'doc_type', 'invalid doc_type')
 
 
 def validate_lang_param(request, **kwargs):
