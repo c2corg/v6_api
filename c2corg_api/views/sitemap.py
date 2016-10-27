@@ -1,17 +1,21 @@
+import functools
 import logging
 
 from c2corg_api import DBSession
+from c2corg_api.caching import cache_sitemap
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.route import ROUTE_TYPE, RouteLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.views import cors_policy
+from c2corg_api.views import cors_policy, etag_cache
 from c2corg_api.views.validation import create_int_validator, \
     validate_document_type
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy.sql.functions import func
 from math import ceil
+from datetime import date
+from c2corg_api import caching
 
 log = logging.getLogger(__name__)
 
@@ -55,27 +59,11 @@ class SitemapRest(object):
                 ]
             }
         """
-        document_locales_per_type = DBSession. \
-            query(Document.type, func.count().label('count')). \
-            join(
-                DocumentLocale,
-                Document.document_id == DocumentLocale.document_id). \
-            filter(Document.type != USERPROFILE_TYPE). \
-            group_by(Document.type). \
-            all()
+        cache_key = _get_cache_key()
+        etag_cache(self.request, cache_key)
 
-        sitemaps = []
-        for doc_type, count in document_locales_per_type:
-            num_sitemaps = ceil(count / PAGES_PER_SITEMAP)
-            sitemaps_for_type = [
-                '/sitemaps/{}/{}'.format(doc_type, i)
-                for i in range(0, num_sitemaps)
-            ]
-            sitemaps.extend(sitemaps_for_type)
-
-        return {
-            'sitemaps': sitemaps
-        }
+        return cache_sitemap.get_or_create(
+            cache_key, _get_sitemap_index, expiration_time=-1)
 
     @view(validators=[validate_page, validate_document_type])
     def get(self):
@@ -85,6 +73,49 @@ class SitemapRest(object):
         doc_type = self.request.validated['doc_type']
         i = self.request.validated['i']
 
+        cache_key = _get_cache_key(doc_type, i)
+        etag_cache(self.request, cache_key)
+
+        return cache_sitemap.get_or_create(
+            cache_key,
+            functools.partial(_get_sitemap, doc_type, i),
+            expiration_time=-1)
+
+
+def _get_cache_key(doc_type=None, i=None):
+    if doc_type:
+        return '{}-{}-{}-{}'.format(
+            doc_type, i, date.today().isoformat(), caching.CACHE_VERSION)
+    else:
+        return '{}-{}'.format(
+            date.today().isoformat(), caching.CACHE_VERSION)
+
+
+def _get_sitemap_index():
+    document_locales_per_type = DBSession. \
+        query(Document.type, func.count().label('count')). \
+        join(
+            DocumentLocale,
+            Document.document_id == DocumentLocale.document_id). \
+        filter(Document.type != USERPROFILE_TYPE). \
+        group_by(Document.type). \
+        all()
+
+    sitemaps = []
+    for doc_type, count in document_locales_per_type:
+        num_sitemaps = ceil(count / PAGES_PER_SITEMAP)
+        sitemaps_for_type = [
+            '/sitemaps/{}/{}'.format(doc_type, i)
+            for i in range(0, num_sitemaps)
+            ]
+        sitemaps.extend(sitemaps_for_type)
+
+    return {
+        'sitemaps': sitemaps
+    }
+
+
+def _get_sitemap(doc_type, i):
         fields = [
             Document.document_id, DocumentLocale.lang, DocumentLocale.title,
             CacheVersion.last_updated
@@ -124,25 +155,26 @@ class SitemapRest(object):
 
         return {
             'pages': [
-                self._format_page(locale, is_route)
+                _format_page(locale, is_route)
                 for locale in document_locales
             ]
         }
 
-    def _format_page(self, document_locale, is_route):
-        if not is_route:
-            doc_id, lang, title, last_updated = document_locale
-        else:
-            doc_id, lang, title, last_updated, title_prefix = document_locale
 
-        page = {
-            'document_id': doc_id,
-            'lang': lang,
-            'title': title,
-            'lastmod': last_updated.isoformat()
-        }
+def _format_page(document_locale, is_route):
+    if not is_route:
+        doc_id, lang, title, last_updated = document_locale
+    else:
+        doc_id, lang, title, last_updated, title_prefix = document_locale
 
-        if is_route:
-            page['title_prefix'] = title_prefix
+    page = {
+        'document_id': doc_id,
+        'lang': lang,
+        'title': title,
+        'lastmod': last_updated.isoformat()
+    }
 
-        return page
+    if is_route:
+        page['title_prefix'] = title_prefix
+
+    return page
