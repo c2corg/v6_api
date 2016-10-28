@@ -17,13 +17,6 @@ class MigrateBooks(MigrateDocuments):
     def get_model_archive_document(self, locales):
         return ArchiveDocumentLocale if locales else ArchiveBook
 
-    def get_document_geometry(self, document_in, version):
-        return dict(
-            document_id=document_in.id,
-            id=document_in.id,
-            version=version
-        )
-
     def get_count_query(self):
         return (
             ' select count(*) '
