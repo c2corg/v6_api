@@ -17,14 +17,6 @@ class MigrateArticles(MigrateDocuments):
     def get_model_archive_document(self, locales):
         return ArchiveDocumentLocale if locales else ArchiveArticle
 
-    def get_document_geometry(self, document_in, version):
-        return dict(
-            document_id=document_in.id,
-            id=document_in.id,
-            version=version,
-            geom=document_in.geom
-        )
-
     def get_count_query(self):
         return (
             ' select count(*) '
@@ -37,8 +29,7 @@ class MigrateArticles(MigrateDocuments):
             ' select '
             '   aa.id, aa.document_archive_id, aa.is_latest_version, '
             '   aa.is_protected, aa.redirects_to, '
-            '   ST_Force2D(ST_SetSRID(aa.geom, 3857)) geom, aa.elevation, '
-            '   aa.categories, aa.activities, aa.article_type '
+            '   aa.elevation, aa.categories, aa.activities, aa.article_type '
             ' from app_articles_archives aa join articles t on aa.id = t.id '
             ' where t.redirects_to is null '
             ' order by aa.id, aa.document_archive_id;'
