@@ -232,6 +232,8 @@ def validate_associations_in(associations_in, document_type, errors):
                       'waypoint_children', WAYPOINT_TYPE, new_errors)
     _add_associations(associations, associations_in, document_type,
                       'areas', AREA_TYPE, new_errors)
+    _add_associations(associations, associations_in, document_type,
+                      'outings', OUTING_TYPE, new_errors)
 
     if new_errors:
         errors.extend(new_errors)
@@ -340,7 +342,8 @@ association_keys = {
     'users': USERPROFILE_TYPE,
     'images': IMAGE_TYPE,
     'articles': ARTICLE_TYPE,
-    'areas': AREA_TYPE
+    'areas': AREA_TYPE,
+    'outings': OUTING_TYPE
 }
 
 association_keys_for_types = {
@@ -349,7 +352,8 @@ association_keys_for_types = {
     USERPROFILE_TYPE: 'users',
     ARTICLE_TYPE: 'articles',
     IMAGE_TYPE: 'images',
-    AREA_TYPE: 'areas'
+    AREA_TYPE: 'areas',
+    OUTING_TYPE: 'outings'
 }
 
 # associations that can be updated/created when updating/creating a document
@@ -359,7 +363,7 @@ updatable_associations = {
     WAYPOINT_TYPE: {'articles', 'waypoints', 'waypoint_children'},
     OUTING_TYPE: {'articles', 'routes', 'users', 'waypoints'},
     IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users', 'articles',
-                 'areas'},
+                 'areas', 'outings'},
     ARTICLE_TYPE: {'articles', 'images', 'users', 'routes', 'waypoints',
                    'outings'},
     AREA_TYPE: {'images'}
