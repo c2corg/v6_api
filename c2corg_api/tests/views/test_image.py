@@ -751,6 +751,32 @@ class TestImageListRest(BaseTestImage):
         self.assertIsNotNone(feed_change.image1_id)
         self.assertIsNotNone(feed_change.image2_id)
         self.assertNotEqual(feed_change.image1_id, feed_change.image2_id)
+        self.assertIsNone(feed_change.image3_id)
+
+    @patch('c2corg_api.views.image.requests.post',
+           return_value=Mock(status_code=200))
+    def test_post_multiple_for_outing(self, post_mock):
+        body = {
+            'images': [
+                self._post_success_document({
+                    'filename': 'post_image1.jpg',
+                    'associations': {
+                        'waypoints': [
+                            {'document_id': self.waypoint.document_id}],
+                        'outings': [
+                            {'document_id': self.outing1.document_id}
+                        ]
+                    }
+                })
+            ]
+        }
+        body, doc = self.post_success(body)
+        self._validate_post_success(body, doc)
+
+        # check that a link to the linked image is created
+        association_img = self.session.query(Association).get(
+            (self.outing1.document_id, doc.document_id))
+        self.assertIsNotNone(association_img)
 
     @patch('c2corg_api.views.image.requests.post',
            return_value=Mock(status_code=200))
