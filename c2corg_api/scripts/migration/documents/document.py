@@ -58,8 +58,9 @@ class MigrateDocuments(MigrateBase):
 
     def get_document_geometry_archive(self, document_in, version):
         doc = self.get_document_geometry(document_in, version)
-        doc['id'] = document_in.document_archive_id
-        return doc
+        if doc is not None:
+            doc['id'] = document_in.document_archive_id
+            return doc
 
     @abc.abstractmethod
     def get_document_locale(self, document_in, version):
@@ -142,9 +143,11 @@ class MigrateDocuments(MigrateBase):
                 else:
                     document_archive = self.get_document_archive(
                         document_in, version)
+                    # do not migrate any empty geom for non geom types
                     geometry_archive = self.get_document_geometry_archive(
                             document_in, version)
-                    geometry_archives.append(geometry_archive)
+                    if geometry_archive is not None:
+                        geometry_archives.append(geometry_archive)
                 archives.append(document_archive)
 
                 if document_in.is_latest_version:
@@ -161,8 +164,10 @@ class MigrateDocuments(MigrateBase):
                             document_in, version)
                         geometry = self.get_document_geometry(
                                 document_in, version)
-                        batch.add_geometry(geometry)
-                    batch.add_geometry_archives(geometry_archives)
+                        # do not migrate any empty geom for non geom types
+                        if geometry is not None:
+                            batch.add_geometry(geometry)
+                            batch.add_geometry_archives(geometry_archives)
                     batch.add_archive_documents(archives)
                     batch.add_document(document)
 
