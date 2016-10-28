@@ -333,9 +333,7 @@ def _add_associations(
                 'body', 'associations.' + document_key,
                 'invalid association type')
         else:
-            if main_document_type == 'b':  # book is always main=parent?
-                is_parent = False
-            elif document_key == 'waypoints':
+            if document_key == 'waypoints' and main_document_type != BOOK_TYPE:
                 is_parent = True
             elif document_key == 'waypoint_children':
                 is_parent = False
