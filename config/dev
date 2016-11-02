@@ -1,7 +1,13 @@
+instanceid ?= dev
+base_url ?= /${instanceid}
+ui_url ?= http://localhost:6553
+
 include Makefile
 
-host = c2corgv6-demo.gis.internal
-export recaptcha_secret_key = 6LdWkR4TAAAAALcZLh54HFlAWFHiMQhZR5jR4p3F
+export db_name = c2corg_${instanceid}
+export tests_db_name = c2corg_${instanceid}_tests
+export elasticsearch_index = c2corg_${instanceid}
+export tests_elasticsearch_index = c2corg_${instanceid}_tests
 
 export redis_db_queue = 6
 export redis_db_cache = 7
