@@ -71,6 +71,7 @@ class TestArticleRest(BaseDocumentTestRest):
         self.assertIn('images', associations)
         self.assertIn('waypoints', associations)
         self.assertIn('routes', associations)
+        self.assertIn('reports', associations)
         self.assertIn('users', associations)
 
         linked_articles = associations.get('articles')
