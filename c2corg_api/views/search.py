@@ -3,6 +3,7 @@ from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.report import REPORT_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
@@ -14,6 +15,7 @@ from c2corg_api.views.article import article_documents_config
 from c2corg_api.views.book import book_documents_config
 from c2corg_api.views.image import image_documents_config
 from c2corg_api.views.outing import outing_documents_config
+from c2corg_api.views.report import report_documents_config
 from c2corg_api.views.route import route_documents_config
 from c2corg_api.views.topo_map import topo_map_documents_config
 from c2corg_api.views.user_profile import user_profile_documents_config
@@ -64,6 +66,9 @@ class SearchRest(object):
         search_types = []
         if self._include_type(WAYPOINT_TYPE, types_to_include):
             search_types.append(('waypoints', waypoint_documents_config))
+
+        if self._include_type(REPORT_TYPE, types_to_include):
+            search_types.append(('reports', report_documents_config))
 
         if self._include_type(ROUTE_TYPE, types_to_include):
             search_types.append(('routes', route_documents_config))
