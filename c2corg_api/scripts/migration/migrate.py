@@ -40,6 +40,7 @@ from c2corg_api.scripts.migration.documents.waypoints.summit import \
     MigrateSummits
 from c2corg_api.scripts.migration.sequences import UpdateSequences
 from c2corg_api.scripts.migration.init_feed import InitFeed
+from c2corg_api.scripts.migration.mailinglists import MigrateMailinglists
 
 
 # no-op function referenced from `migration.ini` (required for
@@ -86,6 +87,7 @@ def main(argv=sys.argv):
     SetDefaultGeometries(connection_source, session, batch_size).migrate()
     MigrateAreaAssociations(connection_source, session, batch_size).migrate()
     MigrateMapAssociations(connection_source, session, batch_size).migrate()
+    MigrateMailinglists(connection_source, session, batch_size).migrate()
     UpdateSequences(connection_source, session, batch_size).migrate()
     InitFeed(connection_source, session, batch_size).migrate()
 

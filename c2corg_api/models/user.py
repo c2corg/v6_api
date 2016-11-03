@@ -13,12 +13,13 @@ from sqlalchemy import (
 
 from colanderalchemy import SQLAlchemySchemaNode
 
-from c2corg_api.models import Base, users_schema, schema, enums
+from c2corg_api.models import Base, users_schema, schema, sympa_schema, enums
 
 import colander
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import ForeignKey
+from sqlalchemy import event, DDL
 
 from enum import Enum
 
@@ -172,3 +173,24 @@ schema_create_user = SQLAlchemySchemaNode(
             'validator': colander.OneOf(default_langs)
         }
     })
+
+# Make sure that user email changes are propagated to mailing lists as well
+trigger_ddl = DDL("""
+CREATE OR REPLACE FUNCTION users.update_mailinglists_email() RETURNS TRIGGER AS
+$BODY$
+BEGIN
+  UPDATE """ + sympa_schema + """.subscriber_table
+  SET user_subscriber = NEW.email
+  WHERE user_subscriber = OLD.email;
+  RETURN null;
+END;
+$BODY$
+language plpgsql;
+
+CREATE TRIGGER users_email_update
+AFTER UPDATE ON users.user
+FOR EACH ROW
+WHEN (OLD.email IS DISTINCT FROM NEW.email)
+EXECUTE PROCEDURE users.update_mailinglists_email();
+""")
+event.listen(User.__table__, 'after_create', trigger_ddl)
