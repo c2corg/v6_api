@@ -105,7 +105,11 @@ def _get_sitemap_index():
     for doc_type, count in document_locales_per_type:
         num_sitemaps = ceil(count / PAGES_PER_SITEMAP)
         sitemaps_for_type = [
-            '/sitemaps/{}/{}'.format(doc_type, i)
+            {
+                'url': '/sitemaps/{}/{}'.format(doc_type, i),
+                'doc_type': doc_type,
+                'i': i
+            }
             for i in range(0, num_sitemaps)
             ]
         sitemaps.extend(sitemaps_for_type)

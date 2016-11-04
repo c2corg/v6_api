@@ -41,8 +41,12 @@ class TestSitemapRest(BaseTestRest):
         body = response.json
 
         sitemaps = body['sitemaps']
-        self.assertIn('/sitemaps/w/0', sitemaps)
-        self.assertIn('/sitemaps/r/0', sitemaps)
+        self.assertIsNotNone(
+            next(filter(lambda s: s['url'] == '/sitemaps/w/0', sitemaps), None)
+        )
+        self.assertIsNotNone(
+            next(filter(lambda s: s['url'] == '/sitemaps/r/0', sitemaps), None)
+        )
 
     def test_get_sitemap_invalid_doc_type(self):
         response = self.app.get(self._prefix + '/z/0', status=400)
