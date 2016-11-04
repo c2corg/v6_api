@@ -473,6 +473,38 @@ class TestWaypointRest(BaseDocumentTestRest):
             '"swimming-pool" is not one of'))
         self.assertEqual(errors[0].get('name'), 'waypoint_type')
 
+    def test_post_empty_assoc_in_new_w_document(self):
+        body = {
+            'document_id': 0,
+            'version': 2345,
+            'geometry': {
+                'document_id': 5678, 'version': 6789,
+                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
+                'geom_detail':
+                    '{"type": "Point", "coordinates": [635956, 5723604]}'
+            },
+            'waypoint_type': 'summit',
+            'elevation': 3779,
+            'locales': [
+                {'id': 3456, 'version': 4567,
+                'lang': 'en', 'title': 'Mont Pourri',
+                'access': 'y'}
+            ],
+            'associations': {
+                 'waypoints': [],
+                 'waypoint_children': [],
+                 'routes': [],
+                 'all_routes': {'total': 0, 'documents': []},
+                 'users': [],
+                 'recent_outings': {'total': 0, 'documents': []},
+                 'articles': [],
+                 'images': [],
+                 'areas': []
+            }
+        }
+
+        body, doc = self.post_success(body, user='moderator')
+
     def test_post_success(self):
         body = {
             'document_id': 1234,
@@ -485,10 +517,10 @@ class TestWaypointRest(BaseDocumentTestRest):
             },
             'waypoint_type': 'summit',
             'elevation': 3779,
-            'locales': [
-                {'id': 3456, 'version': 4567,
-                 'lang': 'en', 'title': 'Mont Pourri',
-                 'access': 'y'}
+            'locales': [{
+                'id': 3456, 'version': 4567,
+                'lang': 'en', 'title': 'Mont Pourri',
+                'access': 'y'}
             ],
             'associations': {
                 'waypoint_children': [
