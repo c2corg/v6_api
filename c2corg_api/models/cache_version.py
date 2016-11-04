@@ -357,6 +357,9 @@ def update_cache_version_for_map(topo_map):
 def update_cache_version_associations(
         added_associations, removed_associations, ignore_document_id=None):
     changed_associations = added_associations + removed_associations
+    if not changed_associations:
+        return
+
     documents_to_update = set()
     waypoints_to_update = set()
     routes_to_update = set()
