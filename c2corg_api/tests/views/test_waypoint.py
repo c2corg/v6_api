@@ -485,8 +485,8 @@ class TestWaypointRest(BaseDocumentTestRest):
             },
             'waypoint_type': 'summit',
             'elevation': 3779,
-            'locales': [
-                {'id': 3456, 'version': 4567,
+            'locales': [{
+                'id': 3456, 'version': 4567,
                 'lang': 'en', 'title': 'Mont Pourri',
                 'access': 'y'}
             ],

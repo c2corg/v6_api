@@ -354,7 +354,8 @@ class TestArticleRest(BaseDocumentTestRest):
                     ],
                     'articles': [
                         {'document_id': self.article2.document_id}
-                    ]
+                    ],
+                    'images': []
                 },
                 'geometry': {
                     'geom':
