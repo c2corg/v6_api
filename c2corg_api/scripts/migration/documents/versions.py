@@ -49,13 +49,20 @@ versions_query_count =\
 
 versions_query =\
     'select ' \
+    '   t.documents_versions_id, t.document_id, t.culture, ' \
+    '   t.document_archive_id, t.document_i18n_archive_id, ' \
+    '   t.history_metadata_id, ' \
+    '   (a.geom is not null) as has_geom ' \
+    'from (select ' \
     '   v.documents_versions_id, v.document_id, v.culture, ' \
     '   v.document_archive_id, v.document_i18n_archive_id, ' \
     '   v.history_metadata_id ' \
     'from app_documents_versions v ' \
     '   inner join (' + tables_union + \
     '   ) u on u.id = v.document_id and u.redirects_to is null ' \
-    'group by v.documents_versions_id;'
+    ' group by v.documents_versions_id) t ' \
+    ' inner join app_documents_archives a ' \
+    ' on a.document_archive_id = t.document_archive_id;'
 
 
 class MigrateVersions(MigrateBase):
@@ -128,7 +135,8 @@ class MigrateVersions(MigrateBase):
             lang=row.culture,
             document_archive_id=row.document_archive_id,
             document_locales_archive_id=row.document_i18n_archive_id,
-            document_geometry_archive_id=row.document_archive_id,
+            document_geometry_archive_id=row.document_archive_id
+            if row.has_geom else None,
             history_metadata_id=row.history_metadata_id
         )
 
