@@ -9,8 +9,8 @@ export tests_db_name = c2corg_demo_tests
 export elasticsearch_index = c2corg_demo
 export tests_elasticsearch_index = c2corg_demo_tests
 
-export image_backend_url = http://images.demov6.camptocamp.org
-export discourse_url = http://forum.demov6.camptocamp.org
+export image_backend_url = https://images.demov6.camptocamp.org
+export discourse_url = https://forum.demov6.camptocamp.org
 
 # FIXME
 export discourse_sso_secret = d836444a9e4084d5b224a60c208dce14
