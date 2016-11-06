@@ -88,7 +88,7 @@ class TestUserFilterPreferencesRest(BaseTestRest):
         self.assertCorniceRequired(
             self.get_error(errors, 'areas.0.document_id'),
             'areas.0.document_id')
-        self.assertCorniceMissing(
+        self.assertCorniceRequired(
             self.get_error(errors, 'followed_only'), 'followed_only')
 
     def test_post_preferences(self):

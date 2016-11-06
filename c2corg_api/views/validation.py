@@ -19,7 +19,7 @@ from dateutil import parser as datetime_parser
 
 
 def create_int_validator(field):
-    def validator(request):
+    def validator(request, **kwargs):
         try:
             request.validated[field] = int(request.matchdict[field])
         except ValueError:
@@ -40,7 +40,7 @@ def validate_lang_(lang, request):
             request.errors.add('querystring', 'lang', 'invalid lang')
 
 
-def validate_lang(request):
+def validate_lang(request, **kwargs):
     """Checks if the language given in the url as match-parameter
     is correct (".../{lang}").
     """
@@ -48,7 +48,7 @@ def validate_lang(request):
     validate_lang_(lang, request)
 
 
-def validate_lang_param(request):
+def validate_lang_param(request, **kwargs):
     """Checks if the language given in the url as GET parameter
     is correct ("...?l=...").
     """
@@ -56,7 +56,7 @@ def validate_lang_param(request):
     validate_lang_(lang, request)
 
 
-def validate_preferred_lang_param(request):
+def validate_preferred_lang_param(request, **kwargs):
     """Checks if the preferred language given in the url as GET parameter
     is correct ("...?pl=...").
     """
@@ -121,7 +121,7 @@ def check_get_for_integer_property(request, key, required):
         request.errors.add('querystring', key, 'invalid ' + key)
 
 
-def validate_pagination(request):
+def validate_pagination(request, **kwargs):
     """
     Checks if a given optional offset is an integer and
     if a given optional limit is an integer.
@@ -130,7 +130,7 @@ def validate_pagination(request):
     check_get_for_integer_property(request, 'limit', False)
 
 
-def validate_token_pagination(request):
+def validate_token_pagination(request, **kwargs):
     """
     Validate token pagination parameters (limit and token) for feed.
     """
@@ -138,7 +138,7 @@ def validate_token_pagination(request):
     validate_token(request)
 
 
-def validate_user_id(request):
+def validate_user_id(request, **kwargs):
     """
     Checks for a required user id parameter.
     """
@@ -154,7 +154,7 @@ def parse_datetime(time_raw):
         return None
 
 
-def validate_token(request):
+def validate_token(request, **kwargs):
     if request.GET.get('token'):
         token = request.GET.get('token')
 
@@ -191,7 +191,7 @@ def validate_required_json_string(key, request):
         request.errors.add('body', key, 'Invalid')
 
 
-def validate_associations(document_type, is_on_create, request):
+def validate_associations(document_type, is_on_create, request, **kwargs):
     if is_on_create:
         associations_in = request.validated.get('associations', None)
     else:

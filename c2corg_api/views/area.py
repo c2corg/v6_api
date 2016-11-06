@@ -9,6 +9,7 @@ from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import area_documents_config
 from c2corg_common.fields_area import fields_area
 from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
 
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update
@@ -40,7 +41,10 @@ class AreaRest(DocumentRest):
 
     @restricted_json_view(
             schema=schema_create_area,
-            validators=[validate_area_create, validate_associations_create],
+            validators=[
+                colander_body_validator,
+                validate_area_create,
+                validate_associations_create],
             permission='moderator')
     def collection_post(self):
         return self._collection_post(
@@ -48,8 +52,11 @@ class AreaRest(DocumentRest):
 
     @restricted_json_view(
             schema=schema_update_area,
-            validators=[validate_id, validate_area_update,
-                        validate_associations_update])
+            validators=[
+                colander_body_validator,
+                validate_id,
+                validate_area_update,
+                validate_associations_update])
     def put(self):
         if not self.request.has_permission('moderator'):
             # the geometry of areas should not be modifiable for non-moderators

@@ -42,7 +42,7 @@ def http_error_handler(exc, request):
             "status": "error",
             "errors": [
                 {
-                    "location": "request",
+                    "location": "body",
                     "name": "Not Found",
                     "description": "document not found"
                 }
@@ -53,18 +53,18 @@ def http_error_handler(exc, request):
         # if it is an error from Cornice, just return it
         return exc
 
-    errors = Errors(request, exc.code)
-    errors.add('request', exc.title, exc.detail)
+    request.errors = Errors(exc.code)
+    request.errors.add('body', exc.title, exc.detail)
 
-    return json_error(errors)
+    return json_error(request)
 
 
 @view_config(context=AccountNotValidated)
 def account_error_handler(exc, request):
-    errors = Errors(request, 400)
-    errors.add('request', 'Error', exc.args)
+    request.errors = Errors(400)
+    request.errors.add('body', 'Error', exc.args)
 
-    return json_error(errors)
+    return json_error(request)
 
 
 def json_view(**kw):

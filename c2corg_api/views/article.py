@@ -10,6 +10,7 @@ from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_common.fields_article import fields_article
 from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
 
 from c2corg_api.views.document_schemas import article_documents_config
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
@@ -41,16 +42,20 @@ class ArticleRest(DocumentRest):
 
     @restricted_json_view(
             schema=schema_create_article,
-            validators=[validate_article_create,
-                        validate_associations_create])
+            validators=[
+                colander_body_validator,
+                validate_article_create,
+                validate_associations_create])
     def collection_post(self):
         return self._collection_post(schema_article)
 
     @restricted_json_view(
             schema=schema_update_article,
-            validators=[validate_id,
-                        validate_article_update,
-                        validate_associations_update])
+            validators=[
+                colander_body_validator,
+                validate_id,
+                validate_article_update,
+                validate_associations_update])
     def put(self):
         return self._put(Article, schema_article)
 

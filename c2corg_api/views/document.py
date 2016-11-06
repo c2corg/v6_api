@@ -516,15 +516,17 @@ def make_validator_create(
     """Returns a validator function used for the creation of documents.
     """
     if type_field is None or valid_type_values is None:
-        def f(request):
+        def f(request, **kwargs):
             document = request.validated
-            validate_document(document, request, fields, updating=False)
+            if document:
+                validate_document(document, request, fields, updating=False)
     else:
-        def f(request):
+        def f(request, **kwargs):
             document = request.validated
-            validate_document_for_type(
-                document, request, fields, type_field, valid_type_values,
-                updating=False)
+            if document:
+                validate_document_for_type(
+                    document, request, fields, type_field, valid_type_values,
+                    updating=False)
     return f
 
 
@@ -532,12 +534,12 @@ def make_validator_update(fields, type_field=None, valid_type_values=None):
     """Returns a validator function used for updating documents.
     """
     if type_field is None or valid_type_values is None:
-        def f(request):
+        def f(request, **kwargs):
             document = request.validated.get('document')
             if document:
                 validate_document(document, request, fields, updating=True)
     else:
-        def f(request):
+        def f(request, **kwargs):
             document = request.validated.get('document')
             if document:
                 validate_document_for_type(

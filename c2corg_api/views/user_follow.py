@@ -10,6 +10,7 @@ from c2corg_api.views.validation import validate_id, \
     validate_preferred_lang_param
 from colander import MappingSchema, SchemaNode, Integer, required
 from cornice.resource import resource
+from cornice.validators import colander_body_validator
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class FollowSchema(MappingSchema):
     user_id = SchemaNode(Integer(), missing=required)
 
 
-def validate_user_id(request):
+def validate_user_id(request, **kwargs):
     """ Check that the user exists.
     """
     user_id = request.validated['user_id']
@@ -46,7 +47,9 @@ class UserFollowRest(object):
     def __init__(self, request):
         self.request = request
 
-    @restricted_json_view(schema=FollowSchema(), validators=[validate_user_id])
+    @restricted_json_view(
+        schema=FollowSchema(),
+        validators=[colander_body_validator, validate_user_id])
     def post(self):
         """ Follow the given user.
         Creates a follower relation, so that the authenticated user is
@@ -79,7 +82,9 @@ class UserUnfollowRest(object):
     def __init__(self, request):
         self.request = request
 
-    @restricted_json_view(schema=FollowSchema(), validators=[validate_user_id])
+    @restricted_json_view(
+        schema=FollowSchema(),
+        validators=[colander_body_validator, validate_user_id])
     def post(self):
         """ Unfollow the given user.
 

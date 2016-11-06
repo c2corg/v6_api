@@ -7,6 +7,7 @@ from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import topo_map_documents_config
 from c2corg_common.fields_topo_map import fields_topo_map
 from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
 
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update
@@ -31,16 +32,17 @@ class TopoMapRest(DocumentRest):
         return self._get(TopoMap, schema_topo_map)
 
     @restricted_json_view(
-            schema=schema_topo_map, validators=validate_map_create,
-            permission='moderator')
+        schema=schema_topo_map,
+        validators=[colander_body_validator, validate_map_create],
+        permission='moderator')
     def collection_post(self):
         return self._collection_post(
             schema_topo_map, after_add=insert_associations)
 
     @restricted_json_view(
-            schema=schema_update_topo_map,
-            validators=[validate_id, validate_map_update],
-            permission='moderator')
+        schema=schema_update_topo_map,
+        validators=[colander_body_validator, validate_id, validate_map_update],
+        permission='moderator')
     def put(self):
         return self._put(
             TopoMap, schema_topo_map, after_update=update_associations)

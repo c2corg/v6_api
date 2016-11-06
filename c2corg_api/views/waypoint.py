@@ -13,6 +13,7 @@ from c2corg_api.views.document_schemas import waypoint_documents_config, \
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.route import set_route_title_prefix
 from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
 
 from c2corg_api.models.waypoint import (
     Waypoint, schema_waypoint, schema_update_waypoint,
@@ -139,8 +140,10 @@ class WaypointRest(DocumentRest):
             set_custom_associations=set_custom_associations)
 
     @restricted_json_view(schema=schema_create_waypoint,
-                          validators=[validate_waypoint_create,
-                                      validate_associations_create])
+                          validators=[
+                              colander_body_validator,
+                              validate_waypoint_create,
+                              validate_associations_create])
     def collection_post(self):
         """
         Create a new document.
@@ -174,9 +177,11 @@ class WaypointRest(DocumentRest):
         return self._collection_post(schema_waypoint)
 
     @restricted_json_view(schema=schema_update_waypoint,
-                          validators=[validate_id,
-                                      validate_waypoint_update,
-                                      validate_associations_update])
+                          validators=[
+                              colander_body_validator,
+                              validate_id,
+                              validate_waypoint_update,
+                              validate_associations_update])
     def put(self):
         """
         Update a document.

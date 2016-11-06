@@ -20,6 +20,7 @@ from c2corg_api.views import (
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.validation import validate_required_json_string
 from cornice.resource import resource
+from cornice.validators import colander_body_validator
 from functools import partial
 from pyramid.httpexceptions import HTTPInternalServerError
 from pyramid.settings import asbool
@@ -32,7 +33,7 @@ VALIDATION_EXPIRE_DAYS = 3
 MINIMUM_PASSWORD_LENGTH = 3
 
 
-def validate_json_password(request):
+def validate_json_password(request, **kwargs):
     """Checks if the password was given and encodes it.
        This is done here as the password is not an SQLAlchemy field.
        In addition, we can ensure the password is not leaked in the
@@ -62,7 +63,7 @@ def is_unused_user_attribute(attrname, value):
     return DBSession.query(User).filter(attr == value).count() == 0
 
 
-def validate_unique_attribute(attrname, request):
+def validate_unique_attribute(attrname, request, **kwargs):
     """Checks if the given attribute is unique.
     """
 
@@ -74,7 +75,7 @@ def validate_unique_attribute(attrname, request):
             request.errors.add('body', attrname, 'already used ' + attrname)
 
 
-def validate_captcha(request):
+def validate_captcha(request, **kwargs):
     """Validate the recaptcha sent by UI.
     """
 
@@ -117,12 +118,15 @@ class UserRegistrationRest(object):
     def __init__(self, request):
         self.request = request
 
-    @json_view(schema=schema_create_user, validators=[
-        validate_json_password,
-        partial(validate_unique_attribute, "email"),
-        partial(validate_unique_attribute, "username"),
-        partial(validate_unique_attribute, "forum_username"),
-        validate_captcha])
+    @json_view(
+        schema=schema_create_user,
+        validators=[
+            colander_body_validator,
+            validate_json_password,
+            partial(validate_unique_attribute, "email"),
+            partial(validate_unique_attribute, "username"),
+            partial(validate_unique_attribute, "forum_username"),
+            validate_captcha])
     def post(self):
         user = schema_create_user.objectify(self.request.validated)
         user.password = self.request.validated['password']
@@ -159,7 +163,7 @@ class UserRegistrationRest(object):
         return to_json_dict(user, schema_user)
 
 
-def validate_user_from_nonce(purpose, request):
+def validate_user_from_nonce(purpose, request, **kwargs):
     nonce = request.matchdict['nonce']
     if nonce is None:
         request.errors.add('querystring', 'nonce', 'missing nonce')
@@ -223,7 +227,7 @@ class UserValidateNewPasswordRest(object):
             return None
 
 
-def validate_required_user_from_email(request):
+def validate_required_user_from_email(request, **kwargs):
     validate_required_json_string("email", request)
     if len(request.errors) != 0:
         return
@@ -376,7 +380,9 @@ class UserLoginRest(object):
     def __init__(self, request):
         self.request = request
 
-    @json_view(schema=login_schema, validators=[validate_json_password])
+    @json_view(
+        schema=login_schema,
+        validators=[colander_body_validator, validate_json_password])
     def post(self):
         request = self.request
         username = request.validated['username']

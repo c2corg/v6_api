@@ -6,6 +6,7 @@ from c2corg_api.models.user_profile import schema_update_user_profile, \
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import user_profile_documents_config
 from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
 
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
@@ -53,7 +54,7 @@ class UserProfileRest(DocumentRest):
 
     @restricted_json_view(
             schema=schema_update_user_profile,
-            validators=[validate_id])
+            validators=[colander_body_validator, validate_id])
     def put(self):
         if not self.request.has_permission('moderator'):
             # moderators can change the profile of every user

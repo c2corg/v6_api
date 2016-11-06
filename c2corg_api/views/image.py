@@ -11,6 +11,7 @@ from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import image_documents_config
 from c2corg_common.fields_image import fields_image
 from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
 
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, validate_document
@@ -39,11 +40,11 @@ def check_filename_unique(image, request, updating):
 
 def make_validator_filename_unique(updating):
     if updating:
-        def f(request):
+        def f(request, **kwargs):
             image = request.validated
             check_filename_unique(image, request, updating=True)
     else:
-        def f(request):
+        def f(request, **kwargs):
             image = request.validated
             check_filename_unique(image, request, updating=False)
     return f
@@ -57,14 +58,14 @@ validate_filename_create = make_validator_filename_unique(updating=False)
 validate_filename_update = make_validator_filename_unique(updating=True)
 
 
-def validate_image_create(request):
-    base_validate_image_create(request)
-    validate_filename_create(request)
+def validate_image_create(request, **kwargs):
+    base_validate_image_create(request, **kwargs)
+    validate_filename_create(request, **kwargs)
 
 
-def validate_image_update(request):
-    base_validate_image_update(request)
-    validate_filename_update(request)
+def validate_image_update(request, **kwargs):
+    base_validate_image_update(request, **kwargs)
+    validate_filename_update(request, **kwargs)
 
 
 validate_associations_create = functools.partial(
@@ -73,14 +74,14 @@ validate_associations_update = functools.partial(
     validate_associations, IMAGE_TYPE, False)
 
 
-def validate_list_image_create(request):
+def validate_list_image_create(request, **kwargs):
     for image in request.validated['images']:
         validate_document(image, request, fields_image.get('required'),
                           updating=False)
         check_filename_unique(image, request, updating=False)
 
 
-def validate_list_associations_create(request):
+def validate_list_associations_create(request, **kwargs):
     for document in request.validated['images']:
         associations_in = document.get('associations', None)
         if not associations_in:
@@ -119,7 +120,10 @@ class ImageRest(DocumentRest):
 
     @restricted_json_view(
             schema=schema_create_image,
-            validators=[validate_image_create, validate_associations_create])
+            validators=[
+                colander_body_validator,
+                validate_image_create,
+                validate_associations_create])
     def collection_post(self):
         document_in = self.request.validated
         document = create_image(self, document_in)
@@ -127,9 +131,11 @@ class ImageRest(DocumentRest):
 
     @restricted_json_view(
             schema=schema_update_image,
-            validators=[validate_id,
-                        validate_image_update,
-                        validate_associations_update])
+            validators=[
+                colander_body_validator,
+                validate_id,
+                validate_image_update,
+                validate_associations_update])
     def put(self):
         if not self.request.has_permission('moderator'):
             image_id = self.request.validated['id']
@@ -158,8 +164,10 @@ class ImageListRest(DocumentRest):
 
     @restricted_json_view(
             schema=schema_create_image_list,
-            validators=[validate_list_image_create,
-                        validate_list_associations_create])
+            validators=[
+                colander_body_validator,
+                validate_list_image_create,
+                validate_list_associations_create])
     def collection_post(self):
         images_in = self.request.validated['images']
 
@@ -184,14 +192,14 @@ class ImageInfoRest(DocumentInfoRest):
         return self._get_document_info(Image)
 
 
-def validate_size(request):
+def validate_size(request, **kwargs):
     """Checks if size is one of the available sizes.
     """
     size = request.GET.get('size', None)
     if size in (None, 'SI', 'MI', 'BI'):
         request.validated['size'] = size
     else:
-        request.errors.add('queryparams', 'size', 'invalid size')
+        request.errors.add('querystring', 'size', 'invalid size')
 
 
 @resource(path='/images/proxy/{id}', cors_policy=cors_policy)

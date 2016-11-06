@@ -100,11 +100,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 {'lang': 'en'}
             ]
         }
-        body = self.post_missing_title(body_post, user='moderator')
-        errors = body.get('errors')
-        self.assertEqual(len(errors), 2)
-        self.assertCorniceRequired(errors[0], 'locales.0.title')
-        self.assertCorniceRequired(errors[1], 'locales')
+        self.post_missing_title(body_post, user='moderator')
 
     def test_post_non_whitelisted_attribute(self):
         body = {

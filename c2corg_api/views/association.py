@@ -7,6 +7,7 @@ from c2corg_api.scripts.es import sync
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_common.associations import valid_associations
 from cornice.resource import resource
+from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest
 
 from c2corg_api.views import cors_policy, restricted_json_view
@@ -15,7 +16,7 @@ from c2corg_api.models.association import schema_association, \
 from sqlalchemy.sql.expression import exists
 
 
-def validate_association(request):
+def validate_association(request, **kwargs):
     """Check if the given documents exist and if an association between the
     two document types is valid.
     """
@@ -56,7 +57,8 @@ class AssociationRest(object):
         self.request = request
 
     @restricted_json_view(
-        schema=schema_association, validators=[validate_association])
+        schema=schema_association,
+        validators=[colander_body_validator, validate_association])
     def collection_post(self):
         association = schema_association.objectify(self.request.validated)
         association.parent_document_type = \
@@ -86,7 +88,8 @@ class AssociationRest(object):
 
         return {}
 
-    @restricted_json_view(schema=schema_association)
+    @restricted_json_view(
+        schema=schema_association, validators=[colander_body_validator])
     def collection_delete(self):
         association_in = schema_association.objectify(self.request.validated)
 

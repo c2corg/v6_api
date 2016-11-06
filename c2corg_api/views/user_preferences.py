@@ -7,6 +7,7 @@ from c2corg_api.views import cors_policy, restricted_json_view, \
 from c2corg_api.views.validation import validate_preferred_lang_param
 from c2corg_common.attributes import activities
 from cornice.resource import resource
+from cornice.validators import colander_body_validator
 from colander import MappingSchema, SchemaNode, String, Boolean, Sequence, \
     OneOf, required
 from sqlalchemy.orm import joinedload, load_only
@@ -78,7 +79,8 @@ class UserFilterPreferencesRest(object):
             ]
         }
 
-    @restricted_json_view(schema=FilterPreferencesSchema())
+    @restricted_json_view(
+        schema=FilterPreferencesSchema(), validators=[colander_body_validator])
     def post(self):
         user = self.get_user(with_area_locales=False)
 
