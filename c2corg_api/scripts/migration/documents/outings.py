@@ -127,7 +127,8 @@ class MigrateOutings(MigrateDocuments):
         )
 
     def get_document_locale(self, document_in, version):
-        description, summary = self.extract_summary(document_in.description)
+        description = self.convert_tags(document_in.description)
+        description, summary = self.extract_summary(description)
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
@@ -137,17 +138,17 @@ class MigrateOutings(MigrateDocuments):
             title=document_in.name,
             description=description,
             summary=summary,
-            access_comment=document_in.access_comments,
-            avalanches=document_in.avalanche_desc,
-            route_description=document_in.outing_route_desc,
-            conditions=document_in.conditions,
+            access_comment=self.convert_tags(document_in.access_comments),
+            avalanches=self.convert_tags(document_in.avalanche_desc),
+            route_description=self.convert_tags(document_in.outing_route_desc),
+            conditions=self.convert_tags(document_in.conditions),
             conditions_levels=php_to_json(
                 document_in.conditions_levels,
                 document_in.document_i18n_archive_id),
-            hut_comment=document_in.hut_comments,
-            participants=document_in.participants,
-            timing=document_in.timing,
-            weather=document_in.weather
+            hut_comment=self.convert_tags(document_in.hut_comments),
+            participants=self.convert_tags(document_in.participants),
+            timing=self.convert_tags(document_in.timing),
+            weather=self.convert_tags(document_in.weather)
         )
 
     access_conditions = {

@@ -81,7 +81,8 @@ class MigrateHuts(MigrateWaypoints):
         )
 
     def get_document_locale(self, document_in, version):
-        description, summary = self.extract_summary(document_in.description)
+        description = self.convert_tags(document_in.description)
+        description, summary = self.extract_summary(description)
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
@@ -91,8 +92,8 @@ class MigrateHuts(MigrateWaypoints):
             title=document_in.name,
             description=description,
             summary=summary,
-            access=document_in.pedestrian_access,
-            access_period=document_in.staffed_period
+            access=self.convert_tags(document_in.pedestrian_access),
+            access_period=self.convert_tags(document_in.staffed_period)
         )
 
     def get_custodianship(self, document_in):

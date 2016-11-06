@@ -73,7 +73,8 @@ class MigrateParkings(MigrateWaypoints):
         )
 
     def get_document_locale(self, document_in, version):
-        description, summary = self.extract_summary(document_in.description)
+        description = self.convert_tags(document_in.description)
+        description, summary = self.extract_summary(description)
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
@@ -82,10 +83,11 @@ class MigrateParkings(MigrateWaypoints):
             lang=document_in.culture,
             title=document_in.name,
             description=self.merge_text(
-                description, document_in.accommodation),
+                description, self.convert_tags(document_in.accommodation)),
             summary=summary,
-            access=document_in.public_transportation_description,
-            access_period=document_in.snow_clearance_comment
+            access=self.convert_tags(
+                document_in.public_transportation_description),
+            access_period=self.convert_tags(document_in.snow_clearance_comment)
         )
 
     public_transportation_ratings = {
