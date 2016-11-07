@@ -12,6 +12,7 @@ from c2corg_api.views.user import is_unused_user_attribute, ENCODING, \
     VALIDATION_EXPIRE_DAYS
 from c2corg_common.attributes import default_langs
 from cornice.resource import resource
+from cornice.validators import colander_body_validator
 from functools import partial
 from pyramid.httpexceptions import HTTPInternalServerError
 
@@ -31,7 +32,8 @@ class UserPreferredLanguageRest(object):
     def __init__(self, request):
         self.request = request
 
-    @restricted_json_view(renderer='json', schema=schema)
+    @restricted_json_view(
+        renderer='json', schema=schema, validators=[colander_body_validator])
     def post(self):
         request = self.request
         userid = request.authenticated_userid
@@ -99,7 +101,10 @@ class UserAccountRest(object):
             'is_profile_public': user.is_profile_public
         }
 
-    @restricted_json_view(renderer='json', schema=updateschema)
+    @restricted_json_view(
+        renderer='json',
+        schema=updateschema,
+        validators=[colander_body_validator])
     def post(self):
         user = self.get_user()
         request = self.request

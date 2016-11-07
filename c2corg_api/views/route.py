@@ -12,6 +12,7 @@ from c2corg_api.views.document_schemas import route_documents_config, \
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.models.utils import get_mid_point
 from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
 
 from c2corg_api.models.route import Route, schema_route, schema_update_route, \
     ArchiveRoute, ArchiveRouteLocale, RouteLocale, ROUTE_TYPE, \
@@ -37,7 +38,7 @@ validate_associations_update = functools.partial(
     validate_associations, ROUTE_TYPE, False)
 
 
-def validate_main_waypoint(is_on_create, request):
+def validate_main_waypoint(is_on_create, request, **kwargs):
     """ Check that the document given as main waypoint is also listed as
     association.
     """
@@ -78,9 +79,11 @@ class RouteRest(DocumentRest):
 
     @restricted_json_view(
         schema=schema_create_route,
-        validators=[validate_route_create,
-                    validate_associations_create,
-                    functools.partial(validate_main_waypoint, True)])
+        validators=[
+            colander_body_validator,
+            validate_route_create,
+            validate_associations_create,
+            functools.partial(validate_main_waypoint, True)])
     def collection_post(self):
         return self._collection_post(
             schema_route, before_add=set_default_geometry,
@@ -88,10 +91,12 @@ class RouteRest(DocumentRest):
 
     @restricted_json_view(
         schema=schema_update_route,
-        validators=[validate_id,
-                    validate_route_update,
-                    validate_associations_update,
-                    functools.partial(validate_main_waypoint, False)])
+        validators=[
+            colander_body_validator,
+            validate_id,
+            validate_route_update,
+            validate_associations_update,
+            functools.partial(validate_main_waypoint, False)])
     def put(self):
         old_main_waypoint_id = DBSession.query(Route.main_waypoint_id). \
             filter(Route.document_id == self.request.validated['id']).scalar()

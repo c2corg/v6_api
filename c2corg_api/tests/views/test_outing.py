@@ -194,9 +194,12 @@ class TestOutingRest(BaseDocumentTestRest):
         body = self.post_error({})
         errors = body.get('errors')
         self.assertEqual(len(errors), 5)
-        self.assertCorniceMissing(errors[0], 'activities')
-        self.assertCorniceMissing(errors[1], 'date_end')
-        self.assertCorniceMissing(errors[2], 'date_start')
+        self.assertCorniceRequired(
+            self.get_error(errors, 'activities'), 'activities')
+        self.assertCorniceRequired(
+            self.get_error(errors, 'date_end'), 'date_end')
+        self.assertCorniceRequired(
+            self.get_error(errors, 'date_start'), 'date_start')
         self.assertError(
             errors, 'associations.users', 'at least one user required')
         self.assertError(
@@ -213,10 +216,10 @@ class TestOutingRest(BaseDocumentTestRest):
             }
         })
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
+        self.assertEqual(len(errors), 3)
+        error = self.get_error(errors, 'activities')
         self.assertEqual(
-            errors[0].get('description'), 'Shorter than minimum length 1')
-        self.assertEqual(errors[0].get('name'), 'activities')
+            error.get('description'), 'Shorter than minimum length 1')
 
     def test_post_invalid_activity(self):
         body_post = {
@@ -271,8 +274,7 @@ class TestOutingRest(BaseDocumentTestRest):
         }
         body = self.post_missing_title(body_post)
         errors = body.get('errors')
-        self.assertEqual(len(errors), 2)
-        self.assertCorniceRequired(errors[1], 'locales')
+        self.assertEqual(len(errors), 3)
 
     def test_post_non_whitelisted_attribute(self):
         body = {

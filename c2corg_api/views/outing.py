@@ -19,6 +19,7 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
 from c2corg_common.attributes import activities
 from c2corg_common.fields_outing import fields_outing
 from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPForbidden
 from sqlalchemy.sql.expression import exists, and_
 
@@ -32,7 +33,7 @@ validate_associations_update = functools.partial(
     validate_associations, OUTING_TYPE, False)
 
 
-def validate_required_associations(request):
+def validate_required_associations(request, **kwargs):
     missing_user = False
     missing_route = False
 
@@ -72,10 +73,13 @@ class OutingRest(DocumentRest):
         return self._get(
             Outing, schema_outing, adapt_schema=outing_schema_adaptor)
 
-    @restricted_json_view(schema=schema_create_outing,
-                          validators=[validate_outing_create,
-                                      validate_associations_create,
-                                      validate_required_associations])
+    @restricted_json_view(
+        schema=schema_create_outing,
+        validators=[
+            colander_body_validator,
+            validate_outing_create,
+            validate_associations_create,
+            validate_required_associations])
     def collection_post(self):
         set_default_geom = functools.partial(
             set_default_geometry,
@@ -84,11 +88,14 @@ class OutingRest(DocumentRest):
         return self._collection_post(
             schema_outing, before_add=set_default_geom)
 
-    @restricted_json_view(schema=schema_update_outing,
-                          validators=[validate_id,
-                                      validate_outing_update,
-                                      validate_associations_update,
-                                      validate_required_associations])
+    @restricted_json_view(
+        schema=schema_update_outing,
+        validators=[
+            colander_body_validator,
+            validate_id,
+            validate_outing_update,
+            validate_associations_update,
+            validate_required_associations])
     def put(self):
         if not self.request.has_permission('moderator'):
             # moderators can change every outing

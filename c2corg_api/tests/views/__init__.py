@@ -587,7 +587,7 @@ class BaseDocumentTestRest(BaseTestRest):
         body = response.json
         self.assertEqual(body['status'], 'error')
         self.assertEqual(
-            body['errors'][0]['description'], 'document is missing')
+            body['errors'][0]['description'], 'Required')
 
     def put_missing_field(
             self, request_body, document, field, user='contributor'):

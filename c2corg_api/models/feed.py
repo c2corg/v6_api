@@ -15,7 +15,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.views.validation import association_keys
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.dialects.postgresql.base import ARRAY
+from sqlalchemy.dialects.postgresql.array import ARRAY
 from sqlalchemy.orm import relationship, column_property
 from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import select, text

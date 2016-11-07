@@ -287,10 +287,8 @@ class TestImageRest(BaseTestImage):
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
-        self.assertEqual(len(errors), 3)
-        self.assertCorniceMissing(errors[0], 'filename')
-        self.assertCorniceRequired(errors[1], 'locales')
-        self.assertCorniceRequired(errors[2], 'image_type')
+        self.assertEqual(len(errors), 1)
+        self.assertCorniceRequired(errors[0], 'filename')
 
     def test_get_info(self):
         body, locale = self.get_info(self.image, 'en')
@@ -332,7 +330,7 @@ class TestImageRest(BaseTestImage):
         del body_post['filename']
         body = self.post_error(body_post)
         errors = body.get('errors')
-        self.assertCorniceMissing(errors[0], 'filename')
+        self.assertCorniceRequired(errors[0], 'filename')
 
     def test_post_duplicated_filename(self):
         body_post = self._post_success_document()

@@ -7,6 +7,7 @@ from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.security.discourse_client import get_discourse_client
 
 from cornice.resource import resource
+from cornice.validators import colander_body_validator
 
 from c2corg_api.views import cors_policy, restricted_view
 
@@ -41,7 +42,7 @@ class SchemaTopicCreate(colander.MappingSchema):
 schema_topic_create = SchemaTopicCreate()
 
 
-def validate_topic_create(request):
+def validate_topic_create(request, **kwargs):
     document_id = request.validated['document_id']
     lang = request.validated['lang']
 
@@ -70,8 +71,9 @@ class ForumTopicRest(object):
     def __init__(self, request):
         self.request = request
 
-    @restricted_view(schema=schema_topic_create,
-                     validators=[validate_topic_create])
+    @restricted_view(
+        schema=schema_topic_create,
+        validators=[colander_body_validator, validate_topic_create])
     def collection_post(self):
         settings = self.request.registry.settings
 
