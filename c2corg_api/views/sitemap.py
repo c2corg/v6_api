@@ -20,8 +20,10 @@ from c2corg_api import caching
 log = logging.getLogger(__name__)
 
 # Search engines accept not more than 50000 urls per sitemap,
+# and the sitemap files may not exceed 10 MB. With 50000 urls the sitemaps
+# are not bigger than 9MB, but to be safe we are using 45000 urls per sitemap.
 # see http://www.sitemaps.org/protocol.html
-PAGES_PER_SITEMAP = 50000
+PAGES_PER_SITEMAP = 45000
 
 
 validate_page = create_int_validator('i')
