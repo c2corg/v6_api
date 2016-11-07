@@ -11,6 +11,7 @@ from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_common.fields_book import fields_book
 from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
 
 from c2corg_api.views.document_schemas import book_documents_config
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
@@ -42,14 +43,16 @@ class BookRest(DocumentRest):
 
     @restricted_json_view(
             schema=schema_create_book,
-            validators=[validate_book_create,
+            validators=[colander_body_validator,
+                        validate_book_create,
                         validate_associations_create])
     def collection_post(self):
         return self._collection_post(schema_book)
 
     @restricted_json_view(
             schema=schema_update_book,
-            validators=[validate_id,
+            validators=[colander_body_validator,
+                        validate_id,
                         validate_book_update,
                         validate_associations_update])
     def put(self):

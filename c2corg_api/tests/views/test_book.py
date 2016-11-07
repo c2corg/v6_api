@@ -164,11 +164,7 @@ class TestBookRest(BaseDocumentTestRest):
                 {'lang': 'en'}
             ]
         }
-        body = self.post_missing_title(body_post, user='moderator')
-        errors = body.get('errors')
-        self.assertEqual(len(errors), 2)
-        self.assertCorniceRequired(errors[0], 'locales.0.title')
-        self.assertCorniceRequired(errors[1], 'locales')
+        self.post_missing_title(body_post, user='moderator')
 
     def test_post_non_whitelisted_attribute(self):
         body = {
@@ -185,6 +181,8 @@ class TestBookRest(BaseDocumentTestRest):
 
     def test_post_success(self):
         body = {
+            'document_id': 12345678,
+            'version': 98765432,
             'activities': ['hiking'],
             'book_types': ['biography'],
             'author': 'NewAuthor',
@@ -254,7 +252,7 @@ class TestBookRest(BaseDocumentTestRest):
     def test_put_wrong_document_id(self):
         body = {
             'document': {
-                'document_id': '-9999',
+                'document_id': '9999999',
                 'version': self.book1.version,
                 'activities': ['hiking'],
                 'book_types': ['biography'],
