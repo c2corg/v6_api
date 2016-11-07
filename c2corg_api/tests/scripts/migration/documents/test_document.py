@@ -49,7 +49,7 @@ class DocumentTest(unittest.TestCase):
         self.assertEqual(
             text, '... [code][b]some whatever[/b] content[/code] abc')
 
-        text = d.convert_wikilinks(
+        text = d.convert_tags(
             '... [[users/123456/fr|Toto le héros]] et ses copains')
         self.assertEqual(
             text, '... [[profiles/123456/fr|Toto le héros]] et ses copains')
