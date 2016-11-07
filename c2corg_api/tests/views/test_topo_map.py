@@ -165,7 +165,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
     def test_put_wrong_document_id(self):
         body = {
             'document': {
-                'document_id': '-9999',
+                'document_id': '9999999',
                 'version': self.map1.version,
                 'editor': 'IGN',
                 'scale': '25000',

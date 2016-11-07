@@ -493,7 +493,7 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_put_wrong_document_id(self):
         body = {
             'document': {
-                'document_id': '-9999',
+                'document_id': '9999999',
                 'version': self.outing.version,
                 'activities': ['skitouring'],
                 'date_start': '2016-01-01',

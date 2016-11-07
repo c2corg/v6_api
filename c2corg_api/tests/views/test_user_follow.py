@@ -169,7 +169,7 @@ class TestUserFollowingUserRest(BaseFollowTest):
     def test_following_wrong_user_id(self):
         headers = self.add_authorization_header(username='contributor')
         response = self.app.get(
-            self._prefix + '/-1',
+            self._prefix + '/9999999999',
             status=200, headers=headers)
         body = response.json
 

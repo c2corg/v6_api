@@ -24,13 +24,15 @@ cache_document_listing = create_region('listing')
 cache_document_history = create_region('history')
 cache_document_version = create_region('version')
 cache_document_info = create_region('info')
+cache_sitemap = create_region('sitemap')
 
 caches = [
     cache_document_detail,
     cache_document_listing,
     cache_document_history,
     cache_document_version,
-    cache_document_info
+    cache_document_info,
+    cache_sitemap
 ]
 
 

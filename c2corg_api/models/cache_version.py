@@ -7,8 +7,9 @@ from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import Column, ForeignKey
-from sqlalchemy.sql.sqltypes import Integer
+from sqlalchemy.sql.sqltypes import Integer, DateTime
 from sqlalchemy import event, DDL, text
 
 log = logging.getLogger(__name__)
@@ -32,11 +33,31 @@ class CacheVersion(Base):
     )
 
     version = Column(Integer, nullable=False, server_default='1')
+    last_updated = Column(
+        DateTime, default=func.now(), server_default='now()', nullable=False)
+
+
+# Trigger that updates the field `last_updated` when a version is updated.
+trigger_ddl_cache_version = DDL("""
+CREATE OR REPLACE FUNCTION guidebook.update_cache_version_time()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.last_updated = now();
+    RETURN NEW;
+END;
+$$ language plpgsql;
+
+CREATE TRIGGER guidebook_cache_versions_update
+BEFORE UPDATE ON guidebook.cache_versions
+FOR EACH ROW
+EXECUTE PROCEDURE guidebook.update_cache_version_time();
+""")
+event.listen(CacheVersion.__table__, 'after_create', trigger_ddl_cache_version)
 
 
 # Trigger that creates a new entry in the `CacheVersion` table when a new
 # document is created.
-trigger_ddl = DDL("""
+trigger_ddl_documents = DDL("""
 CREATE OR REPLACE FUNCTION guidebook.create_cache_version() RETURNS TRIGGER AS
 $BODY$
 BEGIN
@@ -53,7 +74,7 @@ AFTER INSERT ON guidebook.documents
 FOR EACH ROW
 EXECUTE PROCEDURE guidebook.create_cache_version();
 """)
-event.listen(Document.__table__, 'after_create', trigger_ddl)
+event.listen(Document.__table__, 'after_create', trigger_ddl_documents)
 
 
 # functions to update the cache version if a document or associations
