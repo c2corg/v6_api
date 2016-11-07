@@ -80,6 +80,10 @@ class MigrateRoutes(MigrateDocuments):
             # (in v6 activities are required)
             activities = ['skitouring']
 
+        climbing_outdoor_type = None
+        if 'rock_climbing' in activities and 'hiking' not in activities:
+            climbing_outdoor_type = 'multi'
+
         orientations = self.convert_type(
             document_in.facing, MigrateRoutes.orientation_types)
         if orientations is not None:
@@ -113,6 +117,7 @@ class MigrateRoutes(MigrateDocuments):
             redirects_to=document_in.redirects_to,
             # elevation=document_in.elevation,  # used for difficulties_height
             activities=activities,
+            climbing_outdoor_type=climbing_outdoor_type,
             orientations=orientations,
             height_diff_up=document_in.height_diff_up,
             height_diff_down=document_in.height_diff_down,
