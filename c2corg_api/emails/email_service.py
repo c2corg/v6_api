@@ -72,11 +72,10 @@ class EmailService:
         self._send_email_with_link(user, 'password_change', link)
 
     def send_change_email_confirmation(self, user, link):
-        # TODO: handle i18n using user.lang
         self._send_email(
                 user.email_to_validate,
-                subject='Email change on Camptocamp.org',
-                body='To activate your new email click on %s' % link)
+                subject=self._(user.lang, 'email_change_subject'),
+                body=self._(user.lang, 'email_change_body') % link)
 
 
 def get_email_service(request):
