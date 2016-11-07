@@ -39,7 +39,7 @@ class MigrateImages(MigrateDocuments):
             '   ST_Force2D(ST_SetSRID(ia.geom, 3857)) geom, ia.elevation, '
             '   ia.filename, ia.date_time, ia.camera_name, ia.exposure_time, '
             '   ia.focal_length, ia.fnumber, ia.iso_speed, ia.categories, '
-            '   ia.activities, ia.author, ia.image_type, ia.has_svg, '
+            '   ia.activities, ia.author, ia.image_type, '
             '   ia.width, ia.height, ia.file_size '
             'from app_images_archives ia join images i on ia.id = i.id '
             'where i.redirects_to is null '
@@ -85,7 +85,6 @@ class MigrateImages(MigrateDocuments):
             author=document_in.author,
             image_type=self.convert_type(
                 document_in.image_type, MigrateImages.image_types),
-            has_svg=document_in.has_svg,
             width=document_in.width,
             height=document_in.height,
             file_size=document_in.file_size,
