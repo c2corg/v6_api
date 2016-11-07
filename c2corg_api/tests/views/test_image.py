@@ -120,6 +120,7 @@ class BaseTestImage(BaseDocumentTestRest):
         self.session.add(Association.create(
             parent_document=self.outing1,
             child_document=self.image))
+        update_feed_document_create(self.outing1, user_id)
         self.session.flush()
 
     def _post_success_document(self, overrides={}):
@@ -142,7 +143,7 @@ class BaseTestImage(BaseDocumentTestRest):
         doc.update(overrides)
         return doc
 
-    def _validate_post_success(self, body, doc):
+    def _validate_post_success(self, body, doc, check_wp=True):
         self._assert_geometry(body)
 
         version = doc.versions[0]
@@ -159,10 +160,11 @@ class BaseTestImage(BaseDocumentTestRest):
         self.assertEqual(archive_geometry.version, doc.geometry.version)
         self.assertIsNotNone(archive_geometry.geom)
 
-        # check that a link to the linked wp is created
-        association_wp = self.session.query(Association).get(
-            (self.waypoint.document_id, doc.document_id))
-        self.assertIsNotNone(association_wp)
+        if check_wp:
+            # check that a link to the linked wp is created
+            association_wp = self.session.query(Association).get(
+                (self.waypoint.document_id, doc.document_id))
+            self.assertIsNotNone(association_wp)
 
     def _assert_geometry(self, body):
         self.assertIsNotNone(body.get('geometry'))
@@ -759,8 +761,6 @@ class TestImageListRest(BaseTestImage):
                 self._post_success_document({
                     'filename': 'post_image1.jpg',
                     'associations': {
-                        'waypoints': [
-                            {'document_id': self.waypoint.document_id}],
                         'outings': [
                             {'document_id': self.outing1.document_id}
                         ]
@@ -769,12 +769,21 @@ class TestImageListRest(BaseTestImage):
             ]
         }
         body, doc = self.post_success(body)
-        self._validate_post_success(body, doc)
+        self._validate_post_success(body, doc, check_wp=False)
 
         # check that a link to the linked image is created
         association_img = self.session.query(Association).get(
             (self.outing1.document_id, doc.document_id))
         self.assertIsNotNone(association_img)
+
+        feed_change = self.get_feed_change(self.outing1.document_id)
+        self.assertIsNotNone(feed_change)
+        self.assertEqual(feed_change.change_type, 'updated')
+        self.assertEqual(
+            feed_change.user_ids, [self.global_userids['contributor']])
+        self.assertIsNotNone(feed_change.image1_id)
+        self.assertIsNone(feed_change.image2_id)
+        self.assertIsNone(feed_change.image3_id)
 
     @patch('c2corg_api.views.image.requests.post',
            return_value=Mock(status_code=200))
