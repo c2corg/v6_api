@@ -81,9 +81,9 @@ class MigrateRoutes(MigrateDocuments):
             activities = ['skitouring']
 
         climbing_outdoor_type = None
-        if 'rock_climbing' in activities and not ('hiking' in activities) :
+        if 'rock_climbing' in activities and 'hiking' not in activities:
             climbing_outdoor_type = 'multi'
-        
+
         orientations = self.convert_type(
             document_in.facing, MigrateRoutes.orientation_types)
         if orientations is not None:
