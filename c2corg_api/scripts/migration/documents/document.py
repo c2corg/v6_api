@@ -203,3 +203,37 @@ class MigrateDocuments(MigrateBase):
             return text, summary
         else:
             return text, None
+
+    def convert_tags(self, text):
+        if not text:
+            return text
+
+        text = self.convert_q_tags(text)
+        text = self.convert_c_tags(text)
+        text = self.convert_wikilinks(
+            text, MigrateDocuments.wikilink_waypoints_regex, 'waypoints')
+        text = self.convert_wikilinks(
+            text, MigrateDocuments.wikilink_profiles_regex, 'profiles')
+        return text
+
+    q_tag_regex = re.compile('\[(/?)q\]')
+
+    def convert_q_tags(self, text):
+        return MigrateDocuments.q_tag_regex.sub(r'[\1quote]', text)
+
+    c_tag_regex = re.compile('\[(/?)c\]')
+
+    def convert_c_tags(self, text):
+        return MigrateDocuments.c_tag_regex.sub(r'[\1code]', text)
+
+    wikilink_waypoints_regex = re.compile(
+        '\[\[(summits|huts|parkings|sites|products)([^|]*)\|([^\]]+)\]\]')
+
+    wikilink_profiles_regex = re.compile(
+        '\[\[(users)([^|]*)\|([^\]]+)\]\]')  # noqa
+
+    def convert_wikilinks(self, text, regex, route):
+        match = regex.search(text)
+        if match:
+            text = regex.sub(r'[[%s\2|\3]]' % route, text)
+        return text

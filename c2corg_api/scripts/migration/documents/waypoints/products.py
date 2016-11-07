@@ -64,7 +64,8 @@ class MigrateProducts(MigrateWaypoints):
         )
 
     def get_document_locale(self, document_in, version):
-        description, summary = self.extract_summary(document_in.description)
+        description = self.convert_tags(document_in.description)
+        description, summary = self.extract_summary(description)
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
@@ -74,8 +75,8 @@ class MigrateProducts(MigrateWaypoints):
             title=document_in.name,
             description=description,
             summary=summary,
-            access=document_in.access,
-            access_period=document_in.hours
+            access=self.convert_tags(document_in.access),
+            access_period=self.convert_tags(document_in.hours)
         )
 
     product_types = {

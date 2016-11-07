@@ -180,7 +180,8 @@ class MigrateRoutes(MigrateDocuments):
         )
 
     def get_document_locale(self, document_in, version):
-        description, summary = self.extract_summary(document_in.description)
+        description = self.convert_tags(document_in.description)
+        description, summary = self.extract_summary(description)
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
@@ -190,10 +191,11 @@ class MigrateRoutes(MigrateDocuments):
             title=document_in.name,
             description=description,
             summary=summary,
-            remarks=document_in.remarks,
-            gear=document_in.gear,
-            route_history=document_in.route_history,
-            external_resources=document_in.external_resources,
+            remarks=self.convert_tags(document_in.remarks),
+            gear=self.convert_tags(document_in.gear),
+            route_history=self.convert_tags(document_in.route_history),
+            external_resources=self.convert_tags(
+                document_in.external_resources),
             slope=document_in.slope
         )
 
