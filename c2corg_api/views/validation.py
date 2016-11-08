@@ -1,5 +1,6 @@
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE
+from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.document import Document
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
@@ -250,6 +251,8 @@ def validate_associations_in(associations_in, document_type, errors):
                       'areas', AREA_TYPE, new_errors)
     _add_associations(associations, associations_in, document_type,
                       'outings', OUTING_TYPE, new_errors)
+    _add_associations(associations, associations_in, document_type,
+                      'books', BOOK_TYPE, new_errors)
 
     if new_errors:
         errors.extend(new_errors)
@@ -330,7 +333,7 @@ def _add_associations(
                 'body', 'associations.' + document_key,
                 'invalid association type')
         else:
-            if document_key == 'waypoints':
+            if document_key == 'waypoints' and main_document_type != BOOK_TYPE:
                 is_parent = True
             elif document_key == 'waypoint_children':
                 is_parent = False
@@ -359,6 +362,7 @@ association_keys = {
     'images': IMAGE_TYPE,
     'articles': ARTICLE_TYPE,
     'areas': AREA_TYPE,
+    'books': BOOK_TYPE,
     'outings': OUTING_TYPE
 }
 
@@ -367,6 +371,7 @@ association_keys_for_types = {
     WAYPOINT_TYPE: 'waypoints',
     USERPROFILE_TYPE: 'users',
     ARTICLE_TYPE: 'articles',
+    BOOK_TYPE: 'books',
     IMAGE_TYPE: 'images',
     AREA_TYPE: 'areas',
     OUTING_TYPE: 'outings'
@@ -375,12 +380,13 @@ association_keys_for_types = {
 # associations that can be updated/created when updating/creating a document
 # e.g. when creating a route, route and waypoint associations can be created
 updatable_associations = {
-    ROUTE_TYPE: {'articles', 'routes', 'waypoints'},
+    ROUTE_TYPE: {'articles', 'routes', 'waypoints', 'books'},
     WAYPOINT_TYPE: {'articles', 'waypoints', 'waypoint_children'},
     OUTING_TYPE: {'articles', 'routes', 'users', 'waypoints'},
     IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users', 'articles',
-                 'areas', 'outings'},
+                 'areas', 'outings', 'books'},
     ARTICLE_TYPE: {'articles', 'images', 'users', 'routes', 'waypoints',
-                   'outings'},
-    AREA_TYPE: {'images'}
+                   'outings', 'books'},
+    AREA_TYPE: {'images'},
+    BOOK_TYPE: {'routes', 'articles', 'images', 'waypoints'}
 }

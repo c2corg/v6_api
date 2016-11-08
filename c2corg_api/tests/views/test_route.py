@@ -5,6 +5,7 @@ from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association, AssociationLog
+from c2corg_api.models.book import Book
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.topo_map import TopoMap
@@ -105,6 +106,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertIn('recent_outings', associations)
         self.assertIn('images', associations)
         self.assertIn('articles', associations)
+        self.assertIn('books', associations)
 
         linked_waypoints = associations.get('waypoints')
         self.assertEqual(1, len(linked_waypoints))
@@ -124,6 +126,11 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(1, len(linked_articles))
         self.assertEqual(
             self.article1.document_id, linked_articles[0].get('document_id'))
+
+        linked_books = associations.get('books')
+        self.assertEqual(1, len(linked_books))
+        self.assertEqual(
+            self.book1.document_id, linked_books[0].get('document_id'))
 
         recent_outings = associations.get('recent_outings')
         self.assertEqual(1, recent_outings['total'])
@@ -859,6 +866,14 @@ class TestRouteRest(BaseDocumentTestRest):
         self.session.add(Association.create(
             parent_document=self.route,
             child_document=self.article1))
+
+        self.book1 = Book(activities=['hiking'],
+                          book_types=['biography'])
+        self.session.add(self.book1)
+        self.session.flush()
+        self.session.add(Association.create(
+            parent_document=self.book1,
+            child_document=self.route))
 
         self.route2 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,

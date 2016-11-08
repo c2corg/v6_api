@@ -2,11 +2,13 @@ import datetime
 
 from c2corg_api.models import es_sync
 from c2corg_api.models.article import Article
+from c2corg_api.models.book import Book
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.search.mappings.article_mapping import SearchArticle
+from c2corg_api.search.mappings.book_mapping import SearchBook
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
@@ -98,6 +100,26 @@ class FillIndexTest(BaseTestCase):
             ]))
         self.session.flush()
 
+        self.session.add(Book(
+            document_id=71177,
+            activities=['hiking'],
+            book_types=['biography'],
+            author='Denis Dainat',
+            publication_date='',
+            locales=[
+                DocumentLocale(
+                    lang='fr', title='Escalades au Thaurac',
+                    description='...',
+                    summary=''),
+                DocumentLocale(
+                    lang='en', title='Escalades au Thaurac',
+                    description='...',
+                    summary=''
+                )
+            ]
+        ))
+        self.session.flush()
+
         # fill the ElasticSearch index
         fill_index(self.session)
 
@@ -137,6 +159,13 @@ class FillIndexTest(BaseTestCase):
         self.assertEqual(article.title_en, 'Lac d\'Annecy')
         self.assertEqual(article.title_fr, 'Lac d\'Annecy')
         self.assertEqual(article.doc_type, 'c')
+
+        book = SearchBook.get(id=71177)
+        self.assertIsNotNone(book)
+        self.assertEqual(book.title_en, 'Escalades au Thaurac')
+        self.assertEqual(book.title_fr, 'Escalades au Thaurac')
+        self.assertEqual(book.doc_type, 'b')
+        self.assertEqual(book.book_types, ['biography'])
 
         # merged document is ignored
         self.assertIsNone(SearchWaypoint.get(id=71174, ignore=404))

@@ -4,6 +4,7 @@ from unittest.mock import patch, Mock
 
 from c2corg_api.models.area import Area
 from c2corg_api.models.article import Article
+from c2corg_api.models.book import Book
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.feed import update_feed_document_create
@@ -53,6 +54,14 @@ class BaseTestImage(BaseDocumentTestRest):
         self.session.flush()
         self.session.add(Association.create(
             parent_document=self.article1,
+            child_document=self.image))
+
+        self.book1 = Book(activities=['hiking'],
+                          book_types=['biography'])
+        self.session.add(self.book1)
+        self.session.flush()
+        self.session.add(Association.create(
+            parent_document=self.book1,
             child_document=self.image))
 
         user_id = self.global_userids['contributor']
@@ -243,6 +252,7 @@ class TestImageRest(BaseTestImage):
         self.assertIn('images', associations)
         self.assertIn('users', associations)
         self.assertIn('articles', associations)
+        self.assertIn('books', associations)
         self.assertIn('areas', associations)
         self.assertIn('outings', associations)
 
@@ -255,6 +265,11 @@ class TestImageRest(BaseTestImage):
         self.assertEqual(len(linked_areas), 1)
         self.assertEqual(
             self.area.document_id, linked_areas[0].get('document_id'))
+
+        linked_books = associations.get('books')
+        self.assertEqual(len(linked_books), 1)
+        self.assertEqual(
+            self.book1.document_id, linked_books[0].get('document_id'))
 
         linked_outings = associations.get('outings')
         self.assertEqual(len(linked_outings), 1)

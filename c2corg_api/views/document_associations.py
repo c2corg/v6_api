@@ -2,6 +2,7 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, Area
 from c2corg_api.models.article import ARTICLE_TYPE, Article
 from c2corg_api.models.association import Association
+from c2corg_api.models.book import BOOK_TYPE, Book
 from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import Route, ROUTE_TYPE
@@ -12,23 +13,26 @@ from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import waypoint_documents_config, \
     route_documents_config, user_profile_documents_config, \
     image_documents_config, article_documents_config, area_documents_config, \
-    outing_documents_config
+    outing_documents_config, book_documents_config
 from c2corg_api.views.validation import updatable_associations
 from sqlalchemy.sql.expression import or_, and_
 
 associations_to_include = {
     WAYPOINT_TYPE: {
-        'waypoints', 'waypoint_children', 'routes', 'images', 'articles'},
+        'waypoints', 'waypoint_children', 'routes', 'images', 'articles',
+        'books'},
     ROUTE_TYPE:
-        {'waypoints', 'routes', 'images', 'articles'},
+        {'waypoints', 'routes', 'images', 'articles', 'books'},
     OUTING_TYPE:
         {'waypoints', 'routes', 'images', 'users', 'articles'},
     IMAGE_TYPE:
         {'waypoints', 'routes', 'images', 'users', 'outings', 'articles',
-         'areas'},
+         'areas', 'books'},
     ARTICLE_TYPE:
-        {'waypoints', 'routes', 'images', 'users', 'outings', 'articles'},
+        {'waypoints', 'routes', 'images', 'users', 'outings', 'articles',
+         'books'},
     AREA_TYPE: {'images'},
+    BOOK_TYPE: {'routes', 'articles', 'images', 'waypoints'},
     USERPROFILE_TYPE: {'images'}
 }
 
@@ -69,6 +73,8 @@ def get_associations(document, lang, editing_view):
         # for waypoints and routes, only the latest x outings are included
         # elsewhere (because there are potentially many)
         associations['outings'] = get_linked_outings(document, lang)
+    if 'books' in types_to_include:
+        associations['books'] = get_linked_books(document, lang)
 
     return associations
 
@@ -130,7 +136,7 @@ def get_linked_routes(document, lang):
 
     if document.type == WAYPOINT_TYPE:
         condition = condition_as_child
-    elif document.type in [OUTING_TYPE, IMAGE_TYPE]:
+    elif document.type in [OUTING_TYPE, IMAGE_TYPE, ARTICLE_TYPE]:
         condition = condition_as_parent
     else:
         condition = or_(condition_as_child, condition_as_parent)
@@ -224,6 +230,7 @@ def get_linked_articles(document, lang):
     elif document.type in [WAYPOINT_TYPE,
                            OUTING_TYPE,
                            ROUTE_TYPE,
+                           BOOK_TYPE,
                            USERPROFILE_TYPE]:
         condition = condition_as_child
 
@@ -240,6 +247,23 @@ def get_linked_articles(document, lang):
 
     return get_documents_for_ids(
         article_ids, lang, article_documents_config).get('documents')
+
+
+def get_linked_books(document, lang):
+    book_ids = get_first_column(
+        DBSession.query(Book.document_id).
+        filter(Book.redirects_to.is_(None)).
+        join(
+            Association,
+            and_(
+                Association.child_document_id == document.document_id,
+                Association.parent_document_id == Book.document_id)
+            ).
+        group_by(Book.document_id).
+        all())
+
+    return get_documents_for_ids(
+        book_ids, lang, book_documents_config).get('documents')
 
 
 def get_first_column(rows):

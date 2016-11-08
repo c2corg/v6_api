@@ -1,6 +1,7 @@
 from c2corg_api.models.area import AREA_TYPE, Area, schema_listing_area
 from c2corg_api.models.article import ARTICLE_TYPE, Article, \
     schema_listing_article
+from c2corg_api.models.book import BOOK_TYPE, Book, schema_listing_book
 from c2corg_api.models.image import IMAGE_TYPE, Image, schema_listing_image
 from c2corg_api.models.outing import OUTING_TYPE, Outing, schema_outing
 from c2corg_api.models.route import schema_route, ROUTE_TYPE, Route, \
@@ -17,6 +18,7 @@ from c2corg_common.fields_route import fields_route
 from c2corg_common.fields_waypoint import fields_waypoint
 from c2corg_common.fields_area import fields_area
 from c2corg_common.fields_article import fields_article
+from c2corg_common.fields_book import fields_book
 from c2corg_common.fields_image import fields_image
 from c2corg_common.fields_topo_map import fields_topo_map
 from c2corg_common.fields_user_profile import fields_user_profile
@@ -121,6 +123,14 @@ article_documents_config = GetDocumentsConfig(
     listing_fields=fields_article['listing'], include_areas=False)
 
 
+# books
+
+
+book_documents_config = GetDocumentsConfig(
+    BOOK_TYPE, Book, schema_listing_book,
+    listing_fields=fields_book['listing'], include_areas=False)
+
+
 # images
 
 
@@ -214,6 +224,7 @@ document_configs = {
     OUTING_TYPE: outing_documents_config,
     IMAGE_TYPE: image_documents_config,
     AREA_TYPE: area_documents_config,
+    BOOK_TYPE: book_documents_config,
     MAP_TYPE: topo_map_documents_config,
     ARTICLE_TYPE: article_documents_config,
     USERPROFILE_TYPE: user_profile_documents_config

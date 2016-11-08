@@ -1,4 +1,5 @@
 from c2corg_api.models.area import Area
+from c2corg_api.models.book import Book
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.route import Route
@@ -8,6 +9,7 @@ from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.models.article import Article
 from c2corg_api.search.mapping_types import QueryableMixin
 from c2corg_api.search.mappings.area_mapping import SearchArea
+from c2corg_api.search.mappings.book_mapping import SearchBook
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
@@ -70,6 +72,13 @@ class MappingTest(BaseTestCase):
         self.assertIn('act', queryable_fields)
         self.assertIn('acat', queryable_fields)
         self.assertIn('atyp', queryable_fields)
+
+    def test_book_mapping(self):
+        self._test_mapping(SearchBook, Book)
+
+        queryable_fields = SearchBook.queryable_fields
+        self.assertIn('btyp', queryable_fields)
+        self.assertIn('act', queryable_fields)
 
     def test_map_mapping(self):
         self._test_mapping(SearchTopoMap, TopoMap)

@@ -1,5 +1,6 @@
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.article import Article
+from c2corg_api.models.book import Book
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.fill_index import fill_index
@@ -65,6 +66,23 @@ class TestSearchRest(BaseTestRest):
                     lang='fr', title='Mont Blanc du ciel',
                     description='...', summary='Ski')
             ]))
+        self.book1 = Book(
+            document_id=534685,
+            activities=['hiking'],
+            book_types=['biography'],
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'),
+            locales=[
+                DocumentLocale(
+                    lang='en', title='Lac d\'Annecy',
+                    description='...',
+                    summary='Lac d\'Annecy'),
+                DocumentLocale(
+                    lang='en', title='Lac d\'Annecy',
+                    description='...',
+                    summary='Lac d\'Annecy')
+            ])
+        self.session.add(self.book1)
         self.session.flush()
         fill_index(self.session)
         # make sure the search index is built
@@ -81,6 +99,7 @@ class TestSearchRest(BaseTestRest):
         self.assertIn('articles', body)
         self.assertIn('images', body)
         self.assertIn('outings', body)
+        self.assertIn('books', body)
 
         waypoints = body['waypoints']
         self.assertTrue(waypoints['total'] > 0)
@@ -103,6 +122,16 @@ class TestSearchRest(BaseTestRest):
 
         self.assertEquals(len(articles), 2)
         self.assertNotEqual(articles['total'], 0)
+
+    def test_search_by_book_title(self):
+        response = self.app.get(
+            self._prefix + '?q=' + str(self.book1.locales[0].title),
+            status=200)
+        body = response.json
+        books = body['books']
+
+        self.assertEquals(len(books), 2)
+        self.assertNotEqual(books['total'], 0)
 
     def test_search_lang(self):
         response = self.app.get(self._prefix + '?q=crolles&pl=fr', status=200)
@@ -138,13 +167,14 @@ class TestSearchRest(BaseTestRest):
         self.assertNotIn('users', body)
 
     def test_search_limit_types(self):
-        response = self.app.get(self._prefix + '?q=crolles&t=w,r,c',
+        response = self.app.get(self._prefix + '?q=crolles&t=w,r,c,b',
                                 status=200)
         body = response.json
 
         self.assertIn('waypoints', body)
         self.assertIn('routes', body)
         self.assertIn('articles', body)
+        self.assertIn('books', body)
         self.assertNotIn('maps', body)
         self.assertNotIn('areas', body)
         self.assertNotIn('images', body)
