@@ -1,4 +1,6 @@
 #!/bin/sh -e
 
 cd /var/www
-make template
+echo 'include Makefile' > config/docker
+env >> config/docker
+make -f config/docker template
