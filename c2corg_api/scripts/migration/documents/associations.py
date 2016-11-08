@@ -198,7 +198,7 @@ with v as (select t.r_id, t.w_id
         join guidebook.waypoints wp on d.document_id = wp.document_id and
           wp.waypoint_type in ('summit', 'virtual', 'pass', 'lake', 'bisse',
                                'waterfall', 'climbing_outdoor', 'cave',
-                               'locality', 'waterpoint', 'misc')
+                               'locality', 'waterpoint', 'misc', 'hut')
       where r.type = 'r')
     union (select r.document_id as r_id, wp.document_id as w_id, wp.elevation
       from guidebook.documents r
@@ -208,7 +208,7 @@ with v as (select t.r_id, t.w_id
         join guidebook.waypoints wp on d.document_id = wp.document_id and
           wp.waypoint_type in ('summit', 'virtual', 'pass', 'lake', 'bisse',
                                'waterfall', 'climbing_outdoor', 'cave',
-                               'locality', 'waterpoint', 'misc')
+                               'locality', 'waterpoint', 'misc', 'hut')
       where r.type = 'r')) u
   ) t where t.rank = 1)
 update guidebook.routes r
