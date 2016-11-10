@@ -58,7 +58,17 @@ mail.validate_change_email_url_template = {mail_validate_change_email_url_templa
 mail.from = {mail_from}
 mail.host = {mail_host}
 mail.port = {mail_port}
+mail.username = {mail_username}
+mail.password = {mail_password}
+mail.tls = {mail_tls}
+mail.ssl = {mail_ssl}
+mail.keyfile = {mail_keyfile}
+mail.certfile = {mail_certfile}
+mail.queue_path = {mail_queue_path}
+mail.default_sender = {mail_default_sender}
 mail.debug = {mail_debug}
+mail.sendmail_app = {mail_sendmail_app}
+mail.sendmail_template = {mail_sendmail_template}
 
 # Number of seconds to wait for response bytes on the requests sockets.
 # At the expiration of this timeout, the request is considered failed.

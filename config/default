@@ -61,10 +61,20 @@ export mail_validate_register_url_template = $(ui_url)/auth{0}validate_register_
 export mail_request_password_change_url_template = $(ui_url)/auth{0}change_password={1}
 export mail_validate_change_email_url_template = $(ui_url)/auth{0}validate_change_email={1}
 
+export mail_from = noreply@camptocamp.org
 export mail_host = psemail.epfl.ch
 export mail_port = 25
-export mail_from = noreply@camptocamp.org
+export mail_username = None
+export mail_password = None
+export mail_tls = False
+export mail_ssl = False
+export mail_keyfile = None
+export mail_certfile = None
+export mail_queue_path = None
+export mail_default_sender = None
 export mail_debug = 0
+export mail_sendmail_app = /usr/sbin/sendmail
+export mail_sendmail_template = {sendmail_app} -t -i -f {sender}
 
 # FIXME
 export discourse_sso_secret = d836444a9e4084d5b224a60c208dce14
