@@ -1,3 +1,5 @@
+import transaction  # NOQA
+
 from pyramid_mailer import get_mailer
 from pyramid_mailer.message import Message
 from functools import lru_cache
@@ -57,7 +59,7 @@ class EmailService:
                 sender=self.mail_from,
                 recipients=[to_address],
                 body=body)
-        self.mailer.send_immediately(msg)
+        self.mailer.send(msg)
 
     def _send_email_with_link(self, user, key, link):
         self._send_email(
