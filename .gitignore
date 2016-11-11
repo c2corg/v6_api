@@ -4,6 +4,7 @@
 /production.ini
 /test.ini
 /c2corg_api/scripts/migration/migration.ini
+/c2corg_api/scripts/loadtests/loadtests.ini
 /apache/app-c2corg_api.wsgi
 /apache/wsgi.conf
 /MANIFEST
