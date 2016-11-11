@@ -16,9 +16,6 @@ pyramid.includes =
     pyramid_debugtoolbar
     pyramid_tm
 
-# disable version in dev mode
-version =
-
 # in dev. mode, append the timestamp to the cache key, so that the cache is
 # invalidated when the debug server reloads
 cache_version_timestamp = True
