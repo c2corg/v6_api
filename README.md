@@ -156,6 +156,15 @@ Check the Discourse forum is up and available to the client API:
 "id" is a v6 user id. The script should return a 200OK.
 
 
+Health service
+--------------
+
+To get information about a running API instance, e.g. its version and the
+status of its components, the health service `/health` can be used:
+
+    GET http://localhost:6543/health
+
+
 Developer Tips
 --------------
 
