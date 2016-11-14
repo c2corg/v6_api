@@ -76,11 +76,12 @@ class MigrateSummits(MigrateWaypoints):
         '4':   'climbing_outdoor',  # was 'cliff'
         '6':   'locality',          # was 'valley'
         '3':   'lake',
-        '7':   'misc',              # was 'glacier'
+        '7':   'locality',          # was 'glacier'
         '8':   'bisse',
         '9':   'waterpoint',        # was 'source'
         '10':  'canyon',
         '11':  'cave',              # was': 'hole'
+        '12':  'waterfall',         # was': 'cascade'
         '100': 'hut',
         '5':   'virtual',           # was 'raid'
         '99':  'misc'               # was 'other'
