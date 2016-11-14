@@ -111,8 +111,8 @@ class APIDiscourseClient(object):
             'nonce': nonce,
             'email': user.email,
             'external_id': user.id,
-            'username': user.username,
-            'name': user.username,
+            'username': user.forum_username,
+            'name': user.name,
         }
 
         key = self.sso_key.encode('utf-8')
