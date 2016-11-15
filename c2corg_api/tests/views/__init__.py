@@ -209,7 +209,7 @@ class BaseDocumentTestRest(BaseTestRest):
         actual_total = actual['total']
         self.assertEqual(actual_total, total)
 
-    def get(self, reference, user=None, check_title=True):
+    def get(self, reference, user=None, check_title=True, ignore_checks=False):
         headers = {} if not user else \
             self.add_authorization_header(username=user)
         response = self.app.get(self._prefix + '/' +
@@ -226,7 +226,8 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertIsNotNone(body.get('associations'))
 
         locales = body.get('locales')
-        self.assertEqual(len(locales), 2)
+        if ignore_checks is False:
+            self.assertEqual(len(locales), 2)
         locale_en = get_locale(locales, 'en')
         self.assertNotIn('id', locale_en)
         self.assertIsNotNone(locale_en.get('version'))
@@ -235,7 +236,8 @@ class BaseDocumentTestRest(BaseTestRest):
             self.assertEqual(locale_en.get('title'), self.locale_en.title)
 
         available_langs = body.get('available_langs')
-        self.assertCountEqual(available_langs, ['en', 'fr'])
+        if ignore_checks is False:
+            self.assertCountEqual(available_langs, ['en', 'fr'])
         return body
 
     def get_version(self, reference, reference_version):
@@ -465,7 +467,8 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(errors[0].get('name'), 'Content-Type')
         return body
 
-    def post_success(self, request_body, user='contributor'):
+    def post_success(self, request_body, user='contributor',
+                     validate_with_auth=False):
         response = self.app_post_json(self._prefix, request_body, status=403)
 
         headers = self.add_authorization_header(username=user)
@@ -473,14 +476,18 @@ class BaseDocumentTestRest(BaseTestRest):
                                       headers=headers, status=200)
 
         body = response.json
-        return self._validate_document(body)
+        return self._validate_document(body, headers, validate_with_auth)
 
-    def _validate_document(self, body):
+    def _validate_document(self, body, headers=None, validate_with_auth=False):
         document_id = body.get('document_id')
         self.assertIsNotNone(document_id)
 
-        response = self.app.get(self._prefix + '/' + str(document_id),
-                                status=200)
+        if validate_with_auth:
+            response = self.app.get(self._prefix + '/' + str(document_id),
+                                    headers=headers, status=200)
+        else:
+            response = self.app.get(self._prefix + '/' + str(document_id),
+                                    status=200)
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -575,6 +582,22 @@ class BaseDocumentTestRest(BaseTestRest):
         body = response.json
         self.assertEqual(body['status'], 'error')
         self.assertEqual(body['errors'][0]['name'], 'Bad Request')
+
+    def put_wrong_authorization(self, request_body, id, user=None):
+        """Test updating a document owned by different author.
+        """
+
+        response = self.app_put_json(
+            self._prefix + '/' + str(id), request_body, status=403)
+
+        headers = self.add_authorization_header(username=user)
+        response = self.app_put_json(
+            self._prefix + '/' + str(id), request_body, headers=headers,
+            status=403)
+
+        body = response.json
+        self.assertEqual(body['status'], 'error')
+        self.assertEqual(body['errors'][0]['name'], 'Forbidden')
 
     def put_put_no_document(self, id, user='contributor'):
         request_body = {

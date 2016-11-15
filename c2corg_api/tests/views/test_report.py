@@ -1,5 +1,6 @@
 import datetime
 from c2corg_api.caching import cache_document_version
+from c2corg_api.models import DBSession
 from c2corg_api.models.article import Article
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing
@@ -7,17 +8,22 @@ from c2corg_api.models.report import ArchiveReport, Report, REPORT_TYPE, \
     ArchiveReportLocale, ReportLocale
 from c2corg_api.models.association import AssociationLog, Association
 from c2corg_api.models.cache_version import get_cache_key
-from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.route import Route
+from c2corg_api.models.user import User
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
 
-from c2corg_api.models.document import DocumentLocale, DocumentGeometry
+from c2corg_api.models.document import DocumentLocale, DocumentGeometry, \
+    ArchiveDocument
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
 from c2corg_common.attributes import quality_types
 from dogpile.cache.api import NO_VALUE
+
+from sqlalchemy.sql.expression import and_, over
+from sqlalchemy.sql.functions import func
 
 
 class TestReportRest(BaseDocumentTestRest):
@@ -113,23 +119,22 @@ class TestReportRest(BaseDocumentTestRest):
         self.assertNotIn('previous_injuries', body)
         self.assertNotIn('autonomy', body)
 
+    def test_get_as_contributor_not_author(self):
+        body = self.get(self.report4, user='contributor')
+
+        # common user should not see personal data in the report
+        self.assertNotIn('author_status', body)
+        self.assertNotIn('activity_rate', body)
+        self.assertNotIn('nb_outings', body)
+        self.assertNotIn('age', body)
+        self.assertNotIn('gender', body)
+        self.assertNotIn('previous_injuries', body)
+        self.assertNotIn('autonomy', body)
+
     def test_get_as_moderator(self):
         body = self.get(self.report1, user='moderator')
 
         # MODERATOR CAN SEE PERSONAL DATA IN THE REPORT
-        self.assertIn('author_status', body)
-        self.assertIn('activity_rate', body)
-        self.assertIn('nb_outings', body)
-        self.assertIn('age', body)
-        self.assertIn('gender', body)
-        self.assertIn('previous_injuries', body)
-        self.assertIn('autonomy', body)
-
-        # TODO add test to get/put document as author only
-    def test_get_as_report_author(self):
-        body = self.get(self.report1, user='contributor')
-        self.assertNotIn('report', body)
-
         self.assertIn('author_status', body)
         self.assertIn('activity_rate', body)
         self.assertIn('nb_outings', body)
@@ -261,7 +266,8 @@ class TestReportRest(BaseDocumentTestRest):
                 {'title': 'Lac d\'Annecy', 'lang': 'en'}
             ]
         }
-        body, doc = self.post_success(body, user='moderator')
+        body, doc = self.post_success(body, user='moderator',
+                                      validate_with_auth=True)
         version = doc.versions[0]
 
         archive_report = version.document_archive
@@ -273,7 +279,7 @@ class TestReportRest(BaseDocumentTestRest):
         self.assertEqual(archive_locale.lang, 'en')
         self.assertEqual(archive_locale.title, 'Lac d\'Annecy')
 
-        # check if geometry is not stored in database afterwards
+        # check if geometry is stored in database afterwards
         self.assertIsNotNone(doc.geometry)
 
         # check that a link to the associated waypoint is created
@@ -301,6 +307,80 @@ class TestReportRest(BaseDocumentTestRest):
                    self.article2.document_id). \
             first()
         self.assertIsNotNone(association_art_log)
+
+    def test_post_as_contributor_and_get_as_author(self):
+        body_post = {
+            'document_id': 111,
+            'version': 1,
+            'activities': ['hiking'],
+            'event_type': ['stone_fall'],
+            'nb_participants': 666,
+            'nb_impacted': 666,
+            'locales': [
+                # {'title': 'Lac d\'Annecy', 'lang': 'fr'},
+                {'title': 'Lac d\'Annecy', 'lang': 'en'}
+            ]
+        }
+
+        # create document (POST uses GET schema inside validation)
+        body_post, doc = self.post_success(body_post, user='contributor')
+        # version = doc.versions[0]
+
+        report_id = doc.document_id
+        user_id = 2  # ID from postgres of the user 'contributor'
+
+        t = DBSession.query(
+            ArchiveDocument.document_id.label('document_id'),
+            User.id.label('user_id'),
+            User.name.label('name'),
+            over(
+                func.rank(), partition_by=ArchiveDocument.document_id,
+                order_by=HistoryMetaData.id).label('rank')). \
+            select_from(ArchiveDocument). \
+            join(
+            DocumentVersion,
+            and_(
+                ArchiveDocument.document_id == DocumentVersion.document_id,
+                ArchiveDocument.version == 1)). \
+            join(HistoryMetaData,
+                 DocumentVersion.history_metadata_id == HistoryMetaData.id). \
+            join(User,
+                 HistoryMetaData.user_id == User.id). \
+            filter(ArchiveDocument.document_id == report_id,
+                   HistoryMetaData.user_id == user_id). \
+            subquery('t')
+
+        query = DBSession.query(
+            t.c.document_id, t.c.user_id, t.c.name). \
+            filter(t.c.rank == 1)
+
+        author_for_documents = {
+            document_id: {
+                'name': name,
+                'user_id': user_id
+            } for document_id, user_id, name in query
+            }
+
+        document_found = False
+
+        for document in author_for_documents:
+            if document == report_id:
+                document_found = True
+
+        # the contributor is successfully set as author in DB
+        self.assertEqual(document_found, True)
+
+        # AUTHORIZED CONTRIBUTOR CAN SEE PERSONAL DATA IN THE REPORT
+        body = self.get(doc, user='contributor', ignore_checks=True)
+        self.assertNotIn('report', body)
+
+        self.assertIn('author_status', body)
+        self.assertIn('activity_rate', body)
+        self.assertIn('nb_outings', body)
+        self.assertIn('age', body)
+        self.assertIn('gender', body)
+        self.assertIn('previous_injuries', body)
+        self.assertIn('autonomy', body)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -429,7 +509,7 @@ class TestReportRest(BaseDocumentTestRest):
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Lac d\'Annecy')
 
-        # check if geometry is not stored in database afterwards
+        # check if geometry is stored in database afterwards
         self.assertIsNotNone(report1.geometry)
         # check that a link to the associated image is created
         association_img = self.session.query(Association).get(
@@ -523,8 +603,7 @@ class TestReportRest(BaseDocumentTestRest):
 
         self.assertEquals(report1.get_locale('es').title, 'Lac d\'Annecy')
 
-    # TODO add test to get/put document as author only
-    def test_put_as_report_author(self):
+    def test_put_as_author(self):
         body = {
             'message': 'Update',
             'document': {
@@ -533,7 +612,7 @@ class TestReportRest(BaseDocumentTestRest):
                 'quality': quality_types[1],
                 'activities': ['paragliding'],  # changed
                 'event_type': ['person_fall'],  # changed
-                'age': 90,  # personal data changed
+                'age': 90,  # PERSONAL DATA CHANGED
                 'locales': [
                     {'lang': 'en', 'title': 'Another final EN title',
                      'version': self.locale_en.version}
@@ -554,6 +633,27 @@ class TestReportRest(BaseDocumentTestRest):
         self.assertEqual(archive_document_en.activities, ['paragliding'])
         self.assertEqual(archive_document_en.event_type, ['person_fall'])
         self.assertEqual(archive_document_en.age, 90)
+
+    # TODO - TRY TO REWRITE REPORT WRITTEN BY SOMEONE ELSE
+    # def test_put_as_non_author(self):
+    #     body = {
+    #         'message': 'Update',
+    #         'document': {
+    #             'document_id': self.report4.document_id,
+    #             'version': self.report4.version,
+    #             'quality': quality_types[1],
+    #             'activities': ['paragliding'],  # changed
+    #             'event_type': ['person_fall'],  # changed
+    #             'age': 90,  # PERSONAL DATA CHANGED
+    #             'locales': [
+    #                 {'lang': 'en', 'title': 'Another final EN title',
+    #                  'version': self.locale_en.version}
+    #             ]
+    #         }
+    #     }
+    #
+    #     (body, report4) = self.put_wrong_authorization(
+    #         body, self.report4.document_id, user='contributor2')
 
     def _add_test_data(self):
         self.report1 = Report(activities=['hiking'],
@@ -587,7 +687,9 @@ class TestReportRest(BaseDocumentTestRest):
         self.session.add(self.report3)
         self.report4 = Report(activities=['hiking'],
                               event_type=['avalanche'],
-                              nb_participants=5)
+                              nb_participants=5,
+                              nb_impacted=5,
+                              age=50)
         self.report4.locales.append(DocumentLocale(
             lang='en', title='Lac d\'Annecy'))
         self.report4.locales.append(DocumentLocale(

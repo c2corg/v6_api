@@ -88,6 +88,12 @@ attributes = [
     'previous_injuries', 'autonomy'
 ]
 
+attributes_without_personal = [
+    'lon', 'lat', 'elevation', 'date', 'event_type', 'activities',
+    'nb_participants', 'nb_impacted', 'rescue',
+    'avalanche_level', 'avalanche_slope', 'severity'
+]
+
 
 class Report(_ReportMixin, Document):
     """
@@ -241,6 +247,26 @@ schema_report = SQLAlchemySchemaNode(
     Report,
     # whitelisted attributes
     includes=schema_attributes + attributes,
+    overrides={
+        'document_id': {
+            'missing': None
+        },
+        'version': {
+            'missing': None
+        },
+        'locales': {
+            'children': [schema_report_locale],
+        },
+        'activities': {
+            'validator': colander.Length(min=1)
+        },
+        'geometry': geometry_schema_overrides
+    })
+
+schema_report_without_personal = SQLAlchemySchemaNode(
+    Report,
+    # whitelisted attributes
+    includes=schema_attributes + attributes_without_personal,
     overrides={
         'document_id': {
             'missing': None
