@@ -425,7 +425,8 @@ def update_cache_version_associations(
         )
 
 
-def _format_cache_key(document_id, lang, version, doc_type=None):
+def _format_cache_key(document_id, lang, version, doc_type=None,
+                      custom_cache_key=None):
     if not version:
         # no version for this document id, the document should not exist
         log.debug('no version for document id {0}'.format(document_id))
@@ -442,10 +443,15 @@ def _format_cache_key(document_id, lang, version, doc_type=None):
     if doc_type:
         cache_key = '{0}-{1}'.format(cache_key, doc_type)
 
+    # custom_cache_key can be 'moderator' for moderators and author of report
+    if custom_cache_key:
+        cache_key = '{0}-{1}'.format(cache_key, custom_cache_key)
+
     return cache_key
 
 
-def get_cache_key(document_id, lang, document_type=None):
+def get_cache_key(document_id, lang, document_type=None,
+                  custom_cache_key=None):
     """ Returns an identifier which reflects the version of a document and
     all its associated documents. This identifier is used as cache key
     and as ETag value.
@@ -455,7 +461,8 @@ def get_cache_key(document_id, lang, document_type=None):
         first()
 
     return _format_cache_key(
-        document_id, lang, version[0] if version else None, document_type)
+        document_id, lang, version[0] if version else None, document_type,
+        custom_cache_key)
 
 
 def get_cache_keys(document_ids, lang, document_type):

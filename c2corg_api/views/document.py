@@ -93,7 +93,8 @@ class DocumentRest(object):
 
     def _get(self, clazz, schema, clazz_locale=None, adapt_schema=None,
              include_maps=False, include_areas=True,
-             set_custom_associations=None, set_custom_fields=None):
+             set_custom_associations=None, set_custom_fields=None,
+             custom_cache_key=None):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')
         editing_view = self.request.GET.get('e', '0') != '0'
@@ -105,7 +106,7 @@ class DocumentRest(object):
                 set_custom_associations, set_custom_fields)
 
         if not editing_view:
-            cache_key = get_cache_key(id, lang)
+            cache_key = get_cache_key(id, lang, custom_cache_key)
 
             if cache_key:
                 # set and check the etag: if the etag value provided in the
