@@ -171,33 +171,6 @@ report_documents_config = GetDocumentsConfig(
     listing_fields=fields_report['listing'])
 
 
-# fields=fields_report['fields']
-
-# report_documents_config = GetDocumentsConfig(
-#   REPORT_TYPE, Report,
-#   schema_report, clazz_locale=ReportLocale,
-#   fields=fields_report['fields'], listing_fields=fields_report['listing'])
-
-#
-# def adapt_report_schema_for_activities(activities, field_list_type):
-#     """Get the schema for a set of activities.
-#     `field_list_type` should be either "fields" or "listing".
-#     """
-#     fields = get_all_fields(fields_route, activities, field_list_type)
-#     return restrict_schema(schema_route, fields)
-#
-# report_schema_adaptor = make_schema_adaptor(
-#     adapt_report_schema_for_activities, 'activities', 'fields')
-# report_listing_schema_adaptor = make_schema_adaptor(
-#     adapt_report_schema_for_activities, 'activities', 'listing')
-#
-# report_documents_config = GetDocumentsConfig(
-#     REPORT_TYPE, Report, schema_report, fields=fields_report,
-#     adapt_schema=report_listing_schema_adaptor)
-
-# , listing_fields=fields_report['listing']
-
-
 # route
 
 

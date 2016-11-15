@@ -21,7 +21,7 @@ from sqlalchemy.sql.expression import or_, and_
 associations_to_include = {
     WAYPOINT_TYPE: {
         'waypoints', 'waypoint_children', 'routes', 'images', 'articles',
-        'books'},
+        'books', 'reports'},
     ROUTE_TYPE:
         {'waypoints', 'routes', 'images', 'articles', 'books', 'reports'},
     OUTING_TYPE:
@@ -34,7 +34,8 @@ associations_to_include = {
          'books', 'reports'},
     AREA_TYPE: {'images'},
     BOOK_TYPE: {'routes', 'articles', 'images', 'waypoints'},
-    REPORT_TYPE: {'routes', 'outings', 'articles', 'images'},
+    REPORT_TYPE: {'waypoints', 'users', 'routes', 'outings', 'articles',
+                  'images'},
     USERPROFILE_TYPE: {'images'}
 }
 
@@ -281,7 +282,8 @@ def get_linked_reports(document, lang):
         Association.parent_document_id == Report.document_id
     )
 
-    if document.type in [ARTICLE_TYPE, IMAGE_TYPE]:
+    if document.type in [WAYPOINT_TYPE, USERPROFILE_TYPE,
+                         ARTICLE_TYPE, IMAGE_TYPE]:
         condition = condition_as_parent
     elif document.type in [ROUTE_TYPE, OUTING_TYPE]:
         condition = condition_as_child

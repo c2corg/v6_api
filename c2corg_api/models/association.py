@@ -370,7 +370,7 @@ association_keys_for_types = {
 # e.g. when creating a route, route and waypoint associations can be created
 updatable_associations = {
     ROUTE_TYPE: {'articles', 'routes', 'waypoints', 'books', 'reports'},
-    WAYPOINT_TYPE: {'articles', 'waypoints', 'waypoint_children'},
+    WAYPOINT_TYPE: {'articles', 'waypoints', 'waypoint_children', 'reports'},
     OUTING_TYPE: {'articles', 'routes', 'users', 'reports'},
     IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users', 'articles',
                  'areas', 'outings', 'books', 'reports'},
