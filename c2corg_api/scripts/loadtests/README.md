@@ -19,6 +19,7 @@ Creating lists of document URLs
 
 Run:
 
+    cd gatling/user-files/data
     sudo -u postgres psql <dbname> -c "select '/outings/' || document_id || '/' || lang || '/foo' as url from guidebook.outings join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" > outing_urls.csv
     sudo -u postgres psql <dbname> -c "select '/routes/' || document_id || '/' || lang || '/foo' as url from guidebook.routes join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" > route_urls.csv
     sudo -u postgres psql <dbname> -c "select '/waypoints/' || document_id || '/' || lang || '/foo' as url from guidebook.waypoints join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" > waypoint_urls.csv
@@ -31,5 +32,5 @@ Creating a list of test usernames and passwords
 
 Run:
 
-    cd files
+    cd gatling/user-files/data
     sh users_list.sh > users.csv

@@ -3,6 +3,8 @@ package c2corg
 import io.gatling.core.Predef._
 
 object C2corgConf {
+  val num_users = 10
+
   val ui_url = "http://www.demov6.camptocamp.org"
   val api_url = "http://api.demov6.camptocamp.org"
   val forum_url = "http://forum.demov6.camptocamp.org"

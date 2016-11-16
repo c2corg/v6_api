@@ -7,9 +7,12 @@ import io.gatling.http.Predef._
 import io.gatling.jdbc.Predef._
 
 object Waypoint {
-  val view = exec(http("View waypoint")
-    .get("/waypoints/37202/fr/bel-oiseau")
-    .headers(C2corgConf.header_html)
-    .basicAuth(C2corgConf.basic_auth_username, C2corgConf.basic_auth_password)
+  val feeder = csv("waypoint_urls.csv").random
+
+  val view = feed(feeder).exec(
+    http("View waypoint")
+      .get("${url}")
+      .headers(C2corgConf.header_html)
+      .basicAuth(C2corgConf.basic_auth_username, C2corgConf.basic_auth_password)
   )
 }
