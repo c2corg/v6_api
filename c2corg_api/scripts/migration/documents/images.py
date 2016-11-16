@@ -133,7 +133,7 @@ class MigrateImages(MigrateDocuments):
         '2': 'people',
         '10': 'fauna',
         '11': 'flora',
-        '16': 'snow',
+        '16': 'nivology',
         '12': 'geology',
         '13': 'hut',
         '14': 'equipment',
