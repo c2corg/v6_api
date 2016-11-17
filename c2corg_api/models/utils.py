@@ -103,7 +103,9 @@ def _force_2d(geojson_track):
             [_force_2d_coords(coords) for coords in polygon]
             for polygon in geojson_track['coordinates']
         ]
-    raise Exception('Unexpected geometry type')
+    else:
+        raise Exception('Unexpected geometry type')
+    return geojson_track
 
 
 def _force_2d_coords(coords):

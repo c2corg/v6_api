@@ -40,7 +40,7 @@ class MigrateOutings(MigrateDocuments):
             'select '
             '   oa.id, oa.document_archive_id, oa.is_latest_version, '
             '   oa.elevation, oa.is_protected, oa.redirects_to, '
-            '   ST_Force2D(ST_SetSRID(oa.geom, 3857)) geom, '
+            '   ST_SetSRID(oa.geom, 3857) geom, '
             '   oa.date, oa.activities, oa.height_diff_up, '
             '   oa.height_diff_down, oa.outing_length, oa.min_elevation, '
             '   oa.max_elevation, oa.partial_trip, '
