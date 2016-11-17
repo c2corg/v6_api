@@ -153,7 +153,7 @@ class MigrateOutings(MigrateDocuments):
 
     access_conditions = {
         '2': 'cleared',
-        '4': 'snow',
+        '4': 'snowy',
         '6': 'closed_snow'
     }
 

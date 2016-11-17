@@ -115,7 +115,7 @@ def create_range_filter(field, query_term):
 def create_enum_range_filter(field, query_term):
     """Creates an ElasticSearch enum range filter.
 
-    E.g. the call `create_enum_range_filter(quality, 'medium,excellent')
+    E.g. the call `create_enum_range_filter(quality, 'medium,great')
     creates the following filter:
         {'range': {'quality': {'gte': 2, 'lte': 4}}}
     """

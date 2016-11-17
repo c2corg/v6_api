@@ -175,7 +175,7 @@ class TestArticleRest(BaseDocumentTestRest):
         body = {
             'document_id': 0,
             'type': '',
-            'quality': 'excellent',
+            'quality': 'great',
             'activities': ['hiking', 'skitouring'],
             'categories': ['mountain_environment'],
             'article_type': 'collab',

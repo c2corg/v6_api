@@ -160,7 +160,7 @@ class AdvancedSearchTest(BaseTestCase):
     def test_create_filter_enum_range(self):
         self.assertEqual(
             create_filter(
-                'not a valid field', 'medium,excellent', SearchWaypoint),
+                'not a valid field', 'medium,great', SearchWaypoint),
             None)
         self.assertEqual(
             create_filter('qa', '', SearchWaypoint),
@@ -169,7 +169,7 @@ class AdvancedSearchTest(BaseTestCase):
             create_filter('qa', 'not a, valid enum', SearchWaypoint),
             None)
         self.assertEqual(
-            create_filter('qa', 'medium,excellent', SearchWaypoint),
+            create_filter('qa', 'medium,great', SearchWaypoint),
             Range(quality={'gte': 2, 'lte': 4}))
         self.assertEqual(
             create_filter('qa', 'medium,', SearchWaypoint),
@@ -178,10 +178,10 @@ class AdvancedSearchTest(BaseTestCase):
             create_filter('qa', 'medium', SearchWaypoint),
             Range(quality={'gte': 2}))
         self.assertEqual(
-            create_filter('qa', ',excellent', SearchWaypoint),
+            create_filter('qa', ',great', SearchWaypoint),
             Range(quality={'lte': 4}))
         self.assertEqual(
-            create_filter('qa', 'invalid enum,excellent', SearchWaypoint),
+            create_filter('qa', 'invalid enum,great', SearchWaypoint),
             Range(quality={'lte': 4}))
         self.assertEqual(
             create_filter('qa', 'medium,invalid enum', SearchWaypoint),
