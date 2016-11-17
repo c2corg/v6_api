@@ -4,12 +4,10 @@
 from colander import (null, Invalid, SchemaType)
 
 from geoalchemy2 import WKBElement
-from geoalchemy2.shape import to_shape, from_shape
-from shapely.geometry import mapping, shape
-from shapely.ops import transform
-from functools import partial
-import pyproj
+from geomet import wkb
+from geoalchemy2.compat import buffer, bytes
 import json
+import geojson
 
 
 class Geometry(SchemaType):
@@ -28,26 +26,10 @@ class Geometry(SchemaType):
         The geometry type should match the column geometry type.
     srid
         The SRID of the geometry should also match the column definition.
-    map_srid
-        The projection used for the OpenLayers map. The geometries will be
-        reprojected to this projection.
     """
     def __init__(self, geometry_type='GEOMETRY', srid=-1, map_srid=-1):
         self.geometry_type = geometry_type.upper()
         self.srid = int(srid)
-        self.map_srid = int(map_srid)
-        if self.map_srid == -1:
-            self.map_srid = self.srid
-
-        if self.srid != self.map_srid:
-            self.project_db_to_map = partial(
-                pyproj.transform,
-                pyproj.Proj(init='epsg:' + str(self.srid)),
-                pyproj.Proj(init='epsg:' + str(self.map_srid)))
-            self.project_map_to_db = partial(
-                pyproj.transform,
-                pyproj.Proj(init='epsg:' + str(self.map_srid)),
-                pyproj.Proj(init='epsg:' + str(self.srid)))
 
     def serialize(self, node, appstruct):
         """
@@ -58,11 +40,8 @@ class Geometry(SchemaType):
         if appstruct is null:
             return null
         if isinstance(appstruct, WKBElement):
-            geometry = to_shape(appstruct)
-            if self.srid != self.map_srid and appstruct.srid != self.map_srid:
-                geometry = transform(self.project_db_to_map, geometry)
+            return geojson_from_wkbelement(appstruct)
 
-            return json.dumps(mapping(geometry))
         raise Invalid(node, 'Unexpected value: %r' % appstruct)
 
     def deserialize(self, node, cstruct):
@@ -74,16 +53,23 @@ class Geometry(SchemaType):
         if cstruct is null or cstruct == '':
             return null
         try:
-            # TODO Shapely does not support loading GeometryCollections from
-            # GeoJSON, see https://github.com/Toblerity/Shapely/issues/115
-            geometry = shape(json.loads(cstruct))
+            return wkbelement_from_geojson(cstruct, self.srid)
         except Exception:
             raise Invalid(node, 'Invalid geometry: %r' % cstruct)
 
-        if self.srid != self.map_srid:
-            geometry = transform(self.project_map_to_db, geometry)
-
-        return from_shape(geometry, srid=self.srid)
-
     def cstruct_children(self, node, cstruct):
         return []
+
+
+def wkbelement_from_geojson(geojson, srid):
+    geometry = wkb.dumps(json.loads(geojson), big_endian=False)
+    return from_wkb(geometry, srid)
+
+
+def geojson_from_wkbelement(wkb_element):
+    geometry = wkb.loads(bytes(wkb_element.data))
+    return geojson.dumps(geometry)
+
+
+def from_wkb(wkb, srid=-1):
+    return WKBElement(buffer(wkb), srid=srid)

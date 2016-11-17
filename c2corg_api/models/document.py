@@ -4,7 +4,7 @@ import abc
 import geoalchemy2
 from c2corg_api.ext import colander_ext
 from c2corg_api.models import Base, schema, DBSession, enums
-from c2corg_api.models.utils import copy_attributes, extend_dict
+from c2corg_api.models.utils import copy_attributes, extend_dict, wkb_to_shape
 from c2corg_common import document_types
 from c2corg_common.attributes import quality_types
 from colander import null
@@ -25,6 +25,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship, column_property
 from sqlalchemy.sql.schema import UniqueConstraint
+from sqlalchemy import event, DDL
 
 UpdateType = enum.Enum(
     'UpdateType', 'FIGURES LANG GEOM')
@@ -281,6 +282,9 @@ class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
         Base.__table_args__
     )
 
+# `geomet` does not support EWKB, so load geometries as WKB
+Geometry.as_binary = 'ST_AsBinary'
+
 
 class _DocumentGeometryMixin(object):
     version = Column(Integer, nullable=False)
@@ -289,7 +293,8 @@ class _DocumentGeometryMixin(object):
     def geom(self):
         return Column(
             Geometry(
-                geometry_type='POINT', srid=3857, management=True,
+                geometry_type='POINT', srid=3857, dimension=2,
+                management=True,
                 spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
             info={
                 'colanderalchemy': {
@@ -298,12 +303,13 @@ class _DocumentGeometryMixin(object):
             }
         )
 
-    # TODO geom_detail should be 3d for tracks?
     @declared_attr
     def geom_detail(self):
         return Column(
             Geometry(
-                geometry_type='GEOMETRY', srid=3857, management=True,
+                geometry_type='GEOMETRY', srid=3857,
+                management=True,
+                use_typmod=False,
                 spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
             info={
                 'colanderalchemy': {
@@ -353,7 +359,7 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
         g1 = None
         proj1 = None
         if isinstance(geom, geoalchemy2.WKBElement):
-            g1 = geoalchemy2.shape.to_shape(geom)
+            g1 = wkb_to_shape(geom)
             proj1 = geom.srid
         else:
             # WKT are used in the tests.
@@ -365,7 +371,7 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
         g2 = None
         proj2 = None
         if isinstance(other_geom, geoalchemy2.WKBElement):
-            g2 = geoalchemy2.shape.to_shape(other_geom)
+            g2 = wkb_to_shape(other_geom)
             proj2 = other_geom.srid
         else:
             # WKT are used in the tests.
@@ -398,6 +404,15 @@ DocumentGeometry.lon_lat = column_property(
     func.ST_AsGeoJSON(func.ST_Transform(DocumentGeometry.geom, 4326)),
     deferred=True)
 
+# remove dimension constraint so that geometries with 2, 3 or 4 dimensions can
+# be stored in the same column
+event.listen(
+    DocumentGeometry.__table__,
+    'after_create',
+    DDL('alter table {}.{} drop constraint enforce_dims_geom_detail;'.format(
+        schema, DocumentGeometry.__tablename__))
+)
+
 
 class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
     __tablename__ = 'documents_geometries_archives'
@@ -414,6 +429,13 @@ class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
             name='uq_documents_geometries_archives_document_id_version_lang'),
         Base.__table_args__
     )
+
+event.listen(
+    ArchiveDocumentGeometry.__table__,
+    'after_create',
+    DDL('alter table {}.{} drop constraint enforce_dims_geom_detail;'.format(
+        schema, ArchiveDocumentGeometry.__tablename__))
+)
 
 
 schema_attributes = [

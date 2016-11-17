@@ -136,7 +136,17 @@ def teardown_package():
         initializees.drop_index()
 
 
-class BaseTestCase(unittest.TestCase):
+class AssertionsMixin(object):
+
+    def assertCoodinateEquals(self, coord1, coord2):  # noqa
+        self.assertEqual(len(coord1), len(coord2), 'not the same dimension')
+        for i in range(0, len(coord1)):
+            self.assertAlmostEquals(
+                coord1[i], coord2[i],
+                msg='{} does not almost equal {}'.format(coord1[i], coord2[i]))
+
+
+class BaseTestCase(unittest.TestCase, AssertionsMixin):
     """The idea for unit tests is, that the database tables
     are created only once per test run and every test case uses a
     transaction which is rolled back at the end. This avoids that

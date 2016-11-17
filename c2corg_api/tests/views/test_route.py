@@ -352,6 +352,124 @@ class TestRouteRest(BaseDocumentTestRest):
             first()
         self.assertIsNotNone(association_main_wp_log)
 
+    def test_post_success_3d(self):
+        """ Tests that routes with 3D tracks can be created and read.
+        """
+        body = {
+            'main_waypoint_id': self.waypoint.document_id,
+            'activities': ['hiking', 'skitouring'],
+            'geometry': {
+                'geom_detail':
+                    '{"type": "LineString", "coordinates": ' +
+                    '[[635956, 5723604, 1200], [635966, 5723644, 1210]]}'
+            },
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'gear': 'shoes'}
+            ],
+            'associations': {
+                'waypoints': [{'document_id': self.waypoint.document_id}]
+            }
+        }
+
+        _, doc = self.post_success(body)
+        response = self.app.get(
+            self._prefix + '/' + str(doc.document_id), status=200)
+        body = response.json
+
+        geometry = body['geometry']
+        geom = json.loads(geometry['geom'])
+        self.assertEqual(len(geom['coordinates']), 2)
+        self.assertCoodinateEquals(geom['coordinates'], [635961.0, 5723624.0])
+
+        geom_detail = json.loads(geometry['geom_detail'])
+        self.assertEqual(len(geom_detail['coordinates']), 2)
+        self.assertEqual(len(geom_detail['coordinates'][0]), 3)
+        self.assertCoodinateEquals(
+            geom_detail['coordinates'][0], [635956.0, 5723604.0, 1200.0])
+        self.assertCoodinateEquals(
+            geom_detail['coordinates'][1], [635966.0, 5723644.0, 1210.0])
+
+    def test_post_success_3d_multiline(self):
+        """ Tests that routes with 3D multiline tracks can be created and read.
+        """
+        body = {
+            'main_waypoint_id': self.waypoint.document_id,
+            'activities': ['hiking', 'skitouring'],
+            'geometry': {
+                'geom_detail':
+                    '{"type": "MultiLineString", "coordinates": ' +
+                    '[[[635956, 5723604, 1200], [635966, 5723644, 1210]]]}'
+            },
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'gear': 'shoes'}
+            ],
+            'associations': {
+                'waypoints': [{'document_id': self.waypoint.document_id}]
+            }
+        }
+
+        _, doc = self.post_success(body)
+        response = self.app.get(
+            self._prefix + '/' + str(doc.document_id), status=200)
+        body = response.json
+
+        geometry = body['geometry']
+        geom = json.loads(geometry['geom'])
+        self.assertEqual(len(geom['coordinates']), 2)
+        self.assertCoodinateEquals(geom['coordinates'], [635961.0, 5723624.0])
+
+        geom_detail = json.loads(geometry['geom_detail'])
+        self.assertEqual(len(geom_detail['coordinates']), 1)
+        self.assertEqual(len(geom_detail['coordinates'][0]), 2)
+        self.assertEqual(len(geom_detail['coordinates'][0][0]), 3)
+        self.assertCoodinateEquals(
+            geom_detail['coordinates'][0][0], [635956.0, 5723604.0, 1200.0])
+        self.assertCoodinateEquals(
+            geom_detail['coordinates'][0][1], [635966.0, 5723644.0, 1210.0])
+
+    def test_post_success_4d(self):
+        """ Tests that routes with 4D tracks can be created and read.
+        """
+        body = {
+            'main_waypoint_id': self.waypoint.document_id,
+            'activities': ['hiking', 'skitouring'],
+            'geometry': {
+                'geom_detail':
+                    '{"type": "LineString", "coordinates": ' +
+                    '[[635956, 5723604, 1200, 12345], '
+                    '[635966, 5723644, 1210, 12346]]}'
+            },
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'gear': 'shoes'}
+            ],
+            'associations': {
+                'waypoints': [{'document_id': self.waypoint.document_id}]
+            }
+        }
+
+        _, doc = self.post_success(body)
+        response = self.app.get(
+            self._prefix + '/' + str(doc.document_id), status=200)
+        body = response.json
+
+        geometry = body['geometry']
+        geom = json.loads(geometry['geom'])
+        self.assertEqual(len(geom['coordinates']), 2)
+        self.assertCoodinateEquals(geom['coordinates'], [635961.0, 5723624.0])
+
+        geom_detail = json.loads(geometry['geom_detail'])
+        self.assertEqual(len(geom_detail['coordinates']), 2)
+        self.assertEqual(len(geom_detail['coordinates'][0]), 4)
+        self.assertCoodinateEquals(
+            geom_detail['coordinates'][0],
+            [635956.0, 5723604.0, 1200.0, 12345])
+        self.assertCoodinateEquals(
+            geom_detail['coordinates'][1],
+            [635966.0, 5723644.0, 1210.0, 12346])
+
     def test_post_default_geom_multi_line(self):
         body = {
             'main_waypoint_id': self.waypoint.document_id,

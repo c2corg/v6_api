@@ -1,3 +1,5 @@
+from c2corg_api.ext.colander_ext import wkbelement_from_geojson
+from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route, RouteLocale
 
 from c2corg_api.tests import BaseTestCase
@@ -38,3 +40,39 @@ class TestRoute(BaseTestCase):
         self.assertEqual(locale_archive.title, locale.title)
         self.assertEqual(locale_archive.description, locale.description)
         self.assertEqual(locale_archive.gear, locale.gear)
+
+    def test_geometry_update(self):
+        """ Check that geometries are only compared in 2D when updating a
+        document.
+        """
+        geom1 = wkbelement_from_geojson(
+            '{"type": "LineString", "coordinates": ' +
+            '[[635956, 5723604, 1200], [635966, 5723644, 1210]]}', 3857)
+        route_db = Route(
+            document_id=1, activities=['hiking'],
+            geometry=DocumentGeometry(
+                document_id=1, geom=None, geom_detail=geom1)
+        )
+
+        geom2 = wkbelement_from_geojson(
+            '{"type": "LineString", "coordinates": ' +
+            '[[635956, 5723604, 9999], [635966, 5723644, 9999]]}', 3857)
+        route_in = Route(
+            document_id=1, activities=['hiking'],
+            geometry=DocumentGeometry(
+                geom=None, geom_detail=geom2)
+        )
+        route_db.update(route_in)
+        self.assertIs(route_db.geometry.geom_detail, geom1)
+
+        geom3 = wkbelement_from_geojson(
+            '{"type": "LineString", "coordinates": ' +
+            '[[635956, 5723608, 1200], [635966, 5723644, 1210]]}', 3857)
+        route_in = Route(
+            document_id=1, activities=['hiking'],
+            geometry=DocumentGeometry(
+                geom=None, geom_detail=geom3)
+        )
+        route_db.update(route_in)
+        self.assertIsNot(route_db.geometry.geom_detail, geom1)
+        self.assertIs(route_db.geometry.geom_detail, geom3)
