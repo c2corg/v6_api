@@ -9,6 +9,7 @@ object C2corgConf {
   val ui_url = "http://www.demov6.camptocamp.org"
   val api_url = "http://api.demov6.camptocamp.org"
   val forum_url = "http://forum.demov6.camptocamp.org"
+  val image_url = "http://images.demov6.camptocamp.org"
 
   val header_json = Map(
       "Accept" -> "application/json",
@@ -28,5 +29,5 @@ object C2corgConf {
   val basic_auth_username = "c2corg"
   val basic_auth_password = "c2corg"
 
-  val black_list = BlackList("""http://server1.affiz.net/.*""", """https://www.google-analytics.com/analytics.js""", """http://sos.exo.io/.*""", """.*/static/.*""", """.*/images/proxy/.*""", """http://i.imgur.com/.*""", """.*.ico""", """.*css.*""", """.*.js""")
+  val black_list = BlackList("""http://server1.affiz.net/.*""", """https://www.google-analytics.com/analytics.js""", """https://www.google.com/recaptcha/api.js?.*""", """http://sos.exo.io/.*""", """.*/static/.*""", """.*/images/proxy/.*""", """http://i.imgur.com/.*""", """.*.ico""", """.*css.*""", """.*.js""")
 }

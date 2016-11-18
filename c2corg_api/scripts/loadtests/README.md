@@ -20,12 +20,15 @@ Creating lists of document URLs
 Run:
 
     cd gatling/user-files/data
-    sudo -u postgres psql <dbname> -c "select '/outings/' || document_id || '/' || lang || '/foo' as url from guidebook.outings join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" > outing_urls.csv
-    sudo -u postgres psql <dbname> -c "select '/routes/' || document_id || '/' || lang || '/foo' as url from guidebook.routes join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" > route_urls.csv
-    sudo -u postgres psql <dbname> -c "select '/waypoints/' || document_id || '/' || lang || '/foo' as url from guidebook.waypoints join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" > waypoint_urls.csv
+    sudo -u postgres psql <dbname> -c "select document_id || ',' || lang as data from guidebook.outings join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" > outings.csv
+    sudo -u postgres psql <dbname> -c "select document_id || ',' || lang as data from guidebook.routes join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" > routes.csv
+    sudo -u postgres psql <dbname> -c "select document_id || ',' || lang as data from guidebook.waypoints join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" > waypoints.csv
 
 
-A few simple manual changes are then required to make the generated files valid CSV files for Gatling's feeders.
+A few simple manual changes are then required to make the generated files valid CSV files for Gatling's feeders:
+* replace "data" by "id,lang"
+* remove the extra lines with no data
+* remove the first blank column
 
 Creating a list of test usernames and passwords
 -----------------------------------------------
@@ -33,4 +36,4 @@ Creating a list of test usernames and passwords
 Run:
 
     cd gatling/user-files/data
-    sh users_list.sh > users.csv
+    sh users.sh > users.csv
