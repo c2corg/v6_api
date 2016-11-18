@@ -3,6 +3,7 @@ import logging
 import collections
 import datetime
 
+from c2corg_api.ext.colander_ext import geojson_from_wkbelement
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import ArchiveDocument
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
@@ -16,10 +17,6 @@ from cornice import Errors
 from cornice.util import json_error, _JSONError
 from cornice.resource import view
 from geoalchemy2 import WKBElement
-from geoalchemy2.shape import to_shape
-from shapely.geometry import mapping
-import json
-
 from sqlalchemy.inspection import inspect
 from sqlalchemy.sql.expression import over, and_
 from sqlalchemy.sql.functions import func
@@ -135,8 +132,7 @@ def serialize(data):
     if isinstance(data, (datetime.date, datetime.datetime)):
         return data.isoformat()
     if isinstance(data, WKBElement):
-        geometry = to_shape(data)
-        return json.dumps(mapping(geometry))
+        return geojson_from_wkbelement(data)
     if data is null:
         return None
 

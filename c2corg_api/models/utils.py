@@ -1,6 +1,7 @@
 import geoalchemy2
 from geoalchemy2 import WKBElement
-from shapely.geometry import LineString, MultiLineString
+from geomet import wkb
+from shapely.geometry import LineString, MultiLineString, shape
 from sqlalchemy.dialects import postgresql
 import sqlalchemy as sa
 from sqlalchemy.sql.expression import and_
@@ -64,16 +65,51 @@ def get_mid_point(wkb_track):
     """Get the point in the middle of a track. If the track is a
     MultiLineString the point in the middle of the first line is taken.
     """
-    assert(isinstance(wkb_track, geoalchemy2.WKBElement))
-    track = geoalchemy2.shape.to_shape(wkb_track)
+    track = wkb_to_shape(wkb_track)
+
     if isinstance(track, LineString):
-        return geoalchemy2.shape.from_shape(
-            track.interpolate(0.5, True), srid=3857)
+        mid_point = track.interpolate(0.5, True)
     elif isinstance(track, MultiLineString) and track.geoms:
-        return geoalchemy2.shape.from_shape(
-            track.geoms[0].interpolate(0.5, True), srid=3857)
+        mid_point = track.geoms[0].interpolate(0.5, True)
     else:
         return None
+
+    return geoalchemy2.shape.from_shape(mid_point, srid=3857)
+
+
+def wkb_to_shape(wkb_element):
+    """ Create a 2D Shapely shape from a WKB value. 3D and 4D geometries
+     are turned into 2D geometries.
+    """
+    assert(isinstance(wkb_element, geoalchemy2.WKBElement))
+    geometry = wkb.loads(bytes(wkb_element.data))
+    return shape(_force_2d(geometry))
+
+
+def _force_2d(geojson_track):
+    if geojson_track['type'].lower() == 'point':
+        coords = geojson_track['coordinates']
+        geojson_track['coordinates'] = [coords[0], coords[1]]
+    elif geojson_track['type'].lower() == 'linestring':
+        geojson_track['coordinates'] = \
+            _force_2d_coords(geojson_track['coordinates'])
+    elif geojson_track['type'].lower() in ('multilinestring', 'polygon'):
+        geojson_track['coordinates'] = [
+            _force_2d_coords(coords)
+            for coords in geojson_track['coordinates']
+        ]
+    elif geojson_track['type'].lower() == 'multipolygon':
+        geojson_track['coordinates'] = [
+            [_force_2d_coords(coords) for coords in polygon]
+            for polygon in geojson_track['coordinates']
+        ]
+    else:
+        raise Exception('Unexpected geometry type')
+    return geojson_track
+
+
+def _force_2d_coords(coords):
+    return [[coord[0], coord[1]] for coord in coords]
 
 
 def windowed_query(q, column, windowsize):

@@ -155,6 +155,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         links = self.session.query(TopoMapAssociation). \
             filter(
                 TopoMapAssociation.topo_map_id == doc.document_id). \
+            order_by(TopoMapAssociation.document_id). \
             all()
         self.assertEqual(len(links), 2)
         self.assertEqual(links[0].document_id, self.waypoint1.document_id)
