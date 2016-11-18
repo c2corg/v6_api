@@ -28,5 +28,5 @@ class ConsultationTopoguideAnonyme extends Simulation {
 		.pause(10)
 		.exec(Waypoint.view)
 
-	setUp(scn.inject(rampUsers(C2corgConf.num_users) over (10 seconds))).protocols(httpProtocol)
+	setUp(scn.inject(rampUsers(C2corgConf.num_users) over (C2corgConf.ramp_time_seconds seconds))).protocols(httpProtocol)
 }
