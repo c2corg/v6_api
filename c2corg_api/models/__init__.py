@@ -9,6 +9,7 @@ from zope.sqlalchemy import ZopeTransactionExtension
 
 schema = 'guidebook'
 users_schema = 'users'
+sympa_schema = 'sympa'
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 

@@ -12,5 +12,6 @@ create database ${DBNAME} owner "www-data";
 create extension postgis;
 create schema guidebook authorization "www-data";
 create schema users authorization "www-data";
+create schema sympa authorization "www-data";
 \q
 EOF
