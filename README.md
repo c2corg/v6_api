@@ -174,3 +174,13 @@ The API is mainly built using the following components:
 * Cornice (REST framework) https://cornice.readthedocs.org/en/latest/
 * Colander (validating and deserializing data) http://docs.pylonsproject.org/projects/colander/en/latest/
 
+Debugger toolbar
+----------------
+
+In case of unexpected exceptions, an error handler makes sure that a JSON
+response is returned. During development it can be convenient to see
+the Pyramid debugger toolbar in case of errors. To disable the error handler,
+add the following line to your config `config/{user}`:
+
+    export show_debugger_for_errors = true
+

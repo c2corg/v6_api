@@ -56,6 +56,22 @@ def http_error_handler(exc, request):
     return json_error(request)
 
 
+@view_config(context=Exception)
+def catch_all_error_handler(exc, request):
+    log.exception('unexpected error')
+
+    show_debugger_for_errors = \
+        request.registry.settings.get('show_debugger_for_errors', '')
+    if show_debugger_for_errors == 'true':
+        raise exc
+
+    request.errors = Errors(500)
+    request.errors.add(
+        'body', 'unexpected error', 'please consult the server logs')
+
+    return json_error(request)
+
+
 @view_config(context=AccountNotValidated)
 def account_error_handler(exc, request):
     request.errors = Errors(400)
