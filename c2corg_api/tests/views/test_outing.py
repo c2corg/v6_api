@@ -120,7 +120,7 @@ class TestOutingRest(BaseDocumentTestRest):
 
         self.assertIn('associations', body)
         associations = body.get('associations')
-        self.assertIn('waypoints', associations)
+        self.assertNotIn('waypoints', associations)
         self.assertIn('routes', associations)
         self.assertIn('images', associations)
         self.assertIn('users', associations)
@@ -162,7 +162,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertNotIn('areas', body)
         self.assertIn('associations', body)
         associations = body['associations']
-        self.assertIn('waypoints', associations)
+        self.assertNotIn('waypoints', associations)
         self.assertIn('routes', associations)
         self.assertIn('users', associations)
         self.assertNotIn('images', associations)

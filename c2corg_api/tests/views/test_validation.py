@@ -33,7 +33,7 @@ class TestValidation(BaseTestCase):
                 {'document_id': self.user_profile1.document_id}
             ],
             'waypoints': [
-                {'document_id': self.waypoint1.document_id}
+                {'document_id': 'waypoints are ignored'}
             ]
         }
 
@@ -51,9 +51,6 @@ class TestValidation(BaseTestCase):
             'routes': [
                 {'document_id': self.route1.document_id, 'is_parent': True},
                 {'document_id': self.route2.document_id, 'is_parent': True}
-            ],
-            'waypoints': [
-                {'document_id': self.waypoint1.document_id, 'is_parent': True}
             ]
         }
         self.assertEqual(associations, expected_associations)
