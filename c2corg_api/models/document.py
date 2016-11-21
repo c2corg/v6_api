@@ -48,7 +48,7 @@ class _DocumentMixin(object):
     version = Column(Integer, nullable=False, server_default='1')
 
     # a protected document can only be edited by moderators
-    protected = Column(Boolean)
+    protected = Column(Boolean, nullable=False, server_default='false')
 
     @declared_attr
     def redirects_to(self):
