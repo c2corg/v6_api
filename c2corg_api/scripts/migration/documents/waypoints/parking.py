@@ -75,6 +75,12 @@ class MigrateParkings(MigrateWaypoints):
     def get_document_locale(self, document_in, version):
         description = self.convert_tags(document_in.description)
         description, summary = self.extract_summary(description)
+
+        description = self._add_accomodation(
+            description,
+            self.convert_tags(document_in.accommodation),
+            document_in.culture)
+
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
@@ -82,13 +88,31 @@ class MigrateParkings(MigrateWaypoints):
             version=version,
             lang=document_in.culture,
             title=document_in.name,
-            description=self.merge_text(
-                description, self.convert_tags(document_in.accommodation)),
+            description=description,
             summary=summary,
             access=self.convert_tags(
                 document_in.public_transportation_description),
             access_period=self.convert_tags(document_in.snow_clearance_comment)
         )
+
+    def __add_accomodation(self, description, accommodation, lang):
+        if accommodation:
+            header = self._translate_accomodation(lang)
+            accommodation = '## ' + header + '\n' + accommodation
+        return self.merge_text(description, accommodation)
+
+    def _translate_accomodation(self, lang):
+        return MigrateParkings.accomodation_translations[lang]
+
+    accomodation_translations = {
+        'ca': 'Allotjament, restauració i patrimoni cultural proper',
+        'de': 'In der Nähe liegende Ess-, Trink- und Übernachtungsmöglichkeiten, sowie Kulturgüter',  # noqa
+        'en': 'Nearby accomodation, restaurants and cultural heritage',
+        'es': 'Alojamiento y comida en las cercanías',
+        'eu': 'Inguruetako lo eta jateko tokiak',
+        'fr': 'Hébergement, restauration et patrimoine culturel à proximité',
+        'it': 'Vitto, alloggio nelle vicinanze e patrimonio culturale'
+    }
 
     public_transportation_ratings = {
         '1': 'good service',
