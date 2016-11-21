@@ -91,6 +91,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self._assert_geometry(body)
         self.assertNotIn('climbing_outdoor_type', body)
         self.assertIn('elevation_min', body)
+        self.assertEqual(body['glacier_gear'], 'no')
 
         locale_en = self.get_locale('en', body.get('locales'))
         self.assertEqual(
@@ -687,6 +688,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'version': self.route.version,
                 'quality': quality_types[1],
                 'activities': ['skitouring'],
+                'glacier_gear': 'no',
                 'elevation_min': 700,
                 'elevation_max': 1600,
                 'height_diff_up': 800,
@@ -715,6 +717,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'version': self.route.version,
                 'quality': quality_types[1],
                 'activities': ['skitouring'],
+                'glacier_gear': 'no',
                 'elevation_min': 700,
                 'elevation_max': 1600,
                 'height_diff_up': 800,
@@ -751,6 +754,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'quality': quality_types[1],
                 'main_waypoint_id': self.waypoint.document_id,
                 'activities': ['skitouring'],
+                'glacier_gear': 'no',
                 'elevation_min': 700,
                 'elevation_max': 1600,
                 'height_diff_up': 800,
@@ -780,6 +784,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'version': self.route.version,
                 'quality': quality_types[1],
                 'activities': ['skitouring'],
+                'glacier_gear': 'no',
                 'elevation_min': 700,
                 'elevation_max': 1500,
                 'height_diff_up': 800,
@@ -828,6 +833,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'version': self.route.version,
                 'quality': quality_types[1],
                 'activities': ['skitouring'],
+                'glacier_gear': 'no',
                 'elevation_min': 700,
                 'elevation_max': 1500,
                 'height_diff_up': 800,
@@ -854,6 +860,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'version': self.route.version,
                 'quality': quality_types[1],
                 'activities': ['skitouring'],
+                'glacier_gear': 'no',
                 'elevation_min': 700,
                 'elevation_max': 1500,
                 'height_diff_up': 800,
