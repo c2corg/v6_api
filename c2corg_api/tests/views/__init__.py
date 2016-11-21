@@ -485,6 +485,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         body = response.json
         self.assertIsNotNone(body.get('version'))
+        self.assertEqual(body.get('protected'), False)
 
         # check that the version was created correctly
         doc = self.session.query(self._model).get(document_id)
