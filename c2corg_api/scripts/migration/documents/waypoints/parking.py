@@ -76,7 +76,7 @@ class MigrateParkings(MigrateWaypoints):
         description = self.convert_tags(document_in.description)
         description, summary = self.extract_summary(description)
 
-        description = self._add_accomodation(
+        description = self._add_accommodation(
             description,
             self.convert_tags(document_in.accommodation),
             document_in.culture)
@@ -95,7 +95,7 @@ class MigrateParkings(MigrateWaypoints):
             access_period=self.convert_tags(document_in.snow_clearance_comment)
         )
 
-    def __add_accomodation(self, description, accommodation, lang):
+    def _add_accommodation(self, description, accommodation, lang):
         if accommodation:
             header = self._translate_accomodation(lang)
             accommodation = '## ' + header + '\n' + accommodation
