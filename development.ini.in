@@ -26,6 +26,8 @@ sqlalchemy.url = postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_na
 # '127.0.0.1' and '::1'.
 debugtoolbar.hosts = 0.0.0.0/0
 
+show_debugger_for_errors = {show_debugger_for_errors}
+
 ###
 # wsgi server configuration
 ###
