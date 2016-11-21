@@ -382,7 +382,7 @@ association_keys_for_types = {
 updatable_associations = {
     ROUTE_TYPE: {'articles', 'routes', 'waypoints', 'books'},
     WAYPOINT_TYPE: {'articles', 'waypoints', 'waypoint_children'},
-    OUTING_TYPE: {'articles', 'routes', 'users', 'waypoints'},
+    OUTING_TYPE: {'articles', 'routes', 'users'},
     IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users', 'articles',
                  'areas', 'outings', 'books'},
     ARTICLE_TYPE: {'articles', 'images', 'users', 'routes', 'waypoints',

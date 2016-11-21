@@ -53,7 +53,7 @@ insert into guidebook.feed_document_changes
   ("time", user_id, change_type, document_id, document_type)
   select written_at, user_id, 'created', document_id, type
   from changes_for_documents
-  where type not in ('i', 'u');
+  where type not in ('i', 'u') and user_id != 2;
 """
 
 

@@ -24,7 +24,7 @@ associations_to_include = {
     ROUTE_TYPE:
         {'waypoints', 'routes', 'images', 'articles', 'books'},
     OUTING_TYPE:
-        {'waypoints', 'routes', 'images', 'users', 'articles'},
+        {'routes', 'images', 'users', 'articles'},
     IMAGE_TYPE:
         {'waypoints', 'routes', 'images', 'users', 'outings', 'articles',
          'areas', 'books'},

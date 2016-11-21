@@ -3,10 +3,14 @@ import logging
 
 from c2corg_api.scripts.migration.area_associations import \
     MigrateAreaAssociations
+from c2corg_api.scripts.migration.climbing_site_routes import \
+    CreateClimbingSiteRoutes
 from c2corg_api.scripts.migration.documents.area import MigrateAreas
 from c2corg_api.scripts.migration.documents.associations import \
     MigrateAssociations
 from c2corg_api.scripts.migration.documents.maps import MigrateMaps
+from c2corg_api.scripts.migration.documents.route_title_prefix import \
+    SetRouteTitlePrefix
 from c2corg_api.scripts.migration.documents.user_profiles import \
     MigrateUserProfiles
 from c2corg_api.scripts.migration.documents.outings import MigrateOutings
@@ -84,6 +88,8 @@ def main(argv=sys.argv):
     MigrateBooks(connection_source, session, batch_size).migrate()
     MigrateVersions(connection_source, session, batch_size).migrate()
     MigrateAssociations(connection_source, session, batch_size).migrate()
+    CreateClimbingSiteRoutes(connection_source, session, batch_size).migrate()
+    SetRouteTitlePrefix(connection_source, session, batch_size).migrate()
     SetDefaultGeometries(connection_source, session, batch_size).migrate()
     MigrateAreaAssociations(connection_source, session, batch_size).migrate()
     MigrateMapAssociations(connection_source, session, batch_size).migrate()
