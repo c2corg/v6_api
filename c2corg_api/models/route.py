@@ -64,7 +64,9 @@ class _RouteMixin(object):
     durations = Column(ArrayOfEnum(enums.route_duration_type))
 
     # crampons et materiel de securite sur glacier
-    glacier_gear = Column(enums.glacier_gear_type)
+    glacier_gear = Column(
+        enums.glacier_gear_type, default='no', server_default='no',
+        nullable=False)
 
     # configuration
     configuration = Column(ArrayOfEnum(enums.route_configuration_type))

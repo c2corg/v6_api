@@ -1,5 +1,4 @@
-import geoalchemy2
-from geoalchemy2 import WKBElement
+from geoalchemy2 import WKBElement, shape as ga_shape
 from geomet import wkb
 from shapely.geometry import LineString, MultiLineString, shape
 from sqlalchemy.dialects import postgresql
@@ -74,14 +73,14 @@ def get_mid_point(wkb_track):
     else:
         return None
 
-    return geoalchemy2.shape.from_shape(mid_point, srid=3857)
+    return ga_shape.from_shape(mid_point, srid=3857)
 
 
 def wkb_to_shape(wkb_element):
     """ Create a 2D Shapely shape from a WKB value. 3D and 4D geometries
      are turned into 2D geometries.
     """
-    assert(isinstance(wkb_element, geoalchemy2.WKBElement))
+    assert(isinstance(wkb_element, WKBElement))
     geometry = wkb.loads(bytes(wkb_element.data))
     return shape(_force_2d(geometry))
 

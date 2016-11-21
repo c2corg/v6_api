@@ -99,10 +99,9 @@ class MigrateRoutes(MigrateDocuments):
         if durations is not None:
             durations = [durations]
 
-        glacier_gear = None
-        if document_in.is_on_glacier is not None:
-            glacier_gear = 'glacier_safety_gear' \
-                if document_in.is_on_glacier else 'no'
+        glacier_gear = 'no'
+        if document_in.is_on_glacier:
+            glacier_gear = 'glacier_safety_gear'
 
         lift_access = None
         if document_in.sub_activities is not None:
