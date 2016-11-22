@@ -602,26 +602,33 @@ class TestReportRest(BaseDocumentTestRest):
         self.assertEqual(archive_document_en.event_type, ['person_fall'])
         self.assertEqual(archive_document_en.age, 90)
 
-    # TODO - TRY TO REWRITE REPORT WRITTEN BY SOMEONE ELSE
-    # def test_put_as_non_author(self):
-    #     body = {
-    #         'message': 'Update',
-    #         'document': {
-    #             'document_id': self.report4.document_id,
-    #             'version': self.report4.version,
-    #             'quality': quality_types[1],
-    #             'activities': ['paragliding'],  # changed
-    #             'event_type': ['person_fall'],  # changed
-    #             'age': 90,  # PERSONAL DATA CHANGED
-    #             'locales': [
-    #                 {'lang': 'en', 'title': 'Another final EN title',
-    #                  'version': self.locale_en.version}
-    #             ]
-    #         }
-    #     }
-    #
-    #     (body, report4) = self.put_wrong_authorization(
-    #         body, self.report4.document_id, user='contributor2')
+    def test_put_as_non_author(self):
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.report4.document_id,
+                'version': self.report4.version,
+                'quality': quality_types[1],
+                'activities': ['paragliding'],
+                'event_type': ['person_fall'],
+                'age': 90,
+                'locales': [
+                    {'lang': 'en', 'title': 'Another final EN title',
+                     'version': self.locale_en.version}
+                ]
+            }
+        }
+
+        headers = self.add_authorization_header(username='contributor2')
+        response = self.app_put_json(
+            self._prefix + '/' + str(self.report4.document_id), body,
+            headers=headers,
+            status=403)
+
+        body = response.json
+        self.assertEqual(body['status'], 'error')
+        self.assertEqual(len(body['errors']), 1)
+        self.assertEqual(body['errors'][0]['name'], 'Forbidden')
 
     def _add_test_data(self):
         self.report1 = Report(activities=['hiking'],

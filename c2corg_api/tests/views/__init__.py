@@ -586,22 +586,6 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(body['status'], 'error')
         self.assertEqual(body['errors'][0]['name'], 'Bad Request')
 
-    def put_wrong_authorization(self, request_body, id, user=None):
-        """Test updating a document owned by different author.
-        """
-
-        response = self.app_put_json(
-            self._prefix + '/' + str(id), request_body, status=403)
-
-        headers = self.add_authorization_header(username=user)
-        response = self.app_put_json(
-            self._prefix + '/' + str(id), request_body, headers=headers,
-            status=403)
-
-        body = response.json
-        self.assertEqual(body['status'], 'error')
-        self.assertEqual(body['errors'][0]['name'], 'Forbidden')
-
     def put_put_no_document(self, id, user='contributor'):
         request_body = {
             'message': '...'

@@ -197,7 +197,7 @@ class MigrateReports(MigrateDocuments):
 
     severity = {
         '0': None,
-        '1': 'serverity_no',
+        '1': 'severity_no',
         '3': '1d_to_3d',
         '30': '4d_to_1m',
         '90': '1m_to_3m',
