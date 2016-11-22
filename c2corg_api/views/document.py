@@ -15,6 +15,7 @@ from c2corg_api.models.document import (
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.feed import update_feed_document_create, \
     update_feed_document_update
+from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.topo_map import schema_listing_topo_map, \
     MAP_TYPE
 from c2corg_api.models.topo_map_association import update_maps_for_document, \
@@ -27,7 +28,7 @@ import c2corg_api.views.document_associations as doc_associations
 from c2corg_api.views.document_listings import add_load_for_locales, \
     add_load_for_profiles, get_documents
 from c2corg_api.views.validation import check_required_fields, \
-    check_duplicate_locales
+    check_duplicate_locales, outing_association_checker
 from functools import partial
 from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
     HTTPBadRequest, HTTPForbidden
@@ -198,8 +199,12 @@ class DocumentRest(object):
             after_add(document, user_id=user_id)
 
         if document_in.get('associations', None):
+            check_association = outing_association_checker(self.request) if \
+                document.type != OUTING_TYPE else None
+
             added_associations = create_associations(
-                document, document_in['associations'], user_id)
+                document, document_in['associations'], user_id,
+                check_association=check_association)
             update_cache_version_associations(
                 added_associations, [], document.document_id)
 
@@ -266,8 +271,13 @@ class DocumentRest(object):
 
         associations = self.request.validated.get('associations', None)
         if associations:
+            check_association = outing_association_checker(self.request) if \
+                document.type != OUTING_TYPE else None
+
             added_associations, removed_associations = \
-                synchronize_associations(document, associations, user_id)
+                synchronize_associations(
+                    document, associations, user_id,
+                    check_association=check_association)
 
         if update_types or associations:
             # update search index

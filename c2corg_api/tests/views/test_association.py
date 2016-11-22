@@ -113,6 +113,26 @@ class TestAssociationRest(BaseTestRest):
                 self.global_userids['contributor2'],
                 self.global_userids['moderator']]))
 
+    def test_add_association_uo_no_rights(self):
+        """ Check that associations with outings can only be changed by users
+        associated to the outing or moderators.
+        """
+        contributor2 = self.global_userids['contributor2']
+        request_body = {
+            'parent_document_id': contributor2,
+            'child_document_id': self.outing.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor2')
+        response = self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=400)
+        body = response.json
+
+        self.assertError(
+            body['errors'], 'associations.outings',
+            'no rights to modify associations with outing {}'.format(
+                self.outing.document_id))
+
     def test_add_association_duplicate(self):
         """ Test that there is only one association between two documents.
         """
@@ -307,6 +327,38 @@ class TestAssociationRest(BaseTestRest):
             errors[0].get('description'),
             'as the main waypoint of the route, this waypoint can not '
             'be disassociated')
+
+    def test_delete_association_uo(self):
+        contributor2 = self.global_userids['contributor2']
+        request_body = {
+            'parent_document_id': contributor2,
+            'child_document_id': self.outing.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor')
+
+        # add association
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=200)
+
+        # then delete it again
+        self.app.delete_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=200)
+
+    def test_delete_association_uo_no_rights(self):
+        """ Try to delete an association to an outing with a user that has
+        no permission to change this outing.
+        """
+        request_body = {
+            'parent_document_id': self.global_userids['contributor'],
+            'child_document_id': self.outing.document_id,
+        }
+
+        headers = self.add_authorization_header(username='contributor2')
+        self.app.delete_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=400)
 
     def _add_test_data(self):
         self.waypoint1 = Waypoint(

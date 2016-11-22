@@ -1,5 +1,9 @@
+from functools import partial
+
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE
+from c2corg_api.models.association import Association, \
+    updatable_associations, association_keys
 from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.document import Document
 from c2corg_api.models.article import ARTICLE_TYPE
@@ -13,6 +17,8 @@ from c2corg_common.attributes import default_langs
 from c2corg_common import document_types
 from colander import null
 from cornice.errors import Errors
+from pyramid.httpexceptions import HTTPBadRequest
+from sqlalchemy.sql.expression import exists, and_
 from webob.descriptors import parse_int_safe
 from dateutil import parser as datetime_parser
 
@@ -191,6 +197,67 @@ def validate_token(request, **kwargs):
         request.errors.add('querystring', 'token', 'invalid format')
 
 
+def validate_outing_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type):
+    """ If the given association is an association with an outing, this
+    function checks if the authenticated user is allowed to change the
+    associations with the outing (either moderator or participant).
+    """
+    if parent_document_type != OUTING_TYPE and \
+            child_document_type != OUTING_TYPE:
+        # no association with an outing, nothing to check
+        return
+
+    if parent_document_type == OUTING_TYPE:
+        outing_id = parent_document_id
+    else:
+        outing_id = child_document_id
+
+    if not has_permission_for_outing(request, outing_id):
+        request.errors.add(
+            'body', 'associations.outings',
+            'no rights to modify associations with outing {}'.format(
+                outing_id))
+
+
+def has_permission_for_outing(request, outing_id):
+    """Check if the user with the given id has permission to change an
+    outing. That is only users that are currently assigned to the outing
+    can modify it.
+    """
+    if request.has_permission('moderator'):
+        # moderators can change everything
+        return True
+
+    user_id = request.authenticated_userid
+    return DBSession.query(exists().where(
+        and_(
+            Association.parent_document_id == user_id,
+            Association.child_document_id == outing_id
+        ))).scalar()
+
+
+def check_permission_for_outing_association(request, association):
+    if association.parent_document_type != OUTING_TYPE and \
+            association.child_document_type != OUTING_TYPE:
+        # no association with an outing, nothing to check
+        return
+
+    if association.parent_document_type == OUTING_TYPE:
+        outing_id = association.parent_document_id
+    else:
+        outing_id = association.child_document_id
+
+    if not has_permission_for_outing(request, outing_id):
+        raise HTTPBadRequest(
+            'no rights to modify association with outing {}'.format(outing_id))
+
+
+def outing_association_checker(request):
+    return partial(check_permission_for_outing_association, request)
+
+
 def validate_required_json_string(key, request):
     """Checks if a given key is present in the request.
     """
@@ -353,40 +420,3 @@ def _is_parent_of_association(main_document_type, other_document_type):
         return True
     else:
         return None
-
-association_keys = {
-    'routes': ROUTE_TYPE,
-    'waypoints': WAYPOINT_TYPE,
-    'waypoint_children': WAYPOINT_TYPE,
-    'users': USERPROFILE_TYPE,
-    'images': IMAGE_TYPE,
-    'articles': ARTICLE_TYPE,
-    'areas': AREA_TYPE,
-    'books': BOOK_TYPE,
-    'outings': OUTING_TYPE
-}
-
-association_keys_for_types = {
-    ROUTE_TYPE: 'routes',
-    WAYPOINT_TYPE: 'waypoints',
-    USERPROFILE_TYPE: 'users',
-    ARTICLE_TYPE: 'articles',
-    BOOK_TYPE: 'books',
-    IMAGE_TYPE: 'images',
-    AREA_TYPE: 'areas',
-    OUTING_TYPE: 'outings'
-}
-
-# associations that can be updated/created when updating/creating a document
-# e.g. when creating a route, route and waypoint associations can be created
-updatable_associations = {
-    ROUTE_TYPE: {'articles', 'routes', 'waypoints', 'books'},
-    WAYPOINT_TYPE: {'articles', 'waypoints', 'waypoint_children'},
-    OUTING_TYPE: {'articles', 'routes', 'users'},
-    IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users', 'articles',
-                 'areas', 'outings', 'books'},
-    ARTICLE_TYPE: {'articles', 'images', 'users', 'routes', 'waypoints',
-                   'outings', 'books'},
-    AREA_TYPE: {'images'},
-    BOOK_TYPE: {'routes', 'articles', 'images', 'waypoints'}
-}
