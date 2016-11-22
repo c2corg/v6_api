@@ -29,5 +29,5 @@ object C2corgConf {
   val basic_auth_username = "c2corg"
   val basic_auth_password = "c2corg"
 
-  val black_list = BlackList("""http://server1.affiz.net/.*""", """https://www.google-analytics.com/analytics.js""", """https://www.google.com/recaptcha/api.js?.*""", """http://sos.exo.io/.*""", """.*/static/.*""", """.*/images/proxy/.*""", """http://i.imgur.com/.*""", """.*.ico""", """.*css.*""", """.*.js""")
+  val black_list = BlackList("""http://server1.affiz.net/.*""", """https://www.google-analytics.com/analytics.js""", """https://www.google.com/recaptcha/api.js?.*""", """http://sos.exo.io/.*""", """http://api.geonames.org/searchJSON""", """.*/static/.*""", """.*/images/proxy/.*""", """http://i.imgur.com/.*""", """.*.ico""", """.*css.*""", """.*.js""")
 }
