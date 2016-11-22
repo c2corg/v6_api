@@ -274,8 +274,16 @@ def etag_cache(request, key):
         headers = [
             ('ETag', etag)
         ]
+        if request.response.headers.get('Cache-Control'):
+            headers.append(
+                ('Cache-Control',
+                 request.response.headers.get('Cache-Control')))
         log.debug("ETag match, returning 304 HTTP Not Modified Response")
         raise HTTPNotModified(headers=headers)
     else:
         request.response.headers['ETag'] = etag
         log.debug("ETag didn't match, returning response object")
+
+
+def set_private_cache_header(request):
+    request.response.headers['Cache-Control'] = 'private'

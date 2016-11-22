@@ -240,11 +240,14 @@ class BaseDocumentTestRest(BaseTestRest):
             self.assertCountEqual(available_langs, ['en', 'fr'])
         return body
 
-    def get_version(self, reference, reference_version):
+    def get_version(self, reference, reference_version, user=None):
+        headers = {} if not user else \
+            self.add_authorization_header(username=user)
         response = self.app.get(
             '{0}/{1}/en/{2}'.format(
                 self._prefix, str(reference.document_id),
                 str(reference_version.id)),
+            headers=headers,
             status=200)
         self.assertEqual(response.content_type, 'application/json')
 

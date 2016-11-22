@@ -15,7 +15,8 @@ from cornice.validators import colander_body_validator
 from c2corg_api.views.document_schemas import report_documents_config
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update
-from c2corg_api.views import cors_policy, restricted_json_view, get_creators
+from c2corg_api.views import cors_policy, restricted_json_view, get_creators, \
+    set_private_cache_header
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
     validate_associations, validate_lang, validate_version_id
@@ -40,7 +41,8 @@ class ReportRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
-        if not self._has_permission(self.request.validated['id']):
+        set_private_cache_header(self.request)
+        if not _has_permission(self.request, self.request.validated['id']):
             # only moderators and the author of a report can access the full
             # report (including personal information)
             return self._get(Report, schema_report_without_personal,
@@ -65,36 +67,43 @@ class ReportRest(DocumentRest):
                         validate_report_update,
                         validate_associations_update])
     def put(self):
-        if not self._has_permission(self.request.validated['id']):
+        if not _has_permission(self.request, self.request.validated['id']):
             raise HTTPForbidden('No permission to change this report')
 
         return self._put(Report, schema_report)
 
-    def _has_permission(self, report_id):
-        """Check if the authenticated user has permission to view non-public
-        information of the report or th change the report. That is only
-        moderators and users that are currently assigned to the report
-        can modify it.
-        """
-        if self.request.authorization is None:
-            return False
 
-        if self.request.has_permission('moderator'):
-            return True
+def _has_permission(request, report_id):
+    """Check if the authenticated user has permission to view non-public
+    information of the report or th change the report. That is only
+    moderators and users that are currently assigned to the report
+    can modify it.
+    """
+    if request.authorization is None:
+        return False
 
-        user_id = self.request.authenticated_userid
+    if request.has_permission('moderator'):
+        return True
 
-        creators = get_creators([report_id])
-        creator_info = creators.get(report_id)
+    user_id = request.authenticated_userid
 
-        return creator_info and creator_info['user_id'] == user_id
+    creators = get_creators([report_id])
+    creator_info = creators.get(report_id)
+
+    return creator_info and creator_info['user_id'] == user_id
 
 
 @resource(path='/reports/{id}/{lang}/{version_id}',
           cors_policy=cors_policy)
 class ReportsVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
+    @restricted_json_view(validators=[
+        validate_id, validate_lang, validate_version_id])
     def get(self):
+        set_private_cache_header(self.request)
+        if not _has_permission(self.request, self.request.validated['id']):
+            raise HTTPForbidden(
+                'No permission to view the version of this report')
+
         return self._get_version(
             ArchiveReport, ArchiveReportLocale, schema_report)
 

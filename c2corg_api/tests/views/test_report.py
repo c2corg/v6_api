@@ -145,27 +145,41 @@ class TestReportRest(BaseDocumentTestRest):
     def test_get_404(self):
         self.get_404(user='moderator')
 
+    def test_get_cache_headers(self):
+        response = self.app.get(self._prefix + '/' +
+                                str(self.report1.document_id),
+                                status=200)
+        headers = response.headers
+        etag = headers.get('ETag')
+        self.assertIsNotNone(etag)
+
+        self.assertEqual(response.headers.get('Cache-Control'), 'private')
+
     def test_get_version(self):
-        self.get_version(self.report1, self.report1_version)
+        self.get_version(
+            self.report1, self.report1_version, user='contributor')
 
     def test_get_version_etag(self):
+        auth_headers = self.add_authorization_header(username='contributor')
         url = '{0}/{1}/en/{2}'.format(
                 self._prefix, str(self.report1.document_id),
                 str(self.report1_version.id))
-        response = self.app.get(url, status=200)
+        response = self.app.get(url, headers=auth_headers, status=200)
 
         # check that the ETag header is set
         headers = response.headers
         etag = headers.get('ETag')
         self.assertIsNotNone(etag)
 
+        self.assertEqual(response.headers.get('Cache-Control'), 'private')
+
         # then request the document again with the etag
-        headers = {
-            'If-None-Match': etag
-        }
-        self.app.get(url, status=304, headers=headers)
+        auth_headers['If-None-Match'] = etag
+        response = self.app.get(url, status=304, headers=auth_headers)
+        self.assertEqual(response.headers.get('Cache-Control'), 'private')
 
     def test_get_version_caching(self):
+        headers = self.add_authorization_header(username='contributor')
         url = '{0}/{1}/en/{2}'.format(
                 self._prefix, str(self.report1.document_id),
                 str(self.report1_version.id))
@@ -177,7 +191,7 @@ class TestReportRest(BaseDocumentTestRest):
         self.assertEqual(cache_value, NO_VALUE)
 
         # check that the response is cached
-        self.app.get(url, status=200)
+        self.app.get(url, headers=headers, status=200)
 
         cache_value = cache_document_version.get(cache_key)
         self.assertNotEqual(cache_value, NO_VALUE)
@@ -186,7 +200,7 @@ class TestReportRest(BaseDocumentTestRest):
         fake_cache_value = {'document': 'fake doc'}
         cache_document_version.set(cache_key, fake_cache_value)
 
-        response = self.app.get(url, status=200)
+        response = self.app.get(url, headers=headers, status=200)
         body = response.json
         self.assertEqual(body, fake_cache_value)
 
