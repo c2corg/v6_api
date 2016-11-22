@@ -29,7 +29,7 @@ object Auth {
 
   val login = feed(feeder).exec(
     http("View login page")
-      .get("/auth")
+      .get(C2corgConf.ui_url + "/auth")
       .headers(C2corgConf.header_html)
       .basicAuth(C2corgConf.basic_auth_username, C2corgConf.basic_auth_password)
     )

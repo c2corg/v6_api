@@ -11,13 +11,13 @@ object Topic {
 
   val open = feed(feeder).exec(
     http("Open topic")
-      .get("/t/${topic_id}.json")
+      .get(C2corgConf.forum_url + "/t/${topic_id}.json")
       .headers(C2corgConf.header_discourse_1)
   )
 
   val scroll = feed(feeder).exec(
     http("Scroll topic")
-      .get("/t/${topic_id}/posts.json")
+      .get(C2corgConf.forum_url + "/t/${topic_id}/posts.json")
       .headers(C2corgConf.header_discourse_2)
   )
 }

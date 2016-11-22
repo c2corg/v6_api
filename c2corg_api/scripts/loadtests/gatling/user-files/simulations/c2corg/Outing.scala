@@ -14,14 +14,14 @@ object Outing {
 
   val view = feed(feeder).exec(
     http("View outing")
-      .get("/outings/${id}/${lang}/foo")
+      .get(C2corgConf.ui_url + "/outings/${id}/${lang}/foo")
       .headers(C2corgConf.header_html)
       .basicAuth(C2corgConf.basic_auth_username, C2corgConf.basic_auth_password)
   )
 
   val add = exec(
     http("Creating an outing")
-      .get("/outings/add")
+      .get(C2corgConf.ui_url + "/outings/add")
       .headers(C2corgConf.header_html)
       .basicAuth(C2corgConf.basic_auth_username, C2corgConf.basic_auth_password)
     )

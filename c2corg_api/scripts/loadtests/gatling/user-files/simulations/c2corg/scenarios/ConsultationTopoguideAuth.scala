@@ -8,12 +8,9 @@ import io.gatling.http.Predef._
 class ConsultationTopoguideAuth extends Simulation {
 
         val httpProtocol = http
-                .baseURL(C2corgConf.ui_url)
                 .inferHtmlResources(C2corgConf.black_list, WhiteList())
                 .acceptHeader("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                 .acceptEncodingHeader("gzip, deflate")
-                .acceptLanguageHeader("fr-CH,en-US;q=0.7,en;q=0.3")
-                .userAgentHeader("Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:49.0) Gecko/20100101 Firefox/49.0")
 
         val scn = scenario("ConsultationTopoguideAuth")
                 .exec(Homepage.init)

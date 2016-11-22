@@ -10,7 +10,7 @@ object Route {
 
   val view = feed(feeder).exec(
     http("View route")
-      .get("/routes/${id}/${lang}/foo")
+      .get(C2corgConf.ui_url + "/routes/${id}/${lang}/foo")
       .headers(C2corgConf.header_html)
       .basicAuth(C2corgConf.basic_auth_username, C2corgConf.basic_auth_password)
   )

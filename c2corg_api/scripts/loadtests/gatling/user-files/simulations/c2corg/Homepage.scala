@@ -7,7 +7,7 @@ import io.gatling.http.Predef._
 
 object Homepage {
   val init = exec(http("View homepage")
-    .get("/")
+    .get(C2corgConf.ui_url + "/")
     .headers(C2corgConf.header_html)
     .basicAuth(C2corgConf.basic_auth_username, C2corgConf.basic_auth_password)
     .resources(
@@ -23,7 +23,7 @@ object Homepage {
   )
 
   val initAuth = exec(http("View personal homepage")
-    .get("/")
+    .get(C2corgConf.ui_url + "/")
     .headers(C2corgConf.header_html)
     .basicAuth(C2corgConf.basic_auth_username, C2corgConf.basic_auth_password)
     .resources(

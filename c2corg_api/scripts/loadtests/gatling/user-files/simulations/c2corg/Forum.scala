@@ -11,7 +11,7 @@ object Forum {
 
   val init = exec(
     http("Forum init")
-      .get("/")
+      .get(C2corgConf.forum_url + "/")
       .headers(C2corgConf.header_html)
       .resources(
         http("Forum categories")
@@ -22,13 +22,13 @@ object Forum {
 
   val open = feed(feeder).exec(
     http("Open forum")
-      .get("/c/${forum_name}/l/latest.json")
+      .get(C2corgConf.forum_url + "/c/${forum_name}/l/latest.json")
       .headers(C2corgConf.header_discourse_1)
   )
 
   val scroll = feed(feeder).exec(
     http("Scroll forum")
-      .get("/c/${forum_name}/l/latest")
+      .get(C2corgConf.forum_url + "/c/${forum_name}/l/latest")
       .headers(C2corgConf.header_discourse_2)
   )
 }
