@@ -1,6 +1,5 @@
 from c2corg_api.models.report import Report, ArchiveReport, REPORT_TYPE, \
     ReportLocale, ArchiveReportLocale
-from c2corg_api.models.document import DOCUMENT_TYPE
 from c2corg_api.scripts.migration.documents.document import MigrateDocuments, \
     DEFAULT_QUALITY
 from c2corg_api.scripts.migration.documents.routes import MigrateRoutes
@@ -38,7 +37,7 @@ class MigrateReports(MigrateDocuments):
             '   aa.id, aa.document_archive_id, aa.is_latest_version, '
             '   aa.is_protected, aa.redirects_to, '
             '   ST_Force2D(ST_SetSRID(aa.geom, 3857)) geom, '
-            '   aa.lon, aa.lat, aa.elevation, '
+            '   aa.elevation, '
             '   aa.date, aa.event_type, '
             '   aa.activities, aa.nb_participants, aa.nb_impacted, '
             '   aa.rescue, aa.avalanche_level, aa.avalanche_slope, '
@@ -82,8 +81,6 @@ class MigrateReports(MigrateDocuments):
 
             quality=DEFAULT_QUALITY,
 
-            lon=document_in.lon,
-            lat=document_in.lat,
             elevation=document_in.elevation,
             date=document_in.date,
             activities=self.convert_types(
@@ -123,7 +120,7 @@ class MigrateReports(MigrateDocuments):
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
-            type=DOCUMENT_TYPE,
+            type=REPORT_TYPE,
             version=version,
             lang=document_in.culture,
             title=document_in.name,
@@ -145,7 +142,6 @@ class MigrateReports(MigrateDocuments):
             other_comments=document_in.other_comments
         )
 
-    # AssertionError: invalid type: 5
     event_types = {
         '0': None,
         '1': 'avalanche',
@@ -201,16 +197,16 @@ class MigrateReports(MigrateDocuments):
 
     severity = {
         '0': None,
-        '1': 'no',
-        '3': '1 to 3 days',
-        '30': '4 days to 1 month',
-        '90': '1 to 3 months',
-        '100': 'more than 3 months'
+        '1': 'serverity_no',
+        '3': '1d_to_3d',
+        '30': '4d_to_1m',
+        '90': '1m_to_3m',
+        '100': 'more_than_3m'
     }
 
     autonomy = {
         '0': None,
-        '10': 'non autonomous',
+        '10': 'non_autonomous',
         '20': 'autonomous',
         '30': 'initiator',
         '40': 'expert',
@@ -219,26 +215,26 @@ class MigrateReports(MigrateDocuments):
 
     avalanche_level = {
         '0': None,
-        '10': '1',
-        '20': '2',
-        '30': '3',
-        '40': '4',
-        '50': '5',
-        '100': 'avalanche_level_NA'
+        '10': 'level_1',
+        '20': 'level_2',
+        '30': 'level_3',
+        '40': 'level_4',
+        '50': 'level_5',
+        '100': 'level_na'
     }
 
     # invalid type: 39(3x), 45(1x), 42(?x)
     avalanche_slope = {
-        '39': '39-41°',
-        '42': '42-44°',
-        '45': '45-47°',
+        '39': 'slope_39_41',
+        '42': 'slope_42_44',
+        '45': 'slope_45_47',
         '0': None,
-        '29': '< 30°',
-        '32': '30-32°',
-        '35': '33-35°',
-        '38': '36-38°',
-        '41': '39-41°',
-        '44': '42-44°',
-        '47': '45-47°',
-        '50': '> 47°'
+        '29': 'slope_lt_30',
+        '32': 'slope_30_32',
+        '35': 'slope_33_35',
+        '38': 'slope_36_38',
+        '41': 'slope_39_41',
+        '44': 'slope_42_44',
+        '47': 'slope_45_47',
+        '50': 'slope_gt_47'
     }
