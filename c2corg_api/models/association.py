@@ -1,7 +1,12 @@
+from c2corg_api.models.area import AREA_TYPE
+from c2corg_api.models.article import ARTICLE_TYPE
+from c2corg_api.models.book import BOOK_TYPE
+from c2corg_api.models.image import IMAGE_TYPE
+from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import User
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
-from c2corg_api.views.validation import updatable_associations, \
-    association_keys, association_keys_for_types
 from colanderalchemy.schema import SQLAlchemySchemaNode
 from sqlalchemy import (
     Boolean,
@@ -129,7 +134,8 @@ def exists_already(link):
 
 def add_association(
         parent_document_id, parent_document_type,
-        child_document_id, child_document_type, user_id, check_first=False):
+        child_document_id, child_document_type, user_id, check_first=False,
+        check_association=None):
     """Create an association between the two documents and create a log entry
     in the association history table with the given user id.
     """
@@ -142,13 +148,17 @@ def add_association(
     if check_first and exists_already(association):
         return
 
+    if check_association:
+        check_association(association)
+
     DBSession.add(association)
     DBSession.add(association.get_log(user_id, is_creation=True))
 
 
 def remove_association(
         parent_document_id, parent_document_type,
-        child_document_id, child_document_type, user_id, check_first=False):
+        child_document_id, child_document_type, user_id, check_first=False,
+        check_association=None):
     """Remove an association between the two documents and create a log entry
     in the association history table with the given user id.
     """
@@ -161,13 +171,17 @@ def remove_association(
     if check_first and not exists_already(association):
         return
 
+    if check_association:
+        check_association(association)
+
     DBSession.query(Association).filter_by(
         parent_document_id=parent_document_id,
         child_document_id=child_document_id).delete()
     DBSession.add(association.get_log(user_id, is_creation=False))
 
 
-def create_associations(document, associations_for_document, user_id):
+def create_associations(
+        document, associations_for_document, user_id, check_association=None):
     """ Create associations for a document that were provided when creating
     a document.
     """
@@ -186,7 +200,8 @@ def create_associations(document, associations_for_document, user_id):
             child_type = main_doc_type if is_parent else doc_type
             add_association(
                 parent_id, parent_type, child_id, child_type,
-                user_id, check_first=False)
+                user_id, check_first=False,
+                check_association=check_association)
             added_associations.append({
                 'parent_id': parent_id,
                 'parent_type': parent_type,
@@ -196,7 +211,8 @@ def create_associations(document, associations_for_document, user_id):
     return added_associations
 
 
-def synchronize_associations(document, new_associations, user_id):
+def synchronize_associations(
+        document, new_associations, user_id, check_association=None):
     """ Synchronize the associations when updating a document.
     """
     current_associations = _get_current_associations(
@@ -205,14 +221,15 @@ def synchronize_associations(document, new_associations, user_id):
         new_associations, current_associations)
 
     added_associations = _apply_operation(
-        to_add, add_association, document, user_id)
+        to_add, add_association, document, user_id, check_association)
     removed_associations = _apply_operation(
-        to_remove, remove_association, document, user_id)
+        to_remove, remove_association, document, user_id, check_association)
 
     return added_associations, removed_associations
 
 
-def _apply_operation(docs, add_or_remove, document, user_id):
+def _apply_operation(
+        docs, add_or_remove, document, user_id, check_association):
     associations = []
     main_doc_type = document.type
     for doc in docs:
@@ -224,7 +241,7 @@ def _apply_operation(docs, add_or_remove, document, user_id):
 
         add_or_remove(
             parent_id, parent_type, child_id, child_type,
-            user_id, check_first=False)
+            user_id, check_first=False, check_association=check_association)
         associations.append({
             'parent_id': parent_id,
             'parent_type': parent_type,

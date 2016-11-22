@@ -17,6 +17,8 @@ from c2corg_common.attributes import default_langs
 from c2corg_common import document_types
 from colander import null
 from cornice.errors import Errors
+from pyramid.httpexceptions import HTTPBadRequest
+from sqlalchemy.sql.expression import exists, and_
 from webob.descriptors import parse_int_safe
 from dateutil import parser as datetime_parser
 
@@ -195,6 +197,29 @@ def validate_token(request, **kwargs):
         request.errors.add('querystring', 'token', 'invalid format')
 
 
+def validate_outing_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type):
+    """ If the given association is an association with an outing, this
+    function checks if the authenticated user is allowed to change the
+    associations with the outing (either moderator or participant).
+    """
+    if parent_document_type != OUTING_TYPE and \
+            child_document_type != OUTING_TYPE:
+        # no association with an outing, nothing to check
+        return
+
+    if parent_document_type == OUTING_TYPE:
+        outing_id = parent_document_id
+    else:
+        outing_id = child_document_id
+
+    if not has_permission_for_outing(request, outing_id):
+        request.errors.add(
+            'body', 'associations.outings',
+            'no rights to modify associations with outing {}'.format(
+                outing_id))
+
 
 def has_permission_for_outing(request, outing_id):
     """Check if the user with the given id has permission to change an
@@ -211,6 +236,26 @@ def has_permission_for_outing(request, outing_id):
             Association.parent_document_id == user_id,
             Association.child_document_id == outing_id
         ))).scalar()
+
+
+def check_permission_for_outing_association(request, association):
+    if association.parent_document_type != OUTING_TYPE and \
+            association.child_document_type != OUTING_TYPE:
+        # no association with an outing, nothing to check
+        return
+
+    if association.parent_document_type == OUTING_TYPE:
+        outing_id = association.parent_document_id
+    else:
+        outing_id = association.child_document_id
+
+    if not has_permission_for_outing(request, outing_id):
+        raise HTTPBadRequest(
+            'no rights to modify association with outing {}'.format(outing_id))
+
+
+def outing_association_checker(request):
+    return partial(check_permission_for_outing_association, request)
 
 
 def validate_required_json_string(key, request):

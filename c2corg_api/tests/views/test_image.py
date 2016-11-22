@@ -8,7 +8,8 @@ from c2corg_api.models.book import Book
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.feed import update_feed_document_create
-from c2corg_api.models.outing import OutingLocale, Outing
+from c2corg_api.models.outing import OutingLocale, Outing, OUTING_TYPE
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
 from c2corg_common.attributes import quality_types
@@ -129,6 +130,11 @@ class BaseTestImage(BaseDocumentTestRest):
         self.session.add(Association.create(
             parent_document=self.outing1,
             child_document=self.image))
+        self.session.add(Association(
+            parent_document_id=self.global_userids['contributor'],
+            parent_document_type=USERPROFILE_TYPE,
+            child_document_id=self.outing1.document_id,
+            child_document_type=OUTING_TYPE))
         update_feed_document_create(self.outing1, user_id)
         self.session.flush()
 
@@ -311,14 +317,18 @@ class TestImageRest(BaseTestImage):
         body, locale = self.get_info(self.image, 'en')
         self.assertEqual(locale.get('lang'), 'en')
 
-    def test_post_missing_title(self):
+    @patch('c2corg_api.views.image.requests.post',
+           return_value=Mock(status_code=200))
+    def test_post_missing_title(self, post_mock):
         request_body = self._post_success_document()
         del request_body['locales'][0]['title']
 
         body, doc = self.post_success(request_body)
         self.assertEqual(doc.locales[0].title, '')
 
-    def test_post_missing_title_none(self):
+    @patch('c2corg_api.views.image.requests.post',
+           return_value=Mock(status_code=200))
+    def test_post_missing_title_none(self, post_mock):
         request_body = self._post_success_document()
         request_body['locales'][0]['title'] = None
 
@@ -375,6 +385,31 @@ class TestImageRest(BaseTestImage):
         self._validate_post_success(body, doc)
         self.check_cache_version(
             self.waypoint.document_id, waypoint_cache_key + 1)
+
+    @patch('c2corg_api.views.image.requests.post',
+           return_value=Mock(status_code=200))
+    def test_post_no_permission_for_outing_association(self, post_mock):
+        """ Try to create an image with an association to an outing as a user
+        who has no permission to add associations to that outing.
+        """
+        body_post = self._post_success_document({
+            'associations': {
+                'outings': [
+                    {'document_id': self.outing1.document_id}
+                ]
+            }
+        })
+
+        headers = self.add_authorization_header(username='contributor2')
+        response = self.app_post_json(self._prefix, body_post,
+                                      headers=headers, expect_errors=True,
+                                      status=400)
+
+        body = response.json
+        self.assertError(
+            body.get('errors'), 'Bad Request',
+            'no rights to modify association with outing {}'.format(
+                self.outing1.document_id))
 
     def test_put_wrong_document_id(self):
         body = {
@@ -523,6 +558,8 @@ class TestImageRest(BaseTestImage):
                      'version': self.locale_en.version}
                 ],
                 'associations': {
+                    # association to outing is removed
+                    'outings': [],
                     'waypoints': [{'document_id': self.waypoint.document_id}]
                 }
             }
@@ -555,6 +592,63 @@ class TestImageRest(BaseTestImage):
         association_wp = self.session.query(Association).get(
             (self.waypoint.document_id, image.document_id))
         self.assertIsNotNone(association_wp)
+
+    def test_put_no_permission_for_outing_association_removal(self):
+        """ Try to remove an association with an outing that the user has no
+        permission to update the associations of.
+        """
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.image.document_id,
+                'version': self.image.version,
+                'filename': self.image.filename,
+                'quality': quality_types[1],
+                'activities': ['paragliding'],
+                'image_type': 'collaborative',
+                'height': 2000,
+                'associations': {
+                    # association to outing is removed
+                    'outings': [],
+                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                }
+            }
+        }
+
+        headers = self.add_authorization_header(username='contributor2')
+        response = self.app_put_json(
+            self._prefix + '/' + str(self.image.document_id), body,
+            headers=headers, expect_errors=True, status=400)
+
+        body = response.json
+        self.assertError(
+            body.get('errors'), 'Bad Request',
+            'no rights to modify association with outing {}'.format(
+                self.outing1.document_id))
+
+    def test_put_success_as_contributor2(self):
+        """ Try to update an image with contributor2 who has no permission to
+        change the association to the associated outing, but who can update
+        the other fields/associations of the image.
+        """
+        body = {
+            'message': 'Changing figures',
+            'document': {
+                'document_id': self.image.document_id,
+                'version': self.image.version,
+                'filename': self.image.filename,
+                'quality': quality_types[1],
+                'activities': ['paragliding'],
+                'image_type': 'collaborative',
+                'height': 2000,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...',
+                     'version': self.locale_en.version}
+                ]
+            }
+        }
+        self.put_success_figures_only(body, self.image, user='contributor2')
 
     def test_put_success_figures_only(self):
         body = {

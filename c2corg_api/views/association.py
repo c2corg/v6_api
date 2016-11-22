@@ -5,6 +5,8 @@ from c2corg_api.models.feed import update_feed_association_update
 from c2corg_api.models.route import Route
 from c2corg_api.scripts.es import sync
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.views.validation import validate_outing_association, \
+    check_permission_for_outing_association
 from c2corg_common.associations import valid_associations
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
@@ -47,6 +49,11 @@ def validate_association(request, **kwargs):
         if association_type not in valid_associations:
             request.errors.add(
                 'body', 'association', 'invalid association type')
+        else:
+            validate_outing_association(
+                request,
+                parent_document_id, parent_document_type,
+                child_document_id, child_document_type)
 
 
 @resource(collection_path='/associations', path='/associations/{id}',
@@ -108,6 +115,8 @@ class AssociationRest(object):
             raise HTTPBadRequest(
                 'as the main waypoint of the route, this waypoint can not '
                 'be disassociated')
+
+        check_permission_for_outing_association(self.request, association)
 
         log = association.get_log(
             self.request.authenticated_userid, is_creation=False)
