@@ -9,10 +9,9 @@ from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.scripts.migration.batch import SimpleBatch
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
-# TODO only importing the versions of the tables listed below
 tables = [
     'articles', 'huts', 'parkings', 'products', 'sites', 'summits', 'routes',
-    'maps', 'areas', 'outings', 'images', 'books'
+    'maps', 'areas', 'outings', 'images', 'books', 'xreports'
 ]
 tables_union = ' union '.join(
     ['select id, redirects_to from ' + t for t in tables]) + \

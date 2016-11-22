@@ -16,7 +16,6 @@ from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.scripts.migration.batch import SimpleBatch
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
-# TODO currently only importing associations for document types imported so far
 associations_query_count =\
     'select count(*) from (' \
     '  select a.main_id, a.linked_id from app_documents_associations a ' \
@@ -164,7 +163,7 @@ ASSOCIATION_TYPES = {
     'c': ARTICLE_TYPE,      # article
     'h': WAYPOINT_TYPE,     # hut
     'r': ROUTE_TYPE,        # route
-    # 'w': ?,               # portal?
+    # 'w': ?,               # portal exist no longer in v6
     's': WAYPOINT_TYPE,     # summit
     't': WAYPOINT_TYPE,     # site
     # 'm': MAP_TYPE         # map: ignored
