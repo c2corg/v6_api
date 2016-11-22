@@ -96,7 +96,8 @@ class MigrateArticles(MigrateDocuments):
 
     article_categories = {
         '1': 'mountain_environment',
-        '2': 'gear_and_technique',
+        '2': 'gear',
+        '11': 'technical',
         '4': 'topoguide_supplements',
         '7': 'soft_mobility',
         '8': 'expeditions',
@@ -105,6 +106,5 @@ class MigrateArticles(MigrateDocuments):
         '10': 'tags',
         '5': 'site_info',
         '6': 'association',
-        '100': 'draft',
-        '11': None
+        '100': None
     }
