@@ -199,6 +199,17 @@ def set_creator(documents, field_name):
         return
     document_ids = [o.document_id for o in documents]
 
+    author_for_documents = get_creators(document_ids)
+
+    for document in documents:
+        setattr(
+            document, field_name,
+            author_for_documents.get(document.document_id))
+
+
+def get_creators(document_ids):
+    """ Get the creator for the list of given document ids.
+    """
     t = DBSession.query(
         ArchiveDocument.document_id.label('document_id'),
         User.id.label('user_id'),
@@ -222,17 +233,12 @@ def set_creator(documents, field_name):
             t.c.document_id, t.c.user_id, t.c.name). \
         filter(t.c.rank == 1)
 
-    author_for_documents = {
+    return {
         document_id: {
             'name': name,
             'user_id': user_id
         } for document_id, user_id, name in query
     }
-
-    for document in documents:
-        setattr(
-            document, field_name,
-            author_for_documents.get(document.document_id))
 
 
 def set_author(outings, lang):

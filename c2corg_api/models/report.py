@@ -30,13 +30,12 @@ REPORT_TYPE = document_types.REPORT_TYPE
 
 
 class _ReportMixin(object):
-    # Event characterization-Caractérisation de l'évènement
 
     # Altitude
     elevation = Column(SmallInteger)
 
     # date des observations
-    date = Column(Date)  # , nullable=False
+    date = Column(Date)
 
     # Type d'évènement
     event_type = Column(ArrayOfEnum(enums.event_type))
@@ -89,7 +88,7 @@ attributes = [
 ]
 
 attributes_without_personal = [
-    'lon', 'lat', 'elevation', 'date', 'event_type', 'activities',
+    'elevation', 'date', 'event_type', 'activities',
     'nb_participants', 'nb_impacted', 'rescue',
     'avalanche_level', 'avalanche_slope', 'severity'
 ]
@@ -263,22 +262,14 @@ schema_report = SQLAlchemySchemaNode(
         'geometry': geometry_schema_overrides
     })
 
+# schema that hides personal information of a report
 schema_report_without_personal = SQLAlchemySchemaNode(
     Report,
     # whitelisted attributes
     includes=schema_attributes + attributes_without_personal,
     overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
         'locales': {
             'children': [schema_report_locale],
-        },
-        'activities': {
-            'validator': colander.Length(min=1)
         },
         'geometry': geometry_schema_overrides
     })

@@ -1,8 +1,4 @@
 import functools
-
-from c2corg_api.models import DBSession
-from c2corg_api.models.document import ArchiveDocument
-from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.report import (
   Report,
   schema_report,
@@ -10,7 +6,6 @@ from c2corg_api.models.report import (
   schema_update_report,
   REPORT_TYPE, ArchiveReport, ArchiveReportLocale, ReportLocale,
   schema_report_without_personal)
-from c2corg_api.models.user import User
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_common.fields_report import fields_report
@@ -20,12 +15,10 @@ from cornice.validators import colander_body_validator
 from c2corg_api.views.document_schemas import report_documents_config
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import cors_policy, restricted_json_view, get_creators
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
     validate_associations, validate_lang, validate_version_id
-from sqlalchemy.sql.expression import and_, over
-from sqlalchemy.sql.functions import func
 
 from pyramid.httpexceptions import HTTPForbidden
 
@@ -47,24 +40,15 @@ class ReportRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
-        if self.request.authorization is None:
+        if not self._has_permission(self.request.validated['id']):
+            # only moderators and the author of a report can access the full
+            # report (including personal information)
             return self._get(Report, schema_report_without_personal,
                              clazz_locale=ReportLocale)
 
-        if not self.request.has_permission('moderator'):
-
-            if not self._has_permission(self.request.authenticated_userid,
-                                        self.request.validated['id']):
-                return self._get(Report, schema_report_without_personal,
-                                 clazz_locale=ReportLocale)
-
-            return self._get(Report, schema_report,
-                             clazz_locale=ReportLocale,
-                             custom_cache_key='moderator')
-
         return self._get(Report, schema_report,
                          clazz_locale=ReportLocale,
-                         custom_cache_key='moderator')
+                         custom_cache_key='private')
 
     @restricted_json_view(
             schema=schema_create_report,
@@ -81,69 +65,29 @@ class ReportRest(DocumentRest):
                         validate_report_update,
                         validate_associations_update])
     def put(self):
-        if self.request.authorization is None:
+        if not self._has_permission(self.request.validated['id']):
             raise HTTPForbidden('No permission to change this report')
-
-        if not self.request.has_permission('moderator'):
-            # moderators can change every outing
-
-            if not self._has_permission(
-                    self.request.authenticated_userid,
-                    self.request.validated['id']):
-                # but a normal user can only change a report that he created
-                # are associated to
-                raise HTTPForbidden('No permission to change this report')
-
-            return self._put(Report, schema_report)
 
         return self._put(Report, schema_report)
 
-    def _has_permission(self, user_id, report_id):
-        """Check if the user with the given id has permission to change the
-        report. That is only users that are currently assigned to the report
+    def _has_permission(self, report_id):
+        """Check if the authenticated user has permission to view non-public
+        information of the report or th change the report. That is only
+        moderators and users that are currently assigned to the report
         can modify it.
         """
-
-        if not report_id:
+        if self.request.authorization is None:
             return False
 
-        t = DBSession.query(
-            ArchiveDocument.document_id.label('document_id'),
-            User.id.label('user_id'),
-            User.name.label('name'),
-            over(
-                func.rank(), partition_by=ArchiveDocument.document_id,
-                order_by=HistoryMetaData.id).label('rank')). \
-            select_from(ArchiveDocument). \
-            join(
-            DocumentVersion,
-            and_(
-                ArchiveDocument.document_id == DocumentVersion.document_id,
-                ArchiveDocument.version == 1)). \
-            join(HistoryMetaData,
-                 DocumentVersion.history_metadata_id == HistoryMetaData.id). \
-            join(User,
-                 HistoryMetaData.user_id == User.id). \
-            filter(ArchiveDocument.document_id == report_id). \
-            subquery('t')
+        if self.request.has_permission('moderator'):
+            return True
 
-        query = DBSession.query(
-            t.c.document_id, t.c.user_id, t.c.name). \
-            filter(t.c.rank == 1)
+        user_id = self.request.authenticated_userid
 
-        author_for_documents = {
-            document_id: {
-                'username': username,
-                'user_id': user_id
-            } for document_id, user_id, username in query
-        }
+        creators = get_creators([report_id])
+        creator_info = creators.get(report_id)
 
-        if len(author_for_documents) > 0:
-            for document in author_for_documents:
-                if document == report_id:
-                    return True
-        else:
-            return False
+        return creator_info and creator_info['user_id'] == user_id
 
 
 @resource(path='/reports/{id}/{lang}/{version_id}',

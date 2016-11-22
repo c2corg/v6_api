@@ -1,29 +1,22 @@
 import datetime
+
 from c2corg_api.caching import cache_document_version
-from c2corg_api.models import DBSession
 from c2corg_api.models.article import Article
+from c2corg_api.models.association import AssociationLog, Association
+from c2corg_api.models.cache_version import get_cache_key
+from c2corg_api.models.document import DocumentLocale, DocumentGeometry
+from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.report import ArchiveReport, Report, REPORT_TYPE, \
     ArchiveReportLocale, ReportLocale
-from c2corg_api.models.association import AssociationLog, Association
-from c2corg_api.models.cache_version import get_cache_key
-from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.route import Route
-from c2corg_api.models.user import User
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
-
-from c2corg_api.models.document import DocumentLocale, DocumentGeometry, \
-    ArchiveDocument
-from c2corg_api.views.document import DocumentRest
-
 from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.views.document import DocumentRest
 from c2corg_common.attributes import quality_types
 from dogpile.cache.api import NO_VALUE
-
-from sqlalchemy.sql.expression import and_, over
-from sqlalchemy.sql.functions import func
 
 
 class TestReportRest(BaseDocumentTestRest):
@@ -120,7 +113,7 @@ class TestReportRest(BaseDocumentTestRest):
         self.assertNotIn('autonomy', body)
 
     def test_get_as_contributor_not_author(self):
-        body = self.get(self.report4, user='contributor')
+        body = self.get(self.report1, user='contributor2')
 
         # common user should not see personal data in the report
         self.assertNotIn('author_status', body)
@@ -134,7 +127,7 @@ class TestReportRest(BaseDocumentTestRest):
     def test_get_as_moderator(self):
         body = self.get(self.report1, user='moderator')
 
-        # MODERATOR CAN SEE PERSONAL DATA IN THE REPORT
+        # moderator can see personal data in the report
         self.assertIn('author_status', body)
         self.assertIn('activity_rate', body)
         self.assertIn('nb_outings', body)
@@ -324,53 +317,14 @@ class TestReportRest(BaseDocumentTestRest):
 
         # create document (POST uses GET schema inside validation)
         body_post, doc = self.post_success(body_post, user='contributor')
-        # version = doc.versions[0]
-
-        report_id = doc.document_id
-        user_id = 2  # ID from postgres of the user 'contributor'
-
-        t = DBSession.query(
-            ArchiveDocument.document_id.label('document_id'),
-            User.id.label('user_id'),
-            User.name.label('name'),
-            over(
-                func.rank(), partition_by=ArchiveDocument.document_id,
-                order_by=HistoryMetaData.id).label('rank')). \
-            select_from(ArchiveDocument). \
-            join(
-            DocumentVersion,
-            and_(
-                ArchiveDocument.document_id == DocumentVersion.document_id,
-                ArchiveDocument.version == 1)). \
-            join(HistoryMetaData,
-                 DocumentVersion.history_metadata_id == HistoryMetaData.id). \
-            join(User,
-                 HistoryMetaData.user_id == User.id). \
-            filter(ArchiveDocument.document_id == report_id,
-                   HistoryMetaData.user_id == user_id). \
-            subquery('t')
-
-        query = DBSession.query(
-            t.c.document_id, t.c.user_id, t.c.name). \
-            filter(t.c.rank == 1)
-
-        author_for_documents = {
-            document_id: {
-                'name': name,
-                'user_id': user_id
-            } for document_id, user_id, name in query
-            }
-
-        document_found = False
-
-        for document in author_for_documents:
-            if document == report_id:
-                document_found = True
 
         # the contributor is successfully set as author in DB
-        self.assertEqual(document_found, True)
+        user_id = self.global_userids['contributor']
+        version = doc.versions[0]
+        meta_data = version.history_metadata
+        self.assertEqual(meta_data.user_id, user_id)
 
-        # AUTHORIZED CONTRIBUTOR CAN SEE PERSONAL DATA IN THE REPORT
+        # authorized contributor can see personal data in the report
         body = self.get(doc, user='contributor', ignore_checks=True)
         self.assertNotIn('report', body)
 
