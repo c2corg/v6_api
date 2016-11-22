@@ -322,3 +322,40 @@ def _get_associations_to_add(new_associations, current_associations):
                 to_add.append(doc)
 
     return to_add
+
+association_keys = {
+    'routes': ROUTE_TYPE,
+    'waypoints': WAYPOINT_TYPE,
+    'waypoint_children': WAYPOINT_TYPE,
+    'users': USERPROFILE_TYPE,
+    'images': IMAGE_TYPE,
+    'articles': ARTICLE_TYPE,
+    'areas': AREA_TYPE,
+    'books': BOOK_TYPE,
+    'outings': OUTING_TYPE
+}
+
+association_keys_for_types = {
+    ROUTE_TYPE: 'routes',
+    WAYPOINT_TYPE: 'waypoints',
+    USERPROFILE_TYPE: 'users',
+    ARTICLE_TYPE: 'articles',
+    BOOK_TYPE: 'books',
+    IMAGE_TYPE: 'images',
+    AREA_TYPE: 'areas',
+    OUTING_TYPE: 'outings'
+}
+
+# associations that can be updated/created when updating/creating a document
+# e.g. when creating a route, route and waypoint associations can be created
+updatable_associations = {
+    ROUTE_TYPE: {'articles', 'routes', 'waypoints', 'books'},
+    WAYPOINT_TYPE: {'articles', 'waypoints', 'waypoint_children'},
+    OUTING_TYPE: {'articles', 'routes', 'users'},
+    IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users', 'articles',
+                 'areas', 'outings', 'books'},
+    ARTICLE_TYPE: {'articles', 'images', 'users', 'routes', 'waypoints',
+                   'outings', 'books'},
+    AREA_TYPE: {'images'},
+    BOOK_TYPE: {'routes', 'articles', 'images', 'waypoints'}
+}
