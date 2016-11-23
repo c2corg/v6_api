@@ -8,21 +8,25 @@ import io.gatling.http.Predef._
 
 class ConsultationTopoguideAnonyme extends Simulation {
 
-        val httpProtocol = http
-                .inferHtmlResources(C2corgConf.black_list, WhiteList())
-                .acceptHeader("*/*")
-                .acceptEncodingHeader("gzip, deflate")
+  val httpProtocol = http
+    .inferHtmlResources(C2corgConf.black_list, WhiteList())
+    .acceptHeader("*/*")
+    .acceptEncodingHeader("gzip, deflate")
 
-        val scn = scenario("ConsultationTopoguideAnonyme")
-                .exec(Homepage.init)
-                .pause(8)
-                .exec(Homepage.browse)
-                .pause(6)
-                .exec(Outing.view)
-                .pause(14)
-                .exec(Route.view)
-                .pause(10)
-                .exec(Waypoint.view)
+  val scn = scenario("ConsultationTopoguideAnonyme")
+    .exec(Homepage.init)
+    .pause(8)
+    .exec(Homepage.browse)
+    .pause(6)
+    .exec(Outing.view)
+    .pause(14)
+    .exec(Route.view)
+    .pause(10)
+    .exec(Waypoint.view)
 
-        setUp(scn.inject(rampUsers(C2corgConf.num_users) over (C2corgConf.ramp_time_seconds seconds))).protocols(httpProtocol)
+  val numUsers = Integer.getInteger("users", 100)
+  val rampSec = Integer.getInteger("ramp", 300)
+
+  setUp(scn.inject(rampUsers(numUsers) over (rampSec seconds))).protocols(httpProtocol)
+
 }
