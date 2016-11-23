@@ -81,3 +81,5 @@ export image_backend_secret_key = test
 
 export skip_captcha_validation = False
 export recaptcha_secret_key = 6LfWUwoUAAAAABDo4_HRfru4HfLxOKmcqBRBObGj
+
+export show_debugger_for_errors = false
