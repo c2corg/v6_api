@@ -381,5 +381,5 @@ updatable_associations = {
                    'outings', 'books', 'xreports'},
     AREA_TYPE: {'images'},
     BOOK_TYPE: {'routes', 'articles', 'images', 'waypoints'},
-    XREPORT_TYPE: {'routes', 'outings', 'articles', 'images'}
+    XREPORT_TYPE: {'routes', 'outings', 'articles', 'users', 'images'}
 }
