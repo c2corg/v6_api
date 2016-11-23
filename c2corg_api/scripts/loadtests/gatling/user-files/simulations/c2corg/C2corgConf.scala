@@ -9,9 +9,7 @@ object C2corgConf {
   val forum_url = "http://forum.gatling.camptocamp.org"
   val image_url = "http://images.gatling.camptocamp.org"
 
-  val header_json = Map(
-      "Accept" -> "application/json",
-      "Origin" -> ui_url)
+  val header_json = Map("Accept" -> "application/json", "Origin" -> ui_url)
 
   val header_html = Map("Accept" -> "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 
