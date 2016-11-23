@@ -178,6 +178,7 @@ class TestRouteRest(BaseDocumentTestRest):
         associations = body['associations']
         self.assertIn('waypoints', associations)
         self.assertIn('routes', associations)
+        self.assertIn('reports', associations)
         self.assertNotIn('images', associations)
         self.assertNotIn('users', associations)
 

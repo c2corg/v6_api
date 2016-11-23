@@ -4,6 +4,7 @@ from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
+from c2corg_api.models.report import REPORT_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from sqlalchemy.sql import text
@@ -15,7 +16,6 @@ from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.scripts.migration.batch import SimpleBatch
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
-# TODO currently only importing associations for document types imported so far
 associations_query_count =\
     'select count(*) from (' \
     '  select a.main_id, a.linked_id from app_documents_associations a ' \
@@ -152,7 +152,7 @@ class MigrateAssociations(MigrateBase):
         return parent_type, child_type
 
 ASSOCIATION_TYPES = {
-    # 'x': REPORT_TYPE,
+    'x': REPORT_TYPE,       # xreports - accidents
     'p': WAYPOINT_TYPE,     # parking
     'u': USERPROFILE_TYPE,  # user
     'b': BOOK_TYPE,         # book
@@ -163,7 +163,7 @@ ASSOCIATION_TYPES = {
     'c': ARTICLE_TYPE,      # article
     'h': WAYPOINT_TYPE,     # hut
     'r': ROUTE_TYPE,        # route
-    # 'w': ?,               # portal?
+    # 'w': ?,               # portal exist no longer in v6
     's': WAYPOINT_TYPE,     # summit
     't': WAYPOINT_TYPE,     # site
     # 'm': MAP_TYPE         # map: ignored

@@ -5,11 +5,13 @@ from c2corg_api.models.article import Article
 from c2corg_api.models.book import Book
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.outing import Outing, OutingLocale
+from c2corg_api.models.report import Report, ReportLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.book_mapping import SearchBook
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
+from c2corg_api.search.mappings.report_mapping import SearchReport
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.tests import BaseTestCase
@@ -120,6 +122,23 @@ class FillIndexTest(BaseTestCase):
         ))
         self.session.flush()
 
+        self.session.add(Report(
+            document_id=71178,
+            event_type=['roped_fall'],
+            activities=['skitouring'],
+            nb_participants=10,
+            elevation=1500,
+            date=datetime.date(2016, 1, 1),
+            locales=[
+                ReportLocale(
+                    lang='en', title='Death in the mountains',
+                    description='...',
+                    place='some place description'
+                )
+            ]
+        ))
+        self.session.flush()
+
         # fill the ElasticSearch index
         fill_index(self.session)
 
@@ -166,6 +185,11 @@ class FillIndexTest(BaseTestCase):
         self.assertEqual(book.title_fr, 'Escalades au Thaurac')
         self.assertEqual(book.doc_type, 'b')
         self.assertEqual(book.book_types, ['biography'])
+
+        report = SearchReport.get(id=71178)
+        self.assertIsNotNone(report)
+        self.assertEqual(report.title_en, 'Death in the mountains')
+        self.assertEqual(report.doc_type, 'x')
 
         # merged document is ignored
         self.assertIsNone(SearchWaypoint.get(id=71174, ignore=404))

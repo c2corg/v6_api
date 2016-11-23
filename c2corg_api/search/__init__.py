@@ -3,6 +3,7 @@ from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.report import REPORT_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
@@ -12,6 +13,7 @@ from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.book_mapping import SearchBook
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
+from c2corg_api.search.mappings.report_mapping import SearchReport
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
 from c2corg_api.search.mappings.user_mapping import SearchUser
@@ -119,6 +121,7 @@ search_documents = {
     BOOK_TYPE: SearchBook,
     IMAGE_TYPE: SearchImage,
     OUTING_TYPE: SearchOuting,
+    REPORT_TYPE: SearchReport,
     ROUTE_TYPE: SearchRoute,
     MAP_TYPE: SearchTopoMap,
     USERPROFILE_TYPE: SearchUser,

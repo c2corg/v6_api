@@ -75,6 +75,8 @@ class SchemaAssociations(MappingSchema):
         Sequence(), SchemaAssociationUser(), missing=None)
     routes = SchemaNode(
         Sequence(), SchemaAssociationDoc(), missing=None)
+    reports = SchemaNode(
+        Sequence(), SchemaAssociationDoc(), missing=None)
     waypoints = SchemaNode(
         Sequence(), SchemaAssociationDoc(), missing=None)
     waypoint_children = SchemaNode(

@@ -126,3 +126,23 @@ book_type = enum(
     'book_type', attributes.book_types)
 feed_change_type = enum(
     'feed_change_type', attributes.feed_change_types)
+event_type = enum(
+    'event_type', attributes.event_types)
+author_status = enum(
+    'author_status', attributes.author_statuses)
+activity_rate = enum(
+    'activity_rate', attributes.activity_rates)
+nb_outings = enum(
+    'nb_outings', attributes.nb_outings)
+gender = enum(
+    'gender', attributes.genders)
+previous_injuries = enum(
+    'previous_injuries', attributes.previous_injuries)
+severity = enum(
+    'severity', attributes.severities)
+autonomy = enum(
+    'autonomy', attributes.autonomies)
+avalanche_level = enum(
+    'avalanche_level', attributes.avalanche_levels)
+avalanche_slope = enum(
+    'avalanche_slope', attributes.avalanche_slopes)

@@ -9,6 +9,7 @@ from c2corg_api.models.document import Document
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.report import REPORT_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
@@ -320,6 +321,8 @@ def validate_associations_in(associations_in, document_type, errors):
                       'outings', OUTING_TYPE, new_errors)
     _add_associations(associations, associations_in, document_type,
                       'books', BOOK_TYPE, new_errors)
+    _add_associations(associations, associations_in, document_type,
+                      'reports', REPORT_TYPE, new_errors)
 
     if new_errors:
         errors.extend(new_errors)
