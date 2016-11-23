@@ -3,13 +3,11 @@ package c2corg
 import io.gatling.core.Predef._
 
 object C2corgConf {
-  val num_users = 10
-  val ramp_time_seconds = 10
 
-  val ui_url = "http://www.demov6.camptocamp.org"
-  val api_url = "http://api.demov6.camptocamp.org"
-  val forum_url = "http://forum.demov6.camptocamp.org"
-  val image_url = "http://images.demov6.camptocamp.org"
+  val ui_url = "http://www.gatling.camptocamp.org"
+  val api_url = "http://api.gatling.camptocamp.org"
+  val forum_url = "http://forum.gatling.camptocamp.org"
+  val image_url = "http://images.gatling.camptocamp.org"
 
   val header_json = Map(
       "Accept" -> "application/json",
@@ -30,4 +28,5 @@ object C2corgConf {
   val basic_auth_password = "c2corg"
 
   val black_list = BlackList("""http://server1.affiz.net/.*""", """https://www.google-analytics.com/analytics.js""", """https://www.google.com/recaptcha/api.js?.*""", """http://sos.exo.io/.*""", """http://api.geonames.org/searchJSON""", """.*/static/.*""", """.*/images/proxy/.*""", """http://i.imgur.com/.*""", """.*.ico""", """.*css.*""", """.*.js""")
+
 }
