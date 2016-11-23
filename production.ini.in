@@ -46,12 +46,12 @@ handlers =
 qualname = c2corg_api
 
 [logger_c2corg_api_syncer]
-level = WARN
+level = INFO
 handlers =
 qualname = c2corg_api_syncer
 
 [logger_c2corg_api_background_jobs]
-level = WARN
+level = INFO
 handlers =
 qualname = c2corg_api_background_jobs
 
