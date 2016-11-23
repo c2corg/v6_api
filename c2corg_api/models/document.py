@@ -57,7 +57,8 @@ class _DocumentMixin(object):
             nullable=True)
 
     quality = Column(
-        enums.quality_type, nullable=False, server_default=quality_types[1])
+        enums.quality_type, nullable=False, default=quality_types[1],
+        server_default=quality_types[1])
 
     type = Column(String(1), index=True)
     __mapper_args__ = {

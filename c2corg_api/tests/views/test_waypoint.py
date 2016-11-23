@@ -674,7 +674,6 @@ class TestWaypointRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.waypoint.document_id,
                 'version': self.waypoint.version,
-                'quality': quality_types[1],
                 'waypoint_type': 'summit',
                 'elevation': 1234,
                 'orientations': None,
