@@ -11,11 +11,6 @@ class SearchReport(SearchDocument):
     class Meta(BaseMeta):
         doc_type = REPORT_TYPE
 
-    # TODO - ADD OTHER FIELDS - names from
-    # https://github.com/c2corg/camptocamp.org/blob/
-    # 72e777075f2e6260b1d2ef563ab0f90c383038ba/apps/frontend/modules/
-    # xreports/config/module.yml
-
     activities = QEnumArray(
         'act', model_field=Report.activities)
     date = QDate('xdate', 'date')
@@ -39,8 +34,11 @@ class SearchReport(SearchDocument):
 
     FIELDS = [
       'activities', 'date', 'event_type', 'nb_participants',
-      'nb_impacted', 'severity', 'avalanche_level',
-      'avalanche_slope', 'elevation'
+      'nb_impacted', 'elevation'
+    ]
+
+    ENUM_RANGE_FIELDS = [
+        'severity', 'avalanche_level', 'avalanche_slope'
     ]
 
     @staticmethod
@@ -52,6 +50,10 @@ class SearchReport(SearchDocument):
 
         SearchDocument.copy_fields(
             search_document, document, SearchReport.FIELDS)
+
+        SearchDocument.copy_enum_range_fields(
+            search_document, document, SearchReport.ENUM_RANGE_FIELDS,
+            SearchReport)
 
         return search_document
 
