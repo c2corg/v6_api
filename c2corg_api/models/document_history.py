@@ -7,12 +7,12 @@ from sqlalchemy import (
     ForeignKey
     )
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.sql.expression import exists, and_
+from sqlalchemy.sql.expression import over, and_
+from sqlalchemy.sql.functions import func
 
 from c2corg_api.models import Base, DBSession, schema, users_schema
 from c2corg_api.models.document import (
     Document, ArchiveDocument, ArchiveDocumentLocale, ArchiveDocumentGeometry)
-from sqlalchemy.sql.functions import func
 
 
 class HistoryMetaData(Base):
@@ -70,15 +70,45 @@ class DocumentVersion(Base):
         HistoryMetaData, primaryjoin=history_metadata_id == HistoryMetaData.id)
 
 
+def get_creators(document_ids):
+    """ Get the creator for the list of given document ids.
+    """
+    t = DBSession.query(
+        ArchiveDocument.document_id.label('document_id'),
+        User.id.label('user_id'),
+        User.name.label('name'),
+        over(
+            func.rank(), partition_by=ArchiveDocument.document_id,
+            order_by=HistoryMetaData.id).label('rank')). \
+        select_from(ArchiveDocument). \
+        join(
+            DocumentVersion,
+            and_(
+                ArchiveDocument.document_id == DocumentVersion.document_id,
+                ArchiveDocument.version == 1)). \
+        join(HistoryMetaData,
+             DocumentVersion.history_metadata_id == HistoryMetaData.id). \
+        join(User,
+             HistoryMetaData.user_id == User.id). \
+        filter(ArchiveDocument.document_id.in_(document_ids)). \
+        subquery('t')
+    query = DBSession.query(
+            t.c.document_id, t.c.user_id, t.c.name). \
+        filter(t.c.rank == 1)
+
+    return {
+        document_id: {
+            'name': name,
+            'user_id': user_id
+        } for document_id, user_id, name in query
+    }
+
+
 def has_been_created_by(document_id, user_id):
     """Check if passed user_id is the id of the user that has created
     the initial version of this document, whatever the language.
     """
-    return DBSession.query(
-        exists().where(and_(
-            ArchiveDocument.document_id == document_id,
-            ArchiveDocument.version == 1,
-            DocumentVersion.document_id == document_id,
-            HistoryMetaData.user_id == user_id
-        ))
-    ).scalar()
+    creators = get_creators([document_id])
+    creator_info = creators.get(document_id)
+
+    return creator_info and creator_info['user_id'] == user_id

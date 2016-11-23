@@ -1,4 +1,6 @@
 import functools
+
+from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.report import (
   Report,
   schema_report,
@@ -15,7 +17,7 @@ from cornice.validators import colander_body_validator
 from c2corg_api.views.document_schemas import report_documents_config
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update
-from c2corg_api.views import cors_policy, restricted_json_view, get_creators, \
+from c2corg_api.views import cors_policy, restricted_json_view, \
     set_private_cache_header
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
@@ -85,12 +87,7 @@ def _has_permission(request, report_id):
     if request.has_permission('moderator'):
         return True
 
-    user_id = request.authenticated_userid
-
-    creators = get_creators([report_id])
-    creator_info = creators.get(report_id)
-
-    return creator_info and creator_info['user_id'] == user_id
+    return has_been_created_by(report_id, request.authenticated_userid)
 
 
 @resource(path='/reports/{id}/{lang}/{version_id}',
