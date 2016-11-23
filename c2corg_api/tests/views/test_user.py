@@ -122,6 +122,19 @@ class TestUserRest(BaseUserTestRest):
         url = self._prefix + '/register'
         self.app_post_json(url, request_body, status=400).json
 
+    def test_register_forum_username_unique(self):
+        request_body = {
+            'username': 'test',
+            'forum_username': 'Contributor',
+            'name': 'Max Mustermann',
+            'password': 'super secret',
+            'email': 'some_user@camptocamp.org'
+        }
+        url = self._prefix + '/register'
+        json = self.app_post_json(url, request_body, status=400).json
+        self.assertEqual(json['errors'][0]['description'],
+                         'already used forum_username')
+
     def test_register_discourse_up(self):
         request_body = {
             'username': 'test', 'forum_username': 'testf',

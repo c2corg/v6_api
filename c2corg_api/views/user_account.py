@@ -63,7 +63,9 @@ class UpdateAccountSchema(colander.MappingSchema):
             validator=colander.All(
                 colander.Length(min=3),
                 colander.Function(
-                    partial(is_unused_user_attribute, 'forum_username'),
+                    partial(is_unused_user_attribute,
+                            'forum_username',
+                            lowercase=True),
                     'Already used forum name'
                 )
             ))

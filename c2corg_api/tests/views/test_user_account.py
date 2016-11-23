@@ -91,6 +91,26 @@ class TestUserAccountRest(BaseUserTestRest):
     def test_update_account_name_discourse_down(self):
         self._update_account_field_discourse_down('name', 'changed')
 
+    def test_update_account_forum_username_unique(self):
+        url = '/users/account'
+
+        data = {
+            'currentpassword': self.global_passwords['contributor'],
+            'forum_username': 'unique'
+        }
+        self.post_json_with_contributor(url, data, status=200)
+
+        data = {
+            'currentpassword': self.global_passwords['contributor2'],
+            'forum_username': 'Unique'
+        }
+        json = self.post_json_with_contributor(url,
+                                               data,
+                                               status=400,
+                                               username='contributor2')
+        self.assertEqual(json['errors'][0]['description'],
+                         'Already used forum name')
+
     def test_update_account_forum_username_discourse_up(self):
         self._update_account_field_discourse_up('forum_username', 'changed')
 

@@ -18,7 +18,7 @@ from c2corg_api.models import Base, users_schema, schema, sympa_schema, enums
 import colander
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import ForeignKey
+from sqlalchemy.sql.schema import ForeignKey, Index
 from sqlalchemy import event, DDL
 
 from enum import Enum
@@ -146,6 +146,11 @@ class User(Base):
         return PasswordUtil.is_password_valid(plain_password, self._password)
 
     password = property(_get_password, _set_password)
+
+
+Index('ix_users_user_lower_forum_username',
+      func.lower(User.forum_username),
+      unique=True)
 
 
 schema_user = SQLAlchemySchemaNode(
