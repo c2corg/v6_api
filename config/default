@@ -3,6 +3,7 @@ export base_url ?= /
 export debug_port ?= 6543
 export ui_url ?= http://c2corgv6.demo-camptocamp.com
 
+# version used for the cache
 export version = $(shell git rev-parse --short HEAD 2>/dev/null || echo "0")
 
 export noauthorization = False
@@ -23,9 +24,6 @@ export redis_db_cache = 5
 export redis_exchange = c2corg_$(instanceid)
 export redis_queue_es = c2corg_$(instanceid)_es_sync
 export redis_cache_key_prefix = c2corg_$(instanceid)
-
-# version used for the cache
-export version = $(shell git rev-parse --short HEAD 2>/dev/null || echo "0")
 
 export image_backend_url = http://c2corgv6-images.demo-camptocamp.com
 export image_url = http://c2corgv6-images.demo-camptocamp.com/active/
