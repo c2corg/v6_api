@@ -86,6 +86,8 @@ class BaseTestImage(BaseDocumentTestRest):
             lang='fr', title='Mont Blanc du ciel', description='...'))
         self.session.add(self.image4)
         self.session.flush()
+        DocumentRest.create_new_version(
+            self.image3, self.global_userids['contributor2'])
         DocumentRest.create_new_version(self.image4, user_id)
 
         self.session.add(Association.create(
@@ -499,6 +501,7 @@ class TestImageRest(BaseTestImage):
                 'filename': self.image4.filename,
                 'activities': ['skitouring'],
                 'image_type': 'personal',
+                'quality': quality_types[1],
                 'height': 2000,
                 'locales': [
                     {'lang': 'en', 'title': 'Mont Blanc from the air',

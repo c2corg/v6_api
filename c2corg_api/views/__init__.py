@@ -5,9 +5,8 @@ import datetime
 
 from c2corg_api.ext.colander_ext import geojson_from_wkbelement
 from c2corg_api.models import DBSession
-from c2corg_api.models.document import ArchiveDocument
-from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
-from c2corg_api.models.user import AccountNotValidated, User
+from c2corg_api.models.document_history import get_creators
+from c2corg_api.models.user import AccountNotValidated
 from c2corg_common.attributes import langs_priority
 from colander import null
 from pyramid.httpexceptions import HTTPError, HTTPNotFound, HTTPForbidden, \
@@ -18,8 +17,6 @@ from cornice.util import json_error, _JSONError
 from cornice.resource import view
 from geoalchemy2 import WKBElement
 from sqlalchemy.inspection import inspect
-from sqlalchemy.sql.expression import over, and_
-from sqlalchemy.sql.functions import func
 
 log = logging.getLogger(__name__)
 
@@ -205,40 +202,6 @@ def set_creator(documents, field_name):
         setattr(
             document, field_name,
             author_for_documents.get(document.document_id))
-
-
-def get_creators(document_ids):
-    """ Get the creator for the list of given document ids.
-    """
-    t = DBSession.query(
-        ArchiveDocument.document_id.label('document_id'),
-        User.id.label('user_id'),
-        User.name.label('name'),
-        over(
-            func.rank(), partition_by=ArchiveDocument.document_id,
-            order_by=HistoryMetaData.id).label('rank')). \
-        select_from(ArchiveDocument). \
-        join(
-            DocumentVersion,
-            and_(
-                ArchiveDocument.document_id == DocumentVersion.document_id,
-                ArchiveDocument.version == 1)). \
-        join(HistoryMetaData,
-             DocumentVersion.history_metadata_id == HistoryMetaData.id). \
-        join(User,
-             HistoryMetaData.user_id == User.id). \
-        filter(ArchiveDocument.document_id.in_(document_ids)). \
-        subquery('t')
-    query = DBSession.query(
-            t.c.document_id, t.c.user_id, t.c.name). \
-        filter(t.c.rank == 1)
-
-    return {
-        document_id: {
-            'name': name,
-            'user_id': user_id
-        } for document_id, user_id, name in query
-    }
 
 
 def set_author(outings, lang):
