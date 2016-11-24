@@ -35,7 +35,7 @@ class MigrateRoutes(MigrateDocuments):
             'select '
             '   ra.id, ra.document_archive_id, ra.is_latest_version, '
             '   ra.elevation, ra.is_protected, ra.redirects_to, '
-            '   ST_SetSRID(ra.geom, 3857) geom, '
+            '   ST_Simplify(ST_SetSRID(ra.geom, 3857), 5) geom, '
             '   ra.activities, ra.facing, ra.height_diff_up, '
             '   ra.height_diff_down, ra.route_type, ra.route_length, '
             '   ra.min_elevation, ra.max_elevation, ra.duration, ra.slope, '
