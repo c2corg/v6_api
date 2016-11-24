@@ -18,6 +18,26 @@ import re
 from unittest.mock import Mock, MagicMock
 
 
+forum_username_tests = {
+    # min length
+    'a': 'Shorter than minimum length 3',
+    'a'*3: False,
+    # max length (colander schema validation)
+    'a'*26: 'Longer than maximum length 25',
+    'a'*25: False,
+    # valid characters
+    'test/test': 'Contain invalid character(s)',
+    'test.test-test_test': False,
+    # first char
+    '-test': 'First character is invalid',
+    # last char
+    'test.': 'Last character is invalid',
+    # double special char
+    'test__test': ('Contains consecutive special characters'),
+    # confusing suffix
+    'test.jpg': 'Ended by confusing suffix'}
+
+
 class BaseUserTestRest(BaseTestRest):
 
     def __init__(self, *args, **kwargs):
@@ -121,6 +141,25 @@ class TestUserRest(BaseUserTestRest):
         }
         url = self._prefix + '/register'
         self.app_post_json(url, request_body, status=400).json
+
+    def test_register_forum_username_validity(self):
+        url = self._prefix + '/register'
+        i = 0
+        for forum_username, value in forum_username_tests.items():
+            i += 1
+            request_body = {
+                'username': 'test{}'.format(i),
+                'forum_username': forum_username,
+                'name': 'Max Mustermann{}'.format(i),
+                'password': 'super secret',
+                'email': 'some_user{}@camptocamp.org'.format(i)
+            }
+            if value is False:
+                self.app_post_json(url, request_body, status=200).json
+            else:
+                json = self.app_post_json(url, request_body, status=400).json
+                self.assertEqual(json['errors'][0]['description'],
+                                 value)
 
     def test_register_forum_username_unique(self):
         request_body = {

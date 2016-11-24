@@ -77,7 +77,7 @@ class User(Base):
     username = Column(String(200), nullable=False, unique=True)
     name = Column(String(200), nullable=False)
     forum_username = Column(
-        String(15),
+        String(25),
         CheckConstraint(  # do not have non alphanumeric characters
             "users.check_forum_username(forum_username)",  # noqa
             name='forum_username_check_constraint'),

@@ -1,7 +1,8 @@
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.search import search_documents, elasticsearch_config
-from c2corg_api.tests.views.test_user import BaseUserTestRest
+from c2corg_api.tests.views.test_user import BaseUserTestRest, \
+    forum_username_tests
 
 
 class TestUserAccountRest(BaseUserTestRest):
@@ -90,6 +91,22 @@ class TestUserAccountRest(BaseUserTestRest):
 
     def test_update_account_name_discourse_down(self):
         self._update_account_field_discourse_down('name', 'changed')
+
+    def test_update_account_forum_username_validity(self):
+        url = '/users/account'
+        i = 0
+        for forum_username, value in forum_username_tests.items():
+            i += 1
+            body = {
+                'currentpassword': self.global_passwords['contributor'],
+                'forum_username': forum_username
+            }
+            if value is False:
+                self.post_json_with_contributor(url, body, status=200)
+            else:
+                json = self.post_json_with_contributor(url, body, status=400)
+                self.assertEqual(json['errors'][0]['description'],
+                                 value)
 
     def test_update_account_forum_username_unique(self):
         url = '/users/account'
