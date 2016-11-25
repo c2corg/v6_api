@@ -1,4 +1,7 @@
-from c2corg_api.ext.colander_ext import wkbelement_from_geojson
+import json
+
+from c2corg_api.ext.colander_ext import wkbelement_from_geojson, \
+    geojson_from_wkbelement
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route, RouteLocale
 
@@ -76,3 +79,34 @@ class TestRoute(BaseTestCase):
         route_db.update(route_in)
         self.assertIsNot(route_db.geometry.geom_detail, geom1)
         self.assertIs(route_db.geometry.geom_detail, geom3)
+
+    def test_simplify(self):
+        geom = wkbelement_from_geojson(
+            '{"type": "LineString", "coordinates": ' +
+            '[[635900, 5723600], [635902, 5723600], [635905, 5723600]]}', 3857)
+        route = Route(
+            activities=['hiking'],
+            geometry=DocumentGeometry(geom=None, geom_detail=geom))
+        self.session.add(route)
+        self.session.flush()
+
+        # check that the line was simplified on insertion
+        simplified_geom = route.geometry
+        self.session.refresh(simplified_geom)
+        geojson = json.loads(
+            geojson_from_wkbelement(simplified_geom.geom_detail))
+        self.assertEqual(len(geojson['coordinates']), 2)
+
+        # check that the line was simplified after an update
+        route.geometry.geom_detail = wkbelement_from_geojson(
+            '{"type": "LineString", "coordinates": ' +
+            '[[635901, 5723600], [635902, 5723600], [635905, 5723600]]}', 3857)
+
+        self.session.flush()
+        simplified_geom = route.geometry
+        self.session.refresh(simplified_geom)
+        geojson = json.loads(
+            geojson_from_wkbelement(simplified_geom.geom_detail))
+        self.assertEqual(len(geojson['coordinates']), 2)
+        self.assertCoodinateEquals(
+            [635901, 5723600], geojson['coordinates'][0])

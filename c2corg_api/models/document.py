@@ -1,6 +1,8 @@
 import enum
 
 import abc
+from functools import partial
+
 import geoalchemy2
 from c2corg_api.ext import colander_ext
 from c2corg_api.models import Base, schema, DBSession, enums
@@ -437,6 +439,66 @@ event.listen(
     DDL('alter table {}.{} drop constraint enforce_dims_geom_detail;'.format(
         schema, ArchiveDocumentGeometry.__tablename__))
 )
+
+trigger_ddl = DDL("""
+-- simplify the tracks for outings and routes
+CREATE OR REPLACE FUNCTION guidebook.simplify_geom_detail() RETURNS TRIGGER AS
+$BODY$
+DECLARE
+  document_type varchar;
+BEGIN
+  IF new.geom_detail is not null THEN
+    SELECT type from guidebook.documents where document_id = new.document_id
+        INTO STRICT document_type;
+    IF document_type in ('r', 'o') THEN
+      new.geom_detail := ST_Simplify(new.geom_detail, 5);
+    END IF;
+  END IF;
+  RETURN new;
+END;
+$BODY$
+language plpgsql;
+
+CREATE TRIGGER
+guidebook_documents_geometries_insert_or_update
+BEFORE INSERT OR UPDATE OF geom_detail
+ON guidebook.documents_geometries
+FOR EACH ROW
+EXECUTE PROCEDURE guidebook.simplify_geom_detail();
+
+CREATE TRIGGER
+guidebook_documents_geometries_archives_geometries_insert_or_update
+BEFORE INSERT OR UPDATE OF geom_detail
+ON guidebook.documents_geometries_archives
+FOR EACH ROW
+EXECUTE PROCEDURE guidebook.simplify_geom_detail();
+""")
+event.listen(Base.metadata, 'after_create', trigger_ddl)
+
+
+def should_drop_trigger(table_name, ddl, target, connection, **kw):
+    table_exists = connection.execute(
+        'SELECT EXISTS ('
+        'SELECT 1 FROM information_schema.tables '
+        '  WHERE table_schema = \'guidebook\' AND '
+        '        table_name = \'{}\');'.format(table_name)).scalar()
+    return table_exists
+
+
+event.listen(Base.metadata, 'before_drop', DDL("""
+drop trigger
+if exists guidebook_documents_geometries_archives_geometries_insert_or_update
+on guidebook.documents_geometries_archives;
+""").execute_if(callable_=partial(
+    should_drop_trigger, 'documents_geometries_archives')))
+
+
+event.listen(Base.metadata, 'before_drop', DDL("""
+drop trigger
+if exists guidebook_documents_geometries_insert_or_update
+on guidebook.documents_geometries;
+""").execute_if(callable_=partial(
+    should_drop_trigger, 'documents_geometries')))
 
 
 schema_attributes = [
