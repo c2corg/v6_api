@@ -5,24 +5,20 @@ import scala.concurrent.duration._
 import io.gatling.core.Predef._
 import io.gatling.http.Predef._
 
-
-class ConsultationTopoguideAnonyme extends Simulation {
+class ConsultationForumAuth extends Simulation {
 
   val httpProtocol = http
+    .baseURL(C2corgConf.forum_url)
     .inferHtmlResources(C2corgConf.black_list, WhiteList())
-    .acceptHeader("*/*")
+    .acceptHeader("application/json, text/javascript, */*; q=0.01")
     .acceptEncodingHeader("gzip, deflate")
 
-  val scn = scenario("ConsultationTopoguideAnonyme")
-    .exec(Homepage.init)
+  val scn = scenario("ConsultationForumAuth")
+    .exec(Forum.init)
+    .pause(2)
+    .exec(Auth.loginForum)
     .pause(8)
-    .exec(Homepage.browse)
-    .pause(6)
-    .exec(Outing.view)
-    .pause(14)
-    .exec(Route.view)
-    .pause(10)
-    .exec(Waypoint.view)
+    .exec(Forum.post)
 
   val numUsers = Integer.getInteger("users", 100)
   val rampSec = Integer.getInteger("ramp", 300)
