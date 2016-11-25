@@ -76,7 +76,6 @@ class MigrateSummits(MigrateWaypoints):
         outdoor_types = []
         if document_in.summit_type == 4:
             outdoor_types.append('multi')
-        
         outdoor_types = outdoor_types if outdoor_types else None
         return outdoor_types
 
