@@ -43,6 +43,7 @@ class MigrateSummits(MigrateWaypoints):
         )
 
     def get_document(self, document_in, version):
+        outdoor_types = self.get_climbing_outdoor_types(document_in)
         return dict(
             document_id=document_in.id,
             type=WAYPOINT_TYPE,
