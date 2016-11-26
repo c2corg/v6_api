@@ -113,7 +113,7 @@ class DocumentChange(Base):
 
     change_id = Column(Integer, primary_key=True)
 
-    time = Column(DateTime, default=func.now(), nullable=False)
+    time = Column(DateTime(timezone=True), default=func.now(), nullable=False)
 
     # the actor: who did the change?
     user_id = Column(

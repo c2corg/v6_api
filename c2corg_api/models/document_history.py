@@ -26,7 +26,8 @@ class HistoryMetaData(Base):
         User, primaryjoin=user_id == User.id, viewonly=True)
     comment = Column(String(200))
     written_at = Column(
-        DateTime, default=func.now(), nullable=False, index=True)
+        DateTime(timezone=True), default=func.now(), nullable=False,
+        index=True)
 
 
 class DocumentVersion(Base):

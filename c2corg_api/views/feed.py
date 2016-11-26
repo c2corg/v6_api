@@ -15,6 +15,7 @@ from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden
 from sqlalchemy.orm import undefer, load_only
 from sqlalchemy.sql.expression import or_, and_
 from sqlalchemy.sql.functions import func
+from urllib import parse as urllib_parse
 
 DEFAULT_PAGE_LIMIT = 10
 MAX_PAGE_LIMIT = 50
@@ -294,7 +295,8 @@ def load_feed(changes, lang):
 
     last_change = changes[-1]
     pagination_token = '{},{}'.format(
-        last_change.change_id, last_change.time.isoformat())
+        last_change.change_id,
+        urllib_parse.quote_plus(last_change.time.isoformat()))
 
     return {
         'feed': [

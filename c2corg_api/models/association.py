@@ -104,7 +104,8 @@ class AssociationLog(Base):
 
     is_creation = Column(Boolean, default=True, nullable=False)
     written_at = Column(
-        DateTime, default=func.now(), nullable=False, index=True)
+        DateTime(timezone=True), default=func.now(), nullable=False,
+        index=True)
 
 schema_association = SQLAlchemySchemaNode(
     Association,

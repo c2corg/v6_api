@@ -152,10 +152,6 @@ def serialize(data):
     return data
 
 
-def to_seconds(date):
-    return int((date - datetime.datetime(1970, 1, 1)).total_seconds())
-
-
 def set_best_locale(documents, preferred_lang, expunge=True):
     """Sets the "best" locale on the given documents. The "best" locale is
     the locale in the given "preferred language" if available. Otherwise

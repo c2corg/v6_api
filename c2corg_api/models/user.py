@@ -89,11 +89,12 @@ class User(Base):
     email_to_validate = Column(String(200), nullable=True)
     moderator = Column(Boolean, nullable=False, default=False)
     validation_nonce = Column(String(200), nullable=True, unique=True)
-    validation_nonce_expire = Column(DateTime, nullable=True, unique=False)
+    validation_nonce_expire = Column(
+        DateTime(timezone=True), nullable=True, unique=False)
     _password = Column('password', String(255), nullable=False)
     last_modified = Column(
-        DateTime, default=func.now(), onupdate=func.now(), nullable=False,
-        index=True)
+        DateTime(timezone=True), default=func.now(), onupdate=func.now(),
+        nullable=False, index=True)
 
     lang = Column(
             String(2), ForeignKey(schema + '.langs.lang'),
