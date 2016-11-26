@@ -43,12 +43,14 @@ class MigrateSummits(MigrateWaypoints):
         )
 
     def get_document(self, document_in, version):
+        outdoor_types = self.get_climbing_outdoor_types(document_in)
         return dict(
             document_id=document_in.id,
             type=WAYPOINT_TYPE,
             version=version,
             waypoint_type=self.convert_type(
                 document_in.summit_type, MigrateSummits.summit_types),
+            climbing_outdoor_types=outdoor_types,
             protected=document_in.is_protected,
             redirects_to=document_in.redirects_to,
             elevation=document_in.elevation,
@@ -69,6 +71,13 @@ class MigrateSummits(MigrateWaypoints):
             description=description,
             summary=summary
         )
+
+    def get_climbing_outdoor_types(self, document_in):
+        outdoor_types = []
+        if document_in.summit_type == 4:
+            outdoor_types.append('multi')
+        outdoor_types = outdoor_types if outdoor_types else None
+        return outdoor_types
 
     summit_types = {
         '1':   'summit',            # was 'culmen'
