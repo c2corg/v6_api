@@ -2,6 +2,7 @@ from c2corg_api.models.schema_utils import restrict_schema,\
     get_update_schema, get_create_schema
 from c2corg_common.fields_image import fields_image
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     Float,
@@ -35,6 +36,8 @@ class _ImageMixin(object):
 
     author = Column(String(100))
 
+    has_svg = Column(Boolean)
+
     elevation = Column(SmallInteger)
 
     height = Column(SmallInteger)
@@ -59,7 +62,7 @@ class _ImageMixin(object):
 
 
 attributes = [
-    'activities', 'categories', 'image_type', 'author', 'elevation',
+    'activities', 'categories', 'image_type', 'author', 'has_svg', 'elevation',
     'height', 'width', 'file_size', 'filename', 'camera_name', 'exposure_time',
     'focal_length', 'fnumber', 'iso_speed', 'date_time'
 ]
