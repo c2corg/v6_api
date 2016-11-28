@@ -9,7 +9,7 @@ from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
 from c2corg_api.views.user import is_unused_user_attribute, ENCODING, \
-    VALIDATION_EXPIRE_DAYS
+    VALIDATION_EXPIRE_DAYS, validate_forum_username
 from c2corg_common.attributes import default_langs
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
@@ -61,9 +61,11 @@ class UpdateAccountSchema(colander.MappingSchema):
             colander.String(),
             missing=colander.drop,
             validator=colander.All(
-                colander.Length(min=3),
+                colander.Length(max=25),
                 colander.Function(
-                    partial(is_unused_user_attribute, 'forum_username'),
+                    partial(is_unused_user_attribute,
+                            'forum_username',
+                            lowercase=True),
                     'Already used forum name'
                 )
             ))
@@ -104,7 +106,8 @@ class UserAccountRest(object):
     @restricted_json_view(
         renderer='json',
         schema=updateschema,
-        validators=[colander_body_validator])
+        validators=[colander_body_validator,
+                    validate_forum_username])
     def post(self):
         user = self.get_user()
         request = self.request

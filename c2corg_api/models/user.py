@@ -18,7 +18,7 @@ from c2corg_api.models import Base, users_schema, schema, sympa_schema, enums
 import colander
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import ForeignKey
+from sqlalchemy.sql.schema import ForeignKey, Index
 from sqlalchemy import event, DDL
 
 from enum import Enum
@@ -77,9 +77,9 @@ class User(Base):
     username = Column(String(200), nullable=False, unique=True)
     name = Column(String(200), nullable=False)
     forum_username = Column(
-        String(15),
+        String(25),
         CheckConstraint(  # do not have non alphanumeric characters
-            "char_length(forum_username) >= 3 and forum_username !~ '[^a-zA-Z0-9]'",  # noqa
+            "users.check_forum_username(forum_username)",  # noqa
             name='forum_username_check_constraint'),
         nullable=False, unique=True
         )
@@ -146,6 +146,58 @@ class User(Base):
         return PasswordUtil.is_password_valid(plain_password, self._password)
 
     password = property(_get_password, _set_password)
+
+
+Index('ix_users_user_lower_forum_username',
+      func.lower(User.forum_username),
+      unique=True)
+
+
+# Check forum_username validity with discourse
+# https://github.com/discourse/discourse/blob/master/app/models/username_validator.rb
+check_forum_username_ddl = DDL("""
+CREATE OR REPLACE FUNCTION users.check_forum_username(name TEXT)
+RETURNS boolean AS $$
+BEGIN
+  IF name = NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  IF char_length(name) < 3 THEN
+    RETURN FALSE;
+  END IF;
+
+  IF char_length(name) > 25 THEN
+    RETURN FALSE;
+  END IF;
+
+  if name ~ '[^\w.-]' THEN
+    RETURN FALSE;
+  END IF;
+
+  if left(name, 1) ~ '\W' THEN
+    RETURN FALSE;
+  END IF;
+
+  if right(name, 1) ~ '[^A-Za-z0-9]' THEN
+    RETURN FALSE;
+  END IF;
+
+  if name ~ '[-_\.]{2,}' THEN
+    RETURN FALSE;
+  END IF;
+
+  if name ~
+  '\.(js|json|css|htm|html|xml|jpg|jpeg|png|gif|bmp|ico|tif|tiff|woff)$'
+  THEN
+    RETURN FALSE;
+  END IF;
+
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql;
+""")
+event.listen(User.__table__, 'before_create', check_forum_username_ddl)
 
 
 schema_user = SQLAlchemySchemaNode(

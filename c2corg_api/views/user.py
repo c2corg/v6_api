@@ -1,5 +1,6 @@
 import datetime
 import logging
+import re
 
 import colander
 import requests
@@ -24,7 +25,7 @@ from cornice.validators import colander_body_validator
 from functools import partial
 from pyramid.httpexceptions import HTTPInternalServerError
 from pyramid.settings import asbool
-from sqlalchemy.sql.expression import and_
+from sqlalchemy.sql.expression import and_, func
 
 log = logging.getLogger(__name__)
 
@@ -58,21 +59,57 @@ def validate_json_password(request, **kwargs):
         request.errors.add('body', 'password', 'Invalid')
 
 
-def is_unused_user_attribute(attrname, value):
+def is_unused_user_attribute(attrname, value, lowercase=False):
     attr = getattr(User, attrname)
-    return DBSession.query(User).filter(attr == value).count() == 0
+    query = DBSession.query(User)
+    if lowercase:
+        query = query.filter(func.lower(attr) == value.lower())
+    else:
+        query = query.filter(attr == value)
+    return query.count() == 0
 
 
-def validate_unique_attribute(attrname, request, **kwargs):
+def validate_unique_attribute(attrname, request, lowercase=False, **kwargs):
     """Checks if the given attribute is unique.
     """
 
     if attrname in request.json:
         value = request.json[attrname]
-        if is_unused_user_attribute(attrname, value):
+        if is_unused_user_attribute(attrname, value, lowercase=lowercase):
             request.validated[attrname] = value
         else:
             request.errors.add('body', attrname, 'already used ' + attrname)
+
+
+# https://github.com/discourse/discourse/blob/master/app/models/username_validator.rb
+def check_forum_username(value):
+    if len(value) < 3:
+        return 'Shorter than minimum length 3'
+    # max length is validated by colander schema
+    if re.search(r'[^\w.-]', value):
+        return 'Contain invalid character(s)'
+    if re.match(r'\W', value[0]):
+        return 'First character is invalid'
+    if re.match(r'[^A-Za-z0-9]', value[-1]):
+        return 'Last character is invalid'
+    if re.search(r'[-_\.]{2,}', value):
+        return 'Contains consecutive special characters'
+    if re.search((r'\.(js|json|css|htm|html|xml|jpg|jpeg|'
+                  r'png|gif|bmp|ico|tif|tiff|woff)$'),
+                 value):
+        return 'Ended by confusing suffix'
+    return False
+
+
+def validate_forum_username(request, **kwargs):
+    attrname = 'forum_username'
+    if attrname in request.json:
+        value = request.json[attrname]
+        res = check_forum_username(value)
+        if res is False:
+            request.validated[attrname] = value
+        else:
+            request.errors.add('body', attrname, res)
 
 
 def validate_captcha(request, **kwargs):
@@ -125,7 +162,10 @@ class UserRegistrationRest(object):
             validate_json_password,
             partial(validate_unique_attribute, "email"),
             partial(validate_unique_attribute, "username"),
-            partial(validate_unique_attribute, "forum_username"),
+            partial(validate_unique_attribute,
+                    "forum_username",
+                    lowercase=True),
+            validate_forum_username,
             validate_captcha])
     def post(self):
         user = schema_create_user.objectify(self.request.validated)
