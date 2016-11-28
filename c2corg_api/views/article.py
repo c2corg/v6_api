@@ -1,4 +1,6 @@
 import functools
+
+from c2corg_api.models import DBSession
 from c2corg_api.models.article import (
     Article,
     schema_article,
@@ -6,8 +8,11 @@ from c2corg_api.models.article import (
     schema_update_article,
     ARTICLE_TYPE, ArchiveArticle)
 from c2corg_api.models.document import ArchiveDocumentLocale
+from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
+from pyramid.httpexceptions import HTTPNotFound, HTTPBadRequest, HTTPForbidden
+
 from c2corg_common.fields_article import fields_article
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
@@ -57,6 +62,24 @@ class ArticleRest(DocumentRest):
                 validate_article_update,
                 validate_associations_update])
     def put(self):
+        if not self.request.has_permission('moderator'):
+            article_id = self.request.validated['id']
+            article = DBSession.query(Article).get(article_id)
+            if article is None:
+                raise HTTPNotFound('No article found for id %d' % article_id)
+            if article.article_type == 'collab':
+                article_type = \
+                    self.request.validated['document']['article_type']
+                if article_type != article.article_type:
+                    raise HTTPBadRequest(
+                        'Article type cannot be changed '
+                        'for collaborative articles'
+                    )
+            # personal articles should only be modifiable by
+            # their creator and moderators
+            elif not has_been_created_by(article_id,
+                                         self.request.authenticated_userid):
+                raise HTTPForbidden('No permission to change this article')
         return self._put(Article, schema_article)
 
 
