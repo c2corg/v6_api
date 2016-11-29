@@ -128,7 +128,7 @@ class SyncTest(BaseTestCase):
             (self.route1.document_id, 'r'),
             (self.outing1.document_id, 'o'),
             (user_id, 'u')]
-        sync_documents(self.session, changed_documents)
+        sync_documents(self.session, changed_documents, 1000)
         self.assertEqual(len(search_documents), 5)
 
         redirected_doc = next(

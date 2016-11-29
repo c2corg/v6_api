@@ -17,6 +17,12 @@ elasticsearch.port = {elasticsearch_port}
 elasticsearch.index = {elasticsearch_index}
 elasticsearch.pool = 50
 
+# batch size for fill_index
+elasticsearch.batch_size.fill_index = {elasticsearch_batch_size_fill_index}
+
+# batch size for es_syncer script
+elasticsearch.batch_size.syncer = {elasticsearch_batch_size_syncer}
+
 # Redis is used as queue to notify the syncer script of changed documents
 # and also as cache
 redis.url = {redis_url}

@@ -21,9 +21,12 @@ class SyncWorker(ConsumerMixin):
     http://docs.celeryproject.org/projects/kombu/en/latest/userguide/examples.html
     """
 
-    def __init__(self, connection, queue, session=None, session_factory=None):
+    def __init__(
+            self, connection, queue, batch_size, session=None,
+            session_factory=None):
         self.connection = connection
         self.queue = queue
+        self.batch_size = batch_size
         self.session = session
         self.session_factory = session_factory
 
@@ -46,7 +49,7 @@ class SyncWorker(ConsumerMixin):
     def sync(self):
         session = self.session if self.session else self.session_factory()
         try:
-            sync_es(session)
+            sync_es(session, self.batch_size)
             session.commit()
         except:
             session.rollback()
@@ -76,11 +79,12 @@ def main(argv=sys.argv):
     Session.configure(bind=engine)
     configure_es_from_config(settings)
     queue_config = get_queue_config(settings)
+    batch_size = int(settings.get('elasticsearch.batch_size.syncer', 1000))
 
     with queue_config.connection:
         try:
             worker = SyncWorker(
-                queue_config.connection, queue_config.queue,
+                queue_config.connection, queue_config.queue, batch_size,
                 session_factory=Session)
             log.info('Syncer started, running initial sync')
             worker.sync()

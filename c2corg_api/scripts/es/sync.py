@@ -10,8 +10,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.utils import windowed_query
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.es.es_batch import ElasticBatch
-from c2corg_api.search import elasticsearch_config, batch_size, \
-    search_documents
+from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.views.document_listings import add_load_for_profiles
 from sqlalchemy.orm import joinedload
 import logging
@@ -22,7 +21,7 @@ from sqlalchemy.sql.expression import or_, and_, union
 log = logging.getLogger(__name__)
 
 
-def sync_es(session):
+def sync_es(session, batch_size=1000):
     last_update, date_now = es_sync.get_status(session)
 
     if not last_update:
@@ -36,7 +35,7 @@ def sync_es(session):
         get_changed_documents_for_associations(session, last_update)
 
     if changed_documents:
-        sync_documents(session, changed_documents)
+        sync_documents(session, changed_documents, batch_size)
 
     es_sync.mark_as_updated(session, date_now)
 
@@ -232,7 +231,7 @@ def get_changed_outings_ro_uo(session, last_update):
         all()
 
 
-def sync_documents(session, changed_documents):
+def sync_documents(session, changed_documents, batch_size):
     client = elasticsearch_config['client']
     batch = ElasticBatch(client, batch_size)
     with batch:
@@ -240,7 +239,8 @@ def sync_documents(session, changed_documents):
         add_dependent_documents(session, docs_per_type)
         for doc_type, document_ids in docs_per_type.items():
             if document_ids:
-                docs = get_documents(session, doc_type, document_ids)
+                docs = get_documents(
+                    session, doc_type, batch_size, document_ids)
                 create_search_documents(doc_type, docs, batch)
 
 
@@ -270,7 +270,7 @@ def get_documents_per_type(changed_documents):
     return docs_per_type
 
 
-def get_documents(session, doc_type, document_ids=None):
+def get_documents(session, doc_type, batch_size, document_ids=None):
     clazz = document_types[doc_type]
     locales_clazz = document_locale_types[doc_type]
 

@@ -19,7 +19,7 @@ from c2corg_api.models import es_sync, document_types
 from c2corg_api.models.document import Document
 from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import configure_es_from_config, elasticsearch_config, \
-    batch_size, search_documents
+    search_documents
 from sqlalchemy.orm.session import sessionmaker
 from zope.sqlalchemy.datamanager import ZopeTransactionExtension
 
@@ -44,11 +44,13 @@ def main(argv=sys.argv):
     session = Session(bind=engine)
     configure_es_from_config(settings)
 
+    batch_size = int(settings.get('elasticsearch.batch_size.fill_index', 1000))
+
     with transaction.manager:
-        fill_index(session)
+        fill_index(session, batch_size)
 
 
-def fill_index(session):
+def fill_index(session, batch_size=1000):
     client = elasticsearch_config['client']
     index_name = elasticsearch_config['index']
 
@@ -76,7 +78,7 @@ def fill_index(session):
             print('Importing document type {}'.format(doc_type))
             to_search_document = search_documents[doc_type].to_search_document
 
-            for doc in sync.get_documents(session, doc_type):
+            for doc in sync.get_documents(session, doc_type, batch_size):
                 batch.add(to_search_document(doc, index_name))
 
                 count += 1

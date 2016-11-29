@@ -38,7 +38,7 @@ class SyncWorkerTest(BaseTestCase):
         t.commit()
 
         syncer = SyncWorker(
-            self.queue_config.connection, self.queue_config.queue,
+            self.queue_config.connection, self.queue_config.queue, 1000,
             session=self.session)
         next(syncer.consume(limit=1))
 
