@@ -45,7 +45,7 @@ class _ImageMixin(object):
 
     filename = Column(String(30), nullable=False)
 
-    date_time = Column(DateTime)
+    date_time = Column(DateTime(timezone=True))
 
     camera_name = Column(String(100))
 

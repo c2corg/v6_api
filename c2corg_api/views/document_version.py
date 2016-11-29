@@ -3,7 +3,7 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.user import User
-from c2corg_api.views import to_json_dict, to_seconds, etag_cache
+from c2corg_api.views import to_json_dict, etag_cache
 from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.elements import literal_column
@@ -84,7 +84,7 @@ def serialize_version(version):
         'user_id': version.history_metadata.user_id,
         'name': version.history_metadata.user.name,
         'comment': version.history_metadata.comment,
-        'written_at': to_seconds(version.history_metadata.written_at)
+        'written_at': version.history_metadata.written_at.isoformat()
     }
 
 

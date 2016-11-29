@@ -11,6 +11,7 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.tests import BaseTestCase
+from dateutil import parser as datetime_parser
 
 
 class BaseTestRest(BaseTestCase):
@@ -261,6 +262,12 @@ class BaseDocumentTestRest(BaseTestRest):
             body['document']['document_id'], reference.document_id)
         self.assertEqual(
             body['version']['version_id'], reference_version.id)
+
+        version = body['version']
+        written_at = version['written_at']
+        time = datetime_parser.parse(written_at)
+        self.assertIsNotNone(time.tzinfo)
+
         return body
 
     def get_info(self, reference, lang):

@@ -34,7 +34,8 @@ class CacheVersion(Base):
 
     version = Column(Integer, nullable=False, server_default='1')
     last_updated = Column(
-        DateTime, default=func.now(), server_default='now()', nullable=False)
+        DateTime(timezone=True), default=func.now(), server_default='now()',
+        nullable=False)
 
 
 # Trigger that updates the field `last_updated` when a version is updated.
