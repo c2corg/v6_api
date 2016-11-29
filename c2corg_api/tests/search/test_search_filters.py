@@ -1,4 +1,4 @@
-from c2corg_api.search import create_search, get_text_query
+from c2corg_api.search import create_search, get_text_query_on_title
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.search_filters import create_filter, build_query, \
@@ -25,7 +25,7 @@ class AdvancedSearchTest(BaseTestCase):
         }
         query = build_query(params, meta_params, 'w')
         expected_query = create_search('w'). \
-            query(get_text_query('search word')). \
+            query(get_text_query_on_title('search word')). \
             filter(Term(available_locales='fr')).\
             filter(Terms(areas=[1234, 4567])). \
             filter(Range(elevation={'gte': 1500})). \
@@ -45,7 +45,7 @@ class AdvancedSearchTest(BaseTestCase):
         }
         query = build_query(params, meta_params, 'w')
         expected_query = create_search('w'). \
-            query(get_text_query('search word')). \
+            query(get_text_query_on_title('search word')). \
             filter(Range(elevation={'gte': 1500})). \
             filter(GeoBoundingBox(
                 geom={
@@ -66,7 +66,7 @@ class AdvancedSearchTest(BaseTestCase):
         }
         query = build_query(params, meta_params, 'w')
         expected_query = create_search('w'). \
-            query(get_text_query('search word')). \
+            query(get_text_query_on_title('search word')). \
             fields([]).\
             extra(from_=40, size=20)
         self.assertQueryEqual(query, expected_query)

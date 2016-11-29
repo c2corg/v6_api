@@ -7,7 +7,7 @@ from c2corg_api.search.mapping_types import reserved_query_fields
 from functools import partial
 
 from c2corg_api.search import create_search, search_documents, \
-    get_text_query
+    get_text_query_on_title
 from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox, \
     Missing
 
@@ -22,7 +22,7 @@ def build_query(url_params, meta_params, doc_type):
     search = create_search(doc_type)
     if search_term:
         search = search.query(
-            get_text_query(search_term, meta_params.get('lang')))
+            get_text_query_on_title(search_term, meta_params.get('lang')))
 
     search_model = search_documents[doc_type]
     for param in url_params:
