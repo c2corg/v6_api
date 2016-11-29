@@ -278,8 +278,13 @@ def get_documents(session, doc_type, document_ids=None):
     if document_ids:
         base_query = base_query.filter(clazz.document_id.in_(document_ids))
 
+    locale_fields = ['title']
+    if clazz == Route:
+        locale_fields.append('title_prefix')
+
     base_query = base_query. \
-        options(joinedload(clazz.locales.of_type(locales_clazz))). \
+        options(joinedload(clazz.locales.of_type(locales_clazz)).
+                load_only(*locale_fields)). \
         options(joinedload(clazz.geometry).load_only(DocumentGeometry.lon_lat))
 
     if clazz != Area:

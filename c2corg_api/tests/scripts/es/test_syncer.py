@@ -45,5 +45,5 @@ class SyncWorkerTest(BaseTestCase):
         index = elasticsearch_config['index']
         doc = SearchWaypoint.get(id=51251, index=index)
         self.assertEqual(doc['title_fr'], 'Mont Granier')
-        self.assertEqual(doc['summary_fr'], 'Le Mont  Granier ')
+        # self.assertEqual(doc['summary_fr'], 'Le Mont  Granier ')
         self.assertEqual(doc['doc_type'], 'w')

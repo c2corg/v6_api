@@ -88,7 +88,7 @@ class SyncTest(BaseTestCase):
         self.assertEqual(doc['_op_type'], 'index')
         self.assertEqual(doc['_id'], self.route1.document_id)
         self.assertEqual(doc['title_en'], 'Mont Blanc : Face N')
-        self.assertEqual(doc['description_en'], '...')
+        # self.assertEqual(doc['description_en'], '...')
         self.assertEqual(doc['geom'], [6, 46])
 
     def test_create_search_documents_user_profile(self):
@@ -105,10 +105,10 @@ class SyncTest(BaseTestCase):
         self.assertEqual(doc['_id'], document_id)
         self.assertEqual(
             doc['title_en'], 'Contributor contributor')
-        self.assertEqual(doc['description_en'], 'Me')
+        # self.assertEqual(doc['description_en'], 'Me')
         self.assertEqual(
             doc['title_fr'], 'Contributor contributor')
-        self.assertEqual(doc['description_fr'], 'Moi')
+        # self.assertEqual(doc['description_fr'], 'Moi')
 
     @patch('c2corg_api.scripts.es.sync.ElasticBatch')
     def test_sync_documents(self, mock):

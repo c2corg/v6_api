@@ -3,7 +3,6 @@ import json
 from c2corg_api.models.document import Document
 from c2corg_api.search.mapping_types import Enum, QEnumArray, QLong, \
     QEnumRange
-from c2corg_api.search.utils import strip_bbcodes
 from c2corg_common.attributes import default_langs
 from c2corg_common.sortable_search_attributes import sortable_quality_types
 from elasticsearch_dsl import DocType, String, MetaField, Long, GeoPoint
@@ -127,10 +126,12 @@ class SearchDocument(DocType):
             for locale in document.locales:
                 available_locales.append(locale.lang)
                 search_document['title_' + locale.lang] = locale.title
-                search_document['summary_' + locale.lang] = \
-                    strip_bbcodes(locale.summary)
-                search_document['description_' + locale.lang] = \
-                    strip_bbcodes(locale.description)
+                # FIXME currently the full-text search only searches the title,
+                # so summary and description are not indexed
+                # search_document['summary_' + locale.lang] = \
+                #     strip_bbcodes(locale.summary)
+                # search_document['description_' + locale.lang] = \
+                #     strip_bbcodes(locale.description)
             search_document['available_locales'] = available_locales
 
             if document.quality:
