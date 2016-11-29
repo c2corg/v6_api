@@ -223,6 +223,7 @@ class ImageProxyRest(object):
             return HTTPFound("{}{}".format(image_url, image.filename))
         else:
             base, ext = os.path.splitext(image.filename)
+            ext = '.jpg' if ext == '.svg' else ext
             return HTTPFound("{}{}{}{}".format(image_url, base, size, ext))
 
 
