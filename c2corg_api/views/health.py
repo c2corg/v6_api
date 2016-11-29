@@ -48,6 +48,7 @@ class HealthRest(object):
             success = True
         except:
             log.exception('Getting last es syncer run failed')
+            self.request.response.status_code = 500
 
         status['pg'] = 'ok' if success else 'error'
         status['last_es_syncer_run'] = last_es_syncer_run.isoformat() \
@@ -65,6 +66,7 @@ class HealthRest(object):
             success = True
         except:
             log.exception('Getting indexed docs count failed')
+            self.request.response.status_code = 500
 
         status['es'] = 'ok' if success else 'error'
         status['es_indexed_docs'] = es_docs
@@ -79,6 +81,7 @@ class HealthRest(object):
             success = True
         except:
             log.exception('Getting redis keys failed')
+            self.request.response.status_code = 500
 
         status['redis'] = 'ok' if success else 'error'
         status['redis_keys'] = redis_keys
