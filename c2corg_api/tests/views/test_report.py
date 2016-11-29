@@ -8,8 +8,8 @@ from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing
-from c2corg_api.models.report import ArchiveReport, Report, REPORT_TYPE, \
-    ArchiveReportLocale, ReportLocale
+from c2corg_api.models.xreport import ArchiveXreport, Xreport, XREPORT_TYPE, \
+    ArchiveXreportLocale, XreportLocale
 from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
@@ -19,12 +19,12 @@ from c2corg_common.attributes import quality_types
 from dogpile.cache.api import NO_VALUE
 
 
-class TestReportRest(BaseDocumentTestRest):
+class TestXreportRest(BaseDocumentTestRest):
 
     def setUp(self):  # noqa
         self.set_prefix_and_model(
-            "/reports", REPORT_TYPE, Report, ArchiveReport,
-            ArchiveReportLocale)
+            "/xreports", XREPORT_TYPE, Xreport, ArchiveXreport,
+            ArchiveXreportLocale)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
@@ -34,20 +34,20 @@ class TestReportRest(BaseDocumentTestRest):
         self.assertIn('geometry', doc)
 
     def test_get_collection_paginated(self):
-        self.app.get("/reports?offset=invalid", status=400)
+        self.app.get("/xreports?offset=invalid", status=400)
 
         self.assertResultsEqual(
             self.get_collection({'offset': 0, 'limit': 0}), [], 4)
 
         self.assertResultsEqual(
             self.get_collection({'offset': 0, 'limit': 1}),
-            [self.report4.document_id], 4)
+            [self.xreport4.document_id], 4)
         self.assertResultsEqual(
             self.get_collection({'offset': 0, 'limit': 2}),
-            [self.report4.document_id, self.report3.document_id], 4)
+            [self.xreport4.document_id, self.xreport3.document_id], 4)
         self.assertResultsEqual(
             self.get_collection({'offset': 1, 'limit': 2}),
-            [self.report3.document_id, self.report2.document_id], 4)
+            [self.xreport3.document_id, self.xreport2.document_id], 4)
 
     def test_get_collection_lang(self):
         self.get_collection_lang()
@@ -57,16 +57,16 @@ class TestReportRest(BaseDocumentTestRest):
 
         self.assertResultsEqual(
             self.get_collection_search({'l': 'en'}),
-            [self.report4.document_id, self.report1.document_id], 2)
+            [self.xreport4.document_id, self.xreport1.document_id], 2)
 
         self.assertResultsEqual(
             self.get_collection_search({'act': ['hiking']}),
-            [self.report4.document_id, self.report3.document_id,
-             self.report2.document_id, self.report1.document_id], 4)
+            [self.xreport4.document_id, self.xreport3.document_id,
+             self.xreport2.document_id, self.xreport1.document_id], 4)
 
     def test_get(self):
-        body = self.get(self.report1, user='moderator')
-        self.assertNotIn('report', body)
+        body = self.get(self.xreport1, user='moderator')
+        self.assertNotIn('xreport', body)
         self.assertIn('geometry', body)
         self.assertIsNone(body.get('geometry'))
         associations = body['associations']
@@ -84,7 +84,7 @@ class TestReportRest(BaseDocumentTestRest):
         linked_routes = associations.get('routes')
         self.assertEqual(len(linked_routes), 1)
 
-        self.assertEqual(body.get('activities'), self.report1.activities)
+        self.assertEqual(body.get('activities'), self.xreport1.activities)
 
         self.assertIn('nb_participants', body)
         self.assertIn('nb_impacted', body)
@@ -101,9 +101,9 @@ class TestReportRest(BaseDocumentTestRest):
           locale_fr.get('place'), 'some place descrip. in french')
 
     def test_get_as_guest(self):
-        body = self.get(self.report1, user=None)
+        body = self.get(self.xreport1, user=None)
 
-        # common user should not see personal data in the report
+        # common user should not see personal data in the xreport
         self.assertNotIn('author_status', body)
         self.assertNotIn('activity_rate', body)
         self.assertNotIn('nb_outings', body)
@@ -113,9 +113,9 @@ class TestReportRest(BaseDocumentTestRest):
         self.assertNotIn('autonomy', body)
 
     def test_get_as_contributor_not_author(self):
-        body = self.get(self.report1, user='contributor2')
+        body = self.get(self.xreport1, user='contributor2')
 
-        # common user should not see personal data in the report
+        # common user should not see personal data in the xreport
         self.assertNotIn('author_status', body)
         self.assertNotIn('activity_rate', body)
         self.assertNotIn('nb_outings', body)
@@ -125,9 +125,9 @@ class TestReportRest(BaseDocumentTestRest):
         self.assertNotIn('autonomy', body)
 
     def test_get_as_moderator(self):
-        body = self.get(self.report1, user='moderator')
+        body = self.get(self.xreport1, user='moderator')
 
-        # moderator can see personal data in the report
+        # moderator can see personal data in the xreport
         self.assertIn('author_status', body)
         self.assertIn('activity_rate', body)
         self.assertIn('nb_outings', body)
@@ -137,17 +137,17 @@ class TestReportRest(BaseDocumentTestRest):
         self.assertIn('autonomy', body)
 
     def test_get_lang(self):
-        self.get_lang(self.report1, user='contributor')
+        self.get_lang(self.xreport1, user='contributor')
 
     def test_get_new_lang(self):
-        self.get_new_lang(self.report1, user='moderator')
+        self.get_new_lang(self.xreport1, user='moderator')
 
     def test_get_404(self):
         self.get_404(user='moderator')
 
     def test_get_cache_headers(self):
         response = self.app.get(self._prefix + '/' +
-                                str(self.report1.document_id),
+                                str(self.xreport1.document_id),
                                 status=200)
         headers = response.headers
         etag = headers.get('ETag')
@@ -157,13 +157,13 @@ class TestReportRest(BaseDocumentTestRest):
 
     def test_get_version(self):
         self.get_version(
-            self.report1, self.report1_version, user='contributor')
+            self.xreport1, self.xreport1_version, user='contributor')
 
     def test_get_version_etag(self):
         auth_headers = self.add_authorization_header(username='contributor')
         url = '{0}/{1}/en/{2}'.format(
-                self._prefix, str(self.report1.document_id),
-                str(self.report1_version.id))
+                self._prefix, str(self.xreport1.document_id),
+                str(self.xreport1_version.id))
         response = self.app.get(url, headers=auth_headers, status=200)
 
         # check that the ETag header is set
@@ -181,11 +181,11 @@ class TestReportRest(BaseDocumentTestRest):
     def test_get_version_caching(self):
         headers = self.add_authorization_header(username='contributor')
         url = '{0}/{1}/en/{2}'.format(
-                self._prefix, str(self.report1.document_id),
-                str(self.report1_version.id))
+                self._prefix, str(self.xreport1.document_id),
+                str(self.xreport1_version.id))
         cache_key = '{0}-{1}'.format(
-            get_cache_key(self.report1.document_id, 'en'),
-            self.report1_version.id)
+            get_cache_key(self.xreport1.document_id, 'en'),
+            self.xreport1_version.id)
 
         cache_value = cache_document_version.get(cache_key)
         self.assertEqual(cache_value, NO_VALUE)
@@ -205,11 +205,11 @@ class TestReportRest(BaseDocumentTestRest):
         self.assertEqual(body, fake_cache_value)
 
     def test_get_info(self):
-        body, locale = self.get_info(self.report1, 'en')
+        body, locale = self.get_info(self.xreport1, 'en')
         self.assertEqual(locale.get('lang'), 'en')
 
     def test_get_info_best_lang(self):
-        body, locale = self.get_info(self.report1, 'es')
+        body, locale = self.get_info(self.xreport1, 'es')
         self.assertEqual(locale.get('lang'), 'fr')
 
     def test_get_info_404(self):
@@ -277,10 +277,10 @@ class TestReportRest(BaseDocumentTestRest):
                                       validate_with_auth=True)
         version = doc.versions[0]
 
-        archive_report = version.document_archive
-        self.assertEqual(archive_report.activities, ['hiking'])
-        self.assertEqual(archive_report.event_type, ['stone_fall'])
-        self.assertEqual(archive_report.nb_participants, 5)
+        archive_xreport = version.document_archive
+        self.assertEqual(archive_xreport.activities, ['hiking'])
+        self.assertEqual(archive_xreport.event_type, ['stone_fall'])
+        self.assertEqual(archive_xreport.nb_participants, 5)
 
         archive_locale = version.document_locales_archive
         self.assertEqual(archive_locale.lang, 'en')
@@ -302,7 +302,7 @@ class TestReportRest(BaseDocumentTestRest):
             first()
         self.assertIsNotNone(association_img_log)
 
-        # check that a link to the associated report is created
+        # check that a link to the associated xreport is created
         association_art = self.session.query(Association).get(
             (doc.document_id, self.article2.document_id))
         self.assertIsNotNone(association_art)
@@ -338,9 +338,9 @@ class TestReportRest(BaseDocumentTestRest):
         meta_data = version.history_metadata
         self.assertEqual(meta_data.user_id, user_id)
 
-        # authorized contributor can see personal data in the report
+        # authorized contributor can see personal data in the xreport
         body = self.get(doc, user='contributor', ignore_checks=True)
-        self.assertNotIn('report', body)
+        self.assertNotIn('xreport', body)
 
         self.assertIn('author_status', body)
         self.assertIn('activity_rate', body)
@@ -354,7 +354,7 @@ class TestReportRest(BaseDocumentTestRest):
         body = {
             'document': {
                 'document_id': '9999999',
-                'version': self.report1.version,
+                'version': self.xreport1.version,
                 'activities': ['hiking'],
                 'event_type': ['avalanche'],
                 'nb_participants': 5,
@@ -369,7 +369,7 @@ class TestReportRest(BaseDocumentTestRest):
     def test_put_wrong_document_version(self):
         body = {
             'document': {
-                'document_id': self.report1.document_id,
+                'document_id': self.xreport1.document_id,
                 'version': -9999,
                 'activities': ['hiking'],
                 'event_type': ['avalanche'],
@@ -381,13 +381,13 @@ class TestReportRest(BaseDocumentTestRest):
             }
         }
         self.put_wrong_version(
-            body, self.report1.document_id, user='moderator')
+            body, self.xreport1.document_id, user='moderator')
 
     def test_put_wrong_locale_version(self):
         body = {
             'document': {
-                'document_id': self.report1.document_id,
-                'version': self.report1.version,
+                'document_id': self.xreport1.document_id,
+                'version': self.xreport1.version,
                 'activities': ['hiking'],
                 'event_type': ['avalanche'],
                 'nb_participants': 5,
@@ -398,13 +398,13 @@ class TestReportRest(BaseDocumentTestRest):
             }
         }
         self.put_wrong_version(
-            body, self.report1.document_id, user='moderator')
+            body, self.xreport1.document_id, user='moderator')
 
     def test_put_wrong_ids(self):
         body = {
             'document': {
-                'document_id': self.report1.document_id,
-                'version': self.report1.version,
+                'document_id': self.xreport1.document_id,
+                'version': self.xreport1.version,
                 'activities': ['hiking'],
                 'event_type': ['avalanche'],
                 'nb_participants': 5,
@@ -414,17 +414,17 @@ class TestReportRest(BaseDocumentTestRest):
                 ]
             }
         }
-        self.put_wrong_ids(body, self.report1.document_id, user='moderator')
+        self.put_wrong_ids(body, self.xreport1.document_id, user='moderator')
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.report1.document_id, user='moderator')
+        self.put_put_no_document(self.xreport1.document_id, user='moderator')
 
     def test_put_success_all(self):
         body = {
             'message': 'Update',
             'document': {
-                'document_id': self.report1.document_id,
-                'version': self.report1.version,
+                'document_id': self.xreport1.document_id,
+                'version': self.xreport1.version,
                 'quality': quality_types[1],
                 'activities': ['hiking'],
                 'event_type': ['stone_fall'],
@@ -451,15 +451,15 @@ class TestReportRest(BaseDocumentTestRest):
                 ]
             }
         }
-        (body, report1) = self.put_success_all(
-            body, self.report1, user='moderator', cache_version=3)
+        (body, xreport1) = self.put_success_all(
+            body, self.xreport1, user='moderator', cache_version=3)
 
-        self.assertEquals(report1.activities, ['hiking'])
-        locale_en = report1.get_locale('en')
+        self.assertEquals(xreport1.activities, ['hiking'])
+        locale_en = xreport1.get_locale('en')
         self.assertEquals(locale_en.title, 'New title')
 
         # version with lang 'en'
-        versions = report1.versions
+        versions = xreport1.versions
         version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.title, 'New title')
@@ -478,15 +478,15 @@ class TestReportRest(BaseDocumentTestRest):
         self.assertEqual(archive_locale.title, 'Lac d\'Annecy')
 
         # check if geometry is stored in database afterwards
-        self.assertIsNotNone(report1.geometry)
+        self.assertIsNotNone(xreport1.geometry)
         # check that a link to the associated image is created
         association_img = self.session.query(Association).get(
-            (report1.document_id, self.image2.document_id))
+            (xreport1.document_id, self.image2.document_id))
         self.assertIsNotNone(association_img)
 
         association_img_log = self.session.query(AssociationLog). \
             filter(AssociationLog.parent_document_id ==
-                   report1.document_id). \
+                   xreport1.document_id). \
             filter(AssociationLog.child_document_id ==
                    self.image2.document_id). \
             first()
@@ -494,12 +494,12 @@ class TestReportRest(BaseDocumentTestRest):
 
         # check that a link to the associated article is created
         association_main_art = self.session.query(Association).get(
-            (report1.document_id, self.article2.document_id))
+            (xreport1.document_id, self.article2.document_id))
         self.assertIsNotNone(association_main_art)
 
         association_art_log = self.session.query(AssociationLog). \
             filter(AssociationLog.parent_document_id ==
-                   report1.document_id). \
+                   xreport1.document_id). \
             filter(AssociationLog.child_document_id ==
                    self.article2.document_id). \
             first()
@@ -509,8 +509,8 @@ class TestReportRest(BaseDocumentTestRest):
         body = {
             'message': 'Changing figures',
             'document': {
-                'document_id': self.report1.document_id,
-                'version': self.report1.version,
+                'document_id': self.xreport1.document_id,
+                'version': self.xreport1.version,
                 'quality': quality_types[1],
                 'activities': ['hiking'],
                 'event_type': ['stone_fall'],
@@ -525,17 +525,17 @@ class TestReportRest(BaseDocumentTestRest):
                 ]
             }
         }
-        (body, report1) = self.put_success_figures_only(
-            body, self.report1, user='moderator')
+        (body, xreport1) = self.put_success_figures_only(
+            body, self.xreport1, user='moderator')
 
-        self.assertEquals(report1.activities, ['hiking'])
+        self.assertEquals(xreport1.activities, ['hiking'])
 
     def test_put_success_lang_only(self):
         body = {
             'message': 'Changing lang',
             'document': {
-                'document_id': self.report1.document_id,
-                'version': self.report1.version,
+                'document_id': self.xreport1.document_id,
+                'version': self.xreport1.version,
                 'quality': quality_types[1],
                 'activities': ['hiking'],
                 'event_type': ['stone_fall'],
@@ -545,10 +545,10 @@ class TestReportRest(BaseDocumentTestRest):
                 ]
             }
         }
-        (body, report1) = self.put_success_lang_only(
-            body, self.report1, user='moderator')
+        (body, xreport1) = self.put_success_lang_only(
+            body, self.xreport1, user='moderator')
 
-        self.assertEquals(report1.get_locale('en').title, 'New title')
+        self.assertEquals(xreport1.get_locale('en').title, 'New title')
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale.
@@ -556,8 +556,8 @@ class TestReportRest(BaseDocumentTestRest):
         body = {
             'message': 'Adding lang',
             'document': {
-                'document_id': self.report1.document_id,
-                'version': self.report1.version,
+                'document_id': self.xreport1.document_id,
+                'version': self.xreport1.version,
                 'quality': quality_types[1],
                 'activities': ['hiking'],
                 'event_type': ['stone_fall'],
@@ -566,17 +566,17 @@ class TestReportRest(BaseDocumentTestRest):
                 ]
             }
         }
-        (body, report1) = self.put_success_new_lang(
-            body, self.report1, user='moderator')
+        (body, xreport1) = self.put_success_new_lang(
+            body, self.xreport1, user='moderator')
 
-        self.assertEquals(report1.get_locale('es').title, 'Lac d\'Annecy')
+        self.assertEquals(xreport1.get_locale('es').title, 'Lac d\'Annecy')
 
     def test_put_as_author(self):
         body = {
             'message': 'Update',
             'document': {
-                'document_id': self.report1.document_id,
-                'version': self.report1.version,
+                'document_id': self.xreport1.document_id,
+                'version': self.xreport1.version,
                 'quality': quality_types[1],
                 'activities': ['paragliding'],  # changed
                 'event_type': ['person_fall'],  # changed
@@ -588,11 +588,11 @@ class TestReportRest(BaseDocumentTestRest):
             }
         }
 
-        (body, report1) = self.put_success_all(
-            body, self.report1, user='contributor', cache_version=2)
+        (body, xreport1) = self.put_success_all(
+            body, self.xreport1, user='contributor', cache_version=2)
 
         # version with lang 'en'
-        versions = report1.versions
+        versions = xreport1.versions
         version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.title, 'Another final EN title')
@@ -606,8 +606,8 @@ class TestReportRest(BaseDocumentTestRest):
         body = {
             'message': 'Update',
             'document': {
-                'document_id': self.report4.document_id,
-                'version': self.report4.version,
+                'document_id': self.xreport4.document_id,
+                'version': self.xreport4.version,
                 'quality': quality_types[1],
                 'activities': ['paragliding'],
                 'event_type': ['person_fall'],
@@ -621,7 +621,7 @@ class TestReportRest(BaseDocumentTestRest):
 
         headers = self.add_authorization_header(username='contributor2')
         response = self.app_put_json(
-            self._prefix + '/' + str(self.report4.document_id), body,
+            self._prefix + '/' + str(self.xreport4.document_id), body,
             headers=headers,
             status=403)
 
@@ -631,45 +631,45 @@ class TestReportRest(BaseDocumentTestRest):
         self.assertEqual(body['errors'][0]['name'], 'Forbidden')
 
     def _add_test_data(self):
-        self.report1 = Report(activities=['hiking'],
-                              event_type=['stone_fall'])
-        self.locale_en = ReportLocale(lang='en',
-                                      title='Lac d\'Annecy',
-                                      place='some place descrip. in english')
-        self.locale_fr = ReportLocale(lang='fr', title='Lac d\'Annecy',
-                                      place='some place descrip. in french')
+        self.xreport1 = Xreport(activities=['hiking'],
+                                event_type=['stone_fall'])
+        self.locale_en = XreportLocale(lang='en',
+                                       title='Lac d\'Annecy',
+                                       place='some place descrip. in english')
+        self.locale_fr = XreportLocale(lang='fr', title='Lac d\'Annecy',
+                                       place='some place descrip. in french')
 
-        self.report1.locales.append(self.locale_en)
-        self.report1.locales.append(self.locale_fr)
+        self.xreport1.locales.append(self.locale_en)
+        self.xreport1.locales.append(self.locale_fr)
 
-        self.session.add(self.report1)
+        self.session.add(self.xreport1)
         self.session.flush()
 
         user_id = self.global_userids['contributor']
-        DocumentRest.create_new_version(self.report1, user_id)
-        self.report1_version = self.session.query(DocumentVersion). \
+        DocumentRest.create_new_version(self.xreport1, user_id)
+        self.xreport1_version = self.session.query(DocumentVersion). \
             filter(DocumentVersion.document_id ==
-                   self.report1.document_id). \
+                   self.xreport1.document_id). \
             filter(DocumentVersion.lang == 'en').first()
 
-        self.report2 = Report(activities=['hiking'],
-                              event_type=['avalanche'],
-                              nb_participants=5)
-        self.session.add(self.report2)
-        self.report3 = Report(activities=['hiking'],
-                              event_type=['avalanche'],
-                              nb_participants=5)
-        self.session.add(self.report3)
-        self.report4 = Report(activities=['hiking'],
-                              event_type=['avalanche'],
-                              nb_participants=5,
-                              nb_impacted=5,
-                              age=50)
-        self.report4.locales.append(DocumentLocale(
+        self.xreport2 = Xreport(activities=['hiking'],
+                                event_type=['avalanche'],
+                                nb_participants=5)
+        self.session.add(self.xreport2)
+        self.xreport3 = Xreport(activities=['hiking'],
+                                event_type=['avalanche'],
+                                nb_participants=5)
+        self.session.add(self.xreport3)
+        self.xreport4 = Xreport(activities=['hiking'],
+                                event_type=['avalanche'],
+                                nb_participants=5,
+                                nb_impacted=5,
+                                age=50)
+        self.xreport4.locales.append(DocumentLocale(
             lang='en', title='Lac d\'Annecy'))
-        self.report4.locales.append(DocumentLocale(
+        self.xreport4.locales.append(DocumentLocale(
             lang='fr', title='Lac d\'Annecy'))
-        self.session.add(self.report4)
+        self.session.add(self.xreport4)
 
         self.article2 = Article(
             categories=['site_info'], activities=['hiking'],
@@ -708,8 +708,8 @@ class TestReportRest(BaseDocumentTestRest):
 
         self.session.add(Association.create(
             parent_document=self.outing3,
-            child_document=self.report1))
+            child_document=self.xreport1))
         self.session.add(Association.create(
             parent_document=self.route3,
-            child_document=self.report1))
+            child_document=self.xreport1))
         self.session.flush()

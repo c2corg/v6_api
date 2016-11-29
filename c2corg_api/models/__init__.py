@@ -38,13 +38,13 @@ from c2corg_api.models import outing  # noqa
 from c2corg_api.models import es_sync  # noqa
 from c2corg_api.models import association_views  # noqa
 from c2corg_api.models import cache_version  # noqa
-from c2corg_api.models import report  # noqa
+from c2corg_api.models import xreport  # noqa
 from c2corg_api.models import article  # noqa
 from c2corg_api.models import book  # noqa
 from c2corg_api.models import feed  # noqa
 
 document_types = {
-    report.REPORT_TYPE: report.Report,
+    xreport.XREPORT_TYPE: xreport.Xreport,
     article.ARTICLE_TYPE: article.Article,
     waypoint.WAYPOINT_TYPE: waypoint.Waypoint,
     book.BOOK_TYPE: book.Book,
@@ -57,7 +57,7 @@ document_types = {
 }
 
 document_locale_types = {
-    report.REPORT_TYPE: report.ReportLocale,
+    xreport.XREPORT_TYPE: xreport.XreportLocale,
     article.ARTICLE_TYPE: document.DocumentLocale,
     waypoint.WAYPOINT_TYPE: waypoint.WaypointLocale,
     book.BOOK_TYPE: document.DocumentLocale,

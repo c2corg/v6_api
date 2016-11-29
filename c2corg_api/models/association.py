@@ -3,7 +3,7 @@ from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.models.report import REPORT_TYPE
+from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
@@ -351,7 +351,7 @@ association_keys = {
     'areas': AREA_TYPE,
     'books': BOOK_TYPE,
     'outings': OUTING_TYPE,
-    'reports': REPORT_TYPE
+    'xreports': XREPORT_TYPE
 }
 
 association_keys_for_types = {
@@ -363,20 +363,20 @@ association_keys_for_types = {
     IMAGE_TYPE: 'images',
     AREA_TYPE: 'areas',
     OUTING_TYPE: 'outings',
-    REPORT_TYPE: 'reports'
+    XREPORT_TYPE: 'xreports'
 }
 
 # associations that can be updated/created when updating/creating a document
 # e.g. when creating a route, route and waypoint associations can be created
 updatable_associations = {
-    ROUTE_TYPE: {'articles', 'routes', 'waypoints', 'books', 'reports'},
-    WAYPOINT_TYPE: {'articles', 'waypoints', 'waypoint_children', 'reports'},
-    OUTING_TYPE: {'articles', 'routes', 'users', 'reports'},
+    ROUTE_TYPE: {'articles', 'routes', 'waypoints', 'books', 'xreports'},
+    WAYPOINT_TYPE: {'articles', 'waypoints', 'waypoint_children', 'xreports'},
+    OUTING_TYPE: {'articles', 'routes', 'users', 'xreports'},
     IMAGE_TYPE: {'routes', 'waypoints', 'images', 'users', 'articles',
-                 'areas', 'outings', 'books', 'reports'},
+                 'areas', 'outings', 'books', 'xreports'},
     ARTICLE_TYPE: {'articles', 'images', 'users', 'routes', 'waypoints',
-                   'outings', 'books', 'reports'},
+                   'outings', 'books', 'xreports'},
     AREA_TYPE: {'images'},
     BOOK_TYPE: {'routes', 'articles', 'images', 'waypoints'},
-    REPORT_TYPE: {'routes', 'outings', 'articles', 'images'}
+    XREPORT_TYPE: {'routes', 'outings', 'articles', 'images'}
 }

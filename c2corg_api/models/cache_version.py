@@ -443,9 +443,9 @@ def _format_cache_key(document_id, lang, version, doc_type=None,
     if doc_type:
         cache_key = '{0}-{1}'.format(cache_key, doc_type)
 
-    # custom_cache_key is used for reports to distinguish between the cache
-    # values for users that are allowed to see the full report with personal
-    # data (moderators and the creator of the report) and a public version for
+    # custom_cache_key is used for xreports to distinguish between the cache
+    # values for users that are allowed to see the full xreport with personal
+    # data (moderators and the creator of the xreport) and a public version for
     # all other users.
     if custom_cache_key:
         cache_key = '{0}-{1}'.format(cache_key, custom_cache_key)

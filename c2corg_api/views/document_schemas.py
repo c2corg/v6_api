@@ -4,8 +4,8 @@ from c2corg_api.models.article import ARTICLE_TYPE, Article, \
 from c2corg_api.models.book import BOOK_TYPE, Book, schema_listing_book
 from c2corg_api.models.image import IMAGE_TYPE, Image, schema_listing_image
 from c2corg_api.models.outing import OUTING_TYPE, Outing, schema_outing
-from c2corg_api.models.report import REPORT_TYPE, Report, \
-    schema_listing_report, ReportLocale
+from c2corg_api.models.xreport import XREPORT_TYPE, Xreport, \
+    schema_listing_xreport, XreportLocale
 from c2corg_api.models.route import schema_route, ROUTE_TYPE, Route, \
     RouteLocale
 from c2corg_api.models.schema_utils import restrict_schema
@@ -16,7 +16,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile, \
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, schema_waypoint, Waypoint
 from c2corg_api.views import set_author
 from c2corg_common.fields_outing import fields_outing
-from c2corg_common.fields_report import fields_report
+from c2corg_common.fields_xreport import fields_xreport
 from c2corg_common.fields_route import fields_route
 from c2corg_common.fields_waypoint import fields_waypoint
 from c2corg_common.fields_area import fields_area
@@ -162,13 +162,13 @@ outing_documents_config = GetDocumentsConfig(
     adapt_schema=outing_listing_schema_adaptor, set_custom_fields=set_author)
 
 
-# reports
+# xreports
 
 
-report_documents_config = GetDocumentsConfig(
-    REPORT_TYPE, Report,
-    schema_listing_report, clazz_locale=ReportLocale,
-    listing_fields=fields_report['listing'])
+xreport_documents_config = GetDocumentsConfig(
+    XREPORT_TYPE, Xreport,
+    schema_listing_xreport, clazz_locale=XreportLocale,
+    listing_fields=fields_xreport['listing'])
 
 
 # route
@@ -237,7 +237,7 @@ document_configs = {
     IMAGE_TYPE: image_documents_config,
     AREA_TYPE: area_documents_config,
     BOOK_TYPE: book_documents_config,
-    REPORT_TYPE: report_documents_config,
+    XREPORT_TYPE: xreport_documents_config,
     MAP_TYPE: topo_map_documents_config,
     ARTICLE_TYPE: article_documents_config,
     USERPROFILE_TYPE: user_profile_documents_config
