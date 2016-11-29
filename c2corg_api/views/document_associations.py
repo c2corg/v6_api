@@ -5,7 +5,7 @@ from c2corg_api.models.association import Association
 from c2corg_api.models.book import BOOK_TYPE, Book
 from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import OUTING_TYPE, Outing
-from c2corg_api.models.report import Report, REPORT_TYPE
+from c2corg_api.models.xreport import Xreport, XREPORT_TYPE
 from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
@@ -14,28 +14,28 @@ from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import waypoint_documents_config, \
     route_documents_config, user_profile_documents_config, \
     image_documents_config, article_documents_config, area_documents_config, \
-    outing_documents_config, book_documents_config, report_documents_config
+    outing_documents_config, book_documents_config, xreport_documents_config
 from c2corg_api.views.validation import updatable_associations
 from sqlalchemy.sql.expression import or_, and_
 
 associations_to_include = {
     WAYPOINT_TYPE: {
         'waypoints', 'waypoint_children', 'routes', 'images', 'articles',
-        'books', 'reports'},
+        'books', 'xreports'},
     ROUTE_TYPE:
-        {'waypoints', 'routes', 'images', 'articles', 'books', 'reports'},
+        {'waypoints', 'routes', 'images', 'articles', 'books', 'xreports'},
     OUTING_TYPE:
-        {'routes', 'images', 'users', 'articles', 'reports'},
+        {'routes', 'images', 'users', 'articles', 'xreports'},
     IMAGE_TYPE:
         {'waypoints', 'routes', 'images', 'users', 'outings', 'articles',
-         'areas', 'books', 'reports'},
+         'areas', 'books', 'xreports'},
     ARTICLE_TYPE:
         {'waypoints', 'routes', 'images', 'users', 'outings', 'articles',
-         'books', 'reports'},
+         'books', 'xreports'},
     AREA_TYPE: {'images'},
     BOOK_TYPE: {'routes', 'articles', 'images', 'waypoints'},
-    REPORT_TYPE: {'waypoints', 'users', 'routes', 'outings', 'articles',
-                  'images'},
+    XREPORT_TYPE: {'waypoints', 'users', 'routes', 'outings', 'articles',
+                   'images'},
     USERPROFILE_TYPE: {'images'}
 }
 
@@ -78,8 +78,8 @@ def get_associations(document, lang, editing_view):
         associations['outings'] = get_linked_outings(document, lang)
     if 'books' in types_to_include:
         associations['books'] = get_linked_books(document, lang)
-    if 'reports' in types_to_include:
-        associations['reports'] = get_linked_reports(document, lang)
+    if 'xreports' in types_to_include:
+        associations['xreports'] = get_linked_xreports(document, lang)
 
     return associations
 
@@ -141,7 +141,8 @@ def get_linked_routes(document, lang):
 
     if document.type == WAYPOINT_TYPE:
         condition = condition_as_child
-    elif document.type in [OUTING_TYPE, IMAGE_TYPE, ARTICLE_TYPE, REPORT_TYPE]:
+    elif document.type in [OUTING_TYPE, IMAGE_TYPE, ARTICLE_TYPE,
+                           XREPORT_TYPE]:
         condition = condition_as_parent
     else:
         condition = or_(condition_as_child, condition_as_parent)
@@ -236,7 +237,7 @@ def get_linked_articles(document, lang):
                            OUTING_TYPE,
                            ROUTE_TYPE,
                            BOOK_TYPE,
-                           REPORT_TYPE,
+                           XREPORT_TYPE,
                            USERPROFILE_TYPE]:
         condition = condition_as_child
 
@@ -272,14 +273,14 @@ def get_linked_books(document, lang):
         book_ids, lang, book_documents_config).get('documents')
 
 
-def get_linked_reports(document, lang):
+def get_linked_xreports(document, lang):
     condition_as_child = and_(
-        Association.child_document_id == Report.document_id,
+        Association.child_document_id == Xreport.document_id,
         Association.parent_document_id == document.document_id
     )
     condition_as_parent = and_(
         Association.child_document_id == document.document_id,
-        Association.parent_document_id == Report.document_id
+        Association.parent_document_id == Xreport.document_id
     )
 
     if document.type in [WAYPOINT_TYPE, USERPROFILE_TYPE,
@@ -288,16 +289,16 @@ def get_linked_reports(document, lang):
     elif document.type in [ROUTE_TYPE, OUTING_TYPE]:
         condition = condition_as_child
 
-    report_ids = get_first_column(
-        DBSession.query(Report.document_id).
-        filter(Report.redirects_to.is_(None)).
+    xreport_ids = get_first_column(
+        DBSession.query(Xreport.document_id).
+        filter(Xreport.redirects_to.is_(None)).
         join(
             Association, condition).
-        group_by(Report.document_id).
+        group_by(Xreport.document_id).
         all())
 
     return get_documents_for_ids(
-        report_ids, lang, report_documents_config).get('documents')
+        xreport_ids, lang, xreport_documents_config).get('documents')
 
 
 def get_first_column(rows):

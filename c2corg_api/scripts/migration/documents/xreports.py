@@ -1,20 +1,20 @@
-from c2corg_api.models.report import Report, ArchiveReport, REPORT_TYPE, \
-    ReportLocale, ArchiveReportLocale
+from c2corg_api.models.xreport import Xreport, ArchiveXreport, XREPORT_TYPE, \
+    XreportLocale, ArchiveXreportLocale
 from c2corg_api.scripts.migration.documents.document import MigrateDocuments, \
     DEFAULT_QUALITY
 from c2corg_api.scripts.migration.documents.routes import MigrateRoutes
 
 
-class MigrateReports(MigrateDocuments):
+class MigrateXreports(MigrateDocuments):
 
     def get_name(self):
-        return 'reports'
+        return 'xreports'
 
     def get_model_document(self, locales):
-        return ReportLocale if locales else Report
+        return XreportLocale if locales else Xreport
 
     def get_model_archive_document(self, locales):
-        return ArchiveReportLocale if locales else ArchiveReport
+        return ArchiveXreportLocale if locales else ArchiveXreport
 
     def get_document_geometry(self, document_in, version):
         return dict(
@@ -76,7 +76,7 @@ class MigrateReports(MigrateDocuments):
     def get_document(self, document_in, version):
         return dict(
             document_id=document_in.id,
-            type=REPORT_TYPE,
+            type=XREPORT_TYPE,
             version=version,
 
             quality=DEFAULT_QUALITY,
@@ -88,31 +88,31 @@ class MigrateReports(MigrateDocuments):
             nb_participants=document_in.nb_participants,
             nb_impacted=document_in.nb_impacted,
             severity=self.convert_type(
-                document_in.severity, MigrateReports.severity),
+                document_in.severity, MigrateXreports.severity),
             rescue=document_in.rescue,
             event_type=self.convert_types(
-                document_in.event_type, MigrateReports.event_types),
+                document_in.event_type, MigrateXreports.event_types),
 
             avalanche_level=self.convert_type(
-                document_in.avalanche_level, MigrateReports.avalanche_level),
+                document_in.avalanche_level, MigrateXreports.avalanche_level),
             avalanche_slope=self.convert_type(
-                document_in.avalanche_slope, MigrateReports.avalanche_slope),
+                document_in.avalanche_slope, MigrateXreports.avalanche_slope),
 
             # Profile
             author_status=self.convert_type(
-                document_in.author_status, MigrateReports.author_status),
+                document_in.author_status, MigrateXreports.author_status),
             activity_rate=self.convert_type(
-                document_in.activity_rate, MigrateReports.activity_rate),
+                document_in.activity_rate, MigrateXreports.activity_rate),
             nb_outings=self.convert_type(
-                document_in.nb_outings, MigrateReports.nb_outings),
+                document_in.nb_outings, MigrateXreports.nb_outings),
             autonomy=self.convert_type(
-                document_in.autonomy, MigrateReports.autonomy),
+                document_in.autonomy, MigrateXreports.autonomy),
             age=document_in.age,
             gender=self.convert_type(
-                document_in.gender, MigrateReports.gender),
+                document_in.gender, MigrateXreports.gender),
             previous_injuries=self.convert_type(
                 document_in.previous_injuries,
-                MigrateReports.previous_injuries)
+                MigrateXreports.previous_injuries)
         )
 
     def get_document_locale(self, document_in, version):
@@ -120,7 +120,7 @@ class MigrateReports(MigrateDocuments):
         return dict(
             document_id=document_in.id,
             id=document_in.document_i18n_archive_id,
-            type=REPORT_TYPE,
+            type=XREPORT_TYPE,
             version=version,
             lang=document_in.culture,
             title=document_in.name,

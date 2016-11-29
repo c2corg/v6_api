@@ -1,24 +1,24 @@
-from c2corg_api.models.report import Report, ReportLocale
+from c2corg_api.models.xreport import Xreport, XreportLocale
 
 from c2corg_api.tests import BaseTestCase
 
 
-class TestReport(BaseTestCase):
+class TestXreport(BaseTestCase):
 
     def test_to_archive(self):
-        report = Report(
+        xreport = Xreport(
             document_id=1,
             activities=['skitouring'],
             event_type=['avalanche'],
             nb_participants=5,
             elevation=1200,
             locales=[
-                ReportLocale(
+                XreportLocale(
                     id=2, lang='en', title='A', description='abc',
                     place='abcdef',
                     route_study='blabla route study...',
                     conditions='blablabla conditions...'),
-                ReportLocale(
+                XreportLocale(
                     id=3, lang='fr', title='B', description='bcd',
                     place='abcdef',
                     route_study='blabla route study...',
@@ -26,25 +26,25 @@ class TestReport(BaseTestCase):
             ]
         )
 
-        report_archive = report.to_archive()
+        xreport_archive = xreport.to_archive()
 
-        self.assertIsNone(report_archive.id)
-        self.assertEqual(report_archive.document_id, report.document_id)
+        self.assertIsNone(xreport_archive.id)
+        self.assertEqual(xreport_archive.document_id, xreport.document_id)
         self.assertEqual(
-            report_archive.activities, report.activities)
-        self.assertEqual(report_archive.event_type, report.event_type)
+            xreport_archive.activities, xreport.activities)
+        self.assertEqual(xreport_archive.event_type, xreport.event_type)
         self.assertEqual(
-            report_archive.nb_participants, report.nb_participants)
-        self.assertEqual(report_archive.elevation, report.elevation)
+            xreport_archive.nb_participants, xreport.nb_participants)
+        self.assertEqual(xreport_archive.elevation, xreport.elevation)
 
-        self.assertIsNotNone(report_archive.activities)
-        self.assertIsNotNone(report_archive.event_type)
-        self.assertIsNotNone(report_archive.nb_participants)
+        self.assertIsNotNone(xreport_archive.activities)
+        self.assertIsNotNone(xreport_archive.event_type)
+        self.assertIsNotNone(xreport_archive.nb_participants)
 
-        archive_locals = report.get_archive_locales()
+        archive_locals = xreport.get_archive_locales()
 
         self.assertEqual(len(archive_locals), 2)
-        locale = report.locales[0]
+        locale = xreport.locales[0]
         locale_archive = archive_locals[0]
         self.assertIsNot(locale_archive, locale)
         self.assertIsNone(locale_archive.id)

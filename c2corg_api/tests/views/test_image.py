@@ -257,7 +257,7 @@ class TestImageRest(BaseTestImage):
         associations = body['associations']
         self.assertIn('waypoints', associations)
         self.assertIn('routes', associations)
-        self.assertIn('reports', associations)
+        self.assertIn('xreports', associations)
         self.assertIn('images', associations)
         self.assertIn('users', associations)
         self.assertIn('articles', associations)

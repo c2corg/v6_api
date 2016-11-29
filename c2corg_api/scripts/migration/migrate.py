@@ -5,7 +5,7 @@ from c2corg_api.scripts.migration.area_associations import \
     MigrateAreaAssociations
 from c2corg_api.scripts.migration.climbing_site_routes import \
     CreateClimbingSiteRoutes
-from c2corg_api.scripts.migration.documents.reports import MigrateReports
+from c2corg_api.scripts.migration.documents.xreports import MigrateXreports
 from c2corg_api.scripts.migration.documents.area import MigrateAreas
 from c2corg_api.scripts.migration.documents.associations import \
     MigrateAssociations
@@ -85,7 +85,7 @@ def main(argv=sys.argv):
     MigrateMaps(connection_source, session, batch_size).migrate()
     MigrateOutings(connection_source, session, batch_size).migrate()
     MigrateImages(connection_source, session, batch_size).migrate()
-    MigrateReports(connection_source, session, batch_size).migrate()
+    MigrateXreports(connection_source, session, batch_size).migrate()
     MigrateArticles(connection_source, session, batch_size).migrate()
     MigrateBooks(connection_source, session, batch_size).migrate()
     MigrateVersions(connection_source, session, batch_size).migrate()
