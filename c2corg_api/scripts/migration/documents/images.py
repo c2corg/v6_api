@@ -1,3 +1,4 @@
+import os
 from c2corg_api.models.image import Image, ArchiveImage, IMAGE_TYPE
 from c2corg_api.models.document import DocumentLocale, ArchiveDocumentLocale, \
     DOCUMENT_TYPE
@@ -39,7 +40,7 @@ class MigrateImages(MigrateDocuments):
             '   ST_Force2D(ST_SetSRID(ia.geom, 3857)) geom, ia.elevation, '
             '   ia.filename, ia.date_time, ia.camera_name, ia.exposure_time, '
             '   ia.focal_length, ia.fnumber, ia.iso_speed, ia.categories, '
-            '   ia.activities, ia.author, ia.image_type, '
+            '   ia.activities, ia.author, ia.image_type, ia.has_svg, '
             '   ia.width, ia.height, ia.file_size '
             'from app_images_archives ia join images i on ia.id = i.id '
             'where i.redirects_to is null '
@@ -71,7 +72,7 @@ class MigrateImages(MigrateDocuments):
             protected=document_in.is_protected,
             redirects_to=document_in.redirects_to,
             elevation=document_in.elevation,
-            filename=document_in.filename,
+            filename=self.convert_filename(document_in),
             date_time=document_in.date_time,
             camera_name=document_in.camera_name,
             exposure_time=document_in.exposure_time,
@@ -104,6 +105,13 @@ class MigrateImages(MigrateDocuments):
             description=description,
             summary=summary
         )
+
+    def convert_filename(self, document_in):
+        filename = document_in.filename
+        if document_in.has_svg:
+            base, ext = os.path.splitext(filename)
+            filename = base + '.svg'
+        return filename
 
     activities = {
         '1': 'skitouring',
