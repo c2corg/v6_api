@@ -28,7 +28,7 @@ port = 6543
 ###
 
 [loggers]
-keys = root, c2corg_api, sqlalchemy, c2corg_api_syncer
+keys = root, c2corg_api, sqlalchemy, c2corg_api_syncer, gunicorn.error, gunicorn.access
 
 [handlers]
 keys = console
@@ -62,6 +62,16 @@ qualname = sqlalchemy.engine
 # "level = INFO" logs SQL queries.
 # "level = DEBUG" logs SQL queries and results.
 # "level = WARN" logs neither.  (Recommended for production systems.)
+
+[logger_gunicorn.access]
+level = INFO
+handlers =
+qualname=gunicorn.access
+
+[logger_gunicorn.error]
+level = INFO
+handlers =
+qualname=gunicorn.error
 
 [handler_console]
 class = StreamHandler
