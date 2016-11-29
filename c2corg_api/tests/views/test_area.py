@@ -57,6 +57,10 @@ class TestAreaRest(BaseDocumentTestRest):
             self.get_collection_search({'l': 'en'}),
             [self.area4.document_id, self.area1.document_id], 2)
 
+        self.assertResultsEqual(
+            self.get_collection_search({'atyp': 'admin_limits'}),
+            [self.area4.document_id], 1)
+
     def test_get(self):
         body = self.get(self.area1)
         self._assert_geometry(body)
