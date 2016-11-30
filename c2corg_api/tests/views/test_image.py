@@ -932,6 +932,11 @@ class TestImageProxyRest(BaseTestRest):
             activities=['paragliding'], height=1500,
             image_type='collaborative')
         self.session.add(self.image)
+        self.image2 = Image(
+            filename='image.svg',
+            activities=['paragliding'], height=1500,
+            image_type='collaborative')
+        self.session.add(self.image2)
         self.session.flush()
 
     def test_get_not_exists(self):
@@ -953,5 +958,17 @@ class TestImageProxyRest(BaseTestRest):
     def test_success_with_size(self):
         resp = self.app.get('/images/proxy/{}?size=BI'.
                             format(self.image.document_id),
+                            status=302)
+        self.assertIn('imageBI.jpg', resp.headers['Location'])
+
+    def test_svg_without_size(self):
+        resp = self.app.get('/images/proxy/{}'.
+                            format(self.image2.document_id),
+                            status=302)
+        self.assertIn('image.svg', resp.headers['Location'])
+
+    def test_svg_with_size(self):
+        resp = self.app.get('/images/proxy/{}?size=BI'.
+                            format(self.image2.document_id),
                             status=302)
         self.assertIn('imageBI.jpg', resp.headers['Location'])
