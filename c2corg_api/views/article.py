@@ -16,6 +16,7 @@ from pyramid.httpexceptions import HTTPNotFound, HTTPBadRequest, HTTPForbidden
 from c2corg_common.fields_article import fields_article
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
+from c2corg_api.views import set_creator as set_creator_on_documents
 
 from c2corg_api.views.document_schemas import article_documents_config
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
@@ -43,7 +44,9 @@ class ArticleRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
-        return self._get(Article, schema_article, include_areas=False)
+        return self._get(
+            Article, schema_article, include_areas=False,
+            set_custom_fields=set_author)
 
     @restricted_json_view(
             schema=schema_create_article,
@@ -98,3 +101,9 @@ class ArticlesInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):
         return self._get_document_info(Article)
+
+
+def set_author(article):
+    """Set the creator (the user who created an image) on an article.
+    """
+    set_creator_on_documents([article], 'author')
