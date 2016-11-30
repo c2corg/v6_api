@@ -1,7 +1,9 @@
 import os
 import sys
 import transaction
-from c2corg_api.models import DBSession, Base, document
+from alembic.command import upgrade
+from alembic.config import Config
+from c2corg_api.models import DBSession, document
 from c2corg_api.models.es_sync import ESSyncStatus
 
 from sqlalchemy import engine_from_config
@@ -13,6 +15,10 @@ from pyramid.paster import (
 
 from pyramid.scripts.common import parse_vars
 from c2corg_common.attributes import default_langs
+
+alembic_configfile = os.path.realpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    '../../alembic.ini'))
 
 
 def usage(argv):
@@ -31,11 +37,13 @@ def main(argv=sys.argv):
     settings = get_appsettings(config_uri, options=options)
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
-    setup_db(engine, DBSession)
+    alembic_config = Config(alembic_configfile)
+
+    setup_db(alembic_config, DBSession)
 
 
-def setup_db(engine, session):
-    Base.metadata.create_all(engine, checkfirst=True)
+def setup_db(alembic_config, session):
+    upgrade(alembic_config, 'head')
 
     with transaction.manager:
         # add default languages
@@ -45,3 +53,5 @@ def setup_db(engine, session):
 
         # add a default status for the ElasticSearch synchronization
         session.add(ESSyncStatus())
+
+    print('Database set up successfully')

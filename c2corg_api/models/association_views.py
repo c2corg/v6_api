@@ -11,8 +11,16 @@ from sqlalchemy.sql.expression import and_, union, select, text, join
 from sqlalchemy.sql.functions import func
 from sqlalchemy import Integer
 
-# this file contains definitions for database views that are used when filling
+# This file contains definitions for database views that are used when filling
 # the search index.
+#
+# Note that the views have to be created explicitly in a migration script. To
+# generate the SQL for a view, you can do for example:
+#
+#   .build/venv/bin/python
+#   > from c2corg_api.models import association_views
+#   > str(association_views._get_select_routes_for_outings_aggregated())
+#
 
 
 # waypoints for routes
