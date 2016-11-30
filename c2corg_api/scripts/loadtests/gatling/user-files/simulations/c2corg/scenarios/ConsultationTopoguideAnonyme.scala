@@ -9,6 +9,7 @@ import io.gatling.http.Predef._
 class ConsultationTopoguideAnonyme extends Simulation {
 
   val httpProtocol = http
+    .baseURL(C2corgConf.ui_url)
     .inferHtmlResources(C2corgConf.black_list, WhiteList())
     .acceptHeader("*/*")
     .acceptEncodingHeader("gzip, deflate")
