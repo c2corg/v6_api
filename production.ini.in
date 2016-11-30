@@ -28,13 +28,13 @@ port = 6543
 ###
 
 [loggers]
-keys = root, c2corg_api, sqlalchemy, c2corg_api_syncer
+keys = root, c2corg_api, sqlalchemy, c2corg_api_syncer, gunicorn.error, gunicorn.access
 
 [handlers]
 keys = console
 
 [formatters]
-keys = generic
+keys = generic,json
 
 [logger_root]
 level = WARN
@@ -63,11 +63,25 @@ qualname = sqlalchemy.engine
 # "level = DEBUG" logs SQL queries and results.
 # "level = WARN" logs neither.  (Recommended for production systems.)
 
+[logger_gunicorn.access]
+level = INFO
+handlers =
+qualname=gunicorn.access
+
+[logger_gunicorn.error]
+level = INFO
+handlers =
+qualname=gunicorn.error
+
 [handler_console]
 class = StreamHandler
 args = (sys.stderr,)
 level = NOTSET
-formatter = generic
+formatter = json
 
 [formatter_generic]
 format = %(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s
+
+[formatter_json]
+class = pythonjsonlogger.jsonlogger.JsonFormatter
+format = %(message)%(levelname)%(name)%(asctime)%(funcName)%(lineno)%(pathname)%(stack_info)%(module)%(created)%(threadName)%(processName)%(getMessage)
