@@ -141,7 +141,7 @@ class ImageRest(DocumentRest):
             image_id = self.request.validated['id']
             image = DBSession.query(Image).get(image_id)
             if image is None:
-                raise HTTPNotFound('No image found for id %d' % image_id)
+                raise HTTPNotFound('No image found for id {}'.format(image_id))
             if image.image_type == 'collaborative':
                 image_type = self.request.validated['document']['image_type']
                 if image_type != image.image_type:

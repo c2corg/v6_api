@@ -480,6 +480,96 @@ class TestArticleRest(BaseDocumentTestRest):
 
         self.assertEquals(article1.get_locale('es').title, 'Lac d\'Annecy')
 
+    def test_put_change_collab_to_personal_as_non_author(self):
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.article1.document_id,
+                'version': self.article1.version,
+                'quality': quality_types[1],
+                'activities': ['paragliding'],
+                'categories': ['technical'],
+                'article_type': 'personal',
+                'locales': [
+                    {'lang': 'en', 'title': 'Another final EN title',
+                     'version': self.locale_en.version,
+                     'description': 'i am just changing the article type'}
+                ]
+            }
+        }
+
+        headers = self.add_authorization_header(username='contributor2')
+        response = self.app_put_json(
+            self._prefix + '/' + str(self.article1.document_id), body,
+            headers=headers,
+            status=400)
+
+        body = response.json
+        self.assertEqual(body['status'], 'error')
+        self.assertEqual(len(body['errors']), 1)
+        self.assertEqual(body['errors'][0]['name'], 'Bad Request')
+
+    def test_put_as_author(self):
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.article4.document_id,
+                'version': self.article4.version,
+                'quality': quality_types[1],
+                'activities': ['paragliding'],
+                'categories': ['technical'],
+                'article_type': 'personal',
+                'locales': [
+                    {'lang': 'en', 'title': 'Another final EN title',
+                     'version': self.locale_en.version,
+                     'description': 'put should be allowed'}
+                ]
+            }
+        }
+
+        (body, article4) = self.put_success_all(
+            body, self.article4, user='contributor', cache_version=2)
+
+        # version with lang 'en'
+        versions = article4.versions
+        version_en = self.get_latest_version('en', versions)
+        archive_locale = version_en.document_locales_archive
+        self.assertEqual(archive_locale.title, 'Another final EN title')
+
+        archive_document_en = version_en.document_archive
+        self.assertEqual(archive_document_en.activities, ['paragliding'])
+        self.assertEqual(archive_document_en.categories, ['technical'])
+        self.assertEqual(archive_document_en.article_type, 'personal')
+
+    def test_put_as_non_author(self):
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.article4.document_id,
+                'version': self.article4.version,
+                'quality': quality_types[1],
+                'activities': ['rock_climbing'],
+                'categories': ['technical'],
+                'article_type': 'personal',
+                'locales': [
+                    {'lang': 'en', 'title': 'Another final EN title',
+                     'version': self.locale_en.version,
+                     'description': 'put should not be allowed'}
+                ]
+            }
+        }
+
+        headers = self.add_authorization_header(username='contributor2')
+        response = self.app_put_json(
+            self._prefix + '/' + str(self.article4.document_id), body,
+            headers=headers,
+            status=403)
+
+        body = response.json
+        self.assertEqual(body['status'], 'error')
+        self.assertEqual(len(body['errors']), 1)
+        self.assertEqual(body['errors'][0]['name'], 'Forbidden')
+
     def _add_test_data(self):
         self.article1 = Article(categories=['site_info'],
                                 activities=['hiking'],
@@ -509,12 +599,19 @@ class TestArticleRest(BaseDocumentTestRest):
         self.session.add(self.article3)
         self.article4 = Article(
             categories=['site_info'], activities=['hiking'],
-            article_type='collab')
+            article_type='personal')
         self.article4.locales.append(DocumentLocale(
             lang='en', title='Lac d\'Annecy'))
         self.article4.locales.append(DocumentLocale(
             lang='fr', title='Lac d\'Annecy'))
         self.session.add(self.article4)
+        self.session.flush()
+
+        DocumentRest.create_new_version(self.article4, user_id)
+        self.article4_version = self.session.query(DocumentVersion). \
+            filter(DocumentVersion.document_id == self.article4.document_id). \
+            filter(DocumentVersion.lang == 'en').first()
+
         self.waypoint1 = Waypoint(
             waypoint_type='summit', elevation=2203)
         self.session.add(self.waypoint1)
