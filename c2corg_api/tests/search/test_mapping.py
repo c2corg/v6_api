@@ -56,6 +56,9 @@ class MappingTest(BaseTestCase):
     def test_area_mapping(self):
         self._test_mapping(SearchArea, Area)
 
+        queryable_fields = SearchArea.queryable_fields
+        self.assertIn('atyp', queryable_fields)
+
     def test_image_mapping(self):
         self._test_mapping(SearchImage, Image)
 
