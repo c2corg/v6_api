@@ -26,8 +26,6 @@ from elasticsearch_dsl.query import MultiMatch, Bool
 from kombu.connection import Connection
 from kombu import Exchange, Queue, pools
 
-batch_size = 1000
-
 # the maximum number of documents that can be returned for each document type
 SEARCH_LIMIT_MAX = 50
 

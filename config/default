@@ -17,6 +17,8 @@ export db_name = c2corg
 export elasticsearch_host = localhost
 export elasticsearch_port = 9200
 export elasticsearch_index = c2corg
+export elasticsearch_batch_size_fill_index = 1000
+export elasticsearch_batch_size_syncer = 1000
 
 export redis_url = redis://localhost:6379/
 export redis_db_queue = 4
