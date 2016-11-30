@@ -146,7 +146,7 @@ class FillIndexTest(BaseTestCase):
         self.assertIsNotNone(waypoint1)
         self.assertEqual(waypoint1.title_en, 'Mont Granier')
         self.assertEqual(waypoint1.title_fr, 'Mont Granier')
-        self.assertEqual(waypoint1.summary_fr, 'Le Mont  Granier ')
+        # self.assertEqual(waypoint1.summary_fr, 'Le Mont  Granier ')
         self.assertEqual(waypoint1.doc_type, 'w')
         self.assertEqual(waypoint1.quality, 2)
         self.assertEqual(waypoint1.access_time, 3)
