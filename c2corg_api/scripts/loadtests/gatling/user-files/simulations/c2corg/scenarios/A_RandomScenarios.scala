@@ -51,7 +51,7 @@ class A_RandomScenarios extends Simulation {
     .pause(1)
     .exec(Topic.open)
     .pause(24)
-    .exec(Topic.scroll) 
+    .exec(Topic.scroll)
 
   val forumAuth = exec(Forum.init)
     .pause(2)
@@ -68,6 +68,7 @@ class A_RandomScenarios extends Simulation {
   )
 
   val httpProtocol = http
+        .baseURL(C2corgConf.ui_url)
         .inferHtmlResources(C2corgConf.black_list, WhiteList())
         .acceptHeader("*/*")
         .acceptEncodingHeader("gzip, deflate")
