@@ -33,15 +33,13 @@ Creating lists of document URLs
 Run:
 
     cd gatling/user-files/data
-    sudo -u postgres psql <dbname> -c "select document_id || ',' || lang as data from guidebook.outings join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" > outings.csv
-    sudo -u postgres psql <dbname> -c "select document_id || ',' || lang as data from guidebook.routes join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" > routes.csv
-    sudo -u postgres psql <dbname> -c "select document_id || ',' || lang as data from guidebook.waypoints join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" > waypoints.csv
+    psql -d <dbname> -A -F, -c "select document_id as id, lang as lang from guidebook.outings join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" | egrep -v '\(.*rows\)' > outings.csv
+    psql <dbname> -A -F, -c "select document_id as id, lang as lang from guidebook.routes join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" | egrep -v '\(.*rows\)' > routes.csv
+    psql <dbname> -A -F, -c "select document_id as id, lang as lang from guidebook.waypoints join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" | egrep -v '\(.*rows\)' > waypoints.csv
 
-
-A few simple manual changes are then required to make the generated files valid CSV files for Gatling's feeders:
-* replace `data` by `id,lang`
-* remove the extra lines with no data
-* remove the first blank column
+You might need to prefix these commands with on of these:
+    sudo -u postgres
+    docker -H $DOCKER_HOST exec -i -u postgres postgresql_postgresql_1
 
 Creating a list of test usernames and passwords
 -----------------------------------------------
