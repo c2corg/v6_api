@@ -3,8 +3,10 @@ from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
 from c2corg_api.tests import BaseTestCase
-from c2corg_api.views.validation import validate_associations_in
+from c2corg_api.views.validation import validate_associations_in, \
+    parse_datetime
 from cornice.errors import Errors
+from dateutil import parser as datetime_parser
 
 
 class TestValidation(BaseTestCase):
@@ -168,3 +170,13 @@ class TestValidation(BaseTestCase):
             error['description'],
             'document "' + str(self.waypoint1.document_id) +
             '" is not of type "r"')
+
+    def test_parse_datetime(self):
+        self.assertEqual(parse_datetime(None), None)
+        self.assertEqual(
+            parse_datetime('2016-11-28T23:57:30.090459+01:00'),
+            datetime_parser.parse('2016-11-28T23:57:30.090459+01:00'))
+
+        self.assertEqual(
+            parse_datetime('2016-11-28T23%3A57%3A30.090459%2B01%3A00'),
+            datetime_parser.parse('2016-11-28T23:57:30.090459+01:00'))

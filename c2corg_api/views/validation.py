@@ -22,6 +22,7 @@ from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.sql.expression import exists, and_
 from webob.descriptors import parse_int_safe
 from dateutil import parser as datetime_parser
+import urllib
 
 
 # Validation functions
@@ -173,6 +174,7 @@ def parse_datetime(time_raw):
     if time_raw is None or time_raw == '':
         return None
     try:
+        time_raw = urllib.parse.unquote(time_raw)
         return datetime_parser.parse(time_raw)
     except ValueError:
         return None
