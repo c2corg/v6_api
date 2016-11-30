@@ -84,31 +84,51 @@ $$ LANGUAGE plpgsql;
 
 
 /*
+ * Create column username_origin
+ */
+
+ALTER TABLE punbb_users ADD COLUMN IF NOT EXISTS username_origin varchar(255);
+UPDATE punbb_users SET username_origin = coalesce(username_origin, username);
+
+
+/*
  * Create column username_normalized
  */
-ALTER TABLE punbb_users ADD COLUMN username_normalized varchar(25);
+ALTER TABLE punbb_users ADD COLUMN IF NOT EXISTS username_normalized varchar(25);
 
-ALTER TABLE punbb_users
-  ADD CONSTRAINT username_normalized_check_constraint CHECK (check_forum_username(username_normalized::text));
+ALTER TABLE punbb_users DROP CONSTRAINT IF EXISTS username_normalized_check_constraint;
+ALTER TABLE punbb_users ADD CONSTRAINT username_normalized_check_constraint
+  CHECK (check_forum_username(username_normalized::text));
 
-UPDATE punbb_users SET username_normalized = normalize_username(normalize_username(username, id), id);
+UPDATE punbb_users SET username_normalized = normalize_username(normalize_username(username_origin, id), id);
+
+CREATE INDEX IF NOT EXISTS ix_punbb_users_lower_username_normalized
+  ON punbb_users
+  USING btree
+  (lower(username_normalized::text) COLLATE pg_catalog."default");
 
 
 /*
  * Create column username_unique
  */
-ALTER TABLE punbb_users ADD COLUMN username_unique varchar(25);
+ALTER TABLE punbb_users ADD COLUMN IF NOT EXISTS username_unique varchar(25);
 
-ALTER TABLE punbb_users
-  ADD CONSTRAINT username_unique_check_constraint CHECK (check_forum_username(username_unique::text));
+ALTER TABLE punbb_users DROP CONSTRAINT IF EXISTS username_unique_check_constraint;
+ALTER TABLE punbb_users ADD CONSTRAINT username_unique_check_constraint
+  CHECK (check_forum_username(username_unique::text));
 
-CREATE UNIQUE INDEX ix_punbb_users_lower_username_unique
+CREATE UNIQUE INDEX IF NOT EXISTS ix_punbb_users_lower_username_unique
   ON punbb_users
   USING btree
   (lower(username_unique::text) COLLATE pg_catalog."default");
 
 UPDATE punbb_users
-SET username_unique = substring(username_normalized from 1 for  24) || number
+SET
+  username_unique = CASE
+    WHEN number > 1 THEN
+      substring(username_normalized from 1 for (25 - char_length(indexed.id::text))) || indexed.id::text
+    ELSE username_normalized
+  END
 FROM (
   SELECT
     id,
@@ -116,18 +136,7 @@ FROM (
   FROM
     punbb_users
 ) AS indexed
-WHERE punbb_users.id = indexed.id
-AND number > 1
-
-
-/*
- * Visual control
- */
-SELECT
-    username,
-    username_unique
-FROM punbb_users
-WHERE username_unique != username;
+WHERE punbb_users.id = indexed.id;
 
 
 /*
@@ -135,3 +144,15 @@ WHERE username_unique != username;
  */
 UPDATE punbb_users
 SET username = username_unique;
+
+
+/*
+ * Visual control
+
+SELECT
+    username_origin,
+    username
+FROM punbb_users
+WHERE username != username_origin;
+*/
+
