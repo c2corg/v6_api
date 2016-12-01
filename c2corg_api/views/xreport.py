@@ -90,23 +90,19 @@ def _has_permission(request, xreport_id):
     return has_been_created_by(xreport_id, request.authenticated_userid)
 
 
-@resource(path='/xreports/{id}/{lang}/{version_id}',
-          cors_policy=cors_policy)
-class XreportsVersionRest(DocumentVersionRest):
-    @restricted_json_view(validators=[
-        validate_id, validate_lang, validate_version_id])
-    def get(self):
-        set_private_cache_header(self.request)
-        if not _has_permission(self.request, self.request.validated['id']):
-            raise HTTPForbidden(
-                'No permission to view the version of this xreport')
+@resource(path='/xreports/{id}/{lang}/{version_id}', cors_policy=cors_policy)
+class XreportVersionRest(DocumentVersionRest):
 
+    @view(validators=[validate_id, validate_lang, validate_version_id])
+    def get(self):
         return self._get_version(
-            ArchiveXreport, ArchiveXreportLocale, schema_xreport)
+            ArchiveXreport, ArchiveXreportLocale,
+            schema_xreport_without_personal)
 
 
 @resource(path='/xreports/{id}/{lang}/info', cors_policy=cors_policy)
-class XreportsInfoRest(DocumentInfoRest):
+class XreportInfoRest(DocumentInfoRest):
+
     @view(validators=[validate_id, validate_lang])
     def get(self):
         return self._get_document_info(Xreport)
