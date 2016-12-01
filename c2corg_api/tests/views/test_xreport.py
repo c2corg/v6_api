@@ -168,15 +168,17 @@ class TestXreportRest(BaseDocumentTestRest):
 
         # check that the ETag header is set
         headers = response.headers
+
+        # TODO check etag as private
         etag = headers.get('ETag')
         self.assertIsNotNone(etag)
 
-        self.assertEqual(response.headers.get('Cache-Control'), 'private')
+        self.assertEqual(response.headers.get('Cache-Control'), None)
 
         # then request the document again with the etag
         auth_headers['If-None-Match'] = etag
         response = self.app.get(url, status=304, headers=auth_headers)
-        self.assertEqual(response.headers.get('Cache-Control'), 'private')
+        self.assertEqual(response.headers.get('Cache-Control'), None)
 
     def test_get_version_caching(self):
         headers = self.add_authorization_header(username='contributor')
