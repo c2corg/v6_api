@@ -30,7 +30,6 @@ from sqlalchemy.orm import sessionmaker
 from pyramid.paster import get_appsettings
 
 from zope.sqlalchemy import ZopeTransactionExtension
-from c2corg_api.models import Base
 from c2corg_api.scripts.initializedb import setup_db
 from c2corg_api.scripts.migration.users import MigrateUsers
 from c2corg_api.scripts.migration.documents.routes import MigrateRoutes
@@ -46,6 +45,7 @@ from c2corg_api.scripts.migration.documents.waypoints.summit import \
 from c2corg_api.scripts.migration.sequences import UpdateSequences
 from c2corg_api.scripts.migration.init_feed import InitFeed
 from c2corg_api.scripts.migration.mailinglists import MigrateMailinglists
+from alembic.config import Config
 
 
 # no-op function referenced from `migration.ini` (required for
@@ -54,6 +54,11 @@ def no_op(global_config, **settings): pass
 
 
 def main(argv=sys.argv):
+    alembic_configfile = os.path.realpath(os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        '../../../alembic.ini'))
+    alembic_config = Config(alembic_configfile)
+
     settings_file = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), 'migration.ini')
     settings = get_appsettings(settings_file)
@@ -64,11 +69,11 @@ def main(argv=sys.argv):
     logging.basicConfig()
     logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
-    # create a fresh schema on the target database
     Session = sessionmaker(extension=ZopeTransactionExtension())  # noqa
     session = Session(bind=engine_target)
-    Base.metadata.drop_all(engine_target, checkfirst=True)
-    setup_db(engine_target, session)
+
+    # set up the target database
+    setup_db(alembic_config, session)
 
     connection_source = engine_source.connect()
 

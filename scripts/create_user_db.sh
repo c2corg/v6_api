@@ -6,6 +6,8 @@ create extension postgis;
 create schema guidebook authorization "www-data";
 create schema users authorization "www-data";
 create schema sympa authorization "www-data";
+create schema alembic authorization "www-data";
 \q
 EOF
-.build/venv/bin/initialize_c2corg_api_db development.ini
+# to also set up the database, uncomment the following line
+# .build/venv/bin/initialize_c2corg_api_db development.ini

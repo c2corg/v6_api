@@ -42,6 +42,7 @@ from c2corg_api.models import xreport  # noqa
 from c2corg_api.models import article  # noqa
 from c2corg_api.models import book  # noqa
 from c2corg_api.models import feed  # noqa
+from c2corg_api.models import mailinglist  # noqa
 
 document_types = {
     xreport.XREPORT_TYPE: xreport.Xreport,

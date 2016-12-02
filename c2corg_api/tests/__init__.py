@@ -8,6 +8,7 @@ import os
 import logging
 from random import randint
 
+from alembic.command import downgrade
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.scripts.es.fill_index import fill_index
@@ -15,6 +16,7 @@ from sqlalchemy import engine_from_config
 from pyramid.paster import get_appsettings
 from pyramid_mailer import get_mailer
 from pyramid import testing
+from alembic.config import Config
 
 import unittest
 from webtest import TestApp
@@ -22,7 +24,7 @@ from webtest import TestApp
 from c2corg_api.emails.email_service import EmailService
 
 from c2corg_api import main, caching
-from c2corg_api.models import DBSession, sessionmaker, Base
+from c2corg_api.models import DBSession, sessionmaker
 from c2corg_api.models.user import User
 from c2corg_api.security.roles import create_claims, add_or_retrieve_token
 from c2corg_api.scripts import initializedb, initializees
@@ -35,6 +37,8 @@ curdir = os.path.dirname(os.path.abspath(__file__))
 configfile = os.path.realpath(os.path.join(curdir, '../../test.ini'))
 settings = get_appsettings(configfile)
 
+alembic_scripts_folder = os.path.realpath(
+    os.path.join(curdir, '../../alembic_migration'))
 
 if settings['noauthorization']:
     log.warning('Authorization disabled for these tests')
@@ -42,6 +46,18 @@ if settings['noauthorization']:
 
 def get_engine():
     return engine_from_config(settings, 'sqlalchemy.')
+
+
+def _get_alembic_config():
+    alembic_config = Config()
+    alembic_config.set_main_option(
+        'script_location', alembic_scripts_folder)
+    alembic_config.set_main_option(
+        'sqlalchemy.url', settings['sqlalchemy.url'])
+    alembic_config.set_main_option(
+        'version_table_schema', 'alembic')
+    return alembic_config
+
 
 global_userids = {}
 global_tokens = {}
@@ -110,8 +126,10 @@ def setup_package():
     # set up database
     engine = get_engine()
     DBSession.configure(bind=engine)
-    Base.metadata.drop_all(engine)
-    initializedb.setup_db(engine, DBSession)
+
+    alembic_config = _get_alembic_config()
+    downgrade(alembic_config, 'base')
+    initializedb.setup_db(alembic_config, DBSession)
 
     # set up ElasticSearch
     configure_es_from_config(settings)
@@ -130,9 +148,9 @@ keep = False
 
 def teardown_package():
     # tear down database
-    engine = get_engine()
     if not keep:
-        Base.metadata.drop_all(engine)
+        alembic_config = _get_alembic_config()
+        downgrade(alembic_config, 'base')
         initializees.drop_index()
 
 

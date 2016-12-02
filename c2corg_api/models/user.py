@@ -5,7 +5,6 @@ from c2corg_api.models.user_profile import UserProfile
 from sqlalchemy import (
     Boolean,
     Column,
-    CheckConstraint,
     Integer,
     DateTime,
     String
@@ -13,13 +12,12 @@ from sqlalchemy import (
 
 from colanderalchemy import SQLAlchemySchemaNode
 
-from c2corg_api.models import Base, users_schema, schema, sympa_schema, enums
+from c2corg_api.models import Base, users_schema, schema, enums
 
 import colander
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import ForeignKey, Index
-from sqlalchemy import event, DDL
 
 from enum import Enum
 
@@ -78,9 +76,6 @@ class User(Base):
     name = Column(String(200), nullable=False)
     forum_username = Column(
         String(25),
-        CheckConstraint(  # do not have non alphanumeric characters
-            "users.check_forum_username(forum_username)",  # noqa
-            name='forum_username_check_constraint'),
         nullable=False, unique=True
         )
     email = Column(String(200), nullable=False, unique=True)
@@ -154,53 +149,6 @@ Index('ix_users_user_lower_forum_username',
       unique=True)
 
 
-# Check forum_username validity with discourse
-# https://github.com/discourse/discourse/blob/master/app/models/username_validator.rb
-check_forum_username_ddl = DDL("""
-CREATE OR REPLACE FUNCTION users.check_forum_username(name TEXT)
-RETURNS boolean AS $$
-BEGIN
-  IF name = NULL THEN
-    RETURN FALSE;
-  END IF;
-
-  IF char_length(name) < 3 THEN
-    RETURN FALSE;
-  END IF;
-
-  IF char_length(name) > 25 THEN
-    RETURN FALSE;
-  END IF;
-
-  if name ~ '[^\w.-]' THEN
-    RETURN FALSE;
-  END IF;
-
-  if left(name, 1) ~ '\W' THEN
-    RETURN FALSE;
-  END IF;
-
-  if right(name, 1) ~ '[^A-Za-z0-9]' THEN
-    RETURN FALSE;
-  END IF;
-
-  if name ~ '[-_\.]{2,}' THEN
-    RETURN FALSE;
-  END IF;
-
-  if name ~
-  '\.(js|json|css|htm|html|xml|jpg|jpeg|png|gif|bmp|ico|tif|tiff|woff)$'
-  THEN
-    RETURN FALSE;
-  END IF;
-
-  RETURN TRUE;
-END;
-$$ LANGUAGE plpgsql;
-""")
-event.listen(User.__table__, 'before_create', check_forum_username_ddl)
-
-
 schema_user = SQLAlchemySchemaNode(
     User,
     # whitelisted attributes
@@ -226,24 +174,3 @@ schema_create_user = SQLAlchemySchemaNode(
             'validator': colander.OneOf(default_langs)
         }
     })
-
-# Make sure that user email changes are propagated to mailing lists as well
-trigger_ddl = DDL("""
-CREATE OR REPLACE FUNCTION users.update_mailinglists_email() RETURNS TRIGGER AS
-$BODY$
-BEGIN
-  UPDATE """ + sympa_schema + """.subscriber_table
-  SET user_subscriber = NEW.email
-  WHERE user_subscriber = OLD.email;
-  RETURN null;
-END;
-$BODY$
-language plpgsql;
-
-CREATE TRIGGER users_email_update
-AFTER UPDATE ON users.user
-FOR EACH ROW
-WHEN (OLD.email IS DISTINCT FROM NEW.email)
-EXECUTE PROCEDURE users.update_mailinglists_email();
-""")
-event.listen(User.__table__, 'after_create', trigger_ddl)
