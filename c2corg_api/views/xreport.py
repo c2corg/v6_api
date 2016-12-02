@@ -13,6 +13,7 @@ from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_common.fields_xreport import fields_xreport
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
+from c2corg_api.views import set_creator as set_creator_on_documents
 
 from c2corg_api.views.document_schemas import xreport_documents_config
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
@@ -48,11 +49,13 @@ class XreportRest(DocumentRest):
             # only moderators and the author of a xreport can access the full
             # xreport (including personal information)
             return self._get(Xreport, schema_xreport_without_personal,
-                             clazz_locale=XreportLocale)
+                             clazz_locale=XreportLocale,
+                             set_custom_fields=set_author)
 
         return self._get(Xreport, schema_xreport,
                          clazz_locale=XreportLocale,
-                         custom_cache_key='private')
+                         custom_cache_key='private',
+                         set_custom_fields=set_author)
 
     @restricted_json_view(
             schema=schema_create_xreport,
@@ -106,3 +109,9 @@ class XreportInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):
         return self._get_document_info(Xreport)
+
+
+def set_author(xreport):
+    """Set the creator (the user who is an author) of the report.
+    """
+    set_creator_on_documents([xreport], 'author')

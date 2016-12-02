@@ -69,6 +69,12 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertNotIn('xreport', body)
         self.assertIn('geometry', body)
         self.assertIsNone(body.get('geometry'))
+
+        self.assertIn('author', body)
+        author = body.get('author')
+        self.assertEqual(
+            self.global_userids['contributor'], author.get('user_id'))
+
         associations = body['associations']
         self.assertIn('images', associations)
         self.assertIn('articles', associations)
