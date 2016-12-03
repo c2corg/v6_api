@@ -66,6 +66,22 @@ def validate_main_waypoint(is_on_create, request, **kwargs):
         'body', 'main_waypoint_id', 'no association for the main waypoint')
 
 
+def validate_required_associations(request, **kwargs):
+    missing_waypoint = False
+
+    associations = request.validated.get('associations', None)
+    if not associations:
+        missing_waypoint = True
+    else:
+        linked_waypoints = associations.get('waypoints', [])
+        if not linked_waypoints:
+            missing_waypoint = True
+
+    if missing_waypoint:
+        request.errors.add(
+            'body', 'associations.waypoints', 'at least one waypoint required')
+
+
 @resource(collection_path='/routes', path='/routes/{id}',
           cors_policy=cors_policy)
 class RouteRest(DocumentRest):
@@ -87,6 +103,7 @@ class RouteRest(DocumentRest):
             colander_body_validator,
             validate_route_create,
             validate_associations_create,
+            validate_required_associations,
             functools.partial(validate_main_waypoint, True)])
     def collection_post(self):
         linked_waypoints = self.request.validated. \
@@ -104,6 +121,7 @@ class RouteRest(DocumentRest):
             validate_id,
             validate_route_update,
             validate_associations_update,
+            validate_required_associations,
             functools.partial(validate_main_waypoint, False)])
     def put(self):
         old_main_waypoint_id = DBSession.query(Route.main_waypoint_id). \

@@ -198,18 +198,22 @@ class TestRouteRest(BaseDocumentTestRest):
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
-        self.assertCorniceRequired(errors[0], 'activities')
+        self.assertEqual(len(errors), 2)
+        self.assertError(
+            errors, 'activities', 'Required')
+        self.assertError(
+            errors, 'associations.waypoints', 'at least one waypoint required')
 
-    def test_post_empty_activities_error(self):
+    def test_post_empty_activities_and_associations_error(self):
         body = self.post_error({
             'activities': []
         })
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(
-            errors[0].get('description'), 'Shorter than minimum length 1')
-        self.assertEqual(errors[0].get('name'), 'activities')
+        self.assertEqual(len(errors), 2)
+        self.assertError(
+            errors, 'activities', 'Shorter than minimum length 1')
+        self.assertError(
+            errors, 'associations.waypoints', 'at least one waypoint required')
 
     def test_post_invalid_activity(self):
         body_post = {
@@ -227,7 +231,12 @@ class TestRouteRest(BaseDocumentTestRest):
             },
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop'}
-            ]
+            ],
+            'associations': {
+                'waypoints': [
+                    {'document_id': self.waypoint.document_id}
+                ]
+            }
         }
         body = self.post_error(body_post)
         errors = body.get('errors')
@@ -275,7 +284,9 @@ class TestRouteRest(BaseDocumentTestRest):
                 {'lang': 'en', 'title': 'Some nice loop',
                  'gear': 'shoes'}
             ],
-            'associations': {}
+            'associations': {
+                'waypoints': [{'document_id': self.waypoint.document_id}]
+            }
         }
         self.post_non_whitelisted_attribute(body)
 
@@ -557,8 +568,13 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop',
                  'gear': 'shoes'}
-            ]
+            ],
             # no association for the main waypoint
+            'associations': {
+                'waypoints': [
+                    {'document_id': self.waypoint2.document_id}
+                ]
+            }
         }
         body = self.post_error(body_post)
         errors = body.get('errors')
@@ -581,7 +597,10 @@ class TestRouteRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                }
             }
         }
         self.put_wrong_document_id(body)
@@ -601,7 +620,10 @@ class TestRouteRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                }
             }
         }
         self.put_wrong_version(body, self.route.document_id)
@@ -621,7 +643,10 @@ class TestRouteRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
                      'version': -9999}
-                ]
+                ],
+                'associations': {
+                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                }
             }
         }
         self.put_wrong_version(body, self.route.document_id)
@@ -641,7 +666,10 @@ class TestRouteRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                }
             }
         }
         self.put_wrong_ids(body, self.route.document_id)
@@ -672,6 +700,9 @@ class TestRouteRest(BaseDocumentTestRest):
                     'geom_detail':
                         '{"type": "LineString", "coordinates": ' +
                         '[[635956, 5723604], [635976, 5723654]]}'
+                },
+                'associations': {
+                    'waypoints': [{'document_id': self.waypoint.document_id}]
                 }
             }
         }
@@ -722,7 +753,10 @@ class TestRouteRest(BaseDocumentTestRest):
                      'description': '...', 'gear': 'paraglider',
                      'version': self.locale_en.version,
                      'title_prefix': 'Should be ignored'}
-                ]
+                ],
+                'associations': {
+                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                }
             }
         }
         (body, route) = self.put_success_figures_only(body, self.route)
@@ -759,6 +793,9 @@ class TestRouteRest(BaseDocumentTestRest):
                         '[[635956, 5723604], [635976, 5723654]]}',
                     'geom':
                         '{"type": "Point", "coordinates": [635000, 5723000]}'
+                },
+                'associations': {
+                    'waypoints': [{'document_id': self.waypoint.document_id}]
                 }
             }
         }
@@ -930,7 +967,10 @@ class TestRouteRest(BaseDocumentTestRest):
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'gear': 'none',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                }
             }
         }
         (body, route) = self.put_success_lang_only(body, self.route)
@@ -956,7 +996,10 @@ class TestRouteRest(BaseDocumentTestRest):
                 'locales': [
                     {'lang': 'es', 'title': 'Mont Blanc del cielo',
                      'description': '...', 'gear': 'si'}
-                ]
+                ],
+                'associations': {
+                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                }
             }
         }
         (body, route) = self.put_success_new_lang(body, self.route)
