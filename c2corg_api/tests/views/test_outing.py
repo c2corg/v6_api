@@ -828,6 +828,44 @@ class TestOutingRest(BaseDocumentTestRest):
             body, self.outing, user='moderator')
         self._assert_default_geometry(body, x=635000, y=5723000)
 
+    def test_put_update_default_geom_from_linked_routes(self):
+        """Tests that the default geometry is updated from linked routes.
+        """
+        body = {
+            'message': 'Changing figures',
+            'document': {
+                'document_id': self.outing2.document_id,
+                'version': self.outing2.version,
+                'quality': quality_types[1],
+                'activities': ['skitouring'],
+                'date_start': '2016-01-01',
+                'date_end': '2016-01-01',
+                'elevation_min': 700,
+                'elevation_max': 1600,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...', 'weather': 'sunny',
+                     'version': self.locale_en.version}
+                ],
+                'associations': {
+                    'users': [{
+                        'document_id': self.global_userids['contributor']
+                    }],
+                    'routes': [{'document_id': self.route.document_id}]
+                }
+            }
+        }
+        headers = self.add_authorization_header(username='moderator')
+        self.app_put_json(
+            self._prefix + '/' + str(self.outing2.document_id), body,
+            headers=headers, status=200)
+        response = self.app.get(
+            self._prefix + '/' + str(self.outing2.document_id), status=200)
+        body = response.json
+        self._assert_default_geometry(body, x=635961, y=5723624)
+
     def test_put_success_lang_only(self):
         body = {
             'message': 'Changing lang',
@@ -1047,9 +1085,19 @@ class TestOutingRest(BaseDocumentTestRest):
 
         self.outing2 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
-            date_end=datetime.date(2016, 2, 1)
+            date_end=datetime.date(2016, 2, 1),
+            locales=[
+                OutingLocale(
+                    lang='en', title='Mont Blanc from the air',
+                    description='...',
+                    weather='sunny')
+            ],
+            geometry=DocumentGeometry(geom='SRID=3857;POINT(0 0)')
         )
         self.session.add(self.outing2)
+        self.session.flush()
+        DocumentRest.create_new_version(self.outing2, user_id)
+
         self.outing3 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
             date_end=datetime.date(2016, 2, 2)
