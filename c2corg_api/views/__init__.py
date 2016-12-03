@@ -5,6 +5,7 @@ import datetime
 
 from c2corg_api.ext.colander_ext import geojson_from_wkbelement
 from c2corg_api.models import DBSession
+from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.document_history import get_creators
 from c2corg_api.models.user import AccountNotValidated
 from c2corg_common.attributes import langs_priority
@@ -17,6 +18,7 @@ from cornice.util import json_error, _JSONError
 from cornice.resource import view
 from geoalchemy2 import WKBElement
 from sqlalchemy.inspection import inspect
+from sqlalchemy.sql.functions import func
 
 log = logging.getLogger(__name__)
 
@@ -205,6 +207,36 @@ def set_author(outings, lang):
     outings.
     """
     set_creator(outings, 'author')
+
+
+def set_default_geom_from_associations(
+        doc, linked_docs, update_always=False):
+    if update_always or doc.geometry is None or doc.geometry.geom is None:
+        default_geom = _get_default_geom(linked_docs)
+
+        if default_geom is not None:
+            if doc.geometry is not None:
+                doc.geometry.geom = default_geom
+            else:
+                doc.geometry = DocumentGeometry(geom=default_geom)
+        else:
+            log.warn(
+                'Creating or updating document without default geometry'.
+                format(doc.document_id))
+
+
+def _get_default_geom(linked_docs):
+    if not linked_docs:
+        return None
+
+    linked_waypoint_ids = [d['document_id'] for d in linked_docs]
+    default_geom = DBSession. \
+        query(func.ST_SetSRID(func.ST_Centroid(func.ST_ConvexHull(
+            func.ST_Collect(DocumentGeometry.geom))), 3857)). \
+        filter(DocumentGeometry.document_id.in_(linked_waypoint_ids)). \
+        scalar()
+
+    return default_geom
 
 
 def etag_cache(request, key):

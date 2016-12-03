@@ -479,7 +479,7 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def post_success(self, request_body, user='contributor',
-                     validate_with_auth=False):
+                     validate_with_auth=False, skip_validation=False):
         response = self.app_post_json(self._prefix, request_body, status=403)
 
         headers = self.add_authorization_header(username=user)
@@ -487,7 +487,14 @@ class BaseDocumentTestRest(BaseTestRest):
                                       headers=headers, status=200)
 
         body = response.json
-        return self._validate_document(body, headers, validate_with_auth)
+        if skip_validation:
+            document_id = body.get('document_id')
+            response = self.app.get(
+                self._prefix + '/' + str(document_id), status=200)
+            doc = self.session.query(self._model).get(document_id)
+            return response.json, doc
+        else:
+            return self._validate_document(body, headers, validate_with_auth)
 
     def _validate_document(self, body, headers=None, validate_with_auth=False):
         document_id = body.get('document_id')
