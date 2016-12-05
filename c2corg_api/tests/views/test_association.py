@@ -360,6 +360,82 @@ class TestAssociationRest(BaseTestRest):
             TestAssociationRest.prefix, request_body, headers=headers,
             status=400)
 
+    def test_delete_association_wp_r_last_waypoint(self):
+        request_body1 = {
+            'parent_document_id': self.waypoint2.document_id,
+            'child_document_id': self.route1.document_id
+        }
+        headers = self.add_authorization_header(username='contributor')
+
+        # add association
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body1, headers=headers,
+            status=200)
+
+        # try to delete the association
+        response = self.app.delete_json(
+            TestAssociationRest.prefix, request_body1, headers=headers,
+            status=400)
+
+        body = response.json
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertError(
+            errors, 'Bad Request',
+            'as the last waypoint of the route, this waypoint can not be '
+            'disassociated')
+
+        # add a second waypoint
+        request_body2 = {
+            'parent_document_id': self.waypoint1.document_id,
+            'child_document_id': self.route1.document_id
+        }
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body2, headers=headers,
+            status=200)
+
+        # now, the first waypoint can be unlinked
+        self.app.delete_json(
+            TestAssociationRest.prefix, request_body1, headers=headers)
+
+    def test_delete_association_ro_last_route(self):
+        request_body1 = {
+            'parent_document_id': self.route1.document_id,
+            'child_document_id': self.outing.document_id
+        }
+        headers = self.add_authorization_header(username='moderator')
+
+        # add association
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body1, headers=headers,
+            status=200)
+
+        # try to delete the association
+        response = self.app.delete_json(
+            TestAssociationRest.prefix, request_body1, headers=headers,
+            status=400)
+
+        body = response.json
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertError(
+            errors, 'Bad Request',
+            'as the last route of the outing, this route can not be '
+            'disassociated')
+
+        # add a second route
+        request_body2 = {
+            'parent_document_id': self.route2.document_id,
+            'child_document_id': self.outing.document_id
+        }
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body2, headers=headers,
+            status=200)
+
+        # now, the first route can be unlinked
+        self.app.delete_json(
+            TestAssociationRest.prefix, request_body1, headers=headers)
+
     def _add_test_data(self):
         self.waypoint1 = Waypoint(
             waypoint_type='summit', elevation=2203)
@@ -371,6 +447,10 @@ class TestAssociationRest(BaseTestRest):
 
         self.route1 = Route(activities=['skitouring'])
         self.session.add(self.route1)
+        self.session.add(self.waypoint2)
+
+        self.route2 = Route(activities=['skitouring'])
+        self.session.add(self.route2)
 
         self.image1 = Image(filename='image.jpg')
         self.session.add(self.image1)

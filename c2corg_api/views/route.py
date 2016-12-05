@@ -1,3 +1,5 @@
+import logging
+
 import functools
 
 from c2corg_api.models import DBSession
@@ -20,13 +22,15 @@ from c2corg_api.models.route import Route, schema_route, schema_update_route, \
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, NUM_RECENT_OUTINGS
 from c2corg_api.views import cors_policy, restricted_json_view, \
-    get_best_locale
+    get_best_locale, set_default_geom_from_associations
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param, validate_associations
 from c2corg_common.fields_route import fields_route
 from c2corg_common.attributes import activities
 from sqlalchemy.orm import load_only
+
+log = logging.getLogger(__name__)
 
 validate_route_create = make_validator_create(
     fields_route, 'activities', activities)
@@ -62,6 +66,22 @@ def validate_main_waypoint(is_on_create, request, **kwargs):
         'body', 'main_waypoint_id', 'no association for the main waypoint')
 
 
+def validate_required_associations(request, **kwargs):
+    missing_waypoint = False
+
+    associations = request.validated.get('associations', None)
+    if not associations:
+        missing_waypoint = True
+    else:
+        linked_waypoints = associations.get('waypoints', [])
+        if not linked_waypoints:
+            missing_waypoint = True
+
+    if missing_waypoint:
+        request.errors.add(
+            'body', 'associations.waypoints', 'at least one waypoint required')
+
+
 @resource(collection_path='/routes', path='/routes/{id}',
           cors_policy=cors_policy)
 class RouteRest(DocumentRest):
@@ -83,10 +103,15 @@ class RouteRest(DocumentRest):
             colander_body_validator,
             validate_route_create,
             validate_associations_create,
+            validate_required_associations,
             functools.partial(validate_main_waypoint, True)])
     def collection_post(self):
+        linked_waypoints = self.request.validated. \
+            get('associations', {}).get('waypoints', [])
         return self._collection_post(
-            schema_route, before_add=set_default_geometry,
+            schema_route,
+            before_add=functools.partial(
+                set_default_geometry, linked_waypoints),
             after_add=init_title_prefix)
 
     @restricted_json_view(
@@ -96,14 +121,18 @@ class RouteRest(DocumentRest):
             validate_id,
             validate_route_update,
             validate_associations_update,
+            validate_required_associations,
             functools.partial(validate_main_waypoint, False)])
     def put(self):
         old_main_waypoint_id = DBSession.query(Route.main_waypoint_id). \
             filter(Route.document_id == self.request.validated['id']).scalar()
+        linked_waypoints = self.request.validated. \
+            get('associations', {}).get('waypoints', [])
         return self._put(
             Route, schema_route,
             before_update=functools.partial(
-                update_default_geometry, old_main_waypoint_id),
+                update_default_geometry, old_main_waypoint_id,
+                linked_waypoints),
             after_update=update_title_prefix)
 
     @staticmethod
@@ -151,9 +180,11 @@ class RouteInfoRest(DocumentInfoRest):
         return self._get_document_info(Route)
 
 
-def set_default_geometry(route, user_id):
+def set_default_geometry(linked_waypoints, route, user_id):
     """When creating a new route, set the default geometry to the middle point
-    of a given track, if not to the geometry of the associated main waypoint.
+    of a given track, if not to the geometry of the associated main waypoint
+    (if a main waypoint is set), otherwise to the centroid of the convex hull
+    of all associated waypoints.
     """
     if route.geometry is not None and route.geometry.geom is not None:
         # default geometry already set
@@ -163,39 +194,54 @@ def set_default_geometry(route, user_id):
         # track is given, obtain a default point from the track
         route.geometry.geom = get_mid_point(route.geometry.geom_detail)
     elif route.main_waypoint_id:
-        # get default point from main waypoint
-        main_wp_point = DBSession.query(DocumentGeometry.geom).filter(
-            DocumentGeometry.document_id == route.main_waypoint_id).scalar()
-        if main_wp_point is not None:
-            route.geometry = DocumentGeometry(geom=main_wp_point)
+        _set_default_geom_from_main_wp(route)
+
+    set_default_geom_from_associations(route, linked_waypoints)
 
 
-def update_default_geometry(old_main_waypoint_id, route, route_in, user_id):
+def _set_default_geom_from_main_wp(route):
+    main_wp_point = _get_default_geom_from_main_wp(route)
+    if main_wp_point is not None:
+        route.geometry = DocumentGeometry(geom=main_wp_point)
+
+
+def _get_default_geom_from_main_wp(route):
+    return DBSession.query(DocumentGeometry.geom).filter(
+        DocumentGeometry.document_id == route.main_waypoint_id).scalar()
+
+
+def update_default_geometry(
+        old_main_waypoint_id, linked_waypoints, route, route_in, user_id):
+    geometry = route.geometry
     geometry_in = route_in.geometry
     if geometry_in is not None and geometry_in.geom is not None:
         # default geom is manually set in the request
         return
     elif geometry_in is not None and geometry_in.geom_detail is not None:
         # update the default geom with the new track
-        route.geometry.geom = get_mid_point(route.geometry.geom_detail)
-    elif main_waypoint_has_changed(route_in, old_main_waypoint_id):
-        # when the main waypoint has changed, use the waypoint geom
-        main_wp_point = DBSession.query(DocumentGeometry.geom).filter(
-            DocumentGeometry.document_id == route.main_waypoint_id).scalar()
-        if main_wp_point is not None:
-            if route.geometry is not None:
-                if route.geometry.geom_detail is None:
-                    # only update if no own track
+        geometry.geom = get_mid_point(geometry.geom_detail)
+        return
+    elif geometry is not None and geometry.geom_detail is not None:
+        # default geom is already set and no new track is provided
+        return
+    elif geometry is None or geometry.geom_detail is None:
+        # only update if no own track
+        if route.main_waypoint_id and \
+                main_waypoint_has_changed(route, old_main_waypoint_id):
+            main_wp_point = _get_default_geom_from_main_wp(route)
+            if main_wp_point is not None:
+                if geometry is not None:
                     route.geometry.geom = main_wp_point
-            else:
-                route.geometry = DocumentGeometry(geom=main_wp_point)
+                else:
+                    route.geometry = DocumentGeometry(geom=main_wp_point)
+                return
+
+    set_default_geom_from_associations(
+        route, linked_waypoints, update_always=True)
 
 
 def main_waypoint_has_changed(route, old_main_waypoint_id):
-    if route.main_waypoint_id is None:
-        return False
-    else:
-        return old_main_waypoint_id != route.main_waypoint_id
+    return old_main_waypoint_id != route.main_waypoint_id
 
 
 def init_title_prefix(route, user_id):

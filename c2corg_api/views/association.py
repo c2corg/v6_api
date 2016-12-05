@@ -2,7 +2,9 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import update_cache_version_associations
 from c2corg_api.models.document import Document
 from c2corg_api.models.feed import update_feed_association_update
-from c2corg_api.models.route import Route
+from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.route import Route, ROUTE_TYPE
+from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.es import sync
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views.validation import validate_outing_association, \
@@ -111,11 +113,7 @@ class AssociationRest(object):
             if association is None:
                 raise HTTPBadRequest('association does not exist')
 
-        if is_main_waypoint_association(association):
-            raise HTTPBadRequest(
-                'as the main waypoint of the route, this waypoint can not '
-                'be disassociated')
-
+        _check_required_associations(association)
         check_permission_for_outing_association(self.request, association)
 
         log = association.get_log(
@@ -145,12 +143,61 @@ class AssociationRest(object):
                  association_in.child_document_id))
 
 
-def is_main_waypoint_association(association):
+def _check_required_associations(association):
+    if _is_main_waypoint_association(association):
+        raise HTTPBadRequest(
+            'as the main waypoint of the route, this waypoint can not '
+            'be disassociated')
+    elif _is_last_waypoint_of_route(association):
+        raise HTTPBadRequest(
+            'as the last waypoint of the route, this waypoint can not '
+            'be disassociated')
+    elif _is_last_route_of_outing(association):
+        raise HTTPBadRequest(
+            'as the last route of the outing, this route can not '
+            'be disassociated')
+
+
+def _is_main_waypoint_association(association):
     return DBSession.query(
         exists().
         where(Route.document_id == association.child_document_id).
         where(Route.main_waypoint_id == association.parent_document_id)
     ).scalar()
+
+
+def _is_last_waypoint_of_route(association):
+    if not(association.parent_document_type == WAYPOINT_TYPE and
+            association.child_document_type == ROUTE_TYPE):
+        # other association type, nothing to check
+        return False
+
+    route_has_other_waypoints = exists(). \
+        where(Association.parent_document_type == WAYPOINT_TYPE). \
+        where(Association.child_document_type == ROUTE_TYPE). \
+        where(Association.parent_document_id !=
+              association.parent_document_id). \
+        where(
+            Association.child_document_id == association.child_document_id)
+
+    return not DBSession.query(route_has_other_waypoints).scalar()
+
+
+def _is_last_route_of_outing(association):
+    if not(association.parent_document_type == ROUTE_TYPE and
+            association.child_document_type == OUTING_TYPE):
+        # other association type, nothing to check
+        return False
+
+    outing_has_other_routes = exists(). \
+        where(Association.parent_document_type == ROUTE_TYPE). \
+        where(Association.child_document_type == OUTING_TYPE). \
+        where(Association.parent_document_id !=
+              association.parent_document_id). \
+        where(
+            Association.child_document_id == association.child_document_id)
+
+    return not DBSession.query(outing_has_other_routes).scalar()
 
 
 def notify_es_syncer_if_needed(association, request):

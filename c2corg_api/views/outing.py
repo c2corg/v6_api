@@ -1,11 +1,10 @@
 import functools
-from c2corg_api.models import DBSession
-from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.outing import schema_outing, Outing, \
     schema_create_outing, schema_update_outing, ArchiveOuting, \
     ArchiveOutingLocale, OUTING_TYPE
 from c2corg_api.models.utils import get_mid_point
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import cors_policy, restricted_json_view, \
+    set_default_geom_from_associations
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update
 from c2corg_api.views.document_info import DocumentInfoRest
@@ -102,7 +101,10 @@ class OutingRest(DocumentRest):
             # change an outing that they are associated to
             raise HTTPForbidden('No permission to change this outing')
         return self._put(
-            Outing, schema_outing, before_update=update_default_geometry)
+            Outing, schema_outing,
+            before_update=functools.partial(
+                update_default_geometry,
+                self.request.validated['associations']['routes']))
 
 
 @resource(path='/outings/{id}/{lang}/info', cors_policy=cors_policy)
@@ -115,7 +117,8 @@ class OutingInfoRest(DocumentInfoRest):
 
 def set_default_geometry(linked_routes, outing, user_id):
     """When creating a new outing, set the default geometry to the middle point
-    of a given track, if not to the geometry of an associated route.
+    of a given track, if not to the centroid of the convex hull
+    of all associated routes.
     """
     if outing.geometry is not None and outing.geometry.geom is not None:
         # default geometry already set
@@ -124,27 +127,31 @@ def set_default_geometry(linked_routes, outing, user_id):
     if outing.geometry is not None and outing.geometry.geom_detail is not None:
         # track is given, obtain a default point from the track
         outing.geometry.geom = get_mid_point(outing.geometry.geom_detail)
-    elif linked_routes:
-        route_id = linked_routes[0]['document_id']
-        # get default point from route
-        route_point = DBSession.query(DocumentGeometry.geom).filter(
-            DocumentGeometry.document_id == route_id).scalar()
-        if route_point is not None:
-            outing.geometry = DocumentGeometry(geom=route_point)
+        return
+
+    set_default_geom_from_associations(outing, linked_routes)
 
 
-def update_default_geometry(outing, outing_in, user_id):
+def update_default_geometry(linked_routes, outing, outing_in, user_id):
     """When updating an outing, set the default geometry to the middle point
-    of a new track, or directly update with a given geometry.
+    of a new track, if not to the centroid of the convex hull
+    of all associated routes.
     """
-    # TODO also use geometry of main waypoint when main waypoint has changed?
+    geometry = outing.geometry
     geometry_in = outing_in.geometry
     if geometry_in is not None and geometry_in.geom is not None:
         # default geom is manually set in the request
         return
     elif geometry_in is not None and geometry_in.geom_detail is not None:
         # update the default geom with the new track
-        outing.geometry.geom = get_mid_point(outing.geometry.geom_detail)
+        geometry.geom = get_mid_point(geometry.geom_detail)
+        return
+    elif geometry is not None and geometry.geom_detail is not None:
+        # default geom is already set and no new track is provided
+        return
+
+    set_default_geom_from_associations(
+        outing, linked_routes, update_always=True)
 
 
 @resource(path='/outings/{id}/{lang}/{version_id}', cors_policy=cors_policy)

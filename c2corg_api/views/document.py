@@ -184,7 +184,7 @@ class DocumentRest(object):
         document.document_id = None
 
         if before_add:
-            before_add(document, user_id=user_id)
+            before_add(document, user_id)
 
         DBSession.add(document)
         DBSession.flush()
