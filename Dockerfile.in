@@ -17,12 +17,14 @@ WORKDIR /var/www/
 COPY requirements.txt \
      setup.py \
      Makefile \
+     alembic.ini.in \
      common.ini.in \
      development.ini.in \
      production.ini.in \
      README.md \
      CHANGES.txt \
      ./
+COPY alembic_migration alembic_migration
 COPY c2corg_api c2corg_api
 COPY scripts scripts
 
