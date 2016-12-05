@@ -10,6 +10,7 @@ from sqlalchemy import (
     SmallInteger,
     String
     )
+from sqlalchemy.ext.declarative import declared_attr
 
 from colander import MappingSchema, SchemaNode, Sequence
 from colanderalchemy import SQLAlchemySchemaNode
@@ -43,7 +44,11 @@ class _ImageMixin(object):
 
     file_size = Column(Integer)
 
-    filename = Column(String(30), nullable=False)
+    @declared_attr
+    def filename(self):
+        return Column(String(30),
+                      nullable=False,
+                      unique=(self.__name__ == 'Image'))
 
     date_time = Column(DateTime(timezone=True))
 
