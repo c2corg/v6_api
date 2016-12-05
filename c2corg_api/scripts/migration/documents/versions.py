@@ -51,7 +51,7 @@ versions_query =\
     '   t.documents_versions_id, t.document_id, t.culture, ' \
     '   t.document_archive_id, t.document_i18n_archive_id, ' \
     '   t.history_metadata_id, ' \
-    '   (a.geom is not null) as has_geom ' \
+    '   a.module ' \
     'from (select ' \
     '   v.documents_versions_id, v.document_id, v.culture, ' \
     '   v.document_archive_id, v.document_i18n_archive_id, ' \
@@ -135,9 +135,12 @@ class MigrateVersions(MigrateBase):
             document_archive_id=row.document_archive_id,
             document_locales_archive_id=row.document_i18n_archive_id,
             document_geometry_archive_id=row.document_archive_id
-            if row.has_geom else None,
+            if self._has_geom(row.module) else None,
             history_metadata_id=row.history_metadata_id
         )
+
+    def _has_geom(self, module):
+        return module not in ('books', 'articles')
 
     def _migrate(self, label, query_count, query, model, get_entity):
         self.start(label)

@@ -15,15 +15,6 @@ class MigrateAreaAssociations(MigrateBase):
             self.session_target.execute(SQL_CREATE_AREA_ASSOCIATIONS)
             zope.sqlalchemy.mark_changed(self.session_target)
 
-        # run vacuum on the table (must be outside a transaction)
-        engine = self.session_target.bind
-        conn = engine.connect()
-        old_lvl = conn.connection.isolation_level
-        conn.connection.set_isolation_level(0)
-        conn.execute('vacuum analyze guidebook.area_associations;')
-        conn.connection.set_isolation_level(old_lvl)
-        conn.close()
-
         self.stop()
 
 

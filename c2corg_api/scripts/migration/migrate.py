@@ -1,6 +1,7 @@
 import sys
 import logging
 
+from c2corg_api.scripts.migration.analyze_all_tables import AnalyzeAllTables
 from c2corg_api.scripts.migration.area_associations import \
     MigrateAreaAssociations
 from c2corg_api.scripts.migration.climbing_site_routes import \
@@ -103,6 +104,7 @@ def main(argv=sys.argv):
     MigrateMailinglists(connection_source, session, batch_size).migrate()
     UpdateSequences(connection_source, session, batch_size).migrate()
     InitFeed(connection_source, session, batch_size).migrate()
+    AnalyzeAllTables(connection_source, session, batch_size).migrate()
 
 if __name__ == "__main__":
     main()
