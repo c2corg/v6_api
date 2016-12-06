@@ -136,7 +136,7 @@ class TestAssociationRest(BaseTestRest):
             'no rights to modify associations with outing {}'.format(
                 self.outing.document_id))
 
-    def test_add_association_wa_article_collab(self):
+    def test_add_association_wc_article_collab(self):
         """ Check that associations with articles can only be changed by
         everyone.
         """
@@ -149,7 +149,7 @@ class TestAssociationRest(BaseTestRest):
             TestAssociationRest.prefix, request_body, headers=headers,
             status=200)
 
-    def test_add_association_wa_article_personal_unauthorized(self):
+    def test_add_association_wc_article_personal_unauthorized(self):
         """ Check that associations with personal articles can only be changed
         by the creator and moderators.
         """
@@ -171,7 +171,7 @@ class TestAssociationRest(BaseTestRest):
             'no rights to modify associations with article {}'.format(
                 self.article1.document_id))
 
-    def test_add_association_wa_article_personal_authorized(self):
+    def test_add_association_wc_article_personal_authorized(self):
         """ Check that associations with personal articles can only be changed
         by the creator and moderators.
         """
@@ -187,7 +187,7 @@ class TestAssociationRest(BaseTestRest):
             TestAssociationRest.prefix, request_body, headers=headers,
             status=200)
 
-    def test_add_association_aa_article_personal_unauthorized(self):
+    def test_add_association_cc_article_personal_unauthorized(self):
         """ Check that associations with personal articles can only be changed
         by the creator and moderators.
         """
@@ -528,6 +528,35 @@ class TestAssociationRest(BaseTestRest):
         self.app.delete_json(
             TestAssociationRest.prefix, request_body, headers=headers,
             status=400)
+
+    def test_delete_association_wc_article_personal(self):
+        """ Test that associations with personal articles require special
+        rights.
+        """
+        self.article1.article_type = 'personal'
+        self.session.flush()
+
+        # first create an association with the article
+        request_body = {
+            'parent_document_id': self.waypoint1.document_id,
+            'child_document_id': self.article1.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor')
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=200)
+
+        # then try to delete the association again with a different user
+        headers = self.add_authorization_header(username='contributor2')
+        response = self.app.delete_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=400)
+        body = response.json
+
+        self.assertError(
+            body['errors'], 'Bad Request',
+            'no rights to modify associations with article {}'.format(
+                self.article1.document_id))
 
     def test_delete_association_wp_r_last_waypoint(self):
         request_body1 = {

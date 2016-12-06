@@ -8,7 +8,7 @@ from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.es import sync
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views.validation import validate_association_permission, \
-    check_permission_for_outing_association
+    check_permission_for_association
 from c2corg_common.associations import valid_associations
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
@@ -114,7 +114,7 @@ class AssociationRest(object):
                 raise HTTPBadRequest('association does not exist')
 
         _check_required_associations(association)
-        check_permission_for_outing_association(self.request, association)
+        check_permission_for_association(self.request, association)
 
         log = association.get_log(
             self.request.authenticated_userid, is_creation=False)

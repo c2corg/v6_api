@@ -61,7 +61,7 @@ class BaseTestRest(BaseTestCase):
             if description == error.get('description') and \
                     name == error.get('name'):
                 return
-        self.fail('no error ({0}, {1})'.format(name, description))
+        self.fail('no error ({}, {}) in {}'.format(name, description, errors))
 
     def get_error(self, errors, name):  # noqa
         for error in errors:

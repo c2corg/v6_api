@@ -203,7 +203,7 @@ def validate_token(request, **kwargs):
 
 def validate_association_permission(
         request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type):
+        child_document_type, raise_exc=False):
     if request.has_permission('moderator'):
         # moderators can do everything
         return
@@ -212,30 +212,30 @@ def validate_association_permission(
     if OUTING_TYPE in (parent_document_type, child_document_type):
         validate_outing_association(
             request, parent_document_id, parent_document_type,
-            child_document_id, child_document_type)
+            child_document_id, child_document_type, raise_exc)
 
     # check association with personal image (creator)
     if IMAGE_TYPE in (parent_document_type, child_document_type):
         validate_image_association(
             request, parent_document_id, parent_document_type,
-            child_document_id, child_document_type)
+            child_document_id, child_document_type, raise_exc)
 
     # check association with personal article (creator)
     if ARTICLE_TYPE in (parent_document_type, child_document_type):
         validate_article_association(
             request, parent_document_id, parent_document_type,
-            child_document_id, child_document_type)
+            child_document_id, child_document_type, raise_exc)
 
     # check association with report (creator)
     if XREPORT_TYPE in (parent_document_type, child_document_type):
         validate_xreport_association(
             request, parent_document_id, parent_document_type,
-            child_document_id, child_document_type)
+            child_document_id, child_document_type, raise_exc)
 
 
 def validate_outing_association(
         request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type):
+        child_document_type, raise_exc):
     """ If the given association is an association with an outing, this
     function checks if the authenticated user is allowed to change the
     associations with the outing (either moderator or participant).
@@ -251,39 +251,43 @@ def validate_outing_association(
         outing_id = child_document_id
 
     if not has_permission_for_outing(request, outing_id):
-        request.errors.add(
-            'body', 'associations.outings',
-            'no rights to modify associations with outing {}'.format(
-                outing_id))
+        msg = 'no rights to modify associations with outing {}'.format(
+            outing_id)
+        if raise_exc:
+            raise HTTPBadRequest(msg)
+        else:
+            request.errors.add('body', 'associations.outings', msg)
 
 
 def validate_article_association(
         request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type):
+        child_document_type, raise_exc):
     validate_personal_association(
         request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, ARTICLE_TYPE, article.is_personal, 'article')
+        child_document_type, raise_exc, ARTICLE_TYPE, article.is_personal,
+        'article')
 
 
 def validate_image_association(
         request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type):
+        child_document_type, raise_exc):
     validate_personal_association(
         request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, IMAGE_TYPE, image.is_personal, 'image')
+        child_document_type, raise_exc, IMAGE_TYPE, image.is_personal, 'image')
 
 
 def validate_xreport_association(
         request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type):
+        child_document_type, raise_exc):
     validate_personal_association(
         request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, XREPORT_TYPE, lambda _: True, 'xreport')
+        child_document_type, raise_exc, XREPORT_TYPE, lambda _: True,
+        'xreport')
 
 
 def validate_personal_association(
         request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, doc_type, is_personal, label):
+        child_document_type, raise_exc, doc_type, is_personal, label):
     document_ids = set()
     if parent_document_type == doc_type:
         document_ids.add(parent_document_id)
@@ -293,10 +297,13 @@ def validate_personal_association(
     for document_id in document_ids:
         if is_personal(document_id) and not has_been_created_by(
                 document_id, request.authenticated_userid):
-            request.errors.add(
-                'body', 'associations.{}s'.format(label),
-                'no rights to modify associations with {} {}'.format(
-                    label, document_id))
+            msg = 'no rights to modify associations with {} {}'.format(
+                label, document_id)
+            if raise_exc:
+                raise HTTPBadRequest(msg)
+            else:
+                request.errors.add(
+                    'body', 'associations.{}s'.format(label), msg)
 
 
 def has_permission_for_outing(request, outing_id):
@@ -314,6 +321,13 @@ def has_permission_for_outing(request, outing_id):
             Association.parent_document_id == user_id,
             Association.child_document_id == outing_id
         ))).scalar()
+
+
+def check_permission_for_association(request, association):
+    validate_association_permission(
+        request, association.parent_document_id,
+        association.parent_document_type, association.child_document_id,
+        association.child_document_type, raise_exc=True)
 
 
 def check_permission_for_outing_association(request, association):
