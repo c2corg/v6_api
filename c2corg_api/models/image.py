@@ -15,7 +15,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from colander import MappingSchema, SchemaNode, Sequence
 from colanderalchemy import SQLAlchemySchemaNode
 
-from c2corg_api.models import schema, enums, Base
+from c2corg_api.models import schema, enums, Base, DBSession
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.document import (
     ArchiveDocument, Document, geometry_schema_overrides,
@@ -156,3 +156,11 @@ class SchemaImageList(MappingSchema):
     images = SchemaNode(
         Sequence(), schema_create_image, missing=None)
 schema_create_image_list = SchemaImageList()
+
+
+def is_personal(image_id):
+    image_type = DBSession.query(Image.image_type). \
+        select_from(Image.__table__). \
+        filter(Image.document_id == image_id). \
+        scalar()
+    return image_type == 'personal'

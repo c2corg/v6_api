@@ -1,12 +1,13 @@
 from functools import partial
 
-from c2corg_api.models import DBSession
+from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.association import Association, \
     updatable_associations, association_keys
 from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.document import Document
 from c2corg_api.models.article import ARTICLE_TYPE
+from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.xreport import XREPORT_TYPE
@@ -200,6 +201,38 @@ def validate_token(request, **kwargs):
         request.errors.add('querystring', 'token', 'invalid format')
 
 
+def validate_association_permission(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type):
+    if request.has_permission('moderator'):
+        # moderators can do everything
+        return
+
+    # check association with outing (creator or participant)
+    if OUTING_TYPE in (parent_document_type, child_document_type):
+        validate_outing_association(
+            request, parent_document_id, parent_document_type,
+            child_document_id, child_document_type)
+
+    # check association with personal image (creator)
+    if IMAGE_TYPE in (parent_document_type, child_document_type):
+        validate_image_association(
+            request, parent_document_id, parent_document_type,
+            child_document_id, child_document_type)
+
+    # check association with personal article (creator)
+    if ARTICLE_TYPE in (parent_document_type, child_document_type):
+        validate_article_association(
+            request, parent_document_id, parent_document_type,
+            child_document_id, child_document_type)
+
+    # check association with report (creator)
+    if XREPORT_TYPE in (parent_document_type, child_document_type):
+        validate_xreport_association(
+            request, parent_document_id, parent_document_type,
+            child_document_id, child_document_type)
+
+
 def validate_outing_association(
         request, parent_document_id, parent_document_type, child_document_id,
         child_document_type):
@@ -222,6 +255,48 @@ def validate_outing_association(
             'body', 'associations.outings',
             'no rights to modify associations with outing {}'.format(
                 outing_id))
+
+
+def validate_article_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type):
+    validate_personal_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type, ARTICLE_TYPE, article.is_personal, 'article')
+
+
+def validate_image_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type):
+    validate_personal_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type, IMAGE_TYPE, image.is_personal, 'image')
+
+
+def validate_xreport_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type):
+    validate_personal_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type, XREPORT_TYPE, lambda _: True, 'xreport')
+
+
+def validate_personal_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type, doc_type, is_personal, label):
+    document_ids = set()
+    if parent_document_type == doc_type:
+        document_ids.add(parent_document_id)
+    if child_document_type == doc_type:
+        document_ids.add(child_document_id)
+
+    for document_id in document_ids:
+        if is_personal(document_id) and not has_been_created_by(
+                document_id, request.authenticated_userid):
+            request.errors.add(
+                'body', 'associations.{}s'.format(label),
+                'no rights to modify associations with {} {}'.format(
+                    label, document_id))
 
 
 def has_permission_for_outing(request, outing_id):

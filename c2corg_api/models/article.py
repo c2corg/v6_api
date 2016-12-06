@@ -1,4 +1,4 @@
-from c2corg_api.models import schema, Base, enums
+from c2corg_api.models import schema, Base, enums, DBSession
 from c2corg_api.models.document import (
     ArchiveDocument, Document, schema_document_locale, schema_attributes)
 from c2corg_api.models.enums import article_category, activity_type
@@ -87,3 +87,11 @@ schema_create_article = get_create_schema(schema_article)
 schema_update_article = get_update_schema(schema_article)
 schema_listing_article = restrict_schema(
     schema_article, fields_article.get('listing'))
+
+
+def is_personal(article_id):
+    article_type = DBSession.query(Article.article_type). \
+        select_from(Article.__table__). \
+        filter(Article.document_id == article_id). \
+        scalar()
+    return article_type == 'personal'

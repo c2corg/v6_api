@@ -7,7 +7,7 @@ from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.es import sync
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.views.validation import validate_outing_association, \
+from c2corg_api.views.validation import validate_association_permission, \
     check_permission_for_outing_association
 from c2corg_common.associations import valid_associations
 from cornice.resource import resource
@@ -52,7 +52,7 @@ def validate_association(request, **kwargs):
             request.errors.add(
                 'body', 'association', 'invalid association type')
         else:
-            validate_outing_association(
+            validate_association_permission(
                 request,
                 parent_document_id, parent_document_type,
                 child_document_id, child_document_type)

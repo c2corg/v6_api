@@ -2,13 +2,16 @@ import datetime
 
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.article import Article
+from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing, OUTING_TYPE
 from c2corg_api.models.route import Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint
+from c2corg_api.models.xreport import Xreport, XreportLocale
 from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.views.document import DocumentRest
 
 
 class TestAssociationRest(BaseTestRest):
@@ -132,6 +135,172 @@ class TestAssociationRest(BaseTestRest):
             body['errors'], 'associations.outings',
             'no rights to modify associations with outing {}'.format(
                 self.outing.document_id))
+
+    def test_add_association_wa_article_collab(self):
+        """ Check that associations with articles can only be changed by
+        everyone.
+        """
+        request_body = {
+            'parent_document_id': self.waypoint1.document_id,
+            'child_document_id': self.article1.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor2')
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=200)
+
+    def test_add_association_wa_article_personal_unauthorized(self):
+        """ Check that associations with personal articles can only be changed
+        by the creator and moderators.
+        """
+        self.article1.article_type = 'personal'
+        self.session.flush()
+
+        request_body = {
+            'parent_document_id': self.waypoint1.document_id,
+            'child_document_id': self.article1.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor2')
+        response = self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=400)
+        body = response.json
+
+        self.assertError(
+            body['errors'], 'associations.articles',
+            'no rights to modify associations with article {}'.format(
+                self.article1.document_id))
+
+    def test_add_association_wa_article_personal_authorized(self):
+        """ Check that associations with personal articles can only be changed
+        by the creator and moderators.
+        """
+        self.article1.article_type = 'personal'
+        self.session.flush()
+
+        request_body = {
+            'parent_document_id': self.waypoint1.document_id,
+            'child_document_id': self.article1.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor')
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=200)
+
+    def test_add_association_aa_article_personal_unauthorized(self):
+        """ Check that associations with personal articles can only be changed
+        by the creator and moderators.
+        """
+        request_body = {
+            'parent_document_id': self.article2.document_id,
+            'child_document_id': self.article1.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor2')
+        response = self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=400)
+        body = response.json
+
+        self.assertError(
+            body['errors'], 'associations.articles',
+            'no rights to modify associations with article {}'.format(
+                self.article2.document_id))
+
+    def test_add_association_wi_image_personal_unauthorized(self):
+        """ Check that associations with personal images can only be changed
+        by the creator and moderators.
+        """
+        self.image1.image_type = 'personal'
+        self.session.flush()
+
+        request_body = {
+            'parent_document_id': self.waypoint1.document_id,
+            'child_document_id': self.image1.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor2')
+        response = self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=400)
+        body = response.json
+
+        self.assertError(
+            body['errors'], 'associations.images',
+            'no rights to modify associations with image {}'.format(
+                self.image1.document_id))
+
+    def test_add_association_wi_image_personal_authorized(self):
+        """ Check that associations with personal images can only be changed
+        by the creator and moderators.
+        """
+        self.article1.article_type = 'personal'
+        self.session.flush()
+
+        request_body = {
+            'parent_document_id': self.waypoint1.document_id,
+            'child_document_id': self.image1.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor')
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=200)
+
+    def test_add_association_wx_xreport_unauthorized(self):
+        """ Check that associations with x-reports can only be changed
+        by the creator and moderators.
+        """
+        request_body = {
+            'parent_document_id': self.waypoint1.document_id,
+            'child_document_id': self.report1.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor2')
+        response = self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=400)
+        body = response.json
+
+        self.assertError(
+            body['errors'], 'associations.xreports',
+            'no rights to modify associations with xreport {}'.format(
+                self.report1.document_id))
+
+    def test_add_association_wx_xreport_authorized(self):
+        """ Check that associations with x-reports can only be changed
+        by the creator and moderators.
+        """
+        request_body = {
+            'parent_document_id': self.waypoint1.document_id,
+            'child_document_id': self.report1.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor')
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=200)
+
+    def test_add_association_wc_xreport_article_unauthorized(self):
+        """ Check an association between a xreport and article that both
+        do not accept associations from contributor2.
+        """
+        self.article1.article_type = 'personal'
+        self.session.flush()
+
+        request_body = {
+            'parent_document_id': self.report1.document_id,
+            'child_document_id': self.article1.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor2')
+        response = self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=400)
+        body = response.json
+
+        self.assertError(
+            body['errors'], 'associations.xreports',
+            'no rights to modify associations with xreport {}'.format(
+                self.report1.document_id))
+        self.assertError(
+            body['errors'], 'associations.articles',
+            'no rights to modify associations with article {}'.format(
+                self.article1.document_id))
 
     def test_add_association_duplicate(self):
         """ Test that there is only one association between two documents.
@@ -437,6 +606,8 @@ class TestAssociationRest(BaseTestRest):
             TestAssociationRest.prefix, request_body1, headers=headers)
 
     def _add_test_data(self):
+        user_id = self.global_userids['contributor']
+
         self.waypoint1 = Waypoint(
             waypoint_type='summit', elevation=2203)
         self.session.add(self.waypoint1)
@@ -452,13 +623,36 @@ class TestAssociationRest(BaseTestRest):
         self.route2 = Route(activities=['skitouring'])
         self.session.add(self.route2)
 
-        self.image1 = Image(filename='image.jpg')
+        self.image1 = Image(
+            filename='image.jpg',
+            locales=[
+                DocumentLocale(lang='en', title='Mont Blanc from the air')])
         self.session.add(self.image1)
+        self.session.flush()
+        DocumentRest.create_new_version(self.image1, user_id)
 
         self.article1 = Article(
             categories=['site_info'], activities=['hiking'],
-            article_type='collab')
+            article_type='collab',
+            locales=[DocumentLocale(lang='en', title='Lac d\'Annecy')])
         self.session.add(self.article1)
+        self.session.flush()
+        DocumentRest.create_new_version(self.article1, user_id)
+
+        self.article2 = Article(
+            categories=['site_info'], activities=['hiking'],
+            article_type='personal',
+            locales=[DocumentLocale(lang='en', title='Lac d\'Annecy')])
+        self.session.add(self.article2)
+        self.session.flush()
+        DocumentRest.create_new_version(self.article2, user_id)
+
+        self.report1 = Xreport(
+            activities=['hiking'],
+            locales=[XreportLocale(lang='en', title='Lac d\'Annecy')])
+        self.session.add(self.report1)
+        self.session.flush()
+        DocumentRest.create_new_version(self.report1, user_id)
 
         self.outing = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
@@ -467,7 +661,6 @@ class TestAssociationRest(BaseTestRest):
         self.session.add(self.outing)
         self.session.flush()
 
-        user_id = self.global_userids['contributor']
         self.session.add(Association(
             parent_document_id=user_id,
             parent_document_type=USERPROFILE_TYPE,
