@@ -1,5 +1,3 @@
-from functools import partial
-
 from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.association import Association, \
@@ -203,13 +201,16 @@ def validate_token(request, **kwargs):
 
 def validate_association_permission(
         request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc=False):
+        child_document_type, raise_exc=False, skip_outing_check=False):
     if request.has_permission('moderator'):
         # moderators can do everything
         return
 
     # check association with outing (creator or participant)
-    if OUTING_TYPE in (parent_document_type, child_document_type):
+    # skip when creating an outing (the participant associations do not
+    # exist yet at that point).
+    if not skip_outing_check and \
+            OUTING_TYPE in (parent_document_type, child_document_type):
         validate_outing_association(
             request, parent_document_id, parent_document_type,
             child_document_id, child_document_type, raise_exc)
@@ -323,31 +324,20 @@ def has_permission_for_outing(request, outing_id):
         ))).scalar()
 
 
-def check_permission_for_association(request, association):
+def check_permission_for_association(
+        request, association, skip_outing_check=False):
     validate_association_permission(
         request, association.parent_document_id,
         association.parent_document_type, association.child_document_id,
-        association.child_document_type, raise_exc=True)
+        association.child_document_type, raise_exc=True,
+        skip_outing_check=skip_outing_check)
 
 
-def check_permission_for_outing_association(request, association):
-    if association.parent_document_type != OUTING_TYPE and \
-            association.child_document_type != OUTING_TYPE:
-        # no association with an outing, nothing to check
-        return
-
-    if association.parent_document_type == OUTING_TYPE:
-        outing_id = association.parent_document_id
-    else:
-        outing_id = association.child_document_id
-
-    if not has_permission_for_outing(request, outing_id):
-        raise HTTPBadRequest(
-            'no rights to modify association with outing {}'.format(outing_id))
-
-
-def outing_association_checker(request):
-    return partial(check_permission_for_outing_association, request)
+def association_permission_checker(request, skip_outing_check=False):
+    def check(association):
+        check_permission_for_association(
+            request, association, skip_outing_check)
+    return check
 
 
 def validate_required_json_string(key, request):

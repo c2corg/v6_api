@@ -411,7 +411,7 @@ class TestImageRest(BaseTestImage):
         body = response.json
         self.assertError(
             body.get('errors'), 'Bad Request',
-            'no rights to modify association with outing {}'.format(
+            'no rights to modify associations with outing {}'.format(
                 self.outing1.document_id))
 
     def test_put_wrong_document_id(self):
@@ -627,7 +627,7 @@ class TestImageRest(BaseTestImage):
         body = response.json
         self.assertError(
             body.get('errors'), 'Bad Request',
-            'no rights to modify association with outing {}'.format(
+            'no rights to modify associations with outing {}'.format(
                 self.outing1.document_id))
 
     def test_put_success_as_contributor2(self):

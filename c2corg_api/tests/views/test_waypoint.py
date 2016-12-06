@@ -503,6 +503,35 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         body, doc = self.post_success(body, user='moderator')
 
+    def test_post_invalid_association_with_personal_article(self):
+        body_post = {
+            'document_id': 1234,
+            'version': 2345,
+            'geometry': {
+                'document_id': 5678, 'version': 6789,
+                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
+                'geom_detail':
+                    '{"type": "Point", "coordinates": [635956, 5723604]}'
+            },
+            'waypoint_type': 'summit',
+            'elevation': 3779,
+            'locales': [{
+                'id': 3456, 'version': 4567,
+                'lang': 'en', 'title': 'Mont Pourri',
+                'access': 'y'}
+            ],
+            'associations': {
+                'articles': [
+                    {'document_id': self.article2.document_id}
+                ]
+            }
+        }
+        body = self.post_error(body_post, user='contributor2')
+        self.assertError(
+            body['errors'], 'Bad Request',
+            'no rights to modify associations with article {}'.format(
+                self.article2.document_id))
+
     def test_post_success(self):
         body = {
             'document_id': 1234,
@@ -1347,6 +1376,14 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(Association.create(
             parent_document=self.waypoint,
             child_document=self.article1))
+
+        self.article2 = Article(
+            categories=['site_info'], activities=['hiking'],
+            article_type='personal',
+            locales=[DocumentLocale(lang='en', title='Lac d\'Annecy')])
+        self.session.add(self.article2)
+        self.session.flush()
+        DocumentRest.create_new_version(self.article2, user_id)
 
         self.outing1 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),

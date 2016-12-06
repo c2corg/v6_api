@@ -28,7 +28,7 @@ import c2corg_api.views.document_associations as doc_associations
 from c2corg_api.views.document_listings import add_load_for_locales, \
     add_load_for_profiles, get_documents
 from c2corg_api.views.validation import check_required_fields, \
-    check_duplicate_locales, outing_association_checker
+    check_duplicate_locales, association_permission_checker
 from functools import partial
 from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
     HTTPBadRequest, HTTPForbidden
@@ -200,8 +200,8 @@ class DocumentRest(object):
             after_add(document, user_id=user_id)
 
         if document_in.get('associations', None):
-            check_association = outing_association_checker(self.request) if \
-                document.type != OUTING_TYPE else None
+            check_association = association_permission_checker(
+                self.request, skip_outing_check=document.type == OUTING_TYPE)
 
             added_associations = create_associations(
                 document, document_in['associations'], user_id,
@@ -272,8 +272,7 @@ class DocumentRest(object):
 
         associations = self.request.validated.get('associations', None)
         if associations:
-            check_association = outing_association_checker(self.request) if \
-                document.type != OUTING_TYPE else None
+            check_association = association_permission_checker(self.request)
 
             added_associations, removed_associations = \
                 synchronize_associations(
