@@ -31,7 +31,7 @@ export image_backend_url = http://c2corgv6-images.demo-camptocamp.com
 export image_url = http://c2corgv6-images.demo-camptocamp.com/active/
 
 export discourse_url = http://c2corgv6-discourse.demo-camptocamp.com
-export discourse_category = 28
+export discourse_category = 'Commentaires'
 
 # database to run the unit tests
 export tests_db_host = localhost
