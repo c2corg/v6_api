@@ -627,8 +627,9 @@ class TestImageRest(BaseTestImage):
         body = response.json
         self.assertError(
             body.get('errors'), 'Bad Request',
-            'no rights to modify associations with outing {}'.format(
-                self.outing1.document_id))
+            'no rights to modify associations between '
+            'document o ({}) and i ({})'.format(
+                self.outing1.document_id, self.image.document_id))
 
     def test_put_success_as_contributor2(self):
         """ Try to update an image with contributor2 who has no permission to

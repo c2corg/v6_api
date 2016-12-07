@@ -729,7 +729,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             }
         }
         (body, waypoint) = self.put_success_all(
-            body, self.waypoint, cache_version=4)
+            body, self.waypoint, cache_version=4, user='moderator')
 
         self.assertEquals(waypoint.elevation, 1234)
         locale_en = waypoint.get_locale('en')
@@ -1141,6 +1141,95 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.app_put_json(
             self._prefix + '/' + str(self.waypoint4.document_id), body_put,
             headers=headers, status=200)
+
+    def test_put_no_permission_for_association_change(self):
+        """ Test that non-moderator users can not remove associations.
+        """
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.waypoint.document_id,
+                'version': self.waypoint.version,
+                'waypoint_type': 'summit',
+                'elevation': 1234,
+                'orientations': None,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Granier!',
+                     'description': 'A.', 'access': 'n',
+                     'version': self.locale_en.version}
+                ],
+                'geometry': {
+                    'version': self.waypoint.geometry.version,
+                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}'  # noqa
+                },
+                'associations': {
+                    'waypoint_children': [
+                        {'document_id': self.waypoint4.document_id}
+                    ],
+                    'routes': [
+                        {'document_id': self.route1.document_id}
+                    ],
+                    'articles': [
+                        {'document_id': self.article1.document_id}
+                    ]
+                }
+            }
+        }
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app_put_json(
+            self._prefix + '/' + str(self.waypoint.document_id), body,
+            headers=headers, status=400)
+        body = response.json
+
+        self.assertError(
+            body['errors'], 'Bad Request',
+            'no rights to modify associations between document '
+            'w ({}) and w ({})'.format(
+                self.waypoint.document_id, self.waypoint5.document_id))
+
+    def test_put_add_new_association(self):
+        """ Test that non-moderator users can add new associations.
+        """
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.waypoint.document_id,
+                'version': self.waypoint.version,
+                'waypoint_type': 'summit',
+                'elevation': 1234,
+                'orientations': None,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Granier!',
+                     'description': 'A.', 'access': 'n',
+                     'version': self.locale_en.version}
+                ],
+                'geometry': {
+                    'version': self.waypoint.geometry.version,
+                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}'  # noqa
+                },
+                'associations': {
+                    'waypoint_children': [
+                        {'document_id': self.waypoint4.document_id},
+                        {'document_id': self.waypoint5.document_id},
+                        {'document_id': self.waypoint2.document_id}
+                    ],
+                    'routes': [
+                        {'document_id': self.route1.document_id}
+                    ],
+                    'articles': [
+                        {'document_id': self.article1.document_id}
+                    ]
+                }
+            }
+        }
+        headers = self.add_authorization_header(username='contributor')
+        self.app_put_json(
+            self._prefix + '/' + str(self.waypoint.document_id), body,
+            headers=headers, status=200)
+
+        association = self.session.query(Association).get(
+            (self.waypoint.document_id, self.waypoint2.document_id))
+        self.assertIsNotNone(association)
 
     def _assert_geometry(self, body, field='geom'):
         self.assertIsNotNone(body.get('geometry'))

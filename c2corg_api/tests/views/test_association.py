@@ -406,7 +406,7 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.waypoint2.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
+        headers = self.add_authorization_header(username='moderator')
 
         # add association
         self.app_post_json(
@@ -437,6 +437,33 @@ class TestAssociationRest(BaseTestRest):
         self.check_cache_version(self.waypoint1.document_id, 3)
         self.check_cache_version(self.waypoint2.document_id, 3)
 
+    def test_delete_association_non_moderator(self):
+        """ For non-personal documents, a normal user can create associations
+        but not delete them.
+        """
+        request_body = {
+            'parent_document_id': self.waypoint1.document_id,
+            'child_document_id': self.waypoint2.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor')
+
+        # add association
+        self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=200)
+
+        # then try to delete it again
+        response = self.app.delete_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=400)
+        body = response.json
+
+        self.assertError(
+            body['errors'], 'Bad Request',
+            'no rights to modify associations between document '
+            'w ({}) and w ({})'.format(
+                self.waypoint1.document_id, self.waypoint2.document_id))
+
     def test_delete_association_fuzzy(self):
         """Test that an association {parent: x, child: y} can be
         deleted with {parent: y, child: x}.
@@ -445,7 +472,7 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.waypoint2.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
+        headers = self.add_authorization_header(username='moderator')
 
         # add association
         self.app_post_json(
@@ -541,29 +568,35 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.article1.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
+        headers1 = self.add_authorization_header(username='contributor')
         self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers,
+            TestAssociationRest.prefix, request_body, headers=headers1,
             status=200)
 
         # then try to delete the association again with a different user
-        headers = self.add_authorization_header(username='contributor2')
+        headers2 = self.add_authorization_header(username='contributor2')
         response = self.app.delete_json(
-            TestAssociationRest.prefix, request_body, headers=headers,
+            TestAssociationRest.prefix, request_body, headers=headers2,
             status=400)
         body = response.json
 
         self.assertError(
             body['errors'], 'Bad Request',
-            'no rights to modify associations with article {}'.format(
-                self.article1.document_id))
+            'no rights to modify associations between document '
+            'w ({}) and c ({})'.format(
+                self.waypoint1.document_id, self.article1.document_id))
+
+        # but the original user can delete it
+        self.app.delete_json(
+            TestAssociationRest.prefix, request_body, headers=headers1,
+            status=200)
 
     def test_delete_association_wp_r_last_waypoint(self):
         request_body1 = {
             'parent_document_id': self.waypoint2.document_id,
             'child_document_id': self.route1.document_id
         }
-        headers = self.add_authorization_header(username='contributor')
+        headers = self.add_authorization_header(username='moderator')
 
         # add association
         self.app_post_json(

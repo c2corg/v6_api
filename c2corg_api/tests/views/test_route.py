@@ -926,7 +926,8 @@ class TestRouteRest(BaseDocumentTestRest):
                 }
             }
         }
-        (body, route) = self.put_success_figures_only(body, self.route)
+        (body, route) = self.put_success_figures_only(
+            body, self.route, user='moderator')
         # tests that the default geometry has not changed (main wp has changed
         # but the route has a track)
         self._assert_default_geometry(body)

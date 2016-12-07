@@ -1,3 +1,5 @@
+import functools
+
 from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.association import Association, \
@@ -338,6 +340,51 @@ def association_permission_checker(request, skip_outing_check=False):
         check_permission_for_association(
             request, association, skip_outing_check)
     return check
+
+
+def association_permission_removal_checker(request):
+    return functools.partial(check_permission_for_association_removal, request)
+
+
+def check_permission_for_association_removal(request, association):
+    if request.has_permission('moderator'):
+        # moderators can change everything
+        return
+
+    valid_parent = _check_permission_association_doc(
+        request,
+        association.parent_document_type, association.parent_document_id)
+    valid_child = _check_permission_association_doc(
+        request,
+        association.child_document_type, association.child_document_id)
+
+    if not valid_parent and not valid_child:
+        raise HTTPBadRequest(
+            'no rights to modify associations between document '
+            '{} ({}) and {} ({})'.format(
+                association.parent_document_type,
+                association.parent_document_id,
+                association.child_document_type,
+                association.child_document_id))
+
+
+def _check_permission_association_doc(request, doc_type, document_id):
+    if doc_type == OUTING_TYPE:
+        if has_permission_for_outing(request, document_id):
+            return True
+    elif doc_type == IMAGE_TYPE:
+        if image.is_personal(document_id) and has_been_created_by(
+                document_id, request.authenticated_userid):
+            return True
+    elif doc_type == ARTICLE_TYPE:
+        if article.is_personal(document_id) and has_been_created_by(
+                document_id, request.authenticated_userid):
+            return True
+    elif doc_type == XREPORT_TYPE:
+        if has_been_created_by(document_id, request.authenticated_userid):
+            return True
+
+    return False
 
 
 def validate_required_json_string(key, request):

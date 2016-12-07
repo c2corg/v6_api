@@ -28,7 +28,8 @@ import c2corg_api.views.document_associations as doc_associations
 from c2corg_api.views.document_listings import add_load_for_locales, \
     add_load_for_profiles, get_documents
 from c2corg_api.views.validation import check_required_fields, \
-    check_duplicate_locales, association_permission_checker
+    check_duplicate_locales, association_permission_checker, \
+    association_permission_removal_checker
 from functools import partial
 from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
     HTTPBadRequest, HTTPForbidden
@@ -272,12 +273,16 @@ class DocumentRest(object):
 
         associations = self.request.validated.get('associations', None)
         if associations:
-            check_association = association_permission_checker(self.request)
+            check_association_add = \
+                association_permission_checker(self.request)
+            check_association_remove = \
+                association_permission_removal_checker(self.request)
 
             added_associations, removed_associations = \
                 synchronize_associations(
                     document, associations, user_id,
-                    check_association=check_association)
+                    check_association_add=check_association_add,
+                    check_association_remove=check_association_remove)
 
         if update_types or associations:
             # update search index

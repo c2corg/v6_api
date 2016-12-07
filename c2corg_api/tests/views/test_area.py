@@ -270,13 +270,10 @@ class TestAreaRest(BaseDocumentTestRest):
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
-                ],
-                'associations': {
-                    'images': []
-                }
+                ]
             }
         }
-        (body, area) = self.put_success_all(body, self.area1, cache_version=3)
+        (body, area) = self.put_success_all(body, self.area1, cache_version=2)
 
         self.assertEquals(area.area_type, 'admin_limits')
         locale_en = area.get_locale('en')
@@ -301,11 +298,6 @@ class TestAreaRest(BaseDocumentTestRest):
         archive_locale = version_fr.document_locales_archive
         self.assertEqual(archive_locale.title, 'Chartreuse')
 
-        # check that existing link to the image is removed
-        association_image = self.session.query(Association).get(
-            (area.document_id, self.image.document_id))
-        self.assertIsNone(association_image)
-
     def test_put_success_all_as_moderator(self):
         body = {
             'message': 'Update',
@@ -321,13 +313,17 @@ class TestAreaRest(BaseDocumentTestRest):
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
-                ]
+                ],
+                'associations': {
+                    'images': []
+                }
             }
         }
-        (body, map1) = self.put_success_all(body, self.area1, user='moderator')
+        (body, area) = self.put_success_all(
+            body, self.area1, user='moderator', cache_version=3)
 
         # version with lang 'en'
-        version_en = map1.versions[2]
+        version_en = area.versions[2]
 
         # geometry has been changed because the user is a moderator
         archive_geometry_en = version_en.document_geometry_archive
@@ -345,6 +341,11 @@ class TestAreaRest(BaseDocumentTestRest):
         self.check_cache_version(self.route.document_id, 2)
         # waypoint 2 is no longer associated, the cache key was incremented
         self.check_cache_version(self.waypoint2.document_id, 2)
+
+        # check that existing link to the image is removed
+        association_image = self.session.query(Association).get(
+            (area.document_id, self.image.document_id))
+        self.assertIsNone(association_image)
 
     def test_put_success_figures_only(self):
         body = {
