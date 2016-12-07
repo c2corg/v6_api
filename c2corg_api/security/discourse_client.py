@@ -119,7 +119,7 @@ class APIDiscourseClient(object):
         r_payload = b64encode(urllib.parse.urlencode(params).encode('utf-8'))
         h = hmac.new(key, r_payload, digestmod=hashlib.sha256)
         qs = urllib.parse.urlencode({'sso': r_payload, 'sig': h.hexdigest()})
-        return '%s%s?%s' % (self.discourse_base_url, url_part, qs)
+        return '%s%s?%s' % (self.discourse_public_url, url_part, qs)
 
     def get_nonce_from_sso(self, sso, sig):
         payload = urllib.parse.unquote(sso)
