@@ -59,3 +59,4 @@ class SearchXreport(SearchDocument):
 
 SearchXreport.queryable_fields = QueryableMixin.get_queryable_fields(
     SearchXreport)
+SearchXreport.queryable_fields['date'] = QDate('xdate', 'date')
