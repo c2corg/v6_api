@@ -7,6 +7,8 @@ if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
   exit 0
 fi
 
+git archive --format=tar --output project.tar "$TRAVIS_COMMIT"
+
 if [ "$TRAVIS_BRANCH" = "master" ]; then
   echo "Building image '${REPO}:latest'"
   docker build -t "${REPO}:latest" .

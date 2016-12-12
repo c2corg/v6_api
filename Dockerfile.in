@@ -2,36 +2,16 @@ FROM docker.io/debian:jessie
 
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get update && apt-get install -y locales
-RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
-    locale-gen en_US.UTF-8 && \
-    dpkg-reconfigure locales && \
-    /usr/sbin/update-locale LANG=en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
 RUN echo 'APT::Install-Recommends "0";' > /etc/apt/apt.conf.d/50no-install-recommends
 RUN echo 'APT::Install-Suggests "0";' > /etc/apt/apt.conf.d/50no-install-suggests
 
+COPY project.tar /tmp
+
 WORKDIR /var/www/
 
-COPY requirements.txt \
-     requirements_pip.txt \
-     setup.py \
-     Makefile \
-     alembic.ini.in \
-     common.ini.in \
-     development.ini.in \
-     production.ini.in \
-     README.md \
-     CHANGES.txt \
-     ./
-COPY alembic_migration alembic_migration
-COPY c2corg_api c2corg_api
-COPY scripts scripts
-
-COPY config/default \
-     config/dev \
-     config/
+RUN tar -xvf /tmp/project.tar && chown -R root:root /var/www
 
 RUN set -x \
  && apt-get update \
@@ -57,6 +37,11 @@ RUN set -x \
     virtualenv \
     gcc \
     git \
+    locales \
+ && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \
+ && locale-gen en_US.UTF-8 \
+ && dpkg-reconfigure locales \
+ && /usr/sbin/update-locale LANG=en_US.UTF-8 \
  && make -f config/dev install \
  && py3compile -f -X '^.*gevent/_util_py2.py$' .build/venv/ \
  && rm -fr .cache \
