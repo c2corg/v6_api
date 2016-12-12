@@ -7,7 +7,7 @@ if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
   exit 0
 fi
 
-docker login -e "$DOCKER_EMAIL" -u "$DOCKER_USER" -p "$DOCKER_PASS"
+docker login -u "$DOCKER_USER" -p "$DOCKER_PASS"
 
 if [ "$TRAVIS_BRANCH" = "master" ]; then
   echo "Pushing image '${REPO}:latest' to docker hub"
