@@ -28,7 +28,7 @@ port = 6543
 ###
 
 [loggers]
-keys = root, c2corg_api, sqlalchemy, c2corg_api_syncer, gunicorn.error, gunicorn.access
+keys = root, c2corg_api, sqlalchemy, c2corg_api_syncer, c2corg_api_sync, kombu, gunicorn.error, gunicorn.access
 
 [handlers]
 keys = console
@@ -49,6 +49,16 @@ qualname = c2corg_api
 level = INFO
 handlers =
 qualname = c2corg_api_syncer
+
+[logger_c2corg_api_sync]
+level = INFO
+handlers =
+qualname = c2corg_api.scripts.es.sync
+
+[logger_kombu]
+level = WARN
+handlers =
+qualname = kombu
 
 [logger_c2corg_api_background_jobs]
 level = INFO

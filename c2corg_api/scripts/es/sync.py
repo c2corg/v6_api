@@ -23,6 +23,7 @@ log = logging.getLogger(__name__)
 
 def sync_es(session, batch_size=1000):
     last_update, date_now = es_sync.get_status(session)
+    log.info('Last update time: {}'.format(last_update))
 
     if not last_update:
         raise Exception('No last update time, run `fill_index` to do an '
@@ -34,10 +35,12 @@ def sync_es(session, batch_size=1000):
         get_changed_users(session, last_update) + \
         get_changed_documents_for_associations(session, last_update)
 
+    log.info('Number of changed documents: {}'.format(len(changed_documents)))
     if changed_documents:
         sync_documents(session, changed_documents, batch_size)
 
     es_sync.mark_as_updated(session, date_now)
+    log.info('Sync has finished')
 
 
 def get_changed_documents(session, last_update):
