@@ -57,7 +57,7 @@ def http_error_handler(exc, request):
 
 @view_config(context=Exception)
 def catch_all_error_handler(exc, request):
-    log.exception('unexpected error')
+    log.exception('Unexpected error: {}'.format(exc))
 
     show_debugger_for_errors = \
         request.registry.settings.get('show_debugger_for_errors', '')
