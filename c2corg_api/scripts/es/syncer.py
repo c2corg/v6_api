@@ -29,6 +29,7 @@ class SyncWorker(ConsumerMixin):
         self.batch_size = batch_size
         self.session = session
         self.session_factory = session_factory
+        self.connect_max_retries = 3
 
     def get_consumers(self, consumer_factory, channel):
         return [consumer_factory(
