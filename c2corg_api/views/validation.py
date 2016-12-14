@@ -1,12 +1,13 @@
-from functools import partial
+import functools
 
-from c2corg_api.models import DBSession
+from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.association import Association, \
     updatable_associations, association_keys
 from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.document import Document
 from c2corg_api.models.article import ARTICLE_TYPE
+from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.xreport import XREPORT_TYPE
@@ -200,9 +201,44 @@ def validate_token(request, **kwargs):
         request.errors.add('querystring', 'token', 'invalid format')
 
 
+def validate_association_permission(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type, raise_exc=False, skip_outing_check=False):
+    if request.has_permission('moderator'):
+        # moderators can do everything
+        return
+
+    # check association with outing (creator or participant)
+    # skip when creating an outing (the participant associations do not
+    # exist yet at that point).
+    if not skip_outing_check and \
+            OUTING_TYPE in (parent_document_type, child_document_type):
+        validate_outing_association(
+            request, parent_document_id, parent_document_type,
+            child_document_id, child_document_type, raise_exc)
+
+    # check association with personal image (creator)
+    if IMAGE_TYPE in (parent_document_type, child_document_type):
+        validate_image_association(
+            request, parent_document_id, parent_document_type,
+            child_document_id, child_document_type, raise_exc)
+
+    # check association with personal article (creator)
+    if ARTICLE_TYPE in (parent_document_type, child_document_type):
+        validate_article_association(
+            request, parent_document_id, parent_document_type,
+            child_document_id, child_document_type, raise_exc)
+
+    # check association with report (creator)
+    if XREPORT_TYPE in (parent_document_type, child_document_type):
+        validate_xreport_association(
+            request, parent_document_id, parent_document_type,
+            child_document_id, child_document_type, raise_exc)
+
+
 def validate_outing_association(
         request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type):
+        child_document_type, raise_exc):
     """ If the given association is an association with an outing, this
     function checks if the authenticated user is allowed to change the
     associations with the outing (either moderator or participant).
@@ -218,10 +254,59 @@ def validate_outing_association(
         outing_id = child_document_id
 
     if not has_permission_for_outing(request, outing_id):
-        request.errors.add(
-            'body', 'associations.outings',
-            'no rights to modify associations with outing {}'.format(
-                outing_id))
+        msg = 'no rights to modify associations with outing {}'.format(
+            outing_id)
+        if raise_exc:
+            raise HTTPBadRequest(msg)
+        else:
+            request.errors.add('body', 'associations.outings', msg)
+
+
+def validate_article_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type, raise_exc):
+    validate_personal_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type, raise_exc, ARTICLE_TYPE, article.is_personal,
+        'article')
+
+
+def validate_image_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type, raise_exc):
+    validate_personal_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type, raise_exc, IMAGE_TYPE, image.is_personal, 'image')
+
+
+def validate_xreport_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type, raise_exc):
+    validate_personal_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type, raise_exc, XREPORT_TYPE, lambda _: True,
+        'xreport')
+
+
+def validate_personal_association(
+        request, parent_document_id, parent_document_type, child_document_id,
+        child_document_type, raise_exc, doc_type, is_personal, label):
+    document_ids = set()
+    if parent_document_type == doc_type:
+        document_ids.add(parent_document_id)
+    if child_document_type == doc_type:
+        document_ids.add(child_document_id)
+
+    for document_id in document_ids:
+        if is_personal(document_id) and not has_been_created_by(
+                document_id, request.authenticated_userid):
+            msg = 'no rights to modify associations with {} {}'.format(
+                label, document_id)
+            if raise_exc:
+                raise HTTPBadRequest(msg)
+            else:
+                request.errors.add(
+                    'body', 'associations.{}s'.format(label), msg)
 
 
 def has_permission_for_outing(request, outing_id):
@@ -241,24 +326,65 @@ def has_permission_for_outing(request, outing_id):
         ))).scalar()
 
 
-def check_permission_for_outing_association(request, association):
-    if association.parent_document_type != OUTING_TYPE and \
-            association.child_document_type != OUTING_TYPE:
-        # no association with an outing, nothing to check
+def check_permission_for_association(
+        request, association, skip_outing_check=False):
+    validate_association_permission(
+        request, association.parent_document_id,
+        association.parent_document_type, association.child_document_id,
+        association.child_document_type, raise_exc=True,
+        skip_outing_check=skip_outing_check)
+
+
+def association_permission_checker(request, skip_outing_check=False):
+    def check(association):
+        check_permission_for_association(
+            request, association, skip_outing_check)
+    return check
+
+
+def association_permission_removal_checker(request):
+    return functools.partial(check_permission_for_association_removal, request)
+
+
+def check_permission_for_association_removal(request, association):
+    if request.has_permission('moderator'):
+        # moderators can change everything
         return
 
-    if association.parent_document_type == OUTING_TYPE:
-        outing_id = association.parent_document_id
-    else:
-        outing_id = association.child_document_id
+    valid_parent = _check_permission_association_doc(
+        request,
+        association.parent_document_type, association.parent_document_id)
+    valid_child = _check_permission_association_doc(
+        request,
+        association.child_document_type, association.child_document_id)
 
-    if not has_permission_for_outing(request, outing_id):
+    if not valid_parent and not valid_child:
         raise HTTPBadRequest(
-            'no rights to modify association with outing {}'.format(outing_id))
+            'no rights to modify associations between document '
+            '{} ({}) and {} ({})'.format(
+                association.parent_document_type,
+                association.parent_document_id,
+                association.child_document_type,
+                association.child_document_id))
 
 
-def outing_association_checker(request):
-    return partial(check_permission_for_outing_association, request)
+def _check_permission_association_doc(request, doc_type, document_id):
+    if doc_type == OUTING_TYPE:
+        if has_permission_for_outing(request, document_id):
+            return True
+    elif doc_type == IMAGE_TYPE:
+        if image.is_personal(document_id) and has_been_created_by(
+                document_id, request.authenticated_userid):
+            return True
+    elif doc_type == ARTICLE_TYPE:
+        if article.is_personal(document_id) and has_been_created_by(
+                document_id, request.authenticated_userid):
+            return True
+    elif doc_type == XREPORT_TYPE:
+        if has_been_created_by(document_id, request.authenticated_userid):
+            return True
+
+    return False
 
 
 def validate_required_json_string(key, request):

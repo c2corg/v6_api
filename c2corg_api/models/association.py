@@ -214,7 +214,8 @@ def create_associations(
 
 
 def synchronize_associations(
-        document, new_associations, user_id, check_association=None):
+        document, new_associations, user_id, check_association_add=None,
+        check_association_remove=None):
     """ Synchronize the associations when updating a document.
     """
     current_associations = _get_current_associations(
@@ -223,9 +224,10 @@ def synchronize_associations(
         new_associations, current_associations)
 
     added_associations = _apply_operation(
-        to_add, add_association, document, user_id, check_association)
+        to_add, add_association, document, user_id, check_association_add)
     removed_associations = _apply_operation(
-        to_remove, remove_association, document, user_id, check_association)
+        to_remove, remove_association, document, user_id,
+        check_association_remove)
 
     return added_associations, removed_associations
 
