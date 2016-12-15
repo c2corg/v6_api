@@ -1,4 +1,4 @@
-from c2corg_api.caching import cache_document_listing
+from c2corg_api.caching import cache_document_listing, get_or_create_multi
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import schema_listing_area
 from c2corg_api.models.cache_version import get_document_id, \
@@ -65,8 +65,8 @@ def get_documents(documents_config, meta_params, search_documents):
         return docs
 
     # get the documents from the cache or from the database
-    documents = cache_document_listing.get_or_create_multi(
-        cache_keys, get_documents_from_cache_keys, expiration_time=-1,
+    documents = get_or_create_multi(
+        cache_document_listing, cache_keys, get_documents_from_cache_keys,
         should_cache_fn=lambda v: v is not None)
 
     documents = [doc for doc in documents if doc]

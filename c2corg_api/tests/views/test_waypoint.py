@@ -1,5 +1,6 @@
 import datetime
 import json
+from unittest.mock import patch
 
 from c2corg_api.caching import cache_document_detail, cache_document_listing, \
     cache_document_history, cache_document_version
@@ -340,6 +341,22 @@ class TestWaypointRest(BaseDocumentTestRest):
             self._prefix + '/' + str(waypoint_id), status=200)
         body = response.json
         self.assertEqual(body, fake_cache_value)
+
+    def test_get_cache_down(self):
+        """ Check that the request does not fail even if Redis errors.
+        """
+        detail_cache_mock = patch(
+            'c2corg_api.views.document.cache_document_detail.get_or_create',
+            side_effect=Exception('Redis down'))
+        listings_cache_mock = patch(
+            'c2corg_api.views.document_listings.cache_document_listing.'
+            'get_or_create_multi',
+            side_effect=Exception('Redis down'))
+
+        with detail_cache_mock, listings_cache_mock:
+            self.app.get(
+                self._prefix + '/' + str(self.waypoint.document_id),
+                status=200)
 
     def test_get_info(self):
         body, locale = self.get_info(self.waypoint, 'en')

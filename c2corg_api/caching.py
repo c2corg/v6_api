@@ -72,3 +72,26 @@ def configure_caches(settings):
             },
             replace_existing_backend=True
         )
+
+
+def get_or_create(cache, key, creator):
+    """ Try to get the value for the given key from the cache. In case of
+    errors fallback to the creator function (e.g. load from the database).
+    """
+    try:
+        return cache.get_or_create(key, creator, expiration_time=-1)
+    except:
+        log.error('Getting value from cache failed', exc_info=True)
+        return creator()
+
+
+def get_or_create_multi(cache, keys, creator, should_cache_fn=None):
+    """ Try to get the values for the given keys from the cache. In case of
+    errors fallback to the creator function (e.g. load from the database).
+    """
+    try:
+        return cache.get_or_create_multi(
+            keys, creator, expiration_time=-1, should_cache_fn=should_cache_fn)
+    except:
+        log.error('Getting values from cache failed', exc_info=True)
+        return creator(*keys)

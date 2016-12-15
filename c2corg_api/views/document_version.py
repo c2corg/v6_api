@@ -1,4 +1,4 @@
-from c2corg_api.caching import cache_document_version
+from c2corg_api.caching import cache_document_version, get_or_create
 from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document_history import DocumentVersion
@@ -37,8 +37,8 @@ class DocumentVersionRest(object):
             # request equals the current etag, return 'NotModified'
             etag_cache(self.request, cache_key)
 
-            return cache_document_version.get_or_create(
-                cache_key, create_response, expiration_time=-1)
+            return get_or_create(
+                cache_document_version, cache_key, create_response)
 
     def _load_version(
             self, document_id, lang, version_id, clazz, locale_clazz, schema,

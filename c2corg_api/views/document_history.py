@@ -1,4 +1,4 @@
-from c2corg_api.caching import cache_document_history
+from c2corg_api.caching import cache_document_history, get_or_create
 from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document import DocumentLocale
@@ -36,8 +36,8 @@ class HistoryDocumentRest(object):
             # request equals the current etag, return 'NotModified'
             etag_cache(self.request, cache_key)
 
-            return cache_document_history.get_or_create(
-                cache_key, create_response, expiration_time=-1)
+            return get_or_create(
+                cache_document_history, cache_key, create_response)
 
     def _get_history(self, document_id, lang):
         # FIXME conditional permission check (when outings implemented)
