@@ -266,3 +266,4 @@ def reset_cache_key():
     cache_version = settings['cache_version']
     caching.CACHE_VERSION = '{0}-{1}-{2}'.format(
         cache_version, int(time.time()), randint(0, 10**9))
+    caching.cache_status = caching.CacheStatus()

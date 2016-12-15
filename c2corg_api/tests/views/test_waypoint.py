@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from c2corg_api.caching import cache_document_detail, cache_document_listing, \
     cache_document_history, cache_document_version
+from c2corg_api import caching
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import Article
@@ -357,6 +358,27 @@ class TestWaypointRest(BaseDocumentTestRest):
             self.app.get(
                 self._prefix + '/' + str(self.waypoint.document_id),
                 status=200)
+            self.assertFalse(caching.cache_status.up)
+
+    def test_get_cache_down_known(self):
+        """ Check that no request to the cache is made if a request to the
+        cache failed in the last 30 seconds.
+        """
+        detail_cache_mock = patch(
+            'c2corg_api.views.document.cache_document_detail.get_or_create',
+            side_effect=Exception('Redis down'))
+        listings_cache_mock = patch(
+            'c2corg_api.views.document_listings.cache_document_listing.'
+            'get_or_create_multi',
+            side_effect=Exception('Redis down'))
+
+        with detail_cache_mock as fn1, listings_cache_mock as fn2:
+            caching.cache_status.request_failure()
+            self.app.get(
+                self._prefix + '/' + str(self.waypoint.document_id),
+                status=200)
+            self.assertFalse(fn1.called)
+            self.assertFalse(fn2.called)
 
     def test_get_info(self):
         body, locale = self.get_info(self.waypoint, 'en')

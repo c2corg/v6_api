@@ -37,6 +37,9 @@ redis.queue_pool = 20
 # cache configuration
 redis.cache_key_prefix = {redis_cache_key_prefix}
 redis.cache_pool = 50
+# status refresh period (in seconds): if a request to Redis failed in the last
+# x seconds, no new request will be made.
+redis.cache_status_refresh_period = {redis_cache_status_refresh_period}
 
 cache_version = {version}
 cache_version_timestamp = False
