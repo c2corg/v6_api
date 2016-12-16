@@ -1,6 +1,6 @@
 import logging
 
-from c2corg_api.caching import cache_document_detail
+from c2corg_api.caching import cache_document_detail, get_or_create
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
 from c2corg_api.models.area_association import update_areas_for_document, \
@@ -114,8 +114,8 @@ class DocumentRest(object):
                 # request equals the current etag, return 'NotModified'
                 etag_cache(self.request, cache_key)
 
-                return cache_document_detail.get_or_create(
-                    cache_key, create_response, expiration_time=-1)
+                return get_or_create(
+                    cache_document_detail, cache_key, create_response)
 
         # don't cache if requesting a document for editing
         return create_response()

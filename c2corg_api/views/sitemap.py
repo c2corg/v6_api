@@ -2,7 +2,7 @@ import functools
 import logging
 
 from c2corg_api import DBSession
-from c2corg_api.caching import cache_sitemap
+from c2corg_api.caching import cache_sitemap, get_or_create
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.route import ROUTE_TYPE, RouteLocale
@@ -64,8 +64,8 @@ class SitemapRest(object):
         cache_key = _get_cache_key()
         etag_cache(self.request, cache_key)
 
-        return cache_sitemap.get_or_create(
-            cache_key, _get_sitemap_index, expiration_time=-1)
+        return get_or_create(
+            cache_sitemap, cache_key, _get_sitemap_index)
 
     @view(validators=[validate_page, validate_document_type])
     def get(self):
@@ -78,10 +78,10 @@ class SitemapRest(object):
         cache_key = _get_cache_key(doc_type, i)
         etag_cache(self.request, cache_key)
 
-        return cache_sitemap.get_or_create(
+        return get_or_create(
+            cache_sitemap,
             cache_key,
-            functools.partial(_get_sitemap, doc_type, i),
-            expiration_time=-1)
+            functools.partial(_get_sitemap, doc_type, i))
 
 
 def _get_cache_key(doc_type=None, i=None):
