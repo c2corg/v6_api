@@ -73,7 +73,8 @@ def configure_caches(settings):
             arguments={
                 'connection_pool': redis_pool,
                 'distributed_lock': True,
-                'lock_timeout': 15  # 15 seconds (dogpile lock)
+                'lock_timeout': 15,  # 15 seconds (dogpile lock)
+                'redis_expiration_time': int(settings['redis.expiration_time'])
             },
             replace_existing_backend=True
         )
