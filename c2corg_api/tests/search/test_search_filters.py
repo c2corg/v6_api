@@ -410,6 +410,13 @@ class AdvancedSearchTest(BaseTestCase):
         self.assertEqual(create_bbox_filter('a,b,c,d'), None)
         self.assertEqual(create_bbox_filter('1,2,3'), None)
         self.assertEqual(create_bbox_filter('1,2,3,d'), None)
+        self.assertEqual(create_bbox_filter('NaN,NaN,NaN,NaN'), None)
+        self.assertEqual(
+            create_bbox_filter('650000,4500000,650000,5700000'), None)
+        self.assertEqual(
+            create_bbox_filter('500000,5700000,650000,5700000'), None)
+        self.assertEqual(
+            create_bbox_filter('650000,5700000,650000,5700000'), None)
         self.assertBboxFilterEqual(
             create_bbox_filter('699398,5785365,699498,5785465').to_dict(),
             GeoBoundingBox(

@@ -321,6 +321,9 @@ def create_bbox_filter(query_term):
     xmin, ymin = transform(bbox3857[0], bbox3857[1])
     xmax, ymax = transform(bbox3857[2], bbox3857[3])
 
+    if xmin == xmax or ymin == ymax:
+        return None
+
     return GeoBoundingBox(
         geom={'left': xmin, 'bottom': ymin, 'right': xmax, 'top': ymax},
         type='indexed'
@@ -350,7 +353,10 @@ def parse_num(s):
         try:
             return int(s)
         except ValueError:
-            return float(s)
+            val = float(s)
+            if math.isnan(val):
+                return None
+            return val
     except ValueError:
         return None
 
