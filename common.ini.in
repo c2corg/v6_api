@@ -37,6 +37,10 @@ redis.queue_pool = 20
 # cache configuration
 redis.cache_key_prefix = {redis_cache_key_prefix}
 redis.cache_pool = 50
+# timeout on socket setup (seconds)
+redis.socket_connect_timeout = 0.1
+# timeout on open socket (seconds)
+redis.socket_timeout = 0.25
 # status refresh period (in seconds): if a request to Redis failed in the last
 # x seconds, no new request will be made.
 redis.cache_status_refresh_period = {redis_cache_status_refresh_period}
