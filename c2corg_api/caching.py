@@ -63,7 +63,8 @@ def configure_caches(settings):
         redis_url,
         max_connections=int(settings['redis.cache_pool']),
         socket_connect_timeout=float(settings['redis.socket_connect_timeout']),
-        socket_timeout=float(settings['redis.socket_timeout'])
+        socket_timeout=float(settings['redis.socket_timeout']),
+        timeout=float(settings['redis.pool_timeout'])
     )
 
     for cache in caches:
