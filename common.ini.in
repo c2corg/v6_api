@@ -44,7 +44,7 @@ redis.socket_timeout = 0.25
 # timeout waiting for an available slot in the connection pool (seconds)
 redis.pool_timeout = 0.5
 # cache keys TTL (seconds). Used by redis' eviction mechanism, not by dogpile
-redis.expiration_time = 86400
+redis.expiration_time = 604800
 # status refresh period (in seconds): if a request to Redis failed in the last
 # x seconds, no new request will be made.
 redis.cache_status_refresh_period = {redis_cache_status_refresh_period}
