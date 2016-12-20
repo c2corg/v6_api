@@ -62,8 +62,9 @@ def configure_caches(settings):
     redis_pool = BlockingConnectionPool.from_url(
         redis_url,
         max_connections=int(settings['redis.cache_pool']),
-        timeout=3,  # 3 seconds (waiting for connection)
-        socket_timeout=3  # 3 seconds (timeout on open socket)
+        socket_connect_timeout=float(settings['redis.socket_connect_timeout']),
+        socket_timeout=float(settings['redis.socket_timeout']),
+        timeout=float(settings['redis.pool_timeout'])
     )
 
     for cache in caches:
@@ -72,7 +73,8 @@ def configure_caches(settings):
             arguments={
                 'connection_pool': redis_pool,
                 'distributed_lock': True,
-                'lock_timeout': 15  # 15 seconds (dogpile lock)
+                'lock_timeout': 15,  # 15 seconds (dogpile lock)
+                'redis_expiration_time': int(settings['redis.expiration_time'])
             },
             replace_existing_backend=True
         )

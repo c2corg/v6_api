@@ -81,7 +81,6 @@ class HealthRest(object):
             success = True
         except:
             log.exception('Getting redis keys failed')
-            self.request.response.status_code = 500
 
         status['redis'] = 'ok' if success else 'error'
         status['redis_keys'] = redis_keys
