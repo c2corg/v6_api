@@ -10,14 +10,14 @@ fi
 docker login -u "$DOCKER_USER" -p "$DOCKER_PASS"
 
 if [ "$TRAVIS_BRANCH" = "master" ]; then
-  echo "Pushing image '${REPO}:latest' to docker hub"
-  docker push "${REPO}:latest"
+  DOCKER_IMAGE="${REPO}:latest"
 elif [ ! -z "$TRAVIS_TAG" ]; then
-  echo "Pushing image '${REPO}:${TRAVIS_TAG}' to docker hub"
-  docker push "${REPO}:${TRAVIS_TAG}"
+  DOCKER_IMAGE="${REPO}:${TRAVIS_TAG}"
 elif [ ! -z "$TRAVIS_BRANCH" ]; then
-  echo "Pushing image '${REPO}:${TRAVIS_BRANCH}' to docker hub"
-  docker push "${REPO}:${TRAVIS_BRANCH}"
+  DOCKER_IMAGE="${REPO}:${TRAVIS_BRANCH}"
 else
   echo "Not pushing any image"
 fi
+
+echo "Pushing image '${DOCKER_IMAGE}' to docker hub"
+docker push "${DOCKER_IMAGE}"
