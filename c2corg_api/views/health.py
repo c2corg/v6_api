@@ -5,6 +5,7 @@ from c2corg_api.models import DBSession, es_sync
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.views import cors_policy
 from cornice.resource import resource, view
+from os.path import isfile
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ class HealthRest(object):
             - Number of documents indexed in ES
             - Redis status
             - Number of keys in Redis
+            - Maintenance mode status
 
         """
         status = {
@@ -36,6 +38,7 @@ class HealthRest(object):
         self._add_database_status(status)
         self._add_es_status(status)
         self._add_redis_status(status)
+        self._add_maintenance_mode_status(status)
 
         return status
 
@@ -84,3 +87,16 @@ class HealthRest(object):
 
         status['redis'] = 'ok' if success else 'error'
         status['redis_keys'] = redis_keys
+
+    def _add_maintenance_mode_status(self, status):
+        maintenance_mode = False
+        maintenance_file = 'maintenance_mode.txt'
+
+        if isfile(maintenance_file):
+            maintenance_mode = True
+            log.warn(
+              'service is in maintenance mode, remove %s to reenable.' %
+              maintenance_file)
+            self.request.response.status_code = 404
+
+        status['maintenance_mode'] = maintenance_mode
