@@ -34,5 +34,6 @@ setup(name='c2corg_api',
       initialize_c2corg_api_db = c2corg_api.scripts.initializedb:main
       initialize_c2corg_api_es = c2corg_api.scripts.initializees:main
       fill_es_index = c2corg_api.scripts.es.fill_index:main
+      sync_usernames = c2corg_api.scripts.sync_usernames:main
       """,
       )
