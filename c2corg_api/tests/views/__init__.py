@@ -75,8 +75,9 @@ class BaseTestRest(BaseTestCase):
         return r.json
 
     def post_json_with_contributor(self, url, body={}, status=200,
-                                   username='contributor'):
-        headers = self.add_authorization_header(username=username)
+                                   username='contributor', headers={}):
+        headers = self.add_authorization_header(username=username,
+                                                headers=headers)
         r = self.app_post_json(url, body, headers=headers, status=status)
         return r.json
 

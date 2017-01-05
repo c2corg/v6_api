@@ -3,9 +3,10 @@ from unittest.mock import patch
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.tests.views import BaseTestRest
 
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.models.image import Image
 
 from requests.exceptions import ConnectionError
 
@@ -33,6 +34,17 @@ class TestForumTopicRest(BaseTestRest):
         self.waypoint_with_topic.geometry = DocumentGeometry(
             geom='SRID=3857;POINT(635956 5723604)')
         self.session.add(self.waypoint_with_topic)
+
+        self.image = Image(
+            filename='image.jpg',
+            activities=['paragliding'], height=1500,
+            image_type='collaborative')
+        self.image_locale_en = DocumentLocale(
+            lang='en', title='', description='')
+        self.image.locales.append(self.image_locale_en)
+        self.image.geometry = DocumentGeometry(
+            geom='SRID=3857;POINT(635956 5723604)')
+        self.session.add(self.image)
 
         self.session.flush()
 
@@ -92,3 +104,28 @@ class TestForumTopicRest(BaseTestRest):
         cache_version = self.session.query(CacheVersion).get(
             self.waypoint.document_id)
         self.assertEqual(cache_version.version, 2)
+
+    @patch('pydiscourse.client.DiscourseClient.create_post',
+           return_value={"topic_id": 10})
+    def test_post_without_title(self, create_post_mock):
+        """Test topic link content for documents without title"""
+        locale = self.image_locale_en
+        referer = ('https://www.camptocamp.org/images/{}/{}'
+                   .format(locale.document_id,
+                           locale.lang))
+        self.post_json_with_contributor(
+            '/forum/topics',
+            {
+                'document_id': self.image.document_id,
+                'lang': 'en'
+            },
+            headers={
+                'Referer': referer
+            },
+            status=200)
+        create_post_mock.assert_called_with(
+            '<a href="{}">{}</a>'.format(
+                referer,
+                "/images/{}/{}".format(locale.document_id, locale.lang)),
+            title='{}_{}'.format(locale.document_id, locale.lang),
+            category='Commentaires')
