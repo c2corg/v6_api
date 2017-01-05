@@ -1,4 +1,5 @@
 import colander
+from urllib3.util.url import parse_url
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import update_cache_version_direct
@@ -82,7 +83,8 @@ class ForumTopicRest(object):
         title = "{}_{}".format(locale.document_id, locale.lang)
         content = '<a href="{}">{}</a>'.format(
                 self.request.referer,
-                locale.title)
+                locale.title or parse_url(self.request.referer).path)
+
         category = settings['discourse.category']
         # category could be id or name
         try:
