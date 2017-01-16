@@ -73,6 +73,7 @@ class TestForumTopicRest(BaseTestRest):
             status=400)
         errors = json.get('errors')
         self.assertEqual('Topic already exists', errors[0].get('description'))
+        self.assertEqual(1, errors[0].get('topic_id'))
 
     @patch('pydiscourse.client.DiscourseClient.create_post',
            side_effect=ConnectionError())

@@ -61,7 +61,8 @@ def validate_topic_create(request, **kwargs):
     if locale.topic_id is not None:
         request.errors.add('body',
                            '{}_{}'.format(document_id, lang),
-                           'Topic already exists')
+                           'Topic already exists',
+                           topic_id=locale.topic_id)
 
 
 # Here path is required by cornice but related routes are not implemented
