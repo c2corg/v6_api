@@ -1,4 +1,4 @@
-from c2corg_api.caching import cache_document_info, get_or_create
+from c2corg_api.caching import cache_document_info
 from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document import DocumentLocale, Document, \
@@ -8,6 +8,7 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.views import etag_cache, \
     set_best_locale
 from c2corg_api.views.document_listings import add_load_for_profiles
+from c2corg_common.utils.caching import get_or_create
 from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy.orm import contains_eager, load_only, joinedload
 from sqlalchemy.orm.util import with_polymorphic

@@ -1,8 +1,8 @@
 import functools
 import logging
 
-from c2corg_api import DBSession
-from c2corg_api.caching import cache_sitemap, get_or_create
+from c2corg_api import DBSession, caching
+from c2corg_api.caching import cache_sitemap
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.route import ROUTE_TYPE, RouteLocale
@@ -10,12 +10,12 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.views import cors_policy, etag_cache
 from c2corg_api.views.validation import create_int_validator, \
     validate_document_type
+from c2corg_common.utils.caching import get_or_create
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy.sql.functions import func
 from math import ceil
 from datetime import date
-from c2corg_api import caching
 
 log = logging.getLogger(__name__)
 

@@ -24,6 +24,7 @@ from webtest import TestApp
 from c2corg_api.emails.email_service import EmailService
 
 from c2corg_api import main, caching
+from c2corg_common.utils import caching as caching_common
 from c2corg_api.models import DBSession, sessionmaker
 from c2corg_api.models.user import User
 from c2corg_api.security.roles import create_claims, add_or_retrieve_token
@@ -266,4 +267,4 @@ def reset_cache_key():
     cache_version = settings['cache_version']
     caching.CACHE_VERSION = '{0}-{1}-{2}'.format(
         cache_version, int(time.time()), randint(0, 10**9))
-    caching.cache_status = caching.CacheStatus()
+    caching_common.cache_status = caching_common.CacheStatus()
