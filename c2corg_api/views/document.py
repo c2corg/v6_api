@@ -1,6 +1,6 @@
 import logging
 
-from c2corg_api.caching import cache_document_detail, get_or_create
+from c2corg_api.caching import cache_document_detail
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
 from c2corg_api.models.area_association import update_areas_for_document, \
@@ -31,6 +31,8 @@ from c2corg_api.views.validation import check_required_fields, \
     check_duplicate_locales, association_permission_checker, \
     association_permission_removal_checker
 from functools import partial
+
+from c2corg_common.utils.caching import get_or_create
 from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
     HTTPBadRequest, HTTPForbidden
 from sqlalchemy.orm import joinedload, contains_eager, load_only

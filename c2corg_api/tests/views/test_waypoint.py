@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from c2corg_api.caching import cache_document_detail, cache_document_listing, \
     cache_document_history, cache_document_version
-from c2corg_api import caching
+from c2corg_common.utils import caching
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import Article
