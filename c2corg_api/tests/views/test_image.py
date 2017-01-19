@@ -920,6 +920,26 @@ class TestImageListRest(BaseTestImage):
         self.assertIsNotNone(feed_change.image2_id)
         self.assertNotEqual(feed_change.image1_id, feed_change.image2_id)
 
+    @patch('c2corg_api.views.image.requests.post',
+           return_value=Mock(status_code=200))
+    def test_post_validation_error(self, post_mock):
+        request_body = {
+            'images': [
+                self._post_success_document({
+                    'geometry': {
+                        'geom': '{"coordinates": [1, null], "type": "Point"}'
+                    }
+                })
+            ]
+        }
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app_post_json('/images/list', request_body,
+                                      headers=headers, status=400)
+
+        body = response.json
+        self.assertErrorsContain(body, 'images.0.geometry.geom')
+
 
 class TestImageProxyRest(BaseTestRest):
 

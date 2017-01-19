@@ -75,6 +75,9 @@ validate_associations_update = functools.partial(
 
 
 def validate_list_image_create(request, **kwargs):
+    if not request.validated.get('images'):
+        return
+
     for image in request.validated['images']:
         validate_document(image, request, fields_image.get('required'),
                           updating=False)
@@ -82,6 +85,9 @@ def validate_list_image_create(request, **kwargs):
 
 
 def validate_list_associations_create(request, **kwargs):
+    if not request.validated.get('images'):
+        return
+
     for document in request.validated['images']:
         associations_in = document.get('associations', None)
         if not associations_in:
