@@ -309,6 +309,15 @@ def get_existing_change(document_id):
         first()
 
 
+def get_existing_change_for_user(document_id, user_id):
+    return DBSession. \
+        query(DocumentChange). \
+        filter(DocumentChange.document_id == document_id). \
+        filter(DocumentChange.user_id == user_id). \
+        order_by(DocumentChange.time.desc()). \
+        first()
+
+
 def update_feed_association_update(
         _parent_document_id, parent_document_type,
         child_document_id, child_document_type, user_id):
@@ -353,19 +362,42 @@ def update_feed_images_upload(images, images_in, user_id):
         change.change_type = 'updated'
         change.time = func.now()
     else:
-        # if different user: copy the feed entry
-        change = change.copy()
-        change.change_type = 'added_photos'
-        change.user_id = user_id
-        change.user_ids = list(set(change.user_ids).union([user_id]))
+        # if different user: first try to get an existing feed entry of the
+        # user for the document
+        change_by_user = get_existing_change_for_user(document_id, user_id)
+        if change_by_user:
+            change = change_by_user
+            change.change_type = 'added_photos'
+            change.time = func.now()
+        else:
+            change = change.copy()
+            change.change_type = 'added_photos'
+            change.user_id = user_id
+            change.user_ids = list(set(change.user_ids).union([user_id]))
 
-    change.image1_id = image1_id
-    change.image2_id = image2_id
-    change.image3_id = image3_id
-    change.more_images = more_images
+    _update_images(change, image1_id, image2_id, image3_id, more_images)
 
     DBSession.add(change)
     DBSession.flush()
+
+
+def _update_images(change, image1_id, image2_id, image3_id, more_images):
+    """ Set the new images on a feed entry by keeping the old images if
+    there are not enough new ones.
+    """
+    existing_images = [
+        image_id for image_id in [
+            change.image1_id, change.image2_id, change.image3_id
+        ] if image_id is not None
+    ]
+
+    change.image1_id = image1_id
+    change.image2_id = image2_id or (existing_images.pop()
+                                     if existing_images else None)
+    change.image3_id = image3_id or (existing_images.pop()
+                                     if existing_images else None)
+    change.more_images = more_images or change.more_images or \
+        len(existing_images) > 0
 
 
 def _get_participants_of_outing(outing_id):

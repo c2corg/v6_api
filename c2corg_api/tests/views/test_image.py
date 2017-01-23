@@ -7,7 +7,7 @@ from c2corg_api.models.article import Article
 from c2corg_api.models.book import Book
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import CacheVersion
-from c2corg_api.models.feed import update_feed_document_create
+from c2corg_api.models.feed import update_feed_document_create, DocumentChange
 from c2corg_api.models.outing import OutingLocale, Outing, OUTING_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
@@ -902,12 +902,13 @@ class TestImageListRest(BaseTestImage):
     @patch('c2corg_api.views.image.requests.post',
            return_value=Mock(status_code=200))
     def test_post_multiple_as_contributor2(self, post_mock):
-        body = {
+        user_id = self.global_userids['contributor2']
+        body_request = {
             'images': [
                 self._post_success_document({'filename': 'post_image1.jpg'}),
                 self._post_success_document({'filename': 'post_image2.jpg'})]
         }
-        body, doc = self.post_success(body, user='contributor2')
+        body, doc = self.post_success(body_request, user='contributor2')
         self._validate_post_success(body, doc)
 
         feed_change = self.get_feed_change(
@@ -915,10 +916,30 @@ class TestImageListRest(BaseTestImage):
         self.assertIsNotNone(feed_change)
         self.assertEqual(feed_change.change_type, 'added_photos')
         self.assertEqual(
-            feed_change.user_ids, [self.global_userids['contributor2']])
+            feed_change.user_ids, [user_id])
         self.assertIsNotNone(feed_change.image1_id)
         self.assertIsNotNone(feed_change.image2_id)
         self.assertNotEqual(feed_change.image1_id, feed_change.image2_id)
+
+        q = self.session.query(DocumentChange). \
+            filter(DocumentChange.document_id == self.waypoint.document_id). \
+            filter(DocumentChange.change_type == 'added_photos'). \
+            filter(DocumentChange.user_id == user_id)
+
+        self.assertEqual(1, q.count())
+
+        # again upload images, and check that there is still only one entry
+        body_request = {
+            'images': [
+                self._post_success_document({'filename': 'post_image3.jpg'}),
+                self._post_success_document({'filename': 'post_image4.jpg'})]
+        }
+        self.post_success(body_request, user='contributor2')
+        self.assertEqual(1, q.count())
+
+        self.session.refresh(feed_change)
+        self.assertIsNotNone(feed_change.image3_id)
+        self.assertTrue(feed_change.more_images)
 
     @patch('c2corg_api.views.image.requests.post',
            return_value=Mock(status_code=200))
