@@ -404,6 +404,63 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertCoodinateEquals(
             geom_detail['coordinates'][1], [635966.0, 5723644.0, 1210.0])
 
+    def test_post_wrong_geom_type(self):
+        body = {
+            'main_waypoint_id': self.waypoint.document_id,
+            'activities': ['hiking', 'skitouring'],
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom_detail':
+                    '{"type": "Point", "coordinates": ' +
+                    '[635956, 5723604]}'
+            },
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'description': '...', 'gear': 'shoes'}
+            ],
+            'associations': {
+                'waypoints': [{'document_id': self.waypoint.document_id}]
+            }
+        }
+        errors = self.post_wrong_geom_type(body)
+        self.assertEqual(
+            errors[0]['description'], "Invalid geometry type. Expected: "
+            "['LINESTRING', 'MULTILINESTRING']. Got: POINT.")
+
+    def test_post_corrupted_geojson_geom(self):
+        body = {
+            'main_waypoint_id': self.waypoint.document_id,
+            'activities': ['hiking', 'skitouring'],
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom_detail':
+                    '{"type": "LineString", "coordinates": ' +
+                    '[[[[[[635956, 5723604, 12345, 67890, 13579]]]]]]}'
+            },
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'description': '...', 'gear': 'shoes'}
+            ],
+            'associations': {
+                'waypoints': [{'document_id': self.waypoint.document_id}]
+            }
+        }
+        errors = self.post_wrong_geom_type(body)
+        self.assertEqual(
+            errors[0]['description'], 'Invalid geometry: {"type": '
+            '"LineString", "coordinates": '
+            '[[[[[[635956, 5723604, 12345, 67890, 13579]]]]]]}')
+
     def test_post_success_3d_multiline(self):
         """ Tests that routes with 3D multiline tracks can be created and read.
         """

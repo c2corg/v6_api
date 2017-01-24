@@ -256,6 +256,36 @@ class TestXreportRest(BaseDocumentTestRest):
     def test_post_missing_content_type(self):
         self.post_missing_content_type({})
 
+    def test_post_wrong_geom_type(self):
+        body = {
+            'document_id': 123456,
+            'version': 567890,
+            'activities': ['hiking'],
+            'event_type': ['stone_fall'],
+            'nb_participants': 5,
+            'associations': {
+                'images': [
+                    {'document_id': self.image2.document_id}
+                ],
+                'articles': [
+                    {'document_id': self.article2.document_id}
+                ]
+            },
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom':
+                    '{"type": "LineString", "coordinates": ' +
+                    '[[635956, 5723604], [635966, 5723644]]}'
+            },
+            'locales': [
+                {'title': 'Lac d\'Annecy', 'lang': 'en'}
+            ]
+        }
+        errors = self.post_wrong_geom_type(body)
+        self.assertEqual(
+            errors[0]['description'],
+            "Invalid geometry type. Expected: ['POINT']. Got: LINESTRING.")
+
     def test_post_success(self):
         body = {
             'document_id': 123456,

@@ -660,6 +660,35 @@ class TestWaypointRest(BaseDocumentTestRest):
             feed_change.area_ids, [self.area1.document_id]
         )
 
+    def test_post_wrong_geom_type(self):
+        body = {
+            'document_id': 1234,
+            'version': 2345,
+            'geometry': {
+                'document_id': 5678, 'version': 6789,
+                'geom': '{"type": "LineString", "coordinates": '
+                        '[[635956, 5723604], [635960, 5723610]]}',
+                'geom_detail':
+                    '{"type": "Point", "coordinates": [635956, 5723604]}'
+            },
+            'waypoint_type': 'summit',
+            'elevation': 3779,
+            'locales': [{
+                'id': 3456, 'version': 4567,
+                'lang': 'en', 'title': 'Mont Pourri',
+                'access': 'y'}
+            ],
+            'associations': {
+                'waypoint_children': [
+                    {'document_id': self.waypoint2.document_id}
+                ]
+            }
+        }
+        errors = self.post_wrong_geom_type(body)
+        self.assertEqual(
+            errors[0]['description'], "Invalid geometry type. Expected: "
+            "['POINT']. Got: LINESTRING.")
+
     def test_put_wrong_document_id(self):
         body = {
             'document': {

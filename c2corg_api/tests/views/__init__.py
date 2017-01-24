@@ -398,6 +398,20 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertCorniceRequired(errors[0], 'geometry.geom')
         return body
 
+    def post_wrong_geom_type(self, request_body):
+        response = self.app_post_json(self._prefix, request_body,
+                                      expect_errors=True, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app_post_json(
+            self._prefix, request_body, headers=headers,
+            expect_errors=True, status=400)
+
+        body = response.json
+        self.assertEqual(body.get('status'), 'error')
+        errors = body.get('errors')
+        return errors
+
     def post_missing_locales(self, request_body):
         response = self.app_post_json(self._prefix, request_body,
                                       expect_errors=True, status=403)

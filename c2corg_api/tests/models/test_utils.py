@@ -1,3 +1,4 @@
+import json
 import unittest
 
 from c2corg_api.ext.colander_ext import wkbelement_from_geojson
@@ -31,17 +32,17 @@ class TestUtils(unittest.TestCase, AssertionsMixin):
         self.assertHasNotField(locale_node, 'access_period')
 
     def test_wkb_to_shape_point(self):
-        wkb = wkbelement_from_geojson(
-            '{"type": "Point", "coordinates": [1.0, 2.0, 3.0, 4.0]}', 3857)
+        wkb = wkbelement_from_geojson(json.loads(
+            '{"type": "Point", "coordinates": [1.0, 2.0, 3.0, 4.0]}'), 3857)
         point = wkb_to_shape(wkb)
         self.assertFalse(point.has_z)
         self.assertAlmostEquals(point.x, 1.0)
         self.assertAlmostEquals(point.y, 2.0)
 
     def test_wkb_to_shape_linestring(self):
-        wkb = wkbelement_from_geojson(
+        wkb = wkbelement_from_geojson(json.loads(
             '{"type": "LineString", "coordinates": ' +
-            '[[635956, 5723604, 1200], [635966, 5723644, 1210]]}', 3857)
+            '[[635956, 5723604, 1200], [635966, 5723644, 1210]]}'), 3857)
         line = wkb_to_shape(wkb)
         self.assertFalse(line.has_z)
 
@@ -53,9 +54,9 @@ class TestUtils(unittest.TestCase, AssertionsMixin):
             line.coords[1], [635966.0, 5723644.0])
 
     def test_wkb_to_shape_multilinestring(self):
-        wkb = wkbelement_from_geojson(
+        wkb = wkbelement_from_geojson(json.loads(
             '{"type": "MultiLineString", "coordinates": ' +
-            '[[[635956, 5723604, 1200], [635966, 5723644, 1210]]]}', 3857)
+            '[[[635956, 5723604, 1200], [635966, 5723644, 1210]]]}'), 3857)
         line = wkb_to_shape(wkb)
         self.assertFalse(line.has_z)
 
@@ -68,10 +69,10 @@ class TestUtils(unittest.TestCase, AssertionsMixin):
             line.geoms[0].coords[1], [635966.0, 5723644.0])
 
     def test_wkb_to_shape_polygon(self):
-        wkb = wkbelement_from_geojson(
+        wkb = wkbelement_from_geojson(json.loads(
             '{"type": "Polygon", "coordinates": ' +
             '[[[100.0, 0.0, 1200], [101.0, 0.0, 1200], [101.0, 1.0, 1200], '
-            '[100.0, 1.0, 1200], [100.0, 0.0, 1200]]]}', 3857)
+            '[100.0, 1.0, 1200], [100.0, 0.0, 1200]]]}'), 3857)
         polygon = wkb_to_shape(wkb)
         self.assertFalse(polygon.has_z)
 
@@ -79,10 +80,10 @@ class TestUtils(unittest.TestCase, AssertionsMixin):
         self.assertEqual(len(polygon.exterior.coords[0]), 2)
 
     def test_wkb_to_shape_multipolygon(self):
-        wkb = wkbelement_from_geojson(
+        wkb = wkbelement_from_geojson(json.loads(
             '{"type": "MultiPolygon", "coordinates": ' +
             '[[[[100.0, 0.0, 1200], [101.0, 0.0, 1200], [101.0, 1.0, 1200], '
-            '[100.0, 1.0, 1200], [100.0, 0.0, 1200]]]]}', 3857)
+            '[100.0, 1.0, 1200], [100.0, 0.0, 1200]]]]}'), 3857)
         multi_polygon = wkb_to_shape(wkb)
         self.assertFalse(multi_polygon.has_z)
 
