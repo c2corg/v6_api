@@ -4,7 +4,8 @@ from c2corg_api.search.mapping_types import QueryableMixin, QInteger,\
     QEnumArray, QEnum, QBoolean, QEnumRange, QEnumRangeMinMax, QNumberRange
 from c2corg_common.sortable_search_attributes import sortable_access_times, \
     sortable_climbing_ratings, sortable_paragliding_ratings, \
-    sortable_exposition_ratings, sortable_equipment_ratings
+    sortable_exposition_ratings, sortable_equipment_ratings, \
+    sortable_best_periods
 
 
 class SearchWaypoint(SearchDocument):
@@ -22,7 +23,8 @@ class SearchWaypoint(SearchDocument):
     orientations = QEnumArray(
         'wfac', model_field=Waypoint.orientations)
     best_periods = QEnumArray(
-        'period', model_field=Waypoint.best_periods)
+        'period', model_field=Waypoint.best_periods,
+        enum_mapper=sortable_best_periods)
     lift_access = QBoolean(
         'plift', is_bool=True)
     custodianship = QEnum(
