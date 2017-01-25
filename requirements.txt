@@ -51,6 +51,6 @@ git+https://github.com/tsauerwein/cornice.git@nested-none-2.1.0-c2corg
 git+https://github.com/c2corg/v6_common.git@2d06ab7
 
 # Discourse API client
-git+https://github.com/c2corg/pydiscourse.git@65e398343bbbc74fdb71cca4637c9f808e5adfb2
+git+https://github.com/c2corg/pydiscourse.git@3287330
 
 -e .

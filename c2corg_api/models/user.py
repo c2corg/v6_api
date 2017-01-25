@@ -90,6 +90,7 @@ class User(Base):
     last_modified = Column(
         DateTime(timezone=True), default=func.now(), onupdate=func.now(),
         nullable=False, index=True)
+    blocked = Column(Boolean, nullable=False, default=False)
 
     lang = Column(
             String(2), ForeignKey(schema + '.langs.lang'),

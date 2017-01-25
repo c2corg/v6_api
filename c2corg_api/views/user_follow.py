@@ -2,12 +2,11 @@ import logging
 
 from c2corg_api import DBSession
 from c2corg_api.models.feed import FollowedUser
-from c2corg_api.models.user import User
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import user_profile_documents_config
 from c2corg_api.views.validation import validate_id, \
-    validate_preferred_lang_param
+    validate_preferred_lang_param, validate_body_user_id
 from colander import MappingSchema, SchemaNode, Integer, required
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
@@ -17,20 +16,6 @@ log = logging.getLogger(__name__)
 
 class FollowSchema(MappingSchema):
     user_id = SchemaNode(Integer(), missing=required)
-
-
-def validate_user_id(request, **kwargs):
-    """ Check that the user exists.
-    """
-    user_id = request.validated['user_id']
-    user_exists_query = DBSession.query(User). \
-        filter(User.id == user_id). \
-        exists()
-    user_exists = DBSession.query(user_exists_query).scalar()
-
-    if not user_exists:
-        request.errors.add(
-            'body', 'user_id', 'user {0} does not exist'.format(user_id))
 
 
 def get_follower_relation(followed_user_id, follower_user_id):
@@ -49,7 +34,7 @@ class UserFollowRest(object):
 
     @restricted_json_view(
         schema=FollowSchema(),
-        validators=[colander_body_validator, validate_user_id])
+        validators=[colander_body_validator, validate_body_user_id])
     def post(self):
         """ Follow the given user.
         Creates a follower relation, so that the authenticated user is
@@ -84,7 +69,7 @@ class UserUnfollowRest(object):
 
     @restricted_json_view(
         schema=FollowSchema(),
-        validators=[colander_body_validator, validate_user_id])
+        validators=[colander_body_validator, validate_body_user_id])
     def post(self):
         """ Unfollow the given user.
 

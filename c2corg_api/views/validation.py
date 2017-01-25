@@ -10,6 +10,7 @@ from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.user import User
 from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
@@ -179,6 +180,20 @@ def parse_datetime(time_raw):
         return datetime_parser.parse(time_raw)
     except ValueError:
         return None
+
+
+def validate_body_user_id(request, **kwargs):
+    """ Check that the user exists.
+    """
+    user_id = request.validated['user_id']
+    user_exists_query = DBSession.query(User). \
+        filter(User.id == user_id). \
+        exists()
+    user_exists = DBSession.query(user_exists_query).scalar()
+
+    if not user_exists:
+        request.errors.add(
+            'body', 'user_id', 'user {0} does not exist'.format(user_id))
 
 
 def validate_token(request, **kwargs):

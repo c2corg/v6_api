@@ -58,7 +58,7 @@ class BaseUserTestRest(BaseTestRest):
         self.set_discourse_client_mock(self.original_discourse_client)
 
     def set_discourse_up(self):
-        # unittest.Mock works great with a completly fake object
+        # unittest.Mock works great with a completely fake object
         mock = Mock()
         mock.redirect_without_nonce = MagicMock()
         mock.redirect = MagicMock()
@@ -340,6 +340,15 @@ class TestUserRest(BaseUserTestRest):
             'password': 'new pass'
             }, status=200)
 
+    def test_forgot_password_blocked_account(self):
+        user_id = self.global_userids['contributor']
+        user = self.session.query(User).get(user_id)
+        user.blocked = True
+        self.session.flush()
+
+        url = '/users/request_password_change'
+        self.app_post_json(url, {'email': user.email}, status=403)
+
     @attr('jobs')
     def test_purge_accounts(self):
         from c2corg_api.jobs.purge_non_activated_accounts import purge_account
@@ -424,6 +433,15 @@ class TestUserRest(BaseUserTestRest):
         # Topoguide login allowed even if Discourse is down.
         body = self.login('moderator', status=200).json
         self.assertTrue('token' in body)
+
+    def test_login_blocked_account(self):
+        contributor = self.session.query(User).get(
+            self.global_userids['contributor'])
+        contributor.blocked = True
+        self.session.flush()
+
+        body = self.login('contributor', status=403).json
+        self.assertErrorsContain(body, 'Forbidden', 'account blocked')
 
     def test_login_discourse_success(self):
         self.set_discourse_not_mocked()

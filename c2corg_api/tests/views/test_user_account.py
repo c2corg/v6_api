@@ -15,6 +15,15 @@ class TestUserAccountRest(BaseUserTestRest):
         self.assertBodyEqual(body, 'forum_username', 'contributor')
         self.assertBodyEqual(body, 'is_profile_public', False)
 
+    def test_read_account_info_blocked_account(self):
+        contributor = self.session.query(User).get(
+            self.global_userids['contributor'])
+        contributor.blocked = True
+        self.session.flush()
+
+        body = self.get_json_with_contributor('/users/account', status=403)
+        self.assertErrorsContain(body, 'Forbidden', 'account blocked')
+
     def _update_account_field_discourse_up(self, field, value):
         url = '/users/account'
         currentpassword = self.global_passwords['contributor']
