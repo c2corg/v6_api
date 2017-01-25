@@ -69,6 +69,14 @@ class APIDiscourseClient(object):
         self.client.log_out(discourse_userid)
         return discourse_userid
 
+    def suspend(self, userid, duration, reason):
+        discourse_userid = self.get_userid(userid)
+        return self.client.suspend(discourse_userid, duration, reason)
+
+    def unsuspend(self, userid):
+        discourse_userid = self.get_userid(userid)
+        return self.client.unsuspend(discourse_userid)
+
     # Below this: SSO provider
     def decode_payload(self, payload):
         decoded = b64decode(payload.encode('utf-8')).decode('utf-8')
