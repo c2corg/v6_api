@@ -4,7 +4,7 @@ from c2corg_api.caching import configure_caches
 from pyramid.config import Configurator
 from sqlalchemy import engine_from_config, exc, event
 from sqlalchemy.pool import Pool
-from pyramid.httpexceptions import HTTPUnauthorized
+from pyramid.httpexceptions import HTTPUnauthorized, HTTPError
 
 from c2corg_api.models import (
     DBSession,
@@ -17,6 +17,7 @@ from pyramid.security import Allow, Everyone, Authenticated
 from c2corg_api.security.roles import is_valid_token, extract_token
 
 from pyramid.settings import asbool
+from c2corg_api.views import http_error_handler, catch_all_error_handler
 
 log = logging.getLogger(__name__)
 
@@ -38,9 +39,8 @@ def jwt_database_validation_tween_factory(handler, registry):
     """
 
     def tween(request):
-        # TODO: first set the cookie in request.authorization if needed
 
-        # Then forward requests without authorization
+        # forward requests without authorization
         if request.authorization is None:
             # Skipping validation if there is no authorization object.
             # This is dangerous since a bad ordering of this tween and the
@@ -48,14 +48,20 @@ def jwt_database_validation_tween_factory(handler, registry):
             return handler(request)
 
         # Finally, check database validation
-        token = extract_token(request)
-        valid = token and is_valid_token(token)
+        try:
+            token = extract_token(request)
+            valid = token and is_valid_token(token)
+        except Exception as exc:
+            if isinstance(exc, HTTPError):
+                return http_error_handler(exc, request)
+            else:
+                return catch_all_error_handler(exc, request)
 
         if valid:
             return handler(request)
         else:
-            # TODO: clear cookie? send json?
-            return HTTPUnauthorized("Invalid token")
+            return http_error_handler(
+                HTTPUnauthorized('Invalid token'), request)
 
     return tween
 

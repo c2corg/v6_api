@@ -1,3 +1,4 @@
+from pyramid.httpexceptions import HTTPForbidden
 from pyramid.security import Authenticated
 from pyramid.interfaces import IAuthenticationPolicy
 
@@ -32,8 +33,19 @@ def groupfinder(userid, request):
 
 def is_valid_token(token):
     now = datetime.datetime.utcnow()
-    return DBSession.query(Token). \
-        filter(Token.value == token, Token.expire > now).count() == 1
+    token = DBSession.query(Token). \
+        filter(Token.value == token, Token.expire > now).first()
+
+    if not token:
+        return False
+    else:
+        user_is_blocked = DBSession. \
+            query(User.blocked). \
+            filter(User.id == token.userid). \
+            scalar()
+        if user_is_blocked:
+            raise HTTPForbidden('account blocked')
+    return True
 
 
 def add_or_retrieve_token(value, expire, userid):
@@ -76,6 +88,10 @@ def log_validated_user_i_know_what_i_do(user, request):
     See the try_login function for a safe version.
     """
     assert user.email_validated
+
+    if user.blocked:
+        raise HTTPForbidden('account blocked')
+
     policy = request.registry.queryUtility(IAuthenticationPolicy)
     now = datetime.datetime.utcnow()
     exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
