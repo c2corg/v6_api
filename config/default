@@ -28,11 +28,11 @@ export redis_queue_es = c2corg_$(instanceid)_es_sync
 export redis_cache_key_prefix = c2corg_$(instanceid)
 export redis_cache_status_refresh_period = 30
 
-export image_backend_url = http://c2corgv6-images.demo-camptocamp.com
-export image_url = http://c2corgv6-images.demo-camptocamp.com/active/
+export image_backend_url = http://images.demov6.camptocamp.org
+export image_url = https://sos.exo.io/c2corg_demov6_active/
 
-export discourse_url = http://c2corgv6-discourse.demo-camptocamp.com
-export discourse_public_url = http://c2corgv6-discourse.demo-camptocamp.com
+export discourse_url = https://forum.demov6.camptocamp.org
+export discourse_public_url = https://forum.demov6.camptocamp.org
 export discourse_category = Commentaires
 
 # database to run the unit tests
@@ -80,7 +80,7 @@ export mail_sendmail_template = {sendmail_app} -t -i -f {sender}
 
 # FIXME
 export discourse_sso_secret = d836444a9e4084d5b224a60c208dce14
-export discourse_api_key = 4647c0d98e8beb793da099ff103b9793d8d4f94fff7cdd52d58391c6fa025845
+export discourse_api_key = SET_API_KEY
 export image_backend_secret_key = test
 
 export skip_captcha_validation = False
