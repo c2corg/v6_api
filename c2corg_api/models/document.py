@@ -299,7 +299,7 @@ class _DocumentGeometryMixin(object):
                 spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
             info={
                 'colanderalchemy': {
-                    'typ': colander_ext.Geometry('POINT', srid=3857)
+                    'typ': colander_ext.Geometry(['POINT'], srid=3857)
                 }
             }
         )
@@ -314,7 +314,7 @@ class _DocumentGeometryMixin(object):
                 spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
             info={
                 'colanderalchemy': {
-                    'typ': colander_ext.Geometry('GEOMETRY', srid=3857)
+                    'typ': colander_ext.Geometry(['GEOMETRY'], srid=3857)
                 }
             }
         )
@@ -449,6 +449,21 @@ geometry_schema_overrides = {
         }
     }
 }
+
+
+def get_geometry_schema_overrides(geometry_types):
+    return {
+        # whitelisted attributes
+        'includes': ['version', 'geom', 'geom_detail'],
+        'overrides': {
+            'version': {
+                'missing': None
+            },
+            'geom_detail': {
+                'typ': colander_ext.Geometry(geometry_types, srid=3857)
+            }
+        }
+    }
 
 
 def get_available_langs(document_id):

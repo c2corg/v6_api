@@ -1,6 +1,6 @@
 from c2corg_api.models import schema, Base
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, geometry_schema_overrides,
+    ArchiveDocument, Document, get_geometry_schema_overrides,
     schema_document_locale, schema_attributes, DocumentLocale)
 from c2corg_api.models.enums import user_category, activity_type
 from c2corg_api.models.schema_utils import restrict_schema, get_update_schema
@@ -99,7 +99,7 @@ schema_user_profile = SQLAlchemySchemaNode(
         'locales': {
             'children': [schema_user_profile_locale]
         },
-        'geometry': geometry_schema_overrides
+        'geometry': get_geometry_schema_overrides(['POINT'])
     })
 
 
@@ -117,7 +117,7 @@ schema_internal_user_profile = SQLAlchemySchemaNode(
         'locales': {
             'children': [schema_document_locale]
         },
-        'geometry': geometry_schema_overrides
+        'geometry': get_geometry_schema_overrides(['POINT'])
     })
 
 schema_update_user_profile = get_update_schema(schema_user_profile)

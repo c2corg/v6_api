@@ -27,8 +27,8 @@ class Geometry(SchemaType):
     srid
         The SRID of the geometry should also match the column definition.
     """
-    def __init__(self, geometry_type='GEOMETRY', srid=-1, map_srid=-1):
-        self.geometry_type = geometry_type.upper()
+    def __init__(self, geometry_types=['GEOMETRY'], srid=-1, map_srid=-1):
+        self.geometry_types = [t.upper() for t in geometry_types]
         self.srid = int(srid)
 
     def serialize(self, node, appstruct):
@@ -53,16 +53,26 @@ class Geometry(SchemaType):
         if cstruct is null or cstruct == '':
             return null
         try:
-            return wkbelement_from_geojson(cstruct, self.srid)
-        except Exception:
-            raise Invalid(node, 'Invalid geometry: %r' % cstruct)
+            geojson = json.loads(cstruct)
+            geom_type = geojson['type'].upper()
+            allowed_types = self.geometry_types
+            if geom_type in allowed_types:
+                return wkbelement_from_geojson(geojson, self.srid)
+            else:
+                raise Invalid(
+                    node, 'Invalid geometry type. Expected: %s. Got: %s.'
+                    % (allowed_types, geom_type))
+        except Invalid as exc:
+            raise exc
+        except:
+            raise Invalid(node, 'Invalid geometry: %s' % cstruct)
 
     def cstruct_children(self, node, cstruct):
         return []
 
 
 def wkbelement_from_geojson(geojson, srid):
-    geometry = wkb.dumps(json.loads(geojson), big_endian=False)
+    geometry = wkb.dumps(geojson, big_endian=False)
     return from_wkb(geometry, srid)
 
 

@@ -20,7 +20,7 @@ from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
     ArchiveDocument,
     Document,
-    geometry_schema_overrides,
+    get_geometry_schema_overrides,
     schema_attributes, DocumentLocale, ArchiveDocumentLocale,
     schema_locale_attributes)
 from c2corg_common import document_types
@@ -259,7 +259,7 @@ schema_xreport = SQLAlchemySchemaNode(
         'activities': {
             'validator': colander.Length(min=1)
         },
-        'geometry': geometry_schema_overrides
+        'geometry': get_geometry_schema_overrides(['POINT'])
     })
 
 # schema that hides personal information of a xreport
@@ -271,7 +271,7 @@ schema_xreport_without_personal = SQLAlchemySchemaNode(
         'locales': {
             'children': [schema_xreport_locale],
         },
-        'geometry': geometry_schema_overrides
+        'geometry': get_geometry_schema_overrides(['POINT'])
     })
 
 

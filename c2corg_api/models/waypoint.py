@@ -15,7 +15,8 @@ from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
-    geometry_schema_overrides, schema_attributes, schema_locale_attributes)
+    schema_attributes, schema_locale_attributes,
+    get_geometry_schema_overrides)
 from c2corg_api.models import enums
 from c2corg_common import document_types
 
@@ -311,7 +312,7 @@ schema_waypoint = SQLAlchemySchemaNode(
         'locales': {
             'children': [schema_waypoint_locale]
         },
-        'geometry': geometry_schema_overrides
+        'geometry': get_geometry_schema_overrides(['POINT'])
     })
 
 schema_create_waypoint = get_create_schema(schema_waypoint)

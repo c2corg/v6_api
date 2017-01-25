@@ -18,7 +18,7 @@ from colanderalchemy import SQLAlchemySchemaNode
 from c2corg_api.models import schema, enums, Base, DBSession
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, geometry_schema_overrides,
+    ArchiveDocument, Document, get_geometry_schema_overrides,
     schema_attributes, DocumentLocale,
     schema_locale_attributes)
 from c2corg_common import document_types
@@ -140,7 +140,7 @@ schema_image = SQLAlchemySchemaNode(
         'locales': {
             'children': [schema_image_locale]
         },
-        'geometry': geometry_schema_overrides
+        'geometry': get_geometry_schema_overrides(['POINT'])
     })
 
 schema_create_image = get_create_schema(schema_image)
