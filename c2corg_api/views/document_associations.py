@@ -16,7 +16,7 @@ from c2corg_api.views.document_schemas import waypoint_documents_config, \
     image_documents_config, article_documents_config, area_documents_config, \
     outing_documents_config, book_documents_config, xreport_documents_config
 from c2corg_api.views.validation import updatable_associations
-from sqlalchemy.sql.expression import or_, and_, desc
+from sqlalchemy.sql.expression import or_, and_, asc
 
 associations_to_include = {
     WAYPOINT_TYPE: {
@@ -180,7 +180,7 @@ def get_linked_images(document, lang):
                 Association.child_document_id == Image.document_id,
                 Association.parent_document_id == document.document_id)
             ).
-        order_by(desc(Image.date_time)).
+        order_by(asc(Image.date_time)).
         group_by(Image.document_id).
         all())
 

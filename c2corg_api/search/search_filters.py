@@ -2,8 +2,6 @@ import math
 
 import pyproj
 import re
-
-from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.search.mapping_types import reserved_query_fields
@@ -50,9 +48,6 @@ def build_query(url_params, meta_params, doc_type):
         if doc_type == OUTING_TYPE:
             search = search.sort(
                 {'date_end': {'order': 'desc'}}, {'id': {'order': 'desc'}})
-        elif doc_type == IMAGE_TYPE:
-            search = search.sort(
-                {'date_time': {'order': 'desc'}}, {'id': {'order': 'desc'}})
         elif doc_type == XREPORT_TYPE:
             search = search.sort(
               {'date': {'order': 'desc'}}, {'id': {'order': 'desc'}})
