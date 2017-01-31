@@ -43,6 +43,8 @@ class MappingTest(BaseTestCase):
         self.assertTrue(queryable_fields['rmina']._range)
         self.assertIn('act', queryable_fields)
         self.assertIsNotNone(queryable_fields['act']._enum)
+        self.assertIn('dhei', queryable_fields)
+        self.assertIn('ralt', queryable_fields)
 
     def test_outing_mapping(self):
         self._test_mapping(SearchOuting, Outing)

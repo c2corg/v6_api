@@ -1,3 +1,4 @@
+import logging
 import math
 
 import pyproj
@@ -11,6 +12,8 @@ from c2corg_api.search import create_search, search_documents, \
     get_text_query_on_title
 from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox, \
     Missing
+
+log = logging.getLogger(__name__)
 
 
 def build_query(url_params, meta_params, doc_type):
@@ -53,6 +56,8 @@ def build_query(url_params, meta_params, doc_type):
               {'date': {'order': 'desc'}}, {'id': {'order': 'desc'}})
         else:
             search = search.sort({'id': {'order': 'desc'}})
+
+    log.debug('Search filter: {}'.format(search.to_dict()))
 
     return search
 
