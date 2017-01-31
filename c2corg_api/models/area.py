@@ -1,6 +1,6 @@
 from c2corg_api.models import schema, Base
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, geometry_schema_overrides,
+    ArchiveDocument, Document, get_geometry_schema_overrides,
     schema_document_locale, schema_attributes)
 from c2corg_api.models.enums import area_type
 from c2corg_api.models.schema_utils import restrict_schema, \
@@ -81,7 +81,7 @@ schema_area = SQLAlchemySchemaNode(
         'locales': {
             'children': [schema_document_locale]
         },
-        'geometry': geometry_schema_overrides
+        'geometry': get_geometry_schema_overrides(['POLYGON', 'MULTIPOLYGON'])
     })
 
 schema_create_area = get_create_schema(schema_area)

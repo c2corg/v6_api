@@ -48,18 +48,18 @@ class TestRoute(BaseTestCase):
         """ Check that geometries are only compared in 2D when updating a
         document.
         """
-        geom1 = wkbelement_from_geojson(
+        geom1 = wkbelement_from_geojson(json.loads(
             '{"type": "LineString", "coordinates": ' +
-            '[[635956, 5723604, 1200], [635966, 5723644, 1210]]}', 3857)
+            '[[635956, 5723604, 1200], [635966, 5723644, 1210]]}'), 3857)
         route_db = Route(
             document_id=1, activities=['hiking'],
             geometry=DocumentGeometry(
                 document_id=1, geom=None, geom_detail=geom1)
         )
 
-        geom2 = wkbelement_from_geojson(
+        geom2 = wkbelement_from_geojson(json.loads(
             '{"type": "LineString", "coordinates": ' +
-            '[[635956, 5723604, 9999], [635966, 5723644, 9999]]}', 3857)
+            '[[635956, 5723604, 9999], [635966, 5723644, 9999]]}'), 3857)
         route_in = Route(
             document_id=1, activities=['hiking'],
             geometry=DocumentGeometry(
@@ -68,9 +68,9 @@ class TestRoute(BaseTestCase):
         route_db.update(route_in)
         self.assertIs(route_db.geometry.geom_detail, geom1)
 
-        geom3 = wkbelement_from_geojson(
+        geom3 = wkbelement_from_geojson(json.loads(
             '{"type": "LineString", "coordinates": ' +
-            '[[635956, 5723608, 1200], [635966, 5723644, 1210]]}', 3857)
+            '[[635956, 5723608, 1200], [635966, 5723644, 1210]]}'), 3857)
         route_in = Route(
             document_id=1, activities=['hiking'],
             geometry=DocumentGeometry(
@@ -81,9 +81,10 @@ class TestRoute(BaseTestCase):
         self.assertIs(route_db.geometry.geom_detail, geom3)
 
     def test_simplify(self):
-        geom = wkbelement_from_geojson(
+        geom = wkbelement_from_geojson(json.loads(
             '{"type": "LineString", "coordinates": ' +
-            '[[635900, 5723600], [635902, 5723600], [635905, 5723600]]}', 3857)
+            '[[635900, 5723600], [635902, 5723600], [635905, 5723600]]}'),
+            3857)
         route = Route(
             activities=['hiking'],
             geometry=DocumentGeometry(geom=None, geom_detail=geom))
@@ -98,9 +99,10 @@ class TestRoute(BaseTestCase):
         self.assertEqual(len(geojson['coordinates']), 2)
 
         # check that the line was simplified after an update
-        route.geometry.geom_detail = wkbelement_from_geojson(
+        route.geometry.geom_detail = wkbelement_from_geojson(json.loads(
             '{"type": "LineString", "coordinates": ' +
-            '[[635901, 5723600], [635902, 5723600], [635905, 5723600]]}', 3857)
+            '[[635901, 5723600], [635902, 5723600], [635905, 5723600]]}'),
+            3857)
 
         self.session.flush()
         simplified_geom = route.geometry

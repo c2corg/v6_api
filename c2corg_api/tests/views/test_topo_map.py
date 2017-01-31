@@ -6,7 +6,7 @@ from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
 from c2corg_common.attributes import quality_types
-from shapely.geometry import shape, Point
+from shapely.geometry import shape, Polygon
 
 from c2corg_api.models.document import (
     DocumentGeometry, ArchiveDocumentLocale, DocumentLocale)
@@ -92,7 +92,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'code': '3432OT',
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom_detail': '{"type": "Point", "coordinates": [635956, 5723604]}'  # noqa
+                'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
             },
             'locales': [
                 {'lang': 'en'}
@@ -108,7 +108,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'protected': True,
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom_detail': '{"type": "Point", "coordinates": [635956, 5723604]}'  # noqa
+                'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
             },
             'locales': [
                 {'lang': 'en', 'title': 'Lac d\'Annecy'}
@@ -359,10 +359,8 @@ class TestTopoMapRest(BaseDocumentTestRest):
         self.assertIsNotNone(geometry.get('geom_detail'))
 
         geom = geometry.get('geom_detail')
-        point = shape(json.loads(geom))
-        self.assertIsInstance(point, Point)
-        self.assertAlmostEqual(point.x, 635956)
-        self.assertAlmostEqual(point.y, 5723604)
+        polygon = shape(json.loads(geom))
+        self.assertIsInstance(polygon, Polygon)
 
     def _add_test_data(self):
         self.map1 = TopoMap(editor='IGN', scale='25000', code='3431OT')
@@ -374,7 +372,8 @@ class TestTopoMapRest(BaseDocumentTestRest):
         self.map1.locales.append(self.locale_fr)
 
         self.map1.geometry = DocumentGeometry(
-            geom_detail='SRID=3857;POINT(635956 5723604)')
+            geom_detail='SRID=3857;POLYGON((611774 5706934,611774 5744215,'
+                        '642834 5744215,642834 5706934,611774 5706934))')
 
         self.session.add(self.map1)
         self.session.flush()

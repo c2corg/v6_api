@@ -17,7 +17,7 @@ from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
-    geometry_schema_overrides, schema_locale_attributes, schema_attributes)
+    get_geometry_schema_overrides, schema_locale_attributes, schema_attributes)
 from c2corg_api.models import enums
 from sqlalchemy.orm import relationship
 from c2corg_common import document_types
@@ -316,7 +316,8 @@ schema_route = SQLAlchemySchemaNode(
         'activities': {
             'validator': colander.Length(min=1)
         },
-        'geometry': geometry_schema_overrides
+        'geometry': get_geometry_schema_overrides(
+            ['LINESTRING', 'MULTILINESTRING'])
     })
 
 schema_create_route = get_create_schema(schema_route)

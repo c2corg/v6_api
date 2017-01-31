@@ -98,7 +98,7 @@ class TestAreaRest(BaseDocumentTestRest):
         body_post = {
             'area_type': 'range',
             'geometry': {
-                'geom_detail': '{"type": "Point", "coordinates": [635956, 5723604]}'  # noqa
+                'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
             },
             'locales': [
                 {'lang': 'en'}
@@ -112,7 +112,7 @@ class TestAreaRest(BaseDocumentTestRest):
             'protected': True,
             'geometry': {
                 'id': 5678, 'version': 6789,
-                'geom_detail': '{"type": "Point", "coordinates": [635956, 5723604]}'  # noqa
+                'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
             },
             'locales': [
                 {'lang': 'en', 'title': 'Chartreuse'}

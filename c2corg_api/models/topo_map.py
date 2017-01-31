@@ -13,7 +13,7 @@ from colanderalchemy import SQLAlchemySchemaNode
 from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, geometry_schema_overrides,
+    ArchiveDocument, Document, get_geometry_schema_overrides,
     schema_document_locale, schema_attributes)
 from c2corg_common import document_types
 
@@ -87,7 +87,7 @@ schema_topo_map = SQLAlchemySchemaNode(
         'locales': {
             'children': [schema_document_locale]
         },
-        'geometry': geometry_schema_overrides
+        'geometry': get_geometry_schema_overrides(['POLYGON', 'MULTIPOLYGON'])
     })
 
 schema_update_topo_map = get_update_schema(schema_topo_map)
