@@ -35,11 +35,11 @@ class SearchRoute(SearchDocument):
     route_length = QInteger(
         'rlen', range=True)
     difficulties_height = QInteger(
-        'ralt ', range=True)
+        'ralt', range=True)
     height_diff_access = QInteger(
         'rappr', range=True)
     height_diff_difficulties = QInteger(
-        'dhei ', range=True)
+        'dhei', range=True)
     route_types = QEnumArray(
          'rtyp', model_field=Route.route_types)
     orientations = QEnumArray(
