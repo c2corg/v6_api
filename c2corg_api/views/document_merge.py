@@ -4,12 +4,14 @@ from c2corg_api.models.cache_version import \
     update_cache_version_direct, update_cache_version_full
 from c2corg_api.models.document import Document, UpdateType
 from c2corg_api.models.feed import DocumentChange
+from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.route import Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.image import delete_all_files_for_image
 from c2corg_api.views.waypoint import update_linked_route_titles
 from colander import MappingSchema, required, SchemaNode, Integer
 from cornice.resource import resource
@@ -147,6 +149,9 @@ class MergeDocumentRest(object):
         update_cache_version_full(target_document_id, source_doc.type)
 
         _remove_feed_entry(source_document_id)
+
+        if source_doc.type == IMAGE_TYPE:
+            delete_all_files_for_image(source_document_id, self.request)
 
         notify_es_syncer(self.request.registry.queue_config)
 

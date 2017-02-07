@@ -1,12 +1,15 @@
 from c2corg_api.models.association import Association, AssociationLog
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale, \
+    UpdateType
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.feed import update_feed_document_create, DocumentChange
+from c2corg_api.models.image import Image
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.document import DocumentRest
 from sqlalchemy.sql.expression import or_
+from httmock import all_requests, HTTMock
 
 
 class TestDocumentMergeRest(BaseTestRest):
@@ -14,6 +17,8 @@ class TestDocumentMergeRest(BaseTestRest):
     def setUp(self):  # noqa
         super(TestDocumentMergeRest, self).setUp()
         self._prefix = '/document/merge'
+
+        contributor_id = self.global_userids['contributor']
 
         self.waypoint1 = Waypoint(
             waypoint_type='summit', elevation=2000,
@@ -61,10 +66,8 @@ class TestDocumentMergeRest(BaseTestRest):
         self.session.add(self.route1)
         self.session.flush()
 
-        DocumentRest.create_new_version(
-            self.waypoint1, self.global_userids['contributor'])
-        update_feed_document_create(
-            self.waypoint1, self.global_userids['contributor'])
+        DocumentRest.create_new_version(self.waypoint1, contributor_id)
+        update_feed_document_create(self.waypoint1, contributor_id)
 
         association = Association.create(
             parent_document=self.waypoint1,
@@ -72,6 +75,37 @@ class TestDocumentMergeRest(BaseTestRest):
         self.session.add(association)
         self.session.add(association.get_log(
             self.global_userids['contributor']))
+        self.session.flush()
+
+        self.image1 = Image(
+            filename='image1.jpg',
+            activities=['paragliding'], height=1500,
+            image_type='collaborative',
+            locales=[
+                DocumentLocale(
+                    lang='en', title='Mont Blanc from the air',
+                    description='...')])
+        self.session.add(self.image1)
+
+        self.image2 = Image(
+            filename='image2.jpg',
+            activities=['paragliding'], height=1500,
+            image_type='collaborative',
+            locales=[
+                DocumentLocale(
+                    lang='en', title='Mont Blanc from the air',
+                    description='...')])
+        self.session.add(self.image2)
+
+        self.session.flush()
+        DocumentRest.create_new_version(self.image1, contributor_id)
+        self.session.flush()
+
+        self.image1.filename = 'image1.1.jpg'
+        self.session.flush()
+        DocumentRest.update_version(
+            self.image1, contributor_id,
+            'changed filename', [UpdateType.FIGURES], [])
         self.session.flush()
 
     def _post(self, body, expected_status):
@@ -152,7 +186,7 @@ class TestDocumentMergeRest(BaseTestRest):
             self.waypoint1.redirects_to, self.waypoint2.document_id
         )
 
-        # check that a new version was create for the source document
+        # check that a new version was created for the source document
         new_source_version = self.session.query(DocumentVersion). \
             filter(
                 DocumentVersion.document_id == self.waypoint1.document_id). \
@@ -174,3 +208,58 @@ class TestDocumentMergeRest(BaseTestRest):
             DocumentChange.document_id == self.waypoint1.document_id
         ).count()
         self.assertEqual(0, feed_count)
+
+    def test_merge_image(self):
+        call = {'times': 0}
+
+        @all_requests
+        def image_service_mock(url, request):
+            call['times'] += 1
+
+            self.assertEqual(
+                request.body,
+                'filenames=image1.1.jpg&filenames=image1.jpg&secret=test')
+            self.assertEqual(
+                request.url,
+                'http://images.demov6.camptocamp.org/delete')
+
+            return {
+                'status_code': 200,
+                'content': ''
+            }
+
+        with HTTMock(image_service_mock):
+            self._post({
+                'source_document_id': self.image1.document_id,
+                'target_document_id': self.image2.document_id
+            }, 200)
+            self.assertEqual(call['times'], 1)
+
+    def test_merge_image_error_deleting_files(self):
+        """ Test that the merge request is also successful if the image files
+        cannot be deleted.
+        """
+        call = {'times': 0}
+
+        @all_requests
+        def image_service_mock(url, request):
+            call['times'] += 1
+
+            self.assertEqual(
+                request.body,
+                'filenames=image1.1.jpg&filenames=image1.jpg&secret=test')
+            self.assertEqual(
+                request.url,
+                'http://images.demov6.camptocamp.org/delete')
+
+            return {
+                'status_code': 500,
+                'content': 'some random error'
+            }
+
+        with HTTMock(image_service_mock):
+            self._post({
+                'source_document_id': self.image1.document_id,
+                'target_document_id': self.image2.document_id
+            }, 200)
+            self.assertEqual(call['times'], 1)

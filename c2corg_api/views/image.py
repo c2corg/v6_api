@@ -6,7 +6,8 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.feed import update_feed_images_upload
 from c2corg_api.models.image import Image, schema_image, schema_update_image, \
-    IMAGE_TYPE, schema_create_image, schema_create_image_list
+    IMAGE_TYPE, schema_create_image, schema_create_image_list, ArchiveImage
+from c2corg_api.search.notify_sync import run_on_successful_transaction
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import image_documents_config
 from c2corg_common.fields_image import fields_image
@@ -110,6 +111,35 @@ def create_image(self, document_in):
                                       format(response.status_code,
                                              response.reason))
     return document
+
+
+def delete_all_files_for_image(document_id, request):
+    """ When the current database transaction is committed successfully,
+     delete all files of the given image document by making a request to
+     the image service.
+     Note that no error is raised if this requests fails.
+    """
+    filenames_result = DBSession.query(ArchiveImage.filename). \
+        filter(ArchiveImage.document_id == document_id). \
+        group_by(ArchiveImage.filename). \
+        all()
+    filenames = [f for (f,) in filenames_result]
+
+    settings = request.registry.settings
+    url = '{}/{}'.format(settings['image_backend.url'], 'delete')
+
+    def send_delete_request():
+        response = requests.post(
+            url,
+            data={'secret': settings['image_backend.secret_key'],
+                  'filenames': filenames})
+
+        if response.status_code != 200:
+            raise HTTPInternalServerError(
+                'Deleting image files failed: {} {}'.format(
+                    response.status_code, response.reason))
+
+    run_on_successful_transaction(send_delete_request)
 
 
 @resource(collection_path='/images', path='/images/{id}',
