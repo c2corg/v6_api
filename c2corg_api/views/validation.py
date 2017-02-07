@@ -491,7 +491,8 @@ def _check_for_valid_documents_ids(associations, errors):
     if linked_documents_id:
         query_documents_with_type = DBSession. \
             query(Document.document_id, Document.type). \
-            filter(Document.document_id.in_(linked_documents_id))
+            filter(Document.document_id.in_(linked_documents_id)). \
+            filter(Document.redirects_to.is_(None))
         type_for_document_id = {
             str(document_id): doc_type
             for document_id, doc_type in query_documents_with_type
@@ -506,7 +507,8 @@ def _check_for_valid_documents_ids(associations, errors):
             if str(document_id) not in type_for_document_id:
                 errors.add(
                     'body', 'associations.' + document_key,
-                    'document "{0:n}" does not exist'.format(document_id))
+                    'document "{0:n}" does not exist or is redirected'.format(
+                        document_id))
                 continue
             if doc_type != type_for_document_id[str(document_id)]:
                 errors.add(

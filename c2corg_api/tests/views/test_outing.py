@@ -378,7 +378,7 @@ class TestOutingRest(BaseDocumentTestRest):
                          'document "' + str(self.waypoint.document_id) +
                          '" is not of type "r"')
         self.assertError(errors, 'associations.users',
-                         'document "-999" does not exist')
+                         'document "-999" does not exist or is redirected')
         self.assertError(errors, 'associations.users',
                          'at least one user required')
         self.assertError(errors, 'associations.routes',
