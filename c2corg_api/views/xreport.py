@@ -1,9 +1,6 @@
 import functools
 
-from c2corg_api.models import DBSession
-from c2corg_api.models.association import Association
 from c2corg_api.models.document_history import has_been_created_by
-from c2corg_api.models.user import User
 from c2corg_api.models.xreport import (
   Xreport,
   schema_xreport,
@@ -11,7 +8,6 @@ from c2corg_api.models.xreport import (
   schema_update_xreport,
   XREPORT_TYPE, ArchiveXreport, ArchiveXreportLocale, XreportLocale,
   schema_xreport_without_personal)
-from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_common.fields_xreport import fields_xreport
@@ -26,7 +22,8 @@ from c2corg_api.views import cors_policy, restricted_json_view, \
     set_private_cache_header
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
-    validate_associations, validate_lang, validate_version_id
+    validate_associations, validate_lang, validate_version_id, \
+    is_associated_user
 
 from pyramid.httpexceptions import HTTPForbidden
 
@@ -97,9 +94,7 @@ def _has_permission(request, xreport_id):
     if has_been_created_by(xreport_id, request.authenticated_userid):
         return True
 
-    associated_user_ids = get_associated_user_ids(xreport_id)
-
-    if request.authenticated_userid in associated_user_ids:
+    if is_associated_user(xreport_id, request.authenticated_userid):
         return True
 
     return False
@@ -127,15 +122,3 @@ def set_author(xreport):
     """Set the creator (the user who is an author) of the report.
     """
     set_creator_on_documents([xreport], 'author')
-
-
-def get_associated_user_ids(xreport_id):
-    """ Required to check if an associated user is able to edit Xreport.
-    """
-    associated_user_ids = get_first_column(
-        DBSession.query(User.id).
-        join(Association, Association.parent_document_id == User.id).
-        filter(Association.child_document_id == xreport_id).
-        group_by(User.id).
-        all())
-    return associated_user_ids

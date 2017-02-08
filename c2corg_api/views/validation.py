@@ -15,6 +15,8 @@ from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
+from c2corg_api.views.document_associations import get_first_column
+
 from c2corg_common.associations import valid_associations
 from c2corg_common.attributes import default_langs
 from c2corg_common import document_types
@@ -341,7 +343,8 @@ def validate_personal_association(
 
     for document_id in document_ids:
         if is_personal(document_id) and not has_been_created_by(
-                document_id, request.authenticated_userid):
+                document_id, request.authenticated_userid) and not \
+                is_associated_user(document_id, request.authenticated_userid):
             msg = 'no rights to modify associations with {} {}'.format(
                 label, document_id)
             if raise_exc:
@@ -423,7 +426,8 @@ def _check_permission_association_doc(request, doc_type, document_id):
                 document_id, request.authenticated_userid):
             return True
     elif doc_type == XREPORT_TYPE:
-        if has_been_created_by(document_id, request.authenticated_userid):
+        if (has_been_created_by(document_id, request.authenticated_userid) or
+           is_associated_user(document_id, request.authenticated_userid)):
             return True
 
     return False
@@ -505,6 +509,24 @@ def validate_associations_in(associations_in, document_type, errors):
         return None
     else:
         return associations
+
+
+def get_associated_user_ids(xreport_id):
+    associated_user_ids = get_first_column(
+        DBSession.query(User.id).
+        join(Association, Association.parent_document_id == User.id).
+        filter(Association.child_document_id == xreport_id).
+        group_by(User.id).
+        all())
+    return associated_user_ids
+
+
+def is_associated_user(xreport_id, user_id):
+    """ Required to check if an associated user is able to edit Xreport.
+    """
+    associated_user_ids = get_associated_user_ids(xreport_id)
+    if user_id in associated_user_ids:
+        return True
 
 
 def _check_for_valid_documents_ids(associations, errors):
