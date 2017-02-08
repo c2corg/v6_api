@@ -171,6 +171,16 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_get_version(self):
         self.get_version(self.outing, self.outing_version)
 
+    def test_get_version_without_activity(self):
+        """ Tests that old outings versions without activity include the fields
+        of all activities.
+        """
+        self.outing_version.document_archive.activities = []
+        self.session.flush()
+        body = self.get_version(self.outing, self.outing_version)
+        locale = body['document']['locales'][0]
+        self.assertIn('title', locale)
+
     def test_get_lang(self):
         self.get_lang(self.outing)
 

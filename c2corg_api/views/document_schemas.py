@@ -15,6 +15,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile, \
     schema_listing_user_profile
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, schema_waypoint, Waypoint
 from c2corg_api.views import set_author
+from c2corg_common import attributes
 from c2corg_common.fields_outing import fields_outing
 from c2corg_common.fields_xreport import fields_xreport
 from c2corg_common.fields_route import fields_route
@@ -149,6 +150,12 @@ def adapt_outing_schema_for_activities(activities, field_list_type):
     """Get the schema for a set of activities.
     `field_list_type` should be either "fields" or "listing".
     """
+    if not activities:
+        # `activities` is a required field, so it should not be empty.
+        # but old versions might have no activities, so we include the fields
+        # for all activities in that case.
+        activities = attributes.activities
+
     fields = get_all_fields(fields_outing, activities, field_list_type)
     return restrict_schema(schema_outing, fields)
 
@@ -178,6 +185,12 @@ def adapt_route_schema_for_activities(activities, field_list_type):
     """Get the schema for a set of activities.
     `field_list_type` should be either "fields" or "listing".
     """
+    if not activities:
+        # `activities` is a required field, so it should not be empty.
+        # but old versions might have no activities, so we include the fields
+        # for all activities in that case.
+        activities = [a for a in attributes.activities if a != 'paragliding']
+
     fields = get_all_fields(fields_route, activities, field_list_type)
     return restrict_schema(schema_route, fields)
 
