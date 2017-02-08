@@ -39,9 +39,15 @@ class CacheVersion(Base):
 
 
 def update_cache_version(document):
+    update_cache_version_full(document.document_id, document.type)
+
+
+def update_cache_version_full(document_id, type):
+    """ Update the cache version of the given document + associated documents.
+    """
     DBSession.execute(
         text('SELECT guidebook.update_cache_version(:document_id, :type)'),
-        {'document_id': document.document_id, 'type': document.type}
+        {'document_id': document_id, 'type': type}
     )
 
 

@@ -258,7 +258,7 @@ class DocumentRest(object):
 
         if update_types:
             # A new version needs to be created and persisted
-            self._update_version(
+            DocumentRest.update_version(
                 document, user_id, self.request.validated['message'],
                 update_types,  changed_langs)
 
@@ -377,22 +377,24 @@ class DocumentRest(object):
         DBSession.add_all(versions)
         DBSession.flush()
 
-    def _update_version(self, document, user_id, comment, update_types,
-                        changed_langs):
+    @staticmethod
+    def update_version(
+            document, user_id, comment, update_types, changed_langs):
         assert user_id
         assert update_types
 
         meta_data = HistoryMetaData(comment=comment, user_id=user_id)
-        archive = self._get_document_archive(document, update_types)
+        archive = DocumentRest._get_document_archive(document, update_types)
         geometry_archive = \
-            self._get_geometry_archive(document, update_types)
+            DocumentRest._get_geometry_archive(document, update_types)
 
-        langs = \
-            self._get_langs_to_update(document, update_types, changed_langs)
+        langs = DocumentRest._get_langs_to_update(
+            document, update_types, changed_langs)
         locale_versions = []
         for lang in langs:
             locale = document.get_locale(lang)
-            locale_archive = self._get_locale_archive(locale, changed_langs)
+            locale_archive = DocumentRest._get_locale_archive(
+                locale, changed_langs)
 
             version = DocumentVersion(
                 document_id=document.document_id,
@@ -409,7 +411,8 @@ class DocumentRest(object):
         DBSession.add_all(locale_versions)
         DBSession.flush()
 
-    def _get_document_archive(self, document, update_types):
+    @staticmethod
+    def _get_document_archive(document, update_types):
         if (UpdateType.FIGURES in update_types):
             # the document has changed, create a new archive version
             archive = document.to_archive()
@@ -422,7 +425,8 @@ class DocumentRest(object):
                 one()
         return archive
 
-    def _get_geometry_archive(self, document, update_types):
+    @staticmethod
+    def _get_geometry_archive(document, update_types):
         if not document.geometry:
             return None
         elif (UpdateType.GEOM in update_types):
@@ -440,7 +444,8 @@ class DocumentRest(object):
                 one()
         return archive
 
-    def _get_langs_to_update(self, document, update_types, changed_langs):
+    @staticmethod
+    def _get_langs_to_update(document, update_types, changed_langs):
         if UpdateType.GEOM not in update_types and \
                 UpdateType.FIGURES not in update_types:
             # if the figures or geometry have no been changed, only update the
@@ -450,7 +455,8 @@ class DocumentRest(object):
             # if the figures or geometry have been changed, update all locales
             return [locale.lang for locale in document.locales]
 
-    def _get_locale_archive(self, locale, changed_langs):
+    @staticmethod
+    def _get_locale_archive(locale, changed_langs):
         if locale.lang in changed_langs:
             # create new archive version for this locale
             locale_archive = locale.to_archive()

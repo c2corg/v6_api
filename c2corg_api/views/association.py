@@ -30,18 +30,22 @@ def validate_association(request, **kwargs):
     parent_document_type = None
     if parent_document_id:
         parent_document_type = DBSession.query(Document.type). \
-            filter(Document.document_id == parent_document_id).scalar()
+            filter(Document.document_id == parent_document_id). \
+            filter(Document.redirects_to.is_(None)).scalar()
         if not parent_document_type:
             request.errors.add(
-                'body', 'parent_document_id', 'parent document does not exist')
+                'body', 'parent_document_id',
+                'parent document does not exist or is redirected')
 
     child_document_type = None
     if child_document_id:
         child_document_type = DBSession.query(Document.type). \
-            filter(Document.document_id == child_document_id).scalar()
+            filter(Document.document_id == child_document_id). \
+            filter(Document.redirects_to.is_(None)).scalar()
         if not child_document_type:
             request.errors.add(
-                'body', 'child_document_id', 'child document does not exist')
+                'body', 'child_document_id',
+                'child document does not exist or is redirected')
 
     if parent_document_type and child_document_type:
         request.validated['parent_document_type'] = parent_document_type

@@ -349,6 +349,26 @@ class TestAssociationRest(BaseTestRest):
         self.assertEqual(
             errors[0].get('description'), 'invalid association type')
 
+    def test_add_association_redirected_document(self):
+        request_body = {
+            'parent_document_id': self.waypoint1.document_id,
+            'child_document_id': self.waypoint3.document_id,
+        }
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app_post_json(
+            TestAssociationRest.prefix, request_body, headers=headers,
+            status=400)
+
+        body = response.json
+        self.assertEqual(body.get('status'), 'error')
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+
+        self.assertEqual(errors[0].get('name'), 'child_document_id')
+        self.assertEqual(
+            errors[0].get('description'),
+            'child document does not exist or is redirected')
+
     def test_add_association_invalid_ids(self):
         request_body = {
             'parent_document_id': -99,
@@ -366,11 +386,13 @@ class TestAssociationRest(BaseTestRest):
 
         self.assertEqual(errors[0].get('name'), 'parent_document_id')
         self.assertEqual(
-            errors[0].get('description'), 'parent document does not exist')
+            errors[0].get('description'),
+            'parent document does not exist or is redirected')
 
         self.assertEqual(errors[1].get('name'), 'child_document_id')
         self.assertEqual(
-            errors[1].get('description'), 'child document does not exist')
+            errors[1].get('description'),
+            'child document does not exist or is redirected')
 
     def test_add_association_no_es_update(self):
         """Tests that the search index is only updated for specific association
@@ -677,6 +699,12 @@ class TestAssociationRest(BaseTestRest):
         self.waypoint2 = Waypoint(
             waypoint_type='summit', elevation=200)
         self.session.add(self.waypoint2)
+        self.session.flush()
+
+        self.waypoint3 = Waypoint(
+            waypoint_type='summit', elevation=200,
+            redirects_to=self.waypoint1.document_id)
+        self.session.add(self.waypoint3)
 
         self.route1 = Route(activities=['skitouring'])
         self.session.add(self.route1)

@@ -149,7 +149,8 @@ class TestValidation(BaseTestCase):
         error = errors[0]
         self.assertEqual(error['name'], 'associations.waypoints')
         self.assertEqual(
-            error['description'], 'document "-99999" does not exist')
+            error['description'],
+            'document "-99999" does not exist or is redirected')
 
     def test_validate_associations_invalid_document_type(self):
         associations_in = {

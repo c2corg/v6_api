@@ -571,6 +571,35 @@ class TestWaypointRest(BaseDocumentTestRest):
             'no rights to modify associations with article {}'.format(
                 self.article2.document_id))
 
+    def test_post_invalid_association_with_redirected_doc(self):
+        body_post = {
+            'document_id': 1234,
+            'version': 2345,
+            'geometry': {
+                'document_id': 5678, 'version': 6789,
+                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
+                'geom_detail':
+                    '{"type": "Point", "coordinates": [635956, 5723604]}'
+            },
+            'waypoint_type': 'summit',
+            'elevation': 3779,
+            'locales': [{
+                'id': 3456, 'version': 4567,
+                'lang': 'en', 'title': 'Mont Pourri',
+                'access': 'y'}
+            ],
+            'associations': {
+                'waypoints': [
+                    {'document_id': self.waypoint5.document_id}
+                ]
+            }
+        }
+        body = self.post_error(body_post, user='contributor2')
+        self.assertError(
+            body['errors'], 'associations.waypoints',
+            'document "{}" does not exist or is redirected'.format(
+                self.waypoint5.document_id))
+
     def test_post_success(self):
         body = {
             'document_id': 1234,
@@ -1232,7 +1261,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 },
                 'associations': {
                     'waypoint_children': [
-                        {'document_id': self.waypoint4.document_id}
+                        # association to waypoint 4 is removed
                     ],
                     'routes': [
                         {'document_id': self.route1.document_id}
@@ -1253,7 +1282,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             body['errors'], 'Bad Request',
             'no rights to modify associations between document '
             'w ({}) and w ({})'.format(
-                self.waypoint.document_id, self.waypoint5.document_id))
+                self.waypoint.document_id, self.waypoint4.document_id))
 
     def test_put_add_new_association(self):
         """ Test that non-moderator users can add new associations.
@@ -1278,7 +1307,6 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'associations': {
                     'waypoint_children': [
                         {'document_id': self.waypoint4.document_id},
-                        {'document_id': self.waypoint5.document_id},
                         {'document_id': self.waypoint2.document_id}
                     ],
                     'routes': [
@@ -1511,9 +1539,6 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(Association.create(
             parent_document=self.waypoint,
             child_document=self.waypoint4))
-        self.session.add(Association.create(
-            parent_document=self.waypoint,
-            child_document=self.waypoint5))
         self.session.add(Association.create(
             parent_document=self.waypoint,
             child_document=self.route1))
