@@ -55,6 +55,19 @@ class TestDocumentMergeRest(BaseTestRest):
                     summary='The heighest point in Europe')
             ])
         self.session.add(self.waypoint3)
+        self.waypoint4 = Waypoint(
+            waypoint_type='summit', elevation=4985,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'),
+            locales=[
+                WaypointLocale(
+                    lang='en', title='Mont Blanc',
+                    description='...',
+                    summary='The heighest point in Europe')
+            ])
+        self.session.add(self.waypoint4)
+        self.session.flush()
+
         self.route1 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
             main_waypoint_id=self.waypoint1.document_id,
@@ -72,6 +85,20 @@ class TestDocumentMergeRest(BaseTestRest):
         association = Association.create(
             parent_document=self.waypoint1,
             child_document=self.route1)
+        self.session.add(association)
+        self.session.add(association.get_log(
+            self.global_userids['contributor']))
+
+        association = Association.create(
+            parent_document=self.waypoint1,
+            child_document=self.waypoint4)
+        self.session.add(association)
+        self.session.add(association.get_log(
+            self.global_userids['contributor']))
+
+        association = Association.create(
+            parent_document=self.waypoint2,
+            child_document=self.waypoint4)
         self.session.add(association)
         self.session.add(association.get_log(
             self.global_userids['contributor']))

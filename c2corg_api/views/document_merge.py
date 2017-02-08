@@ -16,6 +16,8 @@ from c2corg_api.views.waypoint import update_linked_route_titles
 from colander import MappingSchema, required, SchemaNode, Integer
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
+from sqlalchemy.sql.elements import not_
+from sqlalchemy.sql.expression import and_, or_
 from sqlalchemy.sql.functions import func
 
 
@@ -159,19 +161,55 @@ class MergeDocumentRest(object):
 
 
 def _transfer_associations(source_document_id, target_document_id):
+    # get the document ids the target is already associated with
+    target_child_ids_result = DBSession. \
+        query(Association.child_document_id). \
+        filter(Association.parent_document_id == target_document_id). \
+        all()
+    target_child_ids = [
+        child_id for (child_id,) in target_child_ids_result]
+    target_parent_ids_result = DBSession. \
+        query(Association.parent_document_id). \
+        filter(Association.child_document_id == target_document_id). \
+        all()
+    target_parent_ids = [
+        parent_id for (parent_id,) in target_parent_ids_result]
+
+    # move the current associations (only if the target document does not
+    # already have an association with the same document)
     DBSession.execute(
         Association.__table__.update().
-        where(Association.parent_document_id == source_document_id).
+        where(_and_in(
+            Association.parent_document_id == source_document_id,
+            Association.child_document_id, target_child_ids
+        )).
         values(parent_document_id=target_document_id)
     )
     DBSession.execute(
         Association.__table__.update().
-        where(Association.child_document_id == source_document_id).
+        where(_and_in(
+            Association.child_document_id == source_document_id,
+            Association.parent_document_id, target_parent_ids
+        )).
         values(child_document_id=target_document_id)
     )
+
+    # remove remaining associations
+    DBSession.execute(
+        Association.__table__.delete().
+        where(or_(
+            Association.child_document_id == source_document_id,
+            Association.parent_document_id == source_document_id)
+        )
+    )
+
+    # transfer the association log entries
     DBSession.execute(
         AssociationLog.__table__.update().
-        where(AssociationLog.parent_document_id == source_document_id).
+        where(_and_in(
+            AssociationLog.parent_document_id == source_document_id,
+            AssociationLog.child_document_id, target_child_ids
+        )).
         values(
             parent_document_id=target_document_id,
             written_at=func.now()
@@ -179,12 +217,30 @@ def _transfer_associations(source_document_id, target_document_id):
     )
     DBSession.execute(
         AssociationLog.__table__.update().
-        where(AssociationLog.child_document_id == source_document_id).
+        where(_and_in(
+            AssociationLog.child_document_id == source_document_id,
+            AssociationLog.parent_document_id, target_parent_ids
+        )).
         values(
             child_document_id=target_document_id,
             written_at=func.now()
         )
     )
+
+    DBSession.execute(
+        AssociationLog.__table__.delete().
+        where(or_(
+            AssociationLog.child_document_id == source_document_id,
+            AssociationLog.parent_document_id == source_document_id)
+        )
+    )
+
+
+def _and_in(condition1, field2, in_ids):
+    if not in_ids:
+        return condition1
+    else:
+        return and_(condition1, not_(field2.in_(in_ids)))
 
 
 def _transfer_main_waypoint(source_document_id, target_document_id):
