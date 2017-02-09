@@ -129,13 +129,13 @@ class ProfileFeedRest(object):
             raise HTTPForbidden('no permission to see the feed')
 
 
-def get_params(request):
+def get_params(request, default_page_limit=DEFAULT_PAGE_LIMIT):
     lang = request.validated.get('lang')
     token_id = request.validated.get('token_id')
     token_time = request.validated.get('token_time')
     limit = request.validated.get('limit')
     limit = min(
-        DEFAULT_PAGE_LIMIT if limit is None else limit,
+        default_page_limit if limit is None else limit,
         MAX_PAGE_LIMIT)
 
     return lang, token_id, token_time, limit
