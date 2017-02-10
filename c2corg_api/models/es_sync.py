@@ -1,7 +1,7 @@
 from c2corg_api.models import Base, schema
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import Column, CheckConstraint
-from sqlalchemy.sql.sqltypes import DateTime, Integer
+from sqlalchemy.sql.sqltypes import DateTime, Integer, String
 
 
 class ESSyncStatus(Base):
@@ -34,3 +34,18 @@ def mark_as_updated(session, new_update_time):
         update(
             {ESSyncStatus.last_update: new_update_time},
             synchronize_session=False)
+
+
+class ESDeletedDocument(Base):
+    """A table listing documents that have been deleted and that should be
+    removed from the ES index.
+    """
+    __tablename__ = 'es_deleted_documents'
+
+    document_id = Column(Integer, primary_key=True)
+
+    type = Column(String(1))
+
+    deleted_at = Column(
+        DateTime(timezone=True), default=func.now(), nullable=False,
+        index=True)

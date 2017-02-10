@@ -9,6 +9,7 @@ from c2corg_api.models.document import (
     ArchiveDocument, DocumentGeometry, ArchiveDocumentGeometry)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.document_topic import DocumentTopic
+from c2corg_api.models.es_sync import ESDeletedDocument
 from c2corg_api.models.feed import DocumentChange
 from c2corg_api.models.image import IMAGE_TYPE, Image, ArchiveImage
 from c2corg_api.models.outing import (
@@ -21,6 +22,7 @@ from c2corg_api.models.waypoint import (
 from c2corg_api.models.xreport import (
     XREPORT_TYPE, Xreport, XreportLocale, ArchiveXreport,
     ArchiveXreportLocale)
+from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.image import delete_all_files_for_image
 from c2corg_api.views.validation import validate_id
@@ -156,7 +158,8 @@ class DeleteDocumentRest(object):
         if document_type == IMAGE_TYPE:
             delete_all_files_for_image(document_id, self.request)
 
-        _notify_es_syncer(self.request.registry.queue_config)
+        _update_deleted_documents_list(document_id, document_type)
+        notify_es_syncer(self.request.registry.queue_config)
 
         return {}
 
@@ -289,6 +292,6 @@ def _remove_associations(document_id):
         )).delete()
 
 
-def _notify_es_syncer(config):
-    # TODO
-    pass
+def _update_deleted_documents_list(document_id, document_type):
+    DBSession.add(ESDeletedDocument(
+        document_id=document_id, type=document_type))
