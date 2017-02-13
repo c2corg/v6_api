@@ -1,10 +1,16 @@
-from unittest.mock import patch
+import datetime
+from unittest.mock import patch, call
+
+from c2corg_common.document_types import OUTING_TYPE
 
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.tests.views import BaseTestRest
 
+from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_topic import DocumentTopic
+from c2corg_api.models.outing import Outing, OutingLocale
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.image import Image
 
@@ -45,6 +51,26 @@ class TestForumTopicRest(BaseTestRest):
         self.image.geometry = DocumentGeometry(
             geom='SRID=3857;POINT(635956 5723604)')
         self.session.add(self.image)
+
+        self.outing = Outing(
+            activities=['skitouring'],
+            date_start=datetime.date(2016, 1, 1),
+            date_end=datetime.date(2016, 1, 1),
+            locales=[OutingLocale(lang='en',
+                                  title='Mont Granier / skitouring')]
+        )
+        self.session.add(self.outing)
+        self.session.flush()
+
+        for user_id in (
+            self.global_userids['contributor'],
+            self.global_userids['contributor2']
+        ):
+            self.session.add(Association(
+                parent_document_id=user_id,
+                parent_document_type=USERPROFILE_TYPE,
+                child_document_id=self.outing.document_id,
+                child_document_type=OUTING_TYPE))
 
         self.session.flush()
 
@@ -130,3 +156,20 @@ class TestForumTopicRest(BaseTestRest):
                 "/images/{}/{}".format(locale.document_id, locale.lang)),
             title='{}_{}'.format(locale.document_id, locale.lang),
             category='Commentaires')
+
+    @patch('pydiscourse.client.DiscourseClient._post',
+           side_effect=[{"topic_id": 10},
+                        {},
+                        {}])
+    def test_post_invite_participants(self, _post_mock):
+        """Test outing participants are invited in the topic"""
+        self.post_json_with_contributor(
+            '/forum/topics',
+            {
+                'document_id': self.outing.document_id,
+                'lang': 'en'
+            },
+            status=200)
+        _post_mock.assert_has_calls([
+            call('/t/10/invite.json', user='contributor'),
+            call('/t/10/invite.json', user='contributor2')])
