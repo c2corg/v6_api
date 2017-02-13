@@ -1,10 +1,14 @@
 import colander
 from urllib3.util.url import parse_url
 
+from c2corg_common import document_types
+
 from c2corg_api.models import DBSession
+from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.document_topic import DocumentTopic
+from c2corg_api.models.user import User
 from c2corg_api.security.discourse_client import get_discourse_client
 
 from cornice.resource import resource
@@ -13,6 +17,9 @@ from cornice.validators import colander_body_validator
 from c2corg_api.views import cors_policy, restricted_view
 
 from pyramid.httpexceptions import HTTPInternalServerError
+
+import logging
+log = logging.getLogger(__name__)
 
 
 @resource(path='/forum/private-messages/unread-count', cors_policy=cors_policy)
@@ -102,9 +109,34 @@ class ForumTopicRest(object):
             raise HTTPInternalServerError('Error with Discourse')
 
         if "topic_id" in response:
-            document_topic = DocumentTopic(topic_id=response['topic_id'])
+            topic_id = response['topic_id']
+
+            document_topic = DocumentTopic(topic_id=topic_id)
             locale.document_topic = document_topic
             update_cache_version_direct(locale.document_id)
             DBSession.flush()
 
+            if locale.type == document_types.OUTING_TYPE:
+                try:
+                    self.invite_participants(client, locale, topic_id)
+                except:
+                    log.error('Inviting participants of outing {} failed'
+                              .format(locale.document_id),
+                              exc_info=True)
+
         return response
+
+    def invite_participants(self, client, locale, topic_id):
+        participants = DBSession.query(User.forum_username). \
+            join(Association, Association.parent_document_id == User.id). \
+            filter(Association.child_document_id == locale.document_id). \
+            group_by(User.forum_username)
+
+        for (forum_username,) in participants:
+            try:
+                client.client.invite_user_to_topic_by_username(forum_username,
+                                                               topic_id)
+            except:
+                log.error('Inviting forum user {} in topic {} failed'
+                          .format(forum_username, topic_id),
+                          exc_info=True)
