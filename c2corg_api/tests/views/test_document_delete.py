@@ -7,7 +7,7 @@ from c2corg_api.models.document import (
     Document, DocumentLocale, DocumentGeometry, ArchiveDocument,
     ArchiveDocumentLocale, ArchiveDocumentGeometry, UpdateType)
 from c2corg_api.models.document_history import DocumentVersion
-from c2corg_api.models.feed import update_feed_document_create
+from c2corg_api.models.feed import update_feed_document_create, DocumentChange
 from c2corg_api.models.image import Image, ArchiveImage
 from c2corg_api.models.outing import (
     Outing, OutingLocale, ArchiveOuting, ArchiveOutingLocale)
@@ -408,7 +408,13 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.assertEqual(0, association_log_count)
 
         # TODO check cache_versions have been updated
-        # TODO check the feed has been cleared
+
+        # Check the feed has been cleared
+        feed_count = self.session.query(DocumentChange).filter(
+            DocumentChange.document_id == document_id
+        ).count()
+        self.assertEqual(0, feed_count)
+
         # TODO check comments have been cleared
 
     def test_delete_waypoint(self):
