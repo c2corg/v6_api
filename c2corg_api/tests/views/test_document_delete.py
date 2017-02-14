@@ -1,17 +1,22 @@
 import datetime
 
+from c2corg_api.models.article import Article, ArchiveArticle
 from c2corg_api.models.association import Association
+from c2corg_api.models.book import Book, ArchiveBook
 from c2corg_api.models.document import (
     Document, DocumentLocale, DocumentGeometry, ArchiveDocument,
-    ArchiveDocumentLocale, ArchiveDocumentGeometry)
+    ArchiveDocumentLocale, ArchiveDocumentGeometry, UpdateType)
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.feed import update_feed_document_create
+from c2corg_api.models.image import Image, ArchiveImage
 from c2corg_api.models.outing import (
     Outing, OutingLocale, ArchiveOuting, ArchiveOutingLocale)
 from c2corg_api.models.route import (
     Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale)
 from c2corg_api.models.waypoint import (
     Waypoint, WaypointLocale, ArchiveWaypoint, ArchiveWaypointLocale)
+from c2corg_api.models.xreport import (
+    Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale)
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.tests.views import BaseTestRest
 
@@ -186,6 +191,131 @@ class TestDocumentDeleteRest(BaseTestRest):
             child_document=self.outing2))
         self.session.flush()
 
+        self.article1 = Article(
+            activities=['skitouring'], categories=['gear'],
+            article_type='personal',
+            locales=[
+                DocumentLocale(
+                    lang='en', title='Some article',
+                    description='Some content')
+            ]
+        )
+        self.session.add(self.article1)
+        self.session.flush()
+
+        DocumentRest.create_new_version(self.article1, user_id)
+        update_feed_document_create(self.article1, user_id)
+        self.session.add(Association.create(
+            parent_document=self.route2,
+            child_document=self.article1))
+        self.session.add(Association.create(
+            parent_document=self.outing2,
+            child_document=self.article1))
+        self.session.flush()
+
+        self.book1 = Book(
+            activities=['skitouring'], book_types=['biography'],
+            locales=[
+                DocumentLocale(
+                    lang='en', title='Some book',
+                    description='Some content')
+            ]
+        )
+        self.session.add(self.book1)
+        self.session.flush()
+
+        DocumentRest.create_new_version(self.book1, user_id)
+        update_feed_document_create(self.book1, user_id)
+        self.session.add(Association.create(
+            parent_document=self.book1,
+            child_document=self.route2))
+        self.session.add(Association.create(
+            parent_document=self.book1,
+            child_document=self.route3))
+        self.session.flush()
+
+        self.xreport1 = Xreport(
+            activities=['hiking'], event_type=['stone_fall'],
+            locales=[
+                XreportLocale(
+                    lang='en', title='Lac d\'Annecy',
+                    place='some place descrip. in english'),
+                XreportLocale(
+                    lang='fr', title='Lac d\'Annecy',
+                    place='some place descrip. in french')
+            ]
+        )
+        self.session.add(self.xreport1)
+        self.session.flush()
+
+        DocumentRest.create_new_version(self.xreport1, user_id)
+        update_feed_document_create(self.xreport1, user_id)
+        self.session.add(Association.create(
+            parent_document=self.outing2,
+            child_document=self.xreport1))
+        self.session.add(Association.create(
+            parent_document=self.route3,
+            child_document=self.xreport1))
+        self.session.flush()
+
+        self.image1 = Image(
+            filename='image1.jpg',
+            activities=['paragliding'], height=1500,
+            image_type='collaborative',
+            locales=[
+                DocumentLocale(
+                    lang='en', title='Mont Blanc from the air',
+                    description='...')])
+        self.session.add(self.image1)
+        self.session.flush()
+
+        DocumentRest.create_new_version(self.image1, user_id)
+        self.session.flush()
+
+        self.session.add(Association.create(
+            parent_document=self.outing1,
+            child_document=self.image1))
+        self.session.add(Association.create(
+            parent_document=self.route3,
+            child_document=self.image1))
+        self.session.add(Association.create(
+            parent_document=self.waypoint3,
+            child_document=self.image1))
+        self.session.flush()
+
+        self.image1.filename = 'image1.1.jpg'
+        self.session.flush()
+        DocumentRest.update_version(
+            self.image1, user_id,
+            'changed filename', [UpdateType.FIGURES], [])
+        self.session.flush()
+
+        # TODO test deleting SVG images?
+        self.image2 = Image(
+            filename='image2.svg',
+            activities=['paragliding'], height=1500,
+            image_type='collaborative',
+            locales=[
+                DocumentLocale(
+                    lang='en', title='Mont Blanc from the air',
+                    description='...')])
+        self.session.add(self.image2)
+        self.session.flush()
+
+        DocumentRest.create_new_version(self.image2, user_id)
+        self.session.flush()
+
+        self.session.add(Association.create(
+            parent_document=self.outing1,
+            child_document=self.image2))
+        self.session.add(Association.create(
+            parent_document=self.route3,
+            child_document=self.image2))
+        self.session.add(Association.create(
+            parent_document=self.waypoint3,
+            child_document=self.image2))
+        self.session.flush()
+
     def _delete(self, document_id, expected_status):
         headers = self.add_authorization_header(username='moderator')
         return self.app.delete_json(
@@ -330,3 +460,20 @@ class TestDocumentDeleteRest(BaseTestRest):
         self._test_delete(
             self.waypoint2.document_id,
             Waypoint, WaypointLocale, ArchiveWaypoint, ArchiveWaypointLocale)
+
+    def test_delete_article(self):
+        self._test_delete(
+            self.article1.document_id, Article, None, ArchiveArticle, None)
+
+    def test_delete_book(self):
+        self._test_delete(
+            self.book1.document_id, Book, None, ArchiveBook, None)
+
+    def test_delete_xreport(self):
+        self._test_delete(
+            self.xreport1.document_id,
+            Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale)
+
+    def test_delete_image(self):
+        self._test_delete(
+            self.image1.document_id, Image, None, ArchiveImage, None)
