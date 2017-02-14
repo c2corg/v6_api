@@ -206,11 +206,6 @@ def _remove_archive_locale(archive_clazz_locale, document_id):
             query(ArchiveDocumentLocale.id). \
             filter(ArchiveDocumentLocale.document_id == document_id). \
             subquery()
-        # FIXME document topic => to do with normal model instead?
-        DBSession.execute(DocumentTopic.__table__.delete().where(
-            DocumentTopic.document_locale_id.in_(
-                archive_document_locale_ids)
-        ))
         DBSession.execute(archive_clazz_locale.__table__.delete().where(
             getattr(archive_clazz_locale, 'id').in_(
                 archive_document_locale_ids)
@@ -223,11 +218,15 @@ def _remove_archive_locale(archive_clazz_locale, document_id):
 
 def _remove_locale(clazz_locale, document_id):
     if clazz_locale:
-        doc_locale_ids = DBSession.query(DocumentLocale.id). \
+        document_locale_ids = DBSession.query(DocumentLocale.id). \
             filter(DocumentLocale.document_id == document_id). \
             subquery()
+        # Remove links to comments (comments themselves are not removed)
+        DBSession.execute(DocumentTopic.__table__.delete().where(
+            DocumentTopic.document_locale_id.in_(document_locale_ids)
+        ))
         DBSession.execute(clazz_locale.__table__.delete().where(
-            getattr(clazz_locale, 'id').in_(doc_locale_ids)
+            getattr(clazz_locale, 'id').in_(document_locale_ids)
         ))
 
     DBSession.query(DocumentLocale). \
@@ -279,9 +278,27 @@ def _remove_from_feed(document_id):
 
 
 def _remove_image_from_feed(document_id):
-    # TODO if removed doc is an image, it might be needed to remove
+    # If removed doc is an image, it might be needed to remove
     # any reference to this image in feed items
-    pass
+    items = DBSession.query(DocumentChange). \
+        filter(or_(
+            DocumentChange.image1_id == document_id,
+            DocumentChange.image2_id == document_id,
+            DocumentChange.image3_id == document_id
+        )).all()
+    for item in items:
+        # Shift image references in the feed item
+        if item.image1_id == document_id:
+            item.image1_id = item.image2_id
+            item.image2_id = item.image3_id
+        elif item.image2_id == document_id:
+            item.image2_id = item.image3_id
+        item.image3_id = None
+        item.more_images = False
+        # FIXME what happens if the deleted image was the only image reference
+        # in the feed item => should the item be removed or replaced?
+    if len(items):
+        DBSession.flush()
 
 
 def _remove_associations(document_id):
