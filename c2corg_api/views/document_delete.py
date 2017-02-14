@@ -1,6 +1,6 @@
 from c2corg_api.models import DBSession
 from c2corg_api.models.article import ARTICLE_TYPE, Article, ArchiveArticle
-from c2corg_api.models.association import Association
+from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.book import BOOK_TYPE, Book, ArchiveBook
 from c2corg_api.models.cache_version import CacheVersion, \
     update_cache_version_full
@@ -289,6 +289,11 @@ def _remove_associations(document_id):
         filter(or_(
             Association.parent_document_id == document_id,
             Association.child_document_id == document_id
+        )).delete()
+    DBSession.query(AssociationLog). \
+        filter(or_(
+            AssociationLog.parent_document_id == document_id,
+            AssociationLog.child_document_id == document_id
         )).delete()
 
 

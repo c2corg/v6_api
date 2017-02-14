@@ -1,7 +1,7 @@
 import datetime
 
 from c2corg_api.models.article import Article, ArchiveArticle
-from c2corg_api.models.association import Association
+from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.book import Book, ArchiveBook
 from c2corg_api.models.document import (
     Document, DocumentLocale, DocumentGeometry, ArchiveDocument,
@@ -19,6 +19,7 @@ from c2corg_api.models.xreport import (
     Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale)
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.tests.views import BaseTestRest
+from sqlalchemy.sql.expression import or_
 
 
 class TestDocumentDeleteRest(BaseTestRest):
@@ -102,12 +103,8 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.add(self.route2)
         self.session.flush()
 
-        self.session.add(Association.create(
-            parent_document=self.waypoint1,
-            child_document=self.route1))
-        self.session.add(Association.create(
-            parent_document=self.waypoint2,
-            child_document=self.route2))
+        self._add_association(self.waypoint1, self.route1)
+        self._add_association(self.waypoint2, self.route2)
         self.session.flush()
 
         route3_geometry = DocumentGeometry(
@@ -131,15 +128,9 @@ class TestDocumentDeleteRest(BaseTestRest):
         DocumentRest.create_new_version(self.route3, user_id)
         update_feed_document_create(self.route3, user_id)
 
-        self.session.add(Association.create(
-            parent_document=self.waypoint1,
-            child_document=self.route3))
-        self.session.add(Association.create(
-            parent_document=self.waypoint2,
-            child_document=self.route3))
-        self.session.add(Association.create(
-            parent_document=self.waypoint3,
-            child_document=self.route3))
+        self._add_association(self.waypoint1, self.route3)
+        self._add_association(self.waypoint2, self.route3)
+        self._add_association(self.waypoint3, self.route3)
         self.session.flush()
 
         outing1_geometry = DocumentGeometry(
@@ -160,9 +151,7 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         DocumentRest.create_new_version(self.outing1, user_id)
         update_feed_document_create(self.outing1, user_id)
-        self.session.add(Association.create(
-            parent_document=self.route1,
-            child_document=self.outing1))
+        self._add_association(self.route1, self.outing1)
         self.session.flush()
 
         outing2_geometry = DocumentGeometry(
@@ -183,12 +172,8 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         DocumentRest.create_new_version(self.outing2, user_id)
         update_feed_document_create(self.outing2, user_id)
-        self.session.add(Association.create(
-            parent_document=self.route2,
-            child_document=self.outing2))
-        self.session.add(Association.create(
-            parent_document=self.route3,
-            child_document=self.outing2))
+        self._add_association(self.route2, self.outing2)
+        self._add_association(self.route3, self.outing2)
         self.session.flush()
 
         self.article1 = Article(
@@ -205,12 +190,8 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         DocumentRest.create_new_version(self.article1, user_id)
         update_feed_document_create(self.article1, user_id)
-        self.session.add(Association.create(
-            parent_document=self.route2,
-            child_document=self.article1))
-        self.session.add(Association.create(
-            parent_document=self.outing2,
-            child_document=self.article1))
+        self._add_association(self.route2, self.article1)
+        self._add_association(self.outing2, self.article1)
         self.session.flush()
 
         self.book1 = Book(
@@ -226,12 +207,8 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         DocumentRest.create_new_version(self.book1, user_id)
         update_feed_document_create(self.book1, user_id)
-        self.session.add(Association.create(
-            parent_document=self.book1,
-            child_document=self.route2))
-        self.session.add(Association.create(
-            parent_document=self.book1,
-            child_document=self.route3))
+        self._add_association(self.book1, self.route2)
+        self._add_association(self.book1, self.route3)
         self.session.flush()
 
         self.xreport1 = Xreport(
@@ -250,12 +227,8 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         DocumentRest.create_new_version(self.xreport1, user_id)
         update_feed_document_create(self.xreport1, user_id)
-        self.session.add(Association.create(
-            parent_document=self.outing2,
-            child_document=self.xreport1))
-        self.session.add(Association.create(
-            parent_document=self.route3,
-            child_document=self.xreport1))
+        self._add_association(self.outing2, self.xreport1)
+        self._add_association(self.route3, self.xreport1)
         self.session.flush()
 
         self.image1 = Image(
@@ -270,17 +243,9 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.flush()
 
         DocumentRest.create_new_version(self.image1, user_id)
-        self.session.flush()
-
-        self.session.add(Association.create(
-            parent_document=self.outing1,
-            child_document=self.image1))
-        self.session.add(Association.create(
-            parent_document=self.route3,
-            child_document=self.image1))
-        self.session.add(Association.create(
-            parent_document=self.waypoint3,
-            child_document=self.image1))
+        self._add_association(self.outing1, self.image1)
+        self._add_association(self.route3, self.image1)
+        self._add_association(self.waypoint3, self.image1)
         self.session.flush()
 
         self.image1.filename = 'image1.1.jpg'
@@ -303,18 +268,18 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.flush()
 
         DocumentRest.create_new_version(self.image2, user_id)
+        self._add_association(self.outing1, self.image2)
+        self._add_association(self.route3, self.image2)
+        self._add_association(self.waypoint3, self.image2)
         self.session.flush()
 
-        self.session.add(Association.create(
-            parent_document=self.outing1,
-            child_document=self.image2))
-        self.session.add(Association.create(
-            parent_document=self.route3,
-            child_document=self.image2))
-        self.session.add(Association.create(
-            parent_document=self.waypoint3,
-            child_document=self.image2))
-        self.session.flush()
+    def _add_association(self, parent_document, child_document):
+        association = Association.create(
+            parent_document=parent_document,
+            child_document=child_document)
+        self.session.add(association)
+        self.session.add(association.get_log(
+            self.global_userids['contributor']))
 
     def _delete(self, document_id, expected_status):
         headers = self.add_authorization_header(username='moderator')
@@ -430,7 +395,18 @@ class TestDocumentDeleteRest(BaseTestRest):
             filter(ArchiveDocumentGeometry.document_id == document_id).count()
         self.assertEqual(0, count)
 
-        # TODO check associations have been cleared
+        # check associations have been cleared
+        association_count = self.session.query(Association).filter(or_(
+            Association.parent_document_id == document_id,
+            Association.child_document_id == document_id
+        )).count()
+        self.assertEqual(0, association_count)
+        association_log_count = self.session.query(AssociationLog).filter(or_(
+            AssociationLog.parent_document_id == document_id,
+            AssociationLog.child_document_id == document_id
+        )).count()
+        self.assertEqual(0, association_log_count)
+
         # TODO check cache_versions have been updated
         # TODO check the feed has been cleared
         # TODO check comments have been cleared
