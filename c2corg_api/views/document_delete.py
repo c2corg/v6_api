@@ -130,6 +130,10 @@ class DeleteDocumentRest(object):
         # Note: if an error occurs while deleting, SqlAlchemy will
         # automatically cancel all DB changes.
 
+        if document_type == IMAGE_TYPE:
+            # Files are actually removed only if the transaction succeeds
+            delete_all_files_for_image(document_id, self.request)
+
         _remove_from_cache(document_id)
 
         # Remove associations and update cache of formerly associated docs
@@ -156,9 +160,6 @@ class DeleteDocumentRest(object):
         # When all references have been deleted, finally remove the main
         # document entry
         _remove_document(document_id)
-
-        if document_type == IMAGE_TYPE:
-            delete_all_files_for_image(document_id, self.request)
 
         _update_deleted_documents_list(document_id, document_type)
         notify_es_syncer(self.request.registry.queue_config)

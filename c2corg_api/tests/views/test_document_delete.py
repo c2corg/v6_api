@@ -24,6 +24,7 @@ from c2corg_api.models.xreport import (
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.tests.views import BaseTestRest
 from sqlalchemy.sql.expression import or_
+from httmock import all_requests, HTTMock
 
 
 class TestDocumentDeleteRest(BaseTestRest):
@@ -504,5 +505,50 @@ class TestDocumentDeleteRest(BaseTestRest):
             Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale)
 
     def test_delete_image(self):
-        self._test_delete(
-            self.image1.document_id, Image, None, ArchiveImage, None)
+        call = {'times': 0}
+
+        @all_requests
+        def image_service_mock(url, request):
+            call['times'] += 1
+            call['request.body'] = request.body.split('&')
+            call['request.url'] = request.url
+            return {
+                'status_code': 200,
+                'content': ''
+            }
+
+        with HTTMock(image_service_mock):
+            self._test_delete(
+                self.image1.document_id, Image, None, ArchiveImage, None)
+            self.assertEqual(call['times'], 1)
+            self.assertIn('filenames=image1.1.jpg', call['request.body'])
+            self.assertIn('filenames=image1.jpg', call['request.body'])
+            self.assertEqual(
+                call['request.url'],
+                self.settings['image_backend.url'] + '/delete')
+
+    def test_delete_image_error_deleting_files(self):
+        """ Test that the delete request is also successful if the image files
+        cannot be deleted.
+        """
+        call = {'times': 0}
+
+        @all_requests
+        def image_service_mock(url, request):
+            call['times'] += 1
+            call['request.body'] = request.body.split('&')
+            call['request.url'] = request.url
+            return {
+                'status_code': 500,
+                'content': ''
+            }
+
+        with HTTMock(image_service_mock):
+            self._test_delete(
+                self.image1.document_id, Image, None, ArchiveImage, None)
+            self.assertEqual(call['times'], 1)
+            self.assertIn('filenames=image1.1.jpg', call['request.body'])
+            self.assertIn('filenames=image1.jpg', call['request.body'])
+            self.assertEqual(
+                call['request.url'],
+                self.settings['image_backend.url'] + '/delete')
