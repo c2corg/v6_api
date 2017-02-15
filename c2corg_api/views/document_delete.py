@@ -220,14 +220,15 @@ def _remove_archive_locale(archive_clazz_locale, document_id):
 
 
 def _remove_locale(clazz_locale, document_id):
+    document_locale_ids = DBSession.query(DocumentLocale.id). \
+        filter(DocumentLocale.document_id == document_id). \
+        subquery()
+    # Remove links to comments (comments themselves are not removed)
+    DBSession.execute(DocumentTopic.__table__.delete().where(
+        DocumentTopic.document_locale_id.in_(document_locale_ids)
+    ))
+
     if clazz_locale:
-        document_locale_ids = DBSession.query(DocumentLocale.id). \
-            filter(DocumentLocale.document_id == document_id). \
-            subquery()
-        # Remove links to comments (comments themselves are not removed)
-        DBSession.execute(DocumentTopic.__table__.delete().where(
-            DocumentTopic.document_locale_id.in_(document_locale_ids)
-        ))
         DBSession.execute(clazz_locale.__table__.delete().where(
             getattr(clazz_locale, 'id').in_(document_locale_ids)
         ))

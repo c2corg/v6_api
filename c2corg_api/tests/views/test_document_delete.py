@@ -9,6 +9,7 @@ from c2corg_api.models.document import (
     Document, DocumentLocale, DocumentGeometry, ArchiveDocument,
     ArchiveDocumentLocale, ArchiveDocumentGeometry, UpdateType)
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.feed import update_feed_document_create, DocumentChange
 from c2corg_api.models.image import Image, ArchiveImage
 from c2corg_api.models.outing import (
@@ -55,6 +56,7 @@ class TestDocumentDeleteRest(BaseTestRest):
                 WaypointLocale(
                     lang='en', title='Mont Blanc',
                     description='...',
+                    document_topic=DocumentTopic(topic_id=1),
                     summary='The heighest point in Europe')
             ])
         self.session.add(self.waypoint2)
@@ -65,10 +67,10 @@ class TestDocumentDeleteRest(BaseTestRest):
                 geom='SRID=3857;POINT(635956 5723604)'))
         self.waypoint3.locales.append(WaypointLocale(
             lang='en', title='Mont Granier', description='...',
-            access='yep'))
+            access='yep', document_topic=DocumentTopic(topic_id=2)))
         self.waypoint3.locales.append(WaypointLocale(
             lang='fr', title='Mont Granier', description='...',
-            access='ouai'))
+            access='ouai', document_topic=DocumentTopic(topic_id=3)))
         self.session.add(self.waypoint3)
         self.session.flush()
 
@@ -104,7 +106,8 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
         self.route2.locales.append(RouteLocale(
             lang='en', title='Mont Blanc from the air', description='...',
-            title_prefix='Mont Blanc :', gear='paraglider'))
+            title_prefix='Mont Blanc :', gear='paraglider',
+            document_topic=DocumentTopic(topic_id=4)))
         self.session.add(self.route2)
         self.session.flush()
 
@@ -122,7 +125,8 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
         self.route3.locales.append(RouteLocale(
             lang='en', title='Mont Blanc from the air', description='...',
-            title_prefix='Mont Blanc :', gear='paraglider'))
+            title_prefix='Mont Blanc :', gear='paraglider',
+            document_topic=DocumentTopic(topic_id=5)))
         self.session.add(self.route3)
         self.session.flush()
 
@@ -148,7 +152,7 @@ class TestDocumentDeleteRest(BaseTestRest):
             locales=[
                 OutingLocale(
                     lang='en', title='...', description='...',
-                    weather='sunny')
+                    weather='sunny', document_topic=DocumentTopic(topic_id=6))
             ]
         )
         self.session.add(self.outing1)
@@ -169,7 +173,7 @@ class TestDocumentDeleteRest(BaseTestRest):
             locales=[
                 OutingLocale(
                     lang='en', title='...', description='...',
-                    weather='sunny')
+                    weather='sunny', document_topic=DocumentTopic(topic_id=7))
             ]
         )
         self.session.add(self.outing2)
@@ -187,7 +191,8 @@ class TestDocumentDeleteRest(BaseTestRest):
             locales=[
                 DocumentLocale(
                     lang='en', title='Some article',
-                    description='Some content')
+                    description='Some content',
+                    document_topic=DocumentTopic(topic_id=8))
             ]
         )
         self.session.add(self.article1)
@@ -204,7 +209,8 @@ class TestDocumentDeleteRest(BaseTestRest):
             locales=[
                 DocumentLocale(
                     lang='en', title='Some book',
-                    description='Some content')
+                    description='Some content',
+                    document_topic=DocumentTopic(topic_id=9))
             ]
         )
         self.session.add(self.book1)
@@ -221,10 +227,12 @@ class TestDocumentDeleteRest(BaseTestRest):
             locales=[
                 XreportLocale(
                     lang='en', title='Lac d\'Annecy',
-                    place='some place descrip. in english'),
+                    place='some place descrip. in english',
+                    document_topic=DocumentTopic(topic_id=10)),
                 XreportLocale(
                     lang='fr', title='Lac d\'Annecy',
-                    place='some place descrip. in french')
+                    place='some place descrip. in french',
+                    document_topic=DocumentTopic(topic_id=11))
             ]
         )
         self.session.add(self.xreport1)
@@ -243,7 +251,8 @@ class TestDocumentDeleteRest(BaseTestRest):
             locales=[
                 DocumentLocale(
                     lang='en', title='Mont Blanc from the air',
-                    description='...')])
+                    description='...',
+                    document_topic=DocumentTopic(topic_id=12))])
         self.session.add(self.image1)
         self.session.flush()
 
@@ -268,7 +277,8 @@ class TestDocumentDeleteRest(BaseTestRest):
             locales=[
                 DocumentLocale(
                     lang='en', title='Mont Blanc from the air',
-                    description='...')])
+                    description='...',
+                    document_topic=DocumentTopic(topic_id=13))])
         self.session.add(self.image2)
         self.session.flush()
 
@@ -462,8 +472,6 @@ class TestDocumentDeleteRest(BaseTestRest):
             DocumentChange.document_id == document_id
         ).count()
         self.assertEqual(0, feed_count)
-
-        # TODO check comments have been cleared
 
     def test_delete_waypoint(self):
         self._test_delete(
