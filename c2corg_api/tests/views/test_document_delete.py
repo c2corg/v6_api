@@ -1,5 +1,7 @@
 import datetime
 
+from c2corg_api.models.area import Area
+from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import Article, ArchiveArticle
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.book import Book, ArchiveBook
@@ -13,6 +15,8 @@ from c2corg_api.models.outing import (
     Outing, OutingLocale, ArchiveOuting, ArchiveOutingLocale)
 from c2corg_api.models.route import (
     Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale)
+from c2corg_api.models.topo_map import TopoMap
+from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import (
     Waypoint, WaypointLocale, ArchiveWaypoint, ArchiveWaypointLocale)
 from c2corg_api.models.xreport import (
@@ -273,6 +277,43 @@ class TestDocumentDeleteRest(BaseTestRest):
         self._add_association(self.waypoint3, self.image2)
         self.session.flush()
 
+        self.topo_map1 = TopoMap(
+            code='3232ET', editor='IGN', scale='25000',
+            locales=[
+                DocumentLocale(lang='fr', title='Belley')
+            ],
+            geometry=DocumentGeometry(geom_detail='SRID=3857;POLYGON((611774.917032556 5706934.10657514,611774.917032556 5744215.5846397,642834.402570357 5744215.5846397,642834.402570357 5706934.10657514,611774.917032556 5706934.10657514))')  # noqa
+        )
+        self.session.add(self.topo_map1)
+        self.session.flush()
+        self.session.add(TopoMapAssociation(
+            document=self.waypoint2, topo_map=self.topo_map1))
+        self.session.add(TopoMapAssociation(
+            document=self.waypoint3, topo_map=self.topo_map1))
+        self.session.add(TopoMapAssociation(
+            document=self.route2, topo_map=self.topo_map1))
+        self.session.add(TopoMapAssociation(
+            document=self.route3, topo_map=self.topo_map1))
+        self.session.flush()
+
+        self.area1 = Area(
+            area_type='range',
+            geometry=DocumentGeometry(
+                geom_detail='SRID=3857;POLYGON((611774.917032556 5706934.10657514,611774.917032556 5744215.5846397,642834.402570357 5744215.5846397,642834.402570357 5706934.10657514,611774.917032556 5706934.10657514))'  # noqa
+            )
+        )
+        self.session.add(self.area1)
+        self.session.flush()
+        self.session.add(AreaAssociation(
+            document=self.waypoint2, area=self.area1))
+        self.session.add(AreaAssociation(
+            document=self.waypoint3, area=self.area1))
+        self.session.add(AreaAssociation(
+            document=self.route2, area=self.area1))
+        self.session.add(AreaAssociation(
+            document=self.route3, area=self.area1))
+        self.session.flush()
+
     def _add_association(self, parent_document, child_document):
         association = Association.create(
             parent_document=parent_document,
@@ -406,6 +447,12 @@ class TestDocumentDeleteRest(BaseTestRest):
             AssociationLog.child_document_id == document_id
         )).count()
         self.assertEqual(0, association_log_count)
+        association_count = self.session.query(TopoMapAssociation).filter(
+            TopoMapAssociation.document_id == document_id).count()
+        self.assertEqual(0, association_count)
+        association_count = self.session.query(AreaAssociation).filter(
+            AreaAssociation.document_id == document_id).count()
+        self.assertEqual(0, association_count)
 
         # TODO check cache_versions have been updated
 

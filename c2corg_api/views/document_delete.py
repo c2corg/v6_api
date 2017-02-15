@@ -1,4 +1,5 @@
 from c2corg_api.models import DBSession
+from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import ARTICLE_TYPE, Article, ArchiveArticle
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.book import BOOK_TYPE, Book, ArchiveBook
@@ -16,6 +17,7 @@ from c2corg_api.models.outing import (
     OUTING_TYPE, Outing, OutingLocale, ArchiveOuting, ArchiveOutingLocale)
 from c2corg_api.models.route import (
     ROUTE_TYPE, Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale)
+from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import (
     WAYPOINT_TYPE, Waypoint, WaypointLocale, ArchiveWaypoint,
     ArchiveWaypointLocale)
@@ -312,6 +314,10 @@ def _remove_associations(document_id):
             AssociationLog.parent_document_id == document_id,
             AssociationLog.child_document_id == document_id
         )).delete()
+    DBSession.query(TopoMapAssociation). \
+        filter(TopoMapAssociation.document_id == document_id).delete()
+    DBSession.query(AreaAssociation). \
+        filter(AreaAssociation.document_id == document_id).delete()
 
 
 def _update_deleted_documents_list(document_id, document_type):
