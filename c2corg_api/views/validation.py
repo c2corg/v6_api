@@ -165,11 +165,26 @@ def validate_token_pagination(request, **kwargs):
     validate_token(request)
 
 
+def validate_simple_token_pagination(request, **kwargs):
+    """
+    Validate token pagination parameters (limit and token) for changes feed.
+    """
+    check_get_for_integer_property(request, 'limit', False)
+    validate_simple_token(request)
+
+
 def validate_user_id(request, **kwargs):
     """
     Checks for a required user id parameter.
     """
     check_get_for_integer_property(request, 'u', True)
+
+
+def validate_user_id_not_required(request, **kwargs):
+    """
+    Checks for a non-required user id parameter.
+    """
+    check_get_for_integer_property(request, 'u', False)
 
 
 def parse_datetime(time_raw):
@@ -213,6 +228,18 @@ def validate_token(request, **kwargs):
                     request.validated['token_id'] = id
                     request.validated['token_time'] = time
                     return
+        request.errors.add('querystring', 'token', 'invalid format')
+
+
+def validate_simple_token(request, **kwargs):
+    if request.GET.get('token'):
+        token = request.GET.get('token')
+
+        # the token should have the format '{id}'
+        id = parse_int_safe(token)
+        if id is not None:
+            request.validated['token_id'] = id
+            return
         request.errors.add('querystring', 'token', 'invalid format')
 
 
