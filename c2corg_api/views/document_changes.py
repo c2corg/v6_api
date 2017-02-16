@@ -1,7 +1,9 @@
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import Document, ArchiveDocumentLocale
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
+from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.user import User
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.views import cors_policy
 from c2corg_api.views.feed import get_params
 from c2corg_api.views.validation import validate_simple_token_pagination,\
@@ -50,19 +52,21 @@ class ChangesDocumentRest(object):
         lang, token_id, _, limit = get_params(self.request, 30)
 
         changes = get_changes_of_feed(token_id, limit, user_id)
-        doc_ids = [change.id for change in changes]
+        doc_ids = [change.history_metadata_id for change in changes]
 
         return load_feed(doc_ids, limit, user_id)
 
 
 def get_changes_of_feed(token_id, limit, user_id=None):
-    query = DBSession. \
-        query(HistoryMetaData.id, HistoryMetaData.user_id). \
-        order_by(HistoryMetaData.id.desc())
+    query = DBSession.query(DocumentVersion.history_metadata_id) \
+        .join(HistoryMetaData) \
+        .join(Document) \
+        .filter(Document.type.notin_([OUTING_TYPE, USERPROFILE_TYPE])) \
+        .order_by(desc(DocumentVersion.history_metadata_id))
 
     # pagination filter
     if token_id is not None:
-        query = query.filter(HistoryMetaData.id < token_id)
+        query = query.filter(DocumentVersion.history_metadata_id < token_id)
 
     if user_id is not None:
         query = query.filter(HistoryMetaData.user_id == user_id)
@@ -71,12 +75,6 @@ def get_changes_of_feed(token_id, limit, user_id=None):
 
 
 def load_feed(doc_ids, limit, user_id=None):
-    if user_id:
-        doc_total = DBSession.query(HistoryMetaData.user_id)\
-            .filter(HistoryMetaData.user_id == user_id).count()
-    else:
-        doc_total = DBSession.query(HistoryMetaData.user_id).count()
-
     if not doc_ids:
         doc_changes = []
     else:
@@ -113,7 +111,6 @@ def load_feed(doc_ids, limit, user_id=None):
     pagination_token = '{}'.format(last_change.history_metadata_id)
 
     return {
-        'total': doc_total,
         'pagination_token': pagination_token,
         'feed': [serialize_change(ch) for ch in doc_changes]
     }

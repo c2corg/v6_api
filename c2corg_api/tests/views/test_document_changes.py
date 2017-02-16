@@ -1,6 +1,10 @@
+import datetime
+
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
+from c2corg_api.models.outing import Outing
 from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.tests.views.test_feed import get_document_ids
@@ -74,29 +78,58 @@ class TestChangesDocumentRest(BaseTestRest):
         DocumentRest.create_new_version(self.route1, contributor_id)
         self.session.flush()
 
+        self.outing = Outing(
+            activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
+            date_end=datetime.date(2016, 1, 1), elevation_max=1500,
+            elevation_min=700, height_diff_up=800, height_diff_down=800
+        )
+        self.session.add(self.outing)
+        self.session.flush()
+        DocumentRest.create_new_version(self.outing, contributor_id)
+        self.session.flush()
+
+        self.profile2 = UserProfile(categories=['amateur'])
+        self.session.add(self.profile2)
+        self.session.flush()
+
         version_count = self.session.query(DocumentVersion).count()
         self.assertEqual(4, version_count)
 
         hist_meta_count = self.session.query(HistoryMetaData).count()
-        self.assertEqual(4, hist_meta_count)
+        self.assertEqual(5, hist_meta_count)
 
     def test_get_changes(self):
         response = self.app.get(self._prefix, status=200)
         body = response.json
 
-        self.assertIn('total', body)
+        self.assertNotIn('total', body)
         self.assertIn('pagination_token', body)
         self.assertIn('feed', body)
 
         feed = body['feed']
         self.assertEqual(4, len(feed))
-        self.assertEqual(4, body['total'])
+
+        for doc in feed:
+            self.assertNotEqual(doc['document']['type'], 'o')
+            self.assertNotEqual(doc['document']['type'], 'u')
 
         # check that the change for the route (latest change) is listed first
         latest_change = feed[0]
 
         self.assertEqual(
             self.route1.document_id, latest_change['document']['document_id'])
+
+    def test_get_changes_empty(self):
+        response = self.app.get(self._prefix + '?token=0', status=200)
+        body = response.json
+
+        self.assertIn('total', body)
+        self.assertNotIn('pagination_token', body)
+        self.assertIn('feed', body)
+
+        feed = body['feed']
+        self.assertEqual(0, len(feed))
+        self.assertEqual(0, body['total'])
 
     def test_get_changes_paginated(self):
         response = self.app.get(
