@@ -279,7 +279,7 @@ def sync_deleted_documents(session, deleted_documents, batch_size):
                 '_op_type': 'delete'
             })
             n += 1
-        log.info('Removed {} document(s)'.format(n))
+    log.info('Removed {} document(s)'.format(n))
 
 
 def add_dependent_documents(session, docs_per_type):

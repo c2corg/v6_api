@@ -154,7 +154,7 @@ class DeleteDocumentRest(object):
         _remove_from_feed(document_id)
 
         if document_type == IMAGE_TYPE:
-            # Remove this image references from the feed
+            # Remove the references of this image from the feed
             _remove_image_from_feed(document_id)
 
         # When all references have been deleted, finally remove the main
@@ -291,18 +291,20 @@ def _remove_image_from_feed(document_id):
             DocumentChange.image3_id == document_id
         )).all()
     for item in items:
-        # Shift image references in the feed item
-        if item.image1_id == document_id:
-            item.image1_id = item.image2_id
-            item.image2_id = item.image3_id
-        elif item.image2_id == document_id:
-            item.image2_id = item.image3_id
-        item.image3_id = None
-        item.more_images = False
-        # FIXME what happens if the deleted image was the only image reference
-        # in the feed item => should the item be removed or replaced?
-    if len(items):
-        DBSession.flush()
+        if item.change_type == 'added_photos' and \
+                item.image1_id == document_id and \
+                not item.image2_id:
+            # Remove feed item if no other image was added
+            DBSession.delete(item)
+        else:
+            # Shift image references in the feed item
+            if item.image1_id == document_id:
+                item.image1_id = item.image2_id
+                item.image2_id = item.image3_id
+            elif item.image2_id == document_id:
+                item.image2_id = item.image3_id
+            item.image3_id = None
+            item.more_images = False
 
 
 def _remove_associations(document_id):

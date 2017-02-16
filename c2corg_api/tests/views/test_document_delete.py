@@ -269,25 +269,6 @@ class TestDocumentDeleteRest(BaseTestRest):
             'changed filename', [UpdateType.FIGURES], [])
         self.session.flush()
 
-        # TODO test deleting SVG images?
-        self.image2 = Image(
-            filename='image2.svg',
-            activities=['paragliding'], height=1500,
-            image_type='collaborative',
-            locales=[
-                DocumentLocale(
-                    lang='en', title='Mont Blanc from the air',
-                    description='...',
-                    document_topic=DocumentTopic(topic_id=13))])
-        self.session.add(self.image2)
-        self.session.flush()
-
-        DocumentRest.create_new_version(self.image2, user_id)
-        self._add_association(self.outing1, self.image2)
-        self._add_association(self.route3, self.image2)
-        self._add_association(self.waypoint3, self.image2)
-        self.session.flush()
-
         self.topo_map1 = TopoMap(
             code='3232ET', editor='IGN', scale='25000',
             locales=[
@@ -355,22 +336,16 @@ class TestDocumentDeleteRest(BaseTestRest):
         """ Test that a main waypoint cannot be deleted.
         """
         response = self._delete(self.waypoint1.document_id, 400)
-        errors = response.json.get('errors')
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0].get('name'), 'Bad Request')
-        self.assertEqual(
-            errors[0].get('description'),
+        self.assertErrorsContain(
+            response.json, 'Bad Request',
             'This waypoint cannot be deleted because it is a main waypoint.')
 
     def test_delete_only_waypoint_of_route(self):
         """ Test that the only waypoint of a route cannot be deleted.
         """
         response = self._delete(self.waypoint2.document_id, 400)
-        errors = response.json.get('errors')
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0].get('name'), 'Bad Request')
-        self.assertEqual(
-            errors[0].get('description'),
+        self.assertErrorsContain(
+            response.json, 'Bad Request',
             'This waypoint cannot be deleted because '
             'it is the only waypoint associated to some routes.')
 
@@ -378,11 +353,8 @@ class TestDocumentDeleteRest(BaseTestRest):
         """ Test that a route cannot be deleted if it is the only route
             of some outing."""
         response = self._delete(self.route1.document_id, 400)
-        errors = response.json.get('errors')
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0].get('name'), 'Bad Request')
-        self.assertEqual(
-            errors[0].get('description'),
+        self.assertErrorsContain(
+            response.json, 'Bad Request',
             'This route cannot be deleted because '
             'it is the only route associated to some outings.')
 
@@ -465,8 +437,6 @@ class TestDocumentDeleteRest(BaseTestRest):
             AreaAssociation.document_id == document_id).count()
         self.assertEqual(0, association_count)
 
-        # TODO check cache_versions have been updated
-
         # Check the feed has been cleared
         feed_count = self.session.query(DocumentChange).filter(
             DocumentChange.document_id == document_id
@@ -478,39 +448,84 @@ class TestDocumentDeleteRest(BaseTestRest):
             self.waypoint3.document_id,
             Waypoint, WaypointLocale, ArchiveWaypoint, ArchiveWaypointLocale)
 
+        # Check that associated documents cache versions have been incremented
+        self.check_cache_version(self.route3.document_id, 2)
+        self.check_cache_version(self.image1.document_id, 2)
+
     def test_delete_route(self):
         self._test_delete(
             self.route3.document_id,
             Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale)
+
+        # Check that associated documents cache versions have been incremented
+        self.check_cache_version(self.waypoint1.document_id, 3)
+        self.check_cache_version(self.waypoint2.document_id, 3)
+        self.check_cache_version(self.waypoint3.document_id, 3)
+        self.check_cache_version(self.outing2.document_id, 2)
+        self.check_cache_version(self.book1.document_id, 2)
+        self.check_cache_version(self.xreport1.document_id, 2)
+        self.check_cache_version(self.image1.document_id, 2)
 
     def test_delete_outing(self):
         self._test_delete(
             self.outing1.document_id,
             Outing, OutingLocale, ArchiveOuting, ArchiveOutingLocale)
 
+        # Check that associated documents cache versions have been incremented
+        self.check_cache_version(self.route1.document_id, 2)
+        self.check_cache_version(self.image1.document_id, 2)
+
     def test_delete_outing_route_waypoint(self):
         self._test_delete(
             self.outing2.document_id,
             Outing, OutingLocale, ArchiveOuting, ArchiveOutingLocale)
+
+        # Check that associated documents cache versions have been incremented
+        self.check_cache_version(self.route2.document_id, 2)
+        self.check_cache_version(self.route3.document_id, 2)
+        self.check_cache_version(self.article1.document_id, 2)
+        self.check_cache_version(self.xreport1.document_id, 2)
+
         self._test_delete(
             self.route2.document_id,
             Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale)
+
+        # Check that associated documents cache versions have been incremented
+        self.check_cache_version(self.waypoint2.document_id, 4)
+        self.check_cache_version(self.article1.document_id, 3)
+        self.check_cache_version(self.book1.document_id, 2)
+
         self._test_delete(
             self.waypoint2.document_id,
             Waypoint, WaypointLocale, ArchiveWaypoint, ArchiveWaypointLocale)
+
+        # Check that associated documents cache versions have been incremented
+        self.check_cache_version(self.route3.document_id, 3)
 
     def test_delete_article(self):
         self._test_delete(
             self.article1.document_id, Article, None, ArchiveArticle, None)
 
+        # Check that associated documents cache versions have been incremented
+        self.check_cache_version(self.route2.document_id, 2)
+        self.check_cache_version(self.outing2.document_id, 2)
+
     def test_delete_book(self):
         self._test_delete(
             self.book1.document_id, Book, None, ArchiveBook, None)
+
+        # Check that associated documents cache versions have been incremented
+        self.check_cache_version(self.route2.document_id, 2)
+        self.check_cache_version(self.route3.document_id, 2)
 
     def test_delete_xreport(self):
         self._test_delete(
             self.xreport1.document_id,
             Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale)
+
+        # Check that associated documents cache versions have been incremented
+        self.check_cache_version(self.route3.document_id, 2)
+        self.check_cache_version(self.outing2.document_id, 2)
 
     def test_delete_image(self):
         call = {'times': 0}
@@ -534,6 +549,9 @@ class TestDocumentDeleteRest(BaseTestRest):
             self.assertEqual(
                 call['request.url'],
                 self.settings['image_backend.url'] + '/delete')
+            self.check_cache_version(self.waypoint3.document_id, 2)
+            self.check_cache_version(self.route3.document_id, 2)
+            self.check_cache_version(self.outing1.document_id, 2)
 
     def test_delete_image_error_deleting_files(self):
         """ Test that the delete request is also successful if the image files
@@ -560,3 +578,6 @@ class TestDocumentDeleteRest(BaseTestRest):
             self.assertEqual(
                 call['request.url'],
                 self.settings['image_backend.url'] + '/delete')
+            self.check_cache_version(self.waypoint3.document_id, 2)
+            self.check_cache_version(self.route3.document_id, 2)
+            self.check_cache_version(self.outing1.document_id, 2)
