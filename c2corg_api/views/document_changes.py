@@ -50,10 +50,7 @@ class ChangesDocumentRest(object):
         lang, token_id, _, limit = get_params(self.request, 30)
 
         changes = get_changes_of_feed(token_id, limit, user_id)
-
-        doc_ids = []
-        for change in changes:
-            doc_ids.append(change.id)
+        doc_ids = [change.id for change in changes]
 
         return load_feed(doc_ids, limit, user_id)
 
