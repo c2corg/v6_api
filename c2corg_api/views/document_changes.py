@@ -50,10 +50,7 @@ class ChangesDocumentRest(object):
         lang, token_id, _, limit = get_params(self.request, 30)
 
         changes = get_changes_of_feed(token_id, limit, user_id)
-
-        doc_ids = []
-        for change in changes:
-            doc_ids.append(change.id)
+        doc_ids = [change.id for change in changes]
 
         return load_feed(doc_ids, limit, user_id)
 
@@ -80,31 +77,34 @@ def load_feed(doc_ids, limit, user_id=None):
     else:
         doc_total = DBSession.query(HistoryMetaData.user_id).count()
 
-    doc_changes = DBSession.query(DocumentVersion) \
-        .options(load_only('history_metadata', 'lang'),
-                 joinedload('history_metadata').load_only(
-                    HistoryMetaData.id,
-                    HistoryMetaData.user_id,
-                    HistoryMetaData.comment,
-                    HistoryMetaData.written_at).
-                 joinedload('user').load_only(
-                    User.id,
-                    User.name,
-                    User.username,
-                    User.lang)) \
-        .options(load_only('document'),
-                 joinedload('document').load_only(
-                    Document.version,
-                    Document.document_id,
-                    Document.type,
-                    Document.quality)) \
-        .options(load_only('document_locales_archive'),
-                 joinedload('document_locales_archive').load_only(
-                    ArchiveDocumentLocale.title)) \
-        .order_by(desc(DocumentVersion.id)) \
-        .filter(DocumentVersion.history_metadata_id.in_(doc_ids)) \
-        .limit(limit) \
-        .all()
+    if not doc_ids:
+        doc_changes = []
+    else:
+        doc_changes = DBSession.query(DocumentVersion) \
+            .options(load_only('history_metadata', 'lang'),
+                     joinedload('history_metadata').load_only(
+                        HistoryMetaData.id,
+                        HistoryMetaData.user_id,
+                        HistoryMetaData.comment,
+                        HistoryMetaData.written_at).
+                     joinedload('user').load_only(
+                        User.id,
+                        User.name,
+                        User.username,
+                        User.lang)) \
+            .options(load_only('document'),
+                     joinedload('document').load_only(
+                        Document.version,
+                        Document.document_id,
+                        Document.type,
+                        Document.quality)) \
+            .options(load_only('document_locales_archive'),
+                     joinedload('document_locales_archive').load_only(
+                        ArchiveDocumentLocale.title)) \
+            .order_by(desc(DocumentVersion.id)) \
+            .filter(DocumentVersion.history_metadata_id.in_(doc_ids)) \
+            .limit(limit) \
+            .all()
 
     if not doc_changes:
         return {'feed': [], 'total': 0}
