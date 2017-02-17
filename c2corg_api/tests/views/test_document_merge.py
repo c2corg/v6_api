@@ -242,14 +242,8 @@ class TestDocumentMergeRest(BaseTestRest):
         @all_requests
         def image_service_mock(url, request):
             call['times'] += 1
-
-            self.assertEqual(
-                request.body,
-                'filenames=image1.1.jpg&filenames=image1.jpg&secret=test')
-            self.assertEqual(
-                request.url,
-                'http://images.demov6.camptocamp.org/delete')
-
+            call['request.body'] = request.body.split('&')
+            call['request.url'] = request.url
             return {
                 'status_code': 200,
                 'content': ''
@@ -261,6 +255,11 @@ class TestDocumentMergeRest(BaseTestRest):
                 'target_document_id': self.image2.document_id
             }, 200)
             self.assertEqual(call['times'], 1)
+            self.assertIn('filenames=image1.1.jpg', call['request.body'])
+            self.assertIn('filenames=image1.jpg', call['request.body'])
+            self.assertEqual(
+                call['request.url'],
+                self.settings['image_backend.url'] + '/delete')
 
     def test_merge_image_error_deleting_files(self):
         """ Test that the merge request is also successful if the image files
@@ -271,14 +270,8 @@ class TestDocumentMergeRest(BaseTestRest):
         @all_requests
         def image_service_mock(url, request):
             call['times'] += 1
-
-            self.assertEqual(
-                request.body,
-                'filenames=image1.1.jpg&filenames=image1.jpg&secret=test')
-            self.assertEqual(
-                request.url,
-                'http://images.demov6.camptocamp.org/delete')
-
+            call['request.body'] = request.body.split('&')
+            call['request.url'] = request.url
             return {
                 'status_code': 500,
                 'content': 'some random error'
@@ -290,3 +283,8 @@ class TestDocumentMergeRest(BaseTestRest):
                 'target_document_id': self.image2.document_id
             }, 200)
             self.assertEqual(call['times'], 1)
+            self.assertIn('filenames=image1.1.jpg', call['request.body'])
+            self.assertIn('filenames=image1.jpg', call['request.body'])
+            self.assertEqual(
+                call['request.url'],
+                self.settings['image_backend.url'] + '/delete')

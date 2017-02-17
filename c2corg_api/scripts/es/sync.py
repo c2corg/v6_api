@@ -3,6 +3,7 @@ from c2corg_api.models.area import Area
 from c2corg_api.models.association import AssociationLog, Association
 from c2corg_api.models.document import Document, DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
+from c2corg_api.models.es_sync import ESDeletedDocument
 from c2corg_api.models.outing import Outing, OUTING_TYPE
 from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.models.user import User
@@ -38,6 +39,13 @@ def sync_es(session, batch_size=1000):
     log.info('Number of changed documents: {}'.format(len(changed_documents)))
     if changed_documents:
         sync_documents(session, changed_documents, batch_size)
+
+    # get list of documents deleted since the last update
+    deleted_documents = get_deleted_documents(session, last_update)
+
+    log.info('Number of deleted documents: {}'.format(len(deleted_documents)))
+    if deleted_documents:
+        sync_deleted_documents(session, deleted_documents, batch_size)
 
     es_sync.mark_as_updated(session, date_now)
     log.info('Sync has finished')
@@ -234,6 +242,15 @@ def get_changed_outings_ro_uo(session, last_update):
         all()
 
 
+def get_deleted_documents(session, last_update):
+    """Returns the ids of documents deleted since the last update.
+    """
+    return session. \
+        query(ESDeletedDocument.document_id, ESDeletedDocument.type) . \
+        filter(ESDeletedDocument.deleted_at >= last_update). \
+        all()
+
+
 def sync_documents(session, changed_documents, batch_size):
     client = elasticsearch_config['client']
     batch = ElasticBatch(client, batch_size)
@@ -245,6 +262,24 @@ def sync_documents(session, changed_documents, batch_size):
                 docs = get_documents(
                     session, doc_type, batch_size, document_ids)
                 create_search_documents(doc_type, docs, batch)
+
+
+def sync_deleted_documents(session, deleted_documents, batch_size):
+    client = elasticsearch_config['client']
+    batch = ElasticBatch(client, batch_size)
+    index = elasticsearch_config['index']
+    n = 0
+    with batch:
+        for document_id, doc_type in deleted_documents:
+            batch.add({
+                '_index': index,
+                '_id': document_id,
+                '_type': doc_type,
+                'id': document_id,
+                '_op_type': 'delete'
+            })
+            n += 1
+    log.info('Removed {} document(s)'.format(n))
 
 
 def add_dependent_documents(session, docs_per_type):

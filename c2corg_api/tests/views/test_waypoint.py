@@ -1473,11 +1473,13 @@ class TestWaypointRest(BaseDocumentTestRest):
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'))
         self.session.add(self.waypoint2)
+
         self.waypoint3 = Waypoint(
             waypoint_type='summit', elevation=3,
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'))
         self.session.add(self.waypoint3)
+
         self.waypoint4 = Waypoint(
             waypoint_type='summit', elevation=4,
             protected=True,
@@ -1490,6 +1492,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             lang='fr', title='Mont Granier', description='...',
             access='ouai'))
         self.session.add(self.waypoint4)
+
         self.waypoint5 = Waypoint(
             waypoint_type='summit', elevation=3,
             redirects_to=self.waypoint.document_id,
@@ -1500,10 +1503,9 @@ class TestWaypointRest(BaseDocumentTestRest):
             access='yep'))
         self.session.add(self.waypoint5)
         self.session.flush()
-        DocumentRest.create_new_version(
-            self.waypoint4, self.global_userids['contributor'])
-        DocumentRest.create_new_version(
-            self.waypoint5, self.global_userids['contributor'])
+
+        DocumentRest.create_new_version(self.waypoint4, user_id)
+        DocumentRest.create_new_version(self.waypoint5, user_id)
 
         # add some associations
         route1_geometry = DocumentGeometry(
