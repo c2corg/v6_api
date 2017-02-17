@@ -7,6 +7,7 @@ from c2corg_api.models.article import Article
 from c2corg_api.models.book import Book
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import CacheVersion
+from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.feed import update_feed_document_create, DocumentChange
 from c2corg_api.models.outing import OutingLocale, Outing, OUTING_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
@@ -67,6 +68,10 @@ class BaseTestImage(BaseDocumentTestRest):
 
         user_id = self.global_userids['contributor']
         DocumentRest.create_new_version(self.image, user_id)
+
+        self.image_version = self.session.query(DocumentVersion). \
+            filter(DocumentVersion.document_id == self.image.document_id). \
+            filter(DocumentVersion.lang == 'en').first()
 
         self.image2 = Image(
             filename='image2.jpg',
@@ -319,6 +324,9 @@ class TestImageRest(BaseTestImage):
     def test_get_info(self):
         body, locale = self.get_info(self.image, 'en')
         self.assertEqual(locale.get('lang'), 'en')
+
+    def test_get_version(self):
+        self.get_version(self.image, self.image_version)
 
     @patch('c2corg_api.views.image.requests.post',
            return_value=Mock(status_code=200))

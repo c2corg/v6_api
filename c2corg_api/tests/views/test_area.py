@@ -3,10 +3,12 @@ import json
 from c2corg_api.models.area import Area, ArchiveArea, AREA_TYPE
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
+from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.image import Image
 from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
+
 from c2corg_common.attributes import quality_types
 from shapely.geometry import shape, Polygon
 
@@ -85,6 +87,9 @@ class TestAreaRest(BaseDocumentTestRest):
     def test_get_info(self):
         body, locale = self.get_info(self.area1, 'en')
         self.assertEqual(locale.get('lang'), 'en')
+
+    def test_get_version(self):
+        self.get_version(self.area1, self.area1_version)
 
     def test_post_error(self):
         body = self.post_error({}, user='moderator')
@@ -449,6 +454,10 @@ class TestAreaRest(BaseDocumentTestRest):
 
         user_id = self.global_userids['contributor']
         DocumentRest.create_new_version(self.area1, user_id)
+
+        self.area1_version = self.session.query(DocumentVersion). \
+            filter(DocumentVersion.document_id == self.area1.document_id). \
+            filter(DocumentVersion.lang == 'en').first()
 
         self.area2 = Area(area_type='range')
         self.session.add(self.area2)
