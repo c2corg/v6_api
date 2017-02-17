@@ -134,6 +134,18 @@ class DeleteDocumentRest(object):
             # Files are actually removed only if the transaction succeeds
             delete_all_files_for_image(document_id, self.request)
 
+        self._delete_document(document_id, document_type)
+
+        _update_deleted_documents_list(document_id, document_type)
+        notify_es_syncer(self.request.registry.queue_config)
+
+        return {}
+
+    def _delete_document(self, document_id, document_type, redirecting=False):
+        # Check if documents are redirecting (merged) to the document to delete
+        # If yes, delete them first.
+        self._remove_merged_documents(document_id, document_type)
+
         _remove_from_cache(document_id)
 
         # Remove associations and update cache of formerly associated docs
@@ -151,9 +163,10 @@ class DeleteDocumentRest(object):
         _remove_locale(clazz_locale, document_id)
         _remove_geometry(document_id)
         _remove_figures(clazz, document_id)
-        _remove_from_feed(document_id)
+        if not redirecting:
+            _remove_from_feed(document_id)
 
-        if document_type == IMAGE_TYPE:
+        if not redirecting and document_type == IMAGE_TYPE:
             # Remove the references of this image from the feed
             _remove_image_from_feed(document_id)
 
@@ -161,10 +174,11 @@ class DeleteDocumentRest(object):
         # document entry
         _remove_document(document_id)
 
-        _update_deleted_documents_list(document_id, document_type)
-        notify_es_syncer(self.request.registry.queue_config)
-
-        return {}
+    def _remove_merged_documents(self, document_id, document_type):
+        merged_document_ids = DBSession.query(ArchiveDocument.document_id). \
+            filter(ArchiveDocument.redirects_to == document_id).all()
+        for merged_document_id in merged_document_ids:
+            self._delete_document(merged_document_id, document_type, True)
 
 
 def _get_models(document_type):

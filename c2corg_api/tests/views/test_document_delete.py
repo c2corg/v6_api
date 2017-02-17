@@ -163,6 +163,26 @@ class TestDocumentDeleteRest(BaseTestRest):
         self._add_association(self.route1, self.outing1)
         self.session.flush()
 
+        outing1b_geometry = DocumentGeometry(
+            geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
+            geom='SRID=3857;POINT(635961 5723624)')
+        self.outing1b = Outing(
+            activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
+            date_end=datetime.date(2016, 1, 1),
+            geometry=outing1b_geometry,
+            redirects_to=self.outing1.document_id,
+            locales=[
+                OutingLocale(
+                    lang='en', title='...', description='...',
+                    weather='sunny')
+            ]
+        )
+        self.session.add(self.outing1b)
+        self.session.flush()
+
+        DocumentRest.create_new_version(self.outing1b, user_id)
+        self.session.flush()
+
         outing2_geometry = DocumentGeometry(
             geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
             geom='SRID=3857;POINT(635961 5723624)')
@@ -360,7 +380,7 @@ class TestDocumentDeleteRest(BaseTestRest):
 
     def _test_delete(
             self, document_id, clazz, clazz_locale, archive_clazz,
-            archive_clazz_locale):
+            archive_clazz_locale, expected_deleted_docs_count=1):
 
         # Get the number of documents before deleting
         initial_count = self.session.query(clazz).count()
@@ -370,9 +390,10 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # Check that only one document has been deleted
         count = self.session.query(clazz).count()
-        self.assertEqual(count, initial_count - 1)
+        self.assertEqual(initial_count - count, expected_deleted_docs_count)
         count = self.session.query(Document).count()
-        self.assertEqual(count, initial_doc_count - 1)
+        self.assertEqual(
+            initial_doc_count - count, expected_deleted_docs_count)
 
         # Check that the document versions table is cleared
         count = self.session.query(DocumentVersion). \
@@ -467,9 +488,10 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.check_cache_version(self.image1.document_id, 2)
 
     def test_delete_outing(self):
+        # outing1b redirects to outing1 => 2 documents to delete
         self._test_delete(
             self.outing1.document_id,
-            Outing, OutingLocale, ArchiveOuting, ArchiveOutingLocale)
+            Outing, OutingLocale, ArchiveOuting, ArchiveOutingLocale, 2)
 
         # Check that associated documents cache versions have been incremented
         self.check_cache_version(self.route1.document_id, 2)
