@@ -357,7 +357,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         """
         response = self._delete(self.waypoint1.document_id, 400)
         self.assertErrorsContain(
-            response.json, 'Bad Request',
+            response.json, 'document_id',
             'This waypoint cannot be deleted because it is a main waypoint.')
 
     def test_delete_only_waypoint_of_route(self):
@@ -365,7 +365,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         """
         response = self._delete(self.waypoint2.document_id, 400)
         self.assertErrorsContain(
-            response.json, 'Bad Request',
+            response.json, 'document_id',
             'This waypoint cannot be deleted because '
             'it is the only waypoint associated to some routes.')
 
@@ -374,7 +374,7 @@ class TestDocumentDeleteRest(BaseTestRest):
             of some outing."""
         response = self._delete(self.route1.document_id, 400)
         self.assertErrorsContain(
-            response.json, 'Bad Request',
+            response.json, 'document_id',
             'This route cannot be deleted because '
             'it is the only route associated to some outings.')
 
