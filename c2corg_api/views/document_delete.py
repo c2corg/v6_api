@@ -29,7 +29,6 @@ from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.image import delete_all_files_for_image
 from c2corg_api.views.validation import validate_id
 from cornice.resource import resource
-from pyramid.httpexceptions import HTTPNotFound, HTTPBadRequest
 from sqlalchemy.sql.expression import or_, and_, exists
 from sqlalchemy.sql.functions import func
 
@@ -43,26 +42,52 @@ def validate_document(request, **kwargs):
         filter(Document.document_id == document_id).first()
 
     if not document:
-        raise HTTPNotFound('document not found')
+        request.errors.add(
+            'querystring',
+            'document_id',
+            'document not found')
+        request.errors.status = 404
+        return
 
     document_type = document.type
+    if document_type not in (WAYPOINT_TYPE,
+                             ROUTE_TYPE,
+                             OUTING_TYPE,
+                             IMAGE_TYPE,
+                             ARTICLE_TYPE,
+                             BOOK_TYPE,
+                             XREPORT_TYPE):
+        request.errors.add(
+            'querystring',
+            'document_id',
+            'Unsupported type when deleting document')
+        return
 
     if document_type == WAYPOINT_TYPE:
         if _is_main_waypoint_of_route(document_id):
-            raise HTTPBadRequest(
+            request.errors.add(
+                'querystring',
+                'document_id',
                 'This waypoint cannot be deleted '
                 'because it is a main waypoint.')
+            return
 
         if _is_only_waypoint_of_route(document_id):
-            raise HTTPBadRequest(
+            request.errors.add(
+                'querystring',
+                'document_id',
                 'This waypoint cannot be deleted because '
                 'it is the only waypoint associated to some routes.')
+            return
 
     elif document_type == ROUTE_TYPE:
         if _is_only_route_of_outing(document_id):
-            raise HTTPBadRequest(
+            request.errors.add(
+                'querystring',
+                'document_id',
                 'This route cannot be deleted because '
                 'it is the only route associated to some outings.')
+            return
 
     request.validated['document_type'] = document_type
 
@@ -196,7 +221,7 @@ def _get_models(document_type):
         return Book, None, ArchiveBook, None
     if document_type == XREPORT_TYPE:
         return Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale
-    raise HTTPBadRequest('Unsupported type when deleting document')
+    assert False
 
 
 def _remove_from_cache(document_id):
