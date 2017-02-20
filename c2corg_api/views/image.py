@@ -3,6 +3,7 @@ import functools
 import requests
 
 from c2corg_api.models import DBSession
+from c2corg_api.models.document import ArchiveDocumentLocale
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.feed import update_feed_images_upload
 from c2corg_api.models.image import Image, schema_image, schema_update_image, \
@@ -10,6 +11,8 @@ from c2corg_api.models.image import Image, schema_image, schema_update_image, \
 from c2corg_api.search.notify_sync import run_on_successful_transaction
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import image_documents_config
+from c2corg_api.views.document_version import DocumentVersionRest
+
 from c2corg_common.fields_image import fields_image
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
@@ -20,7 +23,8 @@ from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
-    validate_associations, validate_associations_in, validate_lang
+    validate_associations, validate_associations_in, validate_lang, \
+    validate_version_id
 
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, \
     HTTPBadRequest, HTTPInternalServerError, HTTPFound
@@ -267,3 +271,12 @@ def set_creator(image):
     """Set the creator (the user who created an image) on an image.
     """
     set_creator_on_documents([image], 'creator')
+
+
+@resource(path='/images/{id}/{lang}/{version_id}', cors_policy=cors_policy)
+class ImageVersionRest(DocumentVersionRest):
+
+    @view(validators=[validate_id, validate_lang, validate_version_id])
+    def get(self):
+        return self._get_version(
+            ArchiveImage, ArchiveDocumentLocale, schema_image)

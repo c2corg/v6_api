@@ -1,12 +1,14 @@
 import functools
 
 from c2corg_api.models.area import schema_area, Area, schema_update_area, \
-    AREA_TYPE, schema_create_area
+    AREA_TYPE, schema_create_area, ArchiveArea
 from c2corg_api.models.area_association import update_area
 from c2corg_api.models.cache_version import update_cache_version_for_area
-from c2corg_api.models.document import UpdateType
+from c2corg_api.models.document import UpdateType, ArchiveDocumentLocale
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import area_documents_config
+from c2corg_api.views.document_version import DocumentVersionRest
+
 from c2corg_common.fields_area import fields_area
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
@@ -16,7 +18,7 @@ from c2corg_api.views.document import DocumentRest, make_validator_create, \
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, validate_lang, \
-    validate_associations
+    validate_associations, validate_version_id
 from pyramid.httpexceptions import HTTPBadRequest
 
 validate_area_create = make_validator_create(fields_area.get('required'))
@@ -91,3 +93,12 @@ def update_associations(area, update_types, user_id):
 
     if UpdateType.GEOM in update_types:
         update_area(area, reset=True)
+
+
+@resource(path='/areas/{id}/{lang}/{version_id}', cors_policy=cors_policy)
+class AreaVersionRest(DocumentVersionRest):
+
+    @view(validators=[validate_id, validate_lang, validate_version_id])
+    def get(self):
+        return self._get_version(
+            ArchiveArea, ArchiveDocumentLocale, schema_area)
