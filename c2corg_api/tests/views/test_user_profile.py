@@ -41,21 +41,21 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 0, 'limit': 0}, user='contributor'),
-            [], 5)
+            [], 6)
 
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 0, 'limit': 1}, user='contributor'),
-            [self.profile4.document_id], 5)
+            [self.profile4.document_id], 6)
         self.assertResultsEqual(
             self.get_collection(
                 {'offset': 0, 'limit': 2}, user='contributor'),
-            [self.profile4.document_id, self.profile2.document_id], 5)
+            [self.profile4.document_id, self.profile2.document_id], 6)
         self.assertResultsEqual(
             self.get_collection(
-                {'offset': 1, 'limit': 2}, user='contributor'),
-            [self.profile2.document_id, self.global_userids['contributor2']],
-            5)
+                {'offset': 1, 'limit': 3}, user='contributor'),
+            [self.profile2.document_id, self.global_userids['contributor3'],
+             self.global_userids['contributor2']], 6)
 
     def test_get_collection_lang(self):
         self.get_collection_lang(user='contributor')
@@ -65,8 +65,9 @@ class TestUserProfileRest(BaseDocumentTestRest):
 
         self.assertResultsEqual(
             self.get_collection_search({'l': 'en'}, user='contributor'),
-            [self.profile4.document_id, self.global_userids['contributor2'],
-             self.profile1.document_id, self.global_userids['moderator']], 4)
+            [self.profile4.document_id, self.global_userids['contributor3'],
+             self.global_userids['contributor2'], self.profile1.document_id,
+             self.global_userids['moderator']], 5)
 
     def test_get_unauthenticated_private_profile(self):
         """Tests that only the user name is returned when requesting a private
