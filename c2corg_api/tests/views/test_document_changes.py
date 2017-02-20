@@ -123,13 +123,11 @@ class TestChangesDocumentRest(BaseTestRest):
         response = self.app.get(self._prefix + '?token=0', status=200)
         body = response.json
 
-        self.assertIn('total', body)
         self.assertNotIn('pagination_token', body)
         self.assertIn('feed', body)
 
         feed = body['feed']
         self.assertEqual(0, len(feed))
-        self.assertEqual(0, body['total'])
 
     def test_get_changes_paginated(self):
         response = self.app.get(

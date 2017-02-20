@@ -105,7 +105,7 @@ def load_feed(doc_ids, limit, user_id=None):
             .all()
 
     if not doc_changes:
-        return {'feed': [], 'total': 0}
+        return {'feed': []}
 
     last_change = doc_changes[-1]
     pagination_token = '{}'.format(last_change.history_metadata_id)
