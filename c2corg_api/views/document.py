@@ -51,6 +51,9 @@ LIMIT_DEFAULT = 30
 # the number of recent outings that are included for waypoint and routes
 NUM_RECENT_OUTINGS = 10
 
+# page offset limit by ElasticSearch
+ES_MAX_RESULT_WINDOW = 10000
+
 
 class DocumentRest(object):
 
@@ -64,6 +67,12 @@ class DocumentRest(object):
             'limit': min(validated.get('limit', LIMIT_DEFAULT), LIMIT_MAX),
             'lang': validated.get('lang')
         }
+
+        if meta_params['offset'] + meta_params['limit'] > ES_MAX_RESULT_WINDOW:
+            # ES does not process requests where offset + limit is greater
+            # than 10000, see:
+            # https://www.elastic.co/guide/en/elasticsearch/reference/master/search-request-from-size.html
+            raise HTTPBadRequest('offset + limit greater than 10000')
 
         if advanced_search.contains_search_params(self.request.GET):
             # search with ElasticSearch
