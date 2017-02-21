@@ -8,6 +8,7 @@ from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.xreport import ArchiveXreport, Xreport, XREPORT_TYPE, \
     ArchiveXreportLocale, XreportLocale
 from c2corg_api.models.route import Route
@@ -640,6 +641,45 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertEqual(archive_document_en.event_type, ['person_fall'])
         self.assertEqual(archive_document_en.age, 90)
 
+    def test_put_as_associated_user(self):
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.xreport1.document_id,
+                'version': self.xreport1.version,
+                'quality': quality_types[1],
+                'activities': ['via_ferrata'],  # changed
+                'event_type': ['crevasse_fall'],  # changed
+                'age': 25,  # PERSONAL DATA CHANGED
+                'locales': [
+                    {'lang': 'en', 'title': 'Renamed title by assoc. user',
+                     'version': self.locale_en.version}
+                ],
+                'associations': {  # added associations
+                    'articles': [
+                        {'document_id': self.article2.document_id}
+                    ],
+                    'routes': [
+                        {'document_id': self.route3.document_id}
+                    ]
+                },
+            }
+        }
+
+        (body, xreport1) = self.put_success_all(
+            body, self.xreport1, user='contributor3', cache_version=3)
+
+        # version with lang 'en'
+        versions = xreport1.versions
+        version_en = self.get_latest_version('en', versions)
+        archive_locale = version_en.document_locales_archive
+        self.assertEqual(archive_locale.title, 'Renamed title by assoc. user')
+
+        archive_document_en = version_en.document_archive
+        self.assertEqual(archive_document_en.activities, ['via_ferrata'])
+        self.assertEqual(archive_document_en.event_type, ['crevasse_fall'])
+        self.assertEqual(archive_document_en.age, 25)
+
     def test_put_as_non_author(self):
         body = {
             'message': 'Update',
@@ -689,6 +729,13 @@ class TestXreportRest(BaseDocumentTestRest):
             filter(DocumentVersion.document_id ==
                    self.xreport1.document_id). \
             filter(DocumentVersion.lang == 'en').first()
+
+        user_id3 = self.global_userids['contributor3']
+        self.session.add(Association(
+            parent_document_id=user_id3,
+            parent_document_type=USERPROFILE_TYPE,
+            child_document_id=self.xreport1.document_id,
+            child_document_type=XREPORT_TYPE))
 
         self.xreport2 = Xreport(activities=['hiking'],
                                 event_type=['avalanche'],

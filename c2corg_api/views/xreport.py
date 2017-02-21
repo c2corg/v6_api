@@ -22,7 +22,8 @@ from c2corg_api.views import cors_policy, restricted_json_view, \
     set_private_cache_header
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
-    validate_associations, validate_lang, validate_version_id
+    validate_associations, validate_lang, validate_version_id, \
+    is_associated_user
 
 from pyramid.httpexceptions import HTTPForbidden
 
@@ -90,7 +91,13 @@ def _has_permission(request, xreport_id):
     if request.has_permission('moderator'):
         return True
 
-    return has_been_created_by(xreport_id, request.authenticated_userid)
+    if has_been_created_by(xreport_id, request.authenticated_userid):
+        return True
+
+    if is_associated_user(xreport_id, request.authenticated_userid):
+        return True
+
+    return False
 
 
 @resource(path='/xreports/{id}/{lang}/{version_id}', cors_policy=cors_policy)
