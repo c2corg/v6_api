@@ -134,6 +134,14 @@ class TestWaypointRest(BaseDocumentTestRest):
                 {'bbox': '659000,5694000,660000,5695000'}),
             [self.waypoint4.document_id], 1)
 
+    def test_get_collection_big_offset(self):
+        url = '{}?offset=10000'.format(self._prefix)
+        response = self.app.get(url, status=400)
+        self.assertErrorsContain(response.json, 'Bad Request')
+
+        url = '{}?offset=9970&limit=30'.format(self._prefix)
+        self.app.get(url, status=200)
+
     def test_get(self):
         body = self.get(self.waypoint)
         self._assert_geometry(body)
