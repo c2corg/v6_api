@@ -16,7 +16,7 @@ class TestDocumentMergeRest(BaseTestRest):
 
     def setUp(self):  # noqa
         super(TestDocumentMergeRest, self).setUp()
-        self._prefix = '/document/merge'
+        self._prefix = '/documents/merge'
 
         contributor_id = self.global_userids['contributor']
 

@@ -92,7 +92,7 @@ def validate_documents(request, **kwargs):
                 'body', 'types', 'merging user accounts is not supported')
 
 
-@resource(path='/document/merge', cors_policy=cors_policy)
+@resource(path='/documents/merge', cors_policy=cors_policy)
 class MergeDocumentRest(object):
 
     def __init__(self, request):
@@ -119,7 +119,7 @@ class MergeDocumentRest(object):
 
 
         Request:
-            `POST` `/document/merge`
+            `POST` `/documents/merge`
 
         Request body:
             {
