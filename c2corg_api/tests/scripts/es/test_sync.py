@@ -11,7 +11,8 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.sync import get_changed_documents, \
     get_documents_per_type,  sync_documents, create_search_documents, \
-    get_changed_users, get_changed_documents_for_associations
+    get_changed_users, get_changed_documents_for_associations, \
+    sync_deleted_documents
 from c2corg_api.tests import BaseTestCase, global_userids
 from c2corg_api.views.document import DocumentRest
 
@@ -131,40 +132,59 @@ class SyncTest(BaseTestCase):
         sync_documents(self.session, changed_documents, 1000)
         self.assertEqual(len(search_documents), 5)
 
-        redirected_doc = next(
-            filter(
-                lambda doc: doc['_id'] == self.waypoint3.document_id,
-                search_documents),
-            None)
+        redirected_doc = self._get_by_id(
+            search_documents, self.waypoint3.document_id)
         self.assertEqual(redirected_doc['_op_type'], 'delete')
 
-        waypoint1_doc = next(
-            filter(
-                lambda doc: doc['_id'] == self.waypoint1.document_id,
-                search_documents),
-            None)
+        waypoint1_doc = self._get_by_id(
+            search_documents, self.waypoint1.document_id)
         self.assertAlmostEqual(waypoint1_doc['geom'][0], 5.71288995)
         self.assertAlmostEqual(waypoint1_doc['geom'][1], 45.64476395)
 
-        route_doc = next(
-            filter(
-                lambda doc: doc['_id'] == self.route1.document_id,
-                search_documents),
-            None)
+        route_doc = self._get_by_id(
+            search_documents, self.route1.document_id)
         self.assertEqual(route_doc['title_en'], 'Mont Blanc : Face N')
         self.assertEqual(
             set(route_doc['waypoints']),
             {self.waypoint1.document_id, self.waypoint2.document_id})
 
-        outing_doc = next(
-            filter(
-                lambda doc: doc['_id'] == self.outing1.document_id,
-                search_documents),
-            None)
+        outing_doc = self._get_by_id(
+            search_documents, self.outing1.document_id)
         self.assertEqual(outing_doc['title_en'], '...')
         self.assertEqual(
             set(outing_doc['waypoints']),
             {self.waypoint1.document_id, self.waypoint2.document_id})
+
+    @patch('c2corg_api.scripts.es.sync.ElasticBatch')
+    def test_sync_deleted_documents(self, mock):
+        search_documents = []
+        mock.side_effect = self._create_mock_match(search_documents)
+
+        deleted_documents = [
+            (self.waypoint1.document_id, 'w'),
+            (self.route1.document_id, 'r'),
+            (self.outing1.document_id, 'o')]
+        sync_deleted_documents(self.session, deleted_documents, 1000)
+        self.assertEqual(len(search_documents), 3)
+
+        waypoint1_doc = self._get_by_id(
+            search_documents, self.waypoint1.document_id)
+        self.assertEqual(waypoint1_doc['_op_type'], 'delete')
+
+        route_doc = self._get_by_id(
+            search_documents, self.route1.document_id)
+        self.assertEqual(route_doc['_op_type'], 'delete')
+
+        outing_doc = self._get_by_id(
+            search_documents, self.outing1.document_id)
+        self.assertEqual(outing_doc['_op_type'], 'delete')
+
+    def _get_by_id(self, search_documents, document_id):
+        return next(
+            filter(
+                lambda doc: doc['_id'] == document_id,
+                search_documents),
+            None)
 
     def _create_mock_match(self, actions):
         class MockBatch(object):
