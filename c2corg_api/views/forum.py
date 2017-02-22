@@ -105,7 +105,8 @@ class ForumTopicRest(object):
             response = client.client.create_post(content,
                                                  title=title,
                                                  category=category)
-        except:
+        except Exception as e:
+            log.error('Error with Discourse: {}'.format(str(e)), exc_info=True)
             raise HTTPInternalServerError('Error with Discourse')
 
         if "topic_id" in response:
