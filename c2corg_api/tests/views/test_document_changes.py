@@ -129,6 +129,17 @@ class TestChangesDocumentRest(BaseTestRest):
         feed = body['feed']
         self.assertEqual(0, len(feed))
 
+    def test_get_changes_by_doc_types(self):
+        response = self.app.get(self._prefix + '?t=r,w', status=200)
+        body = response.json
+
+        self.assertIn('feed', body)
+
+        feed = body['feed']
+        self.assertEqual(4, len(feed))
+        self.assertEqual(feed[0]['document']['type'], 'r')
+        self.assertEqual(feed[1]['document']['type'], 'w')
+
     def test_get_changes_paginated(self):
         response = self.app.get(
             self._prefix + '?limit=2', status=200)

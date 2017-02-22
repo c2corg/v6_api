@@ -1,18 +1,23 @@
 from c2corg_api.models import DBSession
-from c2corg_api.models.document import Document, ArchiveDocumentLocale
+from c2corg_api.models.document import Document, ArchiveDocumentLocale, \
+    DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
+from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.views import cors_policy
 from c2corg_api.views.feed import get_params
 from c2corg_api.views.validation import validate_simple_token_pagination,\
-  validate_user_id_not_required
+  validate_user_id_not_required, validate_doc_types_not_required
 
 from sqlalchemy.sql.expression import desc
 
 from cornice.resource import resource, view
 from sqlalchemy.orm import joinedload, load_only
+
+from c2corg_common.document_types import WAYPOINT_TYPE, ARTICLE_TYPE, BOOK_TYPE, \
+    IMAGE_TYPE, ROUTE_TYPE
 
 
 @resource(path='/documents/changes', cors_policy=cors_policy)
@@ -24,7 +29,8 @@ class ChangesDocumentRest(object):
         self.request = request
 
     @view(validators=[validate_simple_token_pagination,
-                      validate_user_id_not_required])
+                      validate_user_id_not_required,
+                      validate_doc_types_not_required])
     def get(self):
         """Get the public document changes feed.
 
@@ -45,19 +51,25 @@ class ChangesDocumentRest(object):
             `u=...` (optional)
             Changes made by one user.
 
+            `t=w[,r,c,...]` (optional)
+            Changes made only to one or more document types.
+
             For more information about "continuation token pagination", see:
             http://www.servicedenuages.fr/pagination-continuation-token (fr)
         """
         user_id = self.request.validated.get('u')
+        doc_types = self.request.validated.get('t')
+
         lang, token_id, _, limit = get_params(self.request, 30)
 
-        changes = get_changes_of_feed(token_id, limit, user_id)
+        changes = get_changes_of_feed(
+            token_id, limit, user_id, doc_types)
         doc_ids = [change.history_metadata_id for change in changes]
 
         return load_feed(doc_ids, limit, user_id)
 
 
-def get_changes_of_feed(token_id, limit, user_id=None):
+def get_changes_of_feed(token_id, limit, user_id=None, doc_types=None):
     query = DBSession.query(DocumentVersion.history_metadata_id) \
         .join(HistoryMetaData) \
         .join(Document) \
@@ -66,10 +78,13 @@ def get_changes_of_feed(token_id, limit, user_id=None):
 
     # pagination filter
     if token_id is not None:
-        query = query.filter(DocumentVersion.history_metadata_id < token_id)
+        query = query.filter(HistoryMetaData.id < token_id)
 
     if user_id is not None:
         query = query.filter(HistoryMetaData.user_id == user_id)
+
+    if doc_types is not None:
+        query = query.filter(Document.type.in_(doc_types))
 
     return query.limit(limit).all()
 

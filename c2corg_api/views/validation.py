@@ -150,6 +150,29 @@ def check_get_for_integer_property(request, key, required):
         request.errors.add('querystring', key, 'invalid ' + key)
 
 
+def check_get_for_string_property(request, key, required):
+    """Checks if the value associated to a given key is an string.
+    """
+    if not required and request.GET.get(key) is None:
+        return
+    try:
+        doc_types = str(request.GET.get(key))
+        valid_doc_types = []
+
+        if ',' in doc_types:
+            doc_types = doc_types.split(',')
+
+        for doc_type in doc_types:
+            if doc_type in [ARTICLE_TYPE, BOOK_TYPE, IMAGE_TYPE,
+                            ROUTE_TYPE, WAYPOINT_TYPE, XREPORT_TYPE]:
+                valid_doc_types.append(doc_type)
+
+        request.validated[key] = valid_doc_types
+
+    except:
+        request.errors.add('querystring', key, 'invalid ' + key)
+
+
 def validate_pagination(request, **kwargs):
     """
     Checks if a given optional offset is an integer and
@@ -187,6 +210,13 @@ def validate_user_id_not_required(request, **kwargs):
     Checks for a non-required user id parameter.
     """
     check_get_for_integer_property(request, 'u', False)
+
+
+def validate_doc_types_not_required(request, **kwargs):
+    """
+    Checks for a non-required document types parameter.
+    """
+    check_get_for_string_property(request, 't', False)
 
 
 def parse_datetime(time_raw):
