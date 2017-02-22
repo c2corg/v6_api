@@ -140,6 +140,16 @@ class TestChangesDocumentRest(BaseTestRest):
         self.assertEqual(feed[0]['document']['type'], 'r')
         self.assertEqual(feed[1]['document']['type'], 'w')
 
+    def test_get_changes_by_lang(self):
+        response = self.app.get(self._prefix + '?l=fr', status=200)
+        body = response.json
+
+        self.assertIn('feed', body)
+        document_ids = get_document_ids(body)
+        self.assertEqual(2, len(body['feed']))
+        self.assertEqual(document_ids,
+                         [self.route1.document_id, self.waypoint1.document_id])
+
     def test_get_changes_paginated(self):
         response = self.app.get(
             self._prefix + '?limit=2', status=200)

@@ -1,23 +1,19 @@
 from c2corg_api.models import DBSession
-from c2corg_api.models.document import Document, ArchiveDocumentLocale, \
-    DocumentLocale
+from c2corg_api.models.document import Document, ArchiveDocumentLocale
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.views import cors_policy
 from c2corg_api.views.feed import get_params
 from c2corg_api.views.validation import validate_simple_token_pagination,\
-  validate_user_id_not_required, validate_doc_types_not_required
+  validate_user_id_not_required, validate_doc_types_not_required, \
+  validate_lang_param
 
-from sqlalchemy.sql.expression import desc
+from sqlalchemy.sql.expression import desc, and_
 
 from cornice.resource import resource, view
 from sqlalchemy.orm import joinedload, load_only
-
-from c2corg_common.document_types import WAYPOINT_TYPE, ARTICLE_TYPE, BOOK_TYPE, \
-    IMAGE_TYPE, ROUTE_TYPE
 
 
 @resource(path='/documents/changes', cors_policy=cors_policy)
@@ -30,7 +26,8 @@ class ChangesDocumentRest(object):
 
     @view(validators=[validate_simple_token_pagination,
                       validate_user_id_not_required,
-                      validate_doc_types_not_required])
+                      validate_doc_types_not_required,
+                      validate_lang_param])
     def get(self):
         """Get the public document changes feed.
 
@@ -63,14 +60,16 @@ class ChangesDocumentRest(object):
         lang, token_id, _, limit = get_params(self.request, 30)
 
         changes = get_changes_of_feed(
-            token_id, limit, user_id, doc_types)
+            token_id, limit, user_id, doc_types, lang)
         doc_ids = [change.history_metadata_id for change in changes]
 
-        return load_feed(doc_ids, limit, user_id)
+        return load_feed(doc_ids, limit, lang)
 
 
-def get_changes_of_feed(token_id, limit, user_id=None, doc_types=None):
-    query = DBSession.query(DocumentVersion.history_metadata_id) \
+def get_changes_of_feed(
+        token_id, limit, user_id=None, doc_types=None, lang=None):
+    query = DBSession.query(DocumentVersion.history_metadata_id,
+                            DocumentVersion.lang) \
         .join(HistoryMetaData) \
         .join(Document) \
         .filter(Document.type.notin_([OUTING_TYPE, USERPROFILE_TYPE])) \
@@ -86,13 +85,24 @@ def get_changes_of_feed(token_id, limit, user_id=None, doc_types=None):
     if doc_types is not None:
         query = query.filter(Document.type.in_(doc_types))
 
+    if lang is not None:
+        query = query.filter(DocumentVersion.lang.like(lang))
+
     return query.limit(limit).all()
 
 
-def load_feed(doc_ids, limit, user_id=None):
+def load_feed(doc_ids, limit, lang=None):
     if not doc_ids:
         doc_changes = []
     else:
+
+        if lang is not None:
+            filter_condition = and_(
+                    DocumentVersion.history_metadata_id.in_(doc_ids),
+                    DocumentVersion.lang.like(lang))
+        else:
+            filter_condition = DocumentVersion.history_metadata_id.in_(doc_ids)
+
         doc_changes = DBSession.query(DocumentVersion) \
             .options(load_only('history_metadata', 'lang'),
                      joinedload('history_metadata').load_only(
@@ -115,9 +125,8 @@ def load_feed(doc_ids, limit, user_id=None):
                      joinedload('document_locales_archive').load_only(
                         ArchiveDocumentLocale.title)) \
             .order_by(desc(DocumentVersion.id)) \
-            .filter(DocumentVersion.history_metadata_id.in_(doc_ids)) \
-            .limit(limit) \
-            .all()
+            .filter(filter_condition) \
+            .limit(limit).all()
 
     if not doc_changes:
         return {'feed': []}
