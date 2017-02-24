@@ -57,6 +57,27 @@ def validate_lang_(lang, request):
             request.errors.add('querystring', 'lang', 'invalid lang')
 
 
+def validate_pref_lang_(lang, request):
+    """Checks given langs are one of the available langs.
+    """
+    if lang is not None:
+        validated = []
+        if ',' in lang:
+            langs = lang.split(',')
+            for lang in langs:
+                if lang in default_langs:
+                    validated.append(lang)
+                else:
+                    request.errors.add('querystring', 'lang', 'invalid lang')
+        elif lang in default_langs:
+            validated.append(lang)
+
+        if validated:
+            request.validated['lang'] = validated
+        else:
+            request.errors.add('querystring', 'lang', 'invalid lang')
+
+
 def validate_lang(request, **kwargs):
     """Checks if the language given in the url as match-parameter
     is correct (".../{lang}").
@@ -90,7 +111,7 @@ def validate_preferred_lang_param(request, **kwargs):
     is correct ("...?pl=...").
     """
     lang = request.GET.get('pl')
-    validate_lang_(lang, request)
+    validate_pref_lang_(lang, request)
 
 
 def is_missing(val):
