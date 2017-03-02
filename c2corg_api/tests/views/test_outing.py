@@ -37,6 +37,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(len(body['documents']), 4)
         doc1 = body['documents'][0]
         self.assertNotIn('frequentation', doc1)
+        self.assertIn('condition_rating', doc1)
 
         doc4 = body['documents'][3]
         self.assertIn('author', doc4)
