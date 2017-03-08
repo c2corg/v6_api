@@ -146,3 +146,5 @@ avalanche_level = enum(
     'avalanche_level', attributes.avalanche_levels)
 avalanche_slope = enum(
     'avalanche_slope', attributes.avalanche_slopes)
+slackline_type = enum(
+    'slackline_type', attributes.slackline_types)

@@ -149,6 +149,10 @@ class _RouteMixin(object):
     # type de voie
     climbing_outdoor_type = Column(enums.climbing_outdoor_type)
 
+    slackline_type = Column(enums.slackline_type)
+
+    slackline_height = Column(SmallInteger)
+
 
 attributes = [
     'main_waypoint_id', 'activities', 'elevation_min', 'elevation_max',
@@ -162,7 +166,8 @@ attributes = [
     'aid_rating', 'via_ferrata_rating', 'hiking_rating',
     'hiking_mtb_exposition', 'snowshoe_rating', 'mtb_up_rating',
     'mtb_down_rating', 'mtb_length_asphalt', 'mtb_length_trail',
-    'mtb_height_diff_portages', 'rock_types', 'climbing_outdoor_type']
+    'mtb_height_diff_portages', 'rock_types', 'climbing_outdoor_type',
+    'slackline_type', 'slackline_height']
 
 
 class Route(_RouteMixin, Document):
@@ -236,9 +241,13 @@ class _RouteLocaleMixin(object):
     # historique de l'itineraire
     route_history = Column(String)
 
+    slackline_anchor1 = Column(String)
+
+    slackline_anchor2 = Column(String)
 
 attributes_locales = [
-    'slope', 'remarks', 'gear', 'external_resources', 'route_history'
+    'slope', 'remarks', 'gear', 'external_resources', 'route_history',
+    'slackline_anchor1', 'slackline_anchor2'
 ]
 
 
