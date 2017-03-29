@@ -3,7 +3,7 @@ from c2corg_api.models.area import Area
 from c2corg_api.models.association import AssociationLog, Association
 from c2corg_api.models.document import Document, DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
-from c2corg_api.models.es_sync import ESDeletedDocument
+from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
 from c2corg_api.models.outing import Outing, OUTING_TYPE
 from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.models.user import User
@@ -34,7 +34,8 @@ def sync_es(session, batch_size=1000):
     changed_documents = \
         get_changed_documents(session, last_update) + \
         get_changed_users(session, last_update) + \
-        get_changed_documents_for_associations(session, last_update)
+        get_changed_documents_for_associations(session, last_update) + \
+        get_deleted_locale_documents(session, last_update)
 
     log.info('Number of changed documents: {}'.format(len(changed_documents)))
     if changed_documents:
@@ -239,6 +240,17 @@ def get_changed_outings_ro_uo(session, last_update):
         )). \
         filter(AssociationLog.written_at >= last_update). \
         group_by('outing_id', 'type'). \
+        all()
+
+
+def get_deleted_locale_documents(session, last_update):
+    """Returns the ids of documents that had locales deleted
+    since the last update.
+    """
+    return session. \
+        query(ESDeletedLocale.document_id, ESDeletedLocale.type) . \
+        filter(ESDeletedLocale.deleted_at >= last_update). \
+        group_by(ESDeletedLocale.document_id, ESDeletedLocale.type). \
         all()
 
 
