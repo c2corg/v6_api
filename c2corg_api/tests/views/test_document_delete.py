@@ -360,6 +360,27 @@ class TestDocumentDeleteRest(BaseTestRest):
             response.json, 'document_id',
             'This waypoint cannot be deleted because it is a main waypoint.')
 
+    def test_delete_former_main_waypoint(self):
+        """ Test that a former main waypoint can be deleted.
+        """
+        self.route3.main_waypoint_id = self.waypoint3.document_id
+        self.session.flush()
+        DocumentRest.update_version(self.route3,
+                                    self.global_userids['contributor'],
+                                    'Update',
+                                    [UpdateType.FIGURES],
+                                    [])
+
+        self.route3.main_waypoint_id = self.waypoint1.document_id
+        self.session.flush()
+        DocumentRest.update_version(self.route3,
+                                    self.global_userids['contributor'],
+                                    'Update',
+                                    [UpdateType.FIGURES],
+                                    [])
+
+        self._delete(self.waypoint3.document_id, 200)
+
     def test_delete_only_waypoint_of_route(self):
         """ Test that the only waypoint of a route cannot be deleted.
         """

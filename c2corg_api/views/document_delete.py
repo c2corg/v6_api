@@ -181,6 +181,8 @@ class DeleteDocumentRest(object):
             document_type)
 
         # Order of removals depends on foreign key constraints
+        if document_type == WAYPOINT_TYPE:
+            _remove_waypoint_from_routes_archives_main_waypoint_id(document_id)
         _remove_history_metadata(document_id)
         _remove_archive_locale(archive_clazz_locale, document_id)
         _remove_archive_geometry(document_id)
@@ -344,6 +346,12 @@ def _remove_image_from_feed(document_id):
                 item.image2_id = item.image3_id
             item.image3_id = None
             item.more_images = False
+
+
+def _remove_waypoint_from_routes_archives_main_waypoint_id(document_id):
+    DBSession.query(ArchiveRoute). \
+        filter(ArchiveRoute.main_waypoint_id == document_id). \
+        update({ArchiveRoute.main_waypoint_id: None})
 
 
 def _remove_associations(document_id):
