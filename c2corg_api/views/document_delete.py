@@ -180,6 +180,13 @@ class DeleteDocumentRest(object):
         clazz, clazz_locale, archive_clazz, archive_clazz_locale = _get_models(
             document_type)
 
+        if not redirecting:
+            _remove_from_feed(document_id)
+
+        if not redirecting and document_type == IMAGE_TYPE:
+            # Remove the references of this image from the feed
+            _remove_image_from_feed(document_id)
+
         # Order of removals depends on foreign key constraints
         _remove_history_metadata(document_id)
         _remove_archive_locale(archive_clazz_locale, document_id)
@@ -188,12 +195,6 @@ class DeleteDocumentRest(object):
         _remove_locale(clazz_locale, document_id)
         _remove_geometry(document_id)
         _remove_figures(clazz, document_id)
-        if not redirecting:
-            _remove_from_feed(document_id)
-
-        if not redirecting and document_type == IMAGE_TYPE:
-            # Remove the references of this image from the feed
-            _remove_image_from_feed(document_id)
 
         # When all references have been deleted, finally remove the main
         # document entry

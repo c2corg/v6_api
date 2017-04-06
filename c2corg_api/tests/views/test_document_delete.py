@@ -10,7 +10,8 @@ from c2corg_api.models.document import (
     ArchiveDocumentLocale, ArchiveDocumentGeometry, UpdateType)
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.document_topic import DocumentTopic
-from c2corg_api.models.feed import update_feed_document_create, DocumentChange
+from c2corg_api.models.feed import (
+    DocumentChange, update_feed_document_create, update_feed_images_upload)
 from c2corg_api.models.image import Image, ArchiveImage
 from c2corg_api.models.outing import (
     Outing, OutingLocale, ArchiveOuting, ArchiveOutingLocale)
@@ -281,6 +282,24 @@ class TestDocumentDeleteRest(BaseTestRest):
         self._add_association(self.route3, self.image1)
         self._add_association(self.waypoint3, self.image1)
         self.session.flush()
+
+        update_feed_images_upload(
+            [self.image1],
+            [{
+                'filename': 'image1.jpg',
+                'activities': ['paragliding'],
+                'image_type': 'collaborative',
+                'height': 1500,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air'}
+                ],
+                'associations': {
+                    'outings': [{'document_id': self.outing1.document_id}],
+                    'routes': [{'document_id': self.route3.document_id}],
+                    'waypoints': [{'document_id': self.waypoint3.document_id}]
+                }
+            }],
+            user_id)
 
         self.image1.filename = 'image1.1.jpg'
         self.session.flush()
