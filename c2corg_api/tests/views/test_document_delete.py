@@ -7,7 +7,8 @@ from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.book import Book, ArchiveBook
 from c2corg_api.models.document import (
     Document, DocumentLocale, DocumentGeometry, ArchiveDocument,
-    ArchiveDocumentLocale, ArchiveDocumentGeometry, UpdateType)
+    ArchiveDocumentLocale, ArchiveDocumentGeometry, UpdateType,
+    get_available_langs)
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.feed import (
@@ -368,7 +369,7 @@ class TestDocumentDeleteRest(BaseTestRest):
             self._prefix + str(self.waypoint1.document_id), {},
             headers=headers, status=403)
 
-    def test_non_existing_document(self):
+    def test_delete_non_existing_document(self):
         self._delete(-9999999, 400)
 
     def test_delete_main_waypoint(self):
@@ -643,3 +644,118 @@ class TestDocumentDeleteRest(BaseTestRest):
             self.check_cache_version(self.waypoint3.document_id, 2)
             self.check_cache_version(self.route3.document_id, 2)
             self.check_cache_version(self.outing1.document_id, 2)
+
+    def test_delete_locale_non_unauthorized(self):
+        self.app.delete_json(
+            self._prefix + str(self.waypoint1.document_id) + '/fr',
+            {}, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        return self.app.delete_json(
+            self._prefix + str(self.waypoint1.document_id) + '/fr',
+            {}, headers=headers, status=403)
+
+    def _delete_locale(self, document_id, lang, expected_status):
+        headers = self.add_authorization_header(username='moderator')
+        return self.app.delete_json(
+            self._prefix + str(document_id) + '/' + lang,
+            headers=headers, status=expected_status)
+
+    def test_delete_locale_non_existing_document(self):
+        self._delete_locale(-9999999, 'fr', 400)
+
+    def test_delete_locale_non_existing_locale(self):
+        self._delete_locale(self.waypoint1.document_id, 'de', 400)
+
+    def test_delete_locale_main_waypoint_with_only_one_locale(self):
+        response = self._delete_locale(self.waypoint1.document_id, 'fr', 400)
+        self.assertErrorsContain(
+            response.json, 'document_id',
+            'This waypoint cannot be deleted because it is a main waypoint.')
+
+    def _test_delete_locale(self, document_id, lang):
+        available_langs = get_available_langs(document_id)
+
+        initial_other_locale_archives_count = self.session. \
+            query(ArchiveDocumentLocale). \
+            filter(ArchiveDocumentLocale.document_id == document_id). \
+            filter(ArchiveDocumentLocale.lang != lang).count()
+
+        initial_other_locale_versions_count = self.session. \
+            query(DocumentVersion). \
+            filter(DocumentVersion.document_id == document_id). \
+            filter(DocumentVersion.lang != lang).count()
+
+        self._delete_locale(document_id, lang, 200)
+
+        # Check that deleted locale is no longer available
+        available_langs.remove(lang)
+        final_available_langs = get_available_langs(document_id)
+        # if the document had only one locale, it is deleted and
+        # get_available_langs() returns None
+        self.assertEqual(not final_available_langs, not available_langs)
+        if available_langs:
+            self.assertCountEqual(final_available_langs, available_langs)
+
+        # Check that archives have been removed too
+        count = self.session.query(ArchiveDocumentLocale). \
+            filter(ArchiveDocumentLocale.document_id == document_id). \
+            filter(ArchiveDocumentLocale.lang == lang).count()
+        self.assertEqual(0, count)
+
+        # but not other locale archives
+        other_locale_archives_count = self.session. \
+            query(ArchiveDocumentLocale). \
+            filter(ArchiveDocumentLocale.document_id == document_id). \
+            filter(ArchiveDocumentLocale.lang != lang).count()
+        self.assertEqual(other_locale_archives_count,
+                         initial_other_locale_archives_count)
+
+        # Check that the document versions table is cleared
+        count = self.session.query(DocumentVersion). \
+            filter(DocumentVersion.document_id == document_id). \
+            filter(DocumentVersion.lang == lang).count()
+        self.assertEqual(0, count)
+
+        # but not for other locales
+        other_locale_versions_count = self.session. \
+            query(DocumentVersion). \
+            filter(DocumentVersion.document_id == document_id). \
+            filter(DocumentVersion.lang != lang).count()
+        self.assertEqual(other_locale_versions_count,
+                         initial_other_locale_versions_count)
+
+    def test_delete_locale_waypoint(self):
+        self._test_delete_locale(self.waypoint3.document_id, 'fr')
+
+    def test_delete_locale_route_with_only_one_locale(self):
+        document_id = self.route3.document_id
+        self._test_delete_locale(document_id, 'en')
+
+        # Test that the document has fully been deleted
+        count = self.session.query(Document). \
+            filter(Document.document_id == document_id).count()
+        self.assertEqual(count, 0)
+        count = self.session.query(ArchiveDocument). \
+            filter(ArchiveDocument.document_id == document_id).count()
+        self.assertEqual(count, 0)
+        count = self.session.query(DocumentLocale). \
+            filter(DocumentLocale.document_id == document_id).count()
+        self.assertEqual(count, 0)
+        count = self.session.query(ArchiveDocumentLocale). \
+            filter(ArchiveDocumentLocale.document_id == document_id).count()
+        self.assertEqual(count, 0)
+        count = self.session.query(DocumentGeometry). \
+            filter(DocumentGeometry.document_id == document_id).count()
+        self.assertEqual(count, 0)
+        count = self.session.query(ArchiveDocumentGeometry). \
+            filter(ArchiveDocumentGeometry.document_id == document_id).count()
+        self.assertEqual(count, 0)
+        count = self.session.query(DocumentVersion). \
+            filter(DocumentVersion.document_id == document_id).count()
+        self.assertEqual(count, 0)
+        count = self.session.query(Association).filter(or_(
+            Association.parent_document_id == document_id,
+            Association.child_document_id == document_id
+        )).count()
+        self.assertEqual(count, 0)

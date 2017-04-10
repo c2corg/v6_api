@@ -4,6 +4,7 @@ from unittest.mock import patch
 from c2corg_api.models import es_sync
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.es_sync import ESDeletedLocale
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user import User
@@ -12,7 +13,7 @@ from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.sync import get_changed_documents, \
     get_documents_per_type,  sync_documents, create_search_documents, \
     get_changed_users, get_changed_documents_for_associations, \
-    sync_deleted_documents
+    get_deleted_locale_documents, sync_deleted_documents
 from c2corg_api.tests import BaseTestCase, global_userids
 from c2corg_api.views.document import DocumentRest
 
@@ -70,6 +71,20 @@ class SyncTest(BaseTestCase):
             len(get_changed_documents(
                 self.session, last_update + datetime.timedelta(0, 1))),
             0)
+
+    def test_get_deleted_locale_documents(self):
+        # simulate removing a locale
+        self.session.add(ESDeletedLocale(
+            document_id=self.waypoint1.document_id, type='w', lang='fr'))
+        self.session.flush()
+
+        last_update, _ = es_sync.get_status(self.session)
+
+        changed_documents = get_deleted_locale_documents(
+            self.session, last_update)
+
+        self.assertEqual(len(changed_documents), 1)
+        self.assertEqual('w', changed_documents[0][1])
 
     def test_get_documents_per_type(self):
         changed_documents = [(1, 'r'), (2, 'w'), (3, 'r'), (4, 'r'), (4, 'r')]

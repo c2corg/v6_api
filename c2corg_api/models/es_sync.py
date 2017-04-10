@@ -1,6 +1,6 @@
 from c2corg_api.models import Base, schema
 from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import Column, CheckConstraint
+from sqlalchemy.sql.schema import Column, CheckConstraint, ForeignKey
 from sqlalchemy.sql.sqltypes import DateTime, Integer, String
 
 
@@ -45,6 +45,25 @@ class ESDeletedDocument(Base):
     document_id = Column(Integer, primary_key=True)
 
     type = Column(String(1))
+
+    deleted_at = Column(
+        DateTime(timezone=True), default=func.now(), nullable=False,
+        index=True)
+
+
+class ESDeletedLocale(Base):
+    """A table listing locales that have been deleted and that should be
+    removed from the ES index.
+    """
+    __tablename__ = 'es_deleted_locales'
+
+    document_id = Column(Integer, primary_key=True)
+
+    type = Column(String(1))
+
+    lang = Column(
+        String(2), ForeignKey(schema + '.langs.lang'),
+        nullable=False)
 
     deleted_at = Column(
         DateTime(timezone=True), default=func.now(), nullable=False,
