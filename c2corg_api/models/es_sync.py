@@ -62,7 +62,7 @@ class ESDeletedLocale(Base):
     type = Column(String(1))
 
     lang = Column(
-        String(2), ForeignKey(schema + '.langs.lang'),
+        String(2), ForeignKey(schema + '.langs.lang'), primary_key=True,
         nullable=False)
 
     deleted_at = Column(
