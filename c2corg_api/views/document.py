@@ -361,13 +361,14 @@ class DocumentRest(object):
         return document
 
     @staticmethod
-    def create_new_version(document, user_id):
+    def create_new_version(document, user_id, written_at=None):
         assert user_id
         archive = document.to_archive()
         archive_locales = document.get_archive_locales()
         archive_geometry = document.get_archive_geometry()
 
-        meta_data = HistoryMetaData(comment='creation', user_id=user_id)
+        meta_data = HistoryMetaData(comment='creation', user_id=user_id,
+                                    written_at=written_at)
         versions = []
         for locale in archive_locales:
             version = DocumentVersion(

@@ -1,4 +1,4 @@
-from c2corg_api.models import DBSession
+from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import ARTICLE_TYPE, Article, ArchiveArticle
 from c2corg_api.models.association import Association, AssociationLog
@@ -9,7 +9,8 @@ from c2corg_api.models.document import (
     Document, DocumentLocale, ArchiveDocumentLocale,
     ArchiveDocument, DocumentGeometry, ArchiveDocumentGeometry,
     get_available_langs)
-from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
+from c2corg_api.models.document_history import HistoryMetaData, \
+    DocumentVersion, has_been_created_by, is_less_than_24h_old
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
 from c2corg_api.models.feed import DocumentChange
@@ -34,7 +35,7 @@ from sqlalchemy.sql.expression import or_, and_, exists, over
 from sqlalchemy.sql.functions import func
 
 
-def validate_document(request, **kwargs):
+def validate_document_type(request, **kwargs):
     if 'id' not in request.validated:
         return
 
@@ -63,6 +64,16 @@ def validate_document(request, **kwargs):
             'document_id',
             'Unsupported type when deleting document')
         return
+    request.validated['document_type'] = document_type
+
+
+def validate_document(request, **kwargs):
+    if 'id' not in request.validated or \
+            'document_type' not in request.validated:
+        return
+
+    document_id = request.validated['id']
+    document_type = request.validated['document_type']
 
     if 'lang' in request.validated:
         # Tests specific to a locale-only deletion
@@ -107,8 +118,6 @@ def validate_document(request, **kwargs):
                 'it is the only route associated to some outings.')
             return
 
-    request.validated['document_type'] = document_type
-
 
 def _is_main_waypoint_of_route(document_id):
     return DBSession.query(
@@ -149,6 +158,54 @@ def _is_only_route_of_outing(document_id):
         having(func.count('*') == 1). \
         exists()
     return DBSession.query(only_route).scalar()
+
+
+def validate_requestor(request, **kwargs):
+    if request.has_permission('moderator'):
+        return
+
+    if 'id' not in request.validated or \
+            'document_type' not in request.validated:
+        return
+
+    document_id = request.validated['id']
+    document_type = request.validated['document_type']
+
+    # Only personal documents might be deleted
+    if document_type in (WAYPOINT_TYPE, ROUTE_TYPE, BOOK_TYPE):
+        request.errors.add(
+            'querystring',
+            'document_type',
+            'No permission to delete this document')
+        return
+
+    if not is_less_than_24h_old(document_id):
+        request.errors.add(
+            'querystring',
+            'document_id',
+            'Only document less than 24h old can be deleted')
+        return
+
+    user_id = request.authenticated_userid
+
+    if document_type == OUTING_TYPE or document_type == XREPORT_TYPE:
+        if not has_been_created_by(document_id, user_id):
+            request.errors.add(
+                'querystring',
+                'document_id',
+                'Only the initial author can delete this document')
+        return
+
+    if ((document_type == IMAGE_TYPE and image.is_personal(document_id)) or
+        (document_type == ARTICLE_TYPE and article.is_personal(document_id))) \
+            and has_been_created_by(document_id, user_id):
+        # Deletion is legal
+        return
+
+    request.errors.add(
+        'querystring',
+        'document_id',
+        'No permission to delete this document')
 
 
 class DeleteBase(object):
@@ -215,8 +272,9 @@ class DeleteBase(object):
 class DeleteDocumentRest(DeleteBase):
 
     @restricted_json_view(
-        permission='moderator',
-        validators=[validate_id, validate_document])
+        permission='authenticated',
+        validators=[validate_id, validate_document_type, validate_requestor,
+                    validate_document])
     def delete(self):
         """
         Delete a document.
@@ -238,7 +296,8 @@ class DeleteDocumentLocaleRest(DeleteBase):
 
     @restricted_json_view(
         permission='moderator',
-        validators=[validate_id, validate_lang, validate_document])
+        validators=[validate_id, validate_lang, validate_document_type,
+                    validate_document])
     def delete(self):
         """
         Delete a document locale.

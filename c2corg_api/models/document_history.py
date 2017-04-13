@@ -1,3 +1,4 @@
+from datetime import datetime, timezone, timedelta
 from c2corg_api.models.user import User
 from sqlalchemy import (
     Column,
@@ -113,3 +114,21 @@ def has_been_created_by(document_id, user_id):
     creator_info = creators.get(document_id)
 
     return creator_info and creator_info['user_id'] == user_id
+
+
+def is_less_than_24h_old(document_id):
+    """Check that the first version of this document was created less than
+    24h ago.
+    """
+    written_at = DBSession.query(
+        HistoryMetaData.written_at.label('written_at')). \
+        select_from(ArchiveDocument). \
+        join(
+            DocumentVersion,
+            and_(
+                ArchiveDocument.document_id == DocumentVersion.document_id,
+                ArchiveDocument.version == 1)). \
+        join(HistoryMetaData,
+             DocumentVersion.history_metadata_id == HistoryMetaData.id). \
+        filter(ArchiveDocument.document_id == document_id).scalar()
+    return datetime.now(timezone.utc) - written_at <= timedelta(hours=24)
