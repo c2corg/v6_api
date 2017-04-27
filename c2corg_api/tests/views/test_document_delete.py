@@ -76,12 +76,23 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.add(self.waypoint3)
         self.session.flush()
 
+        self.waypoint4 = Waypoint(
+            waypoint_type='summit', elevation=3,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'))
+        self.waypoint4.locales.append(WaypointLocale(
+            lang='en', title='Mont Ventoux', description='...'))
+        self.session.add(self.waypoint4)
+        self.session.flush()
+
         DocumentRest.create_new_version(self.waypoint1, user_id)
         update_feed_document_create(self.waypoint1, user_id)
         DocumentRest.create_new_version(self.waypoint2, user_id)
         update_feed_document_create(self.waypoint2, user_id)
         DocumentRest.create_new_version(self.waypoint3, user_id)
         update_feed_document_create(self.waypoint3, user_id)
+        DocumentRest.create_new_version(self.waypoint4, user_id)
+        update_feed_document_create(self.waypoint4, user_id)
         self.session.flush()
 
         route1_geometry = DocumentGeometry(
@@ -226,6 +237,24 @@ class TestDocumentDeleteRest(BaseTestRest):
         self._add_association(self.outing2, self.article1)
         self.session.flush()
 
+        self.article2 = Article(
+            activities=['skitouring'], categories=['gear'],
+            article_type='personal',
+            locales=[
+                DocumentLocale(
+                    lang='en', title='Some other article',
+                    description='Some content')
+            ]
+        )
+        self.session.add(self.article2)
+        self.session.flush()
+
+        # Make the article older than 24h old
+        written_at = datetime.datetime(2016, 1, 1, 0, 0, 0)
+        DocumentRest.create_new_version(self.article2, user_id, written_at)
+        update_feed_document_create(self.article2, user_id)
+        self.session.flush()
+
         self.book1 = Book(
             activities=['skitouring'], book_types=['biography'],
             locales=[
@@ -363,11 +392,6 @@ class TestDocumentDeleteRest(BaseTestRest):
     def test_non_unauthorized(self):
         self.app.delete_json(
             self._prefix + str(self.waypoint1.document_id), {}, status=403)
-
-        headers = self.add_authorization_header(username='contributor')
-        return self.app.delete_json(
-            self._prefix + str(self.waypoint1.document_id), {},
-            headers=headers, status=403)
 
     def test_delete_non_existing_document(self):
         self._delete(-9999999, 400)
@@ -644,6 +668,46 @@ class TestDocumentDeleteRest(BaseTestRest):
             self.check_cache_version(self.waypoint3.document_id, 2)
             self.check_cache_version(self.route3.document_id, 2)
             self.check_cache_version(self.outing1.document_id, 2)
+
+    def test_delete_collaborative_doc(self):
+        # Collaborative documents cannot be deleted, even by their authors:
+        headers = self.add_authorization_header(username='contributor')
+        return self.app.delete_json(
+            self._prefix + str(self.waypoint4.document_id), {},
+            headers=headers, status=400)
+
+        # Moderators can:
+        headers = self.add_authorization_header(username='moderator')
+        return self.app.delete_json(
+            self._prefix + str(self.waypoint4.document_id), {},
+            headers=headers, status=200)
+
+    def test_delete_personal_doc_not_author(self):
+        # Personal documents cannot be deleted by anyone:
+        headers = self.add_authorization_header(username='contributor2')
+        return self.app.delete_json(
+            self._prefix + str(self.article1.document_id), {},
+            headers=headers, status=400)
+
+        # Except by moderators:
+        headers = self.add_authorization_header(username='moderator')
+        return self.app.delete_json(
+            self._prefix + str(self.article1.document_id), {},
+            headers=headers, status=200)
+
+    def test_delete_personal_doc_author_less_24h(self):
+        # article1 has just been created by 'contributor'
+        headers = self.add_authorization_header(username='contributor')
+        return self.app.delete_json(
+            self._prefix + str(self.article1.document_id), {},
+            headers=headers, status=200)
+
+    def test_delete_personal_doc_author_more_24h(self):
+        # article2 is older than 24h
+        headers = self.add_authorization_header(username='contributor')
+        return self.app.delete_json(
+            self._prefix + str(self.article2.document_id), {},
+            headers=headers, status=400)
 
     def test_delete_locale_non_unauthorized(self):
         self.app.delete_json(
