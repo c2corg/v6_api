@@ -471,6 +471,23 @@ class TestRouteRest(BaseDocumentTestRest):
             '"LineString", "coordinates": '
             '[[[[[[635956, 5723604, 12345, 67890, 13579]]]]]]}')
 
+        body = {
+            'activities': ['hiking', 'skitouring'],
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom': '{"type": "Point", "coordinates": [NaN, NaN]}',
+                'geom_detail': None
+            },
+            'locales': [{'lang': 'en', 'title': 'Some nice loop'}],
+            'associations': {
+                'waypoints': [{'document_id': self.waypoint.document_id}]
+            }
+        }
+        errors = self.post_wrong_geom_type(body)
+        self.assertEqual(
+            errors[0]['description'], 'Invalid geometry: {"type": '
+            '"Point", "coordinates": [NaN, NaN]}')
+
     def test_post_success_3d_multiline(self):
         """ Tests that routes with 3D multiline tracks can be created and read.
         """
