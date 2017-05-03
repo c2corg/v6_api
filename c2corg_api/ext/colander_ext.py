@@ -6,8 +6,8 @@ from colander import (null, Invalid, SchemaType)
 from geoalchemy2 import WKBElement
 from geomet import wkb
 from geoalchemy2.compat import buffer, bytes
-import json
 import geojson
+from geojson.validation import is_polygon, checkListOfObjects
 
 
 class Geometry(SchemaType):
@@ -53,19 +53,24 @@ class Geometry(SchemaType):
         if cstruct is null or cstruct == '':
             return null
         try:
-            geojson = json.loads(cstruct)
-            geom_type = geojson['type'].upper()
-            allowed_types = self.geometry_types
-            if geom_type in allowed_types:
-                return wkbelement_from_geojson(geojson, self.srid)
-            else:
-                raise Invalid(
-                    node, 'Invalid geometry type. Expected: %s. Got: %s.'
-                    % (allowed_types, geom_type))
+            data = geojson.loads(cstruct)
         except Invalid as exc:
             raise exc
         except:
             raise Invalid(node, 'Invalid geometry: %s' % cstruct)
+        if not isinstance(data, geojson.GeoJSON):
+            raise Invalid(node, 'Invalid geometry: %s' % cstruct)
+        geom_type = data['type'].upper()
+        allowed_types = self.geometry_types
+        if geom_type in allowed_types:
+            if not is_valid_geometry(data):
+                raise Invalid(node, 'Invalid geometry: %s' % cstruct)
+            else:
+                return wkbelement_from_geojson(data, self.srid)
+        else:
+            raise Invalid(
+                node, 'Invalid geometry type. Expected: %s. Got: %s.'
+                % (allowed_types, geom_type))
 
     def cstruct_children(self, node, cstruct):
         return []
@@ -83,3 +88,50 @@ def geojson_from_wkbelement(wkb_element):
 
 def from_wkb(wkb, srid=-1):
     return WKBElement(buffer(wkb), srid=srid)
+
+
+def is_valid_geometry(obj):
+    """
+    Adapted from geojson.is_valid()
+    https://github.com/frewsxcv/python-geojson/blob/master/geojson/validation.py
+    """
+
+    if isinstance(obj, geojson.Point) and \
+            len(obj['coordinates']) not in (2, 3):
+        # Points have 2 or 3 dimensions
+        return False
+
+    # MultiPoint type is not handled because else 4D linestrings are
+    # incorrectly detected as multipoints
+
+    if isinstance(obj, geojson.LineString) and \
+            len(obj['coordinates']) < 2:
+        # Lines must have at least 2 positions
+        return False
+
+    if isinstance(obj, geojson.MultiLineString) and \
+            checkListOfObjects(obj['coordinates'], lambda x: len(x) >= 2):
+        # Each segment must must have at least 2 positions
+        return False
+
+    if isinstance(obj, geojson.Polygon):
+        coord = obj['coordinates']
+        lengths = all([len(elem) >= 4 for elem in coord])
+        if lengths is False:
+            # LinearRing must contain 4 or more positions
+            return False
+
+        isring = all([elem[0] == elem[-1] for elem in coord])
+        if isring is False:
+            # The first and last positions in LinearRing must be equivalent
+            return False
+
+        return True
+
+    if isinstance(obj, geojson.MultiPolygon) and \
+            checkListOfObjects(obj['coordinates'], lambda x: is_polygon(x)):
+        # the "coordinates" member must be an array
+        # of Polygon coordinate arrays
+        return False
+
+    return True
