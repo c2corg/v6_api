@@ -86,4 +86,7 @@ export image_backend_secret_key = test
 export skip_captcha_validation = False
 export recaptcha_secret_key = 6LfWUwoUAAAAABDo4_HRfru4HfLxOKmcqBRBObGj
 
+# if given, changes of this user account will not be returned in the feed
+export feed_admin_user_account = 2
+
 export show_debugger_for_errors = false

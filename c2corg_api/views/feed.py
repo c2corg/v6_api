@@ -55,7 +55,10 @@ class FeedRest(object):
 
         """
         lang, token_id, token_time, limit = get_params(self.request)
-        changes = get_changes_of_feed(token_id, token_time, limit)
+        ignore_admin_changes_filter = get_ignore_admin_entries_filter(
+            self.request)
+        changes = get_changes_of_feed(
+            token_id, token_time, limit, ignore_admin_changes_filter)
         return load_feed(changes, lang)
 
 
@@ -78,8 +81,10 @@ class PersonalFeedRest(object):
         """
         user_id = self.request.authenticated_userid
         lang, token_id, token_time, limit = get_params(self.request)
+        ignore_admin_changes_filter = get_ignore_admin_entries_filter(
+            self.request)
         changes = get_changes_of_personal_feed(
-            user_id, token_id, token_time, limit)
+            user_id, token_id, token_time, limit, ignore_admin_changes_filter)
         return load_feed(changes, lang)
 
 
@@ -161,7 +166,8 @@ def get_changes_of_feed(token_id, token_time, limit, extra_filter=None):
     return query.limit(limit).all()
 
 
-def get_changes_of_personal_feed(user_id, token_id, token_time, limit):
+def get_changes_of_personal_feed(
+        user_id, token_id, token_time, limit, ignore_admin_changes_filter):
     user = DBSession.query(User). \
         filter(User.id == user_id). \
         options(undefer('has_area_filter')). \
@@ -171,14 +177,15 @@ def get_changes_of_personal_feed(user_id, token_id, token_time, limit):
     if has_no_custom_filter(user):
         # if no custom filter is set (no area/activity filter and no followed
         # users), return the full/standard feed
-        return get_changes_of_feed(token_id, token_time, limit)
+        return get_changes_of_feed(
+            token_id, token_time, limit, ignore_admin_changes_filter)
 
-    personal_filter = create_personal_filter(user)
+    personal_filter = create_personal_filter(user, ignore_admin_changes_filter)
 
     return get_changes_of_feed(token_id, token_time, limit, personal_filter)
 
 
-def create_personal_filter(user):
+def create_personal_filter(user, ignore_admin_changes_filter):
     """ Create a filter condition for the query to get the changes taking
     the filter preferences of the user into account.
     """
@@ -212,13 +219,16 @@ def create_personal_filter(user):
 
     # `or` connect the filter on followed users with the area/activity filter
     if area_activity_filter is not None and followed_users_filter is not None:
-        return or_(area_activity_filter, followed_users_filter)
+        filter = or_(area_activity_filter, followed_users_filter)
+        return and_(filter, ignore_admin_changes_filter) \
+            if ignore_admin_changes_filter else filter
     elif area_activity_filter is not None:
-        return area_activity_filter
+        return and_(area_activity_filter, ignore_admin_changes_filter) \
+            if ignore_admin_changes_filter else area_activity_filter
     elif followed_users_filter is not None:
         return followed_users_filter
     else:
-        return None
+        return ignore_admin_changes_filter
 
 
 def has_no_custom_filter(user):
@@ -376,3 +386,11 @@ def load_documents(documents_to_load, lang):
             documents[doc['document_id']] = doc
 
     return documents
+
+
+def get_ignore_admin_entries_filter(request):
+    account_id = request.registry.feed_admin_user_account_id
+    if account_id is None:
+        return None
+
+    return DocumentChange.user_id != account_id

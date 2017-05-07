@@ -96,6 +96,7 @@ def main(global_config, **settings):
         log.warning('Bypassing authorization')
 
     configure_caches(settings)
+    configure_feed(settings, config)
 
     # Scan MUST be the last call otherwise ACLs will not be set
     # and the permissions would be bypassed
@@ -114,3 +115,11 @@ def ping_connection(dbapi_connection, connection_record, connection_proxy):
         # connecting again up to three times before raising.
         raise exc.DisconnectionError()
     cursor.close()
+
+
+def configure_feed(settings, config):
+    account_id = None
+
+    if settings.get('feed.admin_user_account'):
+        account_id = int(settings.get('feed.admin_user_account'))
+    config.registry.feed_admin_user_account_id = account_id

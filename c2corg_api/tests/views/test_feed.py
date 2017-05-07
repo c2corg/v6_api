@@ -125,6 +125,23 @@ class TestFeedRest(BaseFeedTestRest):
         self.assertEqual(
             self.outing.document_id, latest_change['document']['document_id'])
 
+    def test_get_public_feed_ignoring_admin(self):
+        """ Test that feed entries of admin users can be ignored.
+        """
+        self.app.app.registry.feed_admin_user_account_id = \
+            self.global_userids['contributor']
+        response = self.app.get(self._prefix, status=200)
+        body = response.json
+
+        feed = body['feed']
+        self.assertEqual(1, len(feed))
+
+        # check that only the change of contributor2 is returned
+        latest_change = feed[0]
+        self.assertEqual(
+            self.waypoint2.document_id,
+            latest_change['document']['document_id'])
+
     def test_get_public_feed_lang(self):
         response = self.app.get(self._prefix + '?pl=en', status=200)
         body = response.json
@@ -248,6 +265,24 @@ class TestPersonalFeedRest(BaseFeedTestRest):
             self.route.document_id, feed[0]['document']['document_id'])
         self.assertEqual(
             self.waypoint1.document_id, feed[1]['document']['document_id'])
+
+    def test_get_feed_areas_filter_ignoring_admin_changes(self):
+        """ Test that feed entries of admin users can be ignored.
+        """
+        self.app.app.registry.feed_admin_user_account_id = \
+            self.global_userids['contributor']
+        # set an area filter for the user
+        self.session.add(FilterArea(
+            area_id=self.area1.document_id,
+            user_id=self.global_userids['contributor']))
+        self.session.flush()
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.get('/personal-feed', status=200, headers=headers)
+        body = response.json
+
+        feed = body['feed']
+        self.assertEqual(0, len(feed))
 
     def test_get_feed_areas_and_activities_filter(self):
         """ Get personal feed with an area and activity filter.
