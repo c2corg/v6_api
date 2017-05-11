@@ -103,6 +103,10 @@ class User(Base):
     feed_filter_activities = Column(
         ArrayOfEnum(enums.activity_type), nullable=False, server_default='{}')
 
+    # the feed on the homepage for a user is filtered on this languages
+    feed_filter_lang_preferences = Column(
+        ArrayOfEnum(enums.lang), nullable=False, server_default='{}')
+
     # only show updates from followed users in the homepage feed
     feed_followed_only = Column(
         Boolean, server_default='FALSE', nullable=False)

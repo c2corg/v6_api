@@ -177,7 +177,12 @@ def set_best_locale(documents, preferred_lang, expunge=True):
 
 
 def get_best_locale(available_locales, preferred_lang):
-    if preferred_lang in available_locales:
+    if type(preferred_lang) is list:
+        best_locale = next(
+            (available_locales[lang] for lang in langs_priority
+             if lang in available_locales and lang in preferred_lang), None)
+
+    elif preferred_lang in available_locales:
         best_locale = available_locales[preferred_lang]
     else:
         best_locale = next(

@@ -182,24 +182,44 @@ def create_personal_filter(user):
     """ Create a filter condition for the query to get the changes taking
     the filter preferences of the user into account.
     """
+
     if user.feed_followed_only:
         # only include changes of followed users
         return create_followed_users_filter(user)
 
     # filter on area and activity (`and` connected)
-    area_activity_filter = None
-    if user.feed_filter_activities or user.has_area_filter:
+    area_activity_language_filter = None
+
+    if user.feed_filter_activities or user.has_area_filter or \
+            user.feed_filter_lang_preferences is not None:
         area_filter = create_area_filter(user)
         activity_filter = create_activity_filter(user)
+        language_filter = create_language_filter(user)
 
-        if area_filter is not None and activity_filter is not None:
-            area_activity_filter = and_(area_filter, activity_filter)
+        if area_filter is not None and \
+                activity_filter is not None and \
+                language_filter is not None:
+            area_activity_language_filter = and_(
+                area_filter, activity_filter, language_filter)
+
+        elif area_filter is not None and activity_filter is not None:
+            area_activity_language_filter = and_(
+                area_filter, activity_filter)
+        elif activity_filter is not None and language_filter is not None:
+            area_activity_language_filter = and_(
+                activity_filter, language_filter)
+        elif language_filter is not None and area_filter is not None:
+            area_activity_language_filter = and_(
+                language_filter, area_filter)
+
         elif area_filter is not None:
-            area_activity_filter = area_filter
+            area_activity_language_filter = area_filter
         elif activity_filter is not None:
-            area_activity_filter = activity_filter
+            area_activity_language_filter = activity_filter
+        elif language_filter is not None:
+            area_activity_language_filter = language_filter
 
-    if area_activity_filter is None:
+    if area_activity_language_filter is None:
         # if no filter on area or activity, there is no need to check for
         # followed users, because all changes in the feed will be included
         # anyway
@@ -211,10 +231,11 @@ def create_personal_filter(user):
         followed_users_filter = create_followed_users_filter(user)
 
     # `or` connect the filter on followed users with the area/activity filter
-    if area_activity_filter is not None and followed_users_filter is not None:
-        return or_(area_activity_filter, followed_users_filter)
-    elif area_activity_filter is not None:
-        return area_activity_filter
+    if area_activity_language_filter is not None and \
+            followed_users_filter is not None:
+        return or_(area_activity_language_filter, followed_users_filter)
+    elif area_activity_language_filter is not None:
+        return area_activity_language_filter
     elif followed_users_filter is not None:
         return followed_users_filter
     else:
@@ -224,6 +245,7 @@ def create_personal_filter(user):
 def has_no_custom_filter(user):
     has_custom_filter = (
         user.feed_filter_activities or
+        user.feed_filter_lang_preferences or
         user.has_area_filter or
         user.is_following_users or
         user.feed_followed_only)
@@ -259,6 +281,13 @@ def create_activity_filter(user):
         return None
 
     return DocumentChange.activities.op('&&')(user.feed_filter_activities)
+
+
+def create_language_filter(user):
+    if not user.feed_filter_lang_preferences:
+        return None
+
+    return DocumentChange.lang_ids.op('&&')(user.feed_filter_lang_preferences)
 
 
 def get_changes_of_profile_feed(user_id, token_id, token_time, limit):
@@ -311,6 +340,7 @@ def load_feed(changes, lang):
                 ],
                 'change_type': c.change_type,
                 'document': documents[c.document_id],
+                'lang_ids': c.lang_ids,
                 'image1':
                     documents[c.image1_id]
                     if c.image1_id and documents.get(c.image1_id) else None,

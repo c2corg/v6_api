@@ -83,21 +83,21 @@ class BaseFeedTestRest(BaseTestRest):
             user_id=contributor_id, change_type='created',
             document_id=self.waypoint1.document_id,
             document_type=WAYPOINT_TYPE, user_ids=[contributor_id],
-            area_ids=[self.area1.document_id]
+            area_ids=[self.area1.document_id], languages=[]
         ))
         self.session.add(DocumentChange(
             time=datetime.datetime(2016, 1, 1, 12, 0, 0),
             user_id=contributor2_id, change_type='created',
             document_id=self.waypoint2.document_id,
             document_type=WAYPOINT_TYPE, user_ids=[contributor2_id],
-            area_ids=[self.area2.document_id]
+            area_ids=[self.area2.document_id], languages=[]
         ))
         self.session.add(DocumentChange(
             time=datetime.datetime(2016, 1, 1, 12, 1, 0),
             user_id=contributor_id, change_type='created',
             document_id=self.route.document_id,
             document_type=ROUTE_TYPE, user_ids=[contributor_id],
-            activities=['hiking'],
+            activities=['hiking'], languages=[],
             area_ids=[self.area1.document_id, self.area2.document_id]
         ))
         self.session.add(DocumentChange(
@@ -106,7 +106,7 @@ class BaseFeedTestRest(BaseTestRest):
             document_id=self.outing.document_id,
             document_type=OUTING_TYPE,
             user_ids=[contributor_id, contributor2_id],
-            activities=['skitouring']
+            activities=['skitouring'], languages=[]
         ))
         self.session.flush()
 
@@ -216,6 +216,24 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         # set an activity filter for the user
         user = self.session.query(User).get(self.global_userids['contributor'])
         user.feed_filter_activities = ['hiking']
+        self.session.flush()
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app.get('/personal-feed', status=200, headers=headers)
+        body = response.json
+
+        feed = body['feed']
+        self.assertEqual(1, len(feed))
+
+        self.assertEqual(
+            self.route.document_id, feed[0]['document']['document_id'])
+
+    def test_get_feed_languages_filter(self):
+        """ Get personal feed with an language filter.
+        """
+        # set an activity filter for the user
+        user = self.session.query(User).get(self.global_userids['contributor'])
+        user.feed_filter_lang_preferences = ['es', 'it']
         self.session.flush()
 
         headers = self.add_authorization_header(username='contributor')

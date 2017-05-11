@@ -5,7 +5,7 @@ from c2corg_api.models.user import User
 from c2corg_api.views import cors_policy, restricted_json_view, \
     restricted_view, to_json_dict, set_best_locale
 from c2corg_api.views.validation import validate_preferred_lang_param
-from c2corg_common.attributes import activities
+from c2corg_common.attributes import activities, default_langs
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
 from colander import MappingSchema, SchemaNode, String, Boolean, Sequence, \
@@ -14,6 +14,9 @@ from sqlalchemy.orm import joinedload, load_only
 
 
 class FilterPreferencesSchema(MappingSchema):
+    lang_preferences = SchemaNode(
+        Sequence(), SchemaNode(String(), validator=OneOf(default_langs)),
+        missing=required)
     activities = SchemaNode(
         Sequence(),
         SchemaNode(String(), validator=OneOf(activities)),
@@ -72,6 +75,7 @@ class UserFilterPreferencesRest(object):
             set_best_locale(areas, lang)
 
         return {
+            'lang_preferences': user.feed_filter_lang_preferences,
             'followed_only': user.feed_followed_only,
             'activities': user.feed_filter_activities,
             'areas': [
@@ -85,6 +89,7 @@ class UserFilterPreferencesRest(object):
         user = self.get_user(with_area_locales=False)
 
         validated = self.request.validated
+        user.feed_filter_lang_preferences = validated['lang_preferences']
         user.feed_followed_only = validated['followed_only']
         user.feed_filter_activities = validated['activities']
 
