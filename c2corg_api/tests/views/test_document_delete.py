@@ -233,6 +233,16 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         DocumentRest.create_new_version(self.article1, user_id)
         update_feed_document_create(self.article1, user_id)
+        self.session.flush()
+
+        self.article1.locales[0].title = 'Some other article title'
+        article1_lang = self.article1.locales[0].lang
+        self.session.flush()
+        DocumentRest.update_version(
+            self.article1, user_id,
+            'new title', [UpdateType.LANG], [article1_lang])
+        self.session.flush()
+
         self._add_association(self.route2, self.article1)
         self._add_association(self.outing2, self.article1)
         self.session.flush()
