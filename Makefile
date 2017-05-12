@@ -51,7 +51,7 @@ test: .build/venv/bin/nosetests template .build/dev-requirements.timestamp .buil
 
 .PHONY: lint
 lint: .build/venv/bin/flake8
-	.build/venv/bin/flake8 c2corg_api
+	.build/venv/bin/flake8 c2corg_api es_migration
 
 .PHONY: install
 install: .build/requirements.timestamp template

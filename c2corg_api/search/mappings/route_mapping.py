@@ -121,6 +121,8 @@ class SearchRoute(SearchDocument):
          'rock', model_field=Route.rock_types)
     climbing_outdoor_type = QEnumArray(
          'crtyp', model_field=Route.climbing_outdoor_type)
+    slackline_type = QEnum(
+         'sltyp', model_field=Route.slackline_type)
 
     FIELDS = [
         'activities', 'elevation_min', 'elevation_max', 'height_diff_up',
@@ -128,7 +130,8 @@ class SearchRoute(SearchDocument):
         'height_diff_access', 'height_diff_difficulties', 'route_types',
         'orientations', 'glacier_gear', 'configuration',
         'mtb_length_asphalt', 'mtb_length_trail',
-        'mtb_height_diff_portages', 'rock_types', 'climbing_outdoor_type'
+        'mtb_height_diff_portages', 'rock_types', 'climbing_outdoor_type',
+        'slackline_type'
     ]
 
     ENUM_RANGE_FIELDS = [

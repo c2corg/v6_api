@@ -164,6 +164,12 @@ class _WaypointMixin(object):
     # nb places en gardiennage (gite, camping refuge)
     capacity_staffed = Column(SmallInteger)
 
+    slackline_types = Column(ArrayOfEnum(enums.slackline_type))
+
+    slackline_length_min = Column(SmallInteger)
+
+    slackline_length_max = Column(SmallInteger)
+
 
 attributes = [
     'waypoint_type', 'elevation', 'prominence', 'length', 'height_median',
@@ -178,7 +184,8 @@ attributes = [
     'blanket_unstaffed', 'gas_unstaffed', 'heating_unstaffed',
     'climbing_styles', 'access_time', 'climbing_rating_max',
     'climbing_rating_min', 'climbing_rating_median', 'height_min',
-    'equipment_ratings'
+    'equipment_ratings', 'slackline_types', 'slackline_length_min',
+    'slackline_length_max'
 ]
 
 

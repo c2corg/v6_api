@@ -231,6 +231,7 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
         self.queue_config = registry.queue_config
         reset_queue(self.queue_config)
         reset_cache_key()
+        registry.feed_admin_user_account_id = None
 
     def tearDown(self):  # noqa
         # rollback - everything that happened with the Session above
