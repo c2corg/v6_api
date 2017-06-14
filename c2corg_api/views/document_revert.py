@@ -2,27 +2,21 @@ import logging
 
 from c2corg_api import DBSession
 from c2corg_api.models.area import AREA_TYPE, Area, ArchiveArea
-from c2corg_api.models.area_association import update_areas_for_document
 from c2corg_api.models.article import ARTICLE_TYPE, Article, ArchiveArticle
 from c2corg_api.models.book import BOOK_TYPE, Book, ArchiveBook
-from c2corg_api.models.cache_version import update_cache_version
 from c2corg_api.models.document import (
-    Document, DocumentLocale, ArchiveDocumentLocale, UpdateType)
+    Document, DocumentLocale, ArchiveDocumentLocale)
 from c2corg_api.models.document_history import DocumentVersion
-from c2corg_api.models.feed import update_feed_document_update
 from c2corg_api.models.image import IMAGE_TYPE, Image, ArchiveImage
 from c2corg_api.models.outing import (
     OUTING_TYPE, Outing, OutingLocale, ArchiveOuting, ArchiveOutingLocale)
 from c2corg_api.models.route import (
     ROUTE_TYPE, Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale)
-from c2corg_api.models.topo_map import MAP_TYPE
-from c2corg_api.models.topo_map_association import update_maps_for_document
 from c2corg_api.models.waypoint import (
     WAYPOINT_TYPE, Waypoint, WaypointLocale, ArchiveWaypoint,
     ArchiveWaypointLocale)
 from c2corg_api.models.xreport import (
     XREPORT_TYPE, Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale)
-from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.area import update_associations
 from c2corg_api.views.document import DocumentRest
@@ -33,9 +27,8 @@ from colander import (
     MappingSchema, SchemaNode, Integer, String, required, OneOf)
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
-from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict
+from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.orm import joinedload, contains_eager
-from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.orm.util import with_polymorphic
 from sqlalchemy.sql.expression import exists, and_
 
@@ -113,55 +106,28 @@ class DocumentRevertRest(object):
         document_in = self._get_archive_document(
             document_id, lang, version_id, archive_clazz, archive_locale_clazz)
 
-        old_versions = document.get_versions()
-        user_id = self.request.authenticated_userid
-
-        # update the document with the input document
-        document.update(document_in)
-
-        # now set back the versions to the versions of the current document
-        # because we are basing our changes on the lastest version
-        document.version = old_versions['document']
-        document.locales[0].version = old_versions['locales'][lang]
-        if document.geometry:
-            document.geometry.version = old_versions['geometry']
-
         # 'before_update' callbacks as in _put() are generally not required
         # when reverting, except maybe if associated WP/routes have changed.
-        # See 'after_update' handling below
+        before_update = None
+        after_update = self._get_after_update(document_type)
 
-        try:
-            DBSession.flush()
-        except StaleDataError:
-            raise HTTPConflict('concurrent modification')
+        def manage_versions(document, old_versions):
+            # After the target document object has been updated,
+            # set the versions back to the versions of the current document
+            # because we are basing our changes on the lastest version.
+            document.version = old_versions['document']
+            document.locales[0].version = old_versions['locales'][lang]
+            if document.geometry:
+                document.geometry.version = old_versions['geometry']
 
-        # when flushing the session, SQLAlchemy automatically updates the
-        # version numbers in case attributes have changed. by comparing with
-        # the old version numbers, we can check if only figures or only locales
-        # have changed.
-        (update_types, changed_langs) = document.get_update_type(old_versions)
+        self.request.validated['message'] = 'Revert to version {}'.format(
+            version_id)
 
-        if update_types:
-            # A new version needs to be created and persisted
-            message = 'Revert to version {}'.format(version_id)
-            DocumentRest.update_version(
-                document, user_id, message, update_types, changed_langs)
+        update_types = DocumentRest.update_document(
+            document, document_in, self.request,
+            before_update, after_update, manage_versions)
 
-            if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
-                update_areas_for_document(document, reset=True)
-
-            if document.type != MAP_TYPE and UpdateType.GEOM in update_types:
-                update_maps_for_document(document, reset=True)
-
-            after_update = self._get_after_update(document_type)
-            if after_update:
-                after_update(document, update_types, user_id=user_id)
-
-            update_cache_version(document)
-            # update search index
-            notify_es_syncer(self.request.registry.queue_config)
-            update_feed_document_update(document, user_id, update_types)
-        else:
+        if not update_types:
             raise HTTPBadRequest(
                 'No change to apply when reverting to this version')
 
