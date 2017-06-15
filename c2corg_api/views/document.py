@@ -229,7 +229,6 @@ class DocumentRest(object):
     def _put(
             self, clazz, schema, clazz_locale=None, before_update=None,
             after_update=None):
-        user_id = self.request.authenticated_userid
         id = self.request.validated['id']
         document_in = \
             schema.objectify(self.request.validated['document'])
@@ -245,63 +244,8 @@ class DocumentRest(object):
 
         self._check_versions(document, document_in)
 
-        # remember the current version numbers of the document
-        old_versions = document.get_versions()
-
-        # update the document with the input document
-        document.update(document_in)
-
-        if before_update:
-            before_update(document, document_in, user_id=user_id)
-
-        try:
-            DBSession.flush()
-        except StaleDataError:
-            raise HTTPConflict('concurrent modification')
-
-        # when flushing the session, SQLAlchemy automatically updates the
-        # version numbers in case attributes have changed. by comparing with
-        # the old version numbers, we can check if only figures or only locales
-        # have changed.
-        (update_types, changed_langs) = document.get_update_type(old_versions)
-
-        if update_types:
-            # A new version needs to be created and persisted
-            DocumentRest.update_version(
-                document, user_id, self.request.validated['message'],
-                update_types,  changed_langs)
-
-            if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
-                update_areas_for_document(document, reset=True)
-
-            if document.type != MAP_TYPE and UpdateType.GEOM in update_types:
-                update_maps_for_document(document, reset=True)
-
-            if after_update:
-                after_update(document, update_types, user_id=user_id)
-
-            update_cache_version(document)
-
-        associations = self.request.validated.get('associations', None)
-        if associations:
-            check_association_add = \
-                association_permission_checker(self.request)
-            check_association_remove = \
-                association_permission_removal_checker(self.request)
-
-            added_associations, removed_associations = \
-                synchronize_associations(
-                    document, associations, user_id,
-                    check_association_add=check_association_add,
-                    check_association_remove=check_association_remove)
-
-        if update_types or associations:
-            # update search index
-            notify_es_syncer(self.request.registry.queue_config)
-            update_feed_document_update(document, user_id, update_types)
-        if associations and (removed_associations or added_associations):
-            update_cache_version_associations(
-                added_associations, removed_associations)
+        DocumentRest.update_document(document, document_in, self.request,
+                                     before_update, after_update)
 
         return {}
 
@@ -359,6 +303,75 @@ class DocumentRest(object):
             raise HTTPNotFound('document not found')
 
         return document
+
+    @staticmethod
+    def update_document(
+            document, document_in, request,
+            before_update=None, after_update=None, manage_versions=None):
+        user_id = request.authenticated_userid
+
+        # remember the current version numbers of the document
+        old_versions = document.get_versions()
+
+        # update the document with the input document
+        document.update(document_in)
+
+        if before_update:
+            before_update(document, document_in, user_id=user_id)
+
+        if manage_versions:
+            manage_versions(document, old_versions)
+
+        try:
+            DBSession.flush()
+        except StaleDataError:
+            raise HTTPConflict('concurrent modification')
+
+        # when flushing the session, SQLAlchemy automatically updates the
+        # version numbers in case attributes have changed. by comparing with
+        # the old version numbers, we can check if only figures or only locales
+        # have changed.
+        (update_types, changed_langs) = document.get_update_type(old_versions)
+
+        if update_types:
+            # A new version needs to be created and persisted
+            DocumentRest.update_version(
+                document, user_id, request.validated['message'],
+                update_types,  changed_langs)
+
+            if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
+                update_areas_for_document(document, reset=True)
+
+            if document.type != MAP_TYPE and UpdateType.GEOM in update_types:
+                update_maps_for_document(document, reset=True)
+
+            if after_update:
+                after_update(document, update_types, user_id=user_id)
+
+            update_cache_version(document)
+
+        associations = request.validated.get('associations', None)
+        if associations:
+            check_association_add = \
+                association_permission_checker(request)
+            check_association_remove = \
+                association_permission_removal_checker(request)
+
+            added_associations, removed_associations = \
+                synchronize_associations(
+                    document, associations, user_id,
+                    check_association_add=check_association_add,
+                    check_association_remove=check_association_remove)
+
+        if update_types or associations:
+            # update search index
+            notify_es_syncer(request.registry.queue_config)
+            update_feed_document_update(document, user_id, update_types)
+        if associations and (removed_associations or added_associations):
+            update_cache_version_associations(
+                added_associations, removed_associations)
+
+        return update_types
 
     @staticmethod
     def create_new_version(document, user_id, written_at=None):
