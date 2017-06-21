@@ -78,19 +78,22 @@ class _XreportMixin(object):
 
     autonomy = Column(enums.autonomy)
 
+    disable_comments = Column(Boolean)
+
 
 attributes = [
     'elevation', 'date', 'event_type', 'activities',
     'nb_participants', 'nb_impacted', 'rescue',
     'avalanche_level', 'avalanche_slope', 'severity',
     'author_status', 'activity_rate', 'nb_outings', 'age', 'gender',
-    'previous_injuries', 'autonomy'
+    'previous_injuries', 'autonomy', 'disable_comments'
 ]
 
 attributes_without_personal = [
     'elevation', 'date', 'event_type', 'activities',
     'nb_participants', 'nb_impacted', 'rescue',
-    'avalanche_level', 'avalanche_slope', 'severity'
+    'avalanche_level', 'avalanche_slope', 'severity',
+    'disable_comments'
 ]
 
 
