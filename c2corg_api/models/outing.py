@@ -76,6 +76,8 @@ class _OutingMixin(object):
 
     hut_status = Column(enums.hut_status)
 
+    disable_comments = Column(Boolean)
+
 attributes = [
     'access_condition', 'activities', 'avalanche_signs',
     'condition_rating', 'date_end', 'date_start',
@@ -83,7 +85,7 @@ attributes = [
     'elevation_max', 'elevation_min', 'elevation_up_snow', 'frequentation',
     'glacier_rating', 'height_diff_down', 'height_diff_up', 'hut_status',
     'length_total', 'lift_status', 'partial_trip', 'participant_count',
-    'public_transport', 'snow_quality', 'snow_quantity']
+    'public_transport', 'snow_quality', 'snow_quantity', 'disable_comments']
 
 
 class Outing(_OutingMixin, Document):
