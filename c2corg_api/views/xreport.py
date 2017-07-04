@@ -64,7 +64,7 @@ class XreportRest(DocumentRest):
                         validate_xreport_create,
                         validate_associations_create])
     def collection_post(self):
-        return self._collection_post(schema_xreport)
+        return self._collection_post(schema_xreport, allow_anonymous=True)
 
     @restricted_json_view(
             schema=schema_update_xreport,

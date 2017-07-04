@@ -182,15 +182,21 @@ class DocumentRest(object):
         ]
 
     def _collection_post(
-            self, schema, before_add=None, after_add=None):
+            self, schema, before_add=None, after_add=None,
+            allow_anonymous=False):
         document_in = self.request.validated
         document = self._create_document(
-                document_in, schema, before_add, after_add)
+                document_in, schema, before_add, after_add, allow_anonymous)
         return {'document_id': document.document_id}
 
     def _create_document(
-            self, document_in, schema, before_add=None, after_add=None):
-        user_id = self.request.authenticated_userid
+            self, document_in, schema, before_add=None, after_add=None,
+            allow_anonymous=False):
+        if allow_anonymous and document_in.get('anonymous') and \
+           self.request.registry.anonymous_user_id:
+            user_id = self.request.registry.anonymous_user_id
+        else:
+            user_id = self.request.authenticated_userid
 
         document = schema.objectify(document_in)
         document.document_id = None
