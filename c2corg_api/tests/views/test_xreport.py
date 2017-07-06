@@ -389,6 +389,31 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertIn('previous_injuries', body)
         self.assertIn('autonomy', body)
 
+    def test_post_anonymous(self):
+        self.app.app.registry.anonymous_user_id = \
+            self.global_userids['moderator']
+        body_post = {
+            'document_id': 111,
+            'version': 1,
+            'activities': ['hiking'],
+            'event_type': ['stone_fall'],
+            'nb_participants': 666,
+            'nb_impacted': 666,
+            'locales': [
+                {'title': 'Lac d\'Annecy', 'lang': 'en'}
+            ],
+            'anonymous': True
+        }
+
+        body_post, doc = self.post_success(body_post, user='contributor')
+
+        # Check that the contributor is not set as author
+        user_id = self.global_userids['contributor']
+        version = doc.versions[0]
+        meta_data = version.history_metadata
+        self.assertNotEqual(meta_data.user_id, user_id)
+        self.assertEqual(meta_data.user_id, self.global_userids['moderator'])
+
     def test_put_wrong_document_id(self):
         body = {
             'document': {

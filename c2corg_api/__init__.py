@@ -97,6 +97,7 @@ def main(global_config, **settings):
 
     configure_caches(settings)
     configure_feed(settings, config)
+    configure_anonymous(settings, config)
 
     # Scan MUST be the last call otherwise ACLs will not be set
     # and the permissions would be bypassed
@@ -123,3 +124,11 @@ def configure_feed(settings, config):
     if settings.get('feed.admin_user_account'):
         account_id = int(settings.get('feed.admin_user_account'))
     config.registry.feed_admin_user_account_id = account_id
+
+
+def configure_anonymous(settings, config):
+    account_id = None
+
+    if settings.get('guidebook.anonymous_user_account'):
+        account_id = int(settings.get('guidebook.anonymous_user_account'))
+    config.registry.anonymous_user_id = account_id

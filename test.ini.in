@@ -19,3 +19,4 @@ discourse.api_key = {discourse_api_key}
 discourse.sso_secret = {discourse_sso_secret}
 skip.captcha.validation = True
 feed.admin_user_account =
+guidebook.anonymous_user_account =

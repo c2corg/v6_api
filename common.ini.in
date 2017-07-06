@@ -52,6 +52,9 @@ redis.cache_status_refresh_period = {redis_cache_status_refresh_period}
 cache_version = {version}
 cache_version_timestamp = False
 
+# User id to use for anonymous contributions in the guidebook
+guidebook.anonymous_user_account = {guidebook_anonymous_user_account}
+
 # if given, changes of this user account will not be returned in the feed
 feed.admin_user_account = {feed_admin_user_account}
 
