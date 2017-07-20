@@ -1,7 +1,7 @@
 import transaction  # NOQA
 
 from pyramid_mailer import get_mailer
-from pyramid_mailer.message import Message
+from pyramid_mailer.message import Message, Attachment
 from functools import lru_cache
 from c2corg_common.attributes import default_langs
 
@@ -54,6 +54,16 @@ class EmailService:
         """Send an email. This method may throw."""
         log.debug('Sending email to %s through %s' % (
             to_address, self.mail_server))
+        if body:
+            # Convert body text to attachment instance
+            # in order to force the transfer encoding to base64
+            # instead of quoted-printable because of problems
+            # with email services such as hotmail.
+            body = Attachment(
+                data=body,
+                content_type='text/plain',
+                transfer_encoding='base64',
+                disposition='inline')
         msg = Message(
                 subject=subject,
                 sender=self.mail_from,
