@@ -56,13 +56,13 @@ class EmailService:
             to_address, self.mail_server))
         if body:
             # Convert body text to attachment instance
-            # in order to force the transfer encoding to base64
+            # in order to force the transfer encoding to 8bit
             # instead of quoted-printable because of problems
             # with email services such as hotmail.
             body = Attachment(
                 data=body,
                 content_type='text/plain',
-                transfer_encoding='base64',
+                transfer_encoding='8bit',
                 disposition='inline')
         msg = Message(
                 subject=subject,
