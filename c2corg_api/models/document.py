@@ -335,7 +335,7 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
             primary_key=True)
 
     _ATTRIBUTES = \
-        ['document_id', 'version', 'geom', 'geom_detail']
+        ['document_id', 'version', 'geom', 'geom_detail', 'has_geom_detail']
 
     def to_archive(self):
         geometry = ArchiveDocumentGeometry()
@@ -405,6 +405,9 @@ DocumentGeometry.lon_lat = column_property(
     func.ST_AsGeoJSON(func.ST_Transform(DocumentGeometry.geom, 4326)),
     deferred=True)
 
+DocumentGeometry.has_geom_detail = column_property(
+    DocumentGeometry.geom_detail.isnot(None))
+
 
 class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
     __tablename__ = 'documents_geometries_archives'
@@ -442,7 +445,7 @@ schema_document_locale = SQLAlchemySchemaNode(
 
 geometry_schema_overrides = {
     # whitelisted attributes
-    'includes': ['version', 'geom', 'geom_detail'],
+    'includes': ['version', 'geom', 'geom_detail', 'has_geom_detail'],
     'overrides': {
         'version': {
             'missing': None
@@ -454,7 +457,7 @@ geometry_schema_overrides = {
 def get_geometry_schema_overrides(geometry_types):
     return {
         # whitelisted attributes
-        'includes': ['version', 'geom', 'geom_detail'],
+        'includes': ['version', 'geom', 'geom_detail', 'has_geom_detail'],
         'overrides': {
             'version': {
                 'missing': None

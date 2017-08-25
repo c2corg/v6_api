@@ -127,6 +127,14 @@ def to_json_dict(obj, schema, with_special_locales_attrs=False):
                 if hasattr(locale, attr):
                     locale_dict[attr] = getattr(locale, attr)
 
+    geometry_special_attributes = ['has_geom_detail']
+    if 'geometry' in obj_dict and hasattr(obj, 'geometry'):
+        geometry_dict = obj_dict['geometry']
+        geometry = obj.geometry
+        for attr in geometry_special_attributes:
+            if hasattr(geometry, attr):
+                geometry_dict[attr] = getattr(geometry, attr)
+
     return obj_dict
 
 
