@@ -46,6 +46,13 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(author['name'], 'Contributor')
         self.assertEqual(author['user_id'], self.global_userids['contributor'])
 
+        for doc in body['documents']:
+            # number of associated images
+            self.assertIn('img_count', doc)
+            self.assertEqual(
+                doc['img_count'],
+                1 if doc['document_id'] == self.outing.document_id else 0)
+
     def test_get_collection_for_route(self):
         reset_search_index(self.session)
         response = self.app.get(
