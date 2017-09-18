@@ -1,10 +1,12 @@
 from c2corg_api.caching import cache_document_listing
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import schema_listing_area
+from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import get_document_id, \
     get_cache_keys
 from c2corg_api.models.document import (
     set_available_langs)
+from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.xreport import Xreport
 from c2corg_api.models.user import User
@@ -12,6 +14,8 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.views import to_json_dict, set_best_locale
 from c2corg_common.utils.caching import get_or_create_multi
 from sqlalchemy.orm import joinedload, contains_eager, subqueryload, load_only
+from sqlalchemy.sql.expression import and_
+from sqlalchemy.sql.functions import func
 
 
 def get_documents_for_ids(document_ids, lang, documents_config, total=None):
@@ -122,6 +126,9 @@ def _get_documents_from_ids(
     if documents_config.include_areas:
         _set_areas_for_documents(documents, lang)
 
+    if documents_config.include_img_count:
+        _set_img_count_for_documents(documents, document_ids)
+
     if documents_config.set_custom_fields:
         documents_config.set_custom_fields(documents, lang)
 
@@ -195,3 +202,16 @@ def _set_areas_for_documents(documents, lang):
         document.areas = [
             to_json_dict(m, schema_listing_area) for m in document._areas
         ]
+
+
+def _set_img_count_for_documents(documents, document_ids):
+    res = DBSession.query(
+        Association.parent_document_id, func.count('*')). \
+        filter(and_(
+            Association.parent_document_id.in_(document_ids),
+            Association.child_document_type == IMAGE_TYPE)). \
+        group_by(Association.parent_document_id).all()
+    counts = {document_id: count for (document_id, count) in res}
+    for document in documents:
+        doc_id = document.document_id
+        document.img_count = counts[doc_id] if doc_id in counts else 0

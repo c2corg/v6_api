@@ -34,13 +34,14 @@ class GetDocumentsConfig:
     def __init__(
             self, document_type, clazz, schema, clazz_locale=None, fields=None,
             listing_fields=None, adapt_schema=None, include_areas=True,
-            set_custom_fields=None):
+            include_img_count=False, set_custom_fields=None):
         self.document_type = document_type
         self.clazz = clazz
         self.schema = schema
         self.clazz_locale = clazz_locale
         self.adapt_schema = adapt_schema
         self.include_areas = include_areas
+        self.include_img_count = include_img_count
         self.set_custom_fields = set_custom_fields
 
         self._set_load_only_fields(fields, listing_fields)
@@ -166,7 +167,8 @@ outing_listing_schema_adaptor = make_schema_adaptor(
 
 outing_documents_config = GetDocumentsConfig(
     OUTING_TYPE, Outing, schema_outing, fields=fields_outing,
-    adapt_schema=outing_listing_schema_adaptor, set_custom_fields=set_author)
+    adapt_schema=outing_listing_schema_adaptor, set_custom_fields=set_author,
+    include_img_count=True)
 
 
 # xreports
