@@ -20,6 +20,7 @@ def upgrade():
     langs = ('fr', 'it', 'de', 'en', 'es', 'ca', 'eu')
     lang_enum = sa.Enum(*langs, name='lang', schema='guidebook')
     lang_enum.create(op.get_bind(), checkfirst=False)
+
     op.add_column(
         'user',
         sa.Column(
@@ -28,6 +29,7 @@ def upgrade():
             server_default='{}',
             nullable=False),
         schema='users')
+
     op.add_column(
         'feed_document_changes',
         sa.Column(
@@ -36,6 +38,15 @@ def upgrade():
             server_default='{}',
             nullable=False),
         schema='guidebook')
+    # fill the new col in
+    op.execute("""
+        with langs_for_documents as (
+          select document_id, array_agg(lang)::guidebook.lang[] as langs from guidebook.documents_locales group by document_id
+        )
+        update guidebook.feed_document_changes as c
+        set langs = dl.langs
+        from langs_for_documents dl
+        where c.document_id = dl.document_id""")
 
 
 def downgrade():
