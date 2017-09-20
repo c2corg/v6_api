@@ -335,7 +335,7 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
             primary_key=True)
 
     _ATTRIBUTES = \
-        ['document_id', 'version', 'geom', 'geom_detail', 'has_geom_detail']
+        ['document_id', 'version', 'geom', 'geom_detail']
 
     def to_archive(self):
         geometry = ArchiveDocumentGeometry()
