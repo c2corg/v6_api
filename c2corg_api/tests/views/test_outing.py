@@ -50,11 +50,16 @@ class TestOutingRest(BaseDocumentTestRest):
         reset_search_index(self.session)
         response = self.app.get(
             self._prefix + '?r=' + str(self.route.document_id), status=200)
-
         documents = response.json['documents']
-
         self.assertEqual(documents[0]['document_id'], self.outing.document_id)
         self.assertEqual(response.json['total'], 1)
+
+    def test_get_collection_has_geom(self):
+        reset_search_index(self.session)
+        response = self.app.get(
+            self._prefix + '?r=' + str(self.route.document_id), status=200)
+        documents = response.json['documents']
+        self.assertEqual(documents[0]['geometry']['has_geom_detail'], True)
 
     def test_get_collection_for_waypoint(self):
         reset_search_index(self.session)

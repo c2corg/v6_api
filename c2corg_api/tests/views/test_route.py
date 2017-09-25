@@ -70,6 +70,11 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(response.json['total'], 1)
         self.assertEqual(documents[0]['document_id'], self.route.document_id)
 
+    def test_get_collection_has_geom(self):
+        body = self.get_collection()
+        doc = body['documents'][3]
+        self.assertEqual(doc['geometry']['has_geom_detail'], True)
+
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
