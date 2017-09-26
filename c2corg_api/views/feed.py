@@ -193,20 +193,28 @@ def create_personal_filter(user, ignore_admin_changes_filter):
         # only include changes of followed users
         return create_followed_users_filter(user)
 
-    # filter on area and activity (`and` connected)
-    area_activity_filter = None
-    if user.feed_filter_activities or user.has_area_filter:
+    # filter on area, activity and langs (`and` connected)
+    feed_filter = None
+    if user.feed_filter_activities or user.has_area_filter or \
+       user.feed_filter_langs:
         area_filter = create_area_filter(user)
         activity_filter = create_activity_filter(user)
+        lang_filter = create_lang_filter(user)
 
-        if area_filter is not None and activity_filter is not None:
-            area_activity_filter = and_(area_filter, activity_filter)
-        elif area_filter is not None:
-            area_activity_filter = area_filter
-        elif activity_filter is not None:
-            area_activity_filter = activity_filter
+        filters = []
+        if area_filter is not None:
+            filters.append(area_filter)
+        if activity_filter is not None:
+            filters.append(activity_filter)
+        if lang_filter is not None:
+            filters.append(lang_filter)
 
-    if area_activity_filter is None:
+        if len(filters) == 1:
+            feed_filter = filters[0]
+        else:
+            feed_filter = and_(f for f in filters)
+
+    if feed_filter is None:
         # if no filter on area or activity, there is no need to check for
         # followed users, because all changes in the feed will be included
         # anyway
@@ -218,13 +226,13 @@ def create_personal_filter(user, ignore_admin_changes_filter):
         followed_users_filter = create_followed_users_filter(user)
 
     # `or` connect the filter on followed users with the area/activity filter
-    if area_activity_filter is not None and followed_users_filter is not None:
-        filter = or_(area_activity_filter, followed_users_filter)
+    if feed_filter is not None and followed_users_filter is not None:
+        filter = or_(feed_filter, followed_users_filter)
         return and_(filter, ignore_admin_changes_filter) \
             if ignore_admin_changes_filter else filter
-    elif area_activity_filter is not None:
-        return and_(area_activity_filter, ignore_admin_changes_filter) \
-            if ignore_admin_changes_filter else area_activity_filter
+    elif feed_filter is not None:
+        return and_(feed_filter, ignore_admin_changes_filter) \
+            if ignore_admin_changes_filter else feed_filter
     elif followed_users_filter is not None:
         return followed_users_filter
     else:
@@ -234,6 +242,7 @@ def create_personal_filter(user, ignore_admin_changes_filter):
 def has_no_custom_filter(user):
     has_custom_filter = (
         user.feed_filter_activities or
+        user.feed_filter_langs or
         user.has_area_filter or
         user.is_following_users or
         user.feed_followed_only)
@@ -269,6 +278,13 @@ def create_activity_filter(user):
         return None
 
     return DocumentChange.activities.op('&&')(user.feed_filter_activities)
+
+
+def create_lang_filter(user):
+    if not user.feed_filter_langs:
+        return None
+
+    return DocumentChange.langs.op('&&')(user.feed_filter_langs)
 
 
 def get_changes_of_profile_feed(user_id, token_id, token_time, limit):

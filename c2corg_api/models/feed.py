@@ -5,7 +5,8 @@ from c2corg_api.models.area import Area, AREA_TYPE
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.association import Association
-from c2corg_api.models.document import Document, UpdateType
+from c2corg_api.models.book import BOOK_TYPE
+from c2corg_api.models.document import Document, DocumentLocale, UpdateType
 from c2corg_api.models.enums import feed_change_type
 from c2corg_api.models.image import Image, IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
@@ -13,12 +14,13 @@ from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.utils import ArrayOfEnum
+from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.views.validation import association_keys
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql.array import ARRAY
 from sqlalchemy.orm import relationship, column_property
 from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import select, text
+from sqlalchemy.sql.expression import select, text, cast
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import Column, ForeignKey, PrimaryKeyConstraint, \
     CheckConstraint, Index
@@ -137,6 +139,10 @@ class DocumentChange(Base):
     activities = Column(
         ArrayOfEnum(enums.activity_type), nullable=False, server_default='{}')
 
+    # langs of the document locales
+    langs = Column(
+        ArrayOfEnum(enums.lang), nullable=False, server_default='{}')
+
     # For performance reasons, areas and users are referenced in simple integer
     # arrays in 'feed_document_changes', no PK-FK relations are set up.
     # To prevent inconsistencies, triggers are used.
@@ -179,6 +185,7 @@ class DocumentChange(Base):
         copy.document_type = self.document_type
         copy.change_type = self.change_type
         copy.activities = self.activities
+        copy.langs = self.langs
         copy.area_ids = self.area_ids
         if copy.document_type == OUTING_TYPE:
             copy.user_ids = self.user_ids
@@ -199,8 +206,11 @@ def update_feed_document_create(document, user_id):
     DBSession.flush()
 
     activities = []
-    if document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE]:
+    if document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE,
+                         BOOK_TYPE, XREPORT_TYPE]:
         activities = document.activities
+
+    langs = [locale.lang for locale in document.locales]
 
     user_ids = [user_id]
     if document.type == OUTING_TYPE:
@@ -217,6 +227,7 @@ def update_feed_document_create(document, user_id):
         document_id=document.document_id,
         document_type=document.type,
         activities=activities,
+        langs=langs,
         area_ids=area_ids,
         user_ids=user_ids
     )
@@ -250,9 +261,12 @@ def update_feed_document_update(document, user_id, update_types):
         update_areas_of_changes(document)
 
     # updates activities
-    if document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE] and \
+    if document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE,
+                         BOOK_TYPE, XREPORT_TYPE] and \
             UpdateType.FIGURES in update_types:
         update_activities_of_changes(document)
+
+    update_langs_of_changes(document)
 
     # update users_ids/participants (only for outings)
     if document.type != OUTING_TYPE:
@@ -446,6 +460,22 @@ def update_activities_of_changes(document):
         where(DocumentChange.document_id == document.document_id).
         values(activities=document.activities)
     )
+
+
+def update_langs_of_changes(document):
+    """Update the langs of all feed entries of the given document.
+    """
+    langs = DBSession. \
+        query(cast(
+            func.array_agg(DocumentLocale.lang),
+            ArrayOfEnum(enums.lang))). \
+        filter(DocumentLocale.document_id == document.document_id). \
+        group_by(DocumentLocale.document_id). \
+        subquery('langs')
+    DBSession.execute(
+        DocumentChange.__table__.update().
+        where(DocumentChange.document_id == document.document_id).
+        values(langs=langs.select()))
 
 
 def get_linked_document(images_in):

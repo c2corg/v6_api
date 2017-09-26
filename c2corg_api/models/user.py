@@ -99,9 +99,13 @@ class User(Base):
     is_profile_public = Column(
         Boolean, nullable=False, default=False, server_default='FALSE')
 
-    # the feed on the homepage for a user is filtered on this activities
+    # the feed on the homepage for a user is filtered on these activities
     feed_filter_activities = Column(
         ArrayOfEnum(enums.activity_type), nullable=False, server_default='{}')
+
+    # the feed on the homepage for a user is filtered on these langs
+    feed_filter_langs = Column(
+        ArrayOfEnum(enums.lang), nullable=False, server_default='{}')
 
     # only show updates from followed users in the homepage feed
     feed_followed_only = Column(

@@ -32,6 +32,7 @@ class TestUserFilterPreferencesRest(BaseTestRest):
             self.global_userids['contributor'])
         self.contributor.feed_filter_areas.append(self.area1)
         self.contributor.feed_filter_activities = ['hiking']
+        self.contributor.feed_filter_langs = ['fr']
         self.session.flush()
 
     def test_get_preferences_unauthenticated(self):
@@ -43,11 +44,13 @@ class TestUserFilterPreferencesRest(BaseTestRest):
         body = response.json
 
         self.assertEqual(['hiking'], body['activities'])
+        self.assertEqual(['fr'], body['langs'])
         self.assertEqual(False, body['followed_only'])
         areas = body['areas']
         self.assertEqual(1, len(areas))
         self.assertEqual(self.area1.document_id, areas[0]['document_id'])
         locale = areas[0]['locales'][0]
+        # not related to the langs pref above:
         self.assertEqual('fr', locale['lang'])
 
     def test_get_preferences_lang(self):
@@ -70,6 +73,8 @@ class TestUserFilterPreferencesRest(BaseTestRest):
             # missing 'followed_only'
             # wrong activity
             'activities': ['hiking', 'soccer'],
+            # wrong lang
+            'langs': ['fr', 'ru'],
             # wrong area entry
             'areas': [{
                 'id': self.area2.document_id
@@ -85,6 +90,7 @@ class TestUserFilterPreferencesRest(BaseTestRest):
         errors = body.get('errors')
 
         self.assertIsNotNone(self.get_error(errors, 'activities.1'))
+        self.assertIsNotNone(self.get_error(errors, 'langs.1'))
         self.assertCorniceRequired(
             self.get_error(errors, 'areas.0.document_id'),
             'areas.0.document_id')
@@ -95,6 +101,7 @@ class TestUserFilterPreferencesRest(BaseTestRest):
         request_body = {
             'followed_only': True,
             'activities': ['hiking', 'skitouring'],
+            'langs': ['fr', 'en'],
             'areas': [{
                 'document_id': self.area2.document_id
             }]
@@ -109,6 +116,7 @@ class TestUserFilterPreferencesRest(BaseTestRest):
         self.assertEquals(
             ['hiking', 'skitouring'],
             self.contributor.feed_filter_activities)
+        self.assertEquals(['fr', 'en'], self.contributor.feed_filter_langs)
 
         self.assertIsNone(
             self.session.query(FilterArea).

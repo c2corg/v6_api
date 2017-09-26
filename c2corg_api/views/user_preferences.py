@@ -5,7 +5,7 @@ from c2corg_api.models.user import User
 from c2corg_api.views import cors_policy, restricted_json_view, \
     restricted_view, to_json_dict, set_best_locale
 from c2corg_api.views.validation import validate_preferred_lang_param
-from c2corg_common.attributes import activities
+from c2corg_common.attributes import activities, default_langs
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
 from colander import MappingSchema, SchemaNode, String, Boolean, Sequence, \
@@ -17,6 +17,10 @@ class FilterPreferencesSchema(MappingSchema):
     activities = SchemaNode(
         Sequence(),
         SchemaNode(String(), validator=OneOf(activities)),
+        missing=required)
+    langs = SchemaNode(
+        Sequence(),
+        SchemaNode(String(), validator=OneOf(default_langs)),
         missing=required)
     areas = SchemaNode(
         Sequence(), SchemaAssociationDoc(), missing=required)
@@ -74,6 +78,7 @@ class UserFilterPreferencesRest(object):
         return {
             'followed_only': user.feed_followed_only,
             'activities': user.feed_filter_activities,
+            'langs': user.feed_filter_langs,
             'areas': [
                 to_json_dict(a, schema_listing_area) for a in areas
             ]
@@ -87,6 +92,7 @@ class UserFilterPreferencesRest(object):
         validated = self.request.validated
         user.feed_followed_only = validated['followed_only']
         user.feed_filter_activities = validated['activities']
+        user.feed_filter_langs = validated['langs']
 
         # update filter areas: get all areas given in the request and
         # then set on `user.feed_filter_areas`
