@@ -21,7 +21,7 @@ python-json-logger==0.1.5
 redis==2.10.5
 requests==2.11.1
 setuptools==28.8.0
-Shapely==1.5.17
+Shapely==1.6.1
 SQLAlchemy==1.1.3
 transaction==1.6.1
 waitress==1.0.1
@@ -48,7 +48,7 @@ git+https://github.com/tsauerwein/cornice.git@nested-none-2.1.0-c2corg
 # c2corg_common project
 # for development use a local checkout
 # -e ../v6_common
-git+https://github.com/c2corg/v6_common.git@b8eca73
+git+https://github.com/c2corg/v6_common.git@9a7f0cb
 
 # Discourse API client
 git+https://github.com/c2corg/pydiscourse.git@188cdf8

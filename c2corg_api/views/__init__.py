@@ -19,6 +19,8 @@ from cornice.resource import view
 from geoalchemy2 import WKBElement
 from sqlalchemy.inspection import inspect
 from sqlalchemy.sql.functions import func
+from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.route import ROUTE_TYPE
 
 log = logging.getLogger(__name__)
 
@@ -102,9 +104,9 @@ def restricted_view(**kw):
     return view(**kw)
 
 
-def to_json_dict(obj, schema, with_special_locales_attrs=False):
+def to_json_dict(obj, schema, with_special_locales_attrs=False,
+                 with_special_geometry_attrs=False):
     obj_dict = serialize(schema.dictify(obj))
-
     # manually copy certain attributes that were set on the object (it would be
     # cleaner to add the field to the schema, but ColanderAlchemy doesn't like
     # it because it's not a real column)
@@ -126,7 +128,13 @@ def to_json_dict(obj, schema, with_special_locales_attrs=False):
             for attr in locale_special_attributes:
                 if hasattr(locale, attr):
                     locale_dict[attr] = getattr(locale, attr)
-
+    if with_special_geometry_attrs and obj.type in(ROUTE_TYPE, OUTING_TYPE):
+            geometry_special_attributes = ['has_geom_detail']
+            geometry_dict = obj_dict['geometry']
+            geometry = obj.geometry
+            for attr in geometry_special_attributes:
+                if hasattr(geometry, attr):
+                    geometry_dict[attr] = getattr(geometry, attr)
     return obj_dict
 
 

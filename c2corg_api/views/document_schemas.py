@@ -106,7 +106,9 @@ def get_all_fields(fields, activities, field_list_type):
     """
     fields_list = [
         fields.get(activity).get(field_list_type) for activity in activities
+        if fields.get(activity)
     ]
+
     # turn a list of lists [['a', 'b'], ['b', 'c'], ['d']] into a flat set
     # ['a', 'b', 'c', 'd']
     return set(sum(fields_list, []))

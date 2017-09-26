@@ -141,7 +141,8 @@ def _get_documents_from_ids(
             doc,
             documents_config.schema if not documents_config.adapt_schema
             else documents_config.adapt_schema(
-                documents_config.schema, doc)
+                documents_config.schema, doc),
+            with_special_geometry_attrs=True
         ) if doc else None for doc in documents
         ]
 
