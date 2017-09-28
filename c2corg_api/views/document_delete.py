@@ -13,7 +13,7 @@ from c2corg_api.models.document_history import HistoryMetaData, \
     DocumentVersion, has_been_created_by, is_less_than_24h_old
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
-from c2corg_api.models.feed import DocumentChange
+from c2corg_api.models.feed import DocumentChange, update_langs_of_changes
 from c2corg_api.models.image import IMAGE_TYPE, Image, ArchiveImage
 from c2corg_api.models.outing import (
     OUTING_TYPE, Outing, OutingLocale, ArchiveOuting, ArchiveOutingLocale)
@@ -323,6 +323,7 @@ class DeleteDocumentLocaleRest(DeleteBase):
         _remove_locale_versions(document_id, lang)
         _remove_archive_locale(archive_clazz_locale, document_id, lang)
         _remove_locale(clazz_locale, document_id, lang)
+        update_langs_of_changes(document_id)
 
         update_cache_version_full(document_id, document_type)
 

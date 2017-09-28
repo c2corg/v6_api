@@ -799,6 +799,13 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.assertEqual(other_locale_versions_count,
                          initial_other_locale_versions_count)
 
+        # Check the feed has been updated
+        feed_items_langs = self.session.query(DocumentChange.langs).filter(
+            DocumentChange.document_id == document_id
+        ).all()
+        for langs in feed_items_langs:
+            self.assertNotIn(lang, langs)
+
     def test_delete_locale_waypoint(self):
         self._test_delete_locale(self.waypoint3.document_id, 'fr')
 
