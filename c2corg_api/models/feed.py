@@ -266,7 +266,7 @@ def update_feed_document_update(document, user_id, update_types):
             UpdateType.FIGURES in update_types:
         update_activities_of_changes(document)
 
-    update_langs_of_changes(document)
+    update_langs_of_changes(document.document_id)
 
     # update users_ids/participants (only for outings)
     if document.type != OUTING_TYPE:
@@ -462,19 +462,19 @@ def update_activities_of_changes(document):
     )
 
 
-def update_langs_of_changes(document):
+def update_langs_of_changes(document_id):
     """Update the langs of all feed entries of the given document.
     """
     langs = DBSession. \
         query(cast(
             func.array_agg(DocumentLocale.lang),
             ArrayOfEnum(enums.lang))). \
-        filter(DocumentLocale.document_id == document.document_id). \
+        filter(DocumentLocale.document_id == document_id). \
         group_by(DocumentLocale.document_id). \
         subquery('langs')
     DBSession.execute(
         DocumentChange.__table__.update().
-        where(DocumentChange.document_id == document.document_id).
+        where(DocumentChange.document_id == document_id).
         values(langs=langs.select()))
 
 
