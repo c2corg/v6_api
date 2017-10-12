@@ -78,6 +78,33 @@ class _OutingMixin(object):
 
     disable_comments = Column(Boolean)
 
+    hiking_rating = Column(enums.hiking_rating)
+
+    ski_rating = Column(enums.ski_rating)
+
+    labande_global_rating = Column(enums.global_rating)
+
+    snowshoe_rating = Column(enums.snowshoe_rating)
+
+    global_rating = Column(enums.global_rating)
+
+    height_diff_difficulties = Column(SmallInteger)
+
+    engagement_rating = Column(enums.engagement_rating)
+
+    equipment_rating = Column(enums.equipment_rating)
+
+    rock_free_rating = Column(enums.climbing_rating)
+
+    ice_rating = Column(enums.ice_rating)
+
+    via_ferrata_rating = Column(enums.via_ferrata_rating)
+
+    mtb_up_rating = Column(enums.mtb_up_rating)
+
+    mtb_down_rating = Column(enums.mtb_down_rating)
+
+
 attributes = [
     'access_condition', 'activities', 'avalanche_signs',
     'condition_rating', 'date_end', 'date_start',
@@ -85,7 +112,12 @@ attributes = [
     'elevation_max', 'elevation_min', 'elevation_up_snow', 'frequentation',
     'glacier_rating', 'height_diff_down', 'height_diff_up', 'hut_status',
     'length_total', 'lift_status', 'partial_trip', 'participant_count',
-    'public_transport', 'snow_quality', 'snow_quantity', 'disable_comments']
+    'public_transport', 'snow_quality', 'snow_quantity', 'disable_comments',
+    'hiking_rating', 'ski_rating', 'labande_global_rating', 'ice_rating',
+    'snowshoe_rating', 'global_rating', 'height_diff_difficulties',
+    'engagement_rating', 'equipment_rating', 'rock_free_rating',
+    'via_ferrata_rating', 'mtb_up_rating', 'mtb_down_rating'
+    ]
 
 
 class Outing(_OutingMixin, Document):
