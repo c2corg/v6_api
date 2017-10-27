@@ -343,7 +343,7 @@ class DocumentRest(object):
             # A new version needs to be created and persisted
             DocumentRest.update_version(
                 document, user_id, request.validated['message'],
-                update_types,  changed_langs)
+                update_types, changed_langs)
 
             if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
                 update_areas_for_document(document, reset=True)

@@ -2,8 +2,9 @@ import logging
 
 from c2corg_api import DBSession
 from c2corg_api.models.cache_version import update_cache_version_direct
-from c2corg_api.models.document import Document
+from c2corg_api.models.document import Document, UpdateType
 from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views.document import DocumentRest
 from colander import MappingSchema, SchemaNode, Integer, required
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
@@ -47,7 +48,18 @@ class DocumentProtectRest(object):
         """
         document_id = self.request.validated['document_id']
         document = _get_document(document_id)
+
+        # Do nothing if document is already protected.
+        if document.protected:
+            return {}
+
         document.protected = True
+
+        user_id = self.request.authenticated_userid
+        DocumentRest.update_version(
+            document, user_id, 'Protected document',
+            [UpdateType.FIGURES], [])
+
         update_cache_version_direct(document_id)
 
         return {}
@@ -75,7 +87,18 @@ class DocumentUnprotectRest(object):
         """
         document_id = self.request.validated['document_id']
         document = _get_document(document_id)
+
+        # Do nothing if document is already not protected.
+        if not document.protected:
+            return {}
+
         document.protected = False
+
+        user_id = self.request.authenticated_userid
+        DocumentRest.update_version(
+            document, user_id, 'Unprotected document',
+            [UpdateType.FIGURES], [])
+
         update_cache_version_direct(document_id)
 
         return {}
