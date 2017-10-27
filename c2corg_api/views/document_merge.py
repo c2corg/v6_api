@@ -133,7 +133,7 @@ class MergeDocumentRest(object):
         source_doc = DBSession.query(Document).get(source_document_id)
 
         # transfer associations from source to target
-        _transfer_associations(source_document_id, target_document_id)
+        transfer_associations(source_document_id, target_document_id)
 
         # if waypoint, update main waypoint of routes
         if source_doc.type == WAYPOINT_TYPE:
@@ -160,7 +160,7 @@ class MergeDocumentRest(object):
         return {}
 
 
-def _transfer_associations(source_document_id, target_document_id):
+def transfer_associations(source_document_id, target_document_id):
     # get the document ids the target is already associated with
     target_child_ids_result = DBSession. \
         query(Association.child_document_id). \

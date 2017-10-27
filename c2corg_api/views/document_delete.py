@@ -220,7 +220,7 @@ class DeleteBase(object):
 
         self._delete_document(document_id, document_type)
 
-        _update_deleted_documents_list(document_id, document_type)
+        update_deleted_documents_list(document_id, document_type)
         notify_es_syncer(self.request.registry.queue_config)
 
         return {}
@@ -230,7 +230,7 @@ class DeleteBase(object):
         # If yes, delete them first.
         self._remove_merged_documents(document_id, document_type)
 
-        _remove_from_cache(document_id)
+        remove_from_cache(document_id)
 
         # Remove associations and update cache of formerly associated docs
         update_cache_version_full(document_id, document_type)
@@ -246,20 +246,10 @@ class DeleteBase(object):
             # Remove the references of this image from the feed
             _remove_image_from_feed(document_id)
 
-        # Order of removals depends on foreign key constraints
         if document_type == WAYPOINT_TYPE:
             _remove_waypoint_from_routes_archives_main_waypoint_id(document_id)
-        _remove_versions(document_id)
-        _remove_archive_locale(archive_clazz_locale, document_id)
-        _remove_archive_geometry(document_id)
-        _remove_archive(archive_clazz, document_id)
-        _remove_locale(clazz_locale, document_id)
-        _remove_geometry(document_id)
-        _remove_figures(clazz, document_id)
-
-        # When all references have been deleted, finally remove the main
-        # document entry
-        _remove_document(document_id)
+        remove_whole_document(document_id, clazz, clazz_locale,
+                              archive_clazz, archive_clazz_locale)
 
     def _remove_merged_documents(self, document_id, document_type):
         merged_document_ids = DBSession.query(ArchiveDocument.document_id). \
@@ -327,10 +317,25 @@ class DeleteDocumentLocaleRest(DeleteBase):
 
         update_cache_version_full(document_id, document_type)
 
-        _update_deleted_locales_list(document_id, document_type, lang)
+        update_deleted_locales_list(document_id, document_type, lang)
         notify_es_syncer(self.request.registry.queue_config)
 
         return {}
+
+
+def remove_whole_document(document_id, clazz, clazz_locale,
+                          archive_clazz, archive_clazz_locale):
+    # Order of removals depends on foreign key constraints
+    _remove_versions(document_id)
+    _remove_archive_locale(archive_clazz_locale, document_id)
+    _remove_archive_geometry(document_id)
+    _remove_archive(archive_clazz, document_id)
+    _remove_locale(clazz_locale, document_id)
+    _remove_geometry(document_id)
+    _remove_figures(clazz, document_id)
+    # When all references have been deleted, finally remove the main
+    # document entry:
+    _remove_document(document_id)
 
 
 def _get_models(document_type):
@@ -351,7 +356,7 @@ def _get_models(document_type):
     assert False
 
 
-def _remove_from_cache(document_id):
+def remove_from_cache(document_id):
     DBSession.query(CacheVersion). \
         filter(CacheVersion.document_id == document_id).delete()
 
@@ -530,11 +535,11 @@ def _remove_associations(document_id):
         filter(AreaAssociation.document_id == document_id).delete()
 
 
-def _update_deleted_documents_list(document_id, document_type):
+def update_deleted_documents_list(document_id, document_type):
     DBSession.add(ESDeletedDocument(
         document_id=document_id, type=document_type))
 
 
-def _update_deleted_locales_list(document_id, document_type, lang):
+def update_deleted_locales_list(document_id, document_type, lang):
     DBSession.add(ESDeletedLocale(
         document_id=document_id, type=document_type, lang=lang))
