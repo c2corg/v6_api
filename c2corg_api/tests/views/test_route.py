@@ -38,7 +38,7 @@ class TestRouteRest(BaseDocumentTestRest):
         body = self.get_collection()
         doc = body['documents'][0]
         self.assertNotIn('climbing_outdoor_type', doc)
-        self.assertNotIn('elevation_min', doc)
+        self.assertNotIn('height_diff_access', doc)
 
     def test_get_collection_paginated(self):
         self.app.get("/routes?offset=invalid", status=400)

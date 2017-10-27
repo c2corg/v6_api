@@ -10,7 +10,7 @@ class TestGetDocumentsConfig(BaseTestRest):
         self.assertIn('elevation_max', fields)
         self.assertIn('ski_rating', fields)
         self.assertIn('rock_free_rating', fields)
-        self.assertNotIn('elevation_min', fields)
+        self.assertNotIn('height_diff_access', fields)
         self.assertNotIn('lift_access', fields)
 
         self.assertNotIn('geometry.geom', fields)
