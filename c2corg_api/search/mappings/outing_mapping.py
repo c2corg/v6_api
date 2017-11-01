@@ -4,7 +4,13 @@ from c2corg_api.search.mapping_types import QueryableMixin, QDateRange, \
     QInteger, QBoolean, QLong, QEnumArray, QEnumRange
 from c2corg_common.sortable_search_attributes import \
     sortable_frequentation_types, sortable_condition_ratings, \
-    sortable_glacier_ratings
+    sortable_glacier_ratings,\
+    sortable_global_ratings, sortable_ski_ratings, \
+    sortable_equipment_ratings, sortable_engagement_ratings, \
+    sortable_ice_ratings, sortable_climbing_ratings, \
+    sortable_via_ferrata_ratings, sortable_hiking_ratings, \
+    sortable_snowshoe_ratings, sortable_mtb_up_ratings, \
+    sortable_mtb_down_ratings
 from elasticsearch_dsl import Date
 
 
@@ -57,17 +63,59 @@ class SearchOuting(SearchDocument):
         enum_mapper=sortable_glacier_ratings)
     avalanche_signs = QEnumArray(
         'avdate', model_field=Outing.avalanche_signs)
+    ski_rating = QEnumRange(
+        'trat', model_field=Outing.ski_rating,
+        enum_mapper=sortable_ski_ratings)
+    labande_global_rating = QEnumRange(
+        'lrat', model_field=Outing.labande_global_rating,
+        enum_mapper=sortable_global_ratings)
+    global_rating = QEnumRange(
+        'grat', model_field=Outing.global_rating,
+        enum_mapper=sortable_global_ratings)
+    height_diff_difficulties = QInteger(
+        'dhei', range=True)
+    engagement_rating = QEnumRange(
+        'erat', model_field=Outing.engagement_rating,
+        enum_mapper=sortable_engagement_ratings)
+    equipment_rating = QEnumRange(
+        'prat', model_field=Outing.equipment_rating,
+        enum_mapper=sortable_equipment_ratings)
+    ice_rating = QEnumRange(
+        'irat', model_field=Outing.ice_rating,
+        enum_mapper=sortable_ice_ratings)
+    rock_free_rating = QEnumRange(
+        'frat', model_field=Outing.rock_free_rating,
+        enum_mapper=sortable_climbing_ratings)
+    via_ferrata_rating = QEnumRange(
+        'krat', model_field=Outing.via_ferrata_rating,
+        enum_mapper=sortable_via_ferrata_ratings)
+    hiking_rating = QEnumRange(
+        'hrat', model_field=Outing.hiking_rating,
+        enum_mapper=sortable_hiking_ratings)
+    snowshoe_rating = QEnumRange(
+        'wrat', model_field=Outing.snowshoe_rating,
+        enum_mapper=sortable_snowshoe_ratings)
+    mtb_up_rating = QEnumRange(
+        'mbur', model_field=Outing.mtb_up_rating,
+        enum_mapper=sortable_mtb_up_ratings)
+    mtb_down_rating = QEnumRange(
+        'mbdr', model_field=Outing.mtb_down_rating,
+        enum_mapper=sortable_mtb_down_ratings)
 
     FIELDS = [
         'activities', 'date_start', 'date_end',
         'elevation_max', 'height_diff_up', 'length_total', 'public_transport',
         'elevation_access', 'elevation_up_snow', 'elevation_down_snow',
-        'avalanche_signs'
+        'avalanche_signs', 'height_diff_difficulties'
     ]
 
     ENUM_RANGE_FIELDS = [
         'frequentation', 'condition_rating', 'snow_quantity', 'snow_quality',
-        'glacier_rating'
+        'glacier_rating', 'hiking_rating', 'ski_rating',
+        'labande_global_rating', 'ice_rating', 'snowshoe_rating',
+        'global_rating',  'engagement_rating',
+        'equipment_rating', 'rock_free_rating', 'via_ferrata_rating',
+        'mtb_up_rating', 'mtb_down_rating'
     ]
 
     @staticmethod
