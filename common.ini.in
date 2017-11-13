@@ -72,6 +72,8 @@ discourse.api_key = {discourse_api_key}
 discourse.sso_secret = {discourse_sso_secret}
 discourse.category = {discourse_category}
 
+ui.url = {ui_url}
+
 mail.validate_register_url_template = {mail_validate_register_url_template}
 mail.request_password_change_url_template = {mail_request_password_change_url_template}
 mail.validate_change_email_url_template = {mail_validate_change_email_url_template}

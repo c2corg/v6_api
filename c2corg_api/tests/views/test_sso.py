@@ -340,20 +340,39 @@ class TestSsoLoginRest(BaseTestRest):
         self.session.flush()
 
     def test_no_token(self):
-        self.app.get(self._url, status=403)
+        body = self.app_post_json(self._url, status=400).json
+        errors = body.get('errors')
+        self.assertEqual('token', errors[0].get('name'))
+        self.assertEqual('Required', errors[0].get('description'))
 
     def test_invalid_token(self):
-        self.app.get(self._url,
-                     params={'token': 'bad_token'},
-                     status=403)
+        body = self.app_post_json(self._url,
+                                  {'token': 'bad_token'},
+                                  status=403).json
+        errors = body.get('errors')
+        self.assertEqual('token', errors[0].get('name'))
+        self.assertEqual('Invalid', errors[0].get('description'))
 
     def test_expired_token(self):
         self.sso_external_id.expire = localized_now()
         self.session.flush()
 
-        self.app.get(self._url,
-                     params={'token': 'good_token'},
-                     status=403)
+        body = self.app_post_json(self._url,
+                                  params={'token': 'good_token'},
+                                  status=403).json
+        errors = body.get('errors')
+        self.assertEqual('token', errors[0].get('name'))
+        self.assertEqual('Invalid', errors[0].get('description'))
+
+    def test_success(self):
+        self.sso_external_id.expire = sso_expire_from_now()
+        self.session.flush()
+
+        body = self.app_post_json(self._url,
+                                  {'discourse': True,
+                                   'token': 'good_token'},
+                                  status=200).json
+        self.assertTrue('token' in body)
 
     @patch(
         'c2corg_api.views.sso.get_discourse_client',
@@ -367,11 +386,11 @@ class TestSsoLoginRest(BaseTestRest):
         self.sso_external_id.expire = sso_expire_from_now()
         self.session.flush()
 
-        r = self.app.get(self._url,
-                         params={'token': 'good_token'},
-                         status=302)
-
-        self.assertEqual('https://discourse_redirect', r.location)
+        body = self.app_post_json(self._url,
+                                  {'discourse': True,
+                                   'token': 'good_token'},
+                                  status=200).json
+        self.assertTrue('token' in body)
 
     @patch(
         'c2corg_api.views.sso.get_discourse_client',
@@ -384,6 +403,8 @@ class TestSsoLoginRest(BaseTestRest):
         self.sso_external_id.expire = sso_expire_from_now()
         self.session.flush()
 
-        self.app.get(self._url,
-                     params={'token': 'good_token'},
-                     status=200)
+        body = self.app_post_json(self._url,
+                                  {'discourse': True,
+                                   'token': 'good_token'},
+                                  status=200).json
+        self.assertTrue('token' in body)
