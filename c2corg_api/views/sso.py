@@ -10,8 +10,6 @@ from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
 from pydiscourse.exceptions import DiscourseClientError
 from pyramid.httpexceptions import (
-    HTTPForbidden,
-    HTTPFound,
     HTTPInternalServerError,
 )
 
@@ -32,6 +30,7 @@ from c2corg_api.views import (
     json_view,
 )
 from c2corg_api.views.user import (
+    token_to_response,
     validate_unique_attribute,
     validate_forum_username,
 )
@@ -204,8 +203,9 @@ class SsoSyncRest(object):
                            group_id, discourse_userid)
 
         return {
-            'url': '{}?{}'.format(request.route_url('ssologinrest'),
-                                  urlencode({'token': sso_external_id.token}))
+            'url': '{}/sso-login?no_redirect&{}'.format(
+                request.registry.settings['ui.url'],
+                urlencode({'token': sso_external_id.token}))
         }
 
 
@@ -239,21 +239,26 @@ def sso_expire_from_now():
     return (localized_now() + timedelta(minutes=CONST_EXPIRE_AFTER_MINUTES))
 
 
+class SsoLoginSchema(colander.MappingSchema):
+    token = colander.SchemaNode(colander.String())
+
+sso_login_schema = SsoLoginSchema()
+
+
 def validate_token(request, **kwargs):
-    token = request.params.get('token', None)
-    if token is None:
-        log.warning('Attempt to use sso_login without token from {}'
-                    .format(request.client_addr))
-        raise HTTPForbidden('Invalid token')
+    if 'token' not in request.validated:
+        return  # validated by colander schema
 
     sso_external_id = DBSession.query(SsoExternalId). \
-        filter(SsoExternalId.token == token). \
+        filter(SsoExternalId.token == request.validated['token']). \
         filter(SsoExternalId.expire > localized_now()). \
         one_or_none()
     if sso_external_id is None:
         log.warning('Attempt to use sso_login with bad token from {}'
                     .format(request.client_addr))
-        raise HTTPForbidden('Invalid token')
+        request.errors.status = 403
+        request.errors.add('body', 'token', 'Invalid')
+        return
     request.validated['sso_user'] = sso_external_id.user
 
 
@@ -262,20 +267,21 @@ class SsoLoginRest(object):
     def __init__(self, request):
         self.request = request
 
-    @view(validators=[validate_token])
-    def get(self):
+    @view(
+        schema=sso_login_schema,
+        validators=[colander_body_validator, validate_token])
+    def post(self):
         user = self.request.validated['sso_user']
-        log_validated_user_i_know_what_i_do(user, self.request)
-        client = get_discourse_client(self.request.registry.settings)
-        try:
-            r = client.redirect_without_nonce(user)
-        except:
-            # Any error with discourse should not prevent login
-            log.warning(
-                'Error logging into discourse for %d', user.id,
-                exc_info=True)
-        else:
-            return HTTPFound(r)
-        return {
-            'success': True
-        }
+        token = log_validated_user_i_know_what_i_do(user, self.request)
+        response = token_to_response(user, token, self.request)
+        if 'discourse' in self.request.json:
+            client = get_discourse_client(self.request.registry.settings)
+            try:
+                r = client.redirect_without_nonce(user)
+                response['redirect_internal'] = r
+            except:
+                # Any error with discourse should not prevent login
+                log.warning(
+                    'Error logging into discourse for %d', user.id,
+                    exc_info=True)
+        return response
