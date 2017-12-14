@@ -78,7 +78,8 @@ def fill_index(session, batch_size=1000):
             print('Importing document type {}'.format(doc_type))
             to_search_document = search_documents[doc_type].to_search_document
 
-            for doc in sync.get_documents(session, doc_type, batch_size):
+            for doc in sync.get_documents(session, doc_type, batch_size,
+                                          ignore_redirects=True):
                 batch.add(to_search_document(doc, index_name))
 
                 count += 1

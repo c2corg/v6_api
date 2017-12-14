@@ -320,11 +320,14 @@ def get_documents_per_type(changed_documents):
     return docs_per_type
 
 
-def get_documents(session, doc_type, batch_size, document_ids=None):
+def get_documents(session, doc_type, batch_size, document_ids=None,
+                  ignore_redirects=False):
     clazz = document_types[doc_type]
     locales_clazz = document_locale_types[doc_type]
 
     base_query = session.query(clazz)
+    if ignore_redirects:
+        base_query = base_query.filter(clazz.redirects_to.is_(None))
     if document_ids:
         base_query = base_query.filter(clazz.document_id.in_(document_ids))
 
