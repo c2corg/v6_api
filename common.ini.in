@@ -105,3 +105,9 @@ skip.captcha.validation = {skip_captcha_validation}
 image_backend.url = {image_backend_url}
 image_backend.secret_key = {image_backend_secret_key}
 image_url = {image_url}
+
+# Rate limiting settings
+# Window timespan in minutes:
+rate_limiting.window_span = 15
+# Max number of actions allowed during a single window:
+rate_limiting.limit = 50

@@ -111,6 +111,10 @@ class User(Base):
     feed_followed_only = Column(
         Boolean, server_default='FALSE', nullable=False)
 
+    ratelimit_limit = Column(Integer)
+    ratelimit_remaining = Column(Integer)
+    ratelimit_reset = Column(DateTime(timezone=True))
+
     def update_validation_nonce(self, purpose, days):
         """Generate and overwrite the nonce.
         A nonce is a random number which is used for authentication when doing
