@@ -35,7 +35,9 @@ def rate_limiting_tween_factory(handler, registry):
         if user.ratelimit_reset is None or user.ratelimit_reset < now:
             # No window exists or it is expired: create a new one.
             span = int(registry.settings.get('rate_limiting.window_span'))
-            limit = int(registry.settings.get('rate_limiting.limit'))
+            limit = int(registry.settings.get(
+                'rate_limiting.limit_moderator' if user.moderator else
+                'rate_limiting.limit'))
             user.ratelimit_reset = now + datetime.timedelta(seconds=span)
             user.ratelimit_limit = limit
             user.ratelimit_remaining = limit - 1

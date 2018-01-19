@@ -11,14 +11,27 @@ class RateLimitingTest(BaseTestRest):
     def setUp(self):  # noqa
         BaseTestRest.setUp(self)
         self._prefix = '/waypoints'
-        self.username = 'contributor'
-        user_id = self.global_userids[self.username]
-        self.user = self.session.query(User).get(user_id)
+
+        self.username = None
+        self.user = None
+
         self.limit = int(self.settings['rate_limiting.limit'])
+        self.limit_moderator = int(
+            self.settings['rate_limiting.limit_moderator'])
         self.window_span = int(self.settings['rate_limiting.window_span'])
         self.max_times = int(self.settings['rate_limiting.max_times'])
 
     def test_contributor(self):
+        self._set_user('contributor')
+        self._test_requests()
+
+    def test_moderator(self):
+        self._set_user('moderator')
+        self._test_requests()
+
+    def _test_requests(self):
+        limit = self.limit_moderator if self.user.moderator else self.limit
+
         # Check contributor has no rate limiting data yet
         self.assertIsNone(self.user.ratelimit_limit)
         self.assertIsNone(self.user.ratelimit_remaining)
@@ -28,8 +41,8 @@ class RateLimitingTest(BaseTestRest):
 
         # Check rating limiting data are now available
         self.session.refresh(self.user)
-        self.assertEqual(self.user.ratelimit_limit, self.limit)
-        self.assertEqual(self.user.ratelimit_remaining, self.limit - 1)
+        self.assertEqual(self.user.ratelimit_limit, limit)
+        self.assertEqual(self.user.ratelimit_remaining, limit - 1)
 
         expiration_date = self.user.ratelimit_reset
         delta = datetime.datetime.now(pytz.utc) + \
@@ -39,11 +52,11 @@ class RateLimitingTest(BaseTestRest):
 
         # Make as many requests as allowed according to the settings
         # (already 1 request as been consumed when creating the document)
-        for i in range(1, self.limit):
+        for i in range(1, limit):
             self._update_document()
             self.session.refresh(self.user)
-            self.assertEqual(self.user.ratelimit_limit, self.limit)
-            self.assertEqual(self.user.ratelimit_remaining, self.limit - 1 - i)
+            self.assertEqual(self.user.ratelimit_limit, limit)
+            self.assertEqual(self.user.ratelimit_remaining, limit - 1 - i)
             self.assertEqual(self.user.ratelimit_reset, expiration_date)
 
         # Counter "remaining" is now set to 0 => write requests should be
@@ -61,18 +74,19 @@ class RateLimitingTest(BaseTestRest):
         self._wait()
         self._update_document()
         self.session.refresh(self.user)
-        self.assertEqual(self.user.ratelimit_remaining, self.limit - 1)
+        self.assertEqual(self.user.ratelimit_remaining, limit - 1)
 
         # Deleting the document is also considered by rate limiting
-        # TODO test for moderators
-        # self._delete_document()
-        # self.session.refresh(self.user)
-        # self.assertEqual(self.user.ratelimit_remaining, self.limit - 2)
+        # (only tested for moderators to skip permission issues)
+        if self.user.moderator:
+            self._delete_document()
+            self.session.refresh(self.user)
+            self.assertEqual(self.user.ratelimit_remaining, limit - 2)
 
     def test_blocked(self):
         """ Check that user is blocked if rate limited too many times
         """
-
+        self._set_user('contributor')
         self._create_document()
         self.session.refresh(self.user)
 
@@ -147,3 +161,8 @@ class RateLimitingTest(BaseTestRest):
         print('Waiting %d secs the rate limiting window expires...'
               % waiting_time)
         time.sleep(waiting_time)
+
+    def _set_user(self, username):
+        self.username = username
+        user_id = self.global_userids[username]
+        self.user = self.session.query(User).get(user_id)

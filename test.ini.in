@@ -21,5 +21,6 @@ skip.captcha.validation = True
 feed.admin_user_account =
 guidebook.anonymous_user_account =
 rate_limiting.window_span = 5
-rate_limiting.limit = 15
+rate_limiting.limit = 12
+rate_limiting.limit_moderator = 15
 rate_limiting.max_times = 2
