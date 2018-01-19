@@ -42,6 +42,20 @@ def rate_limiting_tween_factory(handler, registry):
         elif user.ratelimit_remaining:
             user.ratelimit_remaining -= 1
         else:
+            # User is rate limited
+
+            # Count how many windows the user has been rate limited
+            # and block them is too many.
+            current_window = user.ratelimit_reset
+            if user.ratelimit_last_blocked_window != current_window:
+                user.ratelimit_last_blocked_window = current_window
+                user.ratelimit_times = user.ratelimit_times + 1 \
+                    if user.ratelimit_times else 1
+                max_times = int(
+                    registry.settings.get('rate_limiting.max_times'))
+                if user.ratelimit_times > max_times:
+                    user.blocked = True
+
             return http_error_handler(
                 HTTPTooManyRequests('Rate limit reached'), request)
 

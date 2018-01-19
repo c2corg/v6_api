@@ -19,9 +19,13 @@ def upgrade():
     op.add_column('user', sa.Column('ratelimit_limit', sa.Integer()), schema='users')
     op.add_column('user', sa.Column('ratelimit_remaining', sa.Integer()), schema='users')
     op.add_column('user', sa.Column('ratelimit_reset', sa.DateTime(timezone=True)), schema='users')
+    op.add_column('user', sa.Column('ratelimit_last_blocked_window', sa.DateTime(timezone=True)), schema='users')
+    op.add_column('user', sa.Column('ratelimit_times', sa.Integer()), schema='users')
 
 
 def downgrade():
     op.drop_column('user', 'ratelimit_limit', schema='users')
     op.drop_column('user', 'ratelimit_remaining', schema='users')
     op.drop_column('user', 'ratelimit_reset', schema='users')
+    op.drop_column('user', 'ratelimit_last_blocked_window', schema='users')
+    op.drop_column('user', 'ratelimit_times', schema='users')

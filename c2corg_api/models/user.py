@@ -114,6 +114,8 @@ class User(Base):
     ratelimit_limit = Column(Integer)
     ratelimit_remaining = Column(Integer)
     ratelimit_reset = Column(DateTime(timezone=True))
+    ratelimit_last_blocked_window = Column(DateTime(timezone=True))
+    ratelimit_times = Column(Integer)
 
     def update_validation_nonce(self, purpose, days):
         """Generate and overwrite the nonce.

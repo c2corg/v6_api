@@ -16,6 +16,7 @@ class RateLimitingTest(BaseTestRest):
         self.user = self.session.query(User).get(user_id)
         self.limit = int(self.settings['rate_limiting.limit'])
         self.window_span = int(self.settings['rate_limiting.window_span'])
+        self.max_times = int(self.settings['rate_limiting.max_times'])
 
     def test_contributor(self):
         # Check contributor has no rate limiting data yet
@@ -53,14 +54,11 @@ class RateLimitingTest(BaseTestRest):
         self.assertEqual(self.user.ratelimit_remaining, 0)
 
         # GET requests are still allowed
-        self.app.get(
-            self._prefix + '/' + str(self.document['document_id']), status=200)
+        document_id = self.document['document_id']
+        self.app.get(self._prefix + '/' + str(document_id), status=200)
 
         # Test write requests are accepted again after window is expired
-        waiting_time = self.window_span + 5
-        print('Waiting %d secs the rate limiting window expires...'
-              % waiting_time)
-        time.sleep(waiting_time)
+        self._wait()
         self._update_document()
         self.session.refresh(self.user)
         self.assertEqual(self.user.ratelimit_remaining, self.limit - 1)
@@ -70,6 +68,30 @@ class RateLimitingTest(BaseTestRest):
         # self._delete_document()
         # self.session.refresh(self.user)
         # self.assertEqual(self.user.ratelimit_remaining, self.limit - 2)
+
+    def test_blocked(self):
+        """ Check that user is blocked if rate limited too many times
+        """
+
+        self._create_document()
+        self.session.refresh(self.user)
+
+        for n in range(0, self.max_times + 1):
+            self.assertFalse(self.user.blocked)
+            self._wait()
+            for i in range(0, self.limit):
+                self._update_document()
+                self.session.refresh(self.user)
+                self.assertEqual(
+                    self.user.ratelimit_remaining, self.limit - 1 - i)
+            self._update_document(status=429)
+            self.session.refresh(self.user)
+            self.assertEqual(self.user.ratelimit_times, n + 1)
+
+        # User has reached their max number of allowed rate limited windows
+        # thus is now blocked:
+        self.assertTrue(self.user.blocked)
+        self._update_document(status=403)
 
     def _create_document(self):
         body = {
@@ -119,3 +141,9 @@ class RateLimitingTest(BaseTestRest):
         self.app.delete_json(
             '/documents/delete/' + str(self.document['document_id']),
             headers=headers, status=200)
+
+    def _wait(self):
+        waiting_time = self.window_span + 1
+        print('Waiting %d secs the rate limiting window expires...'
+              % waiting_time)
+        time.sleep(waiting_time)
