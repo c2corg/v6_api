@@ -112,5 +112,6 @@ rate_limiting.window_span = 900
 # Max number of actions allowed during a single window:
 rate_limiting.limit = 50
 rate_limiting.limit_moderator = 100
+rate_limiting.limit_robot = 1000
 # Max number of times a user can be rate limited before being blocked:
 rate_limiting.max_times = 3

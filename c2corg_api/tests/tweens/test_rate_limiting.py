@@ -18,6 +18,8 @@ class RateLimitingTest(BaseTestRest):
         self.limit = int(self.settings['rate_limiting.limit'])
         self.limit_moderator = int(
             self.settings['rate_limiting.limit_moderator'])
+        self.limit_robot = int(
+            self.settings['rate_limiting.limit_robot'])
         self.window_span = int(self.settings['rate_limiting.window_span'])
         self.max_times = int(self.settings['rate_limiting.max_times'])
 
@@ -30,7 +32,8 @@ class RateLimitingTest(BaseTestRest):
         self._test_requests()
 
     def _test_requests(self):
-        limit = self.limit_moderator if self.user.moderator else self.limit
+        limit = self.limit_robot if self.user.robot else \
+                self.limit_moderator if self.user.moderator else self.limit
 
         # Check contributor has no rate limiting data yet
         self.assertIsNone(self.user.ratelimit_limit)

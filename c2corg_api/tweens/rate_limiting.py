@@ -36,6 +36,7 @@ def rate_limiting_tween_factory(handler, registry):
             # No window exists or it is expired: create a new one.
             span = int(registry.settings.get('rate_limiting.window_span'))
             limit = int(registry.settings.get(
+                'rate_limiting.limit_robot' if user.robot else
                 'rate_limiting.limit_moderator' if user.moderator else
                 'rate_limiting.limit'))
             user.ratelimit_reset = now + datetime.timedelta(seconds=span)

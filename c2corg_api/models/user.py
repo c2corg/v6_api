@@ -117,6 +117,8 @@ class User(Base):
     ratelimit_last_blocked_window = Column(DateTime(timezone=True))
     ratelimit_times = Column(Integer)
 
+    robot = Column(Boolean, nullable=False, default=False)
+
     def update_validation_nonce(self, purpose, days):
         """Generate and overwrite the nonce.
         A nonce is a random number which is used for authentication when doing
