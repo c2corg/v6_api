@@ -20,7 +20,11 @@ def upgrade():
     op.add_column('user', sa.Column('ratelimit_remaining', sa.Integer()), schema='users')
     op.add_column('user', sa.Column('ratelimit_reset', sa.DateTime(timezone=True)), schema='users')
     op.add_column('user', sa.Column('ratelimit_last_blocked_window', sa.DateTime(timezone=True)), schema='users')
-    op.add_column('user', sa.Column('ratelimit_times', sa.Integer()), schema='users')
+    op.add_column(
+        'user',
+        sa.Column(
+            'ratelimit_times', sa.Integer(), server_default='0', nullable=False),
+        schema='users')
     op.add_column(
         'user',
         sa.Column(

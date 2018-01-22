@@ -115,7 +115,7 @@ class User(Base):
     ratelimit_remaining = Column(Integer)
     ratelimit_reset = Column(DateTime(timezone=True))
     ratelimit_last_blocked_window = Column(DateTime(timezone=True))
-    ratelimit_times = Column(Integer)
+    ratelimit_times = Column(Integer, nullable=False, default=0)
 
     robot = Column(Boolean, nullable=False, default=False)
 

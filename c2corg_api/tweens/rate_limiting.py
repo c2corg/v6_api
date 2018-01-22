@@ -52,8 +52,7 @@ def rate_limiting_tween_factory(handler, registry):
             current_window = user.ratelimit_reset
             if user.ratelimit_last_blocked_window != current_window:
                 user.ratelimit_last_blocked_window = current_window
-                user.ratelimit_times = user.ratelimit_times + 1 \
-                    if user.ratelimit_times else 1
+                user.ratelimit_times += 1
                 max_times = int(
                     registry.settings.get('rate_limiting.max_times'))
                 if user.ratelimit_times > max_times:
