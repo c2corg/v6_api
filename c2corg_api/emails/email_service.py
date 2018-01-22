@@ -89,6 +89,19 @@ class EmailService:
                 subject=self._(user.lang, 'email_change_subject'),
                 body=self._(user.lang, 'email_change_body') % link)
 
+    def send_rate_limiting_alert(self, user):
+        url = '{}/profiles/{}'.format(self.settings['ui.url'], user.id)
+        if user.blocked:
+            body = self._('fr', 'rate_limiting_blocked_alert_body') % (
+                user.name, url)
+        else:
+            body = self._('fr', 'rate_limiting_alert_body') % (
+                user.name, url, user.ratelimit_times)
+        self._send_email(
+                self.settings['rate_limiting.alert_address'],
+                subject=self._('fr', 'rate_limiting_alert_subject'),
+                body=body)
+
 
 def get_email_service(request):
     if not EmailService.instance:

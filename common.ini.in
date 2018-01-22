@@ -115,3 +115,5 @@ rate_limiting.limit_moderator = 100
 rate_limiting.limit_robot = 1000
 # Max number of times a user can be rate limited before being blocked:
 rate_limiting.max_times = 3
+# Email address rate limiting alert messages are sent to
+rate_limiting.alert_address = {rate_limiting_alert_address}

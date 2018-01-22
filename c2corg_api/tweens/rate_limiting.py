@@ -3,6 +3,7 @@ import datetime
 import pytz
 
 from pyramid.httpexceptions import HTTPBadRequest, HTTPTooManyRequests
+from c2corg_api.emails.email_service import get_email_service
 from c2corg_api.views import http_error_handler
 from c2corg_api.models import DBSession
 from c2corg_api.models.user import User
@@ -53,10 +54,15 @@ def rate_limiting_tween_factory(handler, registry):
             if user.ratelimit_last_blocked_window != current_window:
                 user.ratelimit_last_blocked_window = current_window
                 user.ratelimit_times += 1
+
                 max_times = int(
                     registry.settings.get('rate_limiting.max_times'))
                 if user.ratelimit_times > max_times:
                     user.blocked = True
+
+                # An alert message is sent to the moderators
+                email_service = get_email_service(request)
+                email_service.send_rate_limiting_alert(user)
 
             return http_error_handler(
                 HTTPTooManyRequests('Rate limit reached'), request)
