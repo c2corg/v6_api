@@ -90,6 +90,9 @@ class UserUnblockRest(object):
         """
         user = _get_user(self.request.validated['user_id'])
         user.blocked = False
+        # Make sure the rate limiting counter is reset
+        # (it might be the reason the user was blocked):
+        user.ratelimit_times = 0
 
         # unsuspend account in Discourse
         try:
