@@ -36,7 +36,6 @@ class RateLimitingTest(BaseTestRest):
                 self.limit_moderator if self.user.moderator else self.limit
 
         # Check contributor has no rate limiting data yet
-        self.assertIsNone(self.user.ratelimit_limit)
         self.assertIsNone(self.user.ratelimit_remaining)
         self.assertIsNone(self.user.ratelimit_reset)
 
@@ -44,7 +43,6 @@ class RateLimitingTest(BaseTestRest):
 
         # Check rating limiting data are now available
         self.session.refresh(self.user)
-        self.assertEqual(self.user.ratelimit_limit, limit)
         self.assertEqual(self.user.ratelimit_remaining, limit - 1)
 
         expiration_date = self.user.ratelimit_reset
@@ -58,7 +56,6 @@ class RateLimitingTest(BaseTestRest):
         for i in range(1, limit):
             self._update_document()
             self.session.refresh(self.user)
-            self.assertEqual(self.user.ratelimit_limit, limit)
             self.assertEqual(self.user.ratelimit_remaining, limit - 1 - i)
             self.assertEqual(self.user.ratelimit_reset, expiration_date)
 

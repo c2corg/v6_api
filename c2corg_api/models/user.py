@@ -111,7 +111,6 @@ class User(Base):
     feed_followed_only = Column(
         Boolean, server_default='FALSE', nullable=False)
 
-    ratelimit_limit = Column(Integer)
     ratelimit_remaining = Column(Integer)
     ratelimit_reset = Column(DateTime(timezone=True))
     ratelimit_last_blocked_window = Column(DateTime(timezone=True))

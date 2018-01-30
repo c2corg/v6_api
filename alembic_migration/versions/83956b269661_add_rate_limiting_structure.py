@@ -16,7 +16,6 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    op.add_column('user', sa.Column('ratelimit_limit', sa.Integer()), schema='users')
     op.add_column('user', sa.Column('ratelimit_remaining', sa.Integer()), schema='users')
     op.add_column('user', sa.Column('ratelimit_reset', sa.DateTime(timezone=True)), schema='users')
     op.add_column('user', sa.Column('ratelimit_last_blocked_window', sa.DateTime(timezone=True)), schema='users')
@@ -33,7 +32,6 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column('user', 'ratelimit_limit', schema='users')
     op.drop_column('user', 'ratelimit_remaining', schema='users')
     op.drop_column('user', 'ratelimit_reset', schema='users')
     op.drop_column('user', 'ratelimit_last_blocked_window', schema='users')
