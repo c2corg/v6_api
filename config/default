@@ -92,3 +92,14 @@ export feed_admin_user_account = 2
 export guidebook_anonymous_user_account = 2
 
 export show_debugger_for_errors = false
+
+# Rate limiting settings
+export rate_limiting_alert_address = fixme@camptocamp.org
+# Window timespan in seconds:
+export rate_limiting_window_span = 900
+# Max number of actions allowed during a single window:
+export rate_limiting_limit = 50
+export rate_limiting_limit_moderator = 100
+export rate_limiting_limit_robot = 1000
+# Max number of times a user can be rate limited before being blocked:
+export rate_limiting_max_times = 3

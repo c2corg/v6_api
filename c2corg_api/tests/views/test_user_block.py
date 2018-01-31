@@ -19,6 +19,7 @@ class BaseBlockTest(BaseTestRest):
             self.global_userids['moderator'])
 
         self.contributor2.blocked = True
+        self.contributor2.ratelimit_times = 2
 
         self.session.flush()
         self.set_discourse_up()
@@ -133,11 +134,13 @@ class TestUserUnblockRest(BaseBlockTest):
             'user_id': self.contributor2.id
         }
         self.assertTrue(self.is_blocked(self.contributor2.id))
+        self.assertNotEqual(self.contributor2.ratelimit_times, 0)
 
         headers = self.add_authorization_header(username='moderator')
         self.app_post_json(
             self._prefix, request_body, status=200, headers=headers)
         self.assertFalse(self.is_blocked(self.contributor2.id))
+        self.assertEqual(self.contributor2.ratelimit_times, 0)
 
     def test_unblock_not_blocked_user(self):
         """ Test that unblocking a not blocked user does not raise an error.

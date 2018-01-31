@@ -4,20 +4,13 @@ from c2corg_api.caching import configure_caches
 from pyramid.config import Configurator
 from sqlalchemy import engine_from_config, exc, event
 from sqlalchemy.pool import Pool
-from pyramid.httpexceptions import HTTPUnauthorized, HTTPError
 
-from c2corg_api.models import (
-    DBSession,
-    Base,
-    )
+from c2corg_api.models import DBSession, Base
 from c2corg_api.search import configure_es_from_config, get_queue_config
 
 from pyramid.security import Allow, Everyone, Authenticated
 
-from c2corg_api.security.roles import is_valid_token, extract_token
-
 from pyramid.settings import asbool
-from c2corg_api.views import http_error_handler, catch_all_error_handler
 
 log = logging.getLogger(__name__)
 
@@ -32,38 +25,6 @@ class RootFactory(object):
 
     def __init__(self, request):
         pass
-
-
-def jwt_database_validation_tween_factory(handler, registry):
-    """ Check validity of the JWT token.
-    """
-
-    def tween(request):
-
-        # forward requests without authorization
-        if request.authorization is None:
-            # Skipping validation if there is no authorization object.
-            # This is dangerous since a bad ordering of this tween and the
-            # cookie tween would bypass security
-            return handler(request)
-
-        # Finally, check database validation
-        try:
-            token = extract_token(request)
-            valid = token and is_valid_token(token)
-        except Exception as exc:
-            if isinstance(exc, HTTPError):
-                return http_error_handler(exc, request)
-            else:
-                return catch_all_error_handler(exc, request)
-
-        if valid:
-            return handler(request)
-        else:
-            return http_error_handler(
-                HTTPUnauthorized('Invalid token'), request)
-
-    return tween
 
 
 def main(global_config, **settings):
@@ -82,6 +43,12 @@ def main(global_config, **settings):
     config.include('cornice')
     config.registry.queue_config = get_queue_config(settings)
 
+    # FIXME? Make sure this tween is run after the JWT validation
+    # Using an explicit ordering in config files might be needed.
+    config.add_tween('c2corg_api.tweens.rate_limiting.' +
+                     'rate_limiting_tween_factory',
+                     under='pyramid_tm.tm_tween_factory')
+
     bypass_auth = False
     if 'noauthorization' in settings:
         bypass_auth = asbool(settings['noauthorization'])
@@ -89,7 +56,8 @@ def main(global_config, **settings):
     if not bypass_auth:
         config.include("pyramid_jwtauth")
         # Intercept request handling to validate token against the database
-        config.add_tween('c2corg_api.jwt_database_validation_tween_factory')
+        config.add_tween('c2corg_api.tweens.jwt_database_validation.' +
+                         'jwt_database_validation_tween_factory')
         # Inject ACLs
         config.set_root_factory(RootFactory)
     else:

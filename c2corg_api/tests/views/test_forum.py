@@ -170,6 +170,8 @@ class TestForumTopicRest(BaseTestRest):
                 'lang': 'en'
             },
             status=200)
-        _post_mock.assert_has_calls([
-            call('/t/10/invite.json', user='contributor'),
-            call('/t/10/invite.json', user='contributor2')])
+        _post_mock.assert_has_calls(
+            [
+                call('/t/10/invite.json', user='contributor'),
+                call('/t/10/invite.json', user='contributor2')],
+            any_order=True)
