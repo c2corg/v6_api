@@ -71,17 +71,19 @@ class EmailService:
                 body=body)
         self.mailer.send(msg)
 
-    def _send_email_with_link(self, user, key, link):
+    def send_registration_confirmation(self, user, link):
         self._send_email(
                 user.email,
-                subject=self._(user.lang, key + '_subject'),
-                body=self._(user.lang, key + '_body') % link)
-
-    def send_registration_confirmation(self, user, link):
-        self._send_email_with_link(user, 'registration', link)
+                subject=self._(user.lang, 'registration_subject'),
+                body=self._(user.lang, 'registration_body') % link)
 
     def send_request_change_password(self, user, link):
-        self._send_email_with_link(user, 'password_change', link)
+        body = self._(user.lang, 'password_change_body') % (
+            link, user.username)
+        self._send_email(
+                user.email,
+                subject=self._(user.lang, 'password_change_subject'),
+                body=body)
 
     def send_change_email_confirmation(self, user, link):
         self._send_email(
