@@ -107,6 +107,22 @@ class TestSsoSyncRest(BaseTestRest):
         self.assertEqual('already used forum_username',
                          errors[0].get('description'))
 
+    def test_new_user_forum_username_too_long(self):
+        request_body = {
+            'sso_key': sso_key,
+            'external_id': '999',
+            'email': 'newuser@external.domain.net',
+            'username': 'newuser',
+            'forum_username': 'more_than_twenty_five_characters',
+            'lang': 'fr',
+            'groups': 'group1,group2'
+        }
+        body = self.app_post_json(self._url, request_body, status=400).json
+        errors = body.get('errors')
+        self.assertEqual('forum_username', errors[0].get('name'))
+        self.assertEqual('Longer than maximum length 25',
+                         errors[0].get('description'))
+
     @patch(
         'c2corg_api.security.discourse_client.DiscourseClient',
         return_value=Mock(

@@ -85,7 +85,8 @@ def validate_unique_attribute(attrname, request, lowercase=False, **kwargs):
 def check_forum_username(value):
     if len(value) < 3:
         return 'Shorter than minimum length 3'
-    # max length is validated by colander schema
+    if len(value) > 25:
+        return 'Longer than maximum length 25'
     if re.search(r'[^\w.-]', value):
         return 'Contain invalid character(s)'
     if re.match(r'\W', value[0]):
