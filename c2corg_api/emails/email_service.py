@@ -59,16 +59,18 @@ class EmailService:
             # in order to force the transfer encoding to base64
             # instead of quoted-printable because of problems
             # with email services such as hotmail.
-            body = Attachment(
+            attachment = Attachment(
                 data=body,
                 content_type='text/plain',
                 transfer_encoding='base64',
                 disposition='inline')
+        base_body = 'FIXME: base email body'
         msg = Message(
                 subject=subject,
                 sender=self.mail_from,
                 recipients=[to_address],
-                body=body)
+                attachments=[attachment] if attachment else None,
+                body=base_body)
         self.mailer.send(msg)
 
     def send_registration_confirmation(self, user, link):

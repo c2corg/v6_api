@@ -12,7 +12,8 @@ class EmailTests(BaseTestCase):
         self.email_service._send_email('toto@localhost', subject='s', body='b')
         self.assertEqual(self.get_email_box_length(), outbox_count + 1)
         self.assertEqual(self.get_last_email().subject, "s")
-        self.assertEqual(self.get_last_email().body.data, "b")
+        self.assertEqual(self.get_last_email().attachments[0].data, "b")
+        self.assertIsNotNone(self.get_last_email().body)
 
     def test_registration_confirmation(self):
         user = User(email='me@localhost', lang='en')
@@ -21,8 +22,8 @@ class EmailTests(BaseTestCase):
         self.email_service.send_registration_confirmation(user, link)
         self.assertEqual(self.get_email_box_length(), outbox_count + 1)
         self.assertIn("Registration", self.get_last_email().subject)
-        self.assertIn("To activate", self.get_last_email().body.data)
-        self.assertIn(link, self.get_last_email().body.data)
+        self.assertIn("To activate", self.get_last_email().attachments[0].data)
+        self.assertIn(link, self.get_last_email().attachments[0].data)
 
     def test_localization(self):
         localizator = EmailLocalizator()

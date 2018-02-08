@@ -77,7 +77,7 @@ class BaseUserTestRest(BaseTestRest):
         return re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@#.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+[0-9a-zA-Z]', data)  # noqa
 
     def extract_nonce(self, key):
-        match = self.extract_urls(self.get_last_email().body.data)
+        match = self.extract_urls(self.get_last_email().attachments[0].data)
         validation_url = match[0]
         fragment = urlparse(validation_url).fragment
         nonce = fragment.replace(key + '=',  '')
