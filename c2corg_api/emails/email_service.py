@@ -7,6 +7,7 @@ from c2corg_common.attributes import default_langs
 
 import logging
 import os
+import re
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +22,8 @@ class EmailLocalizator(object):
         if not os.path.isfile(filepath):
             filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % ('fr', key)
         f = open(filepath, 'r')
-        return f.read().rstrip()  # No trailing new line in email subject!
+        return f.read().rstrip()
+        # No trailing new line in email subject!
 
     def get_translation(self, lang, key):
         if lang not in default_langs:
@@ -54,23 +56,24 @@ class EmailService:
         """Send an email. This method may throw."""
         log.debug('Sending email to %s through %s' % (
             to_address, self.mail_server))
-        if body:
+        if re.search('(?<=@)[^.]+(?=\.)', to_address) == 'hotmail':
+            # For hotmail adresses add
             # Convert body text to attachment instance
             # in order to force the transfer encoding to base64
             # instead of quoted-printable because of problems
             # with email services such as hotmail.
-            attachment = Attachment(
+            body = Attachment(
                 data=body,
                 content_type='text/plain',
                 transfer_encoding='base64',
                 disposition='inline')
-        base_body = 'FIXME: base email body'
+        # base_body = 'FIXME: base email body \r\n'
         msg = Message(
                 subject=subject,
                 sender=self.mail_from,
                 recipients=[to_address],
-                attachments=[attachment] if attachment else None,
-                body=base_body)
+                body=body
+        )
         self.mailer.send(msg)
 
     def send_registration_confirmation(self, user, link):
