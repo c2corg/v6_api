@@ -1,6 +1,7 @@
 import time
 import datetime
 import pytz
+from unittest.mock import patch
 
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.models.user import User
@@ -23,13 +24,17 @@ class RateLimitingTest(BaseTestRest):
         self.window_span = int(self.settings['rate_limiting.window_span'])
         self.max_times = int(self.settings['rate_limiting.max_times'])
 
-    def test_contributor(self):
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_contributor(self, _send_email):
         self._set_user('contributor')
         self._test_requests()
+        _send_email.assert_call_once()
 
-    def test_moderator(self):
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_moderator(self, _send_email):
         self._set_user('moderator')
         self._test_requests()
+        _send_email.assert_call_once()
 
     def _test_requests(self):
         limit = self.limit_robot if self.user.robot else \
@@ -83,7 +88,8 @@ class RateLimitingTest(BaseTestRest):
             self.session.refresh(self.user)
             self.assertEqual(self.user.ratelimit_remaining, limit - 2)
 
-    def test_blocked(self):
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_blocked(self, _send_email):
         """ Check that user is blocked if rate limited too many times
         """
         self._set_user('contributor')
@@ -105,6 +111,7 @@ class RateLimitingTest(BaseTestRest):
         # User has reached their max number of allowed rate limited windows
         # thus is now blocked:
         self.assertTrue(self.user.blocked)
+        _send_email.assert_called_once()
         self._update_document(status=403)
 
     def _create_document(self):

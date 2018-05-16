@@ -4,6 +4,8 @@ from c2corg_api.search import search_documents, elasticsearch_config
 from c2corg_api.tests.views.test_user import BaseUserTestRest, \
     forum_username_tests
 
+from unittest.mock import patch
+
 
 class TestUserAccountRest(BaseUserTestRest):
 
@@ -50,9 +52,8 @@ class TestUserAccountRest(BaseUserTestRest):
 
         self.assertEqual(1, int(self.discourse_client.sso_sync.called_count))
 
-    def test_update_account_email_discourse_up(self):
-        email_count = self.get_email_box_length()
-
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_update_account_email_discourse_up(self, _send_email):
         new_email = 'superemail@localhost.localhost'
         self._update_account_field_discourse_up('email', new_email)
 
@@ -61,11 +62,10 @@ class TestUserAccountRest(BaseUserTestRest):
         self.assertEqual(user.email_to_validate, new_email)
         self.assertNotEqual(user.email, new_email)
 
-        email_count_after = self.get_email_box_length()
-        self.assertEqual(email_count_after, email_count + 1)
+        _send_email.assert_called_once()
 
         # Simulate confirmation email validation
-        nonce = self.extract_nonce('validate_change_email')
+        nonce = self.extract_nonce(_send_email, 'validate_change_email')
         url_api_validation = '/users/validate_change_email/%s' % nonce
         self.app_post_json(url_api_validation, {}, status=200)
 

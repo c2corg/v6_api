@@ -14,7 +14,6 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.scripts.es.fill_index import fill_index
 from sqlalchemy import engine_from_config
 from pyramid.paster import get_appsettings
-from pyramid_mailer import get_mailer
 from pyramid import testing
 from alembic.config import Config
 
@@ -220,8 +219,7 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
     def setUp(self):  # noqa
         self.app = TestApp(self.app)
         registry = self.app.app.registry
-        self.mailer = get_mailer(registry)
-        self.email_service = EmailService(self.mailer, settings)
+        self.email_service = EmailService(settings)
         EmailService.instance = None
 
         self.config = testing.setUp()

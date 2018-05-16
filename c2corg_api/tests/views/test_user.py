@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 
 import re
 
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, patch
 
 
 forum_username_tests = {
@@ -76,8 +76,8 @@ class BaseUserTestRest(BaseTestRest):
     def extract_urls(self, data):
         return re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@#.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+[0-9a-zA-Z]', data)  # noqa
 
-    def extract_nonce(self, key):
-        match = self.extract_urls(self.get_last_email().body.data)
+    def extract_nonce(self, _send_mail, key):
+        match = self.extract_urls(_send_mail.call_args_list[0][1]['body'])
         validation_url = match[0]
         fragment = urlparse(validation_url).fragment
         nonce = fragment.replace(key + '=',  '')
@@ -86,7 +86,8 @@ class BaseUserTestRest(BaseTestRest):
 
 class TestUserRest(BaseUserTestRest):
 
-    def test_always_register_non_validated_users(self):
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_always_register_non_validated_users(self, _send_email):
         request_body = {
             'username': 'test', 'forum_username': 'test',
             'name': 'Max Mustermann',
@@ -101,8 +102,10 @@ class TestUserRest(BaseUserTestRest):
         user_id = body.get('id')
         user = self.session.query(User).get(user_id)
         self.assertFalse(user.email_validated)
+        _send_email.check_call_once()
 
-    def test_register_default_lang(self):
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_register_default_lang(self, _send_email):
         request_body = {
             'username': 'test', 'forum_username': 'test',
             'name': 'Max Mustermann',
@@ -115,8 +118,10 @@ class TestUserRest(BaseUserTestRest):
         user_id = body.get('id')
         user = self.session.query(User).get(user_id)
         self.assertEqual(user.lang, 'fr')
+        _send_email.check_call_once()
 
-    def test_register_passed_lang(self):
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_register_passed_lang(self, _send_email):
         request_body = {
             'username': 'test', 'forum_username': 'test',
             'lang': 'en',
@@ -130,6 +135,7 @@ class TestUserRest(BaseUserTestRest):
         user_id = body.get('id')
         user = self.session.query(User).get(user_id)
         self.assertEqual(user.lang, 'en')
+        _send_email.check_call_once()
 
     def test_register_invalid_lang(self):
         request_body = {
@@ -142,7 +148,8 @@ class TestUserRest(BaseUserTestRest):
         url = self._prefix + '/register'
         self.app_post_json(url, request_body, status=400).json
 
-    def test_register_forum_username_validity(self):
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_register_forum_username_validity(self, _send_email):
         url = self._prefix + '/register'
         i = 0
         for forum_username, value in forum_username_tests.items():
@@ -161,7 +168,8 @@ class TestUserRest(BaseUserTestRest):
                 self.assertEqual(json['errors'][0]['description'],
                                  value)
 
-    def test_register_forum_username_unique(self):
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_register_forum_username_unique(self, _send_email):
         request_body = {
             'username': 'test',
             'forum_username': 'Contributor',
@@ -174,7 +182,8 @@ class TestUserRest(BaseUserTestRest):
         self.assertEqual(json['errors'][0]['description'],
                          'already used forum_username')
 
-    def test_register_discourse_up(self):
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_register_discourse_up(self, _send_email):
         request_body = {
             'username': 'test', 'forum_username': 'testf',
             'name': 'Max Mustermann',
@@ -184,7 +193,6 @@ class TestUserRest(BaseUserTestRest):
         url = self._prefix + '/register'
 
         # First succeed in creating a new user
-        email_count = self.get_email_box_length()
         body = self.app_post_json(url, request_body, status=200).json
         self.assertBodyEqual(body, 'username', 'test')
         self.assertBodyEqual(body, 'forum_username', 'testf')
@@ -199,12 +207,11 @@ class TestUserRest(BaseUserTestRest):
         profile = self.session.query(UserProfile).get(user_id)
         self.assertIsNotNone(profile)
         self.assertEqual(len(profile.versions), 1)
-        email_count_after = self.get_email_box_length()
-        self.assertEqual(email_count_after, email_count + 1)
+        _send_email.check_call_once()
 
         self.assertEqual(user.lang, 'fr')
         # Simulate confirmation email validation
-        nonce = self.extract_nonce('validate_register_email')
+        nonce = self.extract_nonce(_send_email, 'validate_register_email')
         url_api_validation = '/users/validate_register_email/%s' % nonce
         self.app_post_json(url_api_validation, {}, status=200)
 
@@ -236,7 +243,8 @@ class TestUserRest(BaseUserTestRest):
         }
         body = self.app_post_json(url, request_utf8, status=200).json
 
-    def test_register_search_index(self):
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_register_search_index(self, _send_email):
         """Tests that user accounts are only indexed once they are confirmed.
         """
         request_body = {
@@ -259,7 +267,7 @@ class TestUserRest(BaseUserTestRest):
         self.assertIsNone(search_doc)
 
         # Simulate confirmation email validation
-        nonce = self.extract_nonce('validate_register_email')
+        nonce = self.extract_nonce(_send_email, 'validate_register_email')
         url_api_validation = '/users/validate_register_email/%s' % nonce
         self.app_post_json(url_api_validation, {}, status=200)
 
@@ -273,7 +281,8 @@ class TestUserRest(BaseUserTestRest):
         self.assertIsNotNone(search_doc['doc_type'])
         self.assertEqual(search_doc['title_fr'], 'Max Mustermann testf')
 
-    def test_register_discourse_down(self):
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_register_discourse_down(self, _send_email):
         self.set_discourse_down()
         request_body = {
             'username': 'test', 'forum_username': 'testf',
@@ -287,7 +296,7 @@ class TestUserRest(BaseUserTestRest):
         self.app_post_json(url, request_body, status=200)
 
         # Simulate confirmation email validation
-        nonce = self.extract_nonce('validate_register_email')
+        nonce = self.extract_nonce(_send_email, 'validate_register_email')
         url_api_validation = '/users/validate_register_email/%s' % nonce
 
         self.app_post_json(url_api_validation, {}, status=500)
@@ -298,7 +307,8 @@ class TestUserRest(BaseUserTestRest):
             'email': 'non_existing_oeuhsaeuh@camptocamp.org'}, status=400).json
         self.assertErrorsContain(body, 'email', 'No user with this email')
 
-    def test_forgot_password_discourse_up(self):
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_forgot_password_discourse_up(self, _send_email):
         user_id = self.global_userids['contributor']
         user = self.session.query(User).get(user_id)
         initial_encoded_password = user.password
@@ -307,8 +317,10 @@ class TestUserRest(BaseUserTestRest):
         self.app_post_json(url, {
             'email': user.email}, status=200).json
 
+        _send_email.check_call_once()
+
         # Simulate confirmation email validation
-        nonce = self.extract_nonce('change_password')
+        nonce = self.extract_nonce(_send_email, 'change_password')
         url_api_validation = '/users/validate_new_password/%s' % nonce
 
         self.app_post_json(url_api_validation, {
@@ -322,7 +334,8 @@ class TestUserRest(BaseUserTestRest):
 
         self.assertTrue(initial_encoded_password != modified_encoded_password)
 
-    def test_forgot_password_discourse_down(self):
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_forgot_password_discourse_down(self, _send_email):
         self.set_discourse_down()
         user_id = self.global_userids['contributor']
         user = self.session.query(User).get(user_id)
@@ -331,8 +344,10 @@ class TestUserRest(BaseUserTestRest):
         self.app_post_json(url, {
             'email': user.email}, status=200).json
 
+        _send_email.check_call_once()
+
         # Simulate confirmation email validation
-        nonce = self.extract_nonce('change_password')
+        nonce = self.extract_nonce(_send_email, 'change_password')
         url_api_validation = '/users/validate_new_password/%s' % nonce
 
         # Succeed anyway since only the password has changed
@@ -350,7 +365,8 @@ class TestUserRest(BaseUserTestRest):
         self.app_post_json(url, {'email': user.email}, status=403)
 
     @attr('jobs')
-    def test_purge_accounts(self):
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_purge_accounts(self, _send_email):
         from c2corg_api.jobs.purge_non_activated_accounts import purge_account
         from datetime import datetime
         request_body = {
