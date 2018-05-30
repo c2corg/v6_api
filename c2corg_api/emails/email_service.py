@@ -1,8 +1,11 @@
 import transaction  # NOQA
 
-from pyramid_mailer import get_mailer
-from pyramid_mailer.message import Message, Attachment
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from functools import lru_cache
+from pyramid.settings import asbool
+import smtplib
+
 from c2corg_common.attributes import default_langs
 
 import logging
@@ -20,8 +23,9 @@ class EmailLocalizator(object):
         filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % (lang, key)
         if not os.path.isfile(filepath):
             filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % ('fr', key)
-        f = open(filepath, 'r')
-        return f.read().rstrip()  # No trailing new line in email subject!
+        with open(filepath, 'rU') as f:  # Use universal newline support.
+            content = f.read().rstrip()  # No trailing new line in subject!
+        return content
 
     def get_translation(self, lang, key):
         if lang not in default_langs:
@@ -40,36 +44,41 @@ class EmailLocalizator(object):
 class EmailService:
     instance = None
 
-    def __init__(self, mailer, settings):
+    def __init__(self, settings):
         self.mail_from = settings['mail.from']
         host = settings['mail.host']
         port = settings['mail.port']
         self.mail_server = '%s:%s' % (host, port)
-        self.mailer = mailer
         self.settings = settings
         localizator = EmailLocalizator()
         self._ = lambda lang, key: localizator.get_translation(lang, key)
 
     def _send_email(self, to_address, subject=None, body=None):
-        """Send an email. This method may throw."""
         log.debug('Sending email to %s through %s' % (
             to_address, self.mail_server))
-        if body:
-            # Convert body text to attachment instance
-            # in order to force the transfer encoding to base64
-            # instead of quoted-printable because of problems
-            # with email services such as hotmail.
-            body = Attachment(
-                data=body,
-                content_type='text/plain',
-                transfer_encoding='base64',
-                disposition='inline')
-        msg = Message(
-                subject=subject,
-                sender=self.mail_from,
-                recipients=[to_address],
-                body=body)
-        self.mailer.send(msg)
+
+        msg = MIMEMultipart()
+        msg['From'] = self.mail_from
+        msg['To'] = to_address
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+
+        if asbool(self.settings.get('mail.ssl', False)):
+            smtp = smtplib.SMTP_SSL(self.settings['mail.host'],
+                                    port=self.settings['mail.port'])
+        else:
+            smtp = smtplib.SMTP(self.settings['mail.host'],
+                                port=self.settings['mail.port'])
+
+        if self.settings.get('mail.username', '') not in ('', 'None'):
+            smtp.login(self.settings['mail.username'],
+                       self.settings['mail.password'])
+
+        if asbool(self.settings.get('mail.tls', False)):
+            smtp.starttls()
+
+        smtp.sendmail(self.mail_from, to_address, msg.as_string())
+        smtp.close()
 
     def send_registration_confirmation(self, user, link):
         self._send_email(
@@ -107,7 +116,6 @@ class EmailService:
 
 def get_email_service(request):
     if not EmailService.instance:
-        mailer = get_mailer(request)
         settings = request.registry.settings
-        EmailService.instance = EmailService(mailer, settings)
+        EmailService.instance = EmailService(settings)
     return EmailService.instance
