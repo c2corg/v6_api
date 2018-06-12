@@ -6,6 +6,7 @@ from c2corg_api.models.document import UpdateType
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
 from c2corg_api.views.document_associations import get_first_column
+from c2corg_api.views.document_geojson import DocumentGeojsonRest
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import waypoint_documents_config, \
@@ -413,3 +414,12 @@ def update_linked_route_titles(waypoint, update_types, user_id):
         for route in linked_routes:
             set_route_title_prefix(
                 route, waypoint_locales, waypoint_locales_index)
+
+
+@resource(collection_path='/waypoints/geojson', path='/waypoints/geojson/{id}',
+          cors_policy=cors_policy)
+class WaypointGeojsonRest(DocumentGeojsonRest):
+
+    @view(validators=[validate_preferred_lang_param])
+    def collection_get(self):
+        return self._get_documents(Waypoint)
