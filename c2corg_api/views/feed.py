@@ -148,7 +148,8 @@ def get_params(request, default_page_limit=DEFAULT_PAGE_LIMIT):
 
 
 def get_changes_of_feed(
-        token_id, token_time, limit, extra_filter=None, ignore_poor_quality=True):
+        token_id, token_time, limit, extra_filter=None,
+        ignore_poor_quality=True):
     query = DBSession. \
         query(DocumentChange). \
         order_by(DocumentChange.time.desc(), DocumentChange.change_id)
