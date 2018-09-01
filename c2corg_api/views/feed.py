@@ -11,6 +11,7 @@ from c2corg_api.views.validation import validate_preferred_lang_param, \
     validate_token_pagination, validate_user_id
 from cornice.resource import resource, view
 from c2corg_api.views import cors_policy, restricted_view
+from c2corg_common.attributes import quality_types
 from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden
 from sqlalchemy.orm import undefer, load_only
 from sqlalchemy.sql.expression import or_, and_
@@ -146,7 +147,8 @@ def get_params(request, default_page_limit=DEFAULT_PAGE_LIMIT):
     return lang, token_id, token_time, limit
 
 
-def get_changes_of_feed(token_id, token_time, limit, extra_filter=None):
+def get_changes_of_feed(
+        token_id, token_time, limit, extra_filter=None, ignore_poor_quality=True):
     query = DBSession. \
         query(DocumentChange). \
         order_by(DocumentChange.time.desc(), DocumentChange.change_id)
@@ -162,6 +164,10 @@ def get_changes_of_feed(token_id, token_time, limit, extra_filter=None):
 
     if extra_filter is not None:
         query = query.filter(extra_filter)
+
+    if ignore_poor_quality:
+        query = query.filter(
+            DocumentChange.quality not in [quality_types[0], quality_types[1]])
 
     return query.limit(limit).all()
 
@@ -298,7 +304,8 @@ def get_changes_of_profile_feed(user_id, token_id, token_time, limit):
 
     user_filter = DocumentChange.user_ids.op('&&')([user_id])
 
-    return get_changes_of_feed(token_id, token_time, limit, user_filter)
+    return get_changes_of_feed(
+        token_id, token_time, limit, user_filter, ignore_poor_quality=False)
 
 
 def load_feed(changes, lang):

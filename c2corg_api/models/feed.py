@@ -143,6 +143,9 @@ class DocumentChange(Base):
     langs = Column(
         ArrayOfEnum(enums.lang), nullable=False, server_default='{}')
 
+    quality = Column(
+        enums.quality_type, nullable=False, server_default='{}')
+
     # For performance reasons, areas and users are referenced in simple integer
     # arrays in 'feed_document_changes', no PK-FK relations are set up.
     # To prevent inconsistencies, triggers are used.
@@ -228,6 +231,7 @@ def update_feed_document_create(document, user_id):
         document_type=document.type,
         activities=activities,
         langs=langs,
+        quality=document.quality,
         area_ids=area_ids,
         user_ids=user_ids
     )
@@ -256,17 +260,28 @@ def update_feed_document_update(document, user_id, update_types):
 
     DBSession.flush()
 
+    values = {}
+
     # update areas
     if UpdateType.GEOM in update_types:
-        update_areas_of_changes(document)
+        update_areas_of_changes(document, values)
 
     # updates activities
     if document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE,
                          BOOK_TYPE, XREPORT_TYPE] and \
             UpdateType.FIGURES in update_types:
-        update_activities_of_changes(document)
+        values['activities'] = document.activities
 
     update_langs_of_changes(document.document_id)
+
+    values['quality'] = document.quality
+
+    # Save document changes to related feed items
+    DBSession.execute(
+        DocumentChange.__table__.update().
+        where(DocumentChange.document_id == document.document_id).
+        values(values)
+    )
 
     # update users_ids/participants (only for outings)
     if document.type != OUTING_TYPE:
@@ -431,7 +446,7 @@ def _get_area_ids(document):
     return [area_id for (area_id,) in area_ids]
 
 
-def update_areas_of_changes(document):
+def update_areas_of_changes(document, values):
     """Update the area ids of all feed entries of the given document.
     """
     areas_select = select(
@@ -444,25 +459,10 @@ def update_areas_of_changes(document):
                         type_=postgresql.ARRAY(Integer)))
             ]).\
         where(AreaAssociation.document_id == document.document_id)
-
-    DBSession.execute(
-        DocumentChange.__table__.update().
-        where(DocumentChange.document_id == document.document_id).
-        values(area_ids=areas_select.as_scalar())
-    )
+    values['area_ids'] = areas_select.as_scalar()
 
 
-def update_activities_of_changes(document):
-    """Update the activities of all feed entries of the given document.
-    """
-    DBSession.execute(
-        DocumentChange.__table__.update().
-        where(DocumentChange.document_id == document.document_id).
-        values(activities=document.activities)
-    )
-
-
-def update_langs_of_changes(document_id):
+def update_langs_of_changes(document_id, values):
     """Update the langs of all feed entries of the given document.
     """
     langs = DBSession. \
@@ -472,10 +472,8 @@ def update_langs_of_changes(document_id):
         filter(DocumentLocale.document_id == document_id). \
         group_by(DocumentLocale.document_id). \
         subquery('langs')
-    DBSession.execute(
-        DocumentChange.__table__.update().
-        where(DocumentChange.document_id == document_id).
-        values(langs=langs.select()))
+    # FIXME check it is possible to pass a subquery like this:
+    values['langs'] = langs.select()
 
 
 def get_linked_document(images_in):
