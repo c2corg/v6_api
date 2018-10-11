@@ -5,9 +5,7 @@
 update users.user set username = 'user' || id, forum_username = 'user' || id, email = 'user' || id || '@example.com', email_validated = true, email_to_validate = null, moderator = false, validation_nonce = null, validation_nonce_expire = null, password = '$2b$12$JPOxvA1AUc4LRUE6OJMlLeFoKoTYjfGpnBsC4tSE7VhAh3e/AmeGi', last_modified = now(), lang = 'en', is_profile_public = false, feed_filter_activities = '{}', feed_followed_only = false,  blocked = false, feed_filter_langs = '{}';
 
 -- Remove all authentication data
-truncate users.token;
-truncate users.sso_external_id;
-truncate users.sso_key;
+truncate users.token, users.sso_external_id, users.sso_key;
 
 -- Remove all snow reports subscriptions
 truncate sympa.subscriber_table;
@@ -27,10 +25,7 @@ update guidebook.documents_locales_archives set summary = null, description = nu
 update guidebook.documents_geometries_archives set geom = null, geom_detail = null where document_id in (select distinct d.document_id from guidebook.user_profiles_archives p join guidebook.documents_archives d using (id));
 
 -- Remove user subscriptions and preferences
-truncate guidebook.feed_followed_users;
-truncate guidebook.feed_filter_area;
+truncate guidebook.feed_followed_users, guidebook.feed_filter_area;
 
 -- Remove ES indexing related data
-truncate guidebook.es_deleted_documents;
-truncate guidebook.es_deleted_locales;
-truncate guidebook.es_sync_status;
+truncate guidebook.es_deleted_documents, guidebook.es_deleted_locales, guidebook.es_sync_status;
