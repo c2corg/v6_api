@@ -1,3 +1,5 @@
+\connect c2corg
+
 -- This file contains SQL queries used to remove personal data before exporting the database to a public dump
 
 -- Replace users'data by fake data. Except (real) name to preserve the authors of the guidebook contributions.
