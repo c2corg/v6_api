@@ -1,0 +1,9 @@
+To create an anonymized database dump, untar a dump from the backups in the
+current directory, following the naming convention: c2corg.YYYY-MM-DD.dump.
+Then run:
+  docker-compose build
+  docker-compose up
+wait until the scripts finish running, then hit CTRL-C and cleanup with:
+  docker-compose down
+The generated anonymised dump can be found in the current directory, named:
+c2corg-anonymized.dump
