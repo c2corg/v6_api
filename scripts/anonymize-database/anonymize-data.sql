@@ -31,3 +31,4 @@ truncate guidebook.feed_followed_users, guidebook.feed_filter_area;
 
 -- Remove ES indexing related data
 truncate guidebook.es_deleted_documents, guidebook.es_deleted_locales, guidebook.es_sync_status;
+insert into guidebook.es_sync_status VALUES (to_timestamp(0), 1)
