@@ -20,7 +20,7 @@ postgresql:
   environment:
     PGDATA: '/c2corg_anon'
   volumes:
-    - docker-compose/pgsql-settings.d/:/c2corg_anon/pgsql-settings.d/
+    - ./docker-compose/pgsql-settings.d/:/c2corg_anon/pgsql-settings.d/
   ports:
     - 5432:5432
 
