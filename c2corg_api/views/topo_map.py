@@ -13,7 +13,8 @@ from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
-    validate_lang_param, validate_preferred_lang_param, validate_lang
+    validate_lang_param, validate_preferred_lang_param, validate_lang, \
+    validate_cook_param
 
 validate_map_create = make_validator_create(fields_topo_map.get('required'))
 validate_map_update = make_validator_update(fields_topo_map.get('required'))
@@ -27,7 +28,7 @@ class TopoMapRest(DocumentRest):
     def collection_get(self):
         return self._collection_get(MAP_TYPE, topo_map_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param])
+    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(TopoMap, schema_topo_map)
 

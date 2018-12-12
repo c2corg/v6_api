@@ -23,7 +23,7 @@ from c2corg_api.views import cors_policy, restricted_json_view, \
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
     validate_associations, validate_lang, validate_version_id, \
-    is_associated_user
+    is_associated_user, validate_cook_param
 
 from pyramid.httpexceptions import HTTPForbidden
 
@@ -43,7 +43,7 @@ class XreportRest(DocumentRest):
     def collection_get(self):
         return self._collection_get(XREPORT_TYPE, xreport_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param])
+    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         set_private_cache_header(self.request)
         if not _has_permission(self.request, self.request.validated['id']):

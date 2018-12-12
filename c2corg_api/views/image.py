@@ -24,7 +24,7 @@ from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
     validate_associations, validate_associations_in, validate_lang, \
-    validate_version_id
+    validate_version_id, validate_cook_param
 
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, \
     HTTPBadRequest, HTTPInternalServerError, HTTPFound
@@ -154,7 +154,7 @@ class ImageRest(DocumentRest):
     def collection_get(self):
         return self._collection_get(IMAGE_TYPE, image_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param])
+    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(Image, schema_image, set_custom_fields=set_creator)
 

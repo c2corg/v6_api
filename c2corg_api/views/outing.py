@@ -14,7 +14,7 @@ from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param, validate_associations, \
-    has_permission_for_outing
+    has_permission_for_outing, validate_cook_param
 from c2corg_common.attributes import activities
 from c2corg_common.fields_outing import fields_outing
 from cornice.resource import resource, view
@@ -66,7 +66,7 @@ class OutingRest(DocumentRest):
     def collection_get(self):
         return self._collection_get(OUTING_TYPE, outing_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param])
+    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(
             Outing, schema_outing, adapt_schema=outing_schema_adaptor)

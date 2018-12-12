@@ -41,7 +41,9 @@ def create_int_validator(field):
             request.validated[field] = val
         except ValueError:
             request.errors.add('querystring', field, 'invalid ' + field)
+
     return validator
+
 
 validate_id = create_int_validator('id')
 validate_version_id = create_int_validator('version_id')
@@ -55,6 +57,16 @@ def validate_lang_(lang, request):
             request.validated['lang'] = lang
         else:
             request.errors.add('querystring', 'lang', 'invalid lang')
+
+
+def validate_cook_(cook, request):
+    """Checks if a given cooking lang is one of the available langs.
+    """
+    if cook is not None:
+        if cook in default_langs:
+            request.validated['cook'] = cook
+        else:
+            request.errors.add('querystring', 'cook', 'invalid lang')
 
 
 def validate_lang(request, **kwargs):
@@ -83,6 +95,14 @@ def validate_lang_param(request, **kwargs):
     """
     lang = request.GET.get('l')
     validate_lang_(lang, request)
+
+
+def validate_cook_param(request, **kwargs):
+    """Checks if the cooking language given in the url as GET parameter
+    is correct ("...?cook=...").
+    """
+    cook = request.GET.get('cook')
+    validate_cook_(cook, request)
 
 
 def validate_preferred_lang_param(request, **kwargs):
@@ -246,8 +266,8 @@ def validate_simple_token(request, **kwargs):
 
 
 def validate_association_permission(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc=False, skip_outing_check=False):
+    request, parent_document_id, parent_document_type, child_document_id,
+    child_document_type, raise_exc=False, skip_outing_check=False):
     if request.has_permission('moderator'):
         # moderators can do everything
         return
@@ -281,8 +301,8 @@ def validate_association_permission(
 
 
 def validate_outing_association(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc):
+    request, parent_document_id, parent_document_type, child_document_id,
+    child_document_type, raise_exc):
     """ If the given association is an association with an outing, this
     function checks if the authenticated user is allowed to change the
     associations with the outing (either moderator or participant).
@@ -307,8 +327,8 @@ def validate_outing_association(
 
 
 def validate_article_association(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc):
+    request, parent_document_id, parent_document_type, child_document_id,
+    child_document_type, raise_exc):
     validate_personal_association(
         request, parent_document_id, parent_document_type, child_document_id,
         child_document_type, raise_exc, ARTICLE_TYPE, article.is_personal,
@@ -316,16 +336,16 @@ def validate_article_association(
 
 
 def validate_image_association(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc):
+    request, parent_document_id, parent_document_type, child_document_id,
+    child_document_type, raise_exc):
     validate_personal_association(
         request, parent_document_id, parent_document_type, child_document_id,
         child_document_type, raise_exc, IMAGE_TYPE, image.is_personal, 'image')
 
 
 def validate_xreport_association(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc):
+    request, parent_document_id, parent_document_type, child_document_id,
+    child_document_type, raise_exc):
     validate_personal_association(
         request, parent_document_id, parent_document_type, child_document_id,
         child_document_type, raise_exc, XREPORT_TYPE, lambda _: True,
@@ -333,8 +353,8 @@ def validate_xreport_association(
 
 
 def validate_personal_association(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc, doc_type, is_personal, label):
+    request, parent_document_id, parent_document_type, child_document_id,
+    child_document_type, raise_exc, doc_type, is_personal, label):
     document_ids = set()
     if parent_document_type == doc_type:
         document_ids.add(parent_document_id)
@@ -343,8 +363,8 @@ def validate_personal_association(
 
     for document_id in document_ids:
         if is_personal(document_id) and not has_been_created_by(
-                document_id, request.authenticated_userid) and not \
-                is_associated_user(document_id, request.authenticated_userid):
+            document_id, request.authenticated_userid) and not \
+            is_associated_user(document_id, request.authenticated_userid):
             msg = 'no rights to modify associations with {} {}'.format(
                 label, document_id)
             if raise_exc:
@@ -372,7 +392,7 @@ def has_permission_for_outing(request, outing_id):
 
 
 def check_permission_for_association(
-        request, association, skip_outing_check=False):
+    request, association, skip_outing_check=False):
     validate_association_permission(
         request, association.parent_document_id,
         association.parent_document_type, association.child_document_id,
@@ -384,6 +404,7 @@ def association_permission_checker(request, skip_outing_check=False):
     def check(association):
         check_permission_for_association(
             request, association, skip_outing_check)
+
     return check
 
 
@@ -419,15 +440,15 @@ def _check_permission_association_doc(request, doc_type, document_id):
             return True
     elif doc_type == IMAGE_TYPE:
         if image.is_personal(document_id) and has_been_created_by(
-                document_id, request.authenticated_userid):
+            document_id, request.authenticated_userid):
             return True
     elif doc_type == ARTICLE_TYPE:
         if article.is_personal(document_id) and has_been_created_by(
-                document_id, request.authenticated_userid):
+            document_id, request.authenticated_userid):
             return True
     elif doc_type == XREPORT_TYPE:
         if (has_been_created_by(document_id, request.authenticated_userid) or
-           is_associated_user(document_id, request.authenticated_userid)):
+                is_associated_user(document_id, request.authenticated_userid)):
             return True
 
     return False
@@ -514,10 +535,10 @@ def validate_associations_in(associations_in, document_type, errors):
 def get_associated_user_ids(xreport_id):
     associated_user_ids = get_first_column(
         DBSession.query(User.id).
-        join(Association, Association.parent_document_id == User.id).
-        filter(Association.child_document_id == xreport_id).
-        group_by(User.id).
-        all())
+            join(Association, Association.parent_document_id == User.id).
+            filter(Association.child_document_id == xreport_id).
+            group_by(User.id).
+            all())
     return associated_user_ids
 
 
@@ -545,7 +566,7 @@ def _check_for_valid_documents_ids(associations, errors):
         type_for_document_id = {
             str(document_id): doc_type
             for document_id, doc_type in query_documents_with_type
-        }
+            }
     else:
         type_for_document_id = {}
 
@@ -572,13 +593,13 @@ def _get_linked_document_ids(associations):
     return set().union(*[
         [
             doc['document_id'] for doc in docs
-        ] for docs in associations.values()
-    ])
+            ] for docs in associations.values()
+        ])
 
 
 def _add_associations(
-        associations, associations_in, main_document_type,
-        document_key, other_document_type, errors):
+    associations, associations_in, main_document_type,
+    document_key, other_document_type, errors):
     valid_types = updatable_associations.get(main_document_type, set())
 
     if document_key not in valid_types:
@@ -607,7 +628,7 @@ def _add_associations(
                     'document_id': doc['document_id'],
                     'is_parent': is_parent
                 } for doc in associations_in[document_key]
-            ]
+                ]
 
 
 def _is_parent_of_association(main_document_type, other_document_type):

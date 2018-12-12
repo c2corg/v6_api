@@ -1,6 +1,6 @@
 import logging
 
-from c2corg_api.caching import cache_document_detail
+from c2corg_api.caching import cache_document_detail, cache_document_cooked
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
 from c2corg_api.models.area_association import update_areas_for_document, \
@@ -22,7 +22,7 @@ from c2corg_api.models.topo_map_association import update_maps_for_document, \
     get_maps
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.views import etag_cache
+from c2corg_api.views import etag_cache, set_best_locale
 from c2corg_api.views import to_json_dict
 import c2corg_api.views.document_associations as doc_associations
 from c2corg_api.views.document_listings import add_load_for_locales, \
@@ -30,6 +30,8 @@ from c2corg_api.views.document_listings import add_load_for_locales, \
 from c2corg_api.views.validation import check_required_fields, \
     check_duplicate_locales, association_permission_checker, \
     association_permission_removal_checker
+from c2corg_api.views.cooker import cook
+
 from functools import partial
 
 from c2corg_common.utils.caching import get_or_create
@@ -38,6 +40,7 @@ from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
 from sqlalchemy.orm import joinedload, contains_eager, load_only
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.orm.util import with_polymorphic
+
 
 log = logging.getLogger(__name__)
 
@@ -110,10 +113,23 @@ class DocumentRest(object):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')
         editing_view = self.request.GET.get('e', '0') != '0'
+        cook = self.request.validated.get('cook')
+
+        if cook and lang:
+            raise HTTPBadRequest("You can't use cook service with explicit lang query")
+
+        if cook and editing_view:
+            raise HTTPBadRequest("You can't use cook service with edition mode")
+
+        if cook:
+            lang = cook
+
+        getter = self._get_document_for_cooking if cook else self._get_document
+        cache = cache_document_cooked if cook else cache_document_detail
 
         def create_response():
             return self._get_in_lang(
-                id, lang, clazz, schema, editing_view, clazz_locale,
+                getter, id, lang, clazz, schema, editing_view, clazz_locale,
                 adapt_schema, include_maps, include_areas,
                 set_custom_associations, set_custom_fields)
 
@@ -125,18 +141,16 @@ class DocumentRest(object):
                 # request equals the current etag, return 'NotModified'
                 etag_cache(self.request, cache_key)
 
-                return get_or_create(
-                    cache_document_detail, cache_key, create_response)
+                return get_or_create(cache, cache_key, create_response)
 
         # don't cache if requesting a document for editing
         return create_response()
 
-    def _get_in_lang(self, id, lang, clazz, schema, editing_view,
+    def _get_in_lang(self, getter, id, lang, clazz, schema, editing_view,
                      clazz_locale=None, adapt_schema=None,
                      include_maps=True, include_areas=True,
                      set_custom_associations=None, set_custom_fields=None):
-        document = self._get_document(
-            clazz, id, clazz_locale=clazz_locale, lang=lang)
+        document = getter(clazz, id, clazz_locale=clazz_locale, lang=lang)
 
         if document.redirects_to:
             return {
@@ -307,6 +321,30 @@ class DocumentRest(object):
 
         if not document:
             raise HTTPNotFound('document not found')
+
+        return document
+
+    def _get_document_for_cooking(self, clazz, id, lang, clazz_locale=None):
+        """Get a document with a single locale
+        this locale may not be the one requested, if this one doesn't exists
+        in this case, the lang returned is given by lang_priority
+        """
+
+        document_query = DBSession. \
+            query(clazz). \
+            filter(getattr(clazz, 'document_id') == id). \
+            options(joinedload('geometry'))
+        document_query = add_load_for_locales(
+            document_query, clazz, clazz_locale)
+        document_query = add_load_for_profiles(document_query, clazz)
+        document = document_query.first()
+
+        if not document:
+            raise HTTPNotFound('document not found')
+
+        set_best_locale([document], lang)
+
+        document.cooked = cook(document.locales[0])
 
         return document
 

@@ -19,7 +19,8 @@ from c2corg_api.views.document import DocumentRest, make_validator_create, \
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
-    validate_associations, validate_lang, validate_version_id
+    validate_associations, validate_lang, validate_version_id, \
+    validate_cook_param
 
 validate_book_create = make_validator_create(fields_book.get('required'))
 validate_book_update = make_validator_update(fields_book.get('required'))
@@ -37,7 +38,7 @@ class BookRest(DocumentRest):
     def collection_get(self):
         return self._collection_get(BOOK_TYPE, book_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param])
+    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(Book, schema_book, include_areas=False)
 

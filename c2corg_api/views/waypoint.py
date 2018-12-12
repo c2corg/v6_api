@@ -26,7 +26,7 @@ from c2corg_api.views.document import (
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
-    validate_preferred_lang_param, validate_associations
+    validate_preferred_lang_param, validate_associations, validate_cook_param
 from c2corg_common.fields_waypoint import fields_waypoint
 from c2corg_common.attributes import waypoint_types
 from sqlalchemy.orm import joinedload, load_only
@@ -116,7 +116,7 @@ class WaypointRest(DocumentRest):
         """
         return self._collection_get(WAYPOINT_TYPE, waypoint_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param])
+    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         """
         Get a single document.
@@ -132,6 +132,11 @@ class WaypointRest(DocumentRest):
             `e=1` (optional)
             Get the document for editing. Only the information needed for
             editing the document is included in the response.
+
+            `cook=...` (optional)
+            Get the document for viewing in a lang. Response may contains
+            another lang if requested one does not exists
+
 
         """
         return self._get(
