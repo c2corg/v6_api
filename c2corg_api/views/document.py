@@ -30,7 +30,6 @@ from c2corg_api.views.document_listings import add_load_for_locales, \
 from c2corg_api.views.validation import check_required_fields, \
     check_duplicate_locales, association_permission_checker, \
     association_permission_removal_checker
-from c2corg_api.views.cooker import cook
 
 from functools import partial
 
@@ -124,14 +123,14 @@ class DocumentRest(object):
         if cook:
             lang = cook
 
-        getter = self._get_document_for_cooking if cook else self._get_document
         cache = cache_document_cooked if cook else cache_document_detail
 
         def create_response():
             return self._get_in_lang(
-                getter, id, lang, clazz, schema, editing_view, clazz_locale,
+                id, lang, clazz, schema, editing_view, clazz_locale,
                 adapt_schema, include_maps, include_areas,
-                set_custom_associations, set_custom_fields)
+                set_custom_associations, set_custom_fields,
+                cook_locale=cook)
 
         if not editing_view:
             cache_key = get_cache_key(id, lang, custom_cache_key)
@@ -146,10 +145,13 @@ class DocumentRest(object):
         # don't cache if requesting a document for editing
         return create_response()
 
-    def _get_in_lang(self, getter, id, lang, clazz, schema, editing_view,
+    def _get_in_lang(self, id, lang, clazz, schema, editing_view,
                      clazz_locale=None, adapt_schema=None,
                      include_maps=True, include_areas=True,
-                     set_custom_associations=None, set_custom_fields=None):
+                     set_custom_associations=None, set_custom_fields=None,
+                     cook_locale=False):
+
+        getter = self._get_document_for_cooking if cook_locale else self._get_document
         document = getter(clazz, id, clazz_locale=clazz_locale, lang=lang)
 
         if document.redirects_to:
@@ -177,7 +179,12 @@ class DocumentRest(object):
         if adapt_schema:
             schema = adapt_schema(schema, document)
 
-        return to_json_dict(document, schema, with_special_locales_attrs=True)
+        return to_json_dict(
+            document,
+            schema,
+            with_special_locales_attrs=True,
+            cook_locale=cook_locale
+        )
 
     def _set_associations(self, document, lang, editing_view):
         document.associations = doc_associations.get_associations(
@@ -343,8 +350,6 @@ class DocumentRest(object):
             raise HTTPNotFound('document not found')
 
         set_best_locale([document], lang)
-
-        document.cooked = cook(document.locales[0])
 
         return document
 

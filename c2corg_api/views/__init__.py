@@ -22,6 +22,8 @@ from sqlalchemy.sql.functions import func
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 
+from c2corg_api.views.markdown import cook
+
 log = logging.getLogger(__name__)
 
 cors_policy = dict(
@@ -105,7 +107,8 @@ def restricted_view(**kw):
 
 
 def to_json_dict(obj, schema, with_special_locales_attrs=False,
-                 with_special_geometry_attrs=False):
+                 with_special_geometry_attrs=False,
+                 cook_locale=False):
     obj_dict = serialize(schema.dictify(obj))
     # manually copy certain attributes that were set on the object (it would be
     # cleaner to add the field to the schema, but ColanderAlchemy doesn't like
@@ -128,6 +131,10 @@ def to_json_dict(obj, schema, with_special_locales_attrs=False,
             for attr in locale_special_attributes:
                 if hasattr(locale, attr):
                     locale_dict[attr] = getattr(locale, attr)
+
+    if cook_locale:
+        obj_dict['cooked'] = cook(obj_dict['locales'][0])
+
     if with_special_geometry_attrs and obj.type in(ROUTE_TYPE, OUTING_TYPE):
             geometry_special_attributes = ['has_geom_detail']
             geometry_dict = obj_dict['geometry']
