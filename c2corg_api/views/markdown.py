@@ -1,6 +1,4 @@
-from c2c_markdown import parse_code, configure_parsers
-
-configure_parsers({'api_url': 'https://api.camptocamp.org/'})
+from c2c_markdown import parse_code
 
 # this is locale property, but they must not be cooked by markdown parser
 NOT_MARKDOWN_PROPERTY = {
