@@ -115,10 +115,14 @@ class DocumentRest(object):
         cook = self.request.validated.get('cook')
 
         if cook and lang:
-            raise HTTPBadRequest("You can't use cook service with explicit lang query")
+            raise HTTPBadRequest(
+                "You can't use cook service with explicit lang query"
+            )
 
         if cook and editing_view:
-            raise HTTPBadRequest("You can't use cook service with edition mode")
+            raise HTTPBadRequest(
+                "You can't use cook service with edition mode"
+            )
 
         if cook:
             lang = cook
@@ -151,8 +155,14 @@ class DocumentRest(object):
                      set_custom_associations=None, set_custom_fields=None,
                      cook_locale=False):
 
-        getter = self._get_document_for_cooking if cook_locale else self._get_document
-        document = getter(clazz, id, clazz_locale=clazz_locale, lang=lang)
+        if cook_locale:
+            document = self._get_document_for_cooking(
+                clazz, id, clazz_locale=clazz_locale, lang=lang
+            )
+        else:
+            document = self._get_document(
+                clazz, id, clazz_locale=clazz_locale, lang=lang
+            )
 
         if document.redirects_to:
             return {
