@@ -290,6 +290,12 @@ class TestImageRest(BaseTestImage):
         self.assertEqual(
             self.outing1.document_id, linked_outings[0].get('document_id'))
 
+    def test_get_cooked(self):
+        self.get_cooked(self.image)
+
+    def test_get_cooked_with_defaulting(self):
+        self.get_cooked_with_defaulting(self.image)
+
     def test_get_lang(self):
         self.get_lang(self.image)
 

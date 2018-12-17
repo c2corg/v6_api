@@ -288,6 +288,12 @@ class TestWaypointRest(BaseDocumentTestRest):
         body = response.json
         self.assertEqual(body, fake_cache_value)
 
+    def test_get_cooked(self):
+        self.get_cooked(self.waypoint)
+
+    def test_get_cooked_with_defaulting(self):
+        self.get_cooked_with_defaulting(self.waypoint)
+
     def test_get_lang(self):
         body = self.get_lang(self.waypoint)
 

@@ -9,6 +9,10 @@ log = logging.getLogger(__name__)
 
 @resource(path='/cooker', cors_policy=cors_policy)
 class CookerRest(object):
+
+    def __init__(self, request):
+        self.request = request
+
     @view()
     def post(self):
         return cook(self.request.json)
