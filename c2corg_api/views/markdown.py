@@ -1,6 +1,6 @@
 from c2c_markdown import parse_code
 
-# this is locale property, but they must not be cooked by markdown parser
+# locale properties that must not be cooked by markdown parser
 NOT_MARKDOWN_PROPERTY = {
     'lang',
     'version',
