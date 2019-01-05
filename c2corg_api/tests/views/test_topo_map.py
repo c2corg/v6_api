@@ -59,6 +59,12 @@ class TestTopoMapRest(BaseDocumentTestRest):
         self._assert_geometry(body)
         self.assertNotIn('maps', body)
 
+    def test_get_cooked(self):
+        self.get_cooked(self.map1)
+
+    def test_get_cooked_with_defaulting(self):
+        self.get_cooked_with_defaulting(self.map1)
+
     def test_get_lang(self):
         self.get_lang(self.map1)
 

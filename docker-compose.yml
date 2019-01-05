@@ -1,5 +1,5 @@
 api:
-  image: 'docker.io/c2corg/v6_api:latest'
+  image: 'docker.io/c2corg/v6_api:markdown-cooker'
   ports:
     - 6543:6543
   environment:

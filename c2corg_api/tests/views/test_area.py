@@ -75,6 +75,12 @@ class TestAreaRest(BaseDocumentTestRest):
         self.assertEqual(1, len(images))
         self.assertEqual(images[0].get('document_id'), self.image.document_id)
 
+    def test_get_cooked(self):
+        self.get_cooked(self.area1)
+
+    def test_get_cooked_with_defaulting(self):
+        self.get_cooked_with_defaulting(self.area1)
+
     def test_get_lang(self):
         self.get_lang(self.area1)
 

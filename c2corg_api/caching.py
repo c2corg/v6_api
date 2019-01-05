@@ -21,6 +21,7 @@ def create_region(name):
         key_mangler=lambda key: '{0}:{1}:{2}'.format(KEY_PREFIX, name, key)
     )
 
+cache_document_cooked = create_region('cooked')
 cache_document_detail = create_region('detail')
 cache_document_listing = create_region('listing')
 cache_document_history = create_region('history')
@@ -29,6 +30,7 @@ cache_document_info = create_region('info')
 cache_sitemap = create_region('sitemap')
 
 caches = [
+    cache_document_cooked,
     cache_document_detail,
     cache_document_listing,
     cache_document_history,

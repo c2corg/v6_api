@@ -143,6 +143,12 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertIn('previous_injuries', body)
         self.assertIn('autonomy', body)
 
+    def test_get_cooked(self):
+        self.get_cooked(self.xreport1)
+
+    def test_get_cooked_with_defaulting(self):
+        self.get_cooked_with_defaulting(self.xreport1)
+
     def test_get_lang(self):
         self.get_lang(self.xreport1, user='contributor')
 

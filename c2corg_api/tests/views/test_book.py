@@ -85,6 +85,12 @@ class TestBookRest(BaseDocumentTestRest):
         linked_images = associations.get('images')
         self.assertEqual(len(linked_images), 0)
 
+    def test_get_cooked(self):
+        self.get_cooked(self.book1)
+
+    def test_get_cooked_with_defaulting(self):
+        self.get_cooked_with_defaulting(self.book1)
+
     def test_get_lang(self):
         self.get_lang(self.book1)
 

@@ -24,7 +24,8 @@ from c2corg_api.views.document import DocumentRest, make_validator_create, \
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
-    validate_associations, validate_lang, validate_version_id
+    validate_associations, validate_lang, validate_version_id, \
+    validate_cook_param
 
 validate_article_create = make_validator_create(fields_article.get('required'))
 validate_article_update = make_validator_update(fields_article.get('required'))
@@ -42,7 +43,7 @@ class ArticleRest(DocumentRest):
     def collection_get(self):
         return self._collection_get(ARTICLE_TYPE, article_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param])
+    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(
             Article, schema_article, include_areas=False,

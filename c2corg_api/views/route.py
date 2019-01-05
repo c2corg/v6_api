@@ -25,7 +25,7 @@ from c2corg_api.views import cors_policy, restricted_json_view, \
     get_best_locale, set_default_geom_from_associations
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
-    validate_preferred_lang_param, validate_associations
+    validate_preferred_lang_param, validate_associations, validate_cook_param
 from c2corg_common.fields_route import fields_route
 from c2corg_common.attributes import activities
 from sqlalchemy.orm import load_only
@@ -90,7 +90,7 @@ class RouteRest(DocumentRest):
     def collection_get(self):
         return self._collection_get(ROUTE_TYPE, route_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param])
+    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(
             Route, schema_route, clazz_locale=RouteLocale,

@@ -72,7 +72,11 @@ class DocumentVersionRest(object):
         )
 
         return {
-            'document': to_json_dict(archive_document, schema),
+            'document': to_json_dict(
+                archive_document,
+                schema,
+                cook_locale=True
+            ),
             'version': serialize_version(version),
             'previous_version_id': previous_version_id,
             'next_version_id': next_version_id,

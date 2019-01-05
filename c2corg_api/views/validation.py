@@ -41,7 +41,9 @@ def create_int_validator(field):
             request.validated[field] = val
         except ValueError:
             request.errors.add('querystring', field, 'invalid ' + field)
+
     return validator
+
 
 validate_id = create_int_validator('id')
 validate_version_id = create_int_validator('version_id')
@@ -55,6 +57,16 @@ def validate_lang_(lang, request):
             request.validated['lang'] = lang
         else:
             request.errors.add('querystring', 'lang', 'invalid lang')
+
+
+def validate_cook_(cook, request):
+    """Checks if a given cooking lang is one of the available langs.
+    """
+    if cook is not None:
+        if cook in default_langs:
+            request.validated['cook'] = cook
+        else:
+            request.errors.add('querystring', 'cook', 'invalid lang')
 
 
 def validate_lang(request, **kwargs):
@@ -83,6 +95,14 @@ def validate_lang_param(request, **kwargs):
     """
     lang = request.GET.get('l')
     validate_lang_(lang, request)
+
+
+def validate_cook_param(request, **kwargs):
+    """Checks if the cooking language given in the url as GET parameter
+    is correct ("...?cook=...").
+    """
+    cook = request.GET.get('cook')
+    validate_cook_(cook, request)
 
 
 def validate_preferred_lang_param(request, **kwargs):
@@ -384,6 +404,7 @@ def association_permission_checker(request, skip_outing_check=False):
     def check(association):
         check_permission_for_association(
             request, association, skip_outing_check)
+
     return check
 
 
@@ -427,7 +448,7 @@ def _check_permission_association_doc(request, doc_type, document_id):
             return True
     elif doc_type == XREPORT_TYPE:
         if (has_been_created_by(document_id, request.authenticated_userid) or
-           is_associated_user(document_id, request.authenticated_userid)):
+                is_associated_user(document_id, request.authenticated_userid)):
             return True
 
     return False
@@ -545,7 +566,7 @@ def _check_for_valid_documents_ids(associations, errors):
         type_for_document_id = {
             str(document_id): doc_type
             for document_id, doc_type in query_documents_with_type
-        }
+            }
     else:
         type_for_document_id = {}
 
@@ -572,8 +593,8 @@ def _get_linked_document_ids(associations):
     return set().union(*[
         [
             doc['document_id'] for doc in docs
-        ] for docs in associations.values()
-    ])
+            ] for docs in associations.values()
+        ])
 
 
 def _add_associations(
@@ -607,7 +628,7 @@ def _add_associations(
                     'document_id': doc['document_id'],
                     'is_parent': is_parent
                 } for doc in associations_in[document_key]
-            ]
+                ]
 
 
 def _is_parent_of_association(main_document_type, other_document_type):

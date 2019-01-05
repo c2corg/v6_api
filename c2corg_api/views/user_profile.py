@@ -11,7 +11,8 @@ from cornice.validators import colander_body_validator
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
-    validate_lang_param, validate_preferred_lang_param, validate_lang
+    validate_lang_param, validate_preferred_lang_param, validate_lang, \
+    validate_cook_param
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
 from sqlalchemy.orm import load_only
 
@@ -26,7 +27,7 @@ class UserProfileRest(DocumentRest):
         return self._collection_get(
             USERPROFILE_TYPE, user_profile_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param])
+    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         # load the requested user
         requested_user_id = self.request.validated['id']

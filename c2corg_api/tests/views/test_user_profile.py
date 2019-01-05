@@ -113,6 +113,12 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.app.get(self._prefix + '/' + str(self.profile3.document_id),
                      headers=headers, status=404)
 
+    def test_get_cooked(self):
+        self.get_cooked(self.profile1, user='contributor')
+
+    def test_get_cooked_with_defaulting(self):
+        self.get_cooked_with_defaulting(self.profile1, user='contributor')
+
     def test_get_lang(self):
         self.get_lang(self.profile1, user='contributor')
 

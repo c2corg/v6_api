@@ -256,6 +256,11 @@ class BaseDocumentTestRest(BaseTestRest):
 
         body = response.json
         self.assertIn('document', body)
+
+        self.assertIn('cooked', body['document'])
+        self.assertIn('lang', body['document']['cooked'])
+        self.assertEqual(body['document']['cooked']['lang'], 'en')
+
         self.assertIn('version', body)
         self.assertIn('previous_version_id', body)
         self.assertIn('next_version_id', body)
@@ -293,6 +298,44 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def get_info_404(self):
         self.app.get(self._prefix + '/9999999/en/info', status=404)
+
+    def _get_cooked(self, reference, lang, user=None):
+        headers = {} if not user else \
+            self.add_authorization_header(username=user)
+
+        response = self.app.get(self._prefix + '/' +
+                                str(reference.document_id) + '?cook=' + lang,
+                                headers=headers,
+                                status=200)
+        self.assertEqual(response.content_type, 'application/json')
+
+        body = response.json
+        self.assertIn('cooked', body)
+        self.assertIn('locales', body)
+
+        locales = body.get('locales')
+        cooked = body.get('cooked')
+
+        self.assertEqual(len(locales), 1)
+
+        return body, locales[0], cooked
+
+    def get_cooked(self, reference, user=None):
+        body, locale, cooked = self._get_cooked(reference, "en", user)
+
+        self.assertEqual(locale.get('lang'), self.locale_en.lang)
+        self.assertEqual(locale.get('lang'), "en")
+        self.assertEqual(cooked.get('lang'), "en")
+
+        return body
+
+    def get_cooked_with_defaulting(self, reference, user=None):
+        body, locale, cooked = self._get_cooked(reference, "it", user)
+
+        self.assertEqual(locale.get('lang'), "fr")
+        self.assertEqual(cooked.get('lang'), "fr")
+
+        return body
 
     def get_lang(self, reference, user=None):
         headers = {} if not user else \

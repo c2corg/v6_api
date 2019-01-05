@@ -165,6 +165,12 @@ class TestRouteRest(BaseDocumentTestRest):
         locale = body['document']['locales'][0]
         self.assertIn('title', locale)
 
+    def test_get_cooked(self):
+        self.get_cooked(self.route)
+
+    def test_get_cooked_with_defaulting(self):
+        self.get_cooked_with_defaulting(self.route)
+
     def test_get_lang(self):
         body = self.get_lang(self.route)
 
