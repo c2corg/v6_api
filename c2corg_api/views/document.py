@@ -341,7 +341,8 @@ class DocumentRest(object):
 
         return document
 
-    def _get_document_for_cooking(self, clazz, id, lang, clazz_locale=None):
+    @staticmethod
+    def _get_document_for_cooking(clazz, document_id, lang, clazz_locale=None):
         """Get a document with a single locale
         this locale may not be the one requested, if this one doesn't exists
         in this case, the lang returned is given by lang_priority
@@ -349,7 +350,7 @@ class DocumentRest(object):
 
         document_query = DBSession. \
             query(clazz). \
-            filter(getattr(clazz, 'document_id') == id). \
+            filter(getattr(clazz, 'document_id') == document_id). \
             options(joinedload('geometry'))
         document_query = add_load_for_locales(
             document_query, clazz, clazz_locale)
