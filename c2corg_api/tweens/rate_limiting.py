@@ -43,19 +43,19 @@ def rate_limiting_tween_factory(handler, registry):
                 'rate_limiting.limit'))
             user.ratelimit_reset = now + datetime.timedelta(seconds=span)
             user.ratelimit_remaining = limit - 1
-            log.debug('RATE LIMITING, CREATE WINDOW SPAN : {}'.format(
+            log.warning('RATE LIMITING, CREATE WINDOW SPAN : {}'.format(
                 user.ratelimit_reset
             ))
 
         elif user.ratelimit_remaining:
             user.ratelimit_remaining -= 1
-            log.info('RATE LIMITING, REQUESTS REMAINING FOR {} : {}'.format(
+            log.warning('RATE LIMITING, REQUESTS REMAINING FOR {} : {}'.format(
                 user.id, user.ratelimit_remaining
             ))
 
         else:
             # User is rate limited
-            log.info('RATE LIMIT REACHED FOR USER {}'.format(user.id))
+            log.warning('RATE LIMIT REACHED FOR USER {}'.format(user.id))
 
             # Count how many windows the user has been rate limited
             # and block them is too many.
