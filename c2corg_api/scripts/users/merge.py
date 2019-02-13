@@ -43,7 +43,12 @@ def main(argv=sys.argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("src_id", help="Source user identifier", type=int)
     parser.add_argument("tgt_id", help="Target user identifier", type=int)
-    parser.add_argument("-f", "--force", action="store_true", help="Merge user without confirmation")
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Merge user without confirmation"
+    )
     args = parser.parse_args()
 
     source_user_id = args.src_id
@@ -77,7 +82,7 @@ def main(argv=sys.argv):
     if not args.force:
         sys.stdout.write(
             '\n'
-            'Are you sure you want to merge the following user accounts? [y/N]\n'
+            'Are you sure you want to merge the following accounts? [y/N]\n'
             'source: id {}: {}/{}\n'
             'target: id {}: {}/{}\n'.format(
                 source_user.id, source_user.name, source_user.forum_username,
