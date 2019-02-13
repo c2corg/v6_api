@@ -8,6 +8,8 @@ class TestSitemapXml(BaseTestRest):
     def setUp(self):  # noqa
         super(TestSitemapXml, self).setUp()
         self._prefix = '/sitemaps.xml'
+        self.ui_url = 'https://www.camptocamp.org'
+        self.schema_url = '{http://www.sitemaps.org/schemas/sitemap/0.9}'
 
         self.waypoint1 = Waypoint(
             waypoint_type='summit', elevation=2000,
@@ -38,17 +40,13 @@ class TestSitemapXml(BaseTestRest):
 
     def test_get(self):
         response = self.app.get(self._prefix, status=200)
-        print(dir(response))
-        body = response.xml
-        print(body)
-
-        sitemaps = body['sitemaps']
+        sitemaps = response.xml
 
         def waypoint_filter(s):
-            return s['url'] == '/sitemaps.xml/w/0'
+            return s[0].text == 'https://api.camptocamp.org/sitemaps/w/0.xml'
 
         def route_filter(s):
-            return s['url'] == '/sitemaps.xml/r/0'
+            return s[0].text == 'https://api.camptocamp.org/sitemaps/r/0.xml'
 
         self.assertIsNotNone(
             next(filter(waypoint_filter, sitemaps), None)
@@ -58,39 +56,48 @@ class TestSitemapXml(BaseTestRest):
         )
 
     def test_get_sitemap_invalid_doc_type(self):
-        response = self.app.get(self._prefix + '/z/0', status=400)
+        response = self.app.get(self._prefix + '/z/0.xml', status=400)
         errors = response.json['errors']
         self.assertError(errors, 'doc_type', 'invalid doc_type')
 
     def test_get_sitemap_invalid_page(self):
-        response = self.app.get(self._prefix + '/a/-123', status=400)
+        response = self.app.get(self._prefix + '/a/-123.xml', status=400)
         errors = response.json['errors']
         self.assertError(errors, 'i', 'invalid i')
 
     def test_get_waypoint_sitemap(self):
-        response = self.app.get(self._prefix + '/w/0', status=200)
-        body = response.xml
+        response = self.app.get(self._prefix + '/w/0.xml', status=200)
+        urlset = response.xml
 
-        pages = body['pages']
-        self.assertEqual(len(pages), 3)
-        page1 = pages[0]
-        self.assertEqual(self.waypoint1.document_id, page1['document_id'])
-        self.assertIn('title', page1)
-        self.assertIn('lang', page1)
-        self.assertIn('lastmod', page1)
+        self.assertEqual(len(urlset), 3)
+        url = urlset[0]
+
+        self.assertEqual(url[0].tag, "{}loc".format(self.schema_url))
+        self.assertEqual(url[1].tag, "{}lastmod".format(self.schema_url))
+        self.assertEqual(
+            url[0].text,
+            "{}/waypoints/{}/fr/dent-de-crolles".format(
+                self.ui_url,
+                self.waypoint1.document_id
+            )
+        )
 
     def test_get_waypoint_sitemap_no_pages(self):
-        self.app.get(self._prefix + '/w/1', status=404)
+        self.app.get(self._prefix + '/w/1.xml', status=404)
 
     def test_get_route_sitemap(self):
-        response = self.app.get(self._prefix + '/r/0', status=200)
-        body = response.xml
+        response = self.app.get(self._prefix + '/r/0.xml', status=200)
+        urlset = response.xml
 
-        pages = body['pages']
-        self.assertEqual(len(pages), 1)
-        page1 = pages[0]
-        self.assertEqual(self.route.document_id, page1['document_id'])
-        self.assertIn('title', page1)
-        self.assertIn('title_prefix', page1)
-        self.assertIn('lang', page1)
-        self.assertIn('lastmod', page1)
+        self.assertEqual(len(urlset), 1)
+        url = urlset[0]
+
+        self.assertEqual(url[0].tag, "{}loc".format(self.schema_url))
+        self.assertEqual(url[1].tag, "{}lastmod".format(self.schema_url))
+        self.assertEqual(
+            url[0].text,
+            "{}/routes/{}/fr/mont-blanc-mont-blanc-du-ciel".format(
+                self.ui_url,
+                self.route.document_id
+            )
+        )

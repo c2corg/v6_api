@@ -43,7 +43,7 @@ validate_page = create_int_validator('i')
 
 
 @resource(
-    collection_path='/sitemaps.xml', path='/sitemaps.xml/{doc_type}/{i}',
+    collection_path='/sitemaps.xml', path='/sitemaps.xml/{doc_type}/{i}.xml',
     cors_policy=cors_policy, renderer='string')
 class SitemapXml(object):
 
@@ -60,19 +60,19 @@ class SitemapXml(object):
         <?xml version="1.0" encoding="UTF-8"?>
             <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
                 <sitemap>
-                    <loc>https://api.camptocamp.org/sitemaps.xml/w/0</loc>
+                    <loc>https://api.camptocamp.org/sitemaps.xml/w/0.xml</loc>
                     <lastmod>2019-02-11T18:01:49.193770+00:00</lastmod>
                 </sitemap>
                 <sitemap>
-                    <loc>https://api.camptocamp.org/sitemaps.xml/a/0</loc>
+                    <loc>https://api.camptocamp.org/sitemaps.xml/a/0.xml</loc>
                     <lastmod>2019-02-11T18:01:49.193770+00:00</lastmod>
                 </sitemap>
                 <sitemap>
-                    <loc>https://api.camptocamp.org/sitemaps.xml/i/0</loc>
+                    <loc>https://api.camptocamp.org/sitemaps.xml/i/0.xml</loc>
                     <lastmod>2019-02-11T18:01:49.193770+00:00</lastmod>
                 </sitemap>
                 <sitemap>
-                    <loc>https://api.camptocamp.org/sitemaps.xml/i/1</loc>
+                    <loc>https://api.camptocamp.org/sitemaps.xml/i/1.xml</loc>
                     <lastmod>2019-02-11T18:01:49.193770+00:00</lastmod>
                 </sitemap>
             </sitemap>
@@ -129,7 +129,7 @@ def _get_sitemap_index():
     lastmod = now.isoformat()
 
     template = """<sitemap>
-    <loc>https://api.camptocamp.org/sitemaps.xml/{doc_type}/{i}</loc>
+    <loc>https://api.camptocamp.org/sitemaps.xml/{doc_type}/{i}.xml</loc>
     <lastmod>{lastmod}</lastmod>
     </sitemap>"""
 
