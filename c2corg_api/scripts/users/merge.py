@@ -1,3 +1,4 @@
+import argparse
 import sys
 import os
 import logging
@@ -39,11 +40,19 @@ def exit(msg):
 
 
 def main(argv=sys.argv):
-    if len(argv) < 3:
-        usage(argv)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("src_id", help="Source user identifier", type=int)
+    parser.add_argument("tgt_id", help="Target user identifier", type=int)
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Merge user without confirmation"
+    )
+    args = parser.parse_args()
 
-    source_user_id = int(argv[1])
-    target_user_id = int(argv[2])
+    source_user_id = args.src_id
+    target_user_id = args.tgt_id
 
     if source_user_id == target_user_id:
         exit('ERROR: source and target user accounts cannot be the same')
@@ -70,15 +79,16 @@ def main(argv=sys.argv):
         exit('ERROR: target user account (id {}) does not exist'.format(
             target_user_id))
 
-    sys.stdout.write(
-        '\n'
-        'Are you sure you want to merge the following user accounts? [y/N]\n'
-        'source: id {}: {}/{}\n'
-        'target: id {}: {}/{}\n'.format(
-            source_user.id, source_user.name, source_user.forum_username,
-            target_user.id, target_user.name, target_user.forum_username))
-    if input().lower()[:1] != 'y':
-        exit('ABORTED: User accounts merging has been aborted')
+    if not args.force:
+        sys.stdout.write(
+            '\n'
+            'Are you sure you want to merge the following accounts? [y/N]\n'
+            'source: id {}: {}/{}\n'
+            'target: id {}: {}/{}\n'.format(
+                source_user.id, source_user.name, source_user.forum_username,
+                target_user.id, target_user.name, target_user.forum_username))
+        if input().lower()[:1] != 'y':
+            exit('ABORTED: User accounts merging has been aborted')
 
     print('Merging user account {} to user account {} in progress.\n'
           'Please wait...'.format(source_user_id, target_user_id))
