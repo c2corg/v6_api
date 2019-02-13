@@ -42,11 +42,13 @@ class TestSitemapXml(BaseTestRest):
         response = self.app.get(self._prefix, status=200)
         sitemaps = response.xml
 
+        base_url = 'https://api.camptocamp.org/sitemaps.xml'
+
         def waypoint_filter(s):
-            return s[0].text == 'https://api.camptocamp.org/sitemaps/w/0.xml'
+            return s[0].text == base_url + '/w/0.xml'
 
         def route_filter(s):
-            return s[0].text == 'https://api.camptocamp.org/sitemaps/r/0.xml'
+            return s[0].text == base_url + '/r/0.xml'
 
         self.assertIsNotNone(
             next(filter(waypoint_filter, sitemaps), None)
