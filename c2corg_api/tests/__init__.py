@@ -25,6 +25,7 @@ from c2corg_api.emails.email_service import EmailService
 from c2corg_api import main, caching
 from c2corg_common.utils import caching as caching_common
 from c2corg_api.models import DBSession, sessionmaker
+from c2corg_api.models.sso import SsoExternalId
 from c2corg_api.models.user import User
 from c2corg_api.security.roles import create_claims, add_or_retrieve_token
 from c2corg_api.scripts import initializedb, initializees
@@ -128,6 +129,14 @@ def _add_global_test_data(session):
 
     users = [robot, moderator, contributor, contributor2, contributor3]
     session.add_all(users)
+
+    sso_external_id = SsoExternalId(
+        domain='www.somewhere.com',
+        external_id='1',
+        user=contributor
+    )
+    session.add(sso_external_id)
+
     session.flush()
 
     key = settings['jwtauth.master_secret']
