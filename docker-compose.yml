@@ -1,5 +1,5 @@
 api:
-  image: 'docker.io/c2corg/v6_api:suglify-dep'
+  image: 'docker.io/c2corg/v6_api:latest'
   ports:
     - 6543:6543
   environment:

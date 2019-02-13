@@ -83,7 +83,10 @@ class SitemapXml(object):
         self.request.response.content_type = "text/xml"
 
         return get_or_create(
-            cache_sitemap_xml, cache_key, _get_sitemap_index)
+            cache_sitemap_xml,
+            cache_key,
+            _get_sitemap_index
+        )
 
     @view(validators=[validate_page, validate_document_type])
     def get(self):
