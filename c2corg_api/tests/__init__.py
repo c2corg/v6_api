@@ -2,6 +2,7 @@ import time
 
 import jwt
 import datetime
+from pytz import utc
 
 import transaction
 import os
@@ -25,7 +26,7 @@ from c2corg_api.emails.email_service import EmailService
 from c2corg_api import main, caching
 from c2corg_common.utils import caching as caching_common
 from c2corg_api.models import DBSession, sessionmaker
-from c2corg_api.models.sso import SsoExternalId
+from c2corg_api.models.sso import SsoExternalId, SsoKey
 from c2corg_api.models.user import User
 from c2corg_api.security.roles import create_claims, add_or_retrieve_token
 from c2corg_api.scripts import initializedb, initializees
@@ -129,11 +130,21 @@ def _add_global_test_data(session):
 
     users = [robot, moderator, contributor, contributor2, contributor3]
     session.add_all(users)
+    session.flush()
+
+    domain = 'www.somewhere.com'
+    sso_key = SsoKey(
+        domain=domain,
+        key=domain
+    )
+    session.add(sso_key)
 
     sso_external_id = SsoExternalId(
-        domain='www.somewhere.com',
+        domain=domain,
         external_id='1',
-        user=contributor
+        user=contributor,
+        token='token',
+        expire=utc.localize(datetime.datetime.utcnow()),
     )
     session.add(sso_external_id)
 
