@@ -17,6 +17,7 @@ from c2corg_api.models.cache_version import \
 from c2corg_api.models.document_history import HistoryMetaData
 from c2corg_api.models.feed import DocumentChange, FollowedUser, FilterArea
 from c2corg_api.models.mailinglist import Mailinglist
+from c2corg_api.models.sso import SsoExternalId
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile, \
@@ -211,6 +212,8 @@ def _unregister_from_mailinglists(user_id):
 
 
 def _remove_user_account(user_id):
+    DBSession.query(SsoExternalId).filter(SsoExternalId.user_id == user_id). \
+        delete()
     DBSession.query(Token).filter(Token.userid == user_id).delete()
     DBSession.query(User).filter(User.id == user_id).delete()
     # Delete profile document and its archives

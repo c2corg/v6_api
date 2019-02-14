@@ -11,6 +11,7 @@ from c2corg_api.models.feed import DocumentChange, update_feed_document_create
 from c2corg_api.models.mailinglist import Mailinglist
 from c2corg_api.models.outing import Outing, OutingLocale, OUTING_TYPE
 from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.models.sso import SsoExternalId
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile, ArchiveUserProfile, \
@@ -105,6 +106,8 @@ class MergeUsersTest(BaseTestCase):
         self.assertEqual(0, count)
         count = self.session.query(Token). \
             filter(Token.userid == source_id).count()
+        count = self.session.query(SsoExternalId). \
+            filter(SsoExternalId.user_id == source_id).count()
         self.assertEqual(0, count)
 
     def _count_area_associations(self, user_id):
