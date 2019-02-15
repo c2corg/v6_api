@@ -12,5 +12,7 @@
 *.pyc
 *.egg-info
 /.idea
+/.vscode
 .noseids
 Dockerfile
+/env_api

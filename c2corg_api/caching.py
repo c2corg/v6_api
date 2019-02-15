@@ -28,6 +28,7 @@ cache_document_history = create_region('history')
 cache_document_version = create_region('version')
 cache_document_info = create_region('info')
 cache_sitemap = create_region('sitemap')
+cache_sitemap_xml = create_region('sitemap_xml')
 
 caches = [
     cache_document_cooked,
@@ -36,7 +37,8 @@ caches = [
     cache_document_history,
     cache_document_version,
     cache_document_info,
-    cache_sitemap
+    cache_sitemap,
+    cache_sitemap_xml
 ]
 
 
