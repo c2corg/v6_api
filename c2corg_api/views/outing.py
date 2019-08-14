@@ -101,10 +101,7 @@ class OutingRest(DocumentRest):
             # change an outing that they are associated to
             raise HTTPForbidden('No permission to change this outing')
         return self._put(
-            Outing, schema_outing,
-            before_update=functools.partial(
-                update_default_geometry,
-                self.request.validated['associations']['routes']))
+            Outing, schema_outing, before_update=update_default_geometry)
 
 
 @resource(path='/outings/{id}/{lang}/info', cors_policy=cors_policy)
@@ -132,26 +129,16 @@ def set_default_geometry(linked_routes, outing, user_id):
     set_default_geom_from_associations(outing, linked_routes)
 
 
-def update_default_geometry(linked_routes, outing, outing_in, user_id):
+def update_default_geometry(outing, outing_in):
     """When updating an outing, set the default geometry to the middle point
-    of a new track, if not to the centroid of the convex hull
-    of all associated routes.
+    of a new track if proovided
     """
-    geometry = outing.geometry
-    geometry_in = outing_in.geometry
-    if geometry_in is not None and geometry_in.geom is not None:
-        # default geom is manually set in the request
-        return
-    elif geometry_in is not None and geometry_in.geom_detail is not None:
-        # update the default geom with the new track
-        geometry.geom = get_mid_point(geometry.geom_detail)
-        return
-    elif geometry is not None and geometry.geom_detail is not None:
-        # default geom is already set and no new track is provided
-        return
 
-    set_default_geom_from_associations(
-        outing, linked_routes, update_always=True)
+    geometry_in = outing_in.geometry
+
+    if geometry_in is not None and geometry_in.geom_detail is not None:
+        # update the default geom with the new track
+        geometry_in.geom = get_mid_point(geometry_in.geom_detail)
 
 
 @resource(path='/outings/{id}/{lang}/{version_id}', cors_policy=cors_policy)

@@ -124,16 +124,10 @@ class RouteRest(DocumentRest):
             validate_required_associations,
             functools.partial(validate_main_waypoint, False)])
     def put(self):
-        old_main_waypoint_id = DBSession.query(Route.main_waypoint_id). \
-            filter(Route.document_id == self.request.validated['id']).scalar()
-        linked_waypoints = self.request.validated. \
-            get('associations', {}).get('waypoints', [])
-        return self._put(
-            Route, schema_route,
-            before_update=functools.partial(
-                update_default_geometry, old_main_waypoint_id,
-                linked_waypoints),
-            after_update=update_title_prefix)
+        return self._put(Route,
+                         schema_route,
+                         before_update=update_default_geometry,
+                         after_update=update_title_prefix)
 
     @staticmethod
     def set_recent_outings(route, lang):
@@ -210,34 +204,17 @@ def _get_default_geom_from_main_wp(route):
         DocumentGeometry.document_id == route.main_waypoint_id).scalar()
 
 
-def update_default_geometry(
-        old_main_waypoint_id, linked_waypoints, route, route_in, user_id):
+def update_default_geometry(route, route_in):
     geometry = route.geometry
     geometry_in = route_in.geometry
-    if geometry_in is not None and geometry_in.geom is not None:
-        # default geom is manually set in the request
-        return
-    elif geometry_in is not None and geometry_in.geom_detail is not None:
-        # update the default geom with the new track
-        geometry.geom = get_mid_point(geometry.geom_detail)
-        return
-    elif geometry is not None and geometry.geom_detail is not None:
-        # default geom is already set and no new track is provided
-        return
-    elif geometry is None or geometry.geom_detail is None:
-        # only update if no own track
-        if route.main_waypoint_id and \
-                main_waypoint_has_changed(route, old_main_waypoint_id):
-            main_wp_point = _get_default_geom_from_main_wp(route)
-            if main_wp_point is not None:
-                if geometry is not None:
-                    route.geometry.geom = main_wp_point
-                else:
-                    route.geometry = DocumentGeometry(geom=main_wp_point)
-                return
 
-    set_default_geom_from_associations(
-        route, linked_waypoints, update_always=True)
+    if geometry_in is None:
+        # new payload does not have geometry => copy old geometry
+        route_in.geometry = route.geometry
+    elif geometry_in.geom is None and geometry is not None:
+        # else, both geometry is set, but new geometry dos not have
+        # geom attribute => copy old geom attribute
+        geometry_in.geom = geometry.geom
 
 
 def main_waypoint_has_changed(route, old_main_waypoint_id):

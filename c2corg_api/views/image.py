@@ -103,18 +103,37 @@ def validate_list_associations_create(request, **kwargs):
 
 def create_image(self, document_in):
     document = self._create_document(document_in, schema_image)
+    publish_image_in_backend(self.request, document)
 
-    settings = self.request.registry.settings
+    return document
+
+
+def before_image_update(request, document, document_in):
+    """
+    callback sent to DocumentRest.update_document()
+    check update of filename, and publish on image backend if needed
+    """
+    old_filename = document.filename
+    new_filename = document_in.filename
+
+    if old_filename != new_filename:
+        publish_image_in_backend(request, new_filename)
+
+
+def publish_image_in_backend(request, filename):
+    settings = request.registry.settings
     url = '{}/{}'.format(settings['image_backend.url'], 'publish')
-    response = requests.post(
-            url,
-            data={'secret': settings['image_backend.secret_key'],
-                  'filename': document.filename})
+    data = {
+        'secret': settings['image_backend.secret_key'],
+        'filename': filename
+        }
+
+    response = requests.post(url, data)
+
     if response.status_code != 200:
         raise HTTPInternalServerError('Image backend returns : {} {}'.
                                       format(response.status_code,
                                              response.reason))
-    return document
 
 
 def delete_all_files_for_image(document_id, request):
@@ -193,7 +212,10 @@ class ImageRest(DocumentRest):
             elif not has_been_created_by(image_id,
                                          self.request.authenticated_userid):
                 raise HTTPForbidden('No permission to change this image')
-        return self._put(Image, schema_image)
+        return self._put(
+            Image, schema_image,
+            before_update=functools.partial(before_image_update, self.request)
+            )
 
 
 # `path` is required by cornice but related routes are not implemented
