@@ -802,7 +802,7 @@ class TestRouteRest(BaseDocumentTestRest):
             }
         }
         (body, route) = self.put_success_all(body, self.route)
-        self._assert_default_geometry(body, x=635966, y=5723629)
+        self._assert_default_geometry(body, x=635961, y=5723624)
 
         self.assertEquals(route.elevation_max, 1600)
         locale_en = route.get_locale('en')
@@ -896,103 +896,6 @@ class TestRouteRest(BaseDocumentTestRest):
         }
         (body, route) = self.put_success_figures_only(body, self.route)
         self._assert_default_geometry(body, x=635000, y=5723000)
-
-    def test_put_success_update_default_geom_main_wp_changed(self):
-        """Test that the default geom is updated when the main waypoint changes
-        and no track exists.
-        """
-        body = {
-            'message': 'Changing figures',
-            'document': {
-                'document_id': self.route2.document_id,
-                'version': self.route2.version,
-                'quality': quality_types[1],
-                'main_waypoint_id': self.waypoint.document_id,
-                'activities': ['skitouring'],
-                'glacier_gear': 'no',
-                'elevation_min': 700,
-                'elevation_max': 1600,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'durations': ['1'],
-                'locales': [
-                    {'lang': 'en', 'title': 'Mont Blanc from the air',
-                     'description': '...', 'gear': 'paraglider',
-                     'version': self.route2.locales[0].version}
-                ],
-                'associations': {
-                    'waypoints': [
-                        {'document_id': self.waypoint.document_id}
-                    ]
-                }
-            }
-        }
-        (body, route) = self.put_success_figures_only(body, self.route2)
-        self._assert_default_geometry(body, x=635956, y=5723604)
-
-    def test_put_success_update_default_geom_from_wps_new(self):
-        """Test that the default geom is updated with associated waypoints if
-        no track exists (and no default geom was set yet).
-        """
-        body = {
-            'message': 'Changing figures',
-            'document': {
-                'document_id': self.route2.document_id,
-                'version': self.route2.version,
-                'quality': quality_types[1],
-                'activities': ['skitouring'],
-                'glacier_gear': 'no',
-                'elevation_min': 700,
-                'elevation_max': 1600,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'durations': ['1'],
-                'locales': [
-                    {'lang': 'en', 'title': 'Mont Blanc from the air',
-                     'description': '...', 'gear': 'paraglider',
-                     'version': self.route2.locales[0].version}
-                ],
-                'associations': {
-                    'waypoints': [
-                        {'document_id': self.waypoint.document_id}
-                    ]
-                }
-            }
-        }
-        (body, route) = self.put_success_figures_only(body, self.route2)
-        self._assert_default_geometry(body, x=635956, y=5723604)
-
-    def test_put_success_update_default_geom_from_wps(self):
-        """Test that the default geom is updated with associated waypoints if
-        no track exists.
-        """
-        body = {
-            'message': 'Changing figures',
-            'document': {
-                'document_id': self.route3.document_id,
-                'version': self.route3.version,
-                'quality': quality_types[1],
-                'activities': ['skitouring'],
-                'glacier_gear': 'no',
-                'elevation_min': 700,
-                'elevation_max': 1600,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'durations': ['1'],
-                'locales': [
-                    {'lang': 'en', 'title': 'Mont Blanc from the air',
-                     'description': '...', 'gear': 'paraglider',
-                     'version': self.route3.locales[0].version}
-                ],
-                'associations': {
-                    'waypoints': [
-                        {'document_id': self.waypoint.document_id}
-                    ]
-                }
-            }
-        }
-        (body, route) = self.put_success_figures_only(body, self.route3)
-        self._assert_default_geometry(body, x=635956, y=5723604)
 
     def test_put_success_main_wp_changed(self):
         body = {

@@ -373,11 +373,11 @@ class DocumentRest(object):
         # remember the current version numbers of the document
         old_versions = document.get_versions()
 
+        if before_update:
+            before_update(document, document_in)
+
         # update the document with the input document
         document.update(document_in)
-
-        if before_update:
-            before_update(document, document_in, user_id=user_id)
 
         if manage_versions:
             manage_versions(document, old_versions)
