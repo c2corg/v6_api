@@ -103,7 +103,7 @@ def validate_list_associations_create(request, **kwargs):
 
 def create_image(self, document_in):
     document = self._create_document(document_in, schema_image)
-    publish_image_in_backend(self.request, document)
+    publish_image_in_backend(self.request, document.filename)
 
     return document
 
