@@ -1,36 +1,53 @@
-api:
-  image: 'docker.io/c2corg/v6_api:latest'
-  ports:
-    - 6543:6543
-  environment:
-    db_host: 'postgresql'
-    elasticsearch_host: 'elasticsearch'
-    redis_url: 'redis://redis:6379/'
-    version: ''
-  volumes:
-    - ./c2corg_api:/var/www/c2corg_api
-  command: make -f config/docker serve
-  links:
-    - postgresql
-    - elasticsearch
-    - redis
+version: "3.7"
+services:
+  api:
+    build:
+      context: .
+      dockerfile: dev_api.Dockerfile
+    depends_on:
+      - postgresql
+      - elasticsearch
+      - redis
+    ports:
+      - 6543:6543
+    environment:
+      db_host: 'postgresql'
+      tests_db_host: 'postgresql'
+      elasticsearch_host: 'elasticsearch'
+      tests_elasticsearch_host: 'elasticsearch'
+      redis_url: 'redis://redis:6379/'
+      version: ''
+    volumes:
+      - ./c2corg_api:/var/www/c2corg_api
+      - ./Makefile:/var/www/Makefile
+      - ./common.ini.in:/var/www/common.ini.in
+      - ./development.ini.in:/var/www/development.ini.in
+      - ./test.ini.in:/var/www/test.ini.in
+    command: make -f config/docker serve
+    links:
+      - postgresql
+      - elasticsearch
+      - redis
 
-postgresql:
-  image: 'docker.io/c2corg/c2corg_pgsql:anon-2018-11-02'
-  environment:
-    PGDATA: '/c2corg_anon'
-  volumes:
-    - ./docker-compose/pgsql-settings.d/:/c2corg_anon/pgsql-settings.d/
-  ports:
-    - 5432:5432
+  postgresql:
+    build:
+      context: .
+      dockerfile: dev_db.Dockerfile
+    environment:
+      PGDATA: '/c2corg_anon'
+    volumes:
+      - ./docker-compose/pgsql-settings.d/:/c2corg_anon/pgsql-settings.d/
+      - .:/v6_api
+    ports:
+      - 5432:5432
 
-elasticsearch:
-  image: 'docker.io/c2corg/c2corg_es:anon-2018-11-02'
-  ports:
-    - 9200:9200
-  command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon
+  elasticsearch:
+    image: 'docker.io/c2corg/c2corg_es:anon-2018-11-02'
+    ports:
+      - 9200:9200
+    command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon
 
-redis:
-  image: 'docker.io/redis:3.2'
-  ports:
-    - 6379:6379
+  redis:
+    image: 'docker.io/redis:3.2'
+    ports:
+      - 6379:6379
