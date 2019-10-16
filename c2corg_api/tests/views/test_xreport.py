@@ -199,7 +199,7 @@ class TestXreportRest(BaseDocumentTestRest):
                 self._prefix, str(self.xreport1.document_id),
                 str(self.xreport1_version.id))
         cache_key = '{0}-{1}'.format(
-            get_cache_key(self.xreport1.document_id, 'en'),
+            get_cache_key(self.xreport1.document_id, 'en', XREPORT_TYPE),
             self.xreport1_version.id)
 
         cache_value = cache_document_version.get(cache_key)
@@ -218,6 +218,9 @@ class TestXreportRest(BaseDocumentTestRest):
         response = self.app.get(url, headers=headers, status=200)
         body = response.json
         self.assertEqual(body, fake_cache_value)
+
+    def test_get_caching(self):
+        self.get_caching(self.xreport1)
 
     def test_get_info(self):
         body, locale = self.get_info(self.xreport1, 'en')

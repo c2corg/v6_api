@@ -62,6 +62,7 @@ class DocumentRest(object):
     def __init__(self, request):
         self.request = request
 
+    # TODO: remove doc_type, it's in documents_config
     def _collection_get(self, doc_type, documents_config):
         validated = self.request.validated
         meta_params = {
@@ -105,8 +106,8 @@ class DocumentRest(object):
 
         return document_ids, total
 
-    def _get(self, clazz, schema, clazz_locale=None, adapt_schema=None,
-             include_maps=False, include_areas=True,
+    def _get(self, document_config, schema, clazz_locale=None,
+             adapt_schema=None, include_maps=False, include_areas=True,
              set_custom_associations=None, set_custom_fields=None,
              custom_cache_key=None):
         id = self.request.validated['id']
@@ -131,13 +132,17 @@ class DocumentRest(object):
 
         def create_response():
             return self._get_in_lang(
-                id, lang, clazz, schema, editing_view, clazz_locale,
-                adapt_schema, include_maps, include_areas,
+                id, lang, document_config.clazz, schema, editing_view,
+                clazz_locale, adapt_schema, include_maps, include_areas,
                 set_custom_associations, set_custom_fields,
                 cook_locale=cook)
 
         if not editing_view:
-            cache_key = get_cache_key(id, lang, custom_cache_key)
+            cache_key = get_cache_key(
+                id,
+                lang,
+                document_type=document_config.document_type,
+                custom_cache_key=custom_cache_key)
 
             if cache_key:
                 # set and check the etag: if the etag value provided in the

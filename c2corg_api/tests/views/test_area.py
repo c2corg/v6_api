@@ -90,6 +90,9 @@ class TestAreaRest(BaseDocumentTestRest):
     def test_get_404(self):
         self.get_404()
 
+    def test_get_caching(self):
+        self.get_caching(self.area1)
+
     def test_get_info(self):
         body, locale = self.get_info(self.area1, 'en')
         self.assertEqual(locale.get('lang'), 'en')

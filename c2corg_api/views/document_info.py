@@ -29,14 +29,21 @@ class DocumentInfoRest(object):
     def __init__(self, request):
         self.request = request
 
-    def _get_document_info(self, clazz):
+    def _get_document_info(self, document_config):
         document_id = self.request.validated['id']
         lang = self.request.validated['lang']
 
         def create_response():
-            return self._load_document_info(document_id, lang, clazz)
+            return self._load_document_info(
+                document_id,
+                lang,
+                document_config.clazz)
 
-        cache_key = get_cache_key(document_id, lang)
+        cache_key = get_cache_key(
+            document_id,
+            lang,
+            document_type=document_config.document_type)
+
         if not cache_key:
             raise HTTPNotFound(
                 'no version for document {0}'.format(document_id))

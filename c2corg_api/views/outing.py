@@ -69,7 +69,9 @@ class OutingRest(DocumentRest):
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(
-            Outing, schema_outing, adapt_schema=outing_schema_adaptor)
+            outing_documents_config,
+            schema_outing,
+            adapt_schema=outing_schema_adaptor)
 
     @restricted_json_view(
         schema=schema_create_outing,
@@ -109,7 +111,7 @@ class OutingInfoRest(DocumentInfoRest):
 
     @view(validators=[validate_id, validate_lang])
     def get(self):
-        return self._get_document_info(Outing)
+        return self._get_document_info(outing_documents_config)
 
 
 def set_default_geometry(linked_routes, outing, user_id):
@@ -147,5 +149,5 @@ class OutingVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveOuting, ArchiveOutingLocale, schema_outing,
+            ArchiveOuting, OUTING_TYPE, ArchiveOutingLocale, schema_outing,
             outing_schema_adaptor)

@@ -3,7 +3,8 @@ import urllib.request
 import urllib.parse
 import urllib.error
 
-from c2corg_api.models.cache_version import CacheVersion
+from c2corg_api.caching import cache_document_detail
+from c2corg_api.models.cache_version import CacheVersion, get_cache_key
 from c2corg_api.models.feed import DocumentChange
 from c2corg_api.models.route import Route
 from c2corg_api.models.user import User
@@ -12,6 +13,7 @@ from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.tests import BaseTestCase
 from dateutil import parser as datetime_parser
+from dogpile.cache.api import NO_VALUE
 
 
 class BaseTestRest(BaseTestCase):
@@ -242,6 +244,39 @@ class BaseDocumentTestRest(BaseTestRest):
         if ignore_checks is False:
             self.assertCountEqual(available_langs, ['en', 'fr'])
         return body
+
+    def get_caching(self, reference, user=None):
+        headers = {} if not user else \
+            self.add_authorization_header(username=user)
+
+        url = '{0}/{1}'.format(self._prefix, str(reference.document_id))
+        cache_key = get_cache_key(
+            reference.document_id,
+            None,
+            document_type=self._doc_type)
+
+        cache_value = cache_document_detail.get(cache_key)
+
+        self.assertEqual(cache_value, NO_VALUE)
+
+        # check that the response is cached
+        self.app.get(url, headers=headers, status=200)
+
+        cache_value = cache_document_detail.get(cache_key)
+        self.assertNotEqual(cache_value, NO_VALUE)
+
+        # check that values are returned from the cache
+        fake_cache_value = {'document': 'fake doc'}
+        cache_document_detail.set(cache_key, fake_cache_value)
+
+        response = self.app.get(url, headers=headers, status=200)
+        body = response.json
+        self.assertEqual(body, fake_cache_value)
+
+        # check that cache handles document types
+        prefix = "/routes" if self._prefix != "/routes" else "/waypoint"
+        url = '{0}/{1}'.format(prefix, str(reference.document_id))
+        self.app.get(url, headers=headers, status=404)
 
     def get_version(self, reference, reference_version, user=None):
         headers = {} if not user else \

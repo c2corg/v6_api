@@ -125,7 +125,7 @@ class TestBookRest(BaseDocumentTestRest):
                 self._prefix, str(self.book1.document_id),
                 str(self.book1_version.id))
         cache_key = '{0}-{1}'.format(
-            get_cache_key(self.book1.document_id, 'en'),
+            get_cache_key(self.book1.document_id, 'en', BOOK_TYPE),
             self.book1_version.id)
 
         cache_value = cache_document_version.get(cache_key)
@@ -144,6 +144,9 @@ class TestBookRest(BaseDocumentTestRest):
         response = self.app.get(url, status=200)
         body = response.json
         self.assertEqual(body, fake_cache_value)
+
+    def test_get_caching(self):
+        self.get_caching(self.book1)
 
     def test_get_info(self):
         body, locale = self.get_info(self.book1, 'en')

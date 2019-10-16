@@ -39,7 +39,10 @@ class AreaRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
-        return self._get(Area, schema_area, include_areas=False)
+        return self._get(
+            area_documents_config,
+            schema_area,
+            include_areas=False)
 
     @restricted_json_view(
             schema=schema_create_area,
@@ -74,7 +77,7 @@ class AreaInfoRest(DocumentInfoRest):
 
     @view(validators=[validate_id, validate_lang])
     def get(self):
-        return self._get_document_info(Area)
+        return self._get_document_info(area_documents_config)
 
 
 def insert_associations(area, user_id):
@@ -101,4 +104,4 @@ class AreaVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveArea, ArchiveDocumentLocale, schema_area)
+            ArchiveArea, AREA_TYPE, ArchiveDocumentLocale, schema_area)
