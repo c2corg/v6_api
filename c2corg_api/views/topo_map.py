@@ -30,7 +30,7 @@ class TopoMapRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
-        return self._get(TopoMap, schema_topo_map)
+        return self._get(topo_map_documents_config, schema_topo_map)
 
     @restricted_json_view(
         schema=schema_topo_map,
@@ -54,7 +54,7 @@ class TopoMapInfoRest(DocumentInfoRest):
 
     @view(validators=[validate_id, validate_lang])
     def get(self):
-        return self._get_document_info(TopoMap)
+        return self._get_document_info(topo_map_documents_config)
 
 
 def insert_associations(topo_map, user_id):

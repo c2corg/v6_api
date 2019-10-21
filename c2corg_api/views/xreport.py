@@ -49,11 +49,12 @@ class XreportRest(DocumentRest):
         if not _has_permission(self.request, self.request.validated['id']):
             # only moderators and the author of a xreport can access the full
             # xreport (including personal information)
-            return self._get(Xreport, schema_xreport_without_personal,
+            return self._get(xreport_documents_config,
+                             schema_xreport_without_personal,
                              clazz_locale=XreportLocale,
                              set_custom_fields=set_author)
 
-        return self._get(Xreport, schema_xreport,
+        return self._get(xreport_documents_config, schema_xreport,
                          clazz_locale=XreportLocale,
                          custom_cache_key='private',
                          set_custom_fields=set_author)
@@ -106,7 +107,7 @@ class XreportVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveXreport, ArchiveXreportLocale,
+            ArchiveXreport, XREPORT_TYPE, ArchiveXreportLocale,
             schema_xreport_without_personal)
 
 
@@ -115,7 +116,7 @@ class XreportInfoRest(DocumentInfoRest):
 
     @view(validators=[validate_id, validate_lang])
     def get(self):
-        return self._get_document_info(Xreport)
+        return self._get_document_info(xreport_documents_config)
 
 
 def set_author(xreport):

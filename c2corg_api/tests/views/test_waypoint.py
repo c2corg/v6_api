@@ -2,7 +2,7 @@ import datetime
 import json
 from unittest.mock import patch
 
-from c2corg_api.caching import cache_document_detail, cache_document_listing, \
+from c2corg_api.caching import cache_document_listing, \
     cache_document_history, cache_document_version
 from c2corg_common.utils import caching
 from c2corg_api.models.area import Area
@@ -29,7 +29,7 @@ from c2corg_api.models.waypoint import (
     Waypoint, WaypointLocale, ArchiveWaypoint, ArchiveWaypointLocale,
     WAYPOINT_TYPE)
 from c2corg_api.models.document import (
-    DocumentGeometry, ArchiveDocumentGeometry, DocumentLocale)
+    DocumentGeometry, ArchiveDocumentGeometry, DocumentLocale, DOCUMENT_TYPE)
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.views.document import DocumentRest
 
@@ -268,7 +268,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 self._prefix, str(self.waypoint.document_id),
                 str(self.waypoint_version.id))
         cache_key = '{0}-{1}'.format(
-            get_cache_key(self.waypoint.document_id, 'en'),
+            get_cache_key(self.waypoint.document_id, 'en', WAYPOINT_TYPE),
             self.waypoint_version.id)
 
         cache_value = cache_document_version.get(cache_key)
@@ -336,26 +336,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                                 status=304, headers=headers)
 
     def test_get_caching(self):
-        waypoint_id = self.waypoint.document_id
-        cache_key = get_cache_key(waypoint_id, None)
-
-        cache_value = cache_document_detail.get(cache_key)
-        self.assertEqual(cache_value, NO_VALUE)
-
-        # check that the response is cached
-        self.app.get(self._prefix + '/' + str(waypoint_id), status=200)
-
-        cache_value = cache_document_detail.get(cache_key)
-        self.assertNotEqual(cache_value, NO_VALUE)
-
-        # check that values are returned from the cache
-        fake_cache_value = {'document_id': 'fake_id'}
-        cache_document_detail.set(cache_key, fake_cache_value)
-
-        response = self.app.get(
-            self._prefix + '/' + str(waypoint_id), status=200)
-        body = response.json
-        self.assertEqual(body, fake_cache_value)
+        self.get_caching(self.waypoint)
 
     def test_get_cache_down(self):
         """ Check that the request does not fail even if Redis errors.
@@ -1392,7 +1373,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
     def test_history_caching(self):
         waypoint_id = self.waypoint.document_id
-        cache_key = get_cache_key(waypoint_id, 'fr')
+        cache_key = get_cache_key(waypoint_id, 'fr', DOCUMENT_TYPE)
 
         cache_value = cache_document_history.get(cache_key)
         self.assertEqual(cache_value, NO_VALUE)

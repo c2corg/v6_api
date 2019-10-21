@@ -40,7 +40,10 @@ class BookRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
-        return self._get(Book, schema_book, include_areas=False)
+        return self._get(
+            book_documents_config,
+            schema_book,
+            include_areas=False)
 
     @restricted_json_view(
             schema=schema_create_book,
@@ -66,11 +69,11 @@ class BooksVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveBook, ArchiveDocumentLocale, schema_book)
+            ArchiveBook, BOOK_TYPE, ArchiveDocumentLocale, schema_book)
 
 
 @resource(path='/books/{id}/{lang}/info', cors_policy=cors_policy)
 class BooksInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):
-        return self._get_document_info(Book)
+        return self._get_document_info(book_documents_config)

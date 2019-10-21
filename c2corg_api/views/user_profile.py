@@ -44,7 +44,9 @@ class UserProfileRest(DocumentRest):
                 self.request.has_permission('authenticated'):
             # only show the full profile if authenticated or if the user marked
             # the profile as public
-            return self._get(UserProfile, schema_user_profile)
+            return self._get(
+                user_profile_documents_config,
+                schema_user_profile)
         else:
             # otherwise only return the user name
             return {
@@ -85,4 +87,4 @@ class UserProfileInfoRest(DocumentInfoRest):
 
     @view(validators=[validate_id, validate_lang])
     def get(self):
-        return self._get_document_info(UserProfile)
+        return self._get_document_info(user_profile_documents_config)

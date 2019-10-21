@@ -209,6 +209,9 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_get_404(self):
         self.get_404()
 
+    def test_get_caching(self):
+        self.get_caching(self.outing)
+
     def test_get_info(self):
         body, locale = self.get_info(self.outing, 'en')
         self.assertEqual(locale.get('lang'), 'en')

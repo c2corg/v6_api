@@ -123,7 +123,7 @@ class TestArticleRest(BaseDocumentTestRest):
                 self._prefix, str(self.article1.document_id),
                 str(self.article1_version.id))
         cache_key = '{0}-{1}'.format(
-            get_cache_key(self.article1.document_id, 'en'),
+            get_cache_key(self.article1.document_id, 'en', ARTICLE_TYPE),
             self.article1_version.id)
 
         cache_value = cache_document_version.get(cache_key)
@@ -142,6 +142,9 @@ class TestArticleRest(BaseDocumentTestRest):
         response = self.app.get(url, status=200)
         body = response.json
         self.assertEqual(body, fake_cache_value)
+
+    def test_get_caching(self):
+        self.get_caching(self.article1)
 
     def test_get_info(self):
         body, locale = self.get_info(self.article1, 'en')

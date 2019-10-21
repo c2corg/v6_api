@@ -18,17 +18,22 @@ class DocumentVersionRest(object):
     def __init__(self, request):
         self.request = request
 
-    def _get_version(self, clazz, locale_clazz, schema, adapt_schema=None):
+    def _get_version(self, clazz, document_type, locale_clazz,
+                     schema, adapt_schema=None):
         document_id = self.request.validated['id']
         lang = self.request.validated['lang']
         version_id = self.request.validated['version_id']
 
         def create_response():
             return self._load_version(
-                document_id, lang, version_id, clazz, locale_clazz, schema,
-                adapt_schema)
+                document_id, lang, version_id, clazz,
+                locale_clazz, schema, adapt_schema)
 
-        base_cache_key = get_cache_key(document_id, lang)
+        base_cache_key = get_cache_key(
+            document_id,
+            lang,
+            document_type=document_type)
+
         if not base_cache_key:
             raise HTTPNotFound(
                 'no version for document {0}'.format(document_id))

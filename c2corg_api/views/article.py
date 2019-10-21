@@ -46,7 +46,7 @@ class ArticleRest(DocumentRest):
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(
-            Article, schema_article, include_areas=False,
+            article_documents_config, schema_article, include_areas=False,
             set_custom_fields=set_author)
 
     @restricted_json_view(
@@ -94,14 +94,17 @@ class ArticlesVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveArticle, ArchiveDocumentLocale, schema_article)
+            ArchiveArticle,
+            ARTICLE_TYPE,
+            ArchiveDocumentLocale,
+            schema_article)
 
 
 @resource(path='/articles/{id}/{lang}/info', cors_policy=cors_policy)
 class ArticlesInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):
-        return self._get_document_info(Article)
+        return self._get_document_info(article_documents_config)
 
 
 def set_author(article):

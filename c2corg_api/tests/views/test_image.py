@@ -327,6 +327,9 @@ class TestImageRest(BaseTestImage):
         self.assertEqual(len(errors), 1)
         self.assertCorniceRequired(errors[0], 'filename')
 
+    def test_get_caching(self):
+        self.get_caching(self.image)
+
     def test_get_info(self):
         body, locale = self.get_info(self.image, 'en')
         self.assertEqual(locale.get('lang'), 'en')

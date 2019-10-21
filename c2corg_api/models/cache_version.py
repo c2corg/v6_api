@@ -163,7 +163,7 @@ def _format_cache_key(document_id, lang, version, doc_type=None,
     return cache_key
 
 
-def get_cache_key(document_id, lang, document_type=None,
+def get_cache_key(document_id, lang, document_type,
                   custom_cache_key=None):
     """ Returns an identifier which reflects the version of a document and
     all its associated documents. This identifier is used as cache key

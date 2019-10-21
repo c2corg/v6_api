@@ -128,6 +128,9 @@ class TestUserProfileRest(BaseDocumentTestRest):
     def test_get_404(self):
         self.get_404(user='contributor')
 
+    def test_get_caching(self):
+        self.get_caching(self.profile1, user='contributor')
+
     def test_get_info(self):
         body, locale = self.get_info(self.profile1, 'en')
         self.assertEqual(locale.get('lang'), 'en')

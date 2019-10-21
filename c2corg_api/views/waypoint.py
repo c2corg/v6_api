@@ -140,7 +140,7 @@ class WaypointRest(DocumentRest):
 
         """
         return self._get(
-            Waypoint, schema_waypoint,
+            waypoint_documents_config, schema_waypoint,
             adapt_schema=waypoint_schema_adaptor, include_maps=True,
             set_custom_associations=set_custom_associations)
 
@@ -381,8 +381,8 @@ class WaypointVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveWaypoint, ArchiveWaypointLocale, schema_waypoint,
-            waypoint_schema_adaptor)
+            ArchiveWaypoint, WAYPOINT_TYPE, ArchiveWaypointLocale,
+            schema_waypoint, waypoint_schema_adaptor)
 
 
 @resource(path='/waypoints/{id}/{lang}/info', cors_policy=cors_policy)
@@ -390,7 +390,7 @@ class WaypointInfoRest(DocumentInfoRest):
 
     @view(validators=[validate_id, validate_lang])
     def get(self):
-        return self._get_document_info(Waypoint)
+        return self._get_document_info(waypoint_documents_config)
 
 
 def update_linked_route_titles(waypoint, update_types, user_id):

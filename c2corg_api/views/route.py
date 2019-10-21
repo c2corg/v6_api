@@ -93,7 +93,7 @@ class RouteRest(DocumentRest):
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(
-            Route, schema_route, clazz_locale=RouteLocale,
+            route_documents_config, schema_route, clazz_locale=RouteLocale,
             adapt_schema=route_schema_adaptor, include_maps=True,
             set_custom_associations=RouteRest.set_recent_outings)
 
@@ -162,7 +162,7 @@ class RouteVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveRoute, ArchiveRouteLocale, schema_route,
+            ArchiveRoute, ROUTE_TYPE, ArchiveRouteLocale, schema_route,
             route_schema_adaptor)
 
 
@@ -171,7 +171,7 @@ class RouteInfoRest(DocumentInfoRest):
 
     @view(validators=[validate_id, validate_lang])
     def get(self):
-        return self._get_document_info(Route)
+        return self._get_document_info(route_documents_config)
 
 
 def set_default_geometry(linked_waypoints, route, user_id):

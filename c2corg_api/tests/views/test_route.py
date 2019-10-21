@@ -203,6 +203,9 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertNotIn('images', associations)
         self.assertNotIn('users', associations)
 
+    def test_get_caching(self):
+        self.get_caching(self.route)
+
     def test_get_info(self):
         body, locale = self.get_info(self.route, 'en')
         self.assertEqual(locale.get('lang'), 'en')

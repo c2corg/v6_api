@@ -175,7 +175,10 @@ class ImageRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
-        return self._get(Image, schema_image, set_custom_fields=set_creator)
+        return self._get(
+            image_documents_config,
+            schema_image,
+            set_custom_fields=set_creator)
 
     @restricted_json_view(
             schema=schema_create_image,
@@ -251,7 +254,7 @@ class ImageInfoRest(DocumentInfoRest):
 
     @view(validators=[validate_id, validate_lang])
     def get(self):
-        return self._get_document_info(Image)
+        return self._get_document_info(image_documents_config)
 
 
 def validate_size(request, **kwargs):
@@ -301,4 +304,4 @@ class ImageVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveImage, ArchiveDocumentLocale, schema_image)
+            ArchiveImage, IMAGE_TYPE, ArchiveDocumentLocale, schema_image)
