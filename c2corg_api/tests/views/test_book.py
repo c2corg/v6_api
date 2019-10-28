@@ -467,6 +467,9 @@ class TestBookRest(BaseDocumentTestRest):
 
         self.assertEquals(book1.get_locale('es').title, 'Escalades au Thaurac')
 
+    def test_get_associations_history(self):
+        self._get_association_logs(self.book1)
+
     def _add_test_data(self):
         self.book1 = Book(activities=['hiking'],
                           book_types=['biography'])
@@ -565,13 +568,13 @@ class TestBookRest(BaseDocumentTestRest):
         self.session.add(self.route3)
         self.session.flush()
 
-        # self.session.add(Association.create(
+        # self._add_association(Association.create(
         #     parent_document=self.book1,
-        #     child_document=self.image2))
-        self.session.add(Association.create(
+        #     child_document=self.image2), user_id)
+        self._add_association(Association.create(
             parent_document=self.book1,
-            child_document=self.route3))
-        self.session.add(Association.create(
+            child_document=self.route3), user_id)
+        self._add_association(Association.create(
             parent_document=self.book2,
-            child_document=self.waypoint2))
+            child_document=self.waypoint2), user_id)
         self.session.flush()

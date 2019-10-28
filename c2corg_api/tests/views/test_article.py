@@ -585,6 +585,9 @@ class TestArticleRest(BaseDocumentTestRest):
         self.assertEqual(len(body['errors']), 1)
         self.assertEqual(body['errors'][0]['name'], 'Forbidden')
 
+    def test_get_associations_history(self):
+        self._get_association_logs(self.article1)
+
     def _add_test_data(self):
         self.article1 = Article(categories=['site_info'],
                                 activities=['hiking'],
@@ -639,10 +642,10 @@ class TestArticleRest(BaseDocumentTestRest):
         self.session.add(self.waypoint2)
         self.session.flush()
 
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.article1,
-            child_document=self.article4))
-        self.session.add(Association.create(
+            child_document=self.article4), user_id)
+        self._add_association(Association.create(
             parent_document=self.article3,
-            child_document=self.article1))
+            child_document=self.article1), user_id)
         self.session.flush()

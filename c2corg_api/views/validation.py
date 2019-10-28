@@ -209,6 +209,13 @@ def validate_user_id_not_required(request, **kwargs):
     check_get_for_integer_property(request, 'u', False)
 
 
+def validate_document_id_not_required(request, **kwargs):
+    """
+    Checks for a non-required document id parameter.
+    """
+    check_get_for_integer_property(request, 'd', False)
+
+
 def parse_datetime(time_raw):
     if time_raw is None or time_raw == '':
         return None
