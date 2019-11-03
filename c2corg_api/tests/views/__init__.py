@@ -8,7 +8,7 @@ from c2corg_api.models.cache_version import CacheVersion, get_cache_key
 from c2corg_api.models.feed import DocumentChange
 from c2corg_api.models.route import Route
 from c2corg_api.models.user import User
-from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.models.user_profile import UserProfile, USERPROFILE_TYPE
 from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.tests import BaseTestCase
@@ -1106,6 +1106,64 @@ class BaseDocumentTestRest(BaseTestRest):
                 search_doc['title_es'], document.get_locale('es').title)
 
         return (body, document)
+
+    def _get_association_logs(self, document):
+        url = '/associations-history?d={}'.format(
+            document.document_id
+        )
+
+        resp = self.app.get(url, status=200)
+        self.assertIsInstance(resp.json['count'], int)
+        associations = resp.json["associations"]
+
+        self.assertNotEqual(
+            len(associations),
+            0,
+            "Need at least one association")
+
+        for association in associations:
+            self._assert_association_log_structure(
+                association,
+                document.document_id)
+
+        return associations
+
+    def _assert_association_log_structure(self, log, document_id):
+        self.assertIsNotNone(log['written_at'])
+        self.assertIsInstance(log['is_creation'], bool)
+
+        user = log['user']
+        self.assertIsInstance(user['user_id'], int)
+        self.assertIsInstance(user['name'], str)
+        self.assertIsInstance(user['forum_username'], str)
+        self.assertIsInstance(user['robot'], bool)
+        self.assertIsInstance(user['moderator'], bool)
+        self.assertIsInstance(user['blocked'], bool)
+
+        child = log['child_document']
+        child_id = child['document_id']
+        self.assertIsInstance(child_id, int)
+        self.assertIsInstance(child['type'], str)
+        self.assertIsInstance(child['locales'], list)
+
+        parent = log['parent_document']
+        parent_id = parent['document_id']
+        self.assertIsInstance(parent_id, int)
+        self.assertIsInstance(parent['type'], str)
+        self.assertIsInstance(parent['locales'], list)
+
+        self.assertTrue(child_id == document_id or parent_id == document_id)
+
+        if parent["type"] == USERPROFILE_TYPE:
+            self.assertIsInstance(parent["name"], str)
+
+        if child["type"] == USERPROFILE_TYPE:
+            self.assertIsInstance(child["name"], str)
+
+    def _add_association(self, association, user_id):
+        """ used for setup """
+        self.session.add(association)
+        self.session.add(association.get_log(user_id, is_creation=True))
 
 
 def get_locale(locales, lang):

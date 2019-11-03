@@ -1084,6 +1084,9 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(
             locale_es.title_prefix, self.waypoint.get_locale('fr').title)
 
+    def test_get_associations_history(self):
+        self._get_association_logs(self.route)
+
     def _add_test_data(self):
         self.route = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
@@ -1120,17 +1123,17 @@ class TestRouteRest(BaseDocumentTestRest):
                                 article_type='collab')
         self.session.add(self.article1)
         self.session.flush()
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.route,
-            child_document=self.article1))
+            child_document=self.article1), user_id)
 
         self.book1 = Book(activities=['hiking'],
                           book_types=['biography'])
         self.session.add(self.book1)
         self.session.flush()
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.book1,
-            child_document=self.route))
+            child_document=self.route), user_id)
 
         self.route2 = Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
@@ -1196,15 +1199,15 @@ class TestRouteRest(BaseDocumentTestRest):
             access='yep'))
         self.session.add(self.waypoint2)
         self.session.flush()
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.route,
-            child_document=self.route4))
-        self.session.add(Association.create(
+            child_document=self.route4), user_id)
+        self._add_association(Association.create(
             parent_document=self.route4,
-            child_document=self.route))
-        self.session.add(Association.create(
+            child_document=self.route), user_id)
+        self._add_association(Association.create(
             parent_document=self.waypoint,
-            child_document=self.route))
+            child_document=self.route), user_id)
 
         # add a map
         topo_map = TopoMap(
@@ -1230,9 +1233,9 @@ class TestRouteRest(BaseDocumentTestRest):
         )
         self.session.add(self.outing1)
         self.session.flush()
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.route,
-            child_document=self.outing1))
+            child_document=self.outing1), user_id)
 
         self.outing2 = Outing(
             redirects_to=self.outing1.document_id,
@@ -1246,9 +1249,9 @@ class TestRouteRest(BaseDocumentTestRest):
         )
         self.session.add(self.outing2)
         self.session.flush()
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.route,
-            child_document=self.outing2))
+            child_document=self.outing2), user_id)
         self.session.flush()
 
         # add areas

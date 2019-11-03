@@ -435,6 +435,9 @@ class TestAreaRest(BaseDocumentTestRest):
 
         self.assertEquals(area.get_locale('es').title, 'Chartreuse')
 
+    def test_get_associations_history(self):
+        self._get_association_logs(self.area1)
+
     def _assert_geometry(self, body):
         self.assertIsNotNone(body.get('geometry'))
         geometry = body.get('geometry')
@@ -510,5 +513,8 @@ class TestAreaRest(BaseDocumentTestRest):
         self.session.add(self.image)
         self.session.flush()
 
-        self.session.add(Association.create(self.area1, self.image))
+        self._add_association(
+            Association.create(self.area1, self.image),
+            user_id
+        )
         self.session.flush()
