@@ -742,6 +742,9 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertEqual(len(body['errors']), 1)
         self.assertEqual(body['errors'][0]['name'], 'Forbidden')
 
+    def test_get_associations_history(self):
+        self._get_association_logs(self.xreport1)
+
     def _add_test_data(self):
         self.xreport1 = Xreport(activities=['hiking'],
                                 event_type=['stone_fall'])
@@ -765,11 +768,11 @@ class TestXreportRest(BaseDocumentTestRest):
             filter(DocumentVersion.lang == 'en').first()
 
         user_id3 = self.global_userids['contributor3']
-        self.session.add(Association(
+        self._add_association(Association(
             parent_document_id=user_id3,
             parent_document_type=USERPROFILE_TYPE,
             child_document_id=self.xreport1.document_id,
-            child_document_type=XREPORT_TYPE))
+            child_document_type=XREPORT_TYPE), user_id)
 
         self.xreport2 = Xreport(activities=['hiking'],
                                 event_type=['avalanche'],
@@ -825,10 +828,10 @@ class TestXreportRest(BaseDocumentTestRest):
         self.session.add(self.route3)
         self.session.flush()
 
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.outing3,
-            child_document=self.xreport1))
-        self.session.add(Association.create(
+            child_document=self.xreport1), user_id)
+        self._add_association(Association.create(
             parent_document=self.route3,
-            child_document=self.xreport1))
+            child_document=self.xreport1), user_id)
         self.session.flush()

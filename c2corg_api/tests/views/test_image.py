@@ -28,6 +28,8 @@ from c2corg_api.tests.views import BaseDocumentTestRest, BaseTestRest
 class BaseTestImage(BaseDocumentTestRest):
 
     def _add_test_data(self):
+        user_id = self.global_userids['contributor']
+
         self.image = Image(
             filename='image.jpg',
             activities=['paragliding'], height=1500,
@@ -54,19 +56,18 @@ class BaseTestImage(BaseDocumentTestRest):
                                 article_type='collab')
         self.session.add(self.article1)
         self.session.flush()
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.article1,
-            child_document=self.image))
+            child_document=self.image), user_id)
 
         self.book1 = Book(activities=['hiking'],
                           book_types=['biography'])
         self.session.add(self.book1)
         self.session.flush()
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.book1,
-            child_document=self.image))
+            child_document=self.image), user_id)
 
-        user_id = self.global_userids['contributor']
         DocumentRest.create_new_version(self.image, user_id)
 
         self.image_version = self.session.query(DocumentVersion). \
@@ -95,9 +96,9 @@ class BaseTestImage(BaseDocumentTestRest):
             self.image3, self.global_userids['contributor2'])
         DocumentRest.create_new_version(self.image4, user_id)
 
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.image,
-            child_document=self.image2))
+            child_document=self.image2), user_id)
 
         self.waypoint = Waypoint(
             waypoint_type='summit', elevation=4,
@@ -120,7 +121,10 @@ class BaseTestImage(BaseDocumentTestRest):
         self.session.add(self.area)
         self.session.flush()
 
-        self.session.add(Association.create(self.area, self.image))
+        self._add_association(
+            Association.create(self.area, self.image),
+            user_id
+        )
         self.session.flush()
 
         self.outing1 = Outing(
@@ -134,14 +138,14 @@ class BaseTestImage(BaseDocumentTestRest):
         )
         self.session.add(self.outing1)
         self.session.flush()
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.outing1,
-            child_document=self.image))
-        self.session.add(Association(
+            child_document=self.image), user_id)
+        self._add_association(Association(
             parent_document_id=self.global_userids['contributor'],
             parent_document_type=USERPROFILE_TYPE,
             child_document_id=self.outing1.document_id,
-            child_document_type=OUTING_TYPE))
+            child_document_type=OUTING_TYPE), user_id)
         update_feed_document_create(self.outing1, user_id)
         self.session.flush()
 
@@ -816,6 +820,9 @@ class TestImageRest(BaseTestImage):
         self.app_put_json(
             self._prefix + '/' + str(self.image4.document_id), body,
             headers=headers, status=200)
+
+    def test_get_associations_history(self):
+        self._get_association_logs(self.image)
 
 
 class TestImageListRest(BaseTestImage):

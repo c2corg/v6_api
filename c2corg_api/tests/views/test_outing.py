@@ -1018,6 +1018,16 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_history_no_doc(self):
         self.app.get('/document/99999/history/es', status=404)
 
+    def test_get_associations_history(self):
+        logs = self._get_association_logs(self.outing)
+
+        self.assertEqual(len(logs), 4)
+
+        # Third association (starting from the youngest) is a user
+        log = logs[2]
+        parent = log['parent_document']
+        self.assertEqual(parent["type"], USERPROFILE_TYPE)
+
     def _assert_geometry(self, body):
         self.assertIsNotNone(body.get('geometry'))
         geometry = body.get('geometry')
@@ -1144,22 +1154,38 @@ class TestOutingRest(BaseDocumentTestRest):
             gear='paraglider'))
         self.session.add(self.route)
         self.session.flush()
-        self.session.add(Association.create(
-            parent_document=self.waypoint,
-            child_document=self.route))
-        self.session.add(Association.create(
-            parent_document=self.route,
-            child_document=self.outing))
 
-        self.session.add(Association(
-            parent_document_id=user_id,
-            parent_document_type=USERPROFILE_TYPE,
-            child_document_id=self.outing.document_id,
-            child_document_type=OUTING_TYPE))
-        self.session.add(Association.create(
-            parent_document=self.outing,
-            child_document=self.image))
-        self.session.add(Association.create(
-            parent_document=self.outing,
-            child_document=self.article1))
+        self._add_association(
+            Association.create(
+                parent_document=self.waypoint,
+                child_document=self.route
+            ),
+            user_id=user_id)
+        self._add_association(
+            Association.create(
+                parent_document=self.route,
+                child_document=self.outing
+            ),
+            user_id=user_id)
+
+        self._add_association(
+            Association(
+                parent_document_id=user_id,
+                parent_document_type=USERPROFILE_TYPE,
+                child_document_id=self.outing.document_id,
+                child_document_type=OUTING_TYPE
+            ),
+            user_id=user_id)
+        self._add_association(
+            Association.create(
+                parent_document=self.outing,
+                child_document=self.image
+            ),
+            user_id=user_id)
+        self._add_association(
+            Association.create(
+                parent_document=self.outing,
+                child_document=self.article1
+            ),
+            user_id=user_id)
         self.session.flush()

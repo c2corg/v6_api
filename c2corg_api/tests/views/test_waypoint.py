@@ -1436,6 +1436,9 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(
             documents[1]['document_id'], self.waypoint2.document_id)
 
+    def test_get_associations_history(self):
+        self._get_association_logs(self.waypoint)
+
     def _add_test_data(self):
         self.waypoint = Waypoint(
             waypoint_type='summit', elevation=2203)
@@ -1533,18 +1536,18 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(self.route2)
         self.session.add(self.route3)
         self.session.flush()
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.waypoint,
-            child_document=self.waypoint4))
-        self.session.add(Association.create(
+            child_document=self.waypoint4), user_id)
+        self._add_association(Association.create(
             parent_document=self.waypoint,
-            child_document=self.route1))
-        self.session.add(Association.create(
+            child_document=self.route1), user_id)
+        self._add_association(Association.create(
             parent_document=self.waypoint,
-            child_document=self.route2))
-        self.session.add(Association.create(
+            child_document=self.route2), user_id)
+        self._add_association(Association.create(
             parent_document=self.waypoint4,
-            child_document=self.route3))
+            child_document=self.route3), user_id)
 
         # article
         self.article1 = Article(
@@ -1552,9 +1555,9 @@ class TestWaypointRest(BaseDocumentTestRest):
             article_type='collab')
         self.session.add(self.article1)
         self.session.flush()
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.waypoint,
-            child_document=self.article1))
+            child_document=self.article1), user_id)
 
         self.article2 = Article(
             categories=['site_info'], activities=['hiking'],
@@ -1575,9 +1578,9 @@ class TestWaypointRest(BaseDocumentTestRest):
         )
         self.session.add(self.outing1)
         self.session.flush()
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.route1,
-            child_document=self.outing1))
+            child_document=self.outing1), user_id)
 
         self.outing2 = Outing(
             redirects_to=self.outing1.document_id,
@@ -1602,12 +1605,12 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(self.outing2)
         self.session.add(self.outing3)
         self.session.flush()
-        self.session.add(Association.create(
+        self._add_association(Association.create(
             parent_document=self.route1,
-            child_document=self.outing2))
-        self.session.add(Association.create(
+            child_document=self.outing2), user_id)
+        self._add_association(Association.create(
             parent_document=self.route3,
-            child_document=self.outing3))
+            child_document=self.outing3), user_id)
 
         # add a map
         self.topo_map1 = TopoMap(
