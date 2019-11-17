@@ -46,7 +46,8 @@ def build_query(url_params, meta_params, doc_type):
             search = search.filter(bbox_filter)
 
     if url_params.get('sort'):
-        search = search.sort(url_params.get('sort'))
+        keys_to_sort = url_params.get('sort').split(',')
+        search = search.sort(*keys_to_sort)
     elif not search_term:
         # if a search term is given, the documents are sorted by a relevance
         # score. if not explicitly sort by id/date.
