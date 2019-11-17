@@ -35,7 +35,7 @@ class SearchRest(object):
         """Search for a query word (simple search).
 
         Request:
-            `GET` `/search?q=...[&lang=...][&limit=...][&t=...]`
+            `GET` `/search?q=...[&lang=...][&limit=...][&t=...][&sort=...]`
 
         Parameters:
             `q=...`
@@ -53,6 +53,14 @@ class SearchRest(object):
             Which document types should be included in the search. If not
             given, all document types are returned. Example: `...&t=w,r`
             searches only for waypoints and routes.
+            
+            `sort=...` (optional)
+            Comma separated list of fields for sorting. If the field name
+            is preceded by a minus sign, sorting is reversed for this field.
+            Order of fields is relevant for sorting.
+            Example: `...&sort=global_rating,-height_diff_up
+            this example sorts first on global rating then on descending
+            height difference.
         """
         search_term = self.request.params.get('q')
         lang = self.request.validated.get('lang')
