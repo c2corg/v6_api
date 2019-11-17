@@ -62,6 +62,8 @@ class SearchRest(object):
             SEARCH_LIMIT_MAX)
         types_to_include = self._parse_types_to_include(
             self.request.params.get('t'))
+        sort = self._parse_sort_columns(
+            self.request.params.get('sort'))
 
         search_types = []
         if self._include_type(WAYPOINT_TYPE, types_to_include):
@@ -95,12 +97,17 @@ class SearchRest(object):
                 self.request.has_permission('authenticated'):
             search_types.append(('users', user_profile_documents_config))
 
-        return search.search_for_types(search_types, search_term, limit, lang)
+        return search.search_for_types(search_types, search_term, limit, lang, sort)
 
     def _parse_types_to_include(self, types_in):
         if not types_in:
             return None
         return types_in.split(',')
+
+    def _parse_sort_columns(self, sort_cols_in):
+        if sort_cols_in is None:
+            return []
+        return sort_cols_in.split(',')
 
     def _include_type(self, doc_type, types_to_include):
         if not types_to_include:

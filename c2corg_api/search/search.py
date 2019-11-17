@@ -4,7 +4,7 @@ from c2corg_api.views.document_listings import get_documents
 from elasticsearch_dsl.search import MultiSearch
 
 
-def search_for_types(search_types, search_term, limit, lang):
+def search_for_types(search_types, search_term, limit, lang, sort):
     """Get results for all given types.
     """
     if not search_types:
@@ -18,7 +18,7 @@ def search_for_types(search_types, search_term, limit, lang):
     else:
         # search in ElasticSearch
         results_for_type = do_multi_search_for_types(
-            search_types, search_term, limit, lang)
+            search_types, search_term, limit, lang, sort)
 
     # load the documents using the document ids returned from the search
     results = {}
@@ -35,7 +35,7 @@ def search_for_types(search_types, search_term, limit, lang):
     return results
 
 
-def do_multi_search_for_types(search_types, search_term, limit, lang):
+def do_multi_search_for_types(search_types, search_term, limit, lang, sort):
     """ Executes a multi-search for all document types in a single request
     and returns a list of tuples (document_ids, total) containing the results
     for each type.
@@ -44,10 +44,11 @@ def do_multi_search_for_types(search_types, search_term, limit, lang):
 
     for search_type in search_types:
         (_, get_documents_config) = search_type
-        search = create_search(get_documents_config.document_type).\
-            query(get_text_query_on_title(search_term, lang)).\
-            fields([]).\
-            extra(from_=0, size=limit)
+        search = (create_search(get_documents_config.document_type)
+                  .query(get_text_query_on_title(search_term, lang))
+                  .sort(*sort)
+                  .fields([])
+                  .extra(from_=0, size=limit))
         multi_search = multi_search.add(search)
 
     responses = multi_search.execute()
