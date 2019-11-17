@@ -53,7 +53,7 @@ class SearchRest(object):
             Which document types should be included in the search. If not
             given, all document types are returned. Example: `...&t=w,r`
             searches only for waypoints and routes.
-            
+
             `sort=...` (optional)
             Comma separated list of fields for sorting. If the field name
             is preceded by a minus sign, sorting is reversed for this field.
@@ -105,7 +105,8 @@ class SearchRest(object):
                 self.request.has_permission('authenticated'):
             search_types.append(('users', user_profile_documents_config))
 
-        return search.search_for_types(search_types, search_term, limit, lang, sort)
+        return search.search_for_types(search_types, search_term,
+                                       limit, lang, sort)
 
     def _parse_types_to_include(self, types_in):
         if not types_in:
