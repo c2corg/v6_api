@@ -45,24 +45,40 @@ class ChangesDocumentRest(object):
             `u=...` (optional)
             Changes made by one user.
 
+            `t=...` (optional)
+            Filter by document type. One-letter keys are used for document types
+            Multiple types can be separated by comma, keys preceded by a minus
+            are excluded. Included types have priority, i.e. if included types
+            are given, excluded types are ignored. By default outings and users
+            are excluded. Example: t=r,-i,w,-a means routes and waypoints shall
+            be included. Exclusion of images and articles is ignored.
+
             For more information about "continuation token pagination", see:
             http://www.servicedenuages.fr/pagination-continuation-token (fr)
         """
         user_id = self.request.validated.get('u')
-        lang, token_id, _, limit = get_params(self.request, 30)
+        lang, token_id, _, limit, doc_types = get_params(self.request, 30)
 
-        changes = get_changes_of_feed(token_id, limit, user_id)
+        changes = get_changes_of_feed(token_id, limit, user_id, doc_types)
         doc_ids = [change.history_metadata_id for change in changes]
 
         return load_feed(doc_ids, limit, user_id)
 
 
-def get_changes_of_feed(token_id, limit, user_id=None):
+def get_changes_of_feed(token_id, limit, user_id=None, doc_types=None):
+    if doc_types is None: doc_types = {'included': [], 'excluded': []}
+    doc_types_included = list(set(doc_types['included'])
+                              - {OUTING_TYPE, USERPROFILE_TYPE})
+    doc_types_excluded = list(set([OUTING_TYPE, USERPROFILE_TYPE]
+                                  + doc_types['excluded']))
     query = DBSession.query(DocumentVersion.history_metadata_id) \
         .join(HistoryMetaData) \
-        .join(Document) \
-        .filter(Document.type.notin_([OUTING_TYPE, USERPROFILE_TYPE])) \
-        .order_by(desc(DocumentVersion.history_metadata_id))
+        .join(Document)
+    if doc_types['included']:
+        query = query.filter(Document.type.in_(doc_types['included']))
+    else:
+        query = query.filter(Document.type.notin_(doc_types_excluded))
+    query = query.order_by(desc(DocumentVersion.history_metadata_id))
 
     # pagination filter
     if token_id is not None:

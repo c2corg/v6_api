@@ -142,8 +142,17 @@ def get_params(request, default_page_limit=DEFAULT_PAGE_LIMIT):
     limit = min(
         default_page_limit if limit is None else limit,
         MAX_PAGE_LIMIT)
+    doc_types = request.params.get('t')
+    if doc_types is not None:
+        doc_types_list = doc_types.split(',')
+    else:
+        doc_types_list = []
+    doc_types_dict = {
+        'included': [t for t in doc_types_list if t[0] != '-'],
+        'excluded': [t[1] for t in doc_types_list if t[0] == '-']
+    }
 
-    return lang, token_id, token_time, limit
+    return lang, token_id, token_time, limit, doc_types_dict
 
 
 def get_changes_of_feed(token_id, token_time, limit, extra_filter=None):
