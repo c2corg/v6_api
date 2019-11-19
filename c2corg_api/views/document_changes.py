@@ -46,7 +46,7 @@ class ChangesDocumentRest(object):
             Changes made by one user.
 
             `t=...` (optional)
-            Filter by document type. One-letter keys are used for document types
+            Filter by document type. One-letter keys are used for doc types
             Multiple types can be separated by comma, keys preceded by a minus
             are excluded. Included types have priority, i.e. if included types
             are given, excluded types are ignored. By default outings and users
@@ -61,21 +61,20 @@ class ChangesDocumentRest(object):
 
         changes = get_changes_of_feed(token_id, limit, user_id, doc_types)
         doc_ids = [change.history_metadata_id for change in changes]
-
         return load_feed(doc_ids, limit, user_id)
 
 
 def get_changes_of_feed(token_id, limit, user_id=None, doc_types=None):
-    if doc_types is None: doc_types = {'included': [], 'excluded': []}
-    doc_types_included = list(set(doc_types['included'])
-                              - {OUTING_TYPE, USERPROFILE_TYPE})
+    if doc_types is None:
+        doc_types = {'included': [], 'excluded': []}
+    doc_types_included = doc_types['included']
     doc_types_excluded = list(set([OUTING_TYPE, USERPROFILE_TYPE]
                                   + doc_types['excluded']))
     query = DBSession.query(DocumentVersion.history_metadata_id) \
         .join(HistoryMetaData) \
         .join(Document)
     if doc_types['included']:
-        query = query.filter(Document.type.in_(doc_types['included']))
+        query = query.filter(Document.type.in_(doc_types_included))
     else:
         query = query.filter(Document.type.notin_(doc_types_excluded))
     query = query.order_by(desc(DocumentVersion.history_metadata_id))

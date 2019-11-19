@@ -2,7 +2,7 @@ import datetime
 
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
-from c2corg_api.models.outing import Outing
+from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
@@ -81,7 +81,12 @@ class TestChangesDocumentRest(BaseTestRest):
         self.outing = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
             date_end=datetime.date(2016, 1, 1), elevation_max=1500,
-            elevation_min=700, height_diff_up=800, height_diff_down=800
+            elevation_min=700, height_diff_up=800, height_diff_down=800,
+            locales=[
+                OutingLocale(
+                    lang='fr', title='Mont Blanc vers le ciel',
+                    description='...', summary='Ski')
+            ]
         )
         self.session.add(self.outing)
         self.session.flush()
@@ -93,7 +98,7 @@ class TestChangesDocumentRest(BaseTestRest):
         self.session.flush()
 
         version_count = self.session.query(DocumentVersion).count()
-        self.assertEqual(4, version_count)
+        self.assertEqual(5, version_count)
 
         hist_meta_count = self.session.query(HistoryMetaData).count()
         self.assertEqual(5, hist_meta_count)
@@ -169,3 +174,31 @@ class TestChangesDocumentRest(BaseTestRest):
         response = self.app.get(
             self._prefix + '?u=invalid-user_id', status=400)
         self.assertError(response.json['errors'], 'u', 'invalid u')
+
+    def test_get_changes_filter_doc_types_included(self):
+        response = self.app.get(
+            self._prefix + '?t=w', status=200)
+        document_ids = get_document_ids(response.json)
+        self.assertEqual(3, len(document_ids))
+        self.assertEqual(
+            document_ids,
+            [self.waypoint3.document_id, self.waypoint2.document_id,
+             self.waypoint1.document_id])
+
+    def test_get_changes_filter_doc_types_included_outing(self):
+        response = self.app.get(
+            self._prefix + '?t=r,o', status=200)
+        document_ids = get_document_ids(response.json)
+        self.assertEqual(2, len(document_ids))
+        self.assertEqual(
+            document_ids,
+            [self.outing.document_id, self.route1.document_id])
+
+    def test_get_changes_filter_doc_types_excluded(self):
+        response = self.app.get(
+            self._prefix + '?t=-w', status=200)
+        document_ids = get_document_ids(response.json)
+        self.assertEqual(1, len(document_ids))
+        self.assertEqual(
+            document_ids,
+            [self.route1.document_id])
