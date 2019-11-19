@@ -134,14 +134,8 @@ class ProfileFeedRest(object):
             raise HTTPForbidden('no permission to see the feed')
 
 
-def get_params(request, default_page_limit=DEFAULT_PAGE_LIMIT):
-    lang = request.validated.get('lang')
-    token_id = request.validated.get('token_id')
-    token_time = request.validated.get('token_time')
-    limit = request.validated.get('limit')
-    limit = min(
-        default_page_limit if limit is None else limit,
-        MAX_PAGE_LIMIT)
+def get_params_type_filter(request, default_page_limit=DEFAULT_PAGE_LIMIT):
+    lang, token_id, token_time, limit = get_params(request, default_page_limit)
     doc_types = request.params.get('t')
     if doc_types is not None:
         doc_types_list = doc_types.split(',')
@@ -151,8 +145,19 @@ def get_params(request, default_page_limit=DEFAULT_PAGE_LIMIT):
         'included': [t for t in doc_types_list if t[0] != '-'],
         'excluded': [t[1] for t in doc_types_list if t[0] == '-']
     }
-
     return lang, token_id, token_time, limit, doc_types_dict
+
+
+def get_params(request, default_page_limit=DEFAULT_PAGE_LIMIT):
+    lang = request.validated.get('lang')
+    token_id = request.validated.get('token_id')
+    token_time = request.validated.get('token_time')
+    limit = request.validated.get('limit')
+    limit = min(
+        default_page_limit if limit is None else limit,
+        MAX_PAGE_LIMIT)
+
+    return lang, token_id, token_time, limit
 
 
 def get_changes_of_feed(token_id, token_time, limit, extra_filter=None):

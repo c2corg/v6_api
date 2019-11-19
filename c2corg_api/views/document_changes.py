@@ -5,7 +5,7 @@ from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.views import cors_policy
-from c2corg_api.views.feed import get_params
+from c2corg_api.views.feed import get_params_type_filter as get_params_tf
 from c2corg_api.views.validation import validate_simple_token_pagination,\
   validate_user_id_not_required
 
@@ -57,7 +57,7 @@ class ChangesDocumentRest(object):
             http://www.servicedenuages.fr/pagination-continuation-token (fr)
         """
         user_id = self.request.validated.get('u')
-        lang, token_id, _, limit, doc_types = get_params(self.request, 30)
+        lang, token_id, _, limit, doc_types = get_params_tf(self.request, 30)
 
         changes = get_changes_of_feed(token_id, limit, user_id, doc_types)
         doc_ids = [change.history_metadata_id for change in changes]
