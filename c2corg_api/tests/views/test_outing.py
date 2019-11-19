@@ -184,6 +184,34 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_get_version(self):
         self.get_version(self.outing, self.outing_version)
 
+    def test_get_sort_asc(self):
+        reset_search_index(self.session)
+        response = self.app.get(self._prefix + '?sort=height_diff_up',
+                                status=200)
+        response_ids = [d['document_id'] for d in response.json['documents']]
+        outing_ids = [d.document_id for d in [self.outing3, self.outing4,
+                                              self.outing2, self.outing]]
+        self.assertEqual(response_ids, outing_ids)
+
+    def test_get_sort_desc(self):
+        reset_search_index(self.session)
+        response = self.app.get(self._prefix + '?sort=-elevation_max',
+                                status=200)
+        response_ids = [d['document_id'] for d in response.json['documents']]
+        outing_ids = [d.document_id for d in [self.outing2, self.outing,
+                                              self.outing4, self.outing3]]
+        self.assertEqual(response_ids, outing_ids)
+
+    def test_get_sort_multi(self):
+        reset_search_index(self.session)
+        response = self.app.get(self._prefix
+                                + '?sort=-elevation_max,height_diff_up',
+                                status=200)
+        response_ids = [d['document_id'] for d in response.json['documents']]
+        outing_ids = [d.document_id for d in [self.outing2, self.outing4,
+                                              self.outing, self.outing3]]
+        self.assertEqual(response_ids, outing_ids)
+
     def test_get_version_without_activity(self):
         """ Tests that old outings versions without activity include the fields
         of all activities.
@@ -1087,6 +1115,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self.outing2 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
             date_end=datetime.date(2016, 2, 1),
+            height_diff_up=600, elevation_max=1800,
             locales=[
                 OutingLocale(
                     lang='en', title='Mont Blanc from the air',
@@ -1101,12 +1130,14 @@ class TestOutingRest(BaseDocumentTestRest):
 
         self.outing3 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
-            date_end=datetime.date(2016, 2, 2)
+            date_end=datetime.date(2016, 2, 2),
+            height_diff_up=200, elevation_max=1200
         )
         self.session.add(self.outing3)
         self.outing4 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
-            date_end=datetime.date(2016, 2, 3)
+            date_end=datetime.date(2016, 2, 3),
+            height_diff_up=500, elevation_max=1500
         )
         self.outing4.locales.append(OutingLocale(
             lang='en', title='Mont Granier (en)', description='...'))
