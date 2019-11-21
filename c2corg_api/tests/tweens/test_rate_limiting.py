@@ -28,13 +28,13 @@ class RateLimitingTest(BaseTestRest):
     def test_contributor(self, _send_email):
         self._set_user('contributor')
         self._test_requests()
-        _send_email.assert_call_once()
+        _send_email.assert_called_once()
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_moderator(self, _send_email):
         self._set_user('moderator')
         self._test_requests()
-        _send_email.assert_call_once()
+        _send_email.assert_called_once()
 
     def _test_requests(self):
         limit = self.limit_robot if self.user.robot else \
@@ -100,7 +100,7 @@ class RateLimitingTest(BaseTestRest):
             self.assertFalse(self.user.blocked)
             self._wait()
             for i in range(0, self.limit):
-                self._update_document()
+                self._update_document(status=200)
                 self.session.refresh(self.user)
                 self.assertEqual(
                     self.user.ratelimit_remaining, self.limit - 1 - i)
@@ -111,7 +111,7 @@ class RateLimitingTest(BaseTestRest):
         # User has reached their max number of allowed rate limited windows
         # thus is now blocked:
         self.assertTrue(self.user.blocked)
-        _send_email.assert_called_once()
+        self.assertEqual(self.user.ratelimit_times, self.max_times + 1)
         self._update_document(status=403)
 
     def _create_document(self):
