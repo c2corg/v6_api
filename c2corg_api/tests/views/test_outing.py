@@ -212,6 +212,16 @@ class TestOutingRest(BaseDocumentTestRest):
                                               self.outing, self.outing3]]
         self.assertEqual(response_ids, outing_ids)
 
+    def test_get_sort_numeric_enum(self):
+        reset_search_index(self.session)
+        response = self.app.get(self._prefix
+                                + '?sort=-elevation_access,condition_rating',
+                                status=200)
+        response_ids = [d['document_id'] for d in response.json['documents']]
+        outing_ids = [d.document_id for d in [self.outing, self.outing4,
+                                              self.outing3, self.outing2]]
+        self.assertEqual(response_ids, outing_ids)
+
     def test_get_version_without_activity(self):
         """ Tests that old outings versions without activity include the fields
         of all activities.
@@ -1086,7 +1096,8 @@ class TestOutingRest(BaseDocumentTestRest):
         self.outing = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
             date_end=datetime.date(2016, 1, 1), elevation_max=1500,
-            elevation_min=700, height_diff_up=800, height_diff_down=800
+            elevation_min=700, height_diff_up=800, height_diff_down=800,
+            elevation_access=900, condition_rating='good'
         )
         self.locale_en = OutingLocale(
             lang='en', title='Mont Blanc from the air', description='...',
@@ -1115,7 +1126,8 @@ class TestOutingRest(BaseDocumentTestRest):
         self.outing2 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
             date_end=datetime.date(2016, 2, 1),
-            height_diff_up=600, elevation_max=1800,
+            height_diff_up=600, elevation_max=1800, elevation_access=700,
+            condition_rating='average',
             locales=[
                 OutingLocale(
                     lang='en', title='Mont Blanc from the air',
@@ -1131,13 +1143,15 @@ class TestOutingRest(BaseDocumentTestRest):
         self.outing3 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
             date_end=datetime.date(2016, 2, 2),
-            height_diff_up=200, elevation_max=1200
+            height_diff_up=200, elevation_max=1200, elevation_access=800,
+            condition_rating='poor'
         )
         self.session.add(self.outing3)
         self.outing4 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
             date_end=datetime.date(2016, 2, 3),
-            height_diff_up=500, elevation_max=1500
+            height_diff_up=500, elevation_max=1500, elevation_access=800,
+            condition_rating='excellent'
         )
         self.outing4.locales.append(OutingLocale(
             lang='en', title='Mont Granier (en)', description='...'))
