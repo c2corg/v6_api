@@ -7,7 +7,27 @@ from geoalchemy2 import WKBElement
 from geomet import wkb
 from geoalchemy2.compat import buffer, bytes
 import geojson
-from geojson.validation import is_polygon, checkListOfObjects
+
+
+# import from geojson
+def _is_polygon(coords):	
+    lengths = all(len(elem) >= 4 for elem in coords)	
+    isring = all(elem[0] == elem[-1] for elem in coords)	
+    return lengths and isring
+
+
+def _checkListOfObjects(coord, pred):	
+    """ This method provides checking list of geojson objects such Multipoint or	
+        MultiLineString that each element of the list is valid geojson object.	
+        This is helpful method for IsValid.	
+    :param coord: List of coordinates	
+    :type coord: list	
+    :param pred: Predicate to check validation of each member in the coord	
+    :type pred: function	
+    :return: True if list contains valid objects, False otherwise	
+    :rtype: bool	
+    """	
+    return not isinstance(coord, list) or not all([pred(ls) for ls in coord])
 
 
 class Geometry(SchemaType):
@@ -110,7 +130,7 @@ def is_valid_geometry(obj):
         return False
 
     if isinstance(obj, geojson.MultiLineString) and \
-            checkListOfObjects(obj['coordinates'], lambda x: len(x) >= 2):
+            _checkListOfObjects(obj['coordinates'], lambda x: len(x) >= 2):
         # Each segment must must have at least 2 positions
         return False
 
@@ -129,7 +149,7 @@ def is_valid_geometry(obj):
         return True
 
     if isinstance(obj, geojson.MultiPolygon) and \
-            checkListOfObjects(obj['coordinates'], lambda x: is_polygon(x)):
+            _checkListOfObjects(obj['coordinates'], lambda x: _is_polygon(x)):
         # the "coordinates" member must be an array
         # of Polygon coordinate arrays
         return False
