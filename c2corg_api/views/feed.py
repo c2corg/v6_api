@@ -136,16 +136,17 @@ class ProfileFeedRest(object):
 
 def get_params_type_filter(request, default_page_limit=DEFAULT_PAGE_LIMIT):
     lang, token_id, token_time, limit = get_params(request, default_page_limit)
-    doc_types = request.params.get('t')
-    if doc_types is not None:
-        doc_types_list = doc_types.split(',')
-    else:
-        doc_types_list = []
-    doc_types_dict = {
-        'included': [t for t in doc_types_list if t[0] != '-'],
-        'excluded': [t[1] for t in doc_types_list if t[0] == '-']
-    }
-    return lang, token_id, token_time, limit, doc_types_dict
+    filters = {}
+    for (param, key) in [('t', 'doc_type'), ('lic', 'license_type'),
+                         ('qual', 'quality')]:
+        if param in request.params:
+            param_list = request.params[param].split(',')
+            filters[key] = {
+                'included': [t for t in param_list if t[0] != '-'],
+                'excluded': [t[1:] for t in param_list if t[0] == '-']
+            }
+
+    return lang, token_id, token_time, limit, filters
 
 
 def get_params(request, default_page_limit=DEFAULT_PAGE_LIMIT):

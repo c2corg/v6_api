@@ -1,7 +1,9 @@
 import datetime
 
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
+from c2corg_api.models.article import Article
+from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user_profile import UserProfile
@@ -18,6 +20,55 @@ class TestChangesDocumentRest(BaseTestRest):
         self._prefix = '/documents/changes'
 
         contributor_id = self.global_userids['contributor']
+
+        self.image1 = Image(
+            filename='image.jpg',
+            activities=['paragliding'], height=1500,
+            image_type='personal',
+            quality='medium',
+            locales=[
+                DocumentLocale(
+                    lang='fr', title='Img1',
+                    description='...',
+                    summary='I1')
+            ])
+
+        self.session.add(self.image1)
+        self.session.flush()
+        DocumentRest.create_new_version(self.image1, contributor_id)
+        self.session.flush()
+
+        self.image2 = Image(
+            filename='image.jpg',
+            activities=['paragliding'], height=1500,
+            image_type='copyright',
+            locales=[
+                DocumentLocale(
+                    lang='fr', title='Img2',
+                    description='...',
+                    summary='I2')
+            ])
+
+        self.session.add(self.image2)
+        self.session.flush()
+        DocumentRest.create_new_version(self.image2, contributor_id)
+        self.session.flush()
+
+        self.article1 = Article(categories=['site_info'],
+                                activities=['hiking'],
+                                article_type='collab',
+                                quality='fine',
+                                locales=[
+                                    DocumentLocale(
+                                        lang='fr', title='Art',
+                                        description='...',
+                                        summary='bla')
+                                ])
+
+        self.session.add(self.article1)
+        self.session.flush()
+        DocumentRest.create_new_version(self.article1, contributor_id)
+        self.session.flush()
 
         self.waypoint1 = Waypoint(
             waypoint_type='summit', elevation=2000,
@@ -98,10 +149,10 @@ class TestChangesDocumentRest(BaseTestRest):
         self.session.flush()
 
         version_count = self.session.query(DocumentVersion).count()
-        self.assertEqual(5, version_count)
+        self.assertEqual(8, version_count)
 
         hist_meta_count = self.session.query(HistoryMetaData).count()
-        self.assertEqual(5, hist_meta_count)
+        self.assertEqual(8, hist_meta_count)
 
     def test_get_changes(self):
         response = self.app.get(self._prefix, status=200)
@@ -112,7 +163,7 @@ class TestChangesDocumentRest(BaseTestRest):
         self.assertIn('feed', body)
 
         feed = body['feed']
-        self.assertEqual(4, len(feed))
+        self.assertEqual(7, len(feed))
 
         for doc in feed:
             self.assertNotEqual(doc['document']['type'], 'o')
@@ -136,30 +187,33 @@ class TestChangesDocumentRest(BaseTestRest):
 
     def test_get_changes_paginated(self):
         response = self.app.get(
-            self._prefix + '?limit=2', status=200)
+            self._prefix + '?limit=4', status=200)
         body = response.json
 
         document_ids = get_document_ids(body)
-        self.assertEqual(2, len(document_ids))
-        self.assertEqual(document_ids, [self.route1.document_id,
-                                        self.waypoint3.document_id])
+        self.assertEqual(4, len(document_ids))
+        self.assertEqual(document_ids, [
+            self.route1.document_id, self.waypoint3.document_id,
+            self.waypoint2.document_id, self.waypoint1.document_id
+        ])
         pagination_token = body['pagination_token']
 
         # last 2 changes
         response = self.app.get(
-            self._prefix + '?limit=2&token=' + pagination_token, status=200)
+            self._prefix + '?limit=4&token=' + pagination_token, status=200)
         body = response.json
 
         document_ids = get_document_ids(body)
-        self.assertEqual(2, len(document_ids))
+        self.assertEqual(3, len(document_ids))
         self.assertEqual(
             document_ids,
-            [self.waypoint2.document_id, self.waypoint1.document_id])
+            [self.article1.document_id, self.image2.document_id,
+             self.image1.document_id])
         pagination_token = body['pagination_token']
 
         # empty response
         response = self.app.get(
-            self._prefix + '?limit=2&token=' + pagination_token, status=200)
+            self._prefix + '?limit=4&token=' + pagination_token, status=200)
         body = response.json
 
         feed = body['feed']
@@ -196,9 +250,80 @@ class TestChangesDocumentRest(BaseTestRest):
 
     def test_get_changes_filter_doc_types_excluded(self):
         response = self.app.get(
-            self._prefix + '?t=-w', status=200)
+            self._prefix + '?t=-w,-c,-i', status=200)
         document_ids = get_document_ids(response.json)
         self.assertEqual(1, len(document_ids))
         self.assertEqual(
             document_ids,
             [self.route1.document_id])
+
+    def test_get_changes_filter_license_included(self):
+        response = self.app.get(
+            self._prefix + '?lic=sa,ncnd', status=200)
+        document_ids = get_document_ids(response.json)
+        self.assertEqual(6, len(document_ids))
+        self.assertEqual(
+            document_ids, [
+                self.route1.document_id, self.waypoint3.document_id,
+                self.waypoint2.document_id, self.waypoint1.document_id,
+                self.article1.document_id, self.image1.document_id
+            ]
+        )
+
+    def test_get_changes_filter_license_excluded(self):
+        response = self.app.get(
+            self._prefix + '?lic=-sa,-c', status=200)
+        document_ids = get_document_ids(response.json)
+        self.assertEqual(1, len(document_ids))
+        self.assertEqual(
+            document_ids, [self.image1.document_id]
+        )
+
+    def test_get_changes_filter_license_excluded_w_outing(self):
+        response = self.app.get(
+            self._prefix + '?lic=-sa,-c&t=o,i,r', status=200)
+        document_ids = get_document_ids(response.json)
+        self.assertEqual(2, len(document_ids))
+        self.assertEqual(
+            document_ids, [
+                self.outing.document_id, self.image1.document_id
+            ]
+        )
+
+    def test_get_changes_filter_quality_draft(self):
+        response = self.app.get(
+            self._prefix + '?qual=draft', status=200)
+        document_ids = get_document_ids(response.json)
+        self.assertEqual(5, len(document_ids))
+        assert self.image1.document_id not in document_ids
+        assert self.article1.document_id not in document_ids
+
+    def test_get_changes_filter_quality_not_draft(self):
+        response = self.app.get(
+            self._prefix + '?qual=-draft', status=200)
+        document_ids = get_document_ids(response.json)
+        self.assertEqual(2, len(document_ids))
+        self.assertEqual(document_ids, [
+                self.article1.document_id, self.image1.document_id
+            ]
+        )
+
+    def test_get_changes_filter_quality_included(self):
+        for qq, dd in zip(['empty', 'medium', 'fine', 'great'],
+                          [[], [self.image1], [self.article1], []]):
+            response = self.app.get(
+                self._prefix + '?qual=%s' % qq, status=200)
+            document_ids = get_document_ids(response.json)
+            self.assertEqual(len(dd), len(document_ids))
+            self.assertEqual(
+                document_ids, [d.document_id for d in dd]
+            )
+
+    def test_get_changes_filter_multi(self):
+        response = self.app.get(
+            self._prefix + '?lic=ncnd&qual=-draft', status=200)
+        document_ids = get_document_ids(response.json)
+        self.assertEqual(1, len(document_ids))
+        self.assertEqual(
+            document_ids, [self.image1.document_id]
+        )
