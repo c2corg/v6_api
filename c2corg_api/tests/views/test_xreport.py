@@ -113,7 +113,6 @@ class TestXreportRest(BaseDocumentTestRest):
         # common user should not see personal data in the xreport
         self.assertNotIn('author_status', body)
         self.assertNotIn('activity_rate', body)
-        self.assertNotIn('nb_outings', body)
         self.assertNotIn('age', body)
         self.assertNotIn('gender', body)
         self.assertNotIn('previous_injuries', body)
@@ -125,7 +124,6 @@ class TestXreportRest(BaseDocumentTestRest):
         # common user should not see personal data in the xreport
         self.assertNotIn('author_status', body)
         self.assertNotIn('activity_rate', body)
-        self.assertNotIn('nb_outings', body)
         self.assertNotIn('age', body)
         self.assertNotIn('gender', body)
         self.assertNotIn('previous_injuries', body)
@@ -137,7 +135,6 @@ class TestXreportRest(BaseDocumentTestRest):
         # moderator can see personal data in the xreport
         self.assertIn('author_status', body)
         self.assertIn('activity_rate', body)
-        self.assertIn('nb_outings', body)
         self.assertIn('age', body)
         self.assertIn('gender', body)
         self.assertIn('previous_injuries', body)
@@ -296,6 +293,22 @@ class TestXreportRest(BaseDocumentTestRest):
             errors[0]['description'],
             "Invalid geometry type. Expected: ['POINT']. Got: LINESTRING.")
 
+    def test_post_outdated_attributes_error(self):
+        outdated_attributes = [
+            # api not checking additional parameters, nb_outings raises no error
+            # ('nb_outings', 'nb_outings_9'),
+            ('autonomy', 'initiator'),
+            ('activity_rate', 'activity_rate_10')
+        ]
+        for (key, value) in outdated_attributes:
+            body = {'document_id': 123456, 'activities': ['hiking'],
+                    'locales': [{'title': 'Lac d\'Annecy', 'lang': 'en'}]}
+            body[key] = value
+            body = self.post_error(body, user='moderator')
+            errors = body.get('errors')
+            self.assertEqual(len(errors), 1)
+            self.assertCorniceNotInEnum(errors[0], key)
+
     def test_post_success(self):
         body = {
             'document_id': 123456,
@@ -303,6 +316,11 @@ class TestXreportRest(BaseDocumentTestRest):
             'activities': ['hiking'],
             'event_type': ['stone_fall'],
             'nb_participants': 5,
+            'nb_outings': 'nb_outings9',
+            'autonomy': 'autonomous',
+            'activity_rate': 'activity_rate_m2',
+            'supervision': 'professional_supervision',
+            'qualification': 'federal_trainer',
             'associations': {
                 'images': [
                     {'document_id': self.image2.document_id}
@@ -321,6 +339,7 @@ class TestXreportRest(BaseDocumentTestRest):
                 {'title': 'Lac d\'Annecy', 'lang': 'en'}
             ]
         }
+        #import pdb; pdb.set_trace()
         body, doc = self.post_success(body, user='moderator',
                                       validate_with_auth=True)
         version = doc.versions[0]
@@ -329,6 +348,12 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertEqual(archive_xreport.activities, ['hiking'])
         self.assertEqual(archive_xreport.event_type, ['stone_fall'])
         self.assertEqual(archive_xreport.nb_participants, 5)
+        assert not hasattr(archive_xreport, 'nb_outings')
+        # self.assertNotIn('nb_outings', archive_xreport)
+        self.assertEqual(archive_xreport.autonomy, 'autonomous')
+        self.assertEqual(archive_xreport.activity_rate, 'activity_rate_m2')
+        self.assertEqual(archive_xreport.supervision, 'professional_supervision')
+        self.assertEqual(archive_xreport.qualification, 'federal_trainer')
 
         archive_locale = version.document_locales_archive
         self.assertEqual(archive_locale.lang, 'en')
@@ -392,7 +417,6 @@ class TestXreportRest(BaseDocumentTestRest):
 
         self.assertIn('author_status', body)
         self.assertIn('activity_rate', body)
-        self.assertIn('nb_outings', body)
         self.assertIn('age', body)
         self.assertIn('gender', body)
         self.assertIn('previous_injuries', body)

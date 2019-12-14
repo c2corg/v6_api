@@ -66,9 +66,6 @@ class _XreportMixin(object):
     # Frequency practical activity-Fréquence de pratique de l'activité
     activity_rate = Column(enums.activity_rate)
 
-    # Total trips made during the year-Nombre sorties réalisées dans l'année
-    nb_outings = Column(enums.nb_outings)
-
     age = Column(SmallInteger)
 
     gender = Column(enums.gender)
@@ -77,6 +74,10 @@ class _XreportMixin(object):
     previous_injuries = Column(enums.previous_injuries)
 
     autonomy = Column(enums.autonomy)
+
+    supervision = Column(enums.supervision)
+
+    qualification = Column(enums.qualification)
 
     disable_comments = Column(Boolean)
 
@@ -87,8 +88,9 @@ attributes = [
     'elevation', 'date', 'event_type', 'activities',
     'nb_participants', 'nb_impacted', 'rescue',
     'avalanche_level', 'avalanche_slope', 'severity',
-    'author_status', 'activity_rate', 'nb_outings', 'age', 'gender',
-    'previous_injuries', 'autonomy', 'disable_comments', 'anonymous'
+    'author_status', 'activity_rate', 'age', 'gender',
+    'previous_injuries', 'autonomy', 'supervision', 'qualification',
+    'disable_comments', 'anonymous'
 ]
 
 attributes_without_personal = [

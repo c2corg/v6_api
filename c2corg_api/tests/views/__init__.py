@@ -54,6 +54,10 @@ class BaseTestRest(BaseTestCase):
         self.assertEqual(error.get('description'), key + ' is missing')
         self.assertEqual(error.get('name'), key)
 
+    def assertCorniceNotInEnum(self, error, key):  # noqa
+        self.assertIn('is not one of', error.get('description'))
+        self.assertEqual(error.get('name'), key)
+
     def assertCorniceRequired(self, error, key):  # noqa
         self.assertEqual(error.get('description'), 'Required')
         self.assertEqual(error.get('name'), key)

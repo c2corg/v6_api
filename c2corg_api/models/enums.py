@@ -130,18 +130,30 @@ event_type = enum(
     'event_type', attributes.event_types)
 author_status = enum(
     'author_status', attributes.author_statuses)
+# TODO: merge in c2corg_commons
 activity_rate = enum(
-    'activity_rate', attributes.activity_rates)
-nb_outings = enum(
-    'nb_outings', attributes.nb_outings)
+    # 'activity_rate', attributes.activity_rates)
+    'activity_rate', ['activity_rate_w1', 'activity_rate_m2', 'activity_rate_y5'])
+# nb_outings = enum(
+#     'nb_outings', attributes.nb_outings)
+supervision = enum(
+    'supervision',
+    ['no_supervision', 'federal_supervision', 'professional_supervision']
+)
+qualification = enum(
+    'qualification',
+    ['federal_supervisor', 'federal_trainer', 'professional_diploma']
+)
 gender = enum(
     'gender', attributes.genders)
 previous_injuries = enum(
     'previous_injuries', attributes.previous_injuries)
 severity = enum(
     'severity', attributes.severities)
+# TODO: merge in c2corg_commons
 autonomy = enum(
-    'autonomy', attributes.autonomies)
+    #'autonomy', attributes.autonomies)
+    'autonomy', ['non_autonomous', 'autonomous', 'expert'])
 avalanche_level = enum(
     'avalanche_level', attributes.avalanche_levels)
 avalanche_slope = enum(
