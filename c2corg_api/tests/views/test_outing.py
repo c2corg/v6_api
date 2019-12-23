@@ -184,6 +184,59 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_get_version(self):
         self.get_version(self.outing, self.outing_version)
 
+    def test_get_sort_asc(self):
+        """ Test ascending sorting of results for height_diff_up keyword. """
+        reset_search_index(self.session)
+        response = self.app.get(self._prefix + '?sort=height_diff_up',
+                                status=200)
+        response_ids = [d['document_id'] for d in response.json['documents']]
+        outing_ids = [d.document_id for d in [self.outing3, self.outing4,
+                                              self.outing2, self.outing]]
+        self.assertEqual(response_ids, outing_ids)
+
+    def test_get_sort_desc(self):
+        """ Test descending sorting of results for elevation max keyword. """
+        reset_search_index(self.session)
+        response = self.app.get(self._prefix + '?sort=-elevation_max',
+                                status=200)
+        response_ids = [d['document_id'] for d in response.json['documents']]
+        outing_ids = [d.document_id for d in [self.outing2, self.outing,
+                                              self.outing4, self.outing3]]
+        self.assertEqual(response_ids, outing_ids)
+
+    def test_get_sort_multi(self):
+        """ Test multi-criteria sorting (elevation_max: desc,
+        height_diff_up: asc) """
+        reset_search_index(self.session)
+        response = self.app.get(self._prefix
+                                + '?sort=-elevation_max,height_diff_up',
+                                status=200)
+        response_ids = [d['document_id'] for d in response.json['documents']]
+        outing_ids = [d.document_id for d in [self.outing2, self.outing4,
+                                              self.outing, self.outing3]]
+        self.assertEqual(response_ids, outing_ids)
+
+    def test_get_sort_numeric_enum(self):
+        """ Test sorting with two different criteria:
+        numeric (elevation_access) and enum (condition_rating) """
+        reset_search_index(self.session)
+        response = self.app.get(self._prefix
+                                + '?sort=-elevation_access,condition_rating',
+                                status=200)
+        response_ids = [d['document_id'] for d in response.json['documents']]
+        outing_ids = [d.document_id for d in [self.outing, self.outing4,
+                                              self.outing3, self.outing2]]
+        self.assertEqual(response_ids, outing_ids)
+
+    def test_get_sort_error(self):
+        """ Test failure of request (status 500) if an unknown
+        keyword is used.
+        """
+        reset_search_index(self.session)
+        self.app.get(self._prefix
+                     + '?sort=-elevation_axess',
+                     status=500)
+
     def test_get_version_without_activity(self):
         """ Tests that old outings versions without activity include the fields
         of all activities.
@@ -871,6 +924,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 'elevation_max': 1500,
                 'height_diff_up': 800,
                 'height_diff_down': 800,
+                'elevation_access': 900,
+                'condition_rating': 'good',
                 'locales': [
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'weather': 'mostly sunny',
@@ -905,6 +960,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 'elevation_max': 1500,
                 'height_diff_up': 800,
                 'height_diff_down': 800,
+                'elevation_access': 900,
+                'condition_rating': 'good',
                 'locales': [
                     {'lang': 'es', 'title': 'Mont Blanc del cielo',
                      'description': '...', 'weather': 'soleado'}
@@ -938,6 +995,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 'elevation_max': 1500,
                 'height_diff_up': 800,
                 'height_diff_down': 800,
+                'elevation_access': 900,
+                'condition_rating': 'good',
                 'locales': [
                     {'lang': 'en', 'title': 'Mont Blanc from the air',
                      'description': '...', 'weather': 'sunny',
@@ -1058,7 +1117,8 @@ class TestOutingRest(BaseDocumentTestRest):
         self.outing = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
             date_end=datetime.date(2016, 1, 1), elevation_max=1500,
-            elevation_min=700, height_diff_up=800, height_diff_down=800
+            elevation_min=700, height_diff_up=800, height_diff_down=800,
+            elevation_access=900, condition_rating='good'
         )
         self.locale_en = OutingLocale(
             lang='en', title='Mont Blanc from the air', description='...',
@@ -1087,6 +1147,8 @@ class TestOutingRest(BaseDocumentTestRest):
         self.outing2 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
             date_end=datetime.date(2016, 2, 1),
+            height_diff_up=600, elevation_max=1800, elevation_access=700,
+            condition_rating='average',
             locales=[
                 OutingLocale(
                     lang='en', title='Mont Blanc from the air',
@@ -1101,12 +1163,16 @@ class TestOutingRest(BaseDocumentTestRest):
 
         self.outing3 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
-            date_end=datetime.date(2016, 2, 2)
+            date_end=datetime.date(2016, 2, 2),
+            height_diff_up=200, elevation_max=1200, elevation_access=800,
+            condition_rating='poor'
         )
         self.session.add(self.outing3)
         self.outing4 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
-            date_end=datetime.date(2016, 2, 3)
+            date_end=datetime.date(2016, 2, 3),
+            height_diff_up=500, elevation_max=1500, elevation_access=800,
+            condition_rating='excellent'
         )
         self.outing4.locales.append(OutingLocale(
             lang='en', title='Mont Granier (en)', description='...'))
