@@ -16,3 +16,4 @@
 .noseids
 Dockerfile
 /env_api
+/venv

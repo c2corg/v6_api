@@ -4,7 +4,12 @@ ui_url ?= http://localhost:6553
 
 include Makefile
 
-export db_name = c2corg_${instanceid}
+export db_host = postgresql
+export db_name = c2corg
+export elasticsearch_host = elasticsearch
+export elasticsearch_index = c2corg_${instanceid}
+
+# export db_name = c2corg_${instanceid}
 export tests_db_host = postgresql
 export tests_db_name = c2corg_tests
 export elasticsearch_index = c2corg_${instanceid}
