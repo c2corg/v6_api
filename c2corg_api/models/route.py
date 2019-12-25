@@ -245,6 +245,7 @@ class _RouteLocaleMixin(object):
 
     slackline_anchor2 = Column(String)
 
+
 attributes_locales = [
     'slope', 'remarks', 'gear', 'external_resources', 'route_history',
     'slackline_anchor1', 'slackline_anchor2'

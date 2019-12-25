@@ -185,6 +185,7 @@ class _XreportLocaleMixin(object):
     # Conséquences physiques et autres commentaires
     other_comments = Column(String)
 
+
 attributes_locales = [
     'place', 'route_study', 'conditions', 'training', 'motivations',
     'group_management', 'risk', 'time_management', 'safety',

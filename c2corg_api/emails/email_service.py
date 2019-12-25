@@ -32,7 +32,7 @@ class EmailLocalizator(object):
             raise Exception('Bad language' + lang)
         try:
             return self._get_file_content(lang, key)
-        except:
+        except:  # noqa
             log.exception('The %s translation for %s could not be read' % (
                 lang, key))
             return self._get_file_content('fr', key)

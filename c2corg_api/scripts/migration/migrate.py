@@ -49,6 +49,8 @@ from c2corg_api.scripts.migration.mailinglists import MigrateMailinglists
 from alembic.config import Config
 
 
+# flake8: noqa
+
 # no-op function referenced from `migration.ini` (required for
 # `get_appsettings` to work)
 def no_op(global_config, **settings): pass

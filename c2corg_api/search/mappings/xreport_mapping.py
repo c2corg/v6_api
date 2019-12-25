@@ -43,7 +43,8 @@ class SearchXreport(SearchDocument):
 
     @staticmethod
     def to_search_document(document, index_prefix):
-        search_document = SearchDocument.to_search_document(document, index_prefix)
+        search_document = SearchDocument.to_search_document(
+            document, index_prefix)
 
         if document.redirects_to:
             return search_document
@@ -56,6 +57,7 @@ class SearchXreport(SearchDocument):
             SearchXreport)
 
         return search_document
+
 
 SearchXreport.queryable_fields = QueryableMixin.get_queryable_fields(
     SearchXreport)

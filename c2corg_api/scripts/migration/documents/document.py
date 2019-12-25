@@ -12,6 +12,8 @@ from c2corg_api.scripts.migration.migrate_base import MigrateBase
 from c2corg_common.attributes import quality_types
 
 
+# flake8: noqa
+
 DEFAULT_QUALITY = quality_types[2]
 
 

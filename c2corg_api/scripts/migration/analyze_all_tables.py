@@ -3,6 +3,8 @@ from sqlalchemy.sql import text
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
 
+# flake8: noqa
+
 class AnalyzeAllTables(MigrateBase):
     """Run "analyze" on all tables.
     """

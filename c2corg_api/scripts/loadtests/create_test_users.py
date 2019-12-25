@@ -94,5 +94,6 @@ def main(argv=sys.argv):
     print('Created %d users with base username `%s`' % (
         NB_USERS_TO_CREATE, BASE_USERNAME))
 
+
 if __name__ == "__main__":
     main()

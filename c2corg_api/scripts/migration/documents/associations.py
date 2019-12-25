@@ -16,6 +16,9 @@ from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.scripts.migration.batch import SimpleBatch
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
+
+# flake8: noqa
+
 associations_query_count =\
     'select count(*) from (' \
     '  select a.main_id, a.linked_id from app_documents_associations a ' \

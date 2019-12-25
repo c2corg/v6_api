@@ -1,16 +1,6 @@
 import os
 import sys
 
-from c2corg_api.search.mappings.area_mapping import SearchArea, AREA_TYPE
-from c2corg_api.search.mappings.article_mapping import SearchArticle, ARTICLE_TYPE
-from c2corg_api.search.mappings.book_mapping import SearchBook, BOOK_TYPE
-from c2corg_api.search.mappings.image_mapping import SearchImage, IMAGE_TYPE
-from c2corg_api.search.mappings.outing_mapping import SearchOuting, OUTING_TYPE
-from c2corg_api.search.mappings.xreport_mapping import SearchXreport, XREPORT_TYPE
-from c2corg_api.search.mappings.route_mapping import SearchRoute, ROUTE_TYPE
-from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap, MAP_TYPE
-from c2corg_api.search.mappings.user_mapping import SearchUser, USERPROFILE_TYPE
-from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint, WAYPOINT_TYPE
 from elasticsearch_dsl import Index
 
 from pyramid.paster import (
@@ -21,22 +11,11 @@ from pyramid.paster import (
 from pyramid.scripts.common import parse_vars
 
 from c2corg_api.search.mapping import es_index_settings
-from c2corg_api.search import configure_es_from_config, elasticsearch_config
+from c2corg_api.search import (
+    configure_es_from_config,
+    elasticsearch_config,
+    search_documents)
 
-# TODO : use from c2corg_api.search import search_documents
-
-_types = [
-    (SearchArea, AREA_TYPE),
-    (SearchArticle, ARTICLE_TYPE),
-    (SearchBook, BOOK_TYPE),
-    (SearchImage, IMAGE_TYPE),
-    (SearchOuting, OUTING_TYPE),
-    (SearchXreport, XREPORT_TYPE),
-    (SearchRoute, ROUTE_TYPE),
-    (SearchTopoMap, MAP_TYPE),
-    (SearchUser, USERPROFILE_TYPE),
-    (SearchWaypoint, WAYPOINT_TYPE),
-]
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
@@ -65,12 +44,13 @@ def setup_es():
     info = client.info()
     print('ElasticSearch version: {0}'.format(info['version']['number']))
 
-    for klass, letter in _types:
+    for letter, klass in search_documents.items():
         index_name = f"{index_prefix}_{letter}"
 
         if client.indices.exists(index_name):
-            print('Index "{0}" already exists. To re-create the index, manually '
-                'delete the index and run this script again.'.format(index_name))
+            print('Index "{0}" already exists. '
+                  'To re-create the index, manually delete the index '
+                  'and run this script again.'.format(index_name))
             print('To delete the index run:')
             print('curl -XDELETE \'http://{0}:{1}/{2}/\''.format(
                 elasticsearch_config['host'], elasticsearch_config['port'],
@@ -109,7 +89,7 @@ def drop_index(silent=True):
 
     index_prefix = elasticsearch_config['index_prefix']
 
-    for _, letter in _types:
+    for letter in search_documents:
         index = Index(f"{index_prefix}_{letter}")
 
         try:

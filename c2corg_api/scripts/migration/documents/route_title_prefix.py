@@ -24,6 +24,7 @@ class SetRouteTitlePrefix(MigrateBase):
 
         self.stop()
 
+
 SQL_SET_TITLE_PREFIX_SAME_CULTURE = """
 with v as (select rl.id, l2.title
   from guidebook.routes_locales rl join guidebook.documents_locales l1

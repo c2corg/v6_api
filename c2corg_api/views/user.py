@@ -55,7 +55,7 @@ def validate_json_password(request, **kwargs):
         # later on requires plain string otherwise it raises
         # the "Unicode-objects must be encoded before hashing" error.
         request.validated['password'] = password.encode(ENCODING)
-    except:
+    except:  # noqa
         request.errors.add('body', 'password', 'Invalid')
 
 
@@ -143,7 +143,7 @@ def validate_captcha(request, **kwargs):
             request.errors.add('body', 'captcha', 'Error, please retry')
             return
 
-    except:
+    except:  # noqa
         log.exception('Request error while checking captcha')
         # We want a notification and not a 500 to let the user immediately
         # resend a response.
@@ -186,7 +186,7 @@ class UserRegistrationRest(object):
         DBSession.add(user)
         try:
             DBSession.flush()
-        except:
+        except:  # noqa
             log.warning('Error persisting user', exc_info=True)
             raise HTTPInternalServerError('Error persisting user')
 
@@ -252,7 +252,7 @@ class UserValidateNewPasswordRest(object):
                 client = get_discourse_client(settings)
                 r = client.redirect_without_nonce(user)
                 response['redirect_internal'] = r
-            except:
+            except:  # noqa
                 # Since only the password is changed, any error with discourse
                 # must not prevent login and validation.
                 log.error(
@@ -262,7 +262,7 @@ class UserValidateNewPasswordRest(object):
             user.clear_validation_nonce()
             try:
                 DBSession.flush()
-            except:
+            except:  # noqa
                 log.warning('Error persisting user', exc_info=True)
                 raise HTTPInternalServerError('Error persisting user')
 
@@ -310,7 +310,7 @@ class UserRequestChangePasswordRest(object):
 
         try:
             DBSession.flush()
-        except:
+        except:  # noqa
             log.warning('Error persisting user', exc_info=True)
             raise HTTPInternalServerError('Error persisting user')
 
@@ -355,7 +355,7 @@ class UserNonceValidationRest(object):
                 client = get_discourse_client(settings)
                 r = client.redirect_without_nonce(user)
                 response['redirect_internal'] = r
-            except:
+            except:  # noqa
                 # Any error with discourse must prevent login and validation
                 log.error(
                     'Error logging into discourse for %d', user.id,
@@ -364,7 +364,7 @@ class UserNonceValidationRest(object):
 
             try:
                 DBSession.flush()
-            except:
+            except:  # noqa
                 log.warning('Error persisting user', exc_info=True)
                 raise HTTPInternalServerError('Error persisting user')
 
@@ -395,13 +395,13 @@ class UserChangeEmailNonceValidationRest(object):
         try:
             client = get_discourse_client(request.registry.settings)
             client.sync_sso(user)
-        except:
+        except:  # noqa
             log.error('Error syncing email with discourse', exc_info=True)
             raise HTTPInternalServerError('Error with Discourse')
 
         try:
             DBSession.flush()
-        except:
+        except:  # noqa
             log.warning('Error persisting user', exc_info=True)
             raise HTTPInternalServerError('Error persisting user')
 
@@ -411,6 +411,7 @@ class UserChangeEmailNonceValidationRest(object):
 class LoginSchema(colander.MappingSchema):
     username = colander.SchemaNode(colander.String())
     password = colander.SchemaNode(colander.String())
+
 
 login_schema = LoginSchema()
 
@@ -461,7 +462,7 @@ class UserLoginRest(object):
                     else:
                         r = client.redirect_without_nonce(user)
                         response['redirect_internal'] = r
-                except:
+                except:  # noqa
                     # Any error with discourse should not prevent login
                     log.warning(
                         'Error logging into discourse for %d', user.id,
@@ -506,7 +507,7 @@ class UserLogoutRest(object):
                 settings = request.registry.settings
                 client = get_discourse_client(settings)
                 result['logged_out_discourse_user'] = client.logout(userid)
-            except:
+            except:  # noqa
                 # Any error with discourse should not prevent logout
                 log.warning(
                     'Error logging out of discourse for %d', userid,

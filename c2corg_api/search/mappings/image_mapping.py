@@ -24,7 +24,8 @@ class SearchImage(SearchDocument):
 
     @staticmethod
     def to_search_document(document, index_prefix):
-        search_document = SearchDocument.to_search_document(document, index_prefix)
+        search_document = SearchDocument.to_search_document(
+            document, index_prefix)
 
         if document.redirects_to:
             return search_document
@@ -33,5 +34,6 @@ class SearchImage(SearchDocument):
             search_document, document, SearchImage.FIELDS)
 
         return search_document
+
 
 SearchImage.queryable_fields = QueryableMixin.get_queryable_fields(SearchImage)

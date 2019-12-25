@@ -112,6 +112,7 @@ class ArchiveImage(_ImageMixin, ArchiveDocument):
 
     __table_args__ = Base.__table_args__
 
+
 # special schema for image locales: images can be created without title
 schema_image_locale = SQLAlchemySchemaNode(
     DocumentLocale,
@@ -155,6 +156,8 @@ schema_association_image = restrict_schema(schema_image, [
 class SchemaImageList(MappingSchema):
     images = SchemaNode(
         Sequence(), schema_create_image, missing=None)
+
+
 schema_create_image_list = SchemaImageList()
 
 

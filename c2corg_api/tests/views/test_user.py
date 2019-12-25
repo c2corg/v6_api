@@ -261,9 +261,10 @@ class TestUserRest(BaseUserTestRest):
 
         # check that the profile is not inserted in the search index
         sync_es(self.session)
+        index = elasticsearch_config['index_prefix'] + '_' + USERPROFILE_TYPE
         search_doc = search_documents[USERPROFILE_TYPE].get(
             id=user_id,
-            index=elasticsearch_config['index_prefix'] + '_' + USERPROFILE_TYPE,
+            index=index,
             ignore=404)
         self.assertIsNone(search_doc)
 
@@ -274,9 +275,10 @@ class TestUserRest(BaseUserTestRest):
 
         # check that the profile is inserted in the index after confirmation
         self.sync_es()
+        index = elasticsearch_config['index_prefix'] + '_' + USERPROFILE_TYPE
         search_doc = search_documents[USERPROFILE_TYPE].get(
             id=user_id,
-            index=elasticsearch_config['index_prefix'] + '_' + USERPROFILE_TYPE)
+            index=index)
         self.assertIsNotNone(search_doc)
 
         self.assertIsNotNone(search_doc['doc_type'])

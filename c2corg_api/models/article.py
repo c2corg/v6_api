@@ -22,6 +22,7 @@ class _ArticleMixin(object):
     activities = Column(ArrayOfEnum(activity_type))
     article_type = Column(enums.article_type)
 
+
 attributes = ['categories', 'activities', 'article_type']
 
 
@@ -62,6 +63,7 @@ class ArchiveArticle(_ArticleMixin, ArchiveDocument):
     }
 
     __table_args__ = Base.__table_args__
+
 
 schema_article_locale = schema_document_locale
 schema_article_attributes = list(schema_attributes)

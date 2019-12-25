@@ -47,6 +47,7 @@ class SchemaTopicCreate(colander.MappingSchema):
     document_id = colander.SchemaNode(colander.Int())
     lang = colander.SchemaNode(colander.String())
 
+
 schema_topic_create = SchemaTopicCreate()
 
 
@@ -97,7 +98,7 @@ class ForumTopicRest(object):
         # category could be id or name
         try:
             category = int(category)
-        except:
+        except:  # noqa
             pass
 
         client = get_discourse_client(settings)
@@ -120,7 +121,7 @@ class ForumTopicRest(object):
             if locale.type == document_types.OUTING_TYPE:
                 try:
                     self.invite_participants(client, locale, topic_id)
-                except:
+                except:  # noqa
                     log.error('Inviting participants of outing {} failed'
                               .format(locale.document_id),
                               exc_info=True)
@@ -137,7 +138,7 @@ class ForumTopicRest(object):
             try:
                 client.client.invite_user_to_topic_by_username(forum_username,
                                                                topic_id)
-            except:
+            except:  # noqa
                 log.error('Inviting forum user {} in topic {} failed'
                           .format(forum_username, topic_id),
                           exc_info=True)

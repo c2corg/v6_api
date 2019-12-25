@@ -120,7 +120,8 @@ class SearchOuting(SearchDocument):
 
     @staticmethod
     def to_search_document(document, index_prefix):
-        search_document = SearchDocument.to_search_document(document, index_prefix)
+        search_document = SearchDocument.to_search_document(
+            document, index_prefix)
 
         if document.redirects_to:
             return search_document
@@ -149,6 +150,7 @@ class SearchOuting(SearchDocument):
                 document.associated_routes_ids.route_ids
 
         return search_document
+
 
 SearchOuting.queryable_fields = QueryableMixin.get_queryable_fields(
     SearchOuting)

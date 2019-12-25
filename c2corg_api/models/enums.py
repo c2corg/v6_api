@@ -8,6 +8,7 @@ def enum(name, types):
     return Enum(
         name=name, metadata=Base.metadata, schema=schema, *types)
 
+
 quality_type = enum(
     'quality_type', attributes.quality_types)
 waypoint_type = enum(

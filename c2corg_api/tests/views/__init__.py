@@ -820,9 +820,10 @@ class BaseDocumentTestRest(BaseTestRest):
         if check_es:
             sync_es(self.session)
             # check updates to the search index
+            index = elasticsearch_config['index_prefix'] + '_' + self._doc_type
             search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
-                index=elasticsearch_config['index_prefix'] + '_' + self._doc_type)
+                index=index)
 
             self.assertEqual(search_doc['doc_type'], document.type)
             self.assertEqual(search_doc['title_en'], archive_locale.title)
@@ -1001,9 +1002,10 @@ class BaseDocumentTestRest(BaseTestRest):
         # check updates to the search index
         if check_es:
             sync_es(self.session)
+            index = elasticsearch_config['index_prefix'] + '_' + self._doc_type
             search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
-                index=elasticsearch_config['index_prefix'] + '_' + self._doc_type)
+                index=index)
 
             self.assertEqual(search_doc['doc_type'], document.type)
             self.assertEqual(
@@ -1093,9 +1095,10 @@ class BaseDocumentTestRest(BaseTestRest):
         # check updates to the search index
         if check_es:
             sync_es(self.session)
+            index = f"{elasticsearch_config['index_prefix']}_{self._doc_type}"
             search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
-                index=f"{elasticsearch_config['index_prefix']}_{self._doc_type}",
+                index=index,
                 # doc_type=self._doc_type,
                 )
 

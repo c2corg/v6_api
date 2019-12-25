@@ -1,5 +1,8 @@
 import re
 
+
+# flake8: noqa
+
 BBCODE_TAGS = [
     'b', 'i', 'u', 's', 'q', 'c', 'sup', 'ind', 'url', 'email', 'acr(onym)?',
     'colou?r', 'picto', 'p', 'center', 'right', 'left', 'justify',

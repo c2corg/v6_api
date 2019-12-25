@@ -11,7 +11,8 @@ class SearchUser(SearchDocument):
 
     @staticmethod
     def to_search_document(document, index_prefix):
-        search_document = SearchDocument.to_search_document(document, index_prefix)
+        search_document = SearchDocument.to_search_document(
+            document, index_prefix)
 
         if document.redirects_to:
             return search_document
@@ -21,5 +22,6 @@ class SearchUser(SearchDocument):
                 document.name or '', document.forum_username or '')
 
         return search_document
+
 
 SearchUser.queryable_fields = QueryableMixin.get_queryable_fields(SearchUser)

@@ -112,6 +112,7 @@ class AssociationLog(Base):
         DateTime(timezone=True), default=func.now(), nullable=False,
         index=True)
 
+
 schema_association = SQLAlchemySchemaNode(
     Association,
     # whitelisted attributes
@@ -348,6 +349,7 @@ def _get_associations_to_add(new_associations, current_associations):
                 to_add.append(doc)
 
     return to_add
+
 
 association_keys = {
     'routes': ROUTE_TYPE,

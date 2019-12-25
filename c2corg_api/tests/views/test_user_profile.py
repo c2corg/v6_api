@@ -354,9 +354,8 @@ class TestUserProfileRest(BaseDocumentTestRest):
 
     def _check_es_index(self):
         sync_es(self.session)
-        search_doc = SearchUser.get(
-            id=self.profile1.document_id,
-            index=elasticsearch_config['index_prefix'] + '_' + USERPROFILE_TYPE)
+        index = elasticsearch_config['index_prefix'] + '_' + USERPROFILE_TYPE
+        search_doc = SearchUser.get(id=self.profile1.document_id, index=index)
         self.assertEqual(search_doc['doc_type'], self.profile1.type)
         self.assertEqual(
             search_doc['title_en'], 'Contributor contributor')

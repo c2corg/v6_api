@@ -4,10 +4,7 @@ import os
 from c2corg_api.search import configure_es_from_config, elasticsearch_config
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from elasticsearch_dsl import Index
-from pyramid.paster import (
-    get_appsettings,
-    setup_logging,
-    )
+from pyramid.paster import get_appsettings, setup_logging
 from pyramid.scripts.common import parse_vars
 
 
@@ -69,6 +66,7 @@ def migrate():
     )
 
     print('Field "{0}" created'.format(field_name))
+
 
 if __name__ == "__main__":
     main()

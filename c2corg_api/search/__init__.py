@@ -112,6 +112,7 @@ def get_text_query_on_title(search_term, search_lang=None):
 
         return MultiMatch(query=search_term, fields=fields)
 
+
 search_documents = {
     AREA_TYPE: SearchArea,
     ARTICLE_TYPE: SearchArticle,

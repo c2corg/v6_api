@@ -10,23 +10,23 @@ import geojson
 
 
 # import from geojson
-def _is_polygon(coords):	
-    lengths = all(len(elem) >= 4 for elem in coords)	
-    isring = all(elem[0] == elem[-1] for elem in coords)	
+def _is_polygon(coords):
+    lengths = all(len(elem) >= 4 for elem in coords)
+    isring = all(elem[0] == elem[-1] for elem in coords)
     return lengths and isring
 
 
-def _checkListOfObjects(coord, pred):	
-    """ This method provides checking list of geojson objects such Multipoint or	
-        MultiLineString that each element of the list is valid geojson object.	
-        This is helpful method for IsValid.	
-    :param coord: List of coordinates	
-    :type coord: list	
-    :param pred: Predicate to check validation of each member in the coord	
-    :type pred: function	
-    :return: True if list contains valid objects, False otherwise	
-    :rtype: bool	
-    """	
+def _checkListOfObjects(coord, pred):  # noqa
+    """ This method provides checking list of geojson objects such Multipoint or
+        MultiLineString that each element of the list is valid geojson object.
+        This is helpful method for IsValid.
+    :param coord: List of coordinates
+    :type coord: list
+    :param pred: Predicate to check validation of each member in the coord
+    :type pred: function
+    :return: True if list contains valid objects, False otherwise
+    :rtype: bool
+    """
     return not isinstance(coord, list) or not all([pred(ls) for ls in coord])
 
 
@@ -76,7 +76,7 @@ class Geometry(SchemaType):
             data = geojson.loads(cstruct)
         except Invalid as exc:
             raise exc
-        except:
+        except:  # noqa
             raise Invalid(node, 'Invalid geometry: %s' % cstruct)
         if not isinstance(data, geojson.GeoJSON):
             raise Invalid(node, 'Invalid geometry: %s' % cstruct)

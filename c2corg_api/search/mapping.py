@@ -1,12 +1,12 @@
 import json
 
 from c2corg_api.models.document import Document
-from c2corg_api.search.mapping_types import Enum, QEnumArray, QLong, \
+from c2corg_api.search.mapping_types import QEnumArray, QLong, \
     QEnumRange
 from c2corg_common.attributes import default_langs
 from c2corg_common.sortable_search_attributes import sortable_quality_types
-from elasticsearch_dsl import Document as DocType, Text as String, MetaField, \
-    Long, GeoPoint, Keyword
+from elasticsearch_dsl import Document as DocType, Text as String, \
+    Long, GeoPoint
 
 
 class BaseMeta:

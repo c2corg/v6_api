@@ -30,6 +30,7 @@ class _BookMixin(object):
     publication_date = Column(String(100))
     langs = Column(ARRAY(String(2)))
 
+
 attributes = ['author', 'editor', 'activities', 'url', 'isbn',
               'book_types', 'nb_pages', 'publication_date', 'langs']
 
@@ -71,6 +72,7 @@ class ArchiveBook(_BookMixin, ArchiveDocument):
     }
 
     __table_args__ = Base.__table_args__
+
 
 schema_book_locale = schema_document_locale
 schema_book_attributes = list(schema_attributes)

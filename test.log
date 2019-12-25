@@ -1,0 +1,56 @@
+^CTraceback (most recent call last):
+  File ".build/venv/bin/nosetests", line 8, in <module>
+    sys.exit(run_exit())
+  File "/var/www/.build/venv/lib/python3.7/site-packages/nose/core.py", line 121, in __init__
+    **extra_args)
+  File "/usr/lib/python3.7/unittest/main.py", line 100, in __init__
+    self.parseArgs(argv)
+  File "/var/www/.build/venv/lib/python3.7/site-packages/nose/core.py", line 179, in parseArgs
+    self.createTests()
+  File "/var/www/.build/venv/lib/python3.7/site-packages/nose/core.py", line 193, in createTests
+    self.test = self.testLoader.loadTestsFromNames(self.testNames)
+  File "/var/www/.build/venv/lib/python3.7/site-packages/nose/loader.py", line 481, in loadTestsFromNames
+    return unittest.TestLoader.loadTestsFromNames(self, names, module)
+  File "/usr/lib/python3.7/unittest/loader.py", line 220, in loadTestsFromNames
+    suites = [self.loadTestsFromName(name, module) for name in names]
+  File "/usr/lib/python3.7/unittest/loader.py", line 220, in <listcomp>
+    suites = [self.loadTestsFromName(name, module) for name in names]
+  File "/var/www/.build/venv/lib/python3.7/site-packages/nose/loader.py", line 418, in loadTestsFromName
+    addr.filename, addr.module)
+  File "/var/www/.build/venv/lib/python3.7/site-packages/nose/importer.py", line 47, in importFromPath
+    return self.importFromDir(dir_path, fqname)
+  File "/var/www/.build/venv/lib/python3.7/site-packages/nose/importer.py", line 94, in importFromDir
+    mod = load_module(part_fqname, fh, filename, desc)
+  File "/var/www/.build/venv/lib/python3.7/imp.py", line 244, in load_module
+    return load_package(name, filename)
+  File "/var/www/.build/venv/lib/python3.7/imp.py", line 216, in load_package
+    return _load(spec)
+  File "<frozen importlib._bootstrap>", line 696, in _load
+  File "<frozen importlib._bootstrap>", line 677, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 728, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/var/www/c2corg_api/__init__.py", line 8, in <module>
+    from c2corg_api.models import DBSession, Base
+  File "/var/www/c2corg_api/models/__init__.py", line 35, in <module>
+    from c2corg_api.models import area_association  # noqa
+  File "/var/www/c2corg_api/models/area_association.py", line 6, in <module>
+    from c2corg_api.views import set_best_locale
+  File "/var/www/c2corg_api/views/__init__.py", line 35, in <module>
+    @view_config(context=HTTPNotFound)
+  File "/var/www/.build/venv/lib/python3.7/site-packages/pyramid/view.py", line 222, in __init__
+    self._get_info()
+  File "/var/www/.build/venv/lib/python3.7/site-packages/pyramid/view.py", line 227, in _get_info
+    frameinfo = inspect.getframeinfo(frame)
+  File "/usr/lib/python3.7/inspect.py", line 1464, in getframeinfo
+    lines, lnum = findsource(frame)
+  File "/usr/lib/python3.7/inspect.py", line 780, in findsource
+    module = getmodule(object, file)
+  File "/usr/lib/python3.7/inspect.py", line 739, in getmodule
+    f = getabsfile(module)
+  File "/usr/lib/python3.7/inspect.py", line 708, in getabsfile
+    _filename = getsourcefile(object) or getfile(object)
+  File "/usr/lib/python3.7/inspect.py", line 693, in getsourcefile
+    if os.path.exists(filename):
+  File "/var/www/.build/venv/lib/python3.7/genericpath.py", line 19, in exists
+    os.stat(path)
+KeyboardInterrupt

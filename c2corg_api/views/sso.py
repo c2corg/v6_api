@@ -57,6 +57,7 @@ class SsoSyncSchema(colander.MappingSchema):
     groups = colander.SchemaNode(colander.String(),
                                  missing=None)
 
+
 sso_sync_schema = SsoSyncSchema()
 
 
@@ -242,6 +243,7 @@ def sso_expire_from_now():
 class SsoLoginSchema(colander.MappingSchema):
     token = colander.SchemaNode(colander.String())
 
+
 sso_login_schema = SsoLoginSchema()
 
 
@@ -279,7 +281,7 @@ class SsoLoginRest(object):
             try:
                 r = client.redirect_without_nonce(user)
                 response['redirect_internal'] = r
-            except:
+            except:  # noqa
                 # Any error with discourse should not prevent login
                 log.warning(
                     'Error logging into discourse for %d', user.id,

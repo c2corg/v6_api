@@ -17,6 +17,7 @@ DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 class BaseMixin(object):
     __table_args__ = {'schema': schema}
 
+
 Base = declarative_base(cls=BaseMixin)
 
 

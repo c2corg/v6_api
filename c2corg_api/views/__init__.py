@@ -136,12 +136,12 @@ def to_json_dict(obj, schema, with_special_locales_attrs=False,
         obj_dict['cooked'] = cook(obj_dict['locales'][0])
 
     if with_special_geometry_attrs and obj.type in(ROUTE_TYPE, OUTING_TYPE):
-            geometry_special_attributes = ['has_geom_detail']
-            geometry_dict = obj_dict['geometry']
-            geometry = obj.geometry
-            for attr in geometry_special_attributes:
-                if hasattr(geometry, attr):
-                    geometry_dict[attr] = getattr(geometry, attr)
+        geometry_special_attributes = ['has_geom_detail']
+        geometry_dict = obj_dict['geometry']
+        geometry = obj.geometry
+        for attr in geometry_special_attributes:
+            if hasattr(geometry, attr):
+                geometry_dict[attr] = getattr(geometry, attr)
     return obj_dict
 
 

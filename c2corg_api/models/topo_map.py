@@ -25,6 +25,7 @@ class _MapMixin(object):
     scale = Column(map_scale)
     code = Column(String)
 
+
 attributes = [
     'editor', 'scale', 'code'
 ]

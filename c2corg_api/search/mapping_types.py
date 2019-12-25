@@ -1,4 +1,4 @@
-from elasticsearch_dsl import Text as String, Keyword, Long, Integer, Boolean, Date
+from elasticsearch_dsl import Keyword, Long, Integer, Boolean, Date
 
 # this module contains classes to mark the fields of a mapping that can be
 # used in a search.

@@ -27,6 +27,7 @@ services:
       redis_url: 'redis://redis:6379/'
       version: ''
     volumes:
+      - ./es_migration:/var/www/es_migration
       - ./alembic_migration:/var/www/alembic_migration
       - ./c2corg_api:/var/www/c2corg_api
       - ./Makefile:/var/www/Makefile

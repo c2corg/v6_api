@@ -21,7 +21,8 @@ class SearchArea(SearchDocument):
 
         SearchDocument.copy_fields(
             search_document, document, SearchArea.FIELDS)
-        
+
         return search_document
+
 
 SearchArea.queryable_fields = QueryableMixin.get_queryable_fields(SearchArea)

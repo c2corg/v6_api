@@ -184,6 +184,7 @@ def setup_package():
         fill_index(DBSession)
     DBSession.remove()
 
+
 # keep the database schema after a test run (useful for debugging)
 keep = False
 

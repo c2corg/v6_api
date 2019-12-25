@@ -122,49 +122,49 @@ def _get_sitemap_index():
 
 
 def _get_sitemap(doc_type, i):
-        fields = [
-            Document.document_id, DocumentLocale.lang, DocumentLocale.title,
-            CacheVersion.last_updated
-        ]
+    fields = [
+        Document.document_id, DocumentLocale.lang, DocumentLocale.title,
+        CacheVersion.last_updated
+    ]
 
-        # include `title_prefix` for routes
-        is_route = doc_type == ROUTE_TYPE
-        if is_route:
-            fields.append(RouteLocale.title_prefix)
+    # include `title_prefix` for routes
+    is_route = doc_type == ROUTE_TYPE
+    if is_route:
+        fields.append(RouteLocale.title_prefix)
 
-        base_query = DBSession. \
-            query(*fields). \
-            select_from(Document). \
-            join(DocumentLocale,
-                 Document.document_id == DocumentLocale.document_id)
+    base_query = DBSession. \
+        query(*fields). \
+        select_from(Document). \
+        join(DocumentLocale,
+             Document.document_id == DocumentLocale.document_id)
 
-        if is_route:
-            # joining on `RouteLocale.__table_` instead of `RouteLocale` to
-            # avoid that SQLAlchemy create an additional join on DocumentLocale
-            base_query = base_query. \
-                join(RouteLocale.__table__,
-                     DocumentLocale.id == RouteLocale.id)
-
+    if is_route:
+        # joining on `RouteLocale.__table_` instead of `RouteLocale` to
+        # avoid that SQLAlchemy create an additional join on DocumentLocale
         base_query = base_query. \
-            join(CacheVersion,
-                 Document.document_id == CacheVersion.document_id). \
-            filter(Document.redirects_to.is_(None)). \
-            filter(Document.type == doc_type). \
-            order_by(Document.document_id, DocumentLocale.lang). \
-            limit(PAGES_PER_SITEMAP). \
-            offset(PAGES_PER_SITEMAP * i)
+            join(RouteLocale.__table__,
+                 DocumentLocale.id == RouteLocale.id)
 
-        document_locales = base_query.all()
+    base_query = base_query. \
+        join(CacheVersion,
+             Document.document_id == CacheVersion.document_id). \
+        filter(Document.redirects_to.is_(None)). \
+        filter(Document.type == doc_type). \
+        order_by(Document.document_id, DocumentLocale.lang). \
+        limit(PAGES_PER_SITEMAP). \
+        offset(PAGES_PER_SITEMAP * i)
 
-        if not document_locales:
-            raise HTTPNotFound()
+    document_locales = base_query.all()
 
-        return {
-            'pages': [
-                _format_page(locale, is_route)
-                for locale in document_locales
-            ]
-        }
+    if not document_locales:
+        raise HTTPNotFound()
+
+    return {
+        'pages': [
+            _format_page(locale, is_route)
+            for locale in document_locales
+        ]
+    }
 
 
 def _format_page(document_locale, is_route):

@@ -38,7 +38,7 @@ def build_query(url_params, meta_params, doc_type):
 
     # TODO : not sure of that, test it
     # search = search.\
-        # fields([]).\ 
+        # fields([]).\
         # extra(from_=offset, size=limit)
 
     search = search.\
@@ -382,6 +382,7 @@ def parse_enum_value(valid_values, s):
         return s
     else:
         return None
+
 
 DATE_REGEX = re.compile('^(?:[0-9]{2})?[0-9]{2}-[0-3]?[0-9]-[0-3]?[0-9]$')
 

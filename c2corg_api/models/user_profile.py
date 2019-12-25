@@ -22,6 +22,7 @@ class _UserProfileMixin(object):
     activities = Column(ArrayOfEnum(activity_type))
     categories = Column(ArrayOfEnum(user_category))
 
+
 attributes = ['activities', 'categories']
 
 

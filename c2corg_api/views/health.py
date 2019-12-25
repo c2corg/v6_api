@@ -49,7 +49,7 @@ class HealthRest(object):
         try:
             last_es_syncer_run, _ = es_sync.get_status(DBSession)
             success = True
-        except:
+        except:  # noqa
             log.exception('Getting last es syncer run failed')
             self.request.response.status_code = 500
 
@@ -64,11 +64,11 @@ class HealthRest(object):
         try:
             client = elasticsearch_config['client']
             index_prefix = elasticsearch_config['index_prefix']
-            index = f"{index_prefix}_o" # TODO iterate ion types
+            index = f"{index_prefix}_o"  # TODO iterate on types
             stats = client.indices.stats(index, metric='docs')
             es_docs = stats['indices'][index]['total']['docs']['count']
             success = True
-        except:
+        except:  # noqa
             log.exception('Getting indexed docs count failed')
             self.request.response.status_code = 500
 
@@ -83,7 +83,7 @@ class HealthRest(object):
             client = cache_document_detail.backend.client
             redis_keys = client.dbsize()
             success = True
-        except:
+        except:  # noqa
             log.exception('Getting redis keys failed')
 
         status['redis'] = 'ok' if success else 'error'

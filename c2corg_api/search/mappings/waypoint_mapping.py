@@ -102,7 +102,8 @@ class SearchWaypoint(SearchDocument):
 
     @staticmethod
     def to_search_document(document, index_prefix):
-        search_document = SearchDocument.to_search_document(document, index_prefix)
+        search_document = SearchDocument.to_search_document(
+            document, index_prefix)
 
         if document.redirects_to:
             return search_document
@@ -115,6 +116,7 @@ class SearchWaypoint(SearchDocument):
             SearchWaypoint)
 
         return search_document
+
 
 SearchWaypoint.queryable_fields = QueryableMixin.get_queryable_fields(
     SearchWaypoint)

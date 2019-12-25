@@ -162,6 +162,7 @@ def adapt_outing_schema_for_activities(activities, field_list_type):
     fields = get_all_fields(fields_outing, activities, field_list_type)
     return restrict_schema(schema_outing, fields)
 
+
 outing_schema_adaptor = make_schema_adaptor(
     adapt_outing_schema_for_activities, 'activities', 'fields')
 outing_listing_schema_adaptor = make_schema_adaptor(

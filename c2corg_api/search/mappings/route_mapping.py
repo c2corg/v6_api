@@ -146,7 +146,8 @@ class SearchRoute(SearchDocument):
 
     @staticmethod
     def to_search_document(document, index_prefix):
-        search_document = SearchDocument.to_search_document(document, index_prefix)
+        search_document = SearchDocument.to_search_document(
+            document, index_prefix)
 
         if document.redirects_to:
             return search_document
@@ -169,6 +170,7 @@ class SearchRoute(SearchDocument):
                 document.associated_waypoints_ids.waypoint_ids
 
         return search_document
+
 
 SearchRoute.queryable_fields = QueryableMixin.get_queryable_fields(
     SearchRoute)

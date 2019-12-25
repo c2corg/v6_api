@@ -557,5 +557,6 @@ def is_linked_to_doc(image_in, document_id, document_type):
 
     return False
 
+
 # the document types that have no entry in the feed
 NO_FEED_DOCUMENT_TYPES = [IMAGE_TYPE, USERPROFILE_TYPE, AREA_TYPE]

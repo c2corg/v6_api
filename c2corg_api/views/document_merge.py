@@ -84,12 +84,12 @@ def validate_documents(request, **kwargs):
 
     # do they have the same type?
     if source_type != target_type:
-            request.errors.add(
-                'body', 'types', 'documents must have the same type')
+        request.errors.add(
+            'body', 'types', 'documents must have the same type')
 
     if source_type == USERPROFILE_TYPE:
-            request.errors.add(
-                'body', 'types', 'merging user accounts is not supported')
+        request.errors.add(
+            'body', 'types', 'merging user accounts is not supported')
 
 
 @resource(path='/documents/merge', cors_policy=cors_policy)

@@ -166,13 +166,13 @@ class UserAccountRest(object):
             try:
                 client = get_discourse_client(request.registry.settings)
                 client.sync_sso(user)
-            except:
+            except:  # noqa
                 log.error('Error syncing with discourse', exc_info=True)
                 raise HTTPInternalServerError('Error with Discourse')
 
         try:
             DBSession.flush()
-        except:
+        except:  # noqa
             log.warning('Error persisting user', exc_info=True)
             raise HTTPInternalServerError('Error persisting user')
 

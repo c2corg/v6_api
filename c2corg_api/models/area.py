@@ -21,6 +21,7 @@ AREA_TYPE = document_types.AREA_TYPE
 class _AreaMixin(object):
     area_type = Column(area_type)
 
+
 attributes = ['area_type']
 
 
