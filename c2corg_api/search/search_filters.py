@@ -11,7 +11,7 @@ from functools import partial
 from c2corg_api.search import create_search, search_documents, \
     get_text_query_on_title
 from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox, \
-    Missing
+    Exists
 
 log = logging.getLogger(__name__)
 
@@ -36,8 +36,12 @@ def build_query(url_params, meta_params, doc_type):
         if filter:
             search = search.filter(filter)
 
+    # TODO : not sure of that, test it
+    # search = search.\
+        # fields([]).\ 
+        # extra(from_=offset, size=limit)
+
     search = search.\
-        fields([]).\
         extra(from_=offset, size=limit)
 
     if url_params.get('bbox'):
@@ -171,8 +175,8 @@ def create_enum_range_min_max_filter(field, query_term):
         Range(**kwargs_start),
         Range(**kwargs_end),
         Bool(must=[
-            Missing(field=field.field_min),
-            Missing(field=field.field_max)
+            ~Exists(field=field.field_min),
+            ~Exists(field=field.field_max)
         ])
     ]))
 
@@ -310,8 +314,8 @@ def create_number_range_filter(field, query_term):
         Range(**kwargs_start),
         Range(**kwargs_end),
         Bool(must=[
-            Missing(field=field.field_min),
-            Missing(field=field.field_max)
+            ~Exists(field=field.field_min),
+            ~Exists(field=field.field_max)
         ])
     ]))
 

@@ -635,7 +635,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.sync_es()
         search_doc = search_documents[self._doc_type].get(
             id=doc.document_id,
-            index=elasticsearch_config['index'])
+            index=elasticsearch_config['index_prefix'] + '_' + self._doc_type)
 
         self.assertIsNotNone(search_doc['doc_type'])
         self.assertEqual(search_doc['doc_type'], doc.type)
@@ -822,7 +822,7 @@ class BaseDocumentTestRest(BaseTestRest):
             # check updates to the search index
             search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
-                index=elasticsearch_config['index'])
+                index=elasticsearch_config['index_prefix'] + '_' + self._doc_type)
 
             self.assertEqual(search_doc['doc_type'], document.type)
             self.assertEqual(search_doc['title_en'], archive_locale.title)
@@ -907,7 +907,7 @@ class BaseDocumentTestRest(BaseTestRest):
         sync_es(self.session)
         search_doc = search_documents[self._doc_type].get(
             id=document.document_id,
-            index=elasticsearch_config['index'])
+            index=elasticsearch_config['index_prefix'] + '_' + self._doc_type)
 
         self.assertEqual(search_doc['doc_type'], document.type)
 
@@ -1003,7 +1003,7 @@ class BaseDocumentTestRest(BaseTestRest):
             sync_es(self.session)
             search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
-                index=elasticsearch_config['index'])
+                index=elasticsearch_config['index_prefix'] + '_' + self._doc_type)
 
             self.assertEqual(search_doc['doc_type'], document.type)
             self.assertEqual(
@@ -1095,7 +1095,9 @@ class BaseDocumentTestRest(BaseTestRest):
             sync_es(self.session)
             search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
-                index=elasticsearch_config['index'])
+                index=f"{elasticsearch_config['index_prefix']}_{self._doc_type}",
+                # doc_type=self._doc_type,
+                )
 
             self.assertEqual(search_doc['doc_type'], document.type)
             self.assertEqual(

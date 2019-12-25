@@ -63,7 +63,8 @@ class HealthRest(object):
 
         try:
             client = elasticsearch_config['client']
-            index = elasticsearch_config['index']
+            index_prefix = elasticsearch_config['index_prefix']
+            index = f"{index_prefix}_o" # TODO iterate ion types
             stats = client.indices.stats(index, metric='docs')
             es_docs = stats['indices'][index]['total']['docs']['count']
             success = True

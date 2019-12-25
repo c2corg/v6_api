@@ -10,8 +10,8 @@ class SearchUser(SearchDocument):
     FIELDS = []
 
     @staticmethod
-    def to_search_document(document, index):
-        search_document = SearchDocument.to_search_document(document, index)
+    def to_search_document(document, index_prefix):
+        search_document = SearchDocument.to_search_document(document, index_prefix)
 
         if document.redirects_to:
             return search_document

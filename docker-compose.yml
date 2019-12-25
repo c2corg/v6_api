@@ -1,3 +1,12 @@
+# En cours :
+#   docker-compose exec api make -f config/docker-dev test
+#   fill_es_index development.ini
+
+
+# read this : 
+# https://www.elastic.co/fr/blog/removal-of-mapping-types-elasticsearch
+# https://github.com/sabricot/django-elasticsearch-dsl/issues/134#issuecomment-482149563
+
 version: "3.7"
 services:
   api:
@@ -24,6 +33,8 @@ services:
       - ./common.ini.in:/var/www/common.ini.in
       - ./development.ini.in:/var/www/development.ini.in
       - ./test.ini.in:/var/www/test.ini.in
+      - ./config/docker-dev:/var/www/config/docker-dev
+      - ./dev-requirements.txt:/var/www/dev-requirements.txt
     command: make -f config/docker serve
     links:
       - postgresql
@@ -31,6 +42,8 @@ services:
       - redis
 
   postgresql:
+    # TODO : trouver un moyen de lancer ca
+    #     docker-compose exec postgresql /v6_api/scripts/create_user_db_test.sh
     build:
       context: .
       dockerfile: dev_db.Dockerfile
@@ -43,10 +56,14 @@ services:
       - 5432:5432
 
   elasticsearch:
-    image: 'docker.io/c2corg/c2corg_es:anon-2018-11-02'
+    # TODO : trouver un moyen de lancer ca : 
+    #   docker-compose exec api initialize_c2corg_api_es development.ini
+    #   docker-compose exec api make -f config/docker run-syncer
+    image: 'elasticsearch:7.1.0'
     ports:
       - 9200:9200
-    command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon
+    environment:
+      discovery.type: 'single-node'  # needed for ES start : https://github.com/elastic/elasticsearch/issues/25067
 
   redis:
     image: 'docker.io/redis:3.2'

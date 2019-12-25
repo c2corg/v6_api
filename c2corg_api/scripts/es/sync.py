@@ -279,14 +279,14 @@ def sync_documents(session, changed_documents, batch_size):
 def sync_deleted_documents(session, deleted_documents, batch_size):
     client = elasticsearch_config['client']
     batch = ElasticBatch(client, batch_size)
-    index = elasticsearch_config['index']
+    index_prefix = elasticsearch_config['index_prefix']
     n = 0
     with batch:
         for document_id, doc_type in deleted_documents:
             batch.add({
-                '_index': index,
+                '_index': f"{index_prefix}_{doc_type}",
                 '_id': document_id,
-                '_type': doc_type,
+                # '_type': doc_type,
                 'id': document_id,
                 '_op_type': 'delete'
             })
@@ -363,10 +363,10 @@ def get_documents(session, doc_type, batch_size, document_ids=None,
 
 def create_search_documents(doc_type, documents, batch):
     to_search_document = search_documents[doc_type].to_search_document
-    index = elasticsearch_config['index']
+    index_prefix = elasticsearch_config['index_prefix']
     n = 0
     for doc in documents:
-        batch.add(to_search_document(doc, index))
+        batch.add(to_search_document(doc, index_prefix))
         n += 1
     log.info('Sent {} document(s) of type {}'.format(n, doc_type))
 

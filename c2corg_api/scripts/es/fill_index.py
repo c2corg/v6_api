@@ -52,7 +52,7 @@ def main(argv=sys.argv):
 
 def fill_index(session, batch_size=1000):
     client = elasticsearch_config['client']
-    index_name = elasticsearch_config['index']
+    index_prefix = elasticsearch_config['index_prefix']
 
     status = {
         'start_time': datetime.now(),
@@ -80,7 +80,7 @@ def fill_index(session, batch_size=1000):
 
             for doc in sync.get_documents(session, doc_type, batch_size,
                                           ignore_redirects=True):
-                batch.add(to_search_document(doc, index_name))
+                batch.add(to_search_document(doc, index_prefix))
 
                 count += 1
                 progress(count, total)

@@ -7,7 +7,7 @@ from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.tests import BaseTestCase
 from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox, \
-    Missing
+    Exists
 
 
 class AdvancedSearchTest(BaseTestCase):
@@ -29,7 +29,6 @@ class AdvancedSearchTest(BaseTestCase):
             filter(Term(available_locales='fr')).\
             filter(Terms(areas=[1234, 4567])). \
             filter(Range(elevation={'gte': 1500})). \
-            fields([]).\
             extra(from_=0, size=10)
         self.assertQueryEqual(query, expected_query)
 
@@ -52,7 +51,6 @@ class AdvancedSearchTest(BaseTestCase):
                     'left': 6.28279913, 'bottom': 46.03129072,
                     'right': 6.28369744, 'top': 46.03191439},
                 type='indexed')).\
-            fields([]).\
             extra(from_=0, size=10)
         self.assertQueryEqual(query, expected_query)
 
@@ -67,7 +65,6 @@ class AdvancedSearchTest(BaseTestCase):
         query = build_query(params, meta_params, 'w')
         expected_query = create_search('w'). \
             query(get_text_query_on_title('search word')). \
-            fields([]).\
             extra(from_=40, size=20)
         self.assertQueryEqual(query, expected_query)
 
@@ -82,7 +79,6 @@ class AdvancedSearchTest(BaseTestCase):
         query = build_query(params, meta_params, 'o')
         expected_query = create_search('o'). \
             filter(Term(activities='skitouring')).\
-            fields([]).\
             sort({'date_end': {'order': 'desc'}}, {'id': {'order': 'desc'}}).\
             extra(from_=40, size=20)
         self.assertQueryEqual(query, expected_query)
@@ -91,7 +87,7 @@ class AdvancedSearchTest(BaseTestCase):
         q1 = query1.to_dict()
         q2 = query2.to_dict()
 
-        self.assertEqual(q1['fields'], q2['fields'])
+        # self.assertEqual(q1['fields'], q2['fields']) # TODO
         self.assertEqual(q1['from'], q2['from'])
         self.assertEqual(q1['size'], q2['size'])
         self.assertEqual(q1.get('sort'), q2.get('sort'))
@@ -213,8 +209,8 @@ class AdvancedSearchTest(BaseTestCase):
                 Range(climbing_rating_min={'gt': 17}),
                 Range(climbing_rating_max={'lt': 5}),
                 Bool(must=[
-                    Missing(field='climbing_rating_min'),
-                    Missing(field='climbing_rating_max')
+                    ~Exists(field='climbing_rating_min'),
+                    ~Exists(field='climbing_rating_max')
                 ])
             ])))
 
@@ -244,8 +240,8 @@ class AdvancedSearchTest(BaseTestCase):
                 Range(elevation_min={'gt': 2400}),
                 Range(elevation_max={'lt': 1200}),
                 Bool(must=[
-                    Missing(field='elevation_min'),
-                    Missing(field='elevation_max')
+                    ~Exists(field='elevation_min'),
+                    ~Exists(field='elevation_max')
                 ])
             ])))
         self.assertEqual(
@@ -254,8 +250,8 @@ class AdvancedSearchTest(BaseTestCase):
                 Range(height_min={'gt': 2400}),
                 Range(height_max={'lt': 1200}),
                 Bool(must=[
-                    Missing(field='height_min'),
-                    Missing(field='height_max')
+                    ~Exists(field='height_min'),
+                    ~Exists(field='height_max')
                 ])
             ])))
 

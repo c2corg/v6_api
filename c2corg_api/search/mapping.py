@@ -5,13 +5,19 @@ from c2corg_api.search.mapping_types import Enum, QEnumArray, QLong, \
     QEnumRange
 from c2corg_common.attributes import default_langs
 from c2corg_common.sortable_search_attributes import sortable_quality_types
-from elasticsearch_dsl import DocType, String, MetaField, Long, GeoPoint
+from elasticsearch_dsl import Document as DocType, Text as String, MetaField, \
+    Long, GeoPoint, Keyword
 
 
 class BaseMeta:
     # disable the '_all' field, see
-    # https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-all-field.html
-    all = MetaField(enabled=False)
+    # https://www.elastic.co/guide/en/elasticsearch/reference/2.4/mapping-all-field.html
+
+    # no more used :
+    # https://www.elastic.co/guide/en/elasticsearch/reference/6.0/mapping-all-field.html
+
+    # all = MetaField(enabled=False)
+    pass
 
 
 # for the title fields a simpler analyzer is used.
@@ -20,7 +26,7 @@ class BaseMeta:
 # https://github.com/komoot/photon/blob/master/es/index_settings.json
 def default_title_field():
     return String(
-        index='not_analyzed',
+        # index='not_analyzed',
         similarity='c2corgsimilarity',
         fields={
             'ngram': String(
@@ -48,7 +54,7 @@ class SearchDocument(DocType):
         pass
 
     id = Long()
-    doc_type = Enum()
+    # doc_type = Enum()
     quality = QEnumRange(
         'qa', model_field=Document.quality, enum_mapper=sortable_quality_types)
     available_locales = QEnumArray('l', enum=default_langs)
@@ -107,11 +113,11 @@ class SearchDocument(DocType):
         analyzer='index_basque', search_analyzer='search_basque')
 
     @staticmethod
-    def to_search_document(document, index, include_areas=True):
+    def to_search_document(document, index_prefix, include_areas=True):
         search_document = {
-            '_index': index,
+            '_index': f"{index_prefix}_{document.type}",
             '_id': document.document_id,
-            '_type': document.type,
+            # '_type': document.type,
             'id': document.document_id
         }
 
@@ -181,277 +187,282 @@ class SearchDocument(DocType):
 
 """To support partial-matching required for the autocomplete search, we
 have to set up a n-gram filter for each language analyzer. See also:
-https://www.elastic.co/guide/en/elasticsearch/guide/current/_index_time_search_as_you_type.html
+https://www.elastic.co/guide/en/elasticsearch/guide/2.4/_index_time_search_as_you_type.html
 The original definitions of the analyzers are taken from here:
-https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-lang-analyzer.html
+https://www.elastic.co/guide/en/elasticsearch/reference/2.4/analysis-lang-analyzer.html
 """
-analysis_settings = {
-    "filter": {
-        "autocomplete_filter": {
-            "type": "edge_ngram",
-            "min_gram": 2,
-            "max_gram": 20
-        },
-        # filters for the english analyzers
-        "english_stop": {
-            "type": "stop",
-            "stopwords": "_english_"
-        },
-        "english_stemmer": {
-            "type": "stemmer",
-            "language": "english"
-        },
-        "english_possessive_stemmer": {
-            "type": "stemmer",
-            "language": "possessive_english"
-        },
-        # filters for the french analyzers
-        "french_elision": {
-            "type": "elision",
-            "articles_case": True,
-            "articles": [
-                "l", "m", "t", "qu", "n", "s",
-                "j", "d", "c", "jusqu", "quoiqu",
-                "lorsqu", "puisqu"
-            ]
-        },
-        "french_stop": {
-            "type": "stop",
-            "stopwords": "_french_"
-        },
-        "french_stemmer": {
-            "type": "stemmer",
-            "language": "light_french"
-        },
-        # filters for the german analyzers
-        "german_stop": {
-            "type": "stop",
-            "stopwords": "_german_"
-        },
-        "german_stemmer": {
-            "type": "stemmer",
-            "language": "light_german"
-        },
-        # filters for the italian analyzers
-        "italian_elision": {
-            "type": "elision",
-            "articles_case": True,
-            "articles": [
-                "c", "l", "all", "dall", "dell",
-                "nell", "sull", "coll", "pell",
-                "gl", "agl", "dagl", "degl", "negl",
-                "sugl", "un", "m", "t", "s", "v", "d"
-            ]
-        },
-        "italian_stop": {
-            "type": "stop",
-            "stopwords": "_italian_"
-        },
-        "italian_stemmer": {
-            "type": "stemmer",
-            "language": "light_italian"
-        },
-        # filters for the spanish analyzers
-        "spanish_stop": {
-            "type": "stop",
-            "stopwords": "_spanish_"
-        },
-        "spanish_stemmer": {
-            "type": "stemmer",
-            "language": "light_spanish"
-        },
-        # filters for the catalan analyzers
-        "catalan_elision": {
-            "type": "elision",
-            "articles_case": True,
-            "articles": ["d", "l", "m", "n", "s", "t"]
-        },
-        "catalan_stop": {
-            "type": "stop",
-            "stopwords": "_catalan_"
-        },
-        "catalan_stemmer": {
-            "type": "stemmer",
-            "language": "catalan"
-        },
-        # filters for the basque analyzers
-        "basque_stop": {
-            "type": "stop",
-            "stopwords": "_basque_"
-        },
-        "basque_stemmer": {
-            "type": "stemmer",
-            "language": "basque"
+
+es_index_settings = {
+    "index": {
+        "similarity": {
+            "c2corgsimilarity": {
+                "type": "BM25"
+            }
         }
     },
-    "similarity": {
-        "c2corgsimilarity": {
-            "type": "BM25"
-        }
-    },
-    "char_filter": {
-        "punctuationgreedy": {
-            "type": "pattern_replace",
-            "pattern": "[\\.,]"
-        }
-    },
-    "analyzer": {
-        "index_ngram": {
-            "char_filter": ["punctuationgreedy"],
-            "filter": [
-                "word_delimiter", "lowercase", "asciifolding", "unique",
-                "autocomplete_filter"],
-            "tokenizer": "standard"
+    "analysis": {
+        "filter": {
+            "autocomplete_filter": {
+                "type": "edge_ngram",
+                "min_gram": 2,
+                "max_gram": 20
+            },
+            # filters for the english analyzers
+            "english_stop": {
+                "type": "stop",
+                "stopwords": "_english_"
+            },
+            "english_stemmer": {
+                "type": "stemmer",
+                "language": "english"
+            },
+            "english_possessive_stemmer": {
+                "type": "stemmer",
+                "language": "possessive_english"
+            },
+            # filters for the french analyzers
+            "french_elision": {
+                "type": "elision",
+                "articles_case": True,
+                "articles": [
+                    "l", "m", "t", "qu", "n", "s",
+                    "j", "d", "c", "jusqu", "quoiqu",
+                    "lorsqu", "puisqu"
+                ]
+            },
+            "french_stop": {
+                "type": "stop",
+                "stopwords": "_french_"
+            },
+            "french_stemmer": {
+                "type": "stemmer",
+                "language": "light_french"
+            },
+            # filters for the german analyzers
+            "german_stop": {
+                "type": "stop",
+                "stopwords": "_german_"
+            },
+            "german_stemmer": {
+                "type": "stemmer",
+                "language": "light_german"
+            },
+            # filters for the italian analyzers
+            "italian_elision": {
+                "type": "elision",
+                "articles_case": True,
+                "articles": [
+                    "c", "l", "all", "dall", "dell",
+                    "nell", "sull", "coll", "pell",
+                    "gl", "agl", "dagl", "degl", "negl",
+                    "sugl", "un", "m", "t", "s", "v", "d"
+                ]
+            },
+            "italian_stop": {
+                "type": "stop",
+                "stopwords": "_italian_"
+            },
+            "italian_stemmer": {
+                "type": "stemmer",
+                "language": "light_italian"
+            },
+            # filters for the spanish analyzers
+            "spanish_stop": {
+                "type": "stop",
+                "stopwords": "_spanish_"
+            },
+            "spanish_stemmer": {
+                "type": "stemmer",
+                "language": "light_spanish"
+            },
+            # filters for the catalan analyzers
+            "catalan_elision": {
+                "type": "elision",
+                "articles_case": True,
+                "articles": ["d", "l", "m", "n", "s", "t"]
+            },
+            "catalan_stop": {
+                "type": "stop",
+                "stopwords": "_catalan_"
+            },
+            "catalan_stemmer": {
+                "type": "stemmer",
+                "language": "catalan"
+            },
+            # filters for the basque analyzers
+            "basque_stop": {
+                "type": "stop",
+                "stopwords": "_basque_"
+            },
+            "basque_stemmer": {
+                "type": "stemmer",
+                "language": "basque"
+            }
         },
-        "search_ngram": {
-            "char_filter": ["punctuationgreedy"],
-            "filter": [
-                "word_delimiter", "lowercase", "asciifolding", "unique"],
-            "tokenizer": "standard"
+        "char_filter": {
+            "punctuationgreedy": {
+                "type": "pattern_replace",
+                "pattern": "[\\.,]"
+            }
         },
-        "index_raw": {
-            "char_filter": ["punctuationgreedy"],
-            "filter": [
-                "word_delimiter", "lowercase", "asciifolding", "unique"],
-            "tokenizer": "standard"
-        },
-        "search_raw": {
-            "char_filter": ["punctuationgreedy"],
-            "filter": [
-                "word_delimiter", "lowercase", "asciifolding", "unique"],
-            "tokenizer": "standard"
-        },
-        "index_english": {
-            "type": "custom",
-            "tokenizer": "standard",
-            "filter": [
-                "english_possessive_stemmer",
-                "lowercase",
-                "english_stop",
-                "english_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "search_english": {
-            "type": "custom",
-            "tokenizer": "standard",
-            "filter": [
-                "english_possessive_stemmer",
-                "lowercase",
-                "english_stop",
-                "english_stemmer"
-            ]
-        },
-        "index_french": {
-            "tokenizer": "standard",
-            "filter": [
-                "french_elision",
-                "lowercase",
-                "french_stop",
-                "french_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "search_french": {
-            "tokenizer": "standard",
-            "filter": [
-                "french_elision",
-                "lowercase",
-                "french_stop",
-                "french_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "index_german": {
-            "tokenizer": "standard",
-            "filter": [
-                "lowercase",
-                "german_stop",
-                "german_normalization",
-                "german_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "search_german": {
-            "tokenizer": "standard",
-            "filter": [
-                "lowercase",
-                "german_stop",
-                "german_normalization",
-                "german_stemmer"
-            ]
-        },
-        "index_italian": {
-            "tokenizer": "standard",
-            "filter": [
-                "italian_elision",
-                "lowercase",
-                "italian_stop",
-                "italian_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "search_italian": {
-            "tokenizer": "standard",
-            "filter": [
-                "italian_elision",
-                "lowercase",
-                "italian_stop",
-                "italian_stemmer"
-            ]
-        },
-        "index_spanish": {
-            "tokenizer": "standard",
-            "filter": [
-                "lowercase",
-                "spanish_stop",
-                "spanish_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "search_spanish": {
-            "tokenizer": "standard",
-            "filter": [
-                "lowercase",
-                "spanish_stop",
-                "spanish_stemmer"
-            ]
-        },
-        "index_catalan": {
-            "tokenizer": "standard",
-            "filter": [
-                "catalan_elision",
-                "lowercase",
-                "catalan_stop",
-                "catalan_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "search_catalan": {
-            "tokenizer": "standard",
-            "filter": [
-                "catalan_elision",
-                "lowercase",
-                "catalan_stop",
-                "catalan_stemmer"
-            ]
-        },
-        "index_basque": {
-            "tokenizer": "standard",
-            "filter": [
-                "lowercase",
-                "basque_stop",
-                "basque_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "search_basque": {
-            "tokenizer": "standard",
-            "filter": [
-                "lowercase",
-                "basque_stop",
-                "basque_stemmer"
-            ]
+        "analyzer": {
+            "index_ngram": {
+                "char_filter": ["punctuationgreedy"],
+                "filter": [
+                    "word_delimiter", "lowercase", "asciifolding", "unique",
+                    "autocomplete_filter"],
+                "tokenizer": "standard"
+            },
+            "search_ngram": {
+                "char_filter": ["punctuationgreedy"],
+                "filter": [
+                    "word_delimiter", "lowercase", "asciifolding", "unique"],
+                "tokenizer": "standard"
+            },
+            "index_raw": {
+                "char_filter": ["punctuationgreedy"],
+                "filter": [
+                    "word_delimiter", "lowercase", "asciifolding", "unique"],
+                "tokenizer": "standard"
+            },
+            "search_raw": {
+                "char_filter": ["punctuationgreedy"],
+                "filter": [
+                    "word_delimiter", "lowercase", "asciifolding", "unique"],
+                "tokenizer": "standard"
+            },
+            "index_english": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "english_possessive_stemmer",
+                    "lowercase",
+                    "english_stop",
+                    "english_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "search_english": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "english_possessive_stemmer",
+                    "lowercase",
+                    "english_stop",
+                    "english_stemmer"
+                ]
+            },
+            "index_french": {
+                "tokenizer": "standard",
+                "filter": [
+                    "french_elision",
+                    "lowercase",
+                    "french_stop",
+                    "french_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "search_french": {
+                "tokenizer": "standard",
+                "filter": [
+                    "french_elision",
+                    "lowercase",
+                    "french_stop",
+                    "french_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "index_german": {
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase",
+                    "german_stop",
+                    "german_normalization",
+                    "german_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "search_german": {
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase",
+                    "german_stop",
+                    "german_normalization",
+                    "german_stemmer"
+                ]
+            },
+            "index_italian": {
+                "tokenizer": "standard",
+                "filter": [
+                    "italian_elision",
+                    "lowercase",
+                    "italian_stop",
+                    "italian_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "search_italian": {
+                "tokenizer": "standard",
+                "filter": [
+                    "italian_elision",
+                    "lowercase",
+                    "italian_stop",
+                    "italian_stemmer"
+                ]
+            },
+            "index_spanish": {
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase",
+                    "spanish_stop",
+                    "spanish_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "search_spanish": {
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase",
+                    "spanish_stop",
+                    "spanish_stemmer"
+                ]
+            },
+            "index_catalan": {
+                "tokenizer": "standard",
+                "filter": [
+                    "catalan_elision",
+                    "lowercase",
+                    "catalan_stop",
+                    "catalan_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "search_catalan": {
+                "tokenizer": "standard",
+                "filter": [
+                    "catalan_elision",
+                    "lowercase",
+                    "catalan_stop",
+                    "catalan_stemmer"
+                ]
+            },
+            "index_basque": {
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase",
+                    "basque_stop",
+                    "basque_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "search_basque": {
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase",
+                    "basque_stop",
+                    "basque_stemmer"
+                ]
+            }
         }
     }
 }

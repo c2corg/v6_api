@@ -857,7 +857,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         # check that the route was updated in the search index
         search_doc = SearchRoute.get(
             id=route.document_id,
-            index=elasticsearch_config['index'])
+            index=elasticsearch_config['index_prefix'] + '_r')
         self.assertEqual(
             search_doc['title_en'], 'Mont Granier! : Mont Blanc from the air')
 

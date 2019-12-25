@@ -1,4 +1,4 @@
-from elasticsearch_dsl import String, Long, Integer, Boolean, Date
+from elasticsearch_dsl import Text as String, Keyword, Long, Integer, Boolean, Date
 
 # this module contains classes to mark the fields of a mapping that can be
 # used in a search.
@@ -75,12 +75,10 @@ def get_as_queryable(clazz):
     return QClass
 
 
-class Enum(String):
+class Enum(Keyword):
     """Field type for enums that should not be analyzed before indexing.
     """
-    def __init__(self, *args, **kwargs):
-        kwargs['index'] = 'not_analyzed'
-        super(Enum, self).__init__(*args, **kwargs)
+    pass
 
 
 class EnumArray(Enum):

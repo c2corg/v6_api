@@ -22,7 +22,7 @@ def search(url_params, meta_params, doc_type):
     # only request the document ids from ES
     response = query.execute()
     document_ids = [int(doc.meta.id) for doc in response]
-    total = response.hits.total
+    total = response.hits.total.value
 
     return document_ids, total
 

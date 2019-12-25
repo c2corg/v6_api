@@ -45,8 +45,8 @@ class SyncWorkerTest(BaseTestCase):
             session=self.session)
         next(syncer.consume(limit=1))
 
-        index = elasticsearch_config['index']
-        doc = SearchWaypoint.get(id=document_id, index=index)
+        index_prefix = elasticsearch_config['index_prefix']
+        doc = SearchWaypoint.get(id=document_id, index=f"{index_prefix}_w")
         self.assertEqual(doc['title_fr'], 'Mont Granier')
         self.assertEqual(doc['doc_type'], 'w')
 
@@ -61,4 +61,4 @@ class SyncWorkerTest(BaseTestCase):
 
         next(syncer.consume(limit=1))
         with self.assertRaises(NotFoundError):
-            SearchWaypoint.get(id=document_id, index=index)
+            SearchWaypoint.get(id=document_id, index=f"{index_prefix}_w")

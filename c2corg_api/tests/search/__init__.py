@@ -1,6 +1,6 @@
 from c2corg_api.scripts import initializees
 from c2corg_api.scripts.es.fill_index import fill_index
-from c2corg_api.search import elasticsearch_config
+from c2corg_api.search import elasticsearch_config, search_documents
 
 
 def reset_search_index(session):
@@ -15,5 +15,7 @@ def reset_search_index(session):
 def force_search_index():
     """Force that the search index is updated.
     """
-    elasticsearch_config['client'].indices.refresh(
-        elasticsearch_config['index'])
+    indices = elasticsearch_config['client'].indices
+    index_prefix = elasticsearch_config['index_prefix']
+    for type_letter in search_documents:
+        indices.refresh(f"{index_prefix}_{type_letter}")

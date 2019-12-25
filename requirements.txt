@@ -3,8 +3,8 @@ apscheduler==3.6.3          # last
 bcrypt==3.1.7               # last
 colander==1.7               # last
 dogpile.cache==0.9.0        # Last
-elasticsearch==2.3.0        # Needs to update ES containers to ES 7.0
-elasticsearch_dsl==2.0.0    # Needs to update ES containers to ES 7.0
+elasticsearch==7.1.0        # last
+elasticsearch_dsl==7.1.0    # last
 geoalchemy2==0.4.0          # TODO 0.6.3, camptocamp SA dep, does not support 3.7 officialy
 geojson==2.5.0              # last 
 geomet==0.2.1               # last, but does not support 3.7 officialy

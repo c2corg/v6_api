@@ -33,7 +33,8 @@ def migrate():
     """ Add the field "slackline_type" to the route mapping.
     """
     client = elasticsearch_config['client']
-    index_name = elasticsearch_config['index']
+    index_prefix = elasticsearch_config['index_prefix']
+    index_name = f"{index_prefix}_r"
     mapping_name = SearchRoute._doc_type.name
     field_name = 'slackline_type'
 

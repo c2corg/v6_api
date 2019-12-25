@@ -40,13 +40,19 @@ def do_multi_search_for_types(search_types, search_term, limit, lang):
     and returns a list of tuples (document_ids, total) containing the results
     for each type.
     """
-    multi_search = MultiSearch(index=elasticsearch_config['index'])
+    multi_search = MultiSearch()
 
     for search_type in search_types:
         (_, get_documents_config) = search_type
+
+        # TODO fields sert à quoi ?
+        # search(get_documents_config.document_type).\
+        #     query(get_text_query_on_title(search_term, lang)).\
+        #     fields([]).\
+        #     extra(from_=0, size=limit)
+
         search = create_search(get_documents_config.document_type).\
             query(get_text_query_on_title(search_term, lang)).\
-            fields([]).\
             extra(from_=0, size=limit)
         multi_search = multi_search.add(search)
 
@@ -56,7 +62,7 @@ def do_multi_search_for_types(search_types, search_term, limit, lang):
     for response in responses:
         # only requesting the document ids from ES
         document_ids = [int(doc.meta.id) for doc in response]
-        total = response.hits.total
+        total = response.hits.total.value
         results_for_type.append((document_ids, total))
     return results_for_type
 

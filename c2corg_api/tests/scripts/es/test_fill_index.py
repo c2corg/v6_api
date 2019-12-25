@@ -156,20 +156,20 @@ class FillIndexTest(BaseTestCase):
         waypoint2 = SearchWaypoint.get(id=71172)
         self.assertIsNotNone(waypoint2)
         self.assertEqual(waypoint2.title_en, 'Mont Blanc')
-        self.assertEqual(waypoint2.title_fr, '')
+        self.assertIsNone(waypoint2.title_fr)
         self.assertEqual(waypoint2.doc_type, 'w')
 
         route = SearchRoute.get(id=71173)
         self.assertIsNotNone(route)
         self.assertEqual(route.title_en, 'Mont Blanc : Face N')
-        self.assertEqual(route.title_fr, '')
+        self.assertIsNone(route.title_fr)
         self.assertEqual(route.doc_type, 'r')
         self.assertEqual(route.durations, [0])
 
         outing = SearchOuting.get(id=71175)
         self.assertIsNotNone(outing)
         self.assertEqual(outing.title_en, 'Mont Blanc : Face N !')
-        self.assertEqual(outing.title_fr, '')
+        self.assertIsNone(outing.title_fr)
         self.assertEqual(outing.doc_type, 'o')
         self.assertEqual(outing.frequentation, 3)
 

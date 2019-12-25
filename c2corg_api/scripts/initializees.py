@@ -1,16 +1,16 @@
 import os
 import sys
 
-from c2corg_api.search.mappings.area_mapping import SearchArea
-from c2corg_api.search.mappings.article_mapping import SearchArticle
-from c2corg_api.search.mappings.book_mapping import SearchBook
-from c2corg_api.search.mappings.image_mapping import SearchImage
-from c2corg_api.search.mappings.outing_mapping import SearchOuting
-from c2corg_api.search.mappings.xreport_mapping import SearchXreport
-from c2corg_api.search.mappings.route_mapping import SearchRoute
-from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
-from c2corg_api.search.mappings.user_mapping import SearchUser
-from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
+from c2corg_api.search.mappings.area_mapping import SearchArea, AREA_TYPE
+from c2corg_api.search.mappings.article_mapping import SearchArticle, ARTICLE_TYPE
+from c2corg_api.search.mappings.book_mapping import SearchBook, BOOK_TYPE
+from c2corg_api.search.mappings.image_mapping import SearchImage, IMAGE_TYPE
+from c2corg_api.search.mappings.outing_mapping import SearchOuting, OUTING_TYPE
+from c2corg_api.search.mappings.xreport_mapping import SearchXreport, XREPORT_TYPE
+from c2corg_api.search.mappings.route_mapping import SearchRoute, ROUTE_TYPE
+from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap, MAP_TYPE
+from c2corg_api.search.mappings.user_mapping import SearchUser, USERPROFILE_TYPE
+from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint, WAYPOINT_TYPE
 from elasticsearch_dsl import Index
 
 from pyramid.paster import (
@@ -20,9 +20,23 @@ from pyramid.paster import (
 
 from pyramid.scripts.common import parse_vars
 
-from c2corg_api.search.mapping import analysis_settings
+from c2corg_api.search.mapping import es_index_settings
 from c2corg_api.search import configure_es_from_config, elasticsearch_config
 
+# TODO : use from c2corg_api.search import search_documents
+
+_types = [
+    (SearchArea, AREA_TYPE),
+    (SearchArticle, ARTICLE_TYPE),
+    (SearchBook, BOOK_TYPE),
+    (SearchImage, IMAGE_TYPE),
+    (SearchOuting, OUTING_TYPE),
+    (SearchXreport, XREPORT_TYPE),
+    (SearchRoute, ROUTE_TYPE),
+    (SearchTopoMap, MAP_TYPE),
+    (SearchUser, USERPROFILE_TYPE),
+    (SearchWaypoint, WAYPOINT_TYPE),
+]
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
@@ -46,45 +60,60 @@ def setup_es():
     """Create the ElasticSearch index and configure the mapping.
     """
     client = elasticsearch_config['client']
-    index_name = elasticsearch_config['index']
+    index_prefix = elasticsearch_config['index_prefix']
 
     info = client.info()
     print('ElasticSearch version: {0}'.format(info['version']['number']))
 
-    if client.indices.exists(index_name):
-        print('Index "{0}" already exists. To re-create the index, manually '
-              'delete the index and run this script again.'.format(index_name))
-        print('To delete the index run:')
-        print('curl -XDELETE \'http://{0}:{1}/{2}/\''.format(
-            elasticsearch_config['host'], elasticsearch_config['port'],
-            index_name))
-        sys.exit(0)
+    for klass, letter in _types:
+        index_name = f"{index_prefix}_{letter}"
 
-    index = Index(index_name)
-    index.settings(analysis=analysis_settings)
+        if client.indices.exists(index_name):
+            print('Index "{0}" already exists. To re-create the index, manually '
+                'delete the index and run this script again.'.format(index_name))
+            print('To delete the index run:')
+            print('curl -XDELETE \'http://{0}:{1}/{2}/\''.format(
+                elasticsearch_config['host'], elasticsearch_config['port'],
+                index_name))
+            sys.exit(0)
 
-    index.doc_type(SearchArea)
-    index.doc_type(SearchBook)
-    index.doc_type(SearchImage)
-    index.doc_type(SearchOuting)
-    index.doc_type(SearchXreport)
-    index.doc_type(SearchRoute)
-    index.doc_type(SearchTopoMap)
-    index.doc_type(SearchUser)
-    index.doc_type(SearchWaypoint)
-    index.doc_type(SearchArticle)
+        index = Index(index_name)
+        index.settings(**es_index_settings)
 
-    index.create()
+        index.document(klass)
+        index.create()
+        print('Index "{0}" created'.format(index_name))
 
-    print('Index "{0}" created'.format(index_name))
+    # index = Index(index_name)
+    # index.settings(**es_index_settings)
+
+    # index.document(SearchArea)
+    # index.document(SearchBook)
+    # index.document(SearchImage)
+    # index.document(SearchOuting)
+    # index.document(SearchXreport)
+    # index.document(SearchRoute)
+    # index.document(SearchTopoMap)
+    # index.document(SearchUser)
+    # index.document(SearchWaypoint)
+    # index.document(SearchArticle)
+
+    # index.create()
+
+    # print('Index "{0}" created'.format(index_name))
 
 
 def drop_index(silent=True):
     """Remove the ElasticSearch index.
     """
-    index = Index(elasticsearch_config['index'])
-    try:
-        index.delete()
-    except Exception as exc:
-        if not silent:
-            raise exc
+
+    index_prefix = elasticsearch_config['index_prefix']
+
+    for _, letter in _types:
+        index = Index(f"{index_prefix}_{letter}")
+
+        try:
+            index.delete()
+        except Exception as exc:
+            if not silent:
+                raise exc

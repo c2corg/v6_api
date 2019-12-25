@@ -12,16 +12,16 @@ class SearchArea(SearchDocument):
     FIELDS = ['area_type']
 
     @staticmethod
-    def to_search_document(document, index):
+    def to_search_document(document, index_prefix):
         search_document = SearchDocument.to_search_document(
-            document, index, include_areas=False)
+            document, index_prefix, include_areas=False)
 
         if document.redirects_to:
             return search_document
 
         SearchDocument.copy_fields(
             search_document, document, SearchArea.FIELDS)
-
+        
         return search_document
 
 SearchArea.queryable_fields = QueryableMixin.get_queryable_fields(SearchArea)

@@ -35,7 +35,7 @@ SEARCH_LIMIT_DEFAULT = 10
 
 elasticsearch_config = {
     'client': None,
-    'index': None,
+    'index_prefix': None,
     'host': None,
     'port': None
 }
@@ -53,7 +53,7 @@ def configure_es_from_config(settings):
     client = client_from_config(settings)
     connections.add_connection('default', client)
     elasticsearch_config['client'] = client
-    elasticsearch_config['index'] = settings['elasticsearch.index']
+    elasticsearch_config['index_prefix'] = settings['elasticsearch.index']
     elasticsearch_config['host'] = settings['elasticsearch.host']
     elasticsearch_config['port'] = int(settings['elasticsearch.port'])
 
@@ -77,8 +77,7 @@ def get_queue_config(settings):
 def create_search(document_type):
     return Search(
         using=elasticsearch_config['client'],
-        index=elasticsearch_config['index'],
-        doc_type=search_documents[document_type])
+        index=elasticsearch_config['index_prefix'] + "_" + document_type)
 
 
 def get_text_query(search_term, lang=None):

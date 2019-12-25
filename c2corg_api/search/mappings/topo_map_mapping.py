@@ -10,8 +10,8 @@ class SearchTopoMap(SearchDocument):
     FIELDS = []
 
     @staticmethod
-    def to_search_document(document, index):
-        return SearchDocument.to_search_document(document, index)
+    def to_search_document(document, index_prefix):
+        return SearchDocument.to_search_document(document, index_prefix)
 
 SearchTopoMap.queryable_fields = QueryableMixin.get_queryable_fields(
     SearchTopoMap)
