@@ -1,4 +1,4 @@
-dist: trusty
+dist: xenial
 
 env:
   global:
@@ -14,24 +14,35 @@ services:
 - redis-server
 
 python:
-- 3.4
+- 3.7
 
 addons:
   postgresql: "9.4"
   apt:
     packages:
-    - postgresql-9.4-postgis-2.3
+    - postgresql-9.4-postgis-2.4
 
 install:
-- mkdir /tmp/elasticsearch
-- wget -O - https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.3.2/elasticsearch-2.3.2.tar.gz | tar xz --directory=/tmp/elasticsearch --strip-components=1
-- /tmp/elasticsearch/bin/elasticsearch --daemonize --path.data /tmp
+
+- curl -s -O https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.1.0-amd64.deb
+- sudo dpkg -i --force-confnew elasticsearch-7.1.0-amd64.deb
+- echo -e '-XX:+DisableExplicitGC\n-Djdk.io.permissionsUseCanonicalPath=true\n-Dlog4j.skipJansi=true\n-server\n' | sudo tee -a /etc/elasticsearch/jvm.options
+- sudo chown -R elasticsearch:elasticsearch /etc/default/elasticsearch
+- sudo systemctl start elasticsearch
+
+# - mkdir /tmp/elasticsearch
+# - wget -O - https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.1.0-linux-x86_64.tar.gz | tar xz --directory=/tmp/elasticsearch --strip-components=1
+# - /tmp/elasticsearch/bin/elasticsearch --daemonize --path.data /tmp
 - make -f config/travis .build/dev-requirements.timestamp
 - make -f config/travis install
 
+
 before_script:
+# - sudo apt-get -qq update
+# - sudo apt-get install postgresql-9.4-postgis-2.3 postgresql-9.4-postgis-scripts postgis -y -q
 - echo "create user \"www-data\" with password 'www-data;'" | psql -U postgres
 - PGUSER=postgres USER=travis scripts/create_user_db_test.sh
+- sleep 10
 - curl http://localhost:9200/
 
 script:
