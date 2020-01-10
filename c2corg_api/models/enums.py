@@ -126,41 +126,26 @@ book_type = enum(
     'book_type', attributes.book_types)
 feed_change_type = enum(
     'feed_change_type', attributes.feed_change_types)
-# TODO: merge in c2corg_commons
 event_type = enum(
-    'event_type', ['avalanche', 'stone_ice_fall', 'ice_cornice_collapse',
-                   'person_fall', 'crevasse_fall', 'physical_failure',
-                   'injury_without_fall', 'blocked_person', 'weather_event',
-                   'safety_operation', 'critical_situation', 'other'])
+    'event_type', attributes.event_types)
 event_activity = enum(
-    'event_activity', ['sport_climbing', 'multipitch_climbing', 'alpine_climbing',
-                   'snow_ice_mixed', 'ice_climbing', 'skitouring', 'other'])
+    'event_activity', attributes.event_activities)
 author_status = enum(
     'author_status', attributes.author_statuses)
-# TODO: merge in c2corg_commons
 activity_rate = enum(
-    # 'activity_rate', attributes.activity_rates)
-    'activity_rate', ['activity_rate_w1', 'activity_rate_m2', 'activity_rate_y5'])
-# nb_outings = enum(
-#     'nb_outings', attributes.nb_outings)
+    'activity_rate', attributes.activity_rates)
 supervision = enum(
-    'supervision',
-    ['no_supervision', 'federal_supervision', 'professional_supervision']
-)
+    'supervision', attributes.supervision)
 qualification = enum(
-    'qualification',
-    ['federal_supervisor', 'federal_trainer', 'professional_diploma']
-)
+    'qualification', attributes.qualification)
 gender = enum(
     'gender', attributes.genders)
 previous_injuries = enum(
     'previous_injuries', attributes.previous_injuries)
 severity = enum(
     'severity', attributes.severities)
-# TODO: merge in c2corg_commons
 autonomy = enum(
-    #'autonomy', attributes.autonomies)
-    'autonomy', ['non_autonomous', 'autonomous', 'expert'])
+    'autonomy', attributes.autonomies)
 avalanche_level = enum(
     'avalanche_level', attributes.avalanche_levels)
 avalanche_slope = enum(
