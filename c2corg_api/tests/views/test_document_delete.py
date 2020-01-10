@@ -284,7 +284,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.flush()
 
         self.xreport1 = Xreport(
-        event_activity='alpine_climbing', event_type='stone_ice_fall',
+            event_activity='alpine_climbing', event_type='stone_ice_fall',
             locales=[
                 XreportLocale(
                     lang='en', title='Lac d\'Annecy',

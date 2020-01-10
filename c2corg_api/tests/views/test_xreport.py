@@ -91,7 +91,8 @@ class TestXreportRest(BaseDocumentTestRest):
         linked_routes = associations.get('routes')
         self.assertEqual(len(linked_routes), 1)
 
-        self.assertEqual(body.get('event_activity'), self.xreport1.event_activity)
+        self.assertEqual(body.get('event_activity'),
+                         self.xreport1.event_activity)
 
         self.assertIn('nb_participants', body)
         self.assertIn('nb_impacted', body)
@@ -295,10 +296,12 @@ class TestXreportRest(BaseDocumentTestRest):
 
     def test_post_outdated_attributes_error(self):
         outdated_attributes = [
-            # api not checking additional parameters, nb_outings raises no error
+            # api not checking additional parameters,
+            # nb_outings raises no error
             # ('nb_outings', 'nb_outings_9'),
             ('autonomy', 'initiator'),
             ('activity_rate', 'activity_rate_10'),
+            ('event_type', 'roped_fall'),
             ('event_activity', 'hiking')
         ]
         for (key, value) in outdated_attributes:
@@ -352,7 +355,8 @@ class TestXreportRest(BaseDocumentTestRest):
         # self.assertNotIn('nb_outings', archive_xreport)
         self.assertEqual(archive_xreport.autonomy, 'autonomous')
         self.assertEqual(archive_xreport.activity_rate, 'activity_rate_m2')
-        self.assertEqual(archive_xreport.supervision, 'professional_supervision')
+        self.assertEqual(archive_xreport.supervision,
+                         'professional_supervision')
         self.assertEqual(archive_xreport.qualification, 'federal_trainer')
 
         archive_locale = version.document_locales_archive

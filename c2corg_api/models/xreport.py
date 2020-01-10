@@ -1,4 +1,3 @@
-import colander
 from c2corg_api.models.schema_utils import restrict_schema,\
     get_update_schema, get_create_schema
 from c2corg_common.fields_xreport import fields_xreport
@@ -15,7 +14,6 @@ from sqlalchemy import (
 from colanderalchemy import SQLAlchemySchemaNode
 
 from c2corg_api.models import schema, Base
-from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
     ArchiveDocument,

@@ -14,7 +14,6 @@ from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.utils import ArrayOfEnum
-from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.views.validation import association_keys
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql.array import ARRAY
