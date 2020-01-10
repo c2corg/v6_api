@@ -17,8 +17,8 @@ down_revision = '85a5ed3c76a8'
 branch_labels = None
 depends_on = None
 
+
 def upgrade():
-    # !!!! do not forget xreports_archives
 
     # convert activities
     activity_conversions = [
@@ -57,9 +57,9 @@ def upgrade():
                sa.Column('event_activity', new_activity_type, nullable=True),
                schema='guidebook')
     xra = Table('xreports_archives', MetaData(),
-               sa.Column('activities', old_activity_type),
-               sa.Column('event_activity', new_activity_type, nullable=True),
-               schema='guidebook')
+                sa.Column('activities', old_activity_type),
+                sa.Column('event_activity', new_activity_type, nullable=True),
+                schema='guidebook')
     for (old_value, new_value) in activity_conversions:
         op.execute(xr.update()
                    .where(xr.c.activities.contains(sa.literal([old_value])
@@ -118,9 +118,9 @@ def upgrade():
                sa.Column('event_type_', new_event_type),
                schema='guidebook')
     xra = Table('xreports_archives', MetaData(),
-               sa.Column('event_type', old_event_type),
-               sa.Column('event_type_', new_event_type),
-               schema='guidebook')
+                sa.Column('event_type', old_event_type),
+                sa.Column('event_type_', new_event_type),
+                schema='guidebook')
     for (old_value, new_value) in type_conversions:
         op.execute(xr.update()
                    .where(xr.c.event_type.contains(sa.literal([old_value])
@@ -181,9 +181,9 @@ def upgrade():
                sa.Column('autonomy_', new_autonomy_type, nullable=True),
                schema='guidebook')
     xra = Table('xreports_archives', MetaData(),
-               sa.Column('autonomy', old_autonomy_type),
-               sa.Column('autonomy_', new_autonomy_type, nullable=True),
-               schema='guidebook')
+                sa.Column('autonomy', old_autonomy_type),
+                sa.Column('autonomy_', new_autonomy_type, nullable=True),
+                schema='guidebook')
     for (old_value, new_value) in autonomy_conversions:
         op.execute(xr.update()
                    .where(xr.c.autonomy == op.inline_literal(old_value))
@@ -213,7 +213,7 @@ def upgrade():
         schema='guidebook')
 
     # end of autonomy conversion
-    
+
     # convert activity enum
     activity_conversions = [
         ('activity_rate_150', 'activity_rate_w1'),
@@ -246,9 +246,9 @@ def upgrade():
                sa.Column('activity_rate_', new_activity_type, nullable=True),
                schema='guidebook')
     xra = Table('xreports_archives', MetaData(),
-               sa.Column('activity_rate', old_activity_type),
-               sa.Column('activity_rate_', new_activity_type, nullable=True),
-               schema='guidebook')
+                sa.Column('activity_rate', old_activity_type),
+                sa.Column('activity_rate_', new_activity_type, nullable=True),
+                schema='guidebook')
     for (old_value, new_value) in activity_conversions:
         op.execute(xr.update()
                    .where(xr.c.activity_rate == op.inline_literal(old_value))
@@ -291,16 +291,16 @@ def upgrade():
     op.add_column('xreports', sa.Column('supervision', supervision_type,
                                         nullable=True), schema='guidebook')
     op.add_column('xreports_archives', sa.Column('supervision', supervision_type,
-                                        nullable=True), schema='guidebook')
+                                                 nullable=True), schema='guidebook')
 
     qualification_type = sa.Enum('federal_supervisor', 'federal_trainer',
-                               'professional_diploma',
-                               name='qualification_type', schema='guidebook')
+                                 'professional_diploma',
+                                 name='qualification_type', schema='guidebook')
     qualification_type.create(op.get_bind())
     op.add_column('xreports', sa.Column('qualification', qualification_type,
                                         nullable=True), schema='guidebook')
     op.add_column('xreports_archives', sa.Column('qualification', qualification_type,
-                                        nullable=True), schema='guidebook')
+                                                 nullable=True), schema='guidebook')
 
 
 def downgrade():
@@ -329,9 +329,9 @@ def downgrade():
                sa.Column('activity_rate_', new_activity_type, nullable=True),
                schema='guidebook')
     xra = Table('xreports_archives', MetaData(),
-               sa.Column('activity_rate', old_activity_type),
-               sa.Column('activity_rate_', new_activity_type, nullable=True),
-               schema='guidebook')
+                sa.Column('activity_rate', old_activity_type),
+                sa.Column('activity_rate_', new_activity_type, nullable=True),
+                schema='guidebook')
     for (old_value, new_value) in activity_conversions:
         op.execute(xr.update()
                    .where(xr.c.activity_rate == op.inline_literal(old_value))
@@ -389,9 +389,9 @@ def downgrade():
                sa.Column('autonomy_', new_autonomy_type, nullable=True),
                schema='guidebook')
     xra = Table('xreports_archives', MetaData(),
-               sa.Column('autonomy', old_autonomy_type),
-               sa.Column('autonomy_', new_autonomy_type, nullable=True),
-               schema='guidebook')
+                sa.Column('autonomy', old_autonomy_type),
+                sa.Column('autonomy_', new_autonomy_type, nullable=True),
+                schema='guidebook')
     for (old_value, new_value) in autonomy_conversions:
         op.execute(xr.update()
                    .where(xr.c.autonomy == op.inline_literal(old_value))
@@ -469,9 +469,9 @@ def downgrade():
                sa.Column('event_activity', old_activity_type),
                schema='guidebook')
     xra = Table('xreports_archives', MetaData(),
-               sa.Column('activities', activities_type, nullable=True),
-               sa.Column('event_activity', old_activity_type),
-               schema='guidebook')
+                sa.Column('activities', activities_type, nullable=True),
+                sa.Column('event_activity', old_activity_type),
+                schema='guidebook')
     for (old_value, new_value) in activity_conversions:
         op.execute(xr.update()
                    .where(xr.c.event_activity == op.inline_literal(old_value))
@@ -531,9 +531,9 @@ def downgrade():
                sa.Column('event_type_', ArrayOfEnum(new_event_type)),
                schema='guidebook')
     xra = Table('xreports_archives', MetaData(),
-               sa.Column('event_type', old_event_type),
-               sa.Column('event_type_', ArrayOfEnum(new_event_type)),
-               schema='guidebook')
+                sa.Column('event_type', old_event_type),
+                sa.Column('event_type_', ArrayOfEnum(new_event_type)),
+                schema='guidebook')
     for (old_value, new_value) in type_conversions:
         op.execute(xr.update()
                    .where(xr.c.event_type == op.inline_literal(old_value))
