@@ -224,8 +224,14 @@ def upgrade():
         ('activity_rate_5', 'activity_rate_y5'),
         ('activity_rate_1', 'activity_rate_y5')
     ]
-    old_activity_type = sa.Enum('activity_rate_150', 'activity_rate_50', 'activity_rate_30', 'activity_rate_20', 'activity_rate_10', 'activity_rate_5', 'activity_rate_1', name='activity_rate', schema='guidebook')
-    new_activity_type = sa.Enum('activity_rate_y5', 'activity_rate_m2', 'activity_rate_w1', name='activity_rate_', schema='guidebook')
+    old_activity_type = sa.Enum('activity_rate_150', 'activity_rate_50',
+                                'activity_rate_30', 'activity_rate_20',
+                                'activity_rate_10', 'activity_rate_5',
+                                'activity_rate_1',
+                                name='activity_rate', schema='guidebook')
+    new_activity_type = sa.Enum('activity_rate_y5', 'activity_rate_m2',
+                                'activity_rate_w1',
+                                name='activity_rate_', schema='guidebook')
     new_activity_type.create(op.get_bind())
 
     op.add_column('xreports',
@@ -286,7 +292,7 @@ def upgrade():
                                         nullable=True), schema='guidebook')
     op.add_column('xreports_archives', sa.Column('supervision', supervision_type,
                                         nullable=True), schema='guidebook')
-    
+
     qualification_type = sa.Enum('federal_supervisor', 'federal_trainer',
                                'professional_diploma',
                                name='qualification_type', schema='guidebook')
@@ -295,7 +301,6 @@ def upgrade():
                                         nullable=True), schema='guidebook')
     op.add_column('xreports_archives', sa.Column('qualification', qualification_type,
                                         nullable=True), schema='guidebook')
-    pass
 
 
 def downgrade():
@@ -308,7 +313,8 @@ def downgrade():
         ('activity_rate_y5', 'activity_rate_5'),
     ]
     old_activity_type = sa.Enum('activity_rate_y5', 'activity_rate_m2', 'activity_rate_w1', name='activity_rate', schema='guidebook')
-    new_activity_type = sa.Enum('activity_rate_150', 'activity_rate_50', 'activity_rate_30', 'activity_rate_20', 'activity_rate_10', 'activity_rate_5', 'activity_rate_1', name='activity_rate_', schema='guidebook')
+    new_activity_type = sa.Enum('activity_rate_150', 'activity_rate_50', 'activity_rate_30', 'activity_rate_20', 'activity_rate_10',
+                                'activity_rate_5', 'activity_rate_1', name='activity_rate_', schema='guidebook')
     new_activity_type.create(op.get_bind())
 
     op.add_column('xreports',
@@ -552,5 +558,3 @@ def downgrade():
         schema='guidebook')
 
     # end of types conversion
-
-    pass

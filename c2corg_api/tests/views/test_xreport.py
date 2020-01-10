@@ -221,11 +221,11 @@ class TestXreportRest(BaseDocumentTestRest):
         self.get_caching(self.xreport1)
 
     def test_get_info(self):
-        body, locale = self.get_info(self.xreport1, 'en')
+        _, locale = self.get_info(self.xreport1, 'en')
         self.assertEqual(locale.get('lang'), 'en')
 
     def test_get_info_best_lang(self):
-        body, locale = self.get_info(self.xreport1, 'es')
+        _, locale = self.get_info(self.xreport1, 'es')
         self.assertEqual(locale.get('lang'), 'fr')
 
     def test_get_info_404(self):
@@ -351,7 +351,7 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertEqual(archive_xreport.event_activity, 'skitouring')
         self.assertEqual(archive_xreport.event_type, 'stone_ice_fall')
         self.assertEqual(archive_xreport.nb_participants, 5)
-        assert not hasattr(archive_xreport, 'nb_outings')
+        self.assertFalse(hasattr(archive_xreport, 'nb_outings'))
         # self.assertNotIn('nb_outings', archive_xreport)
         self.assertEqual(archive_xreport.autonomy, 'autonomous')
         self.assertEqual(archive_xreport.activity_rate, 'activity_rate_m2')
