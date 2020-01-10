@@ -38,9 +38,9 @@ class _XreportMixin(object):
     date = Column(Date)
 
     # Type d'évènement
-    event_type = Column(ArrayOfEnum(enums.event_type))
+    event_type = Column(enums.event_type)
 
-    activities = Column(ArrayOfEnum(enums.activity_type), nullable=False)
+    event_activity = Column(enums.event_activity, nullable=False)
 
     # Nombre de participants
     nb_participants = Column(SmallInteger)
@@ -85,7 +85,7 @@ class _XreportMixin(object):
 
 
 attributes = [
-    'elevation', 'date', 'event_type', 'activities',
+    'elevation', 'date', 'event_type', 'event_activity',
     'nb_participants', 'nb_impacted', 'rescue',
     'avalanche_level', 'avalanche_slope', 'severity',
     'author_status', 'activity_rate', 'age', 'gender',
@@ -94,7 +94,7 @@ attributes = [
 ]
 
 attributes_without_personal = [
-    'elevation', 'date', 'event_type', 'activities',
+    'elevation', 'date', 'event_type', 'event_activity',
     'nb_participants', 'nb_impacted', 'rescue',
     'avalanche_level', 'avalanche_slope', 'severity',
     'disable_comments', 'anonymous'
@@ -262,9 +262,6 @@ schema_xreport = SQLAlchemySchemaNode(
         },
         'locales': {
             'children': [schema_xreport_locale],
-        },
-        'activities': {
-            'validator': colander.Length(min=1)
         },
         'geometry': get_geometry_schema_overrides(['POINT'])
     })

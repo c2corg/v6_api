@@ -126,8 +126,15 @@ book_type = enum(
     'book_type', attributes.book_types)
 feed_change_type = enum(
     'feed_change_type', attributes.feed_change_types)
+# TODO: merge in c2corg_commons
 event_type = enum(
-    'event_type', attributes.event_types)
+    'event_type', ['avalanche', 'stone_ice_fall', 'ice_cornice_collapse',
+                   'person_fall', 'crevasse_fall', 'physical_failure',
+                   'injury_without_fall', 'blocked_person', 'weather_event',
+                   'safety_operation', 'critical_situation', 'other'])
+event_activity = enum(
+    'event_activity', ['sport_climbing', 'multipitch_climbing', 'alpine_climbing',
+                   'snow_ice_mixed', 'ice_climbing', 'skitouring', 'other'])
 author_status = enum(
     'author_status', attributes.author_statuses)
 # TODO: merge in c2corg_commons
