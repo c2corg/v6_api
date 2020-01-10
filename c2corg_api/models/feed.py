@@ -207,7 +207,7 @@ def update_feed_document_create(document, user_id):
 
     activities = []
     if document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE,
-                         BOOK_TYPE, XREPORT_TYPE]:
+                         BOOK_TYPE]:
         activities = document.activities
 
     langs = [locale.lang for locale in document.locales]
@@ -262,7 +262,7 @@ def update_feed_document_update(document, user_id, update_types):
 
     # updates activities
     if document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE,
-                         BOOK_TYPE, XREPORT_TYPE] and \
+                         BOOK_TYPE] and \
             UpdateType.FIGURES in update_types:
         update_activities_of_changes(document)
 

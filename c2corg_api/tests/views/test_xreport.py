@@ -61,7 +61,7 @@ class TestXreportRest(BaseDocumentTestRest):
             [self.xreport4.document_id, self.xreport1.document_id], 2)
 
         self.assertResultsEqual(
-            self.get_collection_search({'act': ['hiking']}),
+            self.get_collection_search({'act': 'skitouring'}),
             [self.xreport4.document_id, self.xreport3.document_id,
              self.xreport2.document_id, self.xreport1.document_id], 4)
 
@@ -91,12 +91,12 @@ class TestXreportRest(BaseDocumentTestRest):
         linked_routes = associations.get('routes')
         self.assertEqual(len(linked_routes), 1)
 
-        self.assertEqual(body.get('activities'), self.xreport1.activities)
+        self.assertEqual(body.get('event_activity'), self.xreport1.event_activity)
 
         self.assertIn('nb_participants', body)
         self.assertIn('nb_impacted', body)
         self.assertIn('event_type', body)
-        self.assertEqual(body.get('event_type'), ['stone_fall'])
+        self.assertEqual(body.get('event_type'), 'stone_ice_fall')
         self.assertIn('date', body)
         self.assertEqual(body.get('date'), None)
 
@@ -234,12 +234,12 @@ class TestXreportRest(BaseDocumentTestRest):
         body = self.post_error({}, user='moderator')
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertCorniceRequired(errors[0], 'activities')
+        self.assertCorniceRequired(errors[0], 'event_activity')
 
     def test_post_missing_title(self):
         body_post = {
-            'activities': ['hiking'],
-            'event_type': ['stone_fall'],
+            'event_activity': 'skitouring',
+            'event_type': 'stone_ice_fall',
             'nb_participants': 5,
             'locales': [
                 {'lang': 'en'}
@@ -249,8 +249,8 @@ class TestXreportRest(BaseDocumentTestRest):
 
     def test_post_non_whitelisted_attribute(self):
         body = {
-            'activities': ['hiking'],
-            'event_type': ['stone_fall'],
+            'event_activity': 'skitouring',
+            'event_type': 'stone_ice_fall',
             'nb_participants': 5,
             'protected': True,
             'locales': [
@@ -267,8 +267,8 @@ class TestXreportRest(BaseDocumentTestRest):
         body = {
             'document_id': 123456,
             'version': 567890,
-            'activities': ['hiking'],
-            'event_type': ['stone_fall'],
+            'event_activity': 'skitouring',
+            'event_type': 'stone_ice_fall',
             'nb_participants': 5,
             'associations': {
                 'images': [
@@ -298,10 +298,11 @@ class TestXreportRest(BaseDocumentTestRest):
             # api not checking additional parameters, nb_outings raises no error
             # ('nb_outings', 'nb_outings_9'),
             ('autonomy', 'initiator'),
-            ('activity_rate', 'activity_rate_10')
+            ('activity_rate', 'activity_rate_10'),
+            ('event_activity', 'hiking')
         ]
         for (key, value) in outdated_attributes:
-            body = {'document_id': 123456, 'activities': ['hiking'],
+            body = {'document_id': 123456, 'event_activity': 'skitouring',
                     'locales': [{'title': 'Lac d\'Annecy', 'lang': 'en'}]}
             body[key] = value
             body = self.post_error(body, user='moderator')
@@ -313,8 +314,8 @@ class TestXreportRest(BaseDocumentTestRest):
         body = {
             'document_id': 123456,
             'version': 567890,
-            'activities': ['hiking'],
-            'event_type': ['stone_fall'],
+            'event_activity': 'skitouring',
+            'event_type': 'stone_ice_fall',
             'nb_participants': 5,
             'nb_outings': 'nb_outings9',
             'autonomy': 'autonomous',
@@ -339,14 +340,13 @@ class TestXreportRest(BaseDocumentTestRest):
                 {'title': 'Lac d\'Annecy', 'lang': 'en'}
             ]
         }
-        #import pdb; pdb.set_trace()
         body, doc = self.post_success(body, user='moderator',
                                       validate_with_auth=True)
         version = doc.versions[0]
 
         archive_xreport = version.document_archive
-        self.assertEqual(archive_xreport.activities, ['hiking'])
-        self.assertEqual(archive_xreport.event_type, ['stone_fall'])
+        self.assertEqual(archive_xreport.event_activity, 'skitouring')
+        self.assertEqual(archive_xreport.event_type, 'stone_ice_fall')
         self.assertEqual(archive_xreport.nb_participants, 5)
         assert not hasattr(archive_xreport, 'nb_outings')
         # self.assertNotIn('nb_outings', archive_xreport)
@@ -392,8 +392,8 @@ class TestXreportRest(BaseDocumentTestRest):
         body_post = {
             'document_id': 111,
             'version': 1,
-            'activities': ['hiking'],
-            'event_type': ['stone_fall'],
+            'event_activity': 'skitouring',
+            'event_type': 'stone_ice_fall',
             'nb_participants': 666,
             'nb_impacted': 666,
             'locales': [
@@ -428,8 +428,8 @@ class TestXreportRest(BaseDocumentTestRest):
         body_post = {
             'document_id': 111,
             'version': 1,
-            'activities': ['hiking'],
-            'event_type': ['stone_fall'],
+            'event_activity': 'skitouring',
+            'event_type': 'stone_ice_fall',
             'nb_participants': 666,
             'nb_impacted': 666,
             'locales': [
@@ -452,8 +452,8 @@ class TestXreportRest(BaseDocumentTestRest):
             'document': {
                 'document_id': '9999999',
                 'version': self.xreport1.version,
-                'activities': ['hiking'],
-                'event_type': ['avalanche'],
+                'event_activity': 'skitouring',
+                'event_type': 'avalanche',
                 'nb_participants': 5,
                 'locales': [
                     {'lang': 'en', 'title': 'Lac d\'Annecy',
@@ -468,8 +468,8 @@ class TestXreportRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.xreport1.document_id,
                 'version': -9999,
-                'activities': ['hiking'],
-                'event_type': ['avalanche'],
+                'event_activity': 'skitouring',
+                'event_type': 'avalanche',
                 'nb_participants': 5,
                 'locales': [
                     {'lang': 'en', 'title': 'Lac d\'Annecy',
@@ -485,8 +485,8 @@ class TestXreportRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.xreport1.document_id,
                 'version': self.xreport1.version,
-                'activities': ['hiking'],
-                'event_type': ['avalanche'],
+                'event_activity': 'skitouring',
+                'event_type': 'avalanche',
                 'nb_participants': 5,
                 'locales': [
                     {'lang': 'en', 'title': 'Lac d\'Annecy',
@@ -502,8 +502,8 @@ class TestXreportRest(BaseDocumentTestRest):
             'document': {
                 'document_id': self.xreport1.document_id,
                 'version': self.xreport1.version,
-                'activities': ['hiking'],
-                'event_type': ['avalanche'],
+                'event_activity': 'skitouring',
+                'event_type': 'avalanche',
                 'nb_participants': 5,
                 'locales': [
                     {'lang': 'en', 'title': 'Lac d\'Annecy',
@@ -523,8 +523,8 @@ class TestXreportRest(BaseDocumentTestRest):
                 'document_id': self.xreport1.document_id,
                 'version': self.xreport1.version,
                 'quality': quality_types[1],
-                'activities': ['hiking'],
-                'event_type': ['stone_fall'],
+                'event_activity': 'skitouring',
+                'event_type': 'stone_ice_fall',
                 'nb_participants': 333,
                 'nb_impacted': 666,
                 'age': 50,
@@ -551,7 +551,7 @@ class TestXreportRest(BaseDocumentTestRest):
         (body, xreport1) = self.put_success_all(
             body, self.xreport1, user='moderator', cache_version=3)
 
-        self.assertEquals(xreport1.activities, ['hiking'])
+        self.assertEquals(xreport1.event_activity, 'skitouring')
         locale_en = xreport1.get_locale('en')
         self.assertEquals(locale_en.title, 'New title')
 
@@ -564,8 +564,8 @@ class TestXreportRest(BaseDocumentTestRest):
                          'some NEW place descrip. in english')
 
         archive_document_en = version_en.document_archive
-        self.assertEqual(archive_document_en.activities, ['hiking'])
-        self.assertEqual(archive_document_en.event_type, ['stone_fall'])
+        self.assertEqual(archive_document_en.event_activity, 'skitouring')
+        self.assertEqual(archive_document_en.event_type, 'stone_ice_fall')
         self.assertEqual(archive_document_en.nb_participants, 333)
         self.assertEqual(archive_document_en.nb_impacted, 666)
 
@@ -609,8 +609,8 @@ class TestXreportRest(BaseDocumentTestRest):
                 'document_id': self.xreport1.document_id,
                 'version': self.xreport1.version,
                 'quality': quality_types[1],
-                'activities': ['hiking'],
-                'event_type': ['stone_fall'],
+                'event_activity': 'skitouring',
+                'event_type': 'stone_ice_fall',
                 'nb_participants': 333,
                 'nb_impacted': 666,
                 'age': 50,
@@ -625,7 +625,7 @@ class TestXreportRest(BaseDocumentTestRest):
         (body, xreport1) = self.put_success_figures_only(
             body, self.xreport1, user='moderator')
 
-        self.assertEquals(xreport1.activities, ['hiking'])
+        self.assertEquals(xreport1.event_activity, 'skitouring')
 
     def test_put_success_lang_only(self):
         body = {
@@ -634,8 +634,8 @@ class TestXreportRest(BaseDocumentTestRest):
                 'document_id': self.xreport1.document_id,
                 'version': self.xreport1.version,
                 'quality': quality_types[1],
-                'activities': ['hiking'],
-                'event_type': ['stone_fall'],
+                'event_activity': 'skitouring',
+                'event_type': 'stone_ice_fall',
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
@@ -656,8 +656,8 @@ class TestXreportRest(BaseDocumentTestRest):
                 'document_id': self.xreport1.document_id,
                 'version': self.xreport1.version,
                 'quality': quality_types[1],
-                'activities': ['hiking'],
-                'event_type': ['stone_fall'],
+                'event_activity': 'skitouring',
+                'event_type': 'stone_ice_fall',
                 'locales': [
                     {'lang': 'es', 'title': 'Lac d\'Annecy'}
                 ]
@@ -675,8 +675,8 @@ class TestXreportRest(BaseDocumentTestRest):
                 'document_id': self.xreport1.document_id,
                 'version': self.xreport1.version,
                 'quality': quality_types[1],
-                'activities': ['paragliding'],  # changed
-                'event_type': ['person_fall'],  # changed
+                'event_activity': 'sport_climbing',  # changed
+                'event_type': 'person_fall',  # changed
                 'age': 90,  # PERSONAL DATA CHANGED
                 'locales': [
                     {'lang': 'en', 'title': 'Another final EN title',
@@ -695,8 +695,8 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertEqual(archive_locale.title, 'Another final EN title')
 
         archive_document_en = version_en.document_archive
-        self.assertEqual(archive_document_en.activities, ['paragliding'])
-        self.assertEqual(archive_document_en.event_type, ['person_fall'])
+        self.assertEqual(archive_document_en.event_activity, 'sport_climbing')
+        self.assertEqual(archive_document_en.event_type, 'person_fall')
         self.assertEqual(archive_document_en.age, 90)
 
     def test_put_as_associated_user(self):
@@ -706,8 +706,8 @@ class TestXreportRest(BaseDocumentTestRest):
                 'document_id': self.xreport1.document_id,
                 'version': self.xreport1.version,
                 'quality': quality_types[1],
-                'activities': ['via_ferrata'],  # changed
-                'event_type': ['crevasse_fall'],  # changed
+                'event_activity': 'alpine_climbing',  # changed
+                'event_type': 'crevasse_fall',  # changed
                 'age': 25,  # PERSONAL DATA CHANGED
                 'locales': [
                     {'lang': 'en', 'title': 'Renamed title by assoc. user',
@@ -734,8 +734,8 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertEqual(archive_locale.title, 'Renamed title by assoc. user')
 
         archive_document_en = version_en.document_archive
-        self.assertEqual(archive_document_en.activities, ['via_ferrata'])
-        self.assertEqual(archive_document_en.event_type, ['crevasse_fall'])
+        self.assertEqual(archive_document_en.event_activity, 'alpine_climbing')
+        self.assertEqual(archive_document_en.event_type, 'crevasse_fall')
         self.assertEqual(archive_document_en.age, 25)
 
     def test_put_as_non_author(self):
@@ -745,8 +745,8 @@ class TestXreportRest(BaseDocumentTestRest):
                 'document_id': self.xreport4.document_id,
                 'version': self.xreport4.version,
                 'quality': quality_types[1],
-                'activities': ['paragliding'],
-                'event_type': ['person_fall'],
+                'event_activity': 'sport_climbing',
+                'event_type': 'person_fall',
                 'age': 90,
                 'locales': [
                     {'lang': 'en', 'title': 'Another final EN title',
@@ -770,8 +770,8 @@ class TestXreportRest(BaseDocumentTestRest):
         self._get_association_logs(self.xreport1)
 
     def _add_test_data(self):
-        self.xreport1 = Xreport(activities=['hiking'],
-                                event_type=['stone_fall'])
+        self.xreport1 = Xreport(event_activity='skitouring',
+                                event_type='stone_ice_fall')
         self.locale_en = XreportLocale(lang='en',
                                        title='Lac d\'Annecy',
                                        place='some place descrip. in english')
@@ -798,16 +798,16 @@ class TestXreportRest(BaseDocumentTestRest):
             child_document_id=self.xreport1.document_id,
             child_document_type=XREPORT_TYPE), user_id)
 
-        self.xreport2 = Xreport(activities=['hiking'],
-                                event_type=['avalanche'],
+        self.xreport2 = Xreport(event_activity='skitouring',
+                                event_type='avalanche',
                                 nb_participants=5)
         self.session.add(self.xreport2)
-        self.xreport3 = Xreport(activities=['hiking'],
-                                event_type=['avalanche'],
+        self.xreport3 = Xreport(event_activity='skitouring',
+                                event_type='avalanche',
                                 nb_participants=5)
         self.session.add(self.xreport3)
-        self.xreport4 = Xreport(activities=['hiking'],
-                                event_type=['avalanche'],
+        self.xreport4 = Xreport(event_activity='skitouring',
+                                event_type='avalanche',
                                 nb_participants=5,
                                 nb_impacted=5,
                                 age=50)
