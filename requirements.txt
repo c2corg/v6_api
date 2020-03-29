@@ -10,7 +10,7 @@ geomet==0.1.1
 kombu==4.0.0
 # phpserialize is only required during the migration
 phpserialize==1.3.0
-psycopg2==2.7.3.2
+psycopg2==2.8.4
 pyproj==1.9.5.1
 pyramid-jwtauth==0.1.3
 pyramid==1.7.3
