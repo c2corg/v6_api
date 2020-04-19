@@ -9,6 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.sql.schema import Table, MetaData
 from alembic_migration.extensions import drop_enum
+import csv
 from c2corg_api.models.utils import ArrayOfEnum
 
 # revision identifiers, used by Alembic.
@@ -16,6 +17,22 @@ revision = '06d2a35e39c8'
 down_revision = '85a5ed3c76a8'
 branch_labels = None
 depends_on = None
+
+
+key_map = {
+    b'avalanche': 'avalanche',
+    b'd\xc3\xa9s\xc3\xa9quilibre/chute ': 'person_fall',
+    b'chute de pierre/glace/serac': 'stone_ice_fall',
+    b'chute en crevasse, b\xc3\xa9di\xc3\xa8re ': 'crevasse_fall',
+    b'man\xc5\x93uvre de s\xc3\xa9cu ': 'safety_operation',
+    b'd\xc3\xa9faillanche physique non traumatique': 'physical_failure',
+    b'\xc3\xa9v\xc3\xa8nement m\xc3\xa9t\xc3\xa9o': 'weather_event',
+    b'autre': 'other',
+    b'effondrement cascade': 'ice_cornice_collapse',
+    b'l\xc3\xa9sion sans chute ': 'injury_without_fall',
+    b'personne bloqu\xc3\xa9e': 'blocked_person'
+}
+
 
 
 def upgrade():
@@ -131,9 +148,9 @@ def upgrade():
                                                     .cast(old_event_type)))
                    .values(event_type_=op.inline_literal(new_value)))
 
-    op.alter_column('xreports', 'event_activity',
+    op.alter_column('xreports', 'event_type',
                     nullable=False, schema='guidebook')
-    op.alter_column('xreports_archives', 'event_activity',
+    op.alter_column('xreports_archives', 'event_type',
                     nullable=False, schema='guidebook')
 
     op.drop_column('xreports', 'event_type', schema='guidebook')
@@ -151,6 +168,30 @@ def upgrade():
         new_column_name='event_type',
         schema='guidebook')
 
+    xr = Table('xreports', MetaData(),
+               sa.Column('document_id', sa.types.INTEGER),
+               sa.Column('event_type', new_event_type),
+               schema='guidebook')
+    # xra = Table('xreports_archives', MetaData(),
+    #             sa.Column('document_id', sa.types.INTEGER),
+    #             sa.Column('event_type', new_event_type),
+    #             schema='guidebook')
+    try:
+        with open('./alembic_migration/versions/06d2a35e39c8_improve_serac_database_data.csv') as f:
+            rr = csv.reader(f)
+            header = rr.__next__()
+            assert (header[1] == 'Document') and (header[8] == 'ENS principal')
+            for line in rr:
+                print("update {} -> {}".format(line[1],
+                                               key_map[line[8].lower().encode()]))
+                op.execute(xr.update()
+                           .where(xr.c.document_id == line[1])
+                           .values(event_type=key_map[line[8].lower().encode()]))
+                # op.execute(xra.update()
+                #            .where(xra.c.document_id == line[1])
+                #            .values(event_type=key_map[line[8].lower()]))
+    except Exception as e:
+        print("EXCEPT!!! {} {}".format(type(e), e))
     # end of types conversion
 
     # convert autonomy enum
