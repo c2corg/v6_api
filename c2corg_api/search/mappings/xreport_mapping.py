@@ -11,8 +11,8 @@ class SearchXreport(SearchDocument):
     class Meta(BaseMeta):
         doc_type = XREPORT_TYPE
 
-    activities = QEnumArray(
-        'act', model_field=Xreport.activities)
+    event_activity = QEnumArray(
+        'act', model_field=Xreport.event_activity)
     date = QDate('xdate', 'date')
     event_type = QEnumArray(
         'xtyp', model_field=Xreport.event_type)
@@ -33,8 +33,8 @@ class SearchXreport(SearchDocument):
         'xalt', range=True)
 
     FIELDS = [
-      'activities', 'date', 'event_type', 'nb_participants',
-      'nb_impacted', 'elevation'
+        'date', 'event_activity', 'event_type', 'nb_participants',
+        'nb_impacted', 'elevation'
     ]
 
     ENUM_RANGE_FIELDS = [

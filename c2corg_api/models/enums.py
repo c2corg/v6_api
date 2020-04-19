@@ -128,12 +128,16 @@ feed_change_type = enum(
     'feed_change_type', attributes.feed_change_types)
 event_type = enum(
     'event_type', attributes.event_types)
+event_activity = enum(
+    'event_activity', attributes.event_activities)
 author_status = enum(
     'author_status', attributes.author_statuses)
 activity_rate = enum(
     'activity_rate', attributes.activity_rates)
-nb_outings = enum(
-    'nb_outings', attributes.nb_outings)
+supervision = enum(
+    'supervision', attributes.supervision)
+qualification = enum(
+    'qualification', attributes.qualification)
 gender = enum(
     'gender', attributes.genders)
 previous_injuries = enum(

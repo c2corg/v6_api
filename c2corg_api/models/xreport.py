@@ -1,4 +1,3 @@
-import colander
 from c2corg_api.models.schema_utils import restrict_schema,\
     get_update_schema, get_create_schema
 from c2corg_common.fields_xreport import fields_xreport
@@ -15,7 +14,6 @@ from sqlalchemy import (
 from colanderalchemy import SQLAlchemySchemaNode
 
 from c2corg_api.models import schema, Base
-from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
     ArchiveDocument,
@@ -38,9 +36,9 @@ class _XreportMixin(object):
     date = Column(Date)
 
     # Type d'évènement
-    event_type = Column(ArrayOfEnum(enums.event_type))
+    event_type = Column(enums.event_type)
 
-    activities = Column(ArrayOfEnum(enums.activity_type), nullable=False)
+    event_activity = Column(enums.event_activity, nullable=False)
 
     # Nombre de participants
     nb_participants = Column(SmallInteger)
@@ -66,9 +64,6 @@ class _XreportMixin(object):
     # Frequency practical activity-Fréquence de pratique de l'activité
     activity_rate = Column(enums.activity_rate)
 
-    # Total trips made during the year-Nombre sorties réalisées dans l'année
-    nb_outings = Column(enums.nb_outings)
-
     age = Column(SmallInteger)
 
     gender = Column(enums.gender)
@@ -78,21 +73,26 @@ class _XreportMixin(object):
 
     autonomy = Column(enums.autonomy)
 
+    supervision = Column(enums.supervision)
+
+    qualification = Column(enums.qualification)
+
     disable_comments = Column(Boolean)
 
     anonymous = Column(Boolean)
 
 
 attributes = [
-    'elevation', 'date', 'event_type', 'activities',
+    'elevation', 'date', 'event_type', 'event_activity',
     'nb_participants', 'nb_impacted', 'rescue',
     'avalanche_level', 'avalanche_slope', 'severity',
-    'author_status', 'activity_rate', 'nb_outings', 'age', 'gender',
-    'previous_injuries', 'autonomy', 'disable_comments', 'anonymous'
+    'author_status', 'activity_rate', 'age', 'gender',
+    'previous_injuries', 'autonomy', 'supervision', 'qualification',
+    'disable_comments', 'anonymous'
 ]
 
 attributes_without_personal = [
-    'elevation', 'date', 'event_type', 'activities',
+    'elevation', 'date', 'event_type', 'event_activity',
     'nb_participants', 'nb_impacted', 'rescue',
     'avalanche_level', 'avalanche_slope', 'severity',
     'disable_comments', 'anonymous'
@@ -260,9 +260,6 @@ schema_xreport = SQLAlchemySchemaNode(
         },
         'locales': {
             'children': [schema_xreport_locale],
-        },
-        'activities': {
-            'validator': colander.Length(min=1)
         },
         'geometry': get_geometry_schema_overrides(['POINT'])
     })

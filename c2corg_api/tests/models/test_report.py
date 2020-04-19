@@ -8,8 +8,8 @@ class TestXreport(BaseTestCase):
     def test_to_archive(self):
         xreport = Xreport(
             document_id=1,
-            activities=['skitouring'],
-            event_type=['avalanche'],
+            event_activity='skitouring',
+            event_type='avalanche',
             nb_participants=5,
             elevation=1200,
             locales=[
@@ -31,13 +31,13 @@ class TestXreport(BaseTestCase):
         self.assertIsNone(xreport_archive.id)
         self.assertEqual(xreport_archive.document_id, xreport.document_id)
         self.assertEqual(
-            xreport_archive.activities, xreport.activities)
+            xreport_archive.event_activity, xreport.event_activity)
         self.assertEqual(xreport_archive.event_type, xreport.event_type)
         self.assertEqual(
             xreport_archive.nb_participants, xreport.nb_participants)
         self.assertEqual(xreport_archive.elevation, xreport.elevation)
 
-        self.assertIsNotNone(xreport_archive.activities)
+        self.assertIsNotNone(xreport_archive.event_activity)
         self.assertIsNotNone(xreport_archive.event_type)
         self.assertIsNotNone(xreport_archive.nb_participants)
 

@@ -738,7 +738,7 @@ class TestAssociationRest(BaseTestRest):
         DocumentRest.create_new_version(self.article2, user_id)
 
         self.report1 = Xreport(
-            activities=['hiking'],
+            event_activity='alpine_climbing',
             locales=[XreportLocale(lang='en', title='Lac d\'Annecy')])
         self.session.add(self.report1)
         self.session.flush()

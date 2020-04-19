@@ -124,8 +124,8 @@ class FillIndexTest(BaseTestCase):
 
         self.session.add(Xreport(
             document_id=71178,
-            event_type=['roped_fall'],
-            activities=['skitouring'],
+            event_type='person_fall',
+            event_activity='skitouring',
             nb_participants=10,
             elevation=1500,
             date=datetime.date(2016, 1, 1),

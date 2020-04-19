@@ -14,7 +14,6 @@ from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.utils import ArrayOfEnum
-from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.views.validation import association_keys
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql.array import ARRAY
@@ -207,7 +206,7 @@ def update_feed_document_create(document, user_id):
 
     activities = []
     if document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE,
-                         BOOK_TYPE, XREPORT_TYPE]:
+                         BOOK_TYPE]:
         activities = document.activities
 
     langs = [locale.lang for locale in document.locales]
@@ -262,7 +261,7 @@ def update_feed_document_update(document, user_id, update_types):
 
     # updates activities
     if document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE,
-                         BOOK_TYPE, XREPORT_TYPE] and \
+                         BOOK_TYPE] and \
             UpdateType.FIGURES in update_types:
         update_activities_of_changes(document)
 
