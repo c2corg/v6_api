@@ -8,6 +8,8 @@ from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.feed import update_feed_images_upload
 from c2corg_api.models.image import Image, schema_image, schema_update_image, \
     IMAGE_TYPE, schema_create_image, schema_create_image_list, ArchiveImage
+from c2corg_api.views.article import article_documents_config
+from c2corg_api.views.outing import outing_documents_config
 from c2corg_api.search.notify_sync import run_on_successful_transaction
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import image_documents_config
@@ -19,6 +21,7 @@ from cornice.validators import colander_body_validator
 
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, validate_document
+from c2corg_api.views.document_associations import get_linked_images
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.validation import validate_id, validate_pagination, \
@@ -171,7 +174,23 @@ class ImageRest(DocumentRest):
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        return self._collection_get(IMAGE_TYPE, image_documents_config)
+        if 'c' in self.request.GET:
+            doc = (
+                DBSession
+                .query(article_documents_config.clazz)
+                .filter(article_documents_config.clazz.document_id == self.request.GET['c'])
+            ).first()
+            return get_linked_images(doc, self.request.validated.get('lang'))
+        elif 'o' in self.request.GET:
+            doc = (
+                DBSession
+                .query(outing_documents_config.clazz)
+                .filter(outing_documents_config.clazz.document_id == self.request.GET['o'])
+            ).first()
+            return get_linked_images(doc, self.request.validated.get('lang'))
+
+        else:
+            return self._collection_get(IMAGE_TYPE, image_documents_config)
 
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
