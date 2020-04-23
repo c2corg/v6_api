@@ -1,6 +1,7 @@
 from c2corg_api.ext import sqa_view
 from c2corg_api.models import Base, schema
 from c2corg_api.models.association import Association
+from c2corg_api.models.document_tag import DocumentTag
 from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
@@ -262,5 +263,42 @@ Outing.associated_routes_ids = relationship(
     uselist=False,
     primaryjoin=Outing.document_id == RoutesForOutingsView.outing_id,
     foreign_keys=RoutesForOutingsView.outing_id,
+    viewonly=True, cascade='expunge'
+)
+
+
+# users for routes (tags)
+def _get_select_users_for_routes_aggregated():
+    """ Returns a select which retrieves for every route the ids of
+    associated users.
+    """
+    return \
+        select([
+            DocumentTag.document_id.label('route_id'),
+            func.array_agg(
+                DocumentTag.user_id,
+                type_=postgresql.ARRAY(Integer)).label('user_ids')
+        ]). \
+        select_from(DocumentTag). \
+        group_by(DocumentTag.document_id)
+
+
+class UsersForRoutesView(Base):
+    """ A (non-materialized) view which contains the associated users
+     for each route. This view is used when filling the search index for
+     routes.
+    """
+    __table__ = sqa_view.view(
+        'users_for_routes',
+        schema,
+        Base.metadata,
+        _get_select_users_for_routes_aggregated())
+
+
+Route.associated_users_ids = relationship(
+    UsersForRoutesView,
+    uselist=False,
+    primaryjoin=Route.document_id == UsersForRoutesView.route_id,
+    foreign_keys=UsersForRoutesView.route_id,
     viewonly=True, cascade='expunge'
 )
