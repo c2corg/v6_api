@@ -1,4 +1,4 @@
-from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
 from c2corg_api.models.document_tag import DocumentTag
 from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
@@ -35,7 +35,8 @@ class BaseDocumentTagTest(BaseTestRest):
 
         self.session.add(DocumentTag(
             user_id=self.contributor2.id,
-            document_id=self.route2.document_id))
+            document_id=self.route2.document_id,
+            document_type=ROUTE_TYPE))
         self.session.flush()
 
 
@@ -87,9 +88,6 @@ class TestDocumentUntagRest(BaseDocumentTagTest):
 
         self.app_post_json(
             self._prefix, request_body, status=200, headers=headers)
-
-        self.assertFalse(
-            has_tagged(self.contributor2.id, self.route2.document_id))
 
     def test_untag_not_tagged(self):
         request_body = {

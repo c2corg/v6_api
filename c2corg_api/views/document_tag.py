@@ -2,7 +2,8 @@ import logging
 
 from c2corg_api import DBSession
 from c2corg_api.models.document import Document
-from c2corg_api.models.document_tag import DocumentTag
+from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
+from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import create_int_validator
 from colander import MappingSchema, SchemaNode, Integer, required
@@ -69,8 +70,11 @@ class DocumentTagRest(object):
 
         if not tag_relation:
             DBSession.add(DocumentTag(
-                user_id=user_id, document_id=document_id))
-
+                user_id=user_id, document_id=document_id,
+                document_type=ROUTE_TYPE))
+            DBSession.add(DocumentTagLog(
+                user_id=user_id, document_id=document_id,
+                document_type=ROUTE_TYPE, is_creation=True))
         return {}
 
 
@@ -99,6 +103,9 @@ class DocumentUntagRest(object):
 
         if tag_relation:
             DBSession.delete(tag_relation)
+            DBSession.add(DocumentTagLog(
+                user_id=user_id, document_id=document_id,
+                document_type=ROUTE_TYPE, is_creation=False))
         else:
             log.warn(
                 'tried to delete not existing tag relation '
