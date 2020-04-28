@@ -1,5 +1,5 @@
 from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
-from c2corg_api.models.document_tag import DocumentTag
+from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.document_tag import get_tag_relation
@@ -54,12 +54,23 @@ class TestDocumentTagRest(BaseDocumentTagTest):
             'document_id': self.route1.document_id
         }
 
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(
-            self._prefix, request_body, status=200, headers=headers)
+        self.post_json_with_contributor(
+            self._prefix, request_body, status=200, username='contributor')
 
         self.assertTrue(
             has_tagged(self.contributor.id, self.route1.document_id))
+
+        log = self.session.query(DocumentTagLog). \
+            filter(DocumentTagLog.document_id == self.route1.document_id). \
+            filter(DocumentTagLog.user_id == self.contributor.id). \
+            filter(DocumentTagLog.document_type == ROUTE_TYPE). \
+            one()
+        self.assertTrue(log.is_creation)
+
+        self.post_json_with_contributor(
+            self._prefix, request_body, status=400, username='contributor')
+
+        self.assertNotifiedEs()
 
 
 class TestDocumentUntagRest(BaseDocumentTagTest):
@@ -79,15 +90,23 @@ class TestDocumentUntagRest(BaseDocumentTagTest):
         self.assertTrue(
             has_tagged(self.contributor2.id, self.route2.document_id))
 
-        headers = self.add_authorization_header(username='contributor2')
-        self.app_post_json(
-            self._prefix, request_body, status=200, headers=headers)
+        self.post_json_with_contributor(
+            self._prefix, request_body, status=200, username='contributor2')
 
         self.assertFalse(
             has_tagged(self.contributor2.id, self.route2.document_id))
 
-        self.app_post_json(
-            self._prefix, request_body, status=200, headers=headers)
+        self.post_json_with_contributor(
+            self._prefix, request_body, status=400, username='contributor2')
+
+        log = self.session.query(DocumentTagLog). \
+            filter(DocumentTagLog.document_id == self.route2.document_id). \
+            filter(DocumentTagLog.user_id == self.contributor2.id). \
+            filter(DocumentTagLog.document_type == ROUTE_TYPE). \
+            one()
+        self.assertFalse(log.is_creation)
+
+        self.assertNotifiedEs()
 
     def test_untag_not_tagged(self):
         request_body = {
@@ -97,12 +116,13 @@ class TestDocumentUntagRest(BaseDocumentTagTest):
         self.assertFalse(
             has_tagged(self.contributor.id, self.route1.document_id))
 
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(
-            self._prefix, request_body, status=200, headers=headers)
+        self.post_json_with_contributor(
+            self._prefix, request_body, status=400, username='contributor')
 
         self.assertFalse(
             has_tagged(self.contributor.id, self.route1.document_id))
+
+        self.assertNotNotifiedEs()
 
 
 class TestDocumentTaggedRest(BaseDocumentTagTest):

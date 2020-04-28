@@ -4,11 +4,13 @@ from c2corg_api import DBSession
 from c2corg_api.models.document import Document
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.route import ROUTE_TYPE
+from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import create_int_validator
 from colander import MappingSchema, SchemaNode, Integer, required
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPBadRequest
 
 log = logging.getLogger(__name__)
 
@@ -65,16 +67,21 @@ class DocumentTagRest(object):
 
         """
         document_id = self.request.validated['document_id']
+        document_type = ROUTE_TYPE
         user_id = self.request.authenticated_userid
-        tag_relation = get_tag_relation(user_id, document_id)
 
-        if not tag_relation:
-            DBSession.add(DocumentTag(
-                user_id=user_id, document_id=document_id,
-                document_type=ROUTE_TYPE))
-            DBSession.add(DocumentTagLog(
-                user_id=user_id, document_id=document_id,
-                document_type=ROUTE_TYPE, is_creation=True))
+        if get_tag_relation(user_id, document_id):
+            raise HTTPBadRequest('This document is already tagged.')
+
+        DBSession.add(DocumentTag(
+            user_id=user_id, document_id=document_id,
+            document_type=document_type))
+        DBSession.add(DocumentTagLog(
+            user_id=user_id, document_id=document_id,
+            document_type=document_type, is_creation=True))
+
+        notify_es_syncer(self.request.registry.queue_config)
+
         return {}
 
 
@@ -98,6 +105,7 @@ class DocumentUntagRest(object):
 
         """
         document_id = self.request.validated['document_id']
+        document_type = ROUTE_TYPE
         user_id = self.request.authenticated_userid
         tag_relation = get_tag_relation(user_id, document_id)
 
@@ -105,11 +113,14 @@ class DocumentUntagRest(object):
             DBSession.delete(tag_relation)
             DBSession.add(DocumentTagLog(
                 user_id=user_id, document_id=document_id,
-                document_type=ROUTE_TYPE, is_creation=False))
+                document_type=document_type, is_creation=False))
         else:
             log.warn(
                 'tried to delete not existing tag relation '
                 '({0}, {1})'.format(user_id, document_id))
+            raise HTTPBadRequest('This document has no such tag.')
+
+        notify_es_syncer(self.request.registry.queue_config)
 
         return {}
 
