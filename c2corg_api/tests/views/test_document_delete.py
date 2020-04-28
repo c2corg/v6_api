@@ -11,6 +11,7 @@ from c2corg_api.models.document import (
     get_available_langs)
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.document_topic import DocumentTopic
+from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.feed import (
     DocumentChange, update_feed_document_create, update_feed_images_upload)
 from c2corg_api.models.image import Image, ArchiveImage
@@ -153,6 +154,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         self._add_association(self.waypoint1, self.route3)
         self._add_association(self.waypoint2, self.route3)
         self._add_association(self.waypoint3, self.route3)
+        self._add_tag(self.route3)
         self.session.flush()
 
         outing1_geometry = DocumentGeometry(
@@ -393,6 +395,19 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.add(association.get_log(
             self.global_userids['contributor']))
 
+    def _add_tag(self, document):
+        document_id = document.document_id
+        document_type = document.type
+        user_id = self.global_userids['contributor']
+        tag = DocumentTag(
+            document_id=document_id, document_type=document_type,
+            user_id=user_id)
+        self.session.add(tag)
+        log = DocumentTagLog(
+            document_id=document_id, document_type=document_type,
+            user_id=user_id, is_creation=True)
+        self.session.add(log)
+
     def _delete(self, document_id, expected_status):
         headers = self.add_authorization_header(username='moderator')
         return self.app.delete_json(
@@ -561,6 +576,27 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.check_cache_version(self.book1.document_id, 2)
         self.check_cache_version(self.xreport1.document_id, 2)
         self.check_cache_version(self.image1.document_id, 2)
+
+    def _count_tags(self, document_id):
+        nb_tags = self.session.query(DocumentTag). \
+            filter(DocumentTag.document_id == document_id).count()
+        nb_logs = self.session.query(DocumentTagLog). \
+            filter(DocumentTagLog.document_id == document_id).count()
+        return nb_tags, nb_logs
+
+    def test_delete_route_with_tags(self):
+        nb_tags, nb_logs = self._count_tags(self.route3.document_id)
+        self.assertEqual(nb_tags, 1)
+        self.assertEqual(nb_logs, 1)
+
+        self._test_delete(
+            self.route3.document_id,
+            Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale)
+
+        # Check related tags have been removed
+        nb_tags, nb_logs = self._count_tags(self.route3.document_id)
+        self.assertEqual(nb_tags, 0)
+        self.assertEqual(nb_logs, 0)
 
     def test_delete_outing(self):
         # outing1b redirects to outing1 => 2 documents to delete
