@@ -7,10 +7,11 @@ from c2corg_api.models.document import Document, ArchiveDocument, \
     DocumentLocale, ArchiveDocumentLocale, \
     DocumentGeometry, ArchiveDocumentGeometry
 from c2corg_api.models.document_history import HistoryMetaData
+from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.feed import DocumentChange, update_feed_document_create
 from c2corg_api.models.mailinglist import Mailinglist
 from c2corg_api.models.outing import Outing, OutingLocale, OUTING_TYPE
-from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
 from c2corg_api.models.sso import SsoExternalId
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
@@ -50,6 +51,11 @@ class MergeUsersTest(BaseTestCase):
 
         self.assertTrue(self._is_registered_to_ml(self.contributor))
         self.assertFalse(self._is_registered_to_ml(self.contributor2))
+
+        self.assertEqual(1, self._count_tags(source_id))
+        self.assertEqual(1, self._count_tag_logs(source_id))
+        self.assertEqual(0, self._count_tags(target_id))
+        self.assertEqual(0, self._count_tag_logs(target_id))
 
         # Actually do the merge
         merge_user_accounts(source_id, target_id, self.queue_config)
@@ -109,6 +115,20 @@ class MergeUsersTest(BaseTestCase):
         count = self.session.query(SsoExternalId). \
             filter(SsoExternalId.user_id == source_id).count()
         self.assertEqual(0, count)
+
+        # Check tags have been transfered to the target user
+        self.assertEqual(0, self._count_tags(source_id))
+        self.assertEqual(0, self._count_tag_logs(source_id))
+        self.assertEqual(1, self._count_tags(target_id))
+        self.assertEqual(1, self._count_tag_logs(target_id))
+
+    def _count_tags(self, user_id):
+        return self.session.query(DocumentTag). \
+            filter(DocumentTag.user_id == user_id).count()
+
+    def _count_tag_logs(self, user_id):
+        return self.session.query(DocumentTagLog). \
+            filter(DocumentTagLog.user_id == user_id).count()
 
     def _count_area_associations(self, user_id):
         return self.session.query(AreaAssociation). \
@@ -241,4 +261,12 @@ class MergeUsersTest(BaseTestCase):
             parent_document_type=USERPROFILE_TYPE,
             child_document_id=self.outing2.document_id,
             child_document_type=OUTING_TYPE))
+
+        self.session.add(DocumentTag(
+            document_id=self.route1.document_id, document_type=ROUTE_TYPE,
+            user_id=self.contributor.id))
+        self.session.add(DocumentTagLog(
+            document_id=self.route1.document_id, document_type=ROUTE_TYPE,
+            user_id=self.contributor.id, is_creation=True))
+
         self.session.flush()
