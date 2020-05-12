@@ -25,6 +25,15 @@ docker-compose up
 
 Press CTRL+C to terminate it.
 
+### Run the background jobs and syncer scripts
+
+In distinct terminals:
+
+```sh
+docker-compose exec api make -f config/docker-dev run-background-jobs
+docker-compose exec api make -f config/docker-dev run-syncer
+```
+
 ### Check code quality
 
 In another terminal (`docker-compose up` must be running) :
