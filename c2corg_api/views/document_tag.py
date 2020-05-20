@@ -30,11 +30,14 @@ validate_document_id = create_int_validator('document_id')
 
 
 def validate_document(request, **kwargs):
-    """ Check that the document exists.
+    """ Check that the document exists, is a route and
+    not merged with another document.
     """
     document_id = request.validated['document_id']
     document_exists_query = DBSession.query(Document). \
         filter(Document.document_id == document_id). \
+        filter(Document.type == ROUTE_TYPE). \
+        filter(Document.redirects_to.is_(None)). \
         exists()
     document_exists = DBSession.query(document_exists_query).scalar()
 
