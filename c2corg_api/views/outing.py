@@ -1,4 +1,6 @@
+import datetime
 import functools
+
 from c2corg_api.models.outing import schema_outing, Outing, \
     schema_create_outing, schema_update_outing, ArchiveOuting, \
     ArchiveOutingLocale, OUTING_TYPE
@@ -29,6 +31,37 @@ validate_associations_create = functools.partial(
     validate_associations, OUTING_TYPE, True)
 validate_associations_update = functools.partial(
     validate_associations, OUTING_TYPE, False)
+
+
+def validate_dates(request, **kwargs):
+    utc_now = datetime.datetime.now(datetime.timezone.utc)
+    utc_now_plus_12h = (utc_now + datetime.timedelta(hours=12)).date()
+
+    document = request.validated.get('document')
+    if document is None:
+        return
+    date_start = document.get('date_start')
+    if date_start is None:
+        return
+
+    if date_start > utc_now_plus_12h:
+        request.errors.add(
+            'body', 'date_start', 'can not be sometime in the future'
+        )
+
+    date_end = document.get('date_end')
+    if date_end is None:
+        return
+
+    if date_end > utc_now_plus_12h:
+        request.errors.add(
+            'body', 'date_end', 'can not be sometime in the future'
+        )
+
+    if not requests.errors and date_end < date_start:
+        request.errors.add(
+            'body', 'date_end', 'can not be prior the starting date'
+        )
 
 
 def validate_required_associations(request, **kwargs):
@@ -79,7 +112,8 @@ class OutingRest(DocumentRest):
             colander_body_validator,
             validate_outing_create,
             validate_associations_create,
-            validate_required_associations])
+            validate_required_associations,
+            validate_dates,])
     def collection_post(self):
         set_default_geom = functools.partial(
             set_default_geometry,
@@ -95,7 +129,8 @@ class OutingRest(DocumentRest):
             validate_id,
             validate_outing_update,
             validate_associations_update,
-            validate_required_associations])
+            validate_required_associations,
+            validate_dates,])
     def put(self):
         if not has_permission_for_outing(
                 self.request, self.request.validated['id']):

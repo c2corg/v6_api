@@ -362,6 +362,112 @@ class TestOutingRest(BaseDocumentTestRest):
         errors = body.get('errors')
         self.assertEqual(len(errors), 3)
 
+    def test_post_date_start_is_tomorrow(self):
+        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+        body_post = {
+            'activities': ['skitouring'],
+            'date_start': tomorrow,
+            'date_end': '2016-01-01',
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom_detail': '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635966, 5723644]]}'
+            },
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'weather': 'sunny'}
+            ],
+            'associations': {
+                'users': [
+                    {'document_id': self.global_userids['contributor']},
+                    {'document_id': self.global_userids['contributor2']}
+                ],
+                'routes': [{'document_id': self.route.document_id}],
+                # images are ignored
+                'images': [{'document_id': self.route.document_id}]
+            }
+        }
+        body = self.post_error(body_post)
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['name'], 'date_start')
+        self.assertEqual(errors[0]['description'], 'can not be sometime in the future')
+
+    def test_post_date_end_is_tomorrow(self):
+        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+        body_post = {
+            'activities': ['skitouring'],
+            'date_start': '2016-01-01',
+            'date_end': tomorrow,
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom_detail': '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635966, 5723644]]}'
+            },
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'weather': 'sunny'}
+            ],
+            'associations': {
+                'users': [
+                    {'document_id': self.global_userids['contributor']},
+                    {'document_id': self.global_userids['contributor2']}
+                ],
+                'routes': [{'document_id': self.route.document_id}],
+                # images are ignored
+                'images': [{'document_id': self.route.document_id}]
+            }
+        }
+        body = self.post_error(body_post)
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['name'], 'date_end')
+        self.assertEqual(errors[0]['description'], 'can not be sometime in the future')
+
+    def test_post_end_date_is_prior_start_date(self):
+        today = datetime.date.today()
+        yesterday = today - timedelta(days=1)
+        body_post = {
+            'activities': ['skitouring'],
+            'date_start': today.strftime('%Y-%m-%d'),
+            'date_end': yesterday.strftime('%Y-%m-%d'),
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom_detail': '{"type": "LineString", "coordinates": ' +
+                        '[[635956, 5723604], [635966, 5723644]]}'
+            },
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'weather': 'sunny'}
+            ],
+            'associations': {
+                'users': [
+                    {'document_id': self.global_userids['contributor']},
+                    {'document_id': self.global_userids['contributor2']}
+                ],
+                'routes': [{'document_id': self.route.document_id}],
+                # images are ignored
+                'images': [{'document_id': self.route.document_id}]
+            }
+        }
+        body = self.post_error(body_post)
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['name'], 'date_end')
+        self.assertEqual(errors[0]['description'], 'can not be prior the starting date')
+
     def test_post_non_whitelisted_attribute(self):
         body = {
             'activities': ['skitouring'],
