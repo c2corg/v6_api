@@ -41,8 +41,8 @@ COPY ./ /var/www/
 WORKDIR /var/www/
 
 RUN set -x \
- && make -f config/docker-dev install \ 
- && py3compile -f -X '^.*gevent/_util_py2.py$' .build/venv/
+ && make -f config/docker-dev install \
+ && py3compile -f -X '^.*gevent/_util_py2.py$' -X '^.*attr/_next_gen.py$' .build/venv/
 
 ENV version="{version}" \
     PATH=/var/www/.build/venv/bin/:$PATH

@@ -39,8 +39,6 @@ services:
     volumes:
       - ./docker-compose/pgsql-settings.d/:/c2corg_anon/pgsql-settings.d/
       - .:/v6_api
-    ports:
-      - 5432:5432
 
   elasticsearch:
     image: 'docker.io/c2corg/c2corg_es:anon-2018-11-02'

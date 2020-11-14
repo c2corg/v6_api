@@ -45,9 +45,9 @@ cleanall: clean
 	rm -rf .build
 
 .PHONY: test
-test: .build/venv/bin/nosetests template .build/dev-requirements.timestamp .build/requirements.timestamp
+test: .build/venv/bin/pytest template .build/dev-requirements.timestamp .build/requirements.timestamp
 	# All tests must be run with authentication/authorization enabled
-	.build/venv/bin/nosetests
+	.build/venv/bin/pytest --cov=c2corg_api
 
 .PHONY: lint
 lint: .build/venv/bin/flake8
@@ -99,7 +99,7 @@ upgrade-dev: .build/venv/bin/pip
 
 .build/venv/bin/flake8: .build/dev-requirements.timestamp
 
-.build/venv/bin/nosetests: .build/dev-requirements.timestamp
+.build/venv/bin/pytest: .build/dev-requirements.timestamp
 
 .build/dev-requirements.timestamp: .build/venv/bin/pip dev-requirements.txt
 	.build/venv/bin/pip install -r dev-requirements.txt
