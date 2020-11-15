@@ -38,10 +38,6 @@ In another terminal (`docker-compose up` must be running) :
 In another terminal (`docker-compose up` must be running) :
 
 ```sh
-# First, inititate test database, must be done once
-./scripts/init_test.sh
-
-# Then
 ./scripts/test.sh
 ```
 
