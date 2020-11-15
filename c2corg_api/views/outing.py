@@ -39,10 +39,19 @@ def validate_dates(request, **kwargs):
 
     document = request.validated.get('document')
     if document is None:
-        return
+        document = request.json_body
+
     date_start = document.get('date_start')
     if date_start is None:
         return
+    if isinstance(date_start, str):
+        try:
+            date_start = datetime.datetime.strptime(date_start, '%Y-%m-%d').date()
+        except ValueError:
+            request.errors.add(
+                'body', 'date_start', 'invalid format, expecting %Y-%m-%d'
+            )
+            return
 
     if date_start > utc_now_plus_12h:
         request.errors.add(
@@ -52,13 +61,21 @@ def validate_dates(request, **kwargs):
     date_end = document.get('date_end')
     if date_end is None:
         return
+    if isinstance(date_end, str):
+        try:
+            date_end = datetime.datetime.strptime(date_end, '%Y-%m-%d').date()
+        except ValueError:
+            request.errors.add(
+                'body', 'date_end', 'invalid format, expecting %Y-%m-%d'
+            )
+            return
 
     if date_end > utc_now_plus_12h:
         request.errors.add(
             'body', 'date_end', 'can not be sometime in the future'
         )
 
-    if not requests.errors and date_end < date_start:
+    if not request.errors and date_end < date_start:
         request.errors.add(
             'body', 'date_end', 'can not be prior the starting date'
         )

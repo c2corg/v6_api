@@ -363,10 +363,10 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(len(errors), 3)
 
     def test_post_date_start_is_tomorrow(self):
-        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+        later = (datetime.date.today() + datetime.timedelta(days=2)).strftime('%Y-%m-%d')
         body_post = {
             'activities': ['skitouring'],
-            'date_start': tomorrow,
+            'date_start': later,
             'date_end': '2016-01-01',
             'elevation_min': 700,
             'elevation_max': 1500,
@@ -398,11 +398,11 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(errors[0]['description'], 'can not be sometime in the future')
 
     def test_post_date_end_is_tomorrow(self):
-        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+        later = (datetime.date.today() + datetime.timedelta(days=2)).strftime('%Y-%m-%d')
         body_post = {
             'activities': ['skitouring'],
             'date_start': '2016-01-01',
-            'date_end': tomorrow,
+            'date_end': later,
             'elevation_min': 700,
             'elevation_max': 1500,
             'height_diff_up': 800,
@@ -434,7 +434,7 @@ class TestOutingRest(BaseDocumentTestRest):
 
     def test_post_end_date_is_prior_start_date(self):
         today = datetime.date.today()
-        yesterday = today - timedelta(days=1)
+        yesterday = today - datetime.timedelta(days=1)
         body_post = {
             'activities': ['skitouring'],
             'date_start': today.strftime('%Y-%m-%d'),
