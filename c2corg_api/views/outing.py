@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta, timezone
 import functools
 
 from c2corg_api.models.outing import schema_outing, Outing, \
@@ -34,41 +34,44 @@ validate_associations_update = functools.partial(
 
 
 def validate_dates(request, **kwargs):
-    utc_now = datetime.datetime.now(datetime.timezone.utc)
-    utc_now_plus_12h = (utc_now + datetime.timedelta(hours=12)).date()
+    utc_now = datetime.now(timezone.utc)
+    utc_now_plus_12h = (utc_now + timedelta(hours=12)).date()
 
     document = request.validated.get('document')
     if document is None:
+        # when called from unit-tests
         document = request.json_body
 
     date_start = document.get('date_start')
     if date_start is None:
+        # sometimes, request.validated is only: {'id': 361}
         return
     if isinstance(date_start, str):
         try:
-            date_start = datetime.datetime.strptime(date_start, '%Y-%m-%d').date()
+            date_start = datetime.strptime(date_start, '%Y-%m-%d').date()
         except ValueError:
             request.errors.add(
-                'body', 'date_start', 'invalid format, expecting %Y-%m-%d'
+                'body', 'date_start',
+                'invalid format, expecting YEAR-MONTH-DAY'
             )
-            return
 
     if date_start > utc_now_plus_12h:
         request.errors.add(
             'body', 'date_start', 'can not be sometime in the future'
         )
+        return
 
     date_end = document.get('date_end')
     if date_end is None:
         return
     if isinstance(date_end, str):
         try:
-            date_end = datetime.datetime.strptime(date_end, '%Y-%m-%d').date()
+            date_end = datetime.strptime(date_end, '%Y-%m-%d').date()
         except ValueError:
             request.errors.add(
-                'body', 'date_end', 'invalid format, expecting %Y-%m-%d'
+                'body', 'date_end',
+                'invalid format, expecting YEAR-MONTH-DAY'
             )
-            return
 
     if date_end > utc_now_plus_12h:
         request.errors.add(
