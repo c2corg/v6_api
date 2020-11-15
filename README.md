@@ -11,14 +11,13 @@ On any OS, install [git](https://git-scm.com/) and [docker](https://docs.docker.
 # Download camptocamp.org source code :
 git clone https://github.com/c2corg/v6_api
 cd v6_api
-
-# Build dev env. It's quite long, but you have to do it once.
-docker-compose build
 ```
 
 ### Run
 
 ```sh
+# the very first call may be quite long, (15 minutes, depending of your bandwith)
+# time to make a coffee
 docker-compose up
 ```
 
@@ -39,10 +38,6 @@ In another terminal (`docker-compose up` must be running) :
 In another terminal (`docker-compose up` must be running) :
 
 ```sh
-# First, inititate test database, must be done once
-./scripts/init_test.sh
-
-# Then
 ./scripts/test.sh
 ```
 

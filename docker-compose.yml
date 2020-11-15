@@ -31,9 +31,7 @@ services:
       - redis
 
   postgresql:
-    build:
-      context: .
-      dockerfile: dev_db.Dockerfile
+    image: docker.io/c2corg/c2corg_pgsql:anon-2018-11-02
     environment:
       PGDATA: '/c2corg_anon'
     volumes:
