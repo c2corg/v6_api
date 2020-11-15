@@ -35,7 +35,7 @@ gaiohttp-websocket==0.1.1
 
 # dogpile.cache
 # needs: https://bitbucket.org/zzzeek/dogpile.cache/pull-requests/58
-git+https://bitbucket.org/tsauerwein/dogpile.cache.git@get_or_create_multi_should_cache
+git+https://github.com/c2corg/dogpile.cache.git@get_or_create_multi_should_cache
 
 # ColanderAlchemy>=0.3.2
 # needed for ColanderAlchemy: https://github.com/stefanofontanelli/ColanderAlchemy/pull/90
