@@ -1,7 +1,6 @@
 #!/bin/sh
 
 PSQL=psql
-[ "$USER" != "travis" ] && PSQL="sudo -u postgres psql"
 
 DBNAME="c2corg_${USER}_tests"
 [ -z "$USER" ] && DBNAME="c2corg_tests"
