@@ -1,4 +1,4 @@
-import datetime
+from datetime import date, timedelta
 import json
 
 from c2corg_api.models.article import Article
@@ -363,7 +363,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(len(errors), 3)
 
     def test_post_date_start_is_tomorrow(self):
-        later = (datetime.date.today() + datetime.timedelta(days=2)).strftime('%Y-%m-%d')
+        later = (date.today() + timedelta(days=2)).strftime('%Y-%m-%d')
         body_post = {
             'activities': ['skitouring'],
             'date_start': later,
@@ -395,10 +395,11 @@ class TestOutingRest(BaseDocumentTestRest):
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['name'], 'date_start')
-        self.assertEqual(errors[0]['description'], 'can not be sometime in the future')
+        self.assertEqual(errors[0]['description'],
+                         'can not be sometime in the future')
 
     def test_post_date_end_is_tomorrow(self):
-        later = (datetime.date.today() + datetime.timedelta(days=2)).strftime('%Y-%m-%d')
+        later = (date.today() + timedelta(days=2)).strftime('%Y-%m-%d')
         body_post = {
             'activities': ['skitouring'],
             'date_start': '2016-01-01',
@@ -410,7 +411,7 @@ class TestOutingRest(BaseDocumentTestRest):
             'geometry': {
                 'id': 5678, 'version': 6789,
                 'geom_detail': '{"type": "LineString", "coordinates": ' +
-                        '[[635956, 5723604], [635966, 5723644]]}'
+                               '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop',
@@ -430,11 +431,12 @@ class TestOutingRest(BaseDocumentTestRest):
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['name'], 'date_end')
-        self.assertEqual(errors[0]['description'], 'can not be sometime in the future')
+        self.assertEqual(errors[0]['description'],
+                         'can not be sometime in the future')
 
     def test_post_end_date_is_prior_start_date(self):
-        today = datetime.date.today()
-        yesterday = today - datetime.timedelta(days=1)
+        today = date.today()
+        yesterday = today - timedelta(days=1)
         body_post = {
             'activities': ['skitouring'],
             'date_start': today.strftime('%Y-%m-%d'),
@@ -446,7 +448,7 @@ class TestOutingRest(BaseDocumentTestRest):
             'geometry': {
                 'id': 5678, 'version': 6789,
                 'geom_detail': '{"type": "LineString", "coordinates": ' +
-                        '[[635956, 5723604], [635966, 5723644]]}'
+                               '[[635956, 5723604], [635966, 5723644]]}'
             },
             'locales': [
                 {'lang': 'en', 'title': 'Some nice loop',
@@ -466,7 +468,8 @@ class TestOutingRest(BaseDocumentTestRest):
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['name'], 'date_end')
-        self.assertEqual(errors[0]['description'], 'can not be prior the starting date')
+        self.assertEqual(errors[0]['description'],
+                         'can not be prior the starting date')
 
     def test_post_non_whitelisted_attribute(self):
         body = {
@@ -606,8 +609,8 @@ class TestOutingRest(BaseDocumentTestRest):
         body, doc = self.post_success(body)
         self._assert_geometry(body)
         self._assert_default_geometry(body)
-        self.assertEqual(doc.date_start, datetime.date(2016, 1, 1))
-        self.assertEqual(doc.date_end, datetime.date(2016, 1, 2))
+        self.assertEqual(doc.date_start, date(2016, 1, 1))
+        self.assertEqual(doc.date_end, date(2016, 1, 2))
 
         version = doc.versions[0]
 
@@ -1221,8 +1224,8 @@ class TestOutingRest(BaseDocumentTestRest):
 
     def _add_test_data(self):
         self.outing = Outing(
-            activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
-            date_end=datetime.date(2016, 1, 1), elevation_max=1500,
+            activities=['skitouring'], date_start=date(2016, 1, 1),
+            date_end=date(2016, 1, 1), elevation_max=1500,
             elevation_min=700, height_diff_up=800, height_diff_down=800,
             elevation_access=900, condition_rating='good'
         )
@@ -1251,8 +1254,8 @@ class TestOutingRest(BaseDocumentTestRest):
         update_feed_document_create(self.outing, user_id)
 
         self.outing2 = Outing(
-            activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
-            date_end=datetime.date(2016, 2, 1),
+            activities=['skitouring'], date_start=date(2016, 2, 1),
+            date_end=date(2016, 2, 1),
             height_diff_up=600, elevation_max=1800, elevation_access=700,
             condition_rating='average',
             locales=[
@@ -1268,15 +1271,15 @@ class TestOutingRest(BaseDocumentTestRest):
         DocumentRest.create_new_version(self.outing2, user_id)
 
         self.outing3 = Outing(
-            activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
-            date_end=datetime.date(2016, 2, 2),
+            activities=['skitouring'], date_start=date(2016, 2, 1),
+            date_end=date(2016, 2, 2),
             height_diff_up=200, elevation_max=1200, elevation_access=800,
             condition_rating='poor'
         )
         self.session.add(self.outing3)
         self.outing4 = Outing(
-            activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
-            date_end=datetime.date(2016, 2, 3),
+            activities=['skitouring'], date_start=date(2016, 2, 1),
+            date_end=date(2016, 2, 3),
             height_diff_up=500, elevation_max=1500, elevation_access=800,
             condition_rating='excellent'
         )

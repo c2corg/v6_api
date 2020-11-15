@@ -130,7 +130,7 @@ class OutingRest(DocumentRest):
             validate_outing_create,
             validate_associations_create,
             validate_required_associations,
-            validate_dates,])
+            validate_dates])
     def collection_post(self):
         set_default_geom = functools.partial(
             set_default_geometry,
@@ -147,7 +147,7 @@ class OutingRest(DocumentRest):
             validate_outing_update,
             validate_associations_update,
             validate_required_associations,
-            validate_dates,])
+            validate_dates])
     def put(self):
         if not has_permission_for_outing(
                 self.request, self.request.validated['id']):
