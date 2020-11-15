@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import search_documents, elasticsearch_config
-from nose.plugins.attrib import attr
+from pytest import mark
 
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
@@ -40,15 +40,16 @@ forum_username_tests = {
 
 class BaseUserTestRest(BaseTestRest):
 
-    def __init__(self, *args, **kwargs):
-        BaseTestRest.__init__(self, *args, **kwargs)
-        self.original_discourse_client = get_discourse_client(self.settings)
-
     def setUp(self):  # noqa
+        self.original_discourse_client = get_discourse_client(self.settings)
         self._prefix = "/users"
         self._model = User
         BaseTestRest.setUp(self)
         self.set_discourse_up()
+
+    def tearDown(self):
+        BaseTestRest.tearDown(self)
+        self.set_discourse_not_mocked()
 
     def set_discourse_client_mock(self, client):
         self.discourse_client = client
@@ -364,7 +365,7 @@ class TestUserRest(BaseUserTestRest):
         url = '/users/request_password_change'
         self.app_post_json(url, {'email': user.email}, status=403)
 
-    @attr('jobs')
+    @mark.jobs
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_purge_accounts(self, _send_email):
         from c2corg_api.jobs.purge_non_activated_accounts import purge_account
@@ -397,7 +398,7 @@ class TestUserRest(BaseUserTestRest):
         purge_account(self.session)
         self.assertEqual(0, query.count())
 
-    @attr('jobs')
+    @mark.jobs
     def test_purge_tokens(self):
         from c2corg_api.jobs.purge_expired_tokens import purge_token
         from datetime import datetime

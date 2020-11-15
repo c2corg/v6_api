@@ -31,7 +31,7 @@ Press CTRL+C to terminate it.
 In another terminal (`docker-compose up` must be running) :
 
 ```sh
-docker-compose exec api make -f config/docker-dev lint
+./scripts/lint.sh
 ```
 
 ### Run test suite 
@@ -40,10 +40,10 @@ In another terminal (`docker-compose up` must be running) :
 
 ```sh
 # First, inititate test database, must be done once
-docker-compose exec postgresql /v6_api/scripts/create_user_db_test.sh
+./scripts/init_test.sh
 
 # Then
-docker-compose exec api make -f config/docker-dev test
+./scripts/test.sh
 ```
 
 ## Useful links in [wiki](https://github.com/c2corg/v6_api/wiki)
