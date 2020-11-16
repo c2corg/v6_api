@@ -24,7 +24,7 @@ services:
       - ./common.ini.in:/var/www/common.ini.in
       - ./development.ini.in:/var/www/development.ini.in
       - ./test.ini.in:/var/www/test.ini.in
-    command: make -f config/docker serve
+    command: make -f config/docker-dev serve
     links:
       - postgresql
       - elasticsearch

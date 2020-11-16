@@ -38,7 +38,17 @@ In another terminal (`docker-compose up` must be running) :
 In another terminal (`docker-compose up` must be running) :
 
 ```sh
+# full tests, take a while
 ./scripts/test.sh
+
+# If you need to test a specific point: 
+./scripts/test.sh c2corg_api/tests/models/test_book.py
+
+# or:
+./scripts/test.sh c2corg_api/tests/models/test_book.py::TestBook
+
+# or even:
+./scripts/test.sh c2corg_api/tests/models/test_book.py::TestBook::test_to_archive
 ```
 
 ## Useful links in [wiki](https://github.com/c2corg/v6_api/wiki)
