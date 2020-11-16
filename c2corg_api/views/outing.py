@@ -34,6 +34,9 @@ validate_associations_update = functools.partial(
 
 
 def validate_dates(request, **kwargs):
+    if request.errors:
+        return
+
     utc_now = datetime.now(timezone.utc)
     utc_now_plus_12h = (utc_now + timedelta(hours=12)).date()
 
@@ -43,9 +46,6 @@ def validate_dates(request, **kwargs):
         document = request.json_body
 
     date_start = document.get('date_start')
-    if date_start is None:
-        # sometimes, request.validated is only: {'id': 361}
-        return
     if isinstance(date_start, str):
         try:
             date_start = datetime.strptime(date_start, '%Y-%m-%d').date()
@@ -62,8 +62,6 @@ def validate_dates(request, **kwargs):
         return
 
     date_end = document.get('date_end')
-    if date_end is None:
-        return
     if isinstance(date_end, str):
         try:
             date_end = datetime.strptime(date_end, '%Y-%m-%d').date()
