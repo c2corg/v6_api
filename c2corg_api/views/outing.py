@@ -33,19 +33,10 @@ validate_associations_update = functools.partial(
     validate_associations, OUTING_TYPE, False)
 
 
-def validate_dates(request, **kwargs):
-    if request.errors:
-        return
-
+def _validate_dates(request, date_start, date_end):
     utc_now = datetime.now(timezone.utc)
     utc_now_plus_12h = (utc_now + timedelta(hours=12)).date()
 
-    document = request.validated.get('document')
-    if document is None:
-        # when called from unit-tests
-        document = request.json_body
-
-    date_start = document.get('date_start')
     if isinstance(date_start, str):
         try:
             date_start = datetime.strptime(date_start, '%Y-%m-%d').date()
@@ -61,7 +52,6 @@ def validate_dates(request, **kwargs):
         )
         return
 
-    date_end = document.get('date_end')
     if isinstance(date_end, str):
         try:
             date_end = datetime.strptime(date_end, '%Y-%m-%d').date()
@@ -80,6 +70,31 @@ def validate_dates(request, **kwargs):
         request.errors.add(
             'body', 'date_end', 'can not be prior the starting date'
         )
+
+
+def validate_dates_on_creation(request, **kwargs):
+    if request.errors:
+        return
+
+    date_start = request.validated.get('date_start')
+    date_end = request.validated.get('date_end')
+
+    _validate_dates(request, date_start, date_end)
+
+
+def validate_dates_on_update(request, **kwargs):
+    if request.errors:
+        return
+
+    document = request.validated.get('document')
+
+    if document is None:  # other validators may have not validated doc
+        return
+
+    date_start = document.get('date_start')
+    date_end = document.get('date_end')
+
+    _validate_dates(request, date_start, date_end)
 
 
 def validate_required_associations(request, **kwargs):
@@ -131,7 +146,7 @@ class OutingRest(DocumentRest):
             validate_outing_create,
             validate_associations_create,
             validate_required_associations,
-            validate_dates])
+            validate_dates_on_creation])
     def collection_post(self):
         set_default_geom = functools.partial(
             set_default_geometry,
@@ -148,7 +163,7 @@ class OutingRest(DocumentRest):
             validate_outing_update,
             validate_associations_update,
             validate_required_associations,
-            validate_dates])
+            validate_dates_on_update])
     def put(self):
         if not has_permission_for_outing(
                 self.request, self.request.validated['id']):
