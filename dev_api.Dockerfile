@@ -42,14 +42,10 @@ WORKDIR /var/www/
 
 RUN set -x \
  && make -f config/docker-dev install \
+ && make -f config/docker-dev .build/dev-requirements.timestamp \
  && py3compile -f -X '^.*gevent/_util_py2.py$' -X '^.*attr/_next_gen.py$' .build/venv/
 
 ENV version="{version}" \
     PATH=/var/www/.build/venv/bin/:$PATH
 
-COPY /docker-entrypoint.sh /
-COPY /docker-entrypoint.d/* /docker-entrypoint.d/
-ENTRYPOINT ["/docker-entrypoint.sh"]
-
-EXPOSE 8080
-CMD ["gunicorn", "--paste", "production.ini", "-u", "www-data", "-g", "www-data", "-b", ":8080"]
+RUN make -f config/docker-dev template

@@ -4,7 +4,6 @@ pyramid.includes =
     pyramid_mailer.testing
     pyramid_tm
 sqlalchemy.url = postgresql://{tests_db_user}:{tests_db_password}@{tests_db_host}:{tests_db_port}/{tests_db_name}
-sqlalchemy.echo = True
 noauthorization = False
 debug_authorization = True
 jwtauth.master_secret = The master key
