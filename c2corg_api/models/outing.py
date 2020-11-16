@@ -66,9 +66,9 @@ class _OutingMixin(object):
 
     condition_rating = Column(enums.condition_rating)
 
-    snow_quantity = Column(enums.condition_rating)
+    snow_quantity = Column(enums.snow_quantity_ratings)
 
-    snow_quality = Column(enums.condition_rating)
+    snow_quality = Column(enums.snow_quality_ratings)
 
     glacier_rating = Column(enums.glacier_rating)
 

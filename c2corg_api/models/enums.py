@@ -154,3 +154,7 @@ slackline_type = enum(
     'slackline_type', attributes.slackline_types)
 lang = enum(
     'lang', attributes.default_langs)
+snow_quality_ratings = enum(
+    'snow_quality_ratings', attributes.snow_quality_ratings)
+snow_quantity_ratings = enum(
+    'snow_quantity_ratings', attributes.snow_quantity_ratings)
