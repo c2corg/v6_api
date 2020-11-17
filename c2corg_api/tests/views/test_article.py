@@ -383,9 +383,9 @@ class TestArticleRest(BaseDocumentTestRest):
         (body, article1) = self.put_success_all(
             body, self.article1, user='moderator', cache_version=3)
 
-        self.assertEquals(article1.activities, ['hiking'])
+        self.assertEqual(article1.activities, ['hiking'])
         locale_en = article1.get_locale('en')
-        self.assertEquals(locale_en.title, 'New title')
+        self.assertEqual(locale_en.title, 'New title')
 
         # version with lang 'en'
         versions = article1.versions
@@ -450,7 +450,7 @@ class TestArticleRest(BaseDocumentTestRest):
         (body, article1) = self.put_success_figures_only(
             body, self.article1, user='moderator')
 
-        self.assertEquals(article1.activities, ['hiking'])
+        self.assertEqual(article1.activities, ['hiking'])
 
     def test_put_success_lang_only(self):
         body = {
@@ -471,7 +471,7 @@ class TestArticleRest(BaseDocumentTestRest):
         (body, article1) = self.put_success_lang_only(
             body, self.article1, user='moderator')
 
-        self.assertEquals(article1.get_locale('en').title, 'New title')
+        self.assertEqual(article1.get_locale('en').title, 'New title')
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale.
@@ -493,7 +493,7 @@ class TestArticleRest(BaseDocumentTestRest):
         (body, article1) = self.put_success_new_lang(
             body, self.article1, user='moderator')
 
-        self.assertEquals(article1.get_locale('es').title, 'Lac d\'Annecy')
+        self.assertEqual(article1.get_locale('es').title, 'Lac d\'Annecy')
 
     def test_put_change_collab_to_personal_as_non_author(self):
         body = {

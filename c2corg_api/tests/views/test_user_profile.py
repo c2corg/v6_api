@@ -277,7 +277,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         (body, profile) = self.put_success_figures_only(
             body, self.profile1, user='moderator', check_es=False)
 
-        self.assertEquals(profile.categories, ['mountain_guide'])
+        self.assertEqual(profile.categories, ['mountain_guide'])
         self._check_es_index()
 
     def test_put_success_lang_only(self):
@@ -297,7 +297,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         (body, profile) = self.put_success_lang_only(
             body, self.profile1, user='moderator', check_es=False)
 
-        self.assertEquals(
+        self.assertEqual(
             profile.get_locale('en').description, 'Me!')
         self._check_es_index()
 
@@ -321,7 +321,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         (body, profile) = self.put_success_lang_only(
             body, self.profile1, user='moderator', check_es=False)
 
-        self.assertEquals(
+        self.assertEqual(
             profile.get_locale('en').description, 'Me!')
         self.session.refresh(self.locale_en)
         self.assertEqual(self.locale_en.title, '')
@@ -347,7 +347,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
         (body, profile) = self.put_success_new_lang(
             body, self.profile1, user='moderator', check_es=False)
 
-        self.assertEquals(profile.get_locale('es').description, 'Yo')
+        self.assertEqual(profile.get_locale('es').description, 'Yo')
         search_doc = self._check_es_index()
         self.assertEqual(
             search_doc['title_es'], 'Contributor contributor')

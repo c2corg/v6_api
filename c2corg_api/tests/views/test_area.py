@@ -289,9 +289,9 @@ class TestAreaRest(BaseDocumentTestRest):
         }
         (body, area) = self.put_success_all(body, self.area1, cache_version=2)
 
-        self.assertEquals(area.area_type, 'admin_limits')
+        self.assertEqual(area.area_type, 'admin_limits')
         locale_en = area.get_locale('en')
-        self.assertEquals(locale_en.title, 'New title')
+        self.assertEqual(locale_en.title, 'New title')
 
         # version with lang 'en'
         versions = area.versions
@@ -377,7 +377,7 @@ class TestAreaRest(BaseDocumentTestRest):
         }
         (body, area) = self.put_success_figures_only(body, self.area1)
 
-        self.assertEquals(area.area_type, 'admin_limits')
+        self.assertEqual(area.area_type, 'admin_limits')
 
         # check that the links to intersecting documents are not updated,
         # because the geometry did not change
@@ -404,7 +404,7 @@ class TestAreaRest(BaseDocumentTestRest):
         }
         (body, area) = self.put_success_lang_only(body, self.area1)
 
-        self.assertEquals(
+        self.assertEqual(
             area.get_locale('en').title, 'New title')
 
         # check that the links to intersecting documents are not updated,
@@ -433,7 +433,7 @@ class TestAreaRest(BaseDocumentTestRest):
         }
         (body, area) = self.put_success_new_lang(body, self.area1)
 
-        self.assertEquals(area.get_locale('es').title, 'Chartreuse')
+        self.assertEqual(area.get_locale('es').title, 'Chartreuse')
 
     def test_get_associations_history(self):
         self._get_association_logs(self.area1)

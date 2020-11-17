@@ -20,7 +20,7 @@ class Testuser(BaseTestCase):
 
         def change_email():
             tony.update_validation_nonce(Purpose.change_email, 2)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             Exception, 'Account not validated', change_email)
 
         tony.email_validated = True

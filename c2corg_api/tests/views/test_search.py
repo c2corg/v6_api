@@ -120,7 +120,7 @@ class TestSearchRest(BaseTestRest):
         body = response.json
         articles = body['articles']
 
-        self.assertEquals(len(articles), 2)
+        self.assertEqual(len(articles), 2)
         self.assertNotEqual(articles['total'], 0)
 
     def test_search_by_book_title(self):
@@ -130,7 +130,7 @@ class TestSearchRest(BaseTestRest):
         body = response.json
         books = body['books']
 
-        self.assertEquals(len(books), 2)
+        self.assertEqual(len(books), 2)
         self.assertNotEqual(books['total'], 0)
 
     def test_search_lang(self):
@@ -187,9 +187,9 @@ class TestSearchRest(BaseTestRest):
         body = response.json
 
         waypoints = body['waypoints']
-        self.assertEquals(len(waypoints['documents']), 1)
-        self.assertEquals(waypoints['total'], 1)
+        self.assertEqual(len(waypoints['documents']), 1)
+        self.assertEqual(waypoints['total'], 1)
 
         routes = body['routes']
-        self.assertEquals(len(routes['documents']), 0)
-        self.assertEquals(routes['total'], 0)
+        self.assertEqual(len(routes['documents']), 0)
+        self.assertEqual(routes['total'], 0)

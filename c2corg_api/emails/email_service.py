@@ -23,7 +23,7 @@ class EmailLocalizator(object):
         filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % (lang, key)
         if not os.path.isfile(filepath):
             filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % ('fr', key)
-        with open(filepath, 'rU') as f:  # Use universal newline support.
+        with open(filepath, 'r') as f:
             content = f.read().rstrip()  # No trailing new line in subject!
         return content
 

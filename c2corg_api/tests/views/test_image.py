@@ -591,9 +591,9 @@ class TestImageRest(BaseTestImage):
         }
         (body, image) = self.put_success_all(body, self.image, cache_version=3)
 
-        self.assertEquals(image.height, 2000)
+        self.assertEqual(image.height, 2000)
         locale_en = image.get_locale('en')
-        self.assertEquals(locale_en.description, 'New description')
+        self.assertEqual(locale_en.description, 'New description')
 
         # version with lang 'en'
         versions = image.versions
@@ -696,7 +696,7 @@ class TestImageRest(BaseTestImage):
         }
         (body, image) = self.put_success_figures_only(body, self.image)
 
-        self.assertEquals(image.height, 2000)
+        self.assertEqual(image.height, 2000)
 
     def test_put_success_lang_only(self):
         body = {
@@ -718,7 +718,7 @@ class TestImageRest(BaseTestImage):
         }
         (body, image) = self.put_success_lang_only(body, self.image)
 
-        self.assertEquals(
+        self.assertEqual(
             image.get_locale('en').description, 'New description')
 
     def test_put_success_new_lang(self):
@@ -742,7 +742,7 @@ class TestImageRest(BaseTestImage):
         }
         (body, image) = self.put_success_new_lang(body, self.image)
 
-        self.assertEquals(image.get_locale('es').description, '...')
+        self.assertEqual(image.get_locale('es').description, '...')
 
     def test_change_image_type_collaborative(self):
         """Test that a non-moderator user cannot change the image_type

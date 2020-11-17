@@ -555,9 +555,9 @@ class TestXreportRest(BaseDocumentTestRest):
         (body, xreport1) = self.put_success_all(
             body, self.xreport1, user='moderator', cache_version=3)
 
-        self.assertEquals(xreport1.event_activity, 'skitouring')
+        self.assertEqual(xreport1.event_activity, 'skitouring')
         locale_en = xreport1.get_locale('en')
-        self.assertEquals(locale_en.title, 'New title')
+        self.assertEqual(locale_en.title, 'New title')
 
         # version with lang 'en'
         versions = xreport1.versions
@@ -629,7 +629,7 @@ class TestXreportRest(BaseDocumentTestRest):
         (body, xreport1) = self.put_success_figures_only(
             body, self.xreport1, user='moderator')
 
-        self.assertEquals(xreport1.event_activity, 'skitouring')
+        self.assertEqual(xreport1.event_activity, 'skitouring')
 
     def test_put_success_lang_only(self):
         body = {
@@ -649,7 +649,7 @@ class TestXreportRest(BaseDocumentTestRest):
         (body, xreport1) = self.put_success_lang_only(
             body, self.xreport1, user='moderator')
 
-        self.assertEquals(xreport1.get_locale('en').title, 'New title')
+        self.assertEqual(xreport1.get_locale('en').title, 'New title')
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale.
@@ -670,7 +670,7 @@ class TestXreportRest(BaseDocumentTestRest):
         (body, xreport1) = self.put_success_new_lang(
             body, self.xreport1, user='moderator')
 
-        self.assertEquals(xreport1.get_locale('es').title, 'Lac d\'Annecy')
+        self.assertEqual(xreport1.get_locale('es').title, 'Lac d\'Annecy')
 
     def test_put_as_author(self):
         body = {
