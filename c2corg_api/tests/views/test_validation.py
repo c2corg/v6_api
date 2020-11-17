@@ -43,7 +43,7 @@ class TestValidation(BaseTestCase):
         associations = validate_associations_in(
             associations_in, OUTING_TYPE, errors)
 
-        self.assertEquals(len(errors), 0)
+        self.assertEqual(len(errors), 0)
 
         expected_associations = {
             'users': [
@@ -78,7 +78,7 @@ class TestValidation(BaseTestCase):
         associations = validate_associations_in(
             associations_in, WAYPOINT_TYPE, errors)
 
-        self.assertEquals(len(errors), 0)
+        self.assertEqual(len(errors), 0)
 
         expected_associations = {
             'waypoints': [
@@ -105,7 +105,7 @@ class TestValidation(BaseTestCase):
         associations = validate_associations_in(
             associations_in, ROUTE_TYPE, errors)
 
-        self.assertEquals(len(errors), 0)
+        self.assertEqual(len(errors), 0)
 
         expected_associations = {
             'routes': [
@@ -131,7 +131,7 @@ class TestValidation(BaseTestCase):
             associations_in, WAYPOINT_TYPE, errors)
 
         # users are ignored for waypoints
-        self.assertEquals(associations, {})
+        self.assertEqual(associations, {})
 
     def test_validate_associations_invalid_document_id(self):
         associations_in = {
@@ -145,7 +145,7 @@ class TestValidation(BaseTestCase):
             associations_in, WAYPOINT_TYPE, errors)
 
         self.assertIsNone(associations)
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
         error = errors[0]
         self.assertEqual(error['name'], 'associations.waypoints')
         self.assertEqual(
@@ -164,7 +164,7 @@ class TestValidation(BaseTestCase):
             associations_in, ROUTE_TYPE, errors)
 
         self.assertIsNone(associations)
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
         error = errors[0]
         self.assertEqual(error['name'], 'associations.routes')
         self.assertEqual(

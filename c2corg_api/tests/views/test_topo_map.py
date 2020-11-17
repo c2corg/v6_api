@@ -261,9 +261,9 @@ class TestTopoMapRest(BaseDocumentTestRest):
         }
         (body, map1) = self.put_success_all(body, self.map1, user='moderator')
 
-        self.assertEquals(map1.code, '3433OT')
+        self.assertEqual(map1.code, '3433OT')
         locale_en = map1.get_locale('en')
-        self.assertEquals(locale_en.title, 'New title')
+        self.assertEqual(locale_en.title, 'New title')
 
         # version with lang 'en'
         versions = map1.versions
@@ -315,7 +315,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         (body, map1) = self.put_success_figures_only(
             body, self.map1, user='moderator')
 
-        self.assertEquals(map1.code, '3433OT')
+        self.assertEqual(map1.code, '3433OT')
 
     def test_put_success_lang_only(self):
         body = {
@@ -336,7 +336,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         (body, map1) = self.put_success_lang_only(
             body, self.map1, user='moderator')
 
-        self.assertEquals(
+        self.assertEqual(
             map1.get_locale('en').title, 'New title')
 
     def test_put_success_new_lang(self):
@@ -359,7 +359,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         (body, map1) = self.put_success_new_lang(
             body, self.map1, user='moderator')
 
-        self.assertEquals(map1.get_locale('es').title, 'Lac d\'Annecy')
+        self.assertEqual(map1.get_locale('es').title, 'Lac d\'Annecy')
 
     def _assert_geometry(self, body):
         self.assertIsNotNone(body.get('geometry'))

@@ -15,7 +15,7 @@ class TestGeometry(BaseTestCase):
         from c2corg_api.ext.colander_ext import Geometry
         geom_schema = Geometry()
 
-        self.assertEquals(null, geom_schema.serialize({}, null))
+        self.assertEqual(null, geom_schema.serialize({}, null))
 
     def test_serialize_wkb(self):
         from c2corg_api.ext.colander_ext import Geometry
@@ -23,7 +23,7 @@ class TestGeometry(BaseTestCase):
 
         from shapely.geometry.point import Point
         wkb = from_shape(Point(1.0, 2.0))
-        self.assertEquals(
+        self.assertEqual(
             {"type": "Point", "coordinates": [1.0, 2.0]},
             json.loads(geom_schema.serialize({}, wkb)))
 
@@ -34,7 +34,7 @@ class TestGeometry(BaseTestCase):
         wkb = geomet_wkb.dumps(
             {'type': 'Point', 'coordinates': [1.0, 2.0, 3.0, 4.0]},
             big_endian=False)
-        self.assertEquals(
+        self.assertEqual(
             {"type": "Point", "coordinates": [1.0, 2.0, 3.0, 4.0]},
             json.loads(geom_schema.serialize({}, from_wkb(wkb))))
 
@@ -50,8 +50,8 @@ class TestGeometry(BaseTestCase):
         from c2corg_api.ext.colander_ext import Geometry
         geom_schema = Geometry()
 
-        self.assertEquals(null, geom_schema.deserialize({}, null))
-        self.assertEquals(null, geom_schema.deserialize({}, ''))
+        self.assertEqual(null, geom_schema.deserialize({}, null))
+        self.assertEqual(null, geom_schema.deserialize({}, ''))
 
     def test_deserialize_valid_geojson(self):
         from c2corg_api.ext.colander_ext import Geometry
@@ -62,7 +62,7 @@ class TestGeometry(BaseTestCase):
 
         wkb = geom_schema.deserialize(
             {}, '{"type": "Point", "coordinates": [1.0, 2.0]}')
-        self.assertEquals(expected_wkb.desc, wkb.desc)
+        self.assertEqual(expected_wkb.desc, wkb.desc)
 
     def test_deserialize_4d(self):
         from c2corg_api.ext.colander_ext import Geometry
@@ -74,7 +74,7 @@ class TestGeometry(BaseTestCase):
 
         wkb = geom_schema.deserialize(
             {}, '{"type": "Point", "coordinates": [1.0, 2.0, 3.0, 4.0]}')
-        self.assertEquals(expected_wkb.desc, wkb.desc)
+        self.assertEqual(expected_wkb.desc, wkb.desc)
 
     def test_serialize_invalid_wrong_type(self):
         from c2corg_api.ext.colander_ext import Geometry

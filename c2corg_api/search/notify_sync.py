@@ -51,8 +51,8 @@ def run_on_successful_transaction(operation):
             except:
                 log.error('Scheduled operation failed', exc_info=True)
         else:
-            log.warn('Scheduled operation is not run because transaction '
-                     'was not successful')
+            log.warning('Scheduled operation is not run because transaction '
+                        'was not successful')
 
     current_transaction = transaction.get()
     current_transaction.addAfterCommitHook(run_when_successful)

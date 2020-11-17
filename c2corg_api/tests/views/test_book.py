@@ -359,9 +359,9 @@ class TestBookRest(BaseDocumentTestRest):
         (body, book1) = self.put_success_all(
             body, self.book1, user='moderator', cache_version=3)
 
-        self.assertEquals(book1.activities, ['hiking'])
+        self.assertEqual(book1.activities, ['hiking'])
         locale_en = book1.get_locale('en')
-        self.assertEquals(locale_en.title, 'New title')
+        self.assertEqual(locale_en.title, 'New title')
 
         # version with lang 'en'
         versions = book1.versions
@@ -423,8 +423,8 @@ class TestBookRest(BaseDocumentTestRest):
         (body, book1) = self.put_success_figures_only(
             body, self.book1, user='moderator')
 
-        self.assertEquals(book1.activities, ['hiking'])
-        self.assertEquals(book1.book_types, ['biography'])
+        self.assertEqual(book1.activities, ['hiking'])
+        self.assertEqual(book1.book_types, ['biography'])
 
     def test_put_success_lang_only(self):
         body = {
@@ -444,7 +444,7 @@ class TestBookRest(BaseDocumentTestRest):
         (body, book1) = self.put_success_lang_only(
             body, self.book1, user='moderator')
 
-        self.assertEquals(book1.get_locale('en').title, 'New title')
+        self.assertEqual(book1.get_locale('en').title, 'New title')
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale.
@@ -465,7 +465,7 @@ class TestBookRest(BaseDocumentTestRest):
         (body, book1) = self.put_success_new_lang(
             body, self.book1, user='moderator')
 
-        self.assertEquals(book1.get_locale('es').title, 'Escalades au Thaurac')
+        self.assertEqual(book1.get_locale('es').title, 'Escalades au Thaurac')
 
     def test_get_associations_history(self):
         self._get_association_logs(self.book1)

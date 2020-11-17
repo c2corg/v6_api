@@ -278,7 +278,7 @@ def update_participants_of_outing(outing_id, user_id):
     existing_change = get_existing_change(outing_id)
 
     if not existing_change:
-        log.warn('no feed change for document {}'.format(outing_id))
+        log.warning('no feed change for document {}'.format(outing_id))
         return
 
     participant_ids = _get_participants_of_outing(outing_id)
@@ -365,7 +365,7 @@ def update_feed_images_upload(images, images_in, user_id):
     # load the feed entry for the images
     change = get_existing_change(document_id)
     if not change:
-        log.warn('no feed change for document {}'.format(document_id))
+        log.warning('no feed change for document {}'.format(document_id))
         return
 
     if change.user_id == user_id:

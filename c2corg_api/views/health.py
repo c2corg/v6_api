@@ -94,7 +94,7 @@ class HealthRest(object):
 
         if isfile(maintenance_file):
             maintenance_mode = True
-            log.warn(
+            log.warning(
               'service is in maintenance mode, remove %s to reenable.' %
               maintenance_file)
             self.request.response.status_code = 404

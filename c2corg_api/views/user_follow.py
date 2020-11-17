@@ -88,7 +88,7 @@ class UserUnfollowRest(object):
         if follower_relation:
             DBSession.delete(follower_relation)
         else:
-            log.warn(
+            log.warning(
                 'tried to delete not existing follower relation '
                 '({0}, {1})'.format(followed_user_id, follower_user_id))
 

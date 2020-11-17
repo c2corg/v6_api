@@ -753,14 +753,14 @@ class BaseDocumentTestRest(BaseTestRest):
 
         body = response.json
         document_id = body.get('document_id')
-        self.assertNotEquals(
+        self.assertNotEqual(
             body.get('version'), document.version)
-        self.assertEquals(body.get('document_id'), document_id)
+        self.assertEqual(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
         self.session.expire_all()
         document = self.session.query(self._model).get(document_id)
-        self.assertEquals(len(document.locales), 2)
+        self.assertEqual(len(document.locales), 2)
         locale_en = document.get_locale('en')
 
         # check that a new archive_document was created
@@ -856,14 +856,14 @@ class BaseDocumentTestRest(BaseTestRest):
 
         body = response.json
         document_id = body.get('document_id')
-        self.assertNotEquals(
+        self.assertNotEqual(
             body.get('version'), document.version)
-        self.assertEquals(body.get('document_id'), document_id)
+        self.assertEqual(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
         self.session.expire_all()
         document = self.session.query(self._model).get(document_id)
-        self.assertEquals(len(document.locales), 2)
+        self.assertEqual(len(document.locales), 2)
 
         # check that a new archive_document was created
         archive_count = self.session.query(self._model_archive). \
@@ -952,13 +952,13 @@ class BaseDocumentTestRest(BaseTestRest):
         body = response.json
         document_id = body.get('document_id')
         # document version does not change!
-        self.assertEquals(body.get('version'), document.version)
-        self.assertEquals(body.get('document_id'), document_id)
+        self.assertEqual(body.get('version'), document.version)
+        self.assertEqual(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
         self.session.expire_all()
         document = self.session.query(self._model).get(document_id)
-        self.assertEquals(len(document.locales), 2)
+        self.assertEqual(len(document.locales), 2)
 
         # check that no new archive_document was created
         archive_count = self.session.query(self._model_archive). \
@@ -1038,13 +1038,13 @@ class BaseDocumentTestRest(BaseTestRest):
         body = response.json
         document_id = body.get('document_id')
         # document version does not change!
-        self.assertEquals(body.get('version'), document.version)
-        self.assertEquals(body.get('document_id'), document_id)
+        self.assertEqual(body.get('version'), document.version)
+        self.assertEqual(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
         self.session.expire_all()
         document = self.session.query(self._model).get(document_id)
-        self.assertEquals(len(document.locales), 3)
+        self.assertEqual(len(document.locales), 3)
 
         # check that no new archive_document was created
         archive_count = self.session.query(self._model_archive). \

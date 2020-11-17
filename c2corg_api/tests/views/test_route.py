@@ -807,10 +807,10 @@ class TestRouteRest(BaseDocumentTestRest):
         (body, route) = self.put_success_all(body, self.route)
         self._assert_default_geometry(body, x=635961, y=5723624)
 
-        self.assertEquals(route.elevation_max, 1600)
+        self.assertEqual(route.elevation_max, 1600)
         locale_en = route.get_locale('en')
-        self.assertEquals(locale_en.description, '...')
-        self.assertEquals(locale_en.gear, 'none')
+        self.assertEqual(locale_en.description, '...')
+        self.assertEqual(locale_en.gear, 'none')
 
         # version with lang 'en'
         versions = route.versions
@@ -859,7 +859,7 @@ class TestRouteRest(BaseDocumentTestRest):
         }
         (body, route) = self.put_success_figures_only(body, self.route)
 
-        self.assertEquals(route.elevation_max, 1600)
+        self.assertEqual(route.elevation_max, 1600)
 
     def test_put_success_new_track_with_default_geom(self):
         """Test that a provided default geometry (`geom`) is used instead of
@@ -977,7 +977,7 @@ class TestRouteRest(BaseDocumentTestRest):
         }
         (body, route) = self.put_success_lang_only(body, self.route)
 
-        self.assertEquals(route.get_locale('en').gear, 'none')
+        self.assertEqual(route.get_locale('en').gear, 'none')
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale.
@@ -1006,7 +1006,7 @@ class TestRouteRest(BaseDocumentTestRest):
         }
         (body, route) = self.put_success_new_lang(body, self.route)
 
-        self.assertEquals(route.get_locale('es').gear, 'si')
+        self.assertEqual(route.get_locale('es').gear, 'si')
 
     def test_history(self):
         id = self.route.document_id

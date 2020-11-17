@@ -235,7 +235,7 @@ def set_default_geom_from_associations(
             else:
                 doc.geometry = DocumentGeometry(geom=default_geom)
         else:
-            log.warn(
+            log.warning(
                 'Creating or updating document without default geometry'.
                 format(doc.document_id))
 

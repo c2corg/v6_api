@@ -823,10 +823,10 @@ class TestWaypointRest(BaseDocumentTestRest):
         (body, waypoint) = self.put_success_all(
             body, self.waypoint, cache_version=4, user='moderator')
 
-        self.assertEquals(waypoint.elevation, 1234)
+        self.assertEqual(waypoint.elevation, 1234)
         locale_en = waypoint.get_locale('en')
-        self.assertEquals(locale_en.description, 'A.')
-        self.assertEquals(locale_en.access, 'n')
+        self.assertEqual(locale_en.description, 'A.')
+        self.assertEqual(locale_en.access, 'n')
 
         # version with lang 'en'
         versions = waypoint.versions
@@ -916,7 +916,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         (body, waypoint) = self.put_success_all(
             body_put, self.waypoint, cache_version=3)
         document_id = body.get('document_id')
-        self.assertEquals(body.get('version'), 2)
+        self.assertEqual(body.get('version'), 2)
 
         self.session.expire_all()
         # check that a new archive_document was created
@@ -943,10 +943,10 @@ class TestWaypointRest(BaseDocumentTestRest):
             count()
         self.assertEqual(archive_geometry_count, 1)
 
-        self.assertEquals(waypoint.elevation, 1234)
+        self.assertEqual(waypoint.elevation, 1234)
         locale_en = waypoint.get_locale('en')
-        self.assertEquals(locale_en.description, 'A.')
-        self.assertEquals(locale_en.access, 'n')
+        self.assertEqual(locale_en.description, 'A.')
+        self.assertEqual(locale_en.access, 'n')
 
         # version with lang 'en'
         versions = waypoint.versions
@@ -993,7 +993,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         }
         (body, waypoint) = self.put_success_figures_only(body, self.waypoint)
 
-        self.assertEquals(waypoint.elevation, 1234)
+        self.assertEqual(waypoint.elevation, 1234)
 
     def test_put_boolean_default_values(self):
         """Test-case for https://github.com/c2corg/v6_api/issues/229
@@ -1019,8 +1019,8 @@ class TestWaypointRest(BaseDocumentTestRest):
         }
         (_, waypoint) = self.put_success_figures_only(body, self.waypoint)
 
-        self.assertEquals(waypoint.blanket_unstaffed, True)
-        self.assertEquals(waypoint.matress_unstaffed, False)
+        self.assertEqual(waypoint.blanket_unstaffed, True)
+        self.assertEqual(waypoint.matress_unstaffed, False)
         self.assertIsNone(waypoint.gas_unstaffed)
         self.assertIsNone(waypoint.heating_unstaffed)
 
@@ -1044,7 +1044,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         }
         (body, waypoint) = self.put_success_lang_only(body, self.waypoint)
 
-        self.assertEquals(waypoint.get_locale('en').access, 'no')
+        self.assertEqual(waypoint.get_locale('en').access, 'no')
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale.
@@ -1066,7 +1066,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         }
         (body, waypoint) = self.put_success_new_lang(body, self.waypoint)
 
-        self.assertEquals(waypoint.get_locale('es').access, 'si')
+        self.assertEqual(waypoint.get_locale('es').access, 'si')
         self.assertNotEqual(waypoint.get_locale('es').version, 2345)
         self.assertNotEqual(waypoint.get_locale('es').id, 1234)
 
@@ -1117,7 +1117,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         body = response.json
         document_id = body.get('document_id')
-        self.assertEquals(
+        self.assertEqual(
             body.get('version'), body_put.get('document').get('version'))
 
         # check that no new archive_document was created

@@ -36,8 +36,8 @@ class TestUtils(unittest.TestCase, AssertionsMixin):
             '{"type": "Point", "coordinates": [1.0, 2.0, 3.0, 4.0]}'), 3857)
         point = wkb_to_shape(wkb)
         self.assertFalse(point.has_z)
-        self.assertAlmostEquals(point.x, 1.0)
-        self.assertAlmostEquals(point.y, 2.0)
+        self.assertAlmostEqual(point.x, 1.0)
+        self.assertAlmostEqual(point.y, 2.0)
 
     def test_wkb_to_shape_linestring(self):
         wkb = wkbelement_from_geojson(json.loads(

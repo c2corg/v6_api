@@ -202,7 +202,7 @@ class AssertionsMixin(object):
     def assertCoodinateEquals(self, coord1, coord2):  # noqa
         self.assertEqual(len(coord1), len(coord2), 'not the same dimension')
         for i in range(0, len(coord1)):
-            self.assertAlmostEquals(
+            self.assertAlmostEqual(
                 coord1[i], coord2[i],
                 msg='{} does not almost equal {}'.format(coord1[i], coord2[i]))
 

@@ -88,7 +88,7 @@ class TestFields(unittest.TestCase):
         for field in fields:
             if '.' in field:
                 field_parts = field.split('.')
-                self.assertEquals(
+                self.assertEqual(
                     len(field_parts), 2, 'only checking the next level')
                 self.assertTrue(
                     hasattr(model, field_parts[0]),

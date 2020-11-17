@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import search_documents, elasticsearch_config
-from pytest import mark
+# from pytest import mark
 
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
@@ -365,7 +365,7 @@ class TestUserRest(BaseUserTestRest):
         url = '/users/request_password_change'
         self.app_post_json(url, {'email': user.email}, status=403)
 
-    @mark.jobs
+    # @mark.jobs
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_purge_accounts(self, _send_email):
         from c2corg_api.jobs.purge_non_activated_accounts import purge_account
@@ -398,7 +398,7 @@ class TestUserRest(BaseUserTestRest):
         purge_account(self.session)
         self.assertEqual(0, query.count())
 
-    @mark.jobs
+    # @mark.jobs
     def test_purge_tokens(self):
         from c2corg_api.jobs.purge_expired_tokens import purge_token
         from datetime import datetime
@@ -517,7 +517,7 @@ class TestUserRest(BaseUserTestRest):
         time.sleep(1.01)
 
         token2 = self.post_json_with_token('/users/renew', token1)['token']
-        self.assertNotEquals(token1, token2)
+        self.assertNotEqual(token1, token2)
 
         body = self.get_json_with_token('/users/account', token2, status=200)
         self.assertBodyEqual(body, 'name', 'Contributor')

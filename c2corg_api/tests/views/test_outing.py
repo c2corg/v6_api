@@ -905,10 +905,10 @@ class TestOutingRest(BaseDocumentTestRest):
         # default geom is updated with the new track
         self._assert_default_geometry(body, x=635966, y=5723629)
 
-        self.assertEquals(outing.elevation_max, 1600)
+        self.assertEqual(outing.elevation_max, 1600)
         locale_en = outing.get_locale('en')
-        self.assertEquals(locale_en.description, '...')
-        self.assertEquals(locale_en.weather, 'mostly sunny')
+        self.assertEqual(locale_en.description, '...')
+        self.assertEqual(locale_en.weather, 'mostly sunny')
 
         # version with lang 'en'
         versions = outing.versions
@@ -979,7 +979,7 @@ class TestOutingRest(BaseDocumentTestRest):
         (body, route) = self.put_success_figures_only(
             body, self.outing, user='moderator')
 
-        self.assertEquals(route.elevation_max, 1600)
+        self.assertEqual(route.elevation_max, 1600)
 
     def test_put_update_default_geom(self):
         """Tests that the default geometry can be updated directly.
@@ -1051,7 +1051,7 @@ class TestOutingRest(BaseDocumentTestRest):
         (body, route) = self.put_success_lang_only(
             body, self.outing, user='moderator')
 
-        self.assertEquals(route.get_locale('en').weather, 'mostly sunny')
+        self.assertEqual(route.get_locale('en').weather, 'mostly sunny')
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale.
@@ -1086,7 +1086,7 @@ class TestOutingRest(BaseDocumentTestRest):
         (body, route) = self.put_success_new_lang(
             body, self.outing, user='moderator')
 
-        self.assertEquals(route.get_locale('es').weather, 'soleado')
+        self.assertEqual(route.get_locale('es').weather, 'soleado')
 
     def test_put_success_association_update(self):
         """Test updating a document by updating associations.
@@ -1133,13 +1133,13 @@ class TestOutingRest(BaseDocumentTestRest):
         body = response.json
         document_id = body.get('document_id')
         # document version does not change!
-        self.assertEquals(body.get('version'), self.outing.version)
-        self.assertEquals(body.get('document_id'), document_id)
+        self.assertEqual(body.get('version'), self.outing.version)
+        self.assertEqual(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
         self.session.expire_all()
         document = self.session.query(self._model).get(document_id)
-        self.assertEquals(len(document.locales), 2)
+        self.assertEqual(len(document.locales), 2)
 
         # check that no new archive_document was created
         archive_count = self.session.query(self._model_archive). \
