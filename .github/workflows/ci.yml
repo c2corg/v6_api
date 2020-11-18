@@ -16,3 +16,17 @@ jobs:
           python-version: '3.4'
       - run: pip install -r dev-requirements.txt
       - run: flake8 c2corg_api es_migration
+  Test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Run tests
+        run: |
+          docker-compose up -d
+          sleep 30
+          docker-compose logs api
+          docker ps
+          ./scripts/test.sh
+      - run: docker-compose down
+        if: always()
