@@ -43,7 +43,7 @@ RUN set -x \
  && dpkg-reconfigure locales \
  && /usr/sbin/update-locale LANG=en_US.UTF-8 \
  && make -f config/dev install \
- && py3compile -f -X '^.*gevent/_util_py2.py$' .build/venv/ \
+ && py3compile -f -X '^.*gevent/_util_py2.py$' -X '^.*attr/_next_gen.py$' .build/venv/ \
  && rm -fr .cache \
  && apt-get -y purge \
     python3-dev \
