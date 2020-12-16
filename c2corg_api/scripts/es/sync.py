@@ -3,6 +3,7 @@ from c2corg_api.models.area import Area
 from c2corg_api.models.association import AssociationLog, Association
 from c2corg_api.models.document import Document, DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
+from c2corg_api.models.document_tag import DocumentTagLog
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
 from c2corg_api.models.outing import Outing, OUTING_TYPE
 from c2corg_api.models.route import Route, ROUTE_TYPE
@@ -35,15 +36,14 @@ def sync_es(session, batch_size=1000):
         get_changed_documents(session, last_update) + \
         get_changed_users(session, last_update) + \
         get_changed_documents_for_associations(session, last_update) + \
-        get_deleted_locale_documents(session, last_update)
-
+        get_deleted_locale_documents(session, last_update) + \
+        get_tagged_documents(session, last_update)
     log.info('Number of changed documents: {}'.format(len(changed_documents)))
     if changed_documents:
         sync_documents(session, changed_documents, batch_size)
 
     # get list of documents deleted since the last update
     deleted_documents = get_deleted_documents(session, last_update)
-
     log.info('Number of deleted documents: {}'.format(len(deleted_documents)))
     if deleted_documents:
         sync_deleted_documents(session, deleted_documents, batch_size)
@@ -260,6 +260,15 @@ def get_deleted_documents(session, last_update):
     return session. \
         query(ESDeletedDocument.document_id, ESDeletedDocument.type) . \
         filter(ESDeletedDocument.deleted_at >= last_update). \
+        all()
+
+
+def get_tagged_documents(session, last_update):
+    """Returns the ids of documents tagged/untagged since the last update.
+    """
+    return session. \
+        query(DocumentTagLog.document_id, DocumentTagLog.document_type). \
+        filter(DocumentTagLog.written_at >= last_update). \
         all()
 
 

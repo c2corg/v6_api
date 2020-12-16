@@ -3,6 +3,7 @@ from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.cache_version import \
     update_cache_version_direct, update_cache_version_full
 from c2corg_api.models.document import Document, UpdateType
+from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.feed import DocumentChange
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.route import Route
@@ -84,12 +85,12 @@ def validate_documents(request, **kwargs):
 
     # do they have the same type?
     if source_type != target_type:
-            request.errors.add(
-                'body', 'types', 'documents must have the same type')
+        request.errors.add(
+            'body', 'types', 'documents must have the same type')
 
     if source_type == USERPROFILE_TYPE:
-            request.errors.add(
-                'body', 'types', 'merging user accounts is not supported')
+        request.errors.add(
+            'body', 'types', 'merging user accounts is not supported')
 
 
 @resource(path='/documents/merge', cors_policy=cors_policy)
@@ -105,8 +106,8 @@ class MergeDocumentRest(object):
     def post(self):
         """ Merges a document into another document.
 
-        - Associations of the source document are transferred to the target
-          document.
+        - Associations and tags of the source document are transferred to
+          the target document.
         - The association log entries are rewritten to the target document.
         - The time of the log entries is updated, so that the ES syncer will
           pick up the new associations of the target document.
@@ -134,6 +135,9 @@ class MergeDocumentRest(object):
 
         # transfer associations from source to target
         transfer_associations(source_document_id, target_document_id)
+
+        # transfer tags from source to target
+        transfer_tags(source_document_id, target_document_id)
 
         # if waypoint, update main waypoint of routes
         if source_doc.type == WAYPOINT_TYPE:
@@ -233,6 +237,50 @@ def transfer_associations(source_document_id, target_document_id):
             AssociationLog.child_document_id == source_document_id,
             AssociationLog.parent_document_id == source_document_id)
         )
+    )
+
+
+def transfer_tags(source_document_id, target_document_id):
+    # get the ids of users that have already tagged the target document
+    target_user_ids_result = DBSession. \
+        query(DocumentTag.user_id). \
+        filter(DocumentTag.document_id == target_document_id). \
+        all()
+    target_user_ids = [user_id for (user_id,) in target_user_ids_result]
+
+    # move the current tags (only if the target document does not
+    # already have been tagged by the same user)
+    DBSession.execute(
+        DocumentTag.__table__.update().
+        where(_and_in(
+            DocumentTag.document_id == source_document_id,
+            DocumentTag.user_id, target_user_ids
+        )).
+        values(document_id=target_document_id)
+    )
+
+    # remove remaining tags
+    DBSession.execute(
+        DocumentTag.__table__.delete().
+        where(DocumentTag.document_id == source_document_id)
+    )
+
+    # transfer the tag log entries
+    DBSession.execute(
+        DocumentTagLog.__table__.update().
+        where(_and_in(
+            DocumentTagLog.document_id == source_document_id,
+            DocumentTagLog.user_id, target_user_ids
+        )).
+        values(
+            document_id=target_document_id,
+            written_at=func.now()
+        )
+    )
+
+    DBSession.execute(
+        DocumentTagLog.__table__.delete().
+        where(DocumentTagLog.document_id == source_document_id)
     )
 
 

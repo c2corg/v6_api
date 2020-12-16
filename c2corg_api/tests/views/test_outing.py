@@ -212,8 +212,8 @@ class TestOutingRest(BaseDocumentTestRest):
                                 + '?sort=-elevation_max,height_diff_up',
                                 status=200)
         response_ids = [d['document_id'] for d in response.json['documents']]
-        outing_ids = [d.document_id for d in [self.outing2, self.outing4,
-                                              self.outing, self.outing3]]
+        outing_ids = [d.document_id for d in [self.outing2, self.outing,
+                                              self.outing4, self.outing3]]
         self.assertEqual(response_ids, outing_ids)
 
     def test_get_sort_numeric_enum(self):
@@ -1280,7 +1280,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self.outing4 = Outing(
             activities=['skitouring'], date_start=date(2016, 2, 1),
             date_end=date(2016, 2, 3),
-            height_diff_up=500, elevation_max=1500, elevation_access=800,
+            height_diff_up=500, elevation_max=1400, elevation_access=800,
             condition_rating='excellent'
         )
         self.outing4.locales.append(OutingLocale(

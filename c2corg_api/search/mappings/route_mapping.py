@@ -22,6 +22,9 @@ class SearchRoute(SearchDocument):
     # array of waypoint ids
     waypoints = QLong('w', is_id=True)
 
+    # array of user ids
+    users = QLong('u', is_id=True)
+
     activities = QEnumArray(
         'act', model_field=Route.activities)
     elevation_min = QInteger(
@@ -167,6 +170,11 @@ class SearchRoute(SearchDocument):
             # and grand-parents of these waypoints
             search_document['waypoints'] = \
                 document.associated_waypoints_ids.waypoint_ids
+
+        if document.associated_users_ids:
+            # add the document ids of associated users
+            search_document['users'] = \
+                document.associated_users_ids.user_ids
 
         return search_document
 

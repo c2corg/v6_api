@@ -2,9 +2,10 @@ from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale, \
     UpdateType
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.feed import update_feed_document_create, DocumentChange
 from c2corg_api.models.image import Image
-from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.document import DocumentRest
@@ -77,14 +78,37 @@ class TestDocumentMergeRest(BaseTestRest):
                     description='...', summary='Ski')
             ])
         self.session.add(self.route1)
+
+        self.route2 = Route(
+            activities=['skitouring'], elevation_max=1400, elevation_min=700,
+            main_waypoint_id=self.waypoint1.document_id,
+            locales=[
+                RouteLocale(
+                    lang='fr', title='Mont Blanc du soleil',
+                    description='...', summary='Ski')
+            ])
+        self.session.add(self.route2)
         self.session.flush()
 
         DocumentRest.create_new_version(self.waypoint1, contributor_id)
         update_feed_document_create(self.waypoint1, contributor_id)
 
+        DocumentRest.create_new_version(self.route1, contributor_id)
+        update_feed_document_create(self.route1, contributor_id)
+
+        DocumentRest.create_new_version(self.route2, contributor_id)
+        update_feed_document_create(self.route2, contributor_id)
+
         association = Association.create(
             parent_document=self.waypoint1,
             child_document=self.route1)
+        self.session.add(association)
+        self.session.add(association.get_log(
+            self.global_userids['contributor']))
+
+        association = Association.create(
+            parent_document=self.waypoint1,
+            child_document=self.route2)
         self.session.add(association)
         self.session.add(association.get_log(
             self.global_userids['contributor']))
@@ -133,6 +157,14 @@ class TestDocumentMergeRest(BaseTestRest):
         DocumentRest.update_version(
             self.image1, contributor_id,
             'changed filename', [UpdateType.FIGURES], [])
+        self.session.flush()
+
+        self.session.add(DocumentTag(
+            document_id=self.route1.document_id, document_type=ROUTE_TYPE,
+            user_id=contributor_id))
+        self.session.add(DocumentTagLog(
+            document_id=self.route1.document_id, document_type=ROUTE_TYPE,
+            user_id=contributor_id, is_creation=True))
         self.session.flush()
 
     def _post(self, body, expected_status):
@@ -288,3 +320,19 @@ class TestDocumentMergeRest(BaseTestRest):
             self.assertEqual(
                 call['request.url'],
                 self.settings['image_backend.url'] + '/delete')
+
+    def test_tags(self):
+        self._post({
+            'source_document_id': self.route1.document_id,
+            'target_document_id': self.route2.document_id
+        }, 200)
+
+        # Check tags and logs have been transfered from route1 to route2
+        count = self.session.query(DocumentTag). \
+            filter(DocumentTag.document_id == self.route2.document_id). \
+            count()
+        self.assertEqual(count, 1)
+        count = self.session.query(DocumentTagLog). \
+            filter(DocumentTagLog.document_id == self.route2.document_id). \
+            count()
+        self.assertEqual(count, 1)

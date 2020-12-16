@@ -17,3 +17,5 @@
 Dockerfile
 /env_api
 /venv
+*.swp
+config/docker
