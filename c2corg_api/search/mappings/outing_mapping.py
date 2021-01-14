@@ -31,6 +31,9 @@ class SearchOuting(SearchDocument):
     # array of route ids
     routes = QLong('r', is_id=True)
 
+    # array of article ids
+    articles = QLong('c', is_id=True)
+
     activities = QEnumArray(
         'act', model_field=Outing.activities)
     frequentation = QEnumRange(
@@ -148,6 +151,11 @@ class SearchOuting(SearchDocument):
             # add the document ids of associated routes
             search_document['routes'] = \
                 document.associated_routes_ids.route_ids
+
+        if document.associated_articles_ids:
+            # add the document ids of associated routes
+            search_document['articles'] = \
+                document.associated_articles_ids.article_ids
 
         return search_document
 

@@ -4,6 +4,7 @@ from c2corg_api.models.association import Association
 from c2corg_api.models.document_tag import DocumentTag
 from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route
+from c2corg_api.models.article import ARTICLE_TYPE, Article
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from sqlalchemy.dialects import postgresql
@@ -263,6 +264,48 @@ Outing.associated_routes_ids = relationship(
     uselist=False,
     primaryjoin=Outing.document_id == RoutesForOutingsView.outing_id,
     foreign_keys=RoutesForOutingsView.outing_id,
+    viewonly=True, cascade='expunge'
+)
+
+# articles for outings
+def _get_select_articles_for_outings_aggregated():
+    """ Returns a select which retrieves for every outing the ids of
+    associated articles.
+    """
+    outing_type = text('\'' + OUTING_TYPE + '\'')
+    article_type = text('\'' + ARTICLE_TYPE + '\'')
+    return \
+        select([
+            Association.child_document_id.label('outing_id'),
+            func.array_agg(
+                Association.parent_document_id,
+                type_=postgresql.ARRAY(Integer)).label('article_ids')
+        ]). \
+        select_from(Association). \
+        where(and_(
+            Association.parent_document_type == article_type,
+            Association.child_document_type == outing_type
+        )). \
+        group_by(Association.child_document_id)
+
+
+class ArticlesForOutingsView(Base):
+    """ A (non-materialized) view which contains the associated articles
+     for each outing. This view is used when filling the search index for
+     outings.
+    """
+    __table__ = sqa_view.view(
+        'articles_for_outings',
+        schema,
+        Base.metadata,
+        _get_select_articles_for_outings_aggregated())
+
+
+Outing.associated_articles_ids = relationship(
+    ArticlesForOutingsView,
+    uselist=False,
+    primaryjoin=Outing.document_id == ArticlesForOutingsView.outing_id,
+    foreign_keys=ArticlesForOutingsView.outing_id,
     viewonly=True, cascade='expunge'
 )
 
