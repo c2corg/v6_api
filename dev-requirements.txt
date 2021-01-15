@@ -1,4 +1,4 @@
-flake8==3.0.4
+flake8==3.8.4
 pep8-naming==0.4.1
 WebTest==2.0.20
 ipdb==0.10.1
