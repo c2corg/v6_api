@@ -4,7 +4,7 @@ from c2corg_api.models.association import Association
 from c2corg_api.models.document_tag import DocumentTag
 from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route
-from c2corg_api.models.article import ARTICLE_TYPE, Article
+from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from sqlalchemy.dialects import postgresql
@@ -266,6 +266,7 @@ Outing.associated_routes_ids = relationship(
     foreign_keys=RoutesForOutingsView.outing_id,
     viewonly=True, cascade='expunge'
 )
+
 
 # articles for outings
 def _get_select_articles_for_outings_aggregated():
