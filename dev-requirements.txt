@@ -1,7 +1,7 @@
 flake8==3.0.4
 pep8-naming==0.4.1
 WebTest==2.0.20
-ipdb==0.10.1
+ipdb==0.13.5
 httmock==1.2.5
 pytest==4.6.11
 pytest-cov==2.8.1
