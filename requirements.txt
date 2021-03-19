@@ -57,3 +57,4 @@ git+https://github.com/c2corg/v6_common.git@941efe9
 https://github.com/c2corg/pydiscourse/archive/ea03a3a.zip
 
 -e .
+pygments>=2.7.4 # not directly required, pinned by Snyk to avoid a vulnerability
