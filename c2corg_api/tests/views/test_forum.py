@@ -1,7 +1,7 @@
 import datetime
 from unittest.mock import patch, call
 
-from c2corg_common.document_types import OUTING_TYPE
+from c2corg_api.models.common.document_types import OUTING_TYPE
 
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.tests.views import BaseTestRest

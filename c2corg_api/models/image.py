@@ -1,6 +1,6 @@
 from c2corg_api.models.schema_utils import restrict_schema,\
     get_update_schema, get_create_schema
-from c2corg_common.fields_image import fields_image
+from c2corg_api.models.common.fields_image import fields_image
 from sqlalchemy import (
     Column,
     DateTime,
@@ -21,7 +21,7 @@ from c2corg_api.models.document import (
     ArchiveDocument, Document, get_geometry_schema_overrides,
     schema_attributes, DocumentLocale,
     schema_locale_attributes)
-from c2corg_common import document_types
+from c2corg_api.models.common import document_types
 
 IMAGE_TYPE = document_types.IMAGE_TYPE
 
@@ -112,6 +112,7 @@ class ArchiveImage(_ImageMixin, ArchiveDocument):
 
     __table_args__ = Base.__table_args__
 
+
 # special schema for image locales: images can be created without title
 schema_image_locale = SQLAlchemySchemaNode(
     DocumentLocale,
@@ -155,6 +156,8 @@ schema_association_image = restrict_schema(schema_image, [
 class SchemaImageList(MappingSchema):
     images = SchemaNode(
         Sequence(), schema_create_image, missing=None)
+
+
 schema_create_image_list = SchemaImageList()
 
 

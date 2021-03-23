@@ -20,7 +20,7 @@ def notify_es_syncer(queue_config):
                 channel.queue_unbind(
                     queue_config.queue.name,
                     exchange=queue_config.exchange.name)
-            except:
+            except Exception:
                 pass
 
             # the re-create the queue
@@ -48,7 +48,7 @@ def run_on_successful_transaction(operation):
         if success:
             try:
                 operation()
-            except:
+            except Exception:
                 log.error('Scheduled operation failed', exc_info=True)
         else:
             log.warning('Scheduled operation is not run because transaction '

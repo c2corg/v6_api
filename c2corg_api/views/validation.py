@@ -17,9 +17,9 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.views.document_associations import get_first_column
 
-from c2corg_common.associations import valid_associations
-from c2corg_common.attributes import default_langs
-from c2corg_common import document_types
+from c2corg_api.models.common.associations import valid_associations
+from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.models.common import document_types
 from colander import null
 from cornice.errors import Errors
 from pyramid.httpexceptions import HTTPBadRequest
@@ -166,7 +166,7 @@ def check_get_for_integer_property(request, key, required):
 
     try:
         request.validated[key] = int(request.GET.get(key))
-    except:
+    except Exception:
         request.errors.add('querystring', key, 'invalid ' + key)
 
 

@@ -2,7 +2,7 @@ from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.migration.documents.document import DEFAULT_QUALITY
 from c2corg_api.scripts.migration.documents.waypoints.waypoint import \
     MigrateWaypoints
-from c2corg_common.attributes import custodianship_types
+from c2corg_api.models.common.attributes import custodianship_types
 
 
 class MigrateHuts(MigrateWaypoints):

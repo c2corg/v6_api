@@ -9,7 +9,7 @@ from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
 
-from c2corg_common.attributes import quality_types
+from c2corg_api.models.common.attributes import quality_types
 from shapely.geometry import shape, Polygon
 
 from c2corg_api.models.document import (

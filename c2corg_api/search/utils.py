@@ -6,16 +6,16 @@ BBCODE_TAGS = [
     'abs(tract)?', 'imp(ortant)?', 'warn(ing)?', 'col', 'img', 'quote'
 ]
 BBCODE_REGEX = \
-    ['\[{0}\]'.format(tag) for tag in BBCODE_TAGS] + \
-    ['\[\/{0}\]'.format(tag) for tag in BBCODE_TAGS] + [
-        '\[url([^\[\]]*?)\]',
-        '\[email([^\[\]]*?)\]',
-        '\[acr(onym)?([^\[\]]*?)\]',
-        '\[colou?r([^\[\]]*?)\]',
-        '\[picto([^\[\]]*?)\]',
-        '\[col([^\[\]]*?)\]',
-        '\[toc([^\[\]]*?)\]',
-        '\[img([^\[\]]*?)\]',
+    [r'\[{0}\]'.format(tag) for tag in BBCODE_TAGS] + \
+    [r'\[\/{0}\]'.format(tag) for tag in BBCODE_TAGS] + [
+        r'\[url([^\[\]]*?)\]',
+        r'\[email([^\[\]]*?)\]',
+        r'\[acr(onym)?([^\[\]]*?)\]',
+        r'\[colou?r([^\[\]]*?)\]',
+        r'\[picto([^\[\]]*?)\]',
+        r'\[col([^\[\]]*?)\]',
+        r'\[toc([^\[\]]*?)\]',
+        r'\[img([^\[\]]*?)\]',
     ]
 BBCODE_REGEX_ALL = re.compile('|'.join(BBCODE_REGEX))
 

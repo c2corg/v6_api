@@ -151,6 +151,7 @@ class APIDiscourseClient(object):
         nonce = self.request_nonce()
         return self.create_response_payload(user, nonce, '/session/sso_login')
 
+
 c = None
 
 

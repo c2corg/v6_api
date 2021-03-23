@@ -24,7 +24,7 @@ from webtest import TestApp
 from c2corg_api.emails.email_service import EmailService
 
 from c2corg_api import main, caching
-from c2corg_common.utils import caching as caching_common
+from c2corg_api import caching as caching_common
 from c2corg_api.models import DBSession, sessionmaker
 from c2corg_api.models.sso import SsoExternalId, SsoKey
 from c2corg_api.models.user import User
@@ -184,6 +184,7 @@ def setup_package():
         _add_global_test_data(DBSession)
         fill_index(DBSession)
     DBSession.remove()
+
 
 # keep the database schema after a test run (useful for debugging)
 keep = False

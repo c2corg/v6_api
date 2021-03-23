@@ -5,7 +5,7 @@ from c2corg_api.models.user import User
 from c2corg_api.views import cors_policy, restricted_json_view, \
     restricted_view, to_json_dict, set_best_locale
 from c2corg_api.views.validation import validate_preferred_lang_param
-from c2corg_common.attributes import activities, default_langs
+from c2corg_api.models.common.attributes import activities, default_langs
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
 from colander import MappingSchema, SchemaNode, String, Boolean, Sequence, \

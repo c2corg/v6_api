@@ -43,7 +43,7 @@ class SyncWorker(ConsumerMixin):
         message.ack()
         try:
             self.sync()
-        except:
+        except Exception:
             log.error('Sync failed', exc_info=True)
         log.info('Waiting on messages')
 
@@ -52,7 +52,7 @@ class SyncWorker(ConsumerMixin):
         try:
             sync_es(session, self.batch_size)
             session.commit()
-        except:
+        except Exception:
             session.rollback()
             raise
         finally:
@@ -93,6 +93,7 @@ def main(argv=sys.argv):
             worker.run()
         except KeyboardInterrupt:
             log.info('Syncer stopped')
+
 
 if __name__ == "__main__":
     main()

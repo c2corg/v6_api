@@ -5,17 +5,19 @@ from sqlalchemy.orm import (
     sessionmaker,
     )
 
-from zope.sqlalchemy import ZopeTransactionExtension
+from zope.sqlalchemy import register
 
 schema = 'guidebook'
 users_schema = 'users'
 sympa_schema = 'sympa'
 
-DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
+DBSession = scoped_session(sessionmaker())
+register(DBSession)
 
 
 class BaseMixin(object):
     __table_args__ = {'schema': schema}
+
 
 Base = declarative_base(cls=BaseMixin)
 

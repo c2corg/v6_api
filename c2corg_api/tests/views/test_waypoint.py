@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from c2corg_api.caching import cache_document_listing, \
     cache_document_history, cache_document_version
-from c2corg_common.utils import caching
+from c2corg_api import caching
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import Article
@@ -20,7 +20,7 @@ from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.views.document_listings import get_documents
 from c2corg_api.views.waypoint import waypoint_documents_config
-from c2corg_common.attributes import quality_types
+from c2corg_api.models.common.attributes import quality_types
 from dogpile.cache.api import NO_VALUE
 from shapely.geometry import shape, Point
 

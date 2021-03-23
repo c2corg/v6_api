@@ -14,7 +14,7 @@ from pyramid.paster import (
     )
 
 from pyramid.scripts.common import parse_vars
-from c2corg_common.attributes import default_langs
+from c2corg_api.models.common.attributes import default_langs
 
 alembic_configfile = os.path.realpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)),

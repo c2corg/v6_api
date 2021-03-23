@@ -4,8 +4,9 @@ from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.user import User
 from c2corg_api.views import to_json_dict, etag_cache
-from c2corg_common.utils.caching import get_or_create
+from c2corg_api.caching import get_or_create
 from pyramid.httpexceptions import HTTPNotFound
+from sqlalchemy import column
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import union
@@ -126,7 +127,7 @@ def get_neighbour_version_ids(version_id, document_id, lang):
         .subquery()
 
     query = DBSession \
-        .query('id', 't') \
+        .query(column('id'), column('t')) \
         .select_from(union(
             next_version.select(), previous_version.select()))
 

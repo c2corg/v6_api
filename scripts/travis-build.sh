@@ -1,5 +1,6 @@
 #!/bin/sh -e
 
+VERSION=`git rev-parse --short HEAD 2>/dev/null || echo "0"`
 REPO="c2corg/v6_api"
 
 if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
@@ -24,6 +25,6 @@ else
 fi
 
 echo "Building docker image '${DOCKER_IMAGE}' out of ${DOCKER_SOURCE}"
-docker build -t "${DOCKER_IMAGE}" .
+docker build -t "${DOCKER_IMAGE}"  --build-arg "VERSION=${VERSION}" .
 docker inspect "${DOCKER_IMAGE}"
 docker history "${DOCKER_IMAGE}"

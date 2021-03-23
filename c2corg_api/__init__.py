@@ -79,7 +79,7 @@ def ping_connection(dbapi_connection, connection_record, connection_proxy):
     cursor = dbapi_connection.cursor()
     try:
         cursor.execute('SELECT 1')
-    except:
+    except Exception:
         # raise DisconnectionError - pool will try
         # connecting again up to three times before raising.
         raise exc.DisconnectionError()

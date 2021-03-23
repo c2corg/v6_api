@@ -25,6 +25,7 @@ class AnalyzeAllTables(MigrateBase):
 
         self.stop()
 
+
 SQL_ALL_TABLES = """
 SELECT schemaname, relname
 FROM pg_stat_all_tables

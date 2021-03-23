@@ -2,7 +2,7 @@ from c2corg_api.tests import BaseTestCase
 
 from c2corg_api.models.user import User
 from c2corg_api.emails.email_service import EmailLocalizator
-from c2corg_common.attributes import default_langs
+from c2corg_api.models.common.attributes import default_langs
 
 from unittest.mock import patch, ANY
 from base64 import b64encode

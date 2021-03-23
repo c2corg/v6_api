@@ -51,8 +51,8 @@ class AdvancedSearchTest(BaseTestCase):
                 geom={
                     'left': 6.28279913, 'bottom': 46.03129072,
                     'right': 6.28369744, 'top': 46.03191439},
-                type='indexed')).\
-            fields([]).\
+                type='indexed')). \
+            fields([]). \
             extra(from_=0, size=10)
         self.assertQueryEqual(query, expected_query)
 
@@ -81,9 +81,9 @@ class AdvancedSearchTest(BaseTestCase):
         }
         query = build_query(params, meta_params, 'o')
         expected_query = create_search('o'). \
-            filter(Term(activities='skitouring')).\
-            fields([]).\
-            sort({'date_end': {'order': 'desc'}}, {'id': {'order': 'desc'}}).\
+            filter(Term(activities='skitouring')). \
+            fields([]). \
+            sort({'date_end': {'order': 'desc'}}, {'id': {'order': 'desc'}}). \
             extra(from_=40, size=20)
         self.assertQueryEqual(query, expected_query)
 
@@ -91,7 +91,7 @@ class AdvancedSearchTest(BaseTestCase):
         q1 = query1.to_dict()
         q2 = query2.to_dict()
 
-        self.assertEqual(q1['fields'], q2['fields'])
+        self.assertEqual(q1.get('fields'), q2.get('fields'))
         self.assertEqual(q1['from'], q2['from'])
         self.assertEqual(q1['size'], q2['size'])
         self.assertEqual(q1.get('sort'), q2.get('sort'))

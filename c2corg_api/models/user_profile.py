@@ -5,14 +5,14 @@ from c2corg_api.models.document import (
 from c2corg_api.models.enums import user_category, activity_type
 from c2corg_api.models.schema_utils import restrict_schema, get_update_schema
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
-from c2corg_common.fields_user_profile import fields_user_profile
+from c2corg_api.models.common.fields_user_profile import fields_user_profile
 from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Column,
     Integer,
     ForeignKey
     )
-from c2corg_common import document_types
+from c2corg_api.models.common import document_types
 from sqlalchemy.ext.associationproxy import association_proxy
 
 USERPROFILE_TYPE = document_types.USERPROFILE_TYPE
@@ -21,6 +21,7 @@ USERPROFILE_TYPE = document_types.USERPROFILE_TYPE
 class _UserProfileMixin(object):
     activities = Column(ArrayOfEnum(activity_type))
     categories = Column(ArrayOfEnum(user_category))
+
 
 attributes = ['activities', 'categories']
 

@@ -69,5 +69,6 @@ def migrate():
 
     print('Field "{0}" created'.format(field_name))
 
+
 if __name__ == "__main__":
     main()

@@ -13,7 +13,7 @@ from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import image_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
 
-from c2corg_common.fields_image import fields_image
+from c2corg_api.models.common.fields_image import fields_image
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
 

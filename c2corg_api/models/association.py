@@ -15,7 +15,8 @@ from sqlalchemy import (
     Integer,
     DateTime,
     ForeignKey,
-    String
+    String,
+    column
     )
 from sqlalchemy.schema import PrimaryKeyConstraint
 from sqlalchemy.orm import relationship
@@ -111,6 +112,7 @@ class AssociationLog(Base):
     written_at = Column(
         DateTime(timezone=True), default=func.now(), nullable=False,
         index=True)
+
 
 schema_association = SQLAlchemySchemaNode(
     Association,
@@ -318,7 +320,7 @@ def _get_load_associations_query(document, doc_types_to_load):
         subquery()
 
     return DBSession \
-        .query('id', 't', 'p') \
+        .query(column('id'), column('t'), column('p')) \
         .select_from(union(query_parents.select(), query_children.select()))
 
 
@@ -348,6 +350,7 @@ def _get_associations_to_add(new_associations, current_associations):
                 to_add.append(doc)
 
     return to_add
+
 
 association_keys = {
     'routes': ROUTE_TYPE,

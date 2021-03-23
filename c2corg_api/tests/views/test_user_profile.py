@@ -7,7 +7,7 @@ from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.tests.search import reset_search_index
-from c2corg_common.attributes import quality_types
+from c2corg_api.models.common.attributes import quality_types
 from shapely.geometry import shape, Point
 
 from c2corg_api.models.document import (

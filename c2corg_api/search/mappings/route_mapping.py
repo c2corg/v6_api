@@ -3,7 +3,7 @@ from c2corg_api.search.mapping import SearchDocument, BaseMeta
 from c2corg_api.search.mapping_types import QueryableMixin, QInteger,\
     QEnumArray, QEnum, QLong, QEnumRange, QNumberRange
 from c2corg_api.search.utils import get_title
-from c2corg_common.sortable_search_attributes import \
+from c2corg_api.models.common.sortable_search_attributes import \
     sortable_route_duration_types, sortable_ski_ratings, \
     sortable_exposition_ratings, sortable_labande_ski_ratings, \
     sortable_global_ratings, sortable_engagement_ratings, \
@@ -177,6 +177,7 @@ class SearchRoute(SearchDocument):
                 document.associated_users_ids.user_ids
 
         return search_document
+
 
 SearchRoute.queryable_fields = QueryableMixin.get_queryable_fields(
     SearchRoute)

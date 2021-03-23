@@ -9,7 +9,7 @@ from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import area_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
 
-from c2corg_common.fields_area import fields_area
+from c2corg_api.models.common.fields_area import fields_area
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
 

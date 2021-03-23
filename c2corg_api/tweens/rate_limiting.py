@@ -58,7 +58,7 @@ def rate_limiting_tween_factory(handler, registry):
             log.warning('RATE LIMIT REACHED FOR USER {}'.format(user.id))
 
             # Count how many windows the user has been rate limited
-            # and block them is too many.
+            # and block them if too many.
             current_window = user.ratelimit_reset
             if user.ratelimit_last_blocked_window != current_window:
                 user.ratelimit_last_blocked_window = current_window

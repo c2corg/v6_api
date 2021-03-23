@@ -6,8 +6,8 @@ import geoalchemy2
 from c2corg_api.ext import colander_ext
 from c2corg_api.models import Base, schema, DBSession, enums
 from c2corg_api.models.utils import copy_attributes, extend_dict, wkb_to_shape
-from c2corg_common import document_types
-from c2corg_common.attributes import quality_types
+from c2corg_api.models.common import document_types
+from c2corg_api.models.common.attributes import quality_types
 from colander import null
 from colanderalchemy.schema import SQLAlchemySchemaNode
 from geoalchemy2 import Geometry
@@ -283,6 +283,7 @@ class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
         Base.__table_args__
     )
 
+
 # `geomet` does not support EWKB, so load geometries as WKB
 Geometry.as_binary = 'ST_AsBinary'
 
@@ -400,6 +401,7 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
             raise HTTPInternalServerError('Bad projection')
 
         return g1.almost_equals(g2, decimals)
+
 
 DocumentGeometry.lon_lat = column_property(
     func.ST_AsGeoJSON(func.ST_Transform(DocumentGeometry.geom, 4326)),

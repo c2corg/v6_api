@@ -1,11 +1,17 @@
-FROM docker.io/debian:jessie
+FROM docker.io/debian:buster-slim
 
 ENV DEBIAN_FRONTEND noninteractive
 
 ENV LC_ALL en_US.UTF-8
 
-RUN echo 'APT::Install-Recommends "0";' > /etc/apt/apt.conf.d/50no-install-recommends
-RUN echo 'APT::Install-Suggests "0";' > /etc/apt/apt.conf.d/50no-install-suggests
+RUN set -x \
+    && apt-get update \
+    && apt-get -y upgrade \
+    && apt-get -y --no-install-recommends install locales \
+    && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \
+    && locale-gen en_US.UTF-8 \
+    && dpkg-reconfigure locales \
+    && /usr/sbin/update-locale LANG=en_US.UTF-8
 
 COPY project.tar /tmp
 
@@ -14,9 +20,7 @@ WORKDIR /var/www/
 RUN tar -xvf /tmp/project.tar && chown -R root:root /var/www
 
 RUN set -x \
- && apt-get update \
- && apt-get -y upgrade \
- && apt-get -y install \
+    && apt-get -y --no-install-recommends install \
     python3 \
     python3-chardet \
     python3-colorama \
@@ -25,7 +29,7 @@ RUN set -x \
     python3-requests \
     python3-six \
     python3-urllib3 \
-    libgeos-c1 \
+    libgeos-c1v5 \
     libpq5 \
     libffi6 \
     make \
@@ -36,29 +40,19 @@ RUN set -x \
     libpq-dev \
     virtualenv \
     gcc \
-    git \
-    locales \
- && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \
- && locale-gen en_US.UTF-8 \
- && dpkg-reconfigure locales \
- && /usr/sbin/update-locale LANG=en_US.UTF-8 \
+    git
+
+RUN set -x \
  && make -f config/dev install \
- && py3compile -f -X '^.*gevent/_util_py2.py$' -X '^.*attr/_next_gen.py$' .build/venv/ \
+ && py3compile -f .build/venv/ \
  && rm -fr .cache \
  && apt-get -y purge \
-    python3-dev \
-    python3-pip \
-    libgeos-dev \
-    libffi-dev \
-    libpq-dev \
-    virtualenv \
-    gcc \
-    git \
  && apt-get -y --purge autoremove \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-ENV version="{version}" \
+ARG VERSION
+ENV version=$VERSION \
     PATH=/var/www/.build/venv/bin/:$PATH
 
 COPY /docker-entrypoint.sh /
@@ -67,4 +61,3 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 
 EXPOSE 8080
 CMD ["gunicorn", "--paste", "production.ini", "-u", "www-data", "-g", "www-data", "-b", ":8080"]
-

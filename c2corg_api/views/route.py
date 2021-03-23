@@ -26,8 +26,8 @@ from c2corg_api.views import cors_policy, restricted_json_view, \
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param, validate_associations, validate_cook_param
-from c2corg_common.fields_route import fields_route
-from c2corg_common.attributes import activities
+from c2corg_api.models.common.fields_route import fields_route
+from c2corg_api.models.common.attributes import activities
 from sqlalchemy.orm import load_only
 
 log = logging.getLogger(__name__)
@@ -273,7 +273,7 @@ def set_title_prefix(route, title):
     """Set the given title as `prefix_title` for all locales of the given
     route.
     """
-    set_title_prefix_for_ids([l.id for l in route.locales], title)
+    set_title_prefix_for_ids([locale.id for locale in route.locales], title)
 
 
 def set_title_prefix_for_ids(ids, title):

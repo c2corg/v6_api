@@ -3,7 +3,8 @@ from c2corg_api.models.user import User
 from c2corg_api.models.mailinglist import Mailinglist
 from c2corg_api.views import cors_policy, restricted_json_view, \
     restricted_view
-from c2corg_common.attributes import mailinglists as valid_mailinglists
+from c2corg_api.models.common.attributes import \
+    mailinglists as valid_mailinglists
 from cornice.resource import resource
 
 
@@ -45,7 +46,7 @@ class UserMailinglistsRest(object):
         user_id = self.request.authenticated_userid
         res = DBSession.query(Mailinglist.listname). \
             filter(Mailinglist.user_id == user_id).all()
-        subscribed_mailinglists = [l[0] for l in res]
+        subscribed_mailinglists = [list[0] for list in res]
 
         return {ml: ml in subscribed_mailinglists for ml in valid_mailinglists}
 
@@ -63,7 +64,7 @@ class UserMailinglistsRest(object):
 
         subscribed_lists = DBSession.query(Mailinglist). \
             filter(Mailinglist.user_id == user_id).all()
-        subscribed_lists = {l.listname: l for l in subscribed_lists}
+        subscribed_lists = {list.listname: list for list in subscribed_lists}
         subscribed_listnames = set(subscribed_lists.keys())
 
         lists_to_add = []

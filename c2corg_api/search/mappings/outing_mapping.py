@@ -2,7 +2,7 @@ from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.search.mapping import SearchDocument, BaseMeta
 from c2corg_api.search.mapping_types import QueryableMixin, QDateRange, \
     QInteger, QBoolean, QLong, QEnumArray, QEnumRange
-from c2corg_common.sortable_search_attributes import \
+from c2corg_api.models.common.sortable_search_attributes import \
     sortable_frequentation_types, sortable_condition_ratings, \
     sortable_snow_quality_ratings, sortable_snow_quantity_ratings, \
     sortable_glacier_ratings,\
@@ -150,6 +150,7 @@ class SearchOuting(SearchDocument):
                 document.associated_routes_ids.route_ids
 
         return search_document
+
 
 SearchOuting.queryable_fields = QueryableMixin.get_queryable_fields(
     SearchOuting)

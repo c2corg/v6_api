@@ -27,8 +27,8 @@ from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param, validate_associations, validate_cook_param
-from c2corg_common.fields_waypoint import fields_waypoint
-from c2corg_common.attributes import waypoint_types
+from c2corg_api.models.common.fields_waypoint import fields_waypoint
+from c2corg_api.models.common.attributes import waypoint_types
 from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.orm.util import aliased
 from sqlalchemy.sql.elements import literal_column

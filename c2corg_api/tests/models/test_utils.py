@@ -4,7 +4,7 @@ import unittest
 from c2corg_api.ext.colander_ext import wkbelement_from_geojson
 from c2corg_api.models.utils import wkb_to_shape
 from c2corg_api.tests import AssertionsMixin
-from c2corg_common.fields_waypoint import fields_waypoint
+from c2corg_api.models.common.fields_waypoint import fields_waypoint
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.waypoint import schema_waypoint
 
