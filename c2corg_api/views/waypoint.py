@@ -35,7 +35,7 @@ from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import and_, union
 
 # the number of routes that are included for waypoints
-NUM_ROUTES = 30
+NUM_ROUTES = 400
 
 validate_waypoint_create = make_validator_create(
     fields_waypoint, 'waypoint_type', waypoint_types)
