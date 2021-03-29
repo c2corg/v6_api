@@ -140,6 +140,7 @@ class RouteRest(DocumentRest):
                 Association,
                 Outing.document_id == Association.child_document_id).
             filter(Association.parent_document_id == route.document_id).
+            group_by(Outing.document_id).
             order_by(Outing.date_end.desc()).
             limit(NUM_RECENT_OUTINGS).
             all())
@@ -150,6 +151,7 @@ class RouteRest(DocumentRest):
                 Association,
                 Outing.document_id == Association.child_document_id). \
             filter(Association.parent_document_id == route.document_id). \
+            group_by(Outing.document_id). \
             count()
 
         route.associations['recent_outings'] = get_documents_for_ids(
