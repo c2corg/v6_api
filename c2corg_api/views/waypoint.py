@@ -266,6 +266,7 @@ def set_recent_outings(waypoint, lang):
             with_query_waypoints,
             with_query_waypoints.c.document_id == t_route_wp.parent_document_id
         ).
+        distinct().
         order_by(Outing.date_end.desc()).
         limit(NUM_RECENT_OUTINGS).
         all())
@@ -286,6 +287,7 @@ def set_recent_outings(waypoint, lang):
             with_query_waypoints,
             with_query_waypoints.c.document_id == t_route_wp.parent_document_id
         ). \
+        distinct(). \
         count()
 
     waypoint.associations['recent_outings'] = get_documents_for_ids(
