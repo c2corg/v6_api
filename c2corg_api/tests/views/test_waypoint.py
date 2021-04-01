@@ -171,19 +171,17 @@ class TestWaypointRest(BaseDocumentTestRest):
         all_linked_routes = associations.get('all_routes')
         linked_routes = all_linked_routes['documents']
         self.assertEqual(2, len(linked_routes))
-        linked_route = linked_routes[0]
+        linked_route = linked_routes[1]
         self.assertIn('type', linked_route)
         self.assertEqual(
             linked_route['document_id'], self.route1.document_id)
         self.assertEqual(
             linked_route.get('locales')[0].get('title_prefix'), 'Mont Blanc :')
-        # the route associated to a child waypoint comes after the route
-        # directly associated to the waypoint
         self.assertEqual(
-            linked_routes[1]['document_id'], self.route3.document_id)
-        self.assertIn('geometry', linked_routes[0])
+            linked_routes[0]['document_id'], self.route3.document_id)
+        self.assertIn('geometry', linked_routes[1])
         # TODO not returning `geom_detail` anymore
-        self.assertIn('geom', linked_routes[0].get('geometry'))
+        self.assertIn('geom', linked_routes[1].get('geometry'))
 
         self.assertIn('maps', body)
         self.assertEqual(1, len(body.get('maps')))
