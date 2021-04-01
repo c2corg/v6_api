@@ -266,7 +266,7 @@ def set_recent_outings(waypoint, lang):
             with_query_waypoints,
             with_query_waypoints.c.document_id == t_route_wp.parent_document_id
         ).
-        distinct(Outing.document_id).
+        distinct().
         order_by(Outing.date_end.desc()).
         limit(NUM_RECENT_OUTINGS).
         all())
@@ -287,7 +287,7 @@ def set_recent_outings(waypoint, lang):
             with_query_waypoints,
             with_query_waypoints.c.document_id == t_route_wp.parent_document_id
         ). \
-        distinct(Outing.document_id). \
+        distinct(). \
         count()
 
     waypoint.associations['recent_outings'] = get_documents_for_ids(
@@ -305,6 +305,7 @@ def set_linked_routes(waypoint, lang):
     route_ids = get_first_column(
         DBSession.query(Route.document_id).
         select_from(with_query_waypoints).
+        distinct(Route.document_id).
         join(
             Association,
             with_query_waypoints.c.document_id ==
@@ -316,7 +317,6 @@ def set_linked_routes(waypoint, lang):
         order_by(
             with_query_waypoints.c.priority.desc(),
             Route.document_id.desc()).
-        distinct(Route.document_id).
         limit(NUM_ROUTES).
         all())
 
@@ -330,7 +330,7 @@ def set_linked_routes(waypoint, lang):
             Route,
             Association.child_document_id == Route.document_id). \
         filter(Route.redirects_to.is_(None)). \
-        distinct(Route.document_id). \
+        distinct(). \
         count()
 
     waypoint.associations['all_routes'] = get_documents_for_ids(
