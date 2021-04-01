@@ -316,6 +316,7 @@ def set_linked_routes(waypoint, lang):
         order_by(
             with_query_waypoints.c.priority.desc(),
             Route.document_id.desc()).
+        distinct().
         limit(NUM_ROUTES).
         all())
 
@@ -329,6 +330,7 @@ def set_linked_routes(waypoint, lang):
             Route,
             Association.child_document_id == Route.document_id). \
         filter(Route.redirects_to.is_(None)). \
+        distinct(). \
         count()
 
     waypoint.associations['all_routes'] = get_documents_for_ids(
