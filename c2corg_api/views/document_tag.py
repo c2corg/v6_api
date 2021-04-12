@@ -26,6 +26,7 @@ def get_tag_relation(user_id, document_id):
         filter(DocumentTag.document_id == document_id). \
         first()
 
+
 validate_document_id = create_int_validator('document_id')
 
 
@@ -118,7 +119,7 @@ class DocumentUntagRest(object):
                 user_id=user_id, document_id=document_id,
                 document_type=document_type, is_creation=False))
         else:
-            log.warn(
+            log.warning(
                 'tried to delete not existing tag relation '
                 '({0}, {1})'.format(user_id, document_id))
             raise HTTPBadRequest('This document has no such tag.')

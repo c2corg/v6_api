@@ -10,7 +10,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.views import cors_policy, etag_cache
 from c2corg_api.views.validation import create_int_validator, \
     validate_document_type
-from c2corg_common.utils.caching import get_or_create
+from c2corg_api.caching import get_or_create
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy.sql.functions import func

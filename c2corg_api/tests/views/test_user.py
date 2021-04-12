@@ -75,7 +75,14 @@ class BaseUserTestRest(BaseTestRest):
         self.set_discourse_client_mock(mock)
 
     def extract_urls(self, data):
-        return re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@#.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+[0-9a-zA-Z]', data)  # noqa
+        return re.findall(r'http[s]?://'
+                          r'(?:'
+                          r'[a-zA-Z]|'
+                          r'[0-9]|'
+                          r'[$-_@#.&+]|'
+                          r'[!*\(\),]|'
+                          r'(?:%[0-9a-fA-F][0-9a-fA-F])'
+                          r')+[0-9a-zA-Z]', data)
 
     def extract_nonce(self, _send_mail, key):
         match = self.extract_urls(_send_mail.call_args_list[0][1]['body'])

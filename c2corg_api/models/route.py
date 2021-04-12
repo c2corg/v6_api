@@ -20,7 +20,7 @@ from c2corg_api.models.document import (
     get_geometry_schema_overrides, schema_locale_attributes, schema_attributes)
 from c2corg_api.models import enums
 from sqlalchemy.orm import relationship
-from c2corg_common import document_types
+from c2corg_api.models.common import document_types
 
 ROUTE_TYPE = document_types.ROUTE_TYPE
 
@@ -244,6 +244,7 @@ class _RouteLocaleMixin(object):
     slackline_anchor1 = Column(String)
 
     slackline_anchor2 = Column(String)
+
 
 attributes_locales = [
     'slope', 'remarks', 'gear', 'external_resources', 'route_history',

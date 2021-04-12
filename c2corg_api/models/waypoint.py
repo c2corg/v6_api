@@ -18,7 +18,7 @@ from c2corg_api.models.document import (
     schema_attributes, schema_locale_attributes,
     get_geometry_schema_overrides)
 from c2corg_api.models import enums
-from c2corg_common import document_types
+from c2corg_api.models.common import document_types
 
 WAYPOINT_TYPE = document_types.WAYPOINT_TYPE
 

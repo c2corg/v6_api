@@ -5,7 +5,7 @@ from c2corg_api.models.topo_map import (
 from c2corg_api.models.topo_map_association import update_map
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import topo_map_documents_config
-from c2corg_common.fields_topo_map import fields_topo_map
+from c2corg_api.models.common.fields_topo_map import fields_topo_map
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
 

@@ -34,4 +34,5 @@ class SearchImage(SearchDocument):
 
         return search_document
 
+
 SearchImage.queryable_fields = QueryableMixin.get_queryable_fields(SearchImage)

@@ -22,4 +22,5 @@ class SearchUser(SearchDocument):
 
         return search_document
 
+
 SearchUser.queryable_fields = QueryableMixin.get_queryable_fields(SearchUser)

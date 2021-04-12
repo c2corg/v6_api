@@ -13,7 +13,7 @@ from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
 from pyramid.httpexceptions import HTTPNotFound, HTTPBadRequest, HTTPForbidden
 
-from c2corg_common.fields_article import fields_article
+from c2corg_api.models.common.fields_article import fields_article
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
 from c2corg_api.views import set_creator as set_creator_on_documents

@@ -6,7 +6,7 @@ from functools import lru_cache
 from pyramid.settings import asbool
 import smtplib
 
-from c2corg_common.attributes import default_langs
+from c2corg_api.models.common.attributes import default_langs
 
 import logging
 import os
@@ -32,7 +32,7 @@ class EmailLocalizator(object):
             raise Exception('Bad language' + lang)
         try:
             return self._get_file_content(lang, key)
-        except:
+        except Exception:
             log.exception('The %s translation for %s could not be read' % (
                 lang, key))
             return self._get_file_content('fr', key)

@@ -15,7 +15,7 @@ from c2corg_api.models.document import (
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
-from c2corg_common.attributes import quality_types
+from c2corg_api.models.common.attributes import quality_types
 from dogpile.cache.api import NO_VALUE
 
 

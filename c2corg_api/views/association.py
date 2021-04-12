@@ -9,7 +9,7 @@ from c2corg_api.scripts.es import sync
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views.validation import validate_association_permission, \
     check_permission_for_association_removal
-from c2corg_common.associations import valid_associations
+from c2corg_api.models.common.associations import valid_associations
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest

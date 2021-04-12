@@ -13,7 +13,7 @@ from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.views.route import check_title_prefix
-from c2corg_common.attributes import quality_types
+from c2corg_api.models.common.attributes import quality_types
 from shapely.geometry import shape, LineString
 
 from c2corg_api.models.route import (

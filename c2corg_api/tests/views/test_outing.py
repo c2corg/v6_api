@@ -11,7 +11,7 @@ from c2corg_api.models.outing import Outing, ArchiveOuting, \
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
-from c2corg_common.attributes import quality_types
+from c2corg_api.models.common.attributes import quality_types
 from shapely.geometry import shape, LineString
 
 from c2corg_api.models.route import Route, RouteLocale

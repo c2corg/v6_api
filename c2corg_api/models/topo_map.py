@@ -1,6 +1,6 @@
 from c2corg_api.models.enums import map_editor, map_scale
 from c2corg_api.models.schema_utils import restrict_schema, get_update_schema
-from c2corg_common.fields_topo_map import fields_topo_map
+from c2corg_api.models.common.fields_topo_map import fields_topo_map
 from sqlalchemy import (
     Column,
     Integer,
@@ -15,7 +15,7 @@ from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
     ArchiveDocument, Document, get_geometry_schema_overrides,
     schema_document_locale, schema_attributes)
-from c2corg_common import document_types
+from c2corg_api.models.common import document_types
 
 MAP_TYPE = document_types.MAP_TYPE
 
@@ -24,6 +24,7 @@ class _MapMixin(object):
     editor = Column(map_editor)
     scale = Column(map_scale)
     code = Column(String)
+
 
 attributes = [
     'editor', 'scale', 'code'

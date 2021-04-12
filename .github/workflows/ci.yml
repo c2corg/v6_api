@@ -1,18 +1,111 @@
 name: Continuous integration
 
-on:
-  push:
-    branches:
-      - '**'
-
+on: [push, pull_request]
 jobs:
-  Lint:
+  Test:
     runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      # elasticsearch:
+      #   image: elasticsearch:6.8.14
+      #   options: >-
+      #     --health-cmd "curl -f http://localhost:9200"
+      #     --health-interval 10s
+      #     --health-timeout 5s
+      #     --health-retries 5
+      #   ports:
+      #     - 9200:9200
+      #     - 9300:9300
+      #   env:
+      #     discovery.type: single-node
+      postgres:
+        image: postgis/postgis
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.4'
-      - run: pip install -r dev-requirements.txt
-      - run: flake8 c2corg_api es_migration
+          python-version: 3.7
+      - name: Cache pip
+        uses: actions/cache@v2.1.4
+        with:
+          path: ~/.cache/pip # This path is specific to Ubuntu
+          # Look to see if there is a cache hit for the corresponding requirements file
+          key: ${{ runner.os }}-pip-${{ hashFiles('dev-requirements.txt') }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
+      - name: Install python dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r dev-requirements.txt -r requirements.txt
+      - name: Lint
+        run: flake8 c2corg_api es_migration
+      - name: Configure postgres
+        run: |
+          echo "create user \"www-data\" with password 'www-data'" | psql
+          USER=github scripts/create_user_db_test.sh
+        env:
+          PGPASSWORD: postgres
+          PGUSER: postgres
+          PGHOST: localhost
+          PGPORT: 5432
+      - name: Create config from templates
+        run: make -f config/github-actions template
+      - name: Install java 8 for (old) elasticsearch
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+      - name: Run (old) elasticsearch
+        run: |
+          mkdir /tmp/elasticsearch
+          wget -O - https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.4.6/elasticsearch-2.4.6.tar.gz | tar xz --directory=/tmp/elasticsearch --strip-components=1
+          /tmp/elasticsearch/bin/elasticsearch --daemonize --path.data /tmp
+          sleep 30 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
+      - run: curl -v http://localhost:9200
+      - name: Run tests
+        run: pytest --cov=c2corg_api
+  Docker:
+    # only publish if tests passed
+    needs: test
+    # secrets are not available for PR from forks, and dependabot PRs, we don't want to build them
+    if: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Docker meta
+        id: docker_meta
+        uses: crazy-max/ghaction-docker-meta@v2.3.0
+        with:
+          images: c2corg/v6_images
+      - name: Publish the docker image
+        uses: docker/build-push-action@v2
+        with:
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.docker_meta.outputs.tags }}
+          labels: ${{ steps.docker_meta.outputs.labels }}
+          build-args: |
+            VERSION=$GITHUB_SHA

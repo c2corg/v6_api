@@ -6,7 +6,7 @@ from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.views import cors_policy, etag_cache
 from c2corg_api.views.document_version import serialize_version
 from c2corg_api.views.validation import validate_lang, validate_id
-from c2corg_common.utils.caching import get_or_create
+from c2corg_api.caching import get_or_create
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy.orm import joinedload

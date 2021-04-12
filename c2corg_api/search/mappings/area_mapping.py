@@ -24,4 +24,5 @@ class SearchArea(SearchDocument):
 
         return search_document
 
+
 SearchArea.queryable_fields = QueryableMixin.get_queryable_fields(SearchArea)

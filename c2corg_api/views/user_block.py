@@ -58,7 +58,7 @@ class UserBlockRest(object):
             block_duration = 99999  # 99999 days = 273 years
             client.suspend(
                 user.id, block_duration, 'account blocked by moderator')
-        except:
+        except Exception:
             log.error(
                 'Suspending account in Discourse failed: %d', user.id,
                 exc_info=True)
@@ -98,7 +98,7 @@ class UserUnblockRest(object):
         try:
             client = get_discourse_client(self.request.registry.settings)
             client.unsuspend(user.id)
-        except:
+        except Exception:
             log.error(
                 'Unsuspending account in Discourse failed: %d', user.id,
                 exc_info=True)

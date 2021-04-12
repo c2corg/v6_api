@@ -5,7 +5,7 @@ from c2corg_api.models.schema_utils import get_update_schema,\
     restrict_schema, get_create_schema
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from sqlalchemy.dialects.postgresql.array import ARRAY
-from c2corg_common.fields_book import fields_book
+from c2corg_api.models.common.fields_book import fields_book
 from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Column,
@@ -14,7 +14,7 @@ from sqlalchemy import (
     SmallInteger,
     ForeignKey
     )
-from c2corg_common import document_types
+from c2corg_api.models.common import document_types
 
 BOOK_TYPE = document_types.BOOK_TYPE
 
@@ -29,6 +29,7 @@ class _BookMixin(object):
     nb_pages = Column(SmallInteger)
     publication_date = Column(String(100))
     langs = Column(ARRAY(String(2)))
+
 
 attributes = ['author', 'editor', 'activities', 'url', 'isbn',
               'book_types', 'nb_pages', 'publication_date', 'langs']
@@ -71,6 +72,7 @@ class ArchiveBook(_BookMixin, ArchiveDocument):
     }
 
     __table_args__ = Base.__table_args__
+
 
 schema_book_locale = schema_document_locale
 schema_book_attributes = list(schema_attributes)

@@ -30,5 +30,6 @@ class SearchArticle(SearchDocument):
 
         return search_document
 
+
 SearchArticle.queryable_fields = QueryableMixin.get_queryable_fields(
     SearchArticle)

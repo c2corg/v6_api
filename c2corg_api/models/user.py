@@ -1,6 +1,6 @@
 import bcrypt
 from c2corg_api.models.utils import ArrayOfEnum
-from c2corg_common.attributes import default_langs
+from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.user_profile import UserProfile
 from sqlalchemy import (
     Boolean,

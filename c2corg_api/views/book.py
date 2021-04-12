@@ -9,7 +9,7 @@ from c2corg_api.models.book import (
 from c2corg_api.models.document import ArchiveDocumentLocale
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_common.fields_book import fields_book
+from c2corg_api.models.common.fields_book import fields_book
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
 

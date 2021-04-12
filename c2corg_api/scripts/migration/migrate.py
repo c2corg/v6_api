@@ -30,7 +30,7 @@ from sqlalchemy.orm import sessionmaker
 
 from pyramid.paster import get_appsettings
 
-from zope.sqlalchemy import ZopeTransactionExtension
+from zope.sqlalchemy import register
 from c2corg_api.scripts.initializedb import setup_db
 from c2corg_api.scripts.migration.users import MigrateUsers
 from c2corg_api.scripts.migration.documents.routes import MigrateRoutes
@@ -70,7 +70,8 @@ def main(argv=sys.argv):
     logging.basicConfig()
     logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
-    Session = sessionmaker(extension=ZopeTransactionExtension())  # noqa
+    Session = sessionmaker()  # noqa
+    register(Session)
     session = Session(bind=engine_target)
 
     # set up the target database
@@ -105,6 +106,7 @@ def main(argv=sys.argv):
     UpdateSequences(connection_source, session, batch_size).migrate()
     InitFeed(connection_source, session, batch_size).migrate()
     AnalyzeAllTables(connection_source, session, batch_size).migrate()
+
 
 if __name__ == "__main__":
     main()

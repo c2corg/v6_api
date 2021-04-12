@@ -56,7 +56,7 @@ class Geometry(SchemaType):
             data = geojson.loads(cstruct)
         except Invalid as exc:
             raise exc
-        except:
+        except Exception:
             raise Invalid(node, 'Invalid geometry: %s' % cstruct)
         if not isinstance(data, geojson.GeoJSON):
             raise Invalid(node, 'Invalid geometry: %s' % cstruct)

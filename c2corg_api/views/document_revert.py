@@ -22,7 +22,7 @@ from c2corg_api.views.area import update_associations
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.waypoint import update_linked_route_titles
 from c2corg_api.views.route import update_title_prefix
-from c2corg_common.attributes import default_langs
+from c2corg_api.models.common.attributes import default_langs
 from colander import (
     MappingSchema, SchemaNode, Integer, String, required, OneOf)
 from cornice.resource import resource

@@ -5,14 +5,14 @@ from c2corg_api.models.enums import article_category, activity_type
 from c2corg_api.models.schema_utils import get_update_schema, \
     restrict_schema, get_create_schema
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
-from c2corg_common.fields_article import fields_article
+from c2corg_api.models.common.fields_article import fields_article
 from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Column,
     Integer,
     ForeignKey
     )
-from c2corg_common import document_types
+from c2corg_api.models.common import document_types
 
 ARTICLE_TYPE = document_types.ARTICLE_TYPE
 
@@ -21,6 +21,7 @@ class _ArticleMixin(object):
     categories = Column(ArrayOfEnum(article_category))
     activities = Column(ArrayOfEnum(activity_type))
     article_type = Column(enums.article_type)
+
 
 attributes = ['categories', 'activities', 'article_type']
 
@@ -62,6 +63,7 @@ class ArchiveArticle(_ArticleMixin, ArchiveDocument):
     }
 
     __table_args__ = Base.__table_args__
+
 
 schema_article_locale = schema_document_locale
 schema_article_attributes = list(schema_attributes)

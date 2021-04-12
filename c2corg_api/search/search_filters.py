@@ -1,7 +1,7 @@
 import logging
 import math
 
-import pyproj
+from pyproj import Transformer
 import re
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.xreport import XREPORT_TYPE
@@ -326,8 +326,8 @@ def create_bbox_filter(query_term):
         return None
 
     # transform the bbox from 3857 to 4326
-    xmin, ymin = transform(bbox3857[0], bbox3857[1])
-    xmax, ymax = transform(bbox3857[2], bbox3857[3])
+    xmin, ymin = transformer.transform(bbox3857[0], bbox3857[1])
+    xmax, ymax = transformer.transform(bbox3857[2], bbox3857[3])
 
     if xmin == xmax or ymin == ymax:
         return None
@@ -339,16 +339,13 @@ def create_bbox_filter(query_term):
 
 
 # A function to transform from 3857 to 4326.
-transform = partial(
-        pyproj.transform,
-        pyproj.Proj(init='epsg:3857'),
-        pyproj.Proj(init='epsg:4326'))
+transformer = Transformer.from_crs('epsg:3857', 'epsg:4326', always_xy=True)
 
 
 def map_enum_to_int(enum_mapper, s):
     """
     Maps an enum value to an integer using an `enum_mapper` (one of the
-    objects in `c2corg_common.sortable_search_attributes`.
+    objects in `c2corg_api.models.common.sortable_search_attributes`.
     """
     if s in enum_mapper:
         return enum_mapper[s]
@@ -381,6 +378,7 @@ def parse_enum_value(valid_values, s):
         return s
     else:
         return None
+
 
 DATE_REGEX = re.compile('^(?:[0-9]{2})?[0-9]{2}-[0-3]?[0-9]-[0-3]?[0-9]$')
 

@@ -28,13 +28,13 @@ class RateLimitingTest(BaseTestRest):
     def test_contributor(self, _send_email):
         self._set_user('contributor')
         self._test_requests()
-        _send_email.assert_call_once()
+        _send_email.assert_called_once()
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_moderator(self, _send_email):
         self._set_user('moderator')
         self._test_requests()
-        _send_email.assert_call_once()
+        _send_email.assert_called_once()
 
     def _test_requests(self):
         limit = self.limit_robot if self.user.robot else \
@@ -111,7 +111,19 @@ class RateLimitingTest(BaseTestRest):
         # User has reached their max number of allowed rate limited windows
         # thus is now blocked:
         self.assertTrue(self.user.blocked)
-        _send_email.assert_called_once()
+        self.assertEqual(self.user.ratelimit_times, self.max_times + 1)
+        # Two emails have been set for each rate limited windows, and one
+        # after the user has been blocked
+        self.assertEqual(_send_email.call_count, 3)
+        _send_email.assert_called_with(
+            'fixme@camptocamp.org',
+            subject="Un usage excessif de l'API a été détecté",
+            body="Bonjour\n\nLe contributeur Contributor a atteint une "
+                 "nouvelle fois le nombre maximum autorisé de modifications "
+                 "via l'API camptocamp.org.\nIl a également dépassé le nombre "
+                 "maximum autorisé de blocages temporaires et a donc été "
+                 "définitivement bloqué.\nSon profil : "
+                 "http://localhost:6553/profiles/3")
         self._update_document(status=403)
 
     def _create_document(self):

@@ -16,7 +16,7 @@ from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
 from c2corg_api.views.document import DocumentRest
-from c2corg_common.attributes import quality_types
+from c2corg_api.models.common.attributes import quality_types
 from dogpile.cache.api import NO_VALUE
 
 

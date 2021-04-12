@@ -13,5 +13,6 @@ class SearchTopoMap(SearchDocument):
     def to_search_document(document, index):
         return SearchDocument.to_search_document(document, index)
 
+
 SearchTopoMap.queryable_fields = QueryableMixin.get_queryable_fields(
     SearchTopoMap)

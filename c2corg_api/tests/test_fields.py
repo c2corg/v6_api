@@ -1,16 +1,16 @@
 import unittest
 
 from c2corg_api.models.book import Book
-from c2corg_common.fields_book import fields_book
+from c2corg_api.models.common.fields_book import fields_book
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_common.fields_user_profile import fields_user_profile
+from c2corg_api.models.common.fields_user_profile import fields_user_profile
 from c2corg_api.models.outing import Outing, OutingLocale
-from c2corg_common.fields_outing import fields_outing
-from c2corg_common.fields_waypoint import fields_waypoint
-from c2corg_common.fields_xreport import fields_xreport
-from c2corg_common.fields_route import fields_route
-from c2corg_common.fields_article import fields_article
-from c2corg_common.attributes import waypoint_types, activities
+from c2corg_api.models.common.fields_outing import fields_outing
+from c2corg_api.models.common.fields_waypoint import fields_waypoint
+from c2corg_api.models.common.fields_xreport import fields_xreport
+from c2corg_api.models.common.fields_route import fields_route
+from c2corg_api.models.common.fields_article import fields_article
+from c2corg_api.models.common.attributes import waypoint_types, activities
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.xreport import Xreport, XreportLocale
 from c2corg_api.models.route import Route, RouteLocale

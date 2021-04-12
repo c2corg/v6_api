@@ -15,17 +15,17 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile, \
     schema_listing_user_profile
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, schema_waypoint, Waypoint
 from c2corg_api.views import set_author
-from c2corg_common import attributes
-from c2corg_common.fields_outing import fields_outing
-from c2corg_common.fields_xreport import fields_xreport
-from c2corg_common.fields_route import fields_route
-from c2corg_common.fields_waypoint import fields_waypoint
-from c2corg_common.fields_area import fields_area
-from c2corg_common.fields_article import fields_article
-from c2corg_common.fields_book import fields_book
-from c2corg_common.fields_image import fields_image
-from c2corg_common.fields_topo_map import fields_topo_map
-from c2corg_common.fields_user_profile import fields_user_profile
+from c2corg_api.models.common import attributes
+from c2corg_api.models.common.fields_outing import fields_outing
+from c2corg_api.models.common.fields_xreport import fields_xreport
+from c2corg_api.models.common.fields_route import fields_route
+from c2corg_api.models.common.fields_waypoint import fields_waypoint
+from c2corg_api.models.common.fields_area import fields_area
+from c2corg_api.models.common.fields_article import fields_article
+from c2corg_api.models.common.fields_book import fields_book
+from c2corg_api.models.common.fields_image import fields_image
+from c2corg_api.models.common.fields_topo_map import fields_topo_map
+from c2corg_api.models.common.fields_user_profile import fields_user_profile
 from functools import lru_cache
 
 
@@ -161,6 +161,7 @@ def adapt_outing_schema_for_activities(activities, field_list_type):
 
     fields = get_all_fields(fields_outing, activities, field_list_type)
     return restrict_schema(schema_outing, fields)
+
 
 outing_schema_adaptor = make_schema_adaptor(
     adapt_outing_schema_for_activities, 'activities', 'fields')

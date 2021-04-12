@@ -151,6 +151,7 @@ class MigrateAssociations(MigrateBase):
 
         return parent_type, child_type
 
+
 ASSOCIATION_TYPES = {
     'x': XREPORT_TYPE,       # xreports - accidents
     'p': WAYPOINT_TYPE,     # parking

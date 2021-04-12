@@ -5,7 +5,7 @@ from c2corg_api.models.topo_map import ArchiveTopoMap, TopoMap, MAP_TYPE
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
-from c2corg_common.attributes import quality_types
+from c2corg_api.models.common.attributes import quality_types
 from shapely.geometry import shape, Polygon
 
 from c2corg_api.models.document import (

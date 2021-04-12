@@ -1,6 +1,6 @@
 from c2corg_api.models.schema_utils import restrict_schema,\
     get_update_schema, get_create_schema
-from c2corg_common.fields_xreport import fields_xreport
+from c2corg_api.models.common.fields_xreport import fields_xreport
 from sqlalchemy import (
     Column,
     Integer,
@@ -21,7 +21,7 @@ from c2corg_api.models.document import (
     get_geometry_schema_overrides,
     schema_attributes, DocumentLocale, ArchiveDocumentLocale,
     schema_locale_attributes)
-from c2corg_common import document_types
+from c2corg_api.models.common import document_types
 from c2corg_api.models import enums
 
 XREPORT_TYPE = document_types.XREPORT_TYPE
@@ -184,6 +184,7 @@ class _XreportLocaleMixin(object):
     # Physical consequences and other comments
     # Conséquences physiques et autres commentaires
     other_comments = Column(String)
+
 
 attributes_locales = [
     'place', 'route_study', 'conditions', 'training', 'motivations',

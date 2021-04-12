@@ -9,7 +9,7 @@ from c2corg_api.models.document import DocumentGeometry, \
     ArchiveDocumentGeometry
 from c2corg_api.scripts.migration.documents.batch_document import DocumentBatch
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
-from c2corg_common.attributes import quality_types
+from c2corg_api.models.common.attributes import quality_types
 
 
 DEFAULT_QUALITY = quality_types[2]
@@ -194,7 +194,7 @@ class MigrateDocuments(MigrateBase):
             return a + '\n' + b
 
     summary_regex = re.compile(
-        '(\[abs(tract)?\]){1}?([\s\S]*?)(\[/abs(tract)?\]){1}?')
+        r'(\[abs(tract)?\]){1}?([\s\S]*?)(\[/abs(tract)?\]){1}?')
 
     def extract_summary(self, text):
         if text is None:
@@ -221,21 +221,21 @@ class MigrateDocuments(MigrateBase):
             text, MigrateDocuments.wikilink_profiles_regex, 'profiles')
         return text
 
-    q_tag_regex = re.compile('\[(/?)q\]')
+    q_tag_regex = re.compile(r'\[(/?)q\]')
 
     def convert_q_tags(self, text):
         return MigrateDocuments.q_tag_regex.sub(r'[\1quote]', text)
 
-    c_tag_regex = re.compile('\[(/?)c\]')
+    c_tag_regex = re.compile(r'\[(/?)c\]')
 
     def convert_c_tags(self, text):
         return MigrateDocuments.c_tag_regex.sub(r'[\1code]', text)
 
     wikilink_waypoints_regex = re.compile(
-        '\[\[(summits|huts|parkings|sites|products)([^|]*)\|([^\]]+)\]\]')
+        r'\[\[(summits|huts|parkings|sites|products)([^|]*)\|([^\]]+)\]\]')
 
     wikilink_profiles_regex = re.compile(
-        '\[\[(users)([^|]*)\|([^\]]+)\]\]')  # noqa
+        r'\[\[(users)([^|]*)\|([^\]]+)\]\]')  # noqa
 
     def convert_wikilinks(self, text, regex, route):
         match = regex.search(text)

@@ -8,7 +8,7 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.document_history import get_creators
 from c2corg_api.models.user import AccountNotValidated
-from c2corg_common.attributes import langs_priority
+from c2corg_api.models.common.attributes import langs_priority
 from colander import null
 from pyramid.httpexceptions import HTTPError, HTTPNotFound, HTTPForbidden, \
     HTTPNotModified
@@ -135,13 +135,13 @@ def to_json_dict(obj, schema, with_special_locales_attrs=False,
     if cook_locale:
         obj_dict['cooked'] = cook(obj_dict['locales'][0])
 
-    if with_special_geometry_attrs and obj.type in(ROUTE_TYPE, OUTING_TYPE):
-            geometry_special_attributes = ['has_geom_detail']
-            geometry_dict = obj_dict['geometry']
-            geometry = obj.geometry
-            for attr in geometry_special_attributes:
-                if hasattr(geometry, attr):
-                    geometry_dict[attr] = getattr(geometry, attr)
+    if with_special_geometry_attrs and obj.type in (ROUTE_TYPE, OUTING_TYPE):
+        geometry_special_attributes = ['has_geom_detail']
+        geometry_dict = obj_dict['geometry']
+        geometry = obj.geometry
+        for attr in geometry_special_attributes:
+            if hasattr(geometry, attr):
+                geometry_dict[attr] = getattr(geometry, attr)
     return obj_dict
 
 
@@ -236,7 +236,7 @@ def set_default_geom_from_associations(
                 doc.geometry = DocumentGeometry(geom=default_geom)
         else:
             log.warning(
-                'Creating or updating document without default geometry'.
+                'Creating or updating document {} without default geometry'.
                 format(doc.document_id))
 
 

@@ -1,12 +1,13 @@
 from sqlalchemy import Enum
 
 from c2corg_api.models import Base, schema
-from c2corg_common import attributes
+from c2corg_api.models.common import attributes
 
 
 def enum(name, types):
     return Enum(
         name=name, metadata=Base.metadata, schema=schema, *types)
+
 
 quality_type = enum(
     'quality_type', attributes.quality_types)

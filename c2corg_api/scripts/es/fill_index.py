@@ -21,7 +21,7 @@ from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import configure_es_from_config, elasticsearch_config, \
     search_documents
 from sqlalchemy.orm.session import sessionmaker
-from zope.sqlalchemy.datamanager import ZopeTransactionExtension
+from zope.sqlalchemy import register
 
 
 def usage(argv):
@@ -40,7 +40,8 @@ def main(argv=sys.argv):
     logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
     settings = get_appsettings(config_uri, options=options)
     engine = engine_from_config(settings, 'sqlalchemy.')
-    Session = sessionmaker(extension=ZopeTransactionExtension())  # noqa
+    Session = sessionmaker()  # noqa
+    register(Session)
     session = Session(bind=engine)
     configure_es_from_config(settings)
 

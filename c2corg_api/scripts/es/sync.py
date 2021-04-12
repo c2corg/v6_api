@@ -379,6 +379,7 @@ def create_search_documents(doc_type, documents, batch):
         n += 1
     log.info('Sent {} document(s) of type {}'.format(n, doc_type))
 
+
 # association types that require an update
 association_types_to_check = {
     # needed to update waypoint ids for routes

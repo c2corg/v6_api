@@ -1,10 +1,10 @@
 from c2corg_api.models.xreport import XREPORT_TYPE, Xreport
 from c2corg_api.search.mapping import SearchDocument, BaseMeta
 from c2corg_api.search.mapping_types import QueryableMixin, \
-  QEnumArray, QInteger, QDate, QEnumRange
+    QEnumArray, QInteger, QDate, QEnumRange
 
-from c2corg_common.sortable_search_attributes import sortable_severities, \
-  sortable_avalanche_levels, sortable_avalanche_slopes
+from c2corg_api.models.common.sortable_search_attributes import \
+    sortable_severities, sortable_avalanche_levels, sortable_avalanche_slopes
 
 
 class SearchXreport(SearchDocument):
@@ -56,6 +56,7 @@ class SearchXreport(SearchDocument):
             SearchXreport)
 
         return search_document
+
 
 SearchXreport.queryable_fields = QueryableMixin.get_queryable_fields(
     SearchXreport)

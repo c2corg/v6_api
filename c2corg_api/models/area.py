@@ -6,20 +6,21 @@ from c2corg_api.models.enums import area_type
 from c2corg_api.models.schema_utils import restrict_schema, \
     get_update_schema, get_create_schema
 from c2corg_api.models.utils import copy_attributes
-from c2corg_common.fields_area import fields_area
+from c2corg_api.models.common.fields_area import fields_area
 from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Column,
     Integer,
     ForeignKey
     )
-from c2corg_common import document_types
+from c2corg_api.models.common import document_types
 
 AREA_TYPE = document_types.AREA_TYPE
 
 
 class _AreaMixin(object):
     area_type = Column(area_type)
+
 
 attributes = ['area_type']
 

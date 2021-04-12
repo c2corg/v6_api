@@ -14,7 +14,6 @@
 /.idea
 /.vscode
 .noseids
-Dockerfile
 /env_api
 /venv
 *.swp

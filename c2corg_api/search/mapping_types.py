@@ -138,7 +138,7 @@ class QEnumRange(QueryableMixin, Integer):
     stored as such in ElasticSearch. When doing a search, a filter using these
     numbers is used.
     The enums are converted to integers using the mappers defined in
-    `c2corg_common.sortable_search_attributes`.
+    `c2corg_api.models.common.sortable_search_attributes`.
     """
     def __init__(self, query_name, model_field, enum_mapper,
                  *args, **kwargs):

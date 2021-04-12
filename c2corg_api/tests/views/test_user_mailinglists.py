@@ -1,7 +1,7 @@
 from c2corg_api.models.user import User
 from c2corg_api.models.mailinglist import Mailinglist
 from c2corg_api.tests.views import BaseTestRest
-from c2corg_common.attributes import mailinglists
+from c2corg_api.models.common.attributes import mailinglists
 
 
 class TestUserMailinglistsRest(BaseTestRest):
@@ -74,7 +74,7 @@ class TestUserMailinglistsRest(BaseTestRest):
 
         mls = self.session.query(Mailinglist.listname).filter(
             Mailinglist.email == self.contributor.email).all()
-        subscribed_mailinglists = [l[0] for l in mls]
+        subscribed_mailinglists = [list[0] for list in mls]
         self.assertEqual(len(subscribed_mailinglists), 2)
         self.assertIn('meteofrance-66', subscribed_mailinglists)
         self.assertIn('avalanche.en', subscribed_mailinglists)
