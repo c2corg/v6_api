@@ -4,7 +4,7 @@
 ![Build status](https://github.com/c2corg/v6_api/actions/workflows/ci.yml/badge.svg)
 ![Github Code scanning](https://github.com/c2corg/v6_api/workflows/Github%20Code%20scanning/badge.svg?branch=master)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/c2corg/v6_api.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/c2corg/v6_api/alerts/)
-[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/c2corg/v6_api.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/c2corg/v6_api/context:javascript)
+[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/c2corg/v6_api.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/c2corg/v6_api/context:python)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/56217935d9cd43458eb5539ce52a8628)](https://app.codacy.com/app/c2corg/v6_api?utm_source=github.com&utm_medium=referral&utm_content=c2corg/v6_api&utm_campaign=Badge_Grade_Dashboard)
 [![Known Vulnerabilities](https://snyk.io/test/github/c2corg/v6_api/badge.svg)](https://snyk.io/test/github/c2corg/v6_api)
 
