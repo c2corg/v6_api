@@ -100,7 +100,7 @@ jobs:
         id: docker_meta
         uses: crazy-max/ghaction-docker-meta@v2.3.0
         with:
-          images: c2corg/v6_images
+          images: c2corg/v6_api
       - name: Checkout repository
         uses: actions/checkout@v2
       - run: git archive --format=tar --output project.tar "$GITHUB_SHA"
