@@ -2,7 +2,6 @@ import enum
 
 import abc
 
-import geoalchemy2
 from c2corg_api.ext import colander_ext
 from c2corg_api.models import Base, schema, DBSession, enums
 from c2corg_api.models.utils import copy_attributes, extend_dict, wkb_to_shape
@@ -10,7 +9,7 @@ from c2corg_api.models.common import document_types
 from c2corg_api.models.common.attributes import quality_types
 from colander import null
 from colanderalchemy.schema import SQLAlchemySchemaNode
-from geoalchemy2 import Geometry
+from geoalchemy2 import Geometry, WKBElement
 from pyramid.httpexceptions import HTTPInternalServerError
 from shapely import wkt
 from sqlalchemy import (
@@ -360,7 +359,7 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
 
         g1 = None
         proj1 = None
-        if isinstance(geom, geoalchemy2.WKBElement):
+        if isinstance(geom, WKBElement):
             g1 = wkb_to_shape(geom)
             proj1 = geom.srid
         else:
@@ -372,7 +371,7 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
 
         g2 = None
         proj2 = None
-        if isinstance(other_geom, geoalchemy2.WKBElement):
+        if isinstance(other_geom, WKBElement):
             g2 = wkb_to_shape(other_geom)
             proj2 = other_geom.srid
         else:
