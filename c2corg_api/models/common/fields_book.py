@@ -23,6 +23,7 @@ DEFAULT_REQUIRED = [
 LISTING_FIELDS = [
     'locales',
     'locales.title',
+    'locales.summary',
     'activities',
     'author',
     'quality',
