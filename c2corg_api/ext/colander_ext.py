@@ -7,7 +7,7 @@ from geoalchemy2 import WKBElement
 from geomet import wkb
 from geoalchemy2.compat import buffer, bytes
 import geojson
-from geojson.validation import is_polygon, checkListOfObjects
+from numbers import Number
 
 
 class Geometry(SchemaType):
@@ -91,47 +91,21 @@ def from_wkb(wkb, srid=-1):
 
 
 def is_valid_geometry(obj):
-    """
-    Adapted from geojson.is_valid()
-    https://github.com/frewsxcv/python-geojson/blob/master/geojson/validation.py
-    """
+    return obj.is_valid
 
-    if isinstance(obj, geojson.Point) and \
-            len(obj['coordinates']) not in (2, 3):
-        # Points have 2 or 3 dimensions
-        return False
 
-    # MultiPoint type is not handled because else 4D linestrings are
-    # incorrectly detected as multipoints
+def _check_point_4d(coord):
+    if not isinstance(coord, list):
+        return 'each position must be a list'
+    if len(coord) not in (2, 3, 4):
+        return 'a position must have exactly 2, 3 or 4 values'
+    for number in coord:
+        if not isinstance(number, Number):
+            return 'a position cannot have inner positions'
 
-    if isinstance(obj, geojson.LineString) and \
-            len(obj['coordinates']) < 2:
-        # Lines must have at least 2 positions
-        return False
 
-    if isinstance(obj, geojson.MultiLineString) and \
-            checkListOfObjects(obj['coordinates'], lambda x: len(x) >= 2):
-        # Each segment must must have at least 2 positions
-        return False
-
-    if isinstance(obj, geojson.Polygon):
-        coord = obj['coordinates']
-        lengths = all([len(elem) >= 4 for elem in coord])
-        if lengths is False:
-            # LinearRing must contain 4 or more positions
-            return False
-
-        isring = all([elem[0] == elem[-1] for elem in coord])
-        if isring is False:
-            # The first and last positions in LinearRing must be equivalent
-            return False
-
-        return True
-
-    if isinstance(obj, geojson.MultiPolygon) and \
-            checkListOfObjects(obj['coordinates'], lambda x: is_polygon(x)):
-        # the "coordinates" member must be an array
-        # of Polygon coordinate arrays
-        return False
-
-    return True
+# geojson RFC says that the coordinates should be 2d or 3d and
+# that parsers may ignore additional elements.
+# geojson raises an error on 4d coordinates (2 or 3 elements expected),
+# We override the function to handle 4d coordinates
+geojson.geometry.check_point = _check_point_4d
