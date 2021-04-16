@@ -1,12 +1,12 @@
 import colander
-from urllib3.util.url import parse_url
 
 from c2corg_api.models.common import document_types
 
 from c2corg_api.models import DBSession
-from c2corg_api.models.association import Association
+from c2corg_api.models.association import Association, \
+    association_keys_for_types
 from c2corg_api.models.cache_version import update_cache_version_direct
-from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.user import User
 from c2corg_api.security.discourse_client import get_discourse_client
@@ -66,6 +66,16 @@ def validate_topic_create(request, **kwargs):
         return
     request.validated['locale'] = locale
 
+    document = DBSession.query(Document) \
+        .filter(Document.document_id == document_id) \
+        .one_or_none()
+    if document is None:
+        request.errors.add('body',
+                           '{}/{}'.format(document_id, lang),
+                           'Document not found')
+        return
+    request.validated['document'] = document
+
     if locale.topic_id is not None:
         request.errors.add('body',
                            '{}_{}'.format(document_id, lang),
@@ -88,11 +98,15 @@ class ForumTopicRest(object):
         settings = self.request.registry.settings
 
         locale = self.request.validated['locale']
+        document = self.request.validated['document']
+        document_type = association_keys_for_types[document.type]
 
-        title = "{}_{}".format(locale.document_id, locale.lang)
-        content = '<a href="{}">{}</a>'.format(
-                self.request.referer,
-                locale.title or parse_url(self.request.referer).path)
+        document_path = "/{}/{}/{}".format(document_type,
+                                           locale.document_id,
+                                           locale.lang)
+
+        content = '<a href="https://www.camptocamp.org{}">{}</a>'.format(
+            document_path, locale.title or document_path)
 
         category = settings['discourse.category']
         # category could be id or name
@@ -103,6 +117,7 @@ class ForumTopicRest(object):
 
         client = get_discourse_client(settings)
         try:
+            title = "{}_{}".format(locale.document_id, locale.lang)
             response = client.client.create_post(content,
                                                  title=title,
                                                  category=category)
