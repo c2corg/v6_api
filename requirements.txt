@@ -25,7 +25,7 @@ redis==3.5.3
 requests==2.25.1
 setuptools==56.0.0
 Shapely==1.7.1
-SQLAlchemy==1.2.19
+SQLAlchemy==1.4.8
 transaction==1.6.1
 waitress==2.0.0
 zope.sqlalchemy==1.3
