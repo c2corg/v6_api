@@ -70,7 +70,9 @@ fields_waypoint = {
             'equipment_ratings'
         ],
         'required': DEFAULT_REQUIRED,
-        'listing': DEFAULT_LISTING
+        'listing': DEFAULT_LISTING + [
+            'locales.access_period'
+        ]
     },
     'climbing_indoor': {
         'fields': DEFAULT_FIELDS + [
