@@ -157,7 +157,7 @@ def serialize(data):
         return str(data)
     if isinstance(data, collections.Mapping):
         return dict(list(map(serialize, iter(data.items()))))
-    if isinstance(data, collections.Iterable):
+    if isinstance(data, collections.abc.Iterable):
         return type(data)(list(map(serialize, data)))
     if isinstance(data, (datetime.date, datetime.datetime)):
         return data.isoformat()
