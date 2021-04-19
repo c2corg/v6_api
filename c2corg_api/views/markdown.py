@@ -1,4 +1,4 @@
-from c2c_markdown import parse_code
+from c2corg_api.markdown import parse_code
 
 # locale properties that must not be cooked by markdown parser
 NOT_MARKDOWN_PROPERTY = {
