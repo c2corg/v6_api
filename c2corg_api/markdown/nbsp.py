@@ -5,8 +5,8 @@ from markdown.inlinepatterns import Pattern
 class NbspPattern(Pattern):
     HTML_ENTITY = "&nbsp;"
 
-    def handleMatch(self, m):  # noqa
-        placeholder = self.markdown.htmlStash.store(self.HTML_ENTITY)
+    def handleMatch(self, m):  # noqa: N802
+        placeholder = self.md.htmlStash.store(self.HTML_ENTITY)
 
         return m.group(2).replace(" ", placeholder)
 
@@ -16,7 +16,7 @@ class NarrowNbspPattern(NbspPattern):
 
 
 class C2CNbspExtension(Extension):
-    def extendMarkdown(self, md, md_globals):  # noqa
+    def extendMarkdown(self, md):  # noqa: N802
 
         """
         patterns like
@@ -35,5 +35,5 @@ class C2CNbspExtension(Extension):
                               '>emphasis2')
 
 
-def makeExtension(*args, **kwargs):  # noqa
+def makeExtension(*args, **kwargs):  # noqa: N802
     return C2CNbspExtension(*args, **kwargs)

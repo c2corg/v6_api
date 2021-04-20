@@ -78,7 +78,7 @@ class C2CTocTreeprocessor(TocTreeprocessor):
 
                 # Do not override pre-existing ids
                 if "id" not in el.attrib:
-                    innertext = stashedHTML2text(text, self.markdown)
+                    innertext = stashedHTML2text(text, self.md)
                     el.attrib["id"] = unique(self.slugify(innertext, self.sep),
                                              used_ids)
 
@@ -102,15 +102,15 @@ class C2CTocTreeprocessor(TocTreeprocessor):
             self.replace_marker(doc, div)
 
         # serialize and attach to markdown instance.
-        toc = self.markdown.serializer(div)
-        for pp in self.markdown.postprocessors.values():
+        toc = self.md.serializer(div)
+        for pp in self.md.postprocessors:
             toc = pp.run(toc)
-        self.markdown.toc = toc
+        self.md.toc = toc
 
 
 class C2CTocExtension(TocExtension):
     TreeProcessorClass = C2CTocTreeprocessor
 
 
-def makeExtension(*args, **kwargs):  # noqa
+def makeExtension(*args, **kwargs):  # noqa: N802
     return C2CTocExtension(*args, **kwargs)

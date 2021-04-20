@@ -18,7 +18,7 @@ IMG_RE = r'(?:^|\n)\[img=(\d+)([a-z_ ]*)(/\]|\]([\w\W]*?)\[/img\])'
 
 
 class C2CImageExtension(Extension):
-    def extendMarkdown(self, md, md_globals):  # noqa
+    def extendMarkdown(self, md):  # noqa: N802
         self.md = md
         md.parser.blockprocessors.add('c2cimgblock',
                                       C2CImageBlock(md.parser,
@@ -48,7 +48,7 @@ class C2CImageBlock(BlockProcessor):
         after = block[m.end():]
         self.parser.parseBlocks(parent, [after])
 
-    def build_element(self, m):  # noqa
+    def build_element(self, m):
         # group(1) is everything before the pattern
         # group(2) is the first group of the pattern
         img_id = m.group(1)
@@ -95,5 +95,5 @@ class C2CImageBlock(BlockProcessor):
         return fig
 
 
-def makeExtension(*args, **kwargs):  # noqa
+def makeExtension(*args, **kwargs):  # noqa: N802
     return C2CImageExtension(*args, **kwargs)

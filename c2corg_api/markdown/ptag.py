@@ -14,7 +14,7 @@ P_RE = r'(?:\n|^)\[p\](?:\n|$)'
 
 
 class C2CPTagExtension(Extension):
-    def extendMarkdown(self, md, md_globals):  # noqa
+    def extendMarkdown(self, md):  # noqa: N802
         md.parser.blockprocessors.add('c2cptag',
                                       C2CPTag(md.parser),
                                       "<paragraph")
@@ -39,5 +39,5 @@ class C2CPTag(BlockProcessor):
         self.parser.parseBlocks(parent, [after])
 
 
-def makeExtension(*args, **kwargs):  # noqa
+def makeExtension(*args, **kwargs):  # noqa: N802
     return C2CPTag(*args, **kwargs)
