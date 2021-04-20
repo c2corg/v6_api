@@ -15,7 +15,7 @@ class FailingProcessor(BlockProcessor):
 
 
 class FailingExtension(Extension):
-    def extendMarkdown(self, md, md_globals):  # noqa: N802
+    def extendMarkdown(self, md):  # noqa: N802
         md.parser.blockprocessors.add('Failing', FailingProcessor(md.parser),
                                       "<paragraph")
 
