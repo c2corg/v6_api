@@ -16,7 +16,7 @@ class C2CVideoExtension(Extension):
         self._iframe_secret_tag = kwargs.pop("iframe_secret_tag")
         super(C2CVideoExtension, self).__init__(*args, **kwargs)
 
-    def extendMarkdown(self, md):  # noqa
+    def extendMarkdown(self, md):  # noqa: N802
 
         processors = md.parser.blockprocessors
 
@@ -71,7 +71,7 @@ class C2CYoutubeVideoBlock(C2CVideoBlock):
     PATTERN = (r"https?:\/\/(?:www\.)?youtube\.com"
                r"/watch\?(?:[=&\w]+&)?v=([-\w]+)(?:&.+)?(?:\#.*)?")
 
-    def build_element(self, m):  # noqa
+    def build_element(self, m):
         return self._embed('//www.youtube.com/embed/' + m.group(2))
 
 
@@ -83,7 +83,7 @@ class C2CDailymotionVideoBlock(C2CVideoBlock):
     PATTERN = (r"https?://(?:www\.)?dailymotion\.com"
                r"/video/([\da-zA-Z]+)_[-&;\w]+(?:\#.*)?")
 
-    def build_element(self, m):  # noqa
+    def build_element(self, m):
         return self._embed('//www.dailymotion.com/embed/video/' +
                            m.group(2) +
                            '?theme=none&wmode=transparent')
@@ -96,12 +96,12 @@ class C2CDailymotionShortVideoBlock(C2CDailymotionVideoBlock):
 class C2CVimeoVideoBlock(C2CVideoBlock):
     PATTERN = r'https?://(?:www\.)?vimeo\.com/(\d+)(?:\#.*)?'
 
-    def build_element(self, m):  # noqa
+    def build_element(self, m):
         return self._embed('//player.vimeo.com/video/' +
                            m.group(2) +
                            '?title=0&byline=0' +
-                           '&portrait=0&color=ff9933')  # noqa
+                           '&portrait=0&color=ff9933')
 
 
-def makeExtension(*args, **kwargs):  # noqa
+def makeExtension(*args, **kwargs):  # noqa: N802
     return C2CVideoExtension(*args, **kwargs)

@@ -79,14 +79,14 @@ class EmojiPattern(Pattern):
         for code in db.aliases:
             self.emoji_index[code] = self.emoji_index[db.aliases[code]]
 
-    def handleMatch(self, m):  # noqa
+    def handleMatch(self, m):  # noqa: N802
         user_code = m.group(2)
         emoji = self.emoji_index.get(user_code, None)
         return emoji.to_svg(user_code) if emoji else user_code
 
 
 class C2CEmojiExtension(Extension):
-    def extendMarkdown(self, md):
+    def extendMarkdown(self, md):  # noqa: N802
 
         # Add chars to the escape list. Don't just append as it modifies the
         # global list permanently. Make a copy and extend **that** copy so
@@ -101,5 +101,5 @@ class C2CEmojiExtension(Extension):
         md.inlinePatterns.add("emoji", emj, "<not_strong")
 
 
-def makeExtension(*args, **kwargs):
+def makeExtension(*args, **kwargs):  # noqa: N802
     return C2CEmojiExtension(*args, **kwargs)

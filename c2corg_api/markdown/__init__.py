@@ -1,7 +1,5 @@
 import markdown
 import bleach
-import binascii
-import os
 import secrets
 from threading import RLock
 
@@ -26,7 +24,7 @@ or post a message on
 <a href="https://forum.camptocamp.org/c/site-et-association/v6-suggestions-bugs-et-problemes">
 forum</a>.
 </div>
-"""  # noqa
+"""  # noqa: E501
 
 # RLock because this lock can be released
 # only by the thread who acquires it.
@@ -167,7 +165,7 @@ def parse_code(text):
             # we keep clean function into thread safe part,
             # because we are not sure of this function
             text = cleaner.clean(text=text)
-        except:  # noqa
+        except BaseException:
             text = _PARSER_EXCEPTION_MESSAGE
 
     text = text.replace(_iframe_secret_tag, "iframe")

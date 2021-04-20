@@ -30,14 +30,14 @@ WIKILINK_RE = r'\[\[' + TARGET_RE + r'\|' + LABEL_RE + r'\]\]'
 
 
 class C2CWikiLinkExtension(Extension):
-    def extendMarkdown(self, md):
+    def extendMarkdown(self, md):  # noqa: N802
         pattern = C2CWikiLinks(WIKILINK_RE)
         # append to end of inline patterns
         md.inlinePatterns.add('c2cwikilink', pattern, "<not_strong")
 
 
 class C2CWikiLinks(Pattern):
-    def handleMatch(self, m):  # noqa
+    def handleMatch(self, m):  # noqa: N802
 
         a = etree.Element('a', {
             "c2c:role": "internal-link",
@@ -63,5 +63,5 @@ class C2CWikiLinks(Pattern):
         return a
 
 
-def makeExtension(*args, **kwargs):  # noqa
+def makeExtension(*args, **kwargs):  # noqa: N802
     return C2CWikiLinkExtension(*args, **kwargs)

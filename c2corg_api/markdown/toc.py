@@ -112,5 +112,5 @@ class C2CTocExtension(TocExtension):
     TreeProcessorClass = C2CTocTreeprocessor
 
 
-def makeExtension(*args, **kwargs):  # noqa
+def makeExtension(*args, **kwargs):  # noqa: N802
     return C2CTocExtension(*args, **kwargs)
