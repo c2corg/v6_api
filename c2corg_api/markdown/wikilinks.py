@@ -30,7 +30,7 @@ WIKILINK_RE = r'\[\[' + TARGET_RE + r'\|' + LABEL_RE + r'\]\]'
 
 
 class C2CWikiLinkExtension(Extension):
-    def extendMarkdown(self, md, md_globals):  # noqa
+    def extendMarkdown(self, md):
         pattern = C2CWikiLinks(WIKILINK_RE)
         # append to end of inline patterns
         md.inlinePatterns.add('c2cwikilink', pattern, "<not_strong")

@@ -61,7 +61,7 @@ class EmojiPattern(Pattern):
         self._append_to_index(c2c_waypoints)
         self._append_to_index(c2c_activities)
 
-        self.markdown = md
+        self.md = md
         Pattern.__init__(self, pattern)
 
     def _append_to_index(self, db):
@@ -86,7 +86,7 @@ class EmojiPattern(Pattern):
 
 
 class C2CEmojiExtension(Extension):
-    def extendMarkdown(self, md, md_globals):  # noqa
+    def extendMarkdown(self, md):
 
         # Add chars to the escape list. Don't just append as it modifies the
         # global list permanently. Make a copy and extend **that** copy so
@@ -101,5 +101,5 @@ class C2CEmojiExtension(Extension):
         md.inlinePatterns.add("emoji", emj, "<not_strong")
 
 
-def makeExtension(*args, **kwargs):  # noqa
+def makeExtension(*args, **kwargs):
     return C2CEmojiExtension(*args, **kwargs)

@@ -16,7 +16,7 @@ class C2CVideoExtension(Extension):
         self._iframe_secret_tag = kwargs.pop("iframe_secret_tag")
         super(C2CVideoExtension, self).__init__(*args, **kwargs)
 
-    def extendMarkdown(self, md, md_globals):  # noqa
+    def extendMarkdown(self, md):  # noqa
 
         processors = md.parser.blockprocessors
 

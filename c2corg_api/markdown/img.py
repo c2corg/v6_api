@@ -18,7 +18,7 @@ IMG_RE = r'(?:^|\n)\[img=(\d+)([a-z_ ]*)(/\]|\]([\w\W]*?)\[/img\])'
 
 
 class C2CImageExtension(Extension):
-    def extendMarkdown(self, md, md_globals):  # noqa
+    def extendMarkdown(self, md):
         self.md = md
         md.parser.blockprocessors.add('c2cimgblock',
                                       C2CImageBlock(md.parser,

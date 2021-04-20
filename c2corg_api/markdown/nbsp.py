@@ -6,7 +6,7 @@ class NbspPattern(Pattern):
     HTML_ENTITY = "&nbsp;"
 
     def handleMatch(self, m):  # noqa
-        placeholder = self.markdown.htmlStash.store(self.HTML_ENTITY)
+        placeholder = self.md.htmlStash.store(self.HTML_ENTITY)
 
         return m.group(2).replace(" ", placeholder)
 
@@ -16,7 +16,7 @@ class NarrowNbspPattern(NbspPattern):
 
 
 class C2CNbspExtension(Extension):
-    def extendMarkdown(self, md, md_globals):  # noqa
+    def extendMarkdown(self, md):
 
         """
         patterns like

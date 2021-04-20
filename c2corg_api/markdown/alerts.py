@@ -63,7 +63,7 @@ class AlertProcessor(BlockProcessor):
 
 
 class AlertExtension(Extension):
-    def extendMarkdown(self, md, md_globals):  # noqa
+    def extendMarkdown(self, md):
         md.parser.blockprocessors.add('c2calert',
                                       AlertProcessor(md.parser),
                                       "<paragraph")
