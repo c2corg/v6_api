@@ -41,7 +41,8 @@ class DocumentVersion(Base):
     document = relationship(
         Document, primaryjoin=document_id == Document.document_id,
         backref=backref(
-            'versions', viewonly=True, order_by=id))
+            'versions', viewonly=True, order_by=id),
+        sync_backref=False)
 
     lang = Column(
         String(2), ForeignKey(schema + '.langs.lang'),
