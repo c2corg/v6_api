@@ -1,7 +1,5 @@
 import markdown
 import bleach
-import binascii
-import os
 import secrets
 from threading import RLock
 
