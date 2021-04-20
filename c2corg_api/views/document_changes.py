@@ -79,7 +79,7 @@ def load_feed(doc_ids, limit, user_id=None):
         doc_changes = []
     else:
         doc_changes = DBSession.query(DocumentVersion) \
-            .options(load_only('history_metadata', 'lang'),
+            .options(load_only('lang'),
                      joinedload('history_metadata').load_only(
                         HistoryMetaData.id,
                         HistoryMetaData.user_id,
@@ -90,15 +90,13 @@ def load_feed(doc_ids, limit, user_id=None):
                         User.name,
                         User.username,
                         User.lang)) \
-            .options(load_only('document'),
-                     joinedload('document').load_only(
-                        Document.version,
-                        Document.document_id,
-                        Document.type,
-                        Document.quality)) \
-            .options(load_only('document_locales_archive'),
-                     joinedload('document_locales_archive').load_only(
-                        ArchiveDocumentLocale.title)) \
+            .options(joinedload('document').load_only(
+                    Document.version,
+                    Document.document_id,
+                    Document.type,
+                    Document.quality)) \
+            .options(joinedload('document_locales_archive').load_only(
+                    ArchiveDocumentLocale.title)) \
             .order_by(desc(DocumentVersion.id)) \
             .filter(DocumentVersion.history_metadata_id.in_(doc_ids)) \
             .limit(limit) \

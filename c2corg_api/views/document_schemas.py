@@ -55,7 +55,10 @@ class GetDocumentsConfig:
         self.fields_locales = set(['version', 'lang'])
 
         for field in listing_fields:
-            if field.startswith('locales.'):
+            if field in ['locales', 'geometry']:
+                # used for validation, but should be skipped by sqlAlchemy
+                pass
+            elif field.startswith('locales.'):
                 self.fields_locales.add(field.replace('locales.', ''))
             elif field.startswith('geometry.'):
                 self.fields_geometry.add(field.replace('geometry.', ''))
