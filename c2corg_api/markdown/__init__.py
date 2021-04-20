@@ -2,6 +2,7 @@ import markdown
 import bleach
 import binascii
 import os
+import secrets
 from threading import RLock
 
 from c2corg_api.markdown.wikilinks import C2CWikiLinkExtension
@@ -15,10 +16,6 @@ from c2corg_api.markdown.toc import C2CTocExtension
 from c2corg_api.markdown.emojis import C2CEmojiExtension
 from c2corg_api.markdown.nbsp import C2CNbspExtension
 from markdown.extensions.nl2br import Nl2BrExtension
-
-
-def _get_secret():
-    return binascii.hexlify(os.urandom(32)).decode('ascii')
 
 
 _PARSER_EXCEPTION_MESSAGE = """
@@ -37,19 +34,13 @@ _parser_lock = RLock()
 
 _markdown_parser = None
 _cleaner = None
-_iframe_secret_tag = "iframe_" + _get_secret()
+_iframe_secret_tag = "iframe_" + secrets.token_hex(32)
 
 """
 _***_secret_tag is used as a private key to replace critical HTML node and
 attributes. The key point is this : the parser will use them. bleach will
 remove all critical nodes. Then, a very end parser replace secret_tag by good
 HTML node/attribute
-
-PEP 506 :
-os.urandom is the safe way to generate private data, where random module only
-generate random data without entropy. Hexlify() and ascii() convert it to
-lower case string. Once V6_ui will be into python 3.6 or higher, we will use
-secrets module.
 
 How to hack C2C ? if you want to inject an iframe, you will need to know the
 value of _iframe_secret_tag present into server memory.
