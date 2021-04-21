@@ -9,7 +9,6 @@ from alembic import op
 import sqlalchemy as sa
 from alembic_migration.extensions import drop_enum
 from sqlalchemy.sql.schema import Table, MetaData
-from sqlalchemy.sql.sqltypes import Enum
 
 
 # revision identifiers, used by Alembic.
