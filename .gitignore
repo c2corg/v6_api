@@ -19,3 +19,4 @@
 *.swp
 config/docker
 .coverage
+coverage.xml
