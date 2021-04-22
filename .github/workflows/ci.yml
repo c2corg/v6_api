@@ -84,6 +84,12 @@ jobs:
       - run: curl -v http://localhost:9200
       - name: Run tests
         run: pytest --cov=c2corg_api
+      - name: Send coverage to codacy
+        uses: codacy/codacy-coverage-reporter-action@v1
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: coverage.xml
+
   Docker:
     # only publish if tests passed
     needs: test

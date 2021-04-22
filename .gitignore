@@ -18,3 +18,4 @@
 /venv
 *.swp
 config/docker
+.coverage
