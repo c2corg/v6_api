@@ -37,7 +37,6 @@ class TestRouteRest(BaseDocumentTestRest):
     def test_get_collection(self):
         body = self.get_collection()
         doc = body['documents'][0]
-        self.assertNotIn('climbing_outdoor_type', doc)
         self.assertNotIn('height_diff_access', doc)
 
     def test_get_collection_paginated(self):
@@ -79,11 +78,11 @@ class TestRouteRest(BaseDocumentTestRest):
         reset_search_index(self.session)
 
         body = self.get_collection_search({'act': 'skitouring'})
-        self.assertEqual(body.get('total'), 4)
-        self.assertEqual(len(body.get('documents')), 4)
+        self.assertEqual(body.get('total'), 3)
+        self.assertEqual(len(body.get('documents')), 3)
 
         body = self.get_collection_search({'act': 'skitouring', 'limit': 2})
-        self.assertEqual(body.get('total'), 4)
+        self.assertEqual(body.get('total'), 3)
         self.assertEqual(len(body.get('documents')), 2)
 
         body = self.get_collection_search({'hdif': '700,900'})
@@ -118,6 +117,11 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(1, len(linked_waypoints))
         self.assertEqual(
             self.waypoint.document_id, linked_waypoints[0].get('document_id'))
+        # check waypoint data in listing
+        self.assertEqual(
+            self.waypoint.locales[0].access_period,
+            linked_waypoints[0].get('locales')[0].get('access_period')
+        )
         self.assertIn('geometry', linked_waypoints[0])
         self.assertIn('geom', linked_waypoints[0].get('geometry'))
 
@@ -125,6 +129,10 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(1, len(linked_routes))
         self.assertEqual(
             self.route4.document_id, linked_routes[0].get('document_id'))
+        # check route data in listing
+        self.assertEqual(
+            self.route4.climbing_outdoor_type,
+            linked_routes[0].get('climbing_outdoor_type'))
         # TODO with geometry now
         # self.assertNotIn('geometry', linked_routes[0])
 
@@ -145,6 +153,10 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(
             self.outing1.document_id,
             recent_outings['documents'][0].get('document_id'))
+        # check outing data in listing
+        self.assertEqual(
+            self.outing1.public_transport,
+            recent_outings['documents'][0].get('public_transport'))
         self.assertIn('type', recent_outings['documents'][0])
 
         self.assertIn('maps', body)
@@ -1168,8 +1180,9 @@ class TestRouteRest(BaseDocumentTestRest):
         DocumentRest.create_new_version(self.route3, user_id)
 
         self.route4 = Route(
-            activities=['skitouring'], elevation_max=1500, elevation_min=700,
-            height_diff_up=500, height_diff_down=500, durations='1')
+            activities=['rock_climbing'], elevation_max=1500,
+            elevation_min=700, height_diff_up=500, height_diff_down=500,
+            durations='1', climbing_outdoor_type='single')
         self.route4.locales.append(RouteLocale(
             lang='en', title='Mont Blanc from the air', description='...',
             gear='paraglider'))
@@ -1180,22 +1193,22 @@ class TestRouteRest(BaseDocumentTestRest):
 
         # add some associations
         self.waypoint = Waypoint(
-            waypoint_type='summit', elevation=4,
+            waypoint_type='climbing_outdoor', elevation=4,
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'))
         self.waypoint.locales.append(WaypointLocale(
-            lang='en', title='Mont Granier (en)', description='...',
-            access='yep'))
+            lang='en', title='Mont Granier 1 (en)', description='...',
+            access='yep', access_period='yapa'))
         self.waypoint.locales.append(WaypointLocale(
-            lang='fr', title='Mont Granier (fr)', description='...',
-            access='ouai'))
+            lang='fr', title='Mont Granier 1 (fr)', description='...',
+            access='ouai', access_period='yapa'))
         self.session.add(self.waypoint)
         self.waypoint2 = Waypoint(
             waypoint_type='summit', elevation=4,
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'))
         self.waypoint2.locales.append(WaypointLocale(
-            lang='en', title='Mont Granier (en)', description='...',
+            lang='en', title='Mont Granier 2 (en)', description='...',
             access='yep'))
         self.session.add(self.waypoint2)
         self.session.flush()
@@ -1225,6 +1238,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.outing1 = Outing(
             activities=['skitouring'], date_start=datetime.date(2016, 1, 1),
             date_end=datetime.date(2016, 1, 1),
+            public_transport=True,
             locales=[
                 OutingLocale(
                     lang='en', title='...', description='...',
