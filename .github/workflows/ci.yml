@@ -85,6 +85,8 @@ jobs:
       - name: Run tests
         run: pytest --cov-report term --cov-report xml --cov=c2corg_api
       - name: Send coverage to codacy
+        # secrets are not available for PR from forks, and dependabot PRs
+        if: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
         uses: codacy/codacy-coverage-reporter-action@v1
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
