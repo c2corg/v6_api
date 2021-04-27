@@ -147,7 +147,8 @@ fields_route = {
             'exposition_rock_rating',
             'rock_free_rating',
             'rock_required_rating',
-            'aid_rating'
+            'aid_rating',
+            'climbing_outdoor_type'
         ]
     },
     'ice_climbing': {

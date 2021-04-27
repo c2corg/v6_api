@@ -13,7 +13,8 @@ from c2corg_api.models.topo_map import MAP_TYPE, TopoMap, \
     schema_listing_topo_map
 from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile, \
     schema_listing_user_profile
-from c2corg_api.models.waypoint import WAYPOINT_TYPE, schema_waypoint, Waypoint
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, schema_waypoint, \
+    Waypoint, WaypointLocale
 from c2corg_api.views import set_author
 from c2corg_api.models.common import attributes
 from c2corg_api.models.common.fields_outing import fields_outing
@@ -248,8 +249,8 @@ waypoint_listing_schema_adaptor = make_schema_adaptor(
     adapt_waypoint_schema_for_type, 'waypoint_type', 'listing')
 
 waypoint_documents_config = GetDocumentsConfig(
-    WAYPOINT_TYPE, Waypoint, schema_waypoint, fields=fields_waypoint,
-    adapt_schema=waypoint_listing_schema_adaptor)
+    WAYPOINT_TYPE, Waypoint, schema_waypoint, clazz_locale=WaypointLocale,
+    fields=fields_waypoint, adapt_schema=waypoint_listing_schema_adaptor)
 
 document_configs = {
     WAYPOINT_TYPE: waypoint_documents_config,

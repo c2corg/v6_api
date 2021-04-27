@@ -50,6 +50,7 @@ DEFAULT_LISTING = [
     'date_end',
     'elevation_max',
     'height_diff_up',
+    'public_transport',
     'condition_rating',
     'quality'
 ]
