@@ -1,4 +1,4 @@
-import markdown
+from markdown import Extension
 from markdown.blockprocessors import BlockProcessor
 from markdown import util
 import re
@@ -55,7 +55,7 @@ class C2CHeaderProcessor(BlockProcessor):
             logger.warn("We've got a problem header: %r" % block)
 
 
-class C2CHeaderExtension(markdown.Extension):
+class C2CHeaderExtension(Extension):
     def extendMarkdown(self, md):  # noqa: N802
         md.parser.blockprocessors.add(
             'header_emphasis',
