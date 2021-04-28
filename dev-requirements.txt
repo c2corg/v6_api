@@ -5,3 +5,4 @@ ipdb==0.13.7
 httmock==1.4.0
 pytest==6.2.3
 pytest-cov==2.11.1
+pygments>=2.7.4 # not directly required, pinned by Snyk to avoid a vulnerability
