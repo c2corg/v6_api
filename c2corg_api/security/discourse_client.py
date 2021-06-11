@@ -59,7 +59,8 @@ class APIDiscourseClient(object):
             name=user.name,
             username=user.forum_username,
             email=user.email,
-            external_id=user.id)
+            external_id=user.id,
+            **{"custom.user_field_1": str(user.id)})
         if result:
             self.discourse_userid_cache[user.id] = result['id']
         return result
