@@ -168,7 +168,8 @@ class TestSsoSyncRest(BaseTestRest):
             name='New User',
             username='NewUser',
             email='newuser@external.domain.net',
-            external_id=sso_user.id
+            external_id=sso_user.id,
+            **{"custom.user_field_1": str(sso_user.id)}
         )
 
     def token_from_url(self, url):
