@@ -122,6 +122,7 @@ class APIDiscourseClient(object):
             'external_id': user.id,
             'username': user.forum_username,
             'name': user.name,
+            'custom.user_field_1': user.id,
         }
 
         key = self.sso_key.encode('utf-8')
