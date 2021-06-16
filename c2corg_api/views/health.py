@@ -79,7 +79,7 @@ class HealthRest(object):
         success = False
 
         try:
-            client = cache_document_detail.backend.client
+            client = cache_document_detail.backend.writer_client
             redis_keys = client.dbsize()
             success = True
         except Exception:
