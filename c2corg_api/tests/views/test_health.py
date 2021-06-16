@@ -6,4 +6,9 @@ class TestHealthRest(BaseTestRest):
         super(TestHealthRest, self).setUp()
 
     def test_get(self):
-        self.app.get('/health', status=200)
+        r = self.app.get('/health', status=200)
+
+        data = r.json
+
+        self.assertEqual(data["es"], "ok")
+        self.assertEqual(data["redis"], "ok")
