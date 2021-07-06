@@ -335,6 +335,7 @@ def remove_whole_document(document_id, clazz, clazz_locale,
     _remove_locale(clazz_locale, document_id)
     _remove_geometry(document_id)
     _remove_figures(clazz, document_id)
+    _remove_associations(document_id)
     # When all references have been deleted, finally remove the main
     # document entry:
     _remove_document(document_id)
