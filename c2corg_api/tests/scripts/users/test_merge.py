@@ -14,6 +14,8 @@ from c2corg_api.models.outing import Outing, OutingLocale, OUTING_TYPE
 from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
 from c2corg_api.models.sso import SsoExternalId
 from c2corg_api.models.token import Token
+from c2corg_api.models.topo_map import TopoMap
+from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile, ArchiveUserProfile, \
     USERPROFILE_TYPE
@@ -192,6 +194,20 @@ class MergeUsersTest(BaseTestCase):
         self.session.add(area)
         self.session.add(AreaAssociation(
             document=self.contributor.profile, area=area))
+        self.session.flush()
+
+        self.map1 = TopoMap(
+            code='3232ET', editor='IGN', scale='25000',
+            locales=[
+                DocumentLocale(lang='fr', title='Belley')
+            ],
+            geometry=DocumentGeometry(geom_detail='SRID=3857;POLYGON((611774.917032556 5706934.10657514,611774.917032556 5744215.5846397,642834.402570357 5744215.5846397,642834.402570357 5706934.10657514,611774.917032556 5706934.10657514))')  # noqa
+        )
+        self.session.add(self.map1)
+        self.session.flush()
+        self.session.add(TopoMapAssociation(
+            document=self.contributor.profile,
+            topo_map=self.map1))
         self.session.flush()
 
         self.waypoint1 = Waypoint(
