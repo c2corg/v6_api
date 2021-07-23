@@ -8,7 +8,6 @@ from c2corg_api.models.document import (
     set_available_langs)
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import Outing
-from c2corg_api.models.xreport import Xreport
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.views import to_json_dict, set_best_locale
@@ -41,10 +40,6 @@ def get_documents(documents_config, meta_params, search_documents):
     if documents_config.clazz == Outing:
         base_query = base_query. \
             order_by(documents_config.clazz.date_end.desc()). \
-            order_by(documents_config.clazz.document_id.desc())
-    elif documents_config.clazz == Xreport:
-        base_query = base_query. \
-            order_by(documents_config.clazz.date.desc()). \
             order_by(documents_config.clazz.document_id.desc())
     else:
         base_query = base_query.order_by(
