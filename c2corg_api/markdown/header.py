@@ -57,10 +57,10 @@ class C2CHeaderProcessor(BlockProcessor):
 
 class C2CHeaderExtension(Extension):
     def extendMarkdown(self, md):  # noqa: N802
-        md.parser.blockprocessors.add(
-            'header_emphasis',
+        md.parser.blockprocessors.register(
             C2CHeaderProcessor(md.parser),
-            "<hashheader")
+            'c2c_header_emphasis',
+            73)
 
 
 def makeExtension(configs=[]):  # noqa: N802

@@ -20,14 +20,18 @@ class C2CVideoExtension(Extension):
 
         processors = md.parser.blockprocessors
 
-        for processor in (C2CYoutubeVideoBlock,
-                          C2CYoutubeShortVideoBlock,
-                          C2CDailymotionVideoBlock,
-                          C2CDailymotionShortVideoBlock,
-                          C2CVimeoVideoBlock):
-            processors.add(processor.__name__,
-                           processor(md.parser, self._iframe_secret_tag),
-                           "<paragraph")
+        for processor, priority in (
+            (C2CYoutubeVideoBlock, 14),
+            (C2CYoutubeShortVideoBlock, 13),
+            (C2CDailymotionVideoBlock, 12),
+            (C2CDailymotionShortVideoBlock, 11),
+            (C2CVimeoVideoBlock, 10.5)
+        ):
+            processors.register(
+                processor(md.parser, self._iframe_secret_tag),
+                processor.__name__,
+                priority
+            )
 
 
 class C2CVideoBlock(BlockProcessor):

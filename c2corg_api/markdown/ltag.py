@@ -330,7 +330,9 @@ class C2CLTagExtension(Extension):
         if '|' not in md.ESCAPED_CHARS:
             md.ESCAPED_CHARS.append('|')
 
-        md.parser.blockprocessors.add('ltag',
+        md.parser.blockprocessors.register(
                                       LTagProcessor(md.parser),
-                                      '<hashheader')
-        md.treeprocessors.add('ltag', LtagTreeprocessor(md), '_end')
+                                      'c2c_ltag',
+                                      75)
+
+        md.treeprocessors.register(LtagTreeprocessor(md), 'c2c_ltag', 0)
