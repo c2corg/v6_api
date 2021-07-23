@@ -64,5 +64,5 @@ def do_multi_search_for_types(search_types, search_term, limit, lang):
 def try_to_parse_document_id(search_term):
     try:
         return int(search_term)
-    except ValueError:
+    except (ValueError, TypeError):
         return None
