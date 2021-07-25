@@ -99,7 +99,7 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertIn('event_type', body)
         self.assertEqual(body.get('event_type'), 'stone_ice_fall')
         self.assertIn('date', body)
-        self.assertEqual(body.get('date'), None)
+        self.assertEqual(body.get('date'), '2020-01-01')
 
         locale_en = self.get_locale('en', body.get('locales'))
         self.assertEqual(
@@ -640,6 +640,7 @@ class TestXreportRest(BaseDocumentTestRest):
                 'quality': quality_types[1],
                 'event_activity': 'skitouring',
                 'event_type': 'stone_ice_fall',
+                'date': '2020-01-01',
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
                      'version': self.locale_en.version}
@@ -662,6 +663,7 @@ class TestXreportRest(BaseDocumentTestRest):
                 'quality': quality_types[1],
                 'event_activity': 'skitouring',
                 'event_type': 'stone_ice_fall',
+                'date': '2020-01-01',
                 'locales': [
                     {'lang': 'es', 'title': 'Lac d\'Annecy'}
                 ]
@@ -775,7 +777,8 @@ class TestXreportRest(BaseDocumentTestRest):
 
     def _add_test_data(self):
         self.xreport1 = Xreport(event_activity='skitouring',
-                                event_type='stone_ice_fall')
+                                event_type='stone_ice_fall',
+                                date=datetime.date(2020, 1, 1))
         self.locale_en = XreportLocale(lang='en',
                                        title='Lac d\'Annecy',
                                        place='some place descrip. in english')
@@ -804,11 +807,13 @@ class TestXreportRest(BaseDocumentTestRest):
 
         self.xreport2 = Xreport(event_activity='skitouring',
                                 event_type='avalanche',
-                                nb_participants=5)
+                                nb_participants=5,
+                                date=datetime.date(2021, 1, 1))
         self.session.add(self.xreport2)
         self.xreport3 = Xreport(event_activity='skitouring',
                                 event_type='avalanche',
-                                nb_participants=5)
+                                nb_participants=5,
+                                date=datetime.date(2018, 1, 1))
         self.session.add(self.xreport3)
         self.xreport4 = Xreport(event_activity='skitouring',
                                 event_type='avalanche',
