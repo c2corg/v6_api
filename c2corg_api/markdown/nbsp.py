@@ -26,13 +26,15 @@ class C2CNbspExtension(Extension):
 
         must have a non-breakable space instead of a space.
         """
-        md.inlinePatterns.add('c2c_nbsp',
+        md.inlinePatterns.register(
                               NbspPattern(r'(\d [a-z]| :)', md),
-                              '>emphasis2')
+                              'c2c_nbsp',
+                              7)
 
-        md.inlinePatterns.add('c2c_nnbsp',
+        md.inlinePatterns.register(
                               NarrowNbspPattern(r'([\w\d] [;?!])', md),
-                              '>emphasis2')
+                              'c2c_nnbsp',
+                              8)
 
 
 def makeExtension(*args, **kwargs):  # noqa: N802

@@ -16,8 +16,11 @@ class FailingProcessor(BlockProcessor):
 
 class FailingExtension(Extension):
     def extendMarkdown(self, md):  # noqa: N802
-        md.parser.blockprocessors.add('Failing', FailingProcessor(md.parser),
-                                      "<paragraph")
+        md.parser.blockprocessors.register(
+            FailingProcessor(md.parser),
+            'c2c_failing',
+            10.0001
+        )
 
 
 def fake_get_markdown_parser(*args, **kwargs):

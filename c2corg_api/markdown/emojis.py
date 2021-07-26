@@ -98,7 +98,7 @@ class C2CEmojiExtension(Extension):
         md.ESCAPED_CHARS = escaped
 
         emj = EmojiPattern(RE_EMOJI, md)
-        md.inlinePatterns.add("emoji", emj, "<not_strong")
+        md.inlinePatterns.register(emj, "c2c_emoji", 72)
 
 
 def makeExtension(*args, **kwargs):  # noqa: N802

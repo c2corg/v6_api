@@ -79,6 +79,7 @@ def configure_caches(settings):
             'dogpile.cache.redis',
             arguments={
                 'connection_pool': redis_pool,
+                "thread_local_lock": False,
                 'distributed_lock': True,
                 'lock_timeout': 15,  # 15 seconds (dogpile lock)
                 'redis_expiration_time': int(settings['redis.expiration_time'])

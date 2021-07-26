@@ -20,10 +20,11 @@ IMG_RE = r'(?:^|\n)\[img=(\d+)([a-z_ ]*)(/\]|\]([\w\W]*?)\[/img\])'
 class C2CImageExtension(Extension):
     def extendMarkdown(self, md):  # noqa: N802
         self.md = md
-        md.parser.blockprocessors.add('c2cimgblock',
+        md.parser.blockprocessors.register(
                                       C2CImageBlock(md.parser,
                                                     self.getConfigs()),
-                                      "<paragraph")
+                                      'c2c_imgblock',
+                                      15)
 
 
 class C2CImageBlock(BlockProcessor):

@@ -33,7 +33,7 @@ class C2CWikiLinkExtension(Extension):
     def extendMarkdown(self, md):  # noqa: N802
         pattern = C2CWikiLinks(WIKILINK_RE)
         # append to end of inline patterns
-        md.inlinePatterns.add('c2cwikilink', pattern, "<not_strong")
+        md.inlinePatterns.register(pattern, 'c2c_wikilink', 75)
 
 
 class C2CWikiLinks(Pattern):

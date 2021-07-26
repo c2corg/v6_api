@@ -136,6 +136,7 @@ def _get_markdown_parser():
         _markdown_parser = markdown.Markdown(output_format='xhtml5',
                                              extensions=extensions,
                                              enable_attributes=False)
+
     return _markdown_parser
 
 
