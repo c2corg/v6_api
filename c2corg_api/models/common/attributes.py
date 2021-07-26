@@ -1,6 +1,6 @@
 # coding: utf-8
-default_langs = ['fr', 'it', 'de', 'en', 'es', 'ca', 'eu']
-langs_priority = ['fr', 'en', 'it', 'de', 'es', 'ca', 'eu']
+default_langs = ['fr', 'it', 'de', 'en', 'es', 'ca', 'eu', 'zh']
+langs_priority = ['fr', 'en', 'it', 'de', 'es', 'ca', 'eu', 'zh']
 
 activities = [
     'skitouring',

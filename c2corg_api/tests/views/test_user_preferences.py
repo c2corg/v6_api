@@ -74,7 +74,7 @@ class TestUserFilterPreferencesRest(BaseTestRest):
             # wrong activity
             'activities': ['hiking', 'soccer'],
             # wrong lang
-            'langs': ['fr', 'ru'],
+            'langs': ['fr', 'xx'],
             # wrong area entry
             'areas': [{
                 'id': self.area2.document_id
