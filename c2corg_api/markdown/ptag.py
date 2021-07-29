@@ -7,7 +7,7 @@ Converts tags [p] to div with clear:both
 
 from markdown.extensions import Extension
 from markdown.blockprocessors import BlockProcessor
-from markdown.util import etree
+from xml.etree import ElementTree  # nosec
 import re
 
 P_RE = r'(?:\n|^)\[p\](?:\n|$)'
@@ -34,7 +34,7 @@ class C2CPTag(BlockProcessor):
         before = block[:m.start()]
         self.parser.parseBlocks(parent, [before])
 
-        parent.append(etree.Element('div', {"style": "clear:both"}))
+        parent.append(ElementTree.Element('div', {"style": "clear:both"}))
 
         after = block[m.end():]
         self.parser.parseBlocks(parent, [after])

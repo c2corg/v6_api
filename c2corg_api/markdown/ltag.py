@@ -10,7 +10,7 @@ See https://regex101.com/r/bVjbkp/6
 from markdown.extensions import Extension
 from markdown.blockprocessors import BlockProcessor
 from markdown.treeprocessors import Treeprocessor
-from markdown.util import etree
+from xml.etree import ElementTree  # nosec
 import re
 
 
@@ -242,9 +242,9 @@ class LTagProcessor(BlockProcessor):
             self.parser.parseBlocks(parent, [before_ltag])
 
         # Build XML elements
-        table = etree.SubElement(parent, 'table', {'c2c:role': 'ltag',
-                                                   'class': 'ltag'})
-        tbody = etree.SubElement(table, 'tbody')
+        table = ElementTree.SubElement(parent, 'table', {'c2c:role': 'ltag',
+                                                         'class': 'ltag'})
+        tbody = ElementTree.SubElement(table, 'tbody')
 
         col_count = 0
         colspan_rows = []
@@ -266,11 +266,11 @@ class LTagProcessor(BlockProcessor):
         and return row object
         """
 
-        row = etree.SubElement(tbody, 'tr', {"tag": markdown[0]})
+        row = ElementTree.SubElement(tbody, 'tr', {"tag": markdown[0]})
         marker = markdown[2:3]
 
         if marker == "~":  # the pattern L#~
-            cell = etree.SubElement(row, "td")
+            cell = ElementTree.SubElement(row, "td")
             cell.text = markdown[3:].strip(" \n")
             colspan_rows.append(row)
 
@@ -282,7 +282,7 @@ class LTagProcessor(BlockProcessor):
 
             # and split markdown
             for cell_markdown in markdown.split(self.CELL_SEPARATOR):
-                cell = etree.SubElement(row, cell_node_name)
+                cell = ElementTree.SubElement(row, cell_node_name)
                 cell.text = cell_markdown.strip(" \n\xa0")
 
         return row

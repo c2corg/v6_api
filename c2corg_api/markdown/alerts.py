@@ -1,6 +1,6 @@
 from markdown.extensions import Extension
 from markdown.blockprocessors import BlockProcessor
-from markdown import util
+from xml.etree import ElementTree  # nosec
 import re
 
 
@@ -43,7 +43,7 @@ class AlertProcessor(BlockProcessor):
         # Remove `!!!` from begining of each line.
         block = '\n'.join([self.clean(line) for line in block])
 
-        quote = util.etree.SubElement(parent, 'div')
+        quote = ElementTree.SubElement(parent, 'div')
         quote.set("c2c:role", self.roles[level])
         # Recursively parse block with div as parent.
         self.parser.parseChunk(quote, block)

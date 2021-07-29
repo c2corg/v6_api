@@ -1,20 +1,23 @@
 import markdown
 import bleach
 import secrets
+import logging
 from threading import RLock
 
-from c2corg_api.markdown.wikilinks import C2CWikiLinkExtension
-from c2corg_api.markdown.img import C2CImageExtension
-from c2corg_api.markdown.video import C2CVideoExtension
-from c2corg_api.markdown.ltag import C2CLTagExtension
-from c2corg_api.markdown.header import C2CHeaderExtension
-from c2corg_api.markdown.ptag import C2CPTagExtension
-from c2corg_api.markdown.alerts import AlertExtension
-from c2corg_api.markdown.toc import C2CTocExtension
-from c2corg_api.markdown.emojis import C2CEmojiExtension
-from c2corg_api.markdown.nbsp import C2CNbspExtension
+from .wikilinks import C2CWikiLinkExtension
+from .img import C2CImageExtension
+from .video import C2CVideoExtension
+from .ltag import C2CLTagExtension
+from .header import C2CHeaderExtension
+from .ptag import C2CPTagExtension
+from .alerts import AlertExtension
+from .toc import C2CTocExtension
+from .emojis import C2CEmojiExtension
+from .nbsp import C2CNbspExtension
 from markdown.extensions.nl2br import Nl2BrExtension
 
+
+logger = logging.getLogger('MARKDOWN')
 
 _PARSER_EXCEPTION_MESSAGE = """
 <div c2c:role="danger" style="font-weight:bold">
@@ -124,7 +127,7 @@ def _get_markdown_parser():
             C2CWikiLinkExtension(),
             C2CImageExtension(),
             Nl2BrExtension(),
-            C2CTocExtension(marker='[toc]', baselevel=2),
+            C2CTocExtension(marker='[toc]', baselevel=2, toc_depth="1-4"),
             C2CVideoExtension(iframe_secret_tag=_iframe_secret_tag),
             C2CLTagExtension(),
             C2CHeaderExtension(),
@@ -134,8 +137,7 @@ def _get_markdown_parser():
             C2CNbspExtension(),
         ]
         _markdown_parser = markdown.Markdown(output_format='xhtml5',
-                                             extensions=extensions,
-                                             enable_attributes=False)
+                                             extensions=extensions)
 
     return _markdown_parser
 
@@ -166,7 +168,8 @@ def parse_code(text):
             # we keep clean function into thread safe part,
             # because we are not sure of this function
             text = cleaner.clean(text=text)
-        except Exception:
+        except Exception as e:
+            logger.exception("While parsing markdown", exc_info=e)
             text = _PARSER_EXCEPTION_MESSAGE
 
     text = text.replace(_iframe_secret_tag, "iframe")

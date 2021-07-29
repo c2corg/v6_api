@@ -4,8 +4,8 @@ https://facelessuser.github.io/pymdown-extensions/extensions/emoji/
 """
 
 from markdown import Extension
-from markdown import util as md_util
 from markdown.inlinepatterns import Pattern
+from xml.etree import ElementTree  # nosec
 import copy
 
 from pymdownx import emoji1_db
@@ -43,7 +43,7 @@ class Emoji(object):
 
     def to_svg(self, user_code):
         """Return svg element."""
-        return md_util.etree.Element("img", {
+        return ElementTree.Element("img", {
             "c2c:role": "emoji",
             "c2c:emoji-db": self.db_name,
             "c2c:svg-name": self.svg_name,

@@ -7,7 +7,7 @@ Converts video tags to advanced HTML video tags.
 
 from markdown.extensions import Extension
 from markdown.blockprocessors import BlockProcessor
-from markdown.util import etree
+from xml.etree import ElementTree  # nosec
 import re
 
 
@@ -63,9 +63,9 @@ class C2CVideoBlock(BlockProcessor):
         raise NotImplementedError()
 
     def _embed(self, link):
-        iframe = etree.Element(self._iframe_secret_tag)
+        iframe = ElementTree.Element(self._iframe_secret_tag)
         iframe.set('src', link)
-        embed = etree.Element('div')
+        embed = ElementTree.Element('div')
         embed.set('c2c:role', 'video')
         embed.append(iframe)
         return embed

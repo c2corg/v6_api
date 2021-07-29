@@ -9,7 +9,7 @@ to advanced HTML img tags.
 
 from markdown.extensions import Extension
 from markdown.blockprocessors import BlockProcessor
-from markdown.util import etree
+from xml.etree import ElementTree  # nosec
 
 import re
 
@@ -68,7 +68,7 @@ class C2CImageBlock(BlockProcessor):
             elif option == 'orig':
                 img_size = ''
 
-        img = etree.Element('img')
+        img = ElementTree.Element('img')
 
         img_url = '/images/proxy/%s' % (img_id, )
 
@@ -81,7 +81,7 @@ class C2CImageBlock(BlockProcessor):
         img.set('c2c:document-id', img_id)
         img.set('c2c:size', img_size)
 
-        fig = etree.Element('figure')
+        fig = ElementTree.Element('figure')
 
         fig.append(img)
         fig.set('c2c:position', position)
@@ -89,7 +89,7 @@ class C2CImageBlock(BlockProcessor):
         fig.set('c2c:size', img_size)
 
         if caption:
-            img_caption = etree.Element('figcaption')
+            img_caption = ElementTree.Element('figcaption')
             img_caption.text = caption
             fig.append(img_caption)
 
