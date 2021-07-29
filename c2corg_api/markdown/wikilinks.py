@@ -11,7 +11,7 @@ Inspired from https://github.com/waylan/Python-Markdown/blob/master
 
 from markdown.extensions import Extension
 from markdown.inlinepatterns import Pattern
-from markdown.util import etree
+from xml.etree import ElementTree  # nosec
 
 # document_type/document_id(/lang(/slug))(#anchor)
 
@@ -39,7 +39,7 @@ class C2CWikiLinkExtension(Extension):
 class C2CWikiLinks(Pattern):
     def handleMatch(self, m):  # noqa: N802
 
-        a = etree.Element('a', {
+        a = ElementTree.Element('a', {
             "c2c:role": "internal-link",
             "c2c:document-id": m.group("document_id"),
             "c2c:document-type": m.group("document_type"),

@@ -1,6 +1,6 @@
 from markdown import Extension
 from markdown.blockprocessors import BlockProcessor
-from markdown import util
+from xml.etree import ElementTree  # nosec
 import re
 import logging
 
@@ -34,7 +34,7 @@ class C2CHeaderProcessor(BlockProcessor):
                 # recursively parse this lines as a block.
                 self.parser.parseBlocks(parent, [before])
             # Create header using named groups from RE
-            h = util.etree.SubElement(parent, 'h%d' % len(m.group('level')))
+            h = ElementTree.SubElement(parent, 'h%d' % len(m.group('level')))
             h.text = m.group('header').strip()
 
             if m.group("fixed_id"):
@@ -43,7 +43,7 @@ class C2CHeaderProcessor(BlockProcessor):
             if m.group('emphasis'):
                 emphasis_text = m.group('emphasis').strip("# ")
                 if len(emphasis_text) != 0:
-                    emphasis = util.etree.SubElement(h, 'span')
+                    emphasis = ElementTree.SubElement(h, 'span')
                     emphasis.set('c2c:role', 'header-emphasis')
                     emphasis.text = ' ' + emphasis_text
 
