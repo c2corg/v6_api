@@ -61,7 +61,9 @@ class BaseUserTestRest(BaseTestRest):
     def set_discourse_up(self):
         # unittest.Mock works great with a completely fake object
         mock = Mock()
-        mock.redirect_without_nonce = MagicMock()
+        mock.redirect_without_nonce = MagicMock(
+            return_value='https://discourse_redirect'
+        )
         mock.redirect = MagicMock()
         mock.sso_sync = MagicMock()
         self.set_discourse_client_mock(mock)
@@ -69,7 +71,10 @@ class BaseUserTestRest(BaseTestRest):
     def set_discourse_down(self):
         # unittest.Mock wants a concrete object to throw correctly
         mock = APIDiscourseClient(self.settings)
-        mock.redirect_without_nonce = MagicMock(side_effect=Exception)
+        mock.redirect_without_nonce = MagicMock(
+            return_value='https://discourse_redirect',
+            side_effect=Exception
+        )
         mock.redirect = MagicMock(side_effect=Exception)
         mock.sso_sync = MagicMock(side_effect=Exception)
         self.set_discourse_client_mock(mock)
