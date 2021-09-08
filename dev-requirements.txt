@@ -1,6 +1,6 @@
 flake8==3.9.2
 pep8-naming==0.12.1
-WebTest==2.0.35
+WebTest==3.0.0
 ipdb==0.13.9
 httmock==1.4.0
 pytest==6.2.5
