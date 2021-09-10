@@ -108,10 +108,17 @@ class RouteRest(DocumentRest):
     def collection_post(self):
         linked_waypoints = self.request.validated. \
             get('associations', {}).get('waypoints', [])
+
+        def before_add(document, user_id):
+            # fundraiser is not modifiable for non-moderators
+            if not self.request.has_permission('moderator'):
+                document.fundraiser_url = None
+
+            set_default_geometry(linked_waypoints, document, user_id)
+
         return self._collection_post(
             schema_route,
-            before_add=functools.partial(
-                set_default_geometry, linked_waypoints),
+            before_add=before_add,
             after_add=init_title_prefix)
 
     @restricted_json_view(
@@ -124,9 +131,26 @@ class RouteRest(DocumentRest):
             validate_required_associations,
             functools.partial(validate_main_waypoint, False)])
     def put(self):
+
+        def before_update(route, route_in):
+            geometry = route.geometry
+            geometry_in = route_in.geometry
+
+            if geometry_in is None:
+                # new payload does not have geometry => copy old geometry
+                route_in.geometry = route.geometry
+            elif geometry_in.geom is None and geometry is not None:
+                # else, both geometry is set, but new geometry dos not have
+                # geom attribute => copy old geom attribute
+                geometry_in.geom = geometry.geom
+
+            # fundraiser is not modifiable for non-moderators
+            if not self.request.has_permission('moderator'):
+                route_in.fundraiser_url = route.fundraiser_url
+
         return self._put(Route,
                          schema_route,
-                         before_update=update_default_geometry,
+                         before_update=before_update,
                          after_update=update_title_prefix)
 
     @staticmethod
@@ -204,19 +228,6 @@ def _set_default_geom_from_main_wp(route):
 def _get_default_geom_from_main_wp(route):
     return DBSession.query(DocumentGeometry.geom).filter(
         DocumentGeometry.document_id == route.main_waypoint_id).scalar()
-
-
-def update_default_geometry(route, route_in):
-    geometry = route.geometry
-    geometry_in = route_in.geometry
-
-    if geometry_in is None:
-        # new payload does not have geometry => copy old geometry
-        route_in.geometry = route.geometry
-    elif geometry_in.geom is None and geometry is not None:
-        # else, both geometry is set, but new geometry dos not have
-        # geom attribute => copy old geom attribute
-        geometry_in.geom = geometry.geom
 
 
 def main_waypoint_has_changed(route, old_main_waypoint_id):

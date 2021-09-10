@@ -11,6 +11,7 @@ from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Column,
     Integer,
+    String,
     ForeignKey
     )
 from c2corg_api.models.common import document_types
@@ -21,8 +22,10 @@ AREA_TYPE = document_types.AREA_TYPE
 class _AreaMixin(object):
     area_type = Column(area_type)
 
+    fundraiser_url = Column(String(256))
 
-attributes = ['area_type']
+
+attributes = ['area_type', 'fundraiser_url']
 
 
 class Area(_AreaMixin, Document):

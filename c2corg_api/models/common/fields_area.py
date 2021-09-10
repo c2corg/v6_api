@@ -2,7 +2,8 @@ DEFAULT_FIELDS = [
     'locales.title',
     'geometry.geom_detail',
     'area_type',
-    'quality'
+    'quality',
+    'fundraiser_url'
 ]
 
 DEFAULT_REQUIRED = [
@@ -15,7 +16,8 @@ DEFAULT_REQUIRED = [
 
 LISTING_FIELDS = [
     'locales.title',
-    'area_type'
+    'area_type',
+    'fundraiser_url'
 ]
 
 fields_area = {

@@ -170,6 +170,8 @@ class _WaypointMixin(object):
 
     slackline_length_max = Column(SmallInteger)
 
+    fundraiser_url = Column(String(256))
+
 
 attributes = [
     'waypoint_type', 'elevation', 'prominence', 'length', 'height_median',
@@ -185,7 +187,7 @@ attributes = [
     'climbing_styles', 'access_time', 'climbing_rating_max',
     'climbing_rating_min', 'climbing_rating_median', 'height_min',
     'equipment_ratings', 'slackline_types', 'slackline_length_min',
-    'slackline_length_max'
+    'slackline_length_max', 'fundraiser_url'
 ]
 
 
@@ -202,6 +204,20 @@ class Waypoint(_WaypointMixin, Document):
         'polymorphic_identity': WAYPOINT_TYPE,
         'inherit_condition': Document.document_id == document_id
     }
+
+    @property
+    def can_have_fundraiser(self):
+        if self.waypoint_type != 'climbing_outdoor':
+            return False
+
+        elif not self.equipment_ratings:
+            return False
+
+        elif 'P1' in self.equipment_ratings or 'P1+' in self.equipment_ratings:
+            return True
+
+        else:
+            return False
 
     def to_archive(self):
         waypoint = ArchiveWaypoint()

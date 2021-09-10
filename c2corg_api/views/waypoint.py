@@ -179,7 +179,13 @@ class WaypointRest(DocumentRest):
             }
 
         """
-        return self._collection_post(schema_waypoint)
+
+        def before_add(document, user_id):
+            # fundraiser is not modifiable for non-moderators
+            if not self.request.has_permission('moderator'):
+                document.fundraiser_url = None
+
+        return self._collection_post(schema_waypoint, before_add=before_add)
 
     @restricted_json_view(schema=schema_update_waypoint,
                           validators=[
@@ -233,8 +239,18 @@ class WaypointRest(DocumentRest):
               and waypoints can be provided. If only waypoint associations are
               given, the route associations will not be changed.
         """
+
+        def before_update(document, document_in):
+            # fundraiser is not modifiable for non-moderators
+            if not self.request.has_permission('moderator'):
+                document_in.fundraiser_url = document.fundraiser_url
+
         return self._put(
-            Waypoint, schema_waypoint, after_update=update_linked_route_titles)
+            Waypoint,
+            schema_waypoint,
+            before_update=before_update,
+            after_update=update_linked_route_titles
+        )
 
 
 def set_custom_associations(waypoint, lang):

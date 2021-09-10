@@ -105,7 +105,7 @@ def _get_documents_from_ids(
                 joinedload(getattr(documents_config.clazz, '_areas')).
                 load_only(
                     'document_id', 'area_type', 'version', 'protected',
-                    'type').
+                    'type', 'fundraiser_url').
                 joinedload('locales').
                 load_only(
                     'lang', 'title', 'version')

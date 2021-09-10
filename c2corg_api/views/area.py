@@ -63,13 +63,25 @@ class AreaRest(DocumentRest):
                 validate_area_update,
                 validate_associations_update])
     def put(self):
+
+        def before_update(document, document_in):
+            # fundraiser is not modifiable for non-moderators
+            if not self.request.has_permission('moderator'):
+                document_in.fundraiser_url = document.fundraiser_url
+
         if not self.request.has_permission('moderator'):
             # the geometry of areas should not be modifiable for non-moderators
-            if self.request.validated['document'] and \
-                    self.request.validated['document']['geometry']:
+
+            document = self.request.validated['document']
+            if document and document['geometry']:
                 raise HTTPBadRequest('No permission to change the geometry')
 
-        return self._put(Area, schema_area, after_update=update_associations)
+        return self._put(
+            Area,
+            schema_area,
+            before_update=before_update,
+            after_update=update_associations
+        )
 
 
 @resource(path='/areas/{id}/{lang}/info', cors_policy=cors_policy)

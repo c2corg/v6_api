@@ -153,6 +153,8 @@ class _RouteMixin(object):
 
     slackline_height = Column(SmallInteger)
 
+    fundraiser_url = Column(String(256))
+
 
 attributes = [
     'main_waypoint_id', 'activities', 'elevation_min', 'elevation_max',
@@ -167,7 +169,7 @@ attributes = [
     'hiking_mtb_exposition', 'snowshoe_rating', 'mtb_up_rating',
     'mtb_down_rating', 'mtb_length_asphalt', 'mtb_length_trail',
     'mtb_height_diff_portages', 'rock_types', 'climbing_outdoor_type',
-    'slackline_type', 'slackline_height']
+    'slackline_type', 'slackline_height', 'fundraiser_url']
 
 
 class Route(_RouteMixin, Document):
@@ -189,6 +191,17 @@ class Route(_RouteMixin, Document):
         'polymorphic_identity': ROUTE_TYPE,
         'inherit_condition': Document.document_id == document_id
     }
+
+    @property
+    def can_have_fundraiser(self):
+        if not self.activities:
+            return False
+        elif "mountain_climbing" in self.activities:
+            return True
+        elif "rock_climbing" in self.activities:
+            return True
+        else:
+            return False
 
     def to_archive(self):
         route = ArchiveRoute()

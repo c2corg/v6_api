@@ -6,7 +6,8 @@ DEFAULT_FIELDS = [
     'geometry.geom',
     'elevation',
     'maps_info',
-    'quality'
+    'quality',
+    'fundraiser_url'
 ]
 DEFAULT_REQUIRED = [
     'locales',
@@ -21,7 +22,8 @@ DEFAULT_LISTING = [
     'geometry.geom',
     'elevation',
     'quality',
-    'waypoint_type'
+    'waypoint_type',
+    'fundraiser_url',
 ]
 DEFAULT_ATTRIBUTES_SETTINGS = {
     'fields': DEFAULT_FIELDS,
@@ -71,7 +73,8 @@ fields_waypoint = {
         ],
         'required': DEFAULT_REQUIRED,
         'listing': DEFAULT_LISTING + [
-            'locales.access_period'
+            'locales.access_period',
+            'equipment_ratings'
         ]
     },
     'climbing_indoor': {

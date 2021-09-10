@@ -40,7 +40,7 @@ class UserFilterPreferencesRest(object):
             joinedload(User.feed_filter_areas). \
             load_only(
                 Area.document_id, Area.area_type, Area.version,
-                Area.protected, Area.type)
+                Area.protected, Area.type, Area.fundraiser_url)
 
         if with_area_locales:
             area_joinedload = area_joinedload. \

@@ -22,7 +22,8 @@ DEFAULT_FIELDS = [
     'orientations',
     'durations',
     'main_waypoint_id',
-    'quality'
+    'quality',
+    'fundraiser_url'
 ]
 DEFAULT_REQUIRED = [
     'locales',
