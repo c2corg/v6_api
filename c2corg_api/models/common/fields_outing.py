@@ -138,10 +138,12 @@ fields_outing = {
             'snow_quality',
             'avalanche_signs',
             'locales.avalanches',
+            'global_rating',
             'ice_rating'
         ],
         'required': DEFAULT_REQUIRED,
         'listing': DEFAULT_LISTING + [
+            'global_rating',
             'ice_rating'
         ]
     },
