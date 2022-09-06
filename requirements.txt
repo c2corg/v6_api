@@ -22,7 +22,7 @@ pyramid_debugtoolbar==4.9
 pyramid_mailer==0.15.1
 pyramid_tm==2.3
 python-json-logger==2.0.4
-python-slugify==6.1.1
+python-slugify==6.1.2
 redis==4.2.2
 requests==2.27.1
 setuptools==65.3.0
