@@ -98,6 +98,7 @@ def get_text_query_on_title(search_term, search_lang=None):
 
     return MultiMatch(
         query=search_term,
+        fuzziness='auto',
         operator='and',
         fields=fields
     )
