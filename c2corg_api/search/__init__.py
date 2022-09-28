@@ -81,16 +81,13 @@ def create_search(document_type):
         doc_type=search_documents[document_type])
 
 def get_text_query_on_title(search_term, search_lang=None):
+    fields = []
     # search in all title* (title_en, title_fr, ...) fields.
     if not search_lang:
-        return MultiMatch(
-            query=search_term,
-            operator='and',
-            fields=['title_*.ngram', 'title_*.raw^2']
-        )
+        fields.append('title_*.ngram')
+        fields.append('title_*.raw^2')
     else:
         # if a language is given, boost the fields for the language
-        fields = []
         for lang in default_langs:
             if lang == search_lang:
                 fields.append('title_{0}.ngram^2'.format(lang))
@@ -99,11 +96,11 @@ def get_text_query_on_title(search_term, search_lang=None):
                 fields.append('title_{0}.ngram'.format(lang))
                 fields.append('title_{0}.raw^2'.format(lang))
 
-        return MultiMatch(
-            query=search_term,
-            operator='and',
-            fields=fields
-        )
+    return MultiMatch(
+        query=search_term,
+        operator='and',
+        fields=fields
+    )
 
 
 search_documents = {
