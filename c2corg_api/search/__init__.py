@@ -80,20 +80,6 @@ def create_search(document_type):
         index=elasticsearch_config['index'],
         doc_type=search_documents[document_type])
 
-
-def get_text_query(search_term, lang=None):
-    # search in all title* (title_en, title_fr, ...), summary* and
-    # description* fields. "boost" title fields and summary fields.
-    return Bool(
-        should=[
-            MultiMatch(
-                query=search_term,
-                operator='and',
-                fields=['summary*^2', 'description*'], boost=0.5),
-            get_text_query_on_title(search_term, lang)
-        ])
-
-
 def get_text_query_on_title(search_term, search_lang=None):
     # search in all title* (title_en, title_fr, ...) fields.
     if not search_lang:
