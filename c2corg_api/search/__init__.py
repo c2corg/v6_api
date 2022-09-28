@@ -88,6 +88,7 @@ def get_text_query(search_term, lang=None):
         should=[
             MultiMatch(
                 query=search_term,
+                type='phrase',
                 fields=['summary*^2', 'description*'], boost=0.5),
             get_text_query_on_title(search_term, lang)
         ])
@@ -98,6 +99,7 @@ def get_text_query_on_title(search_term, search_lang=None):
     if not search_lang:
         return MultiMatch(
             query=search_term,
+            type='phrase',
             fields=['title_*.ngram', 'title_*.raw^2']
         )
     else:
@@ -111,7 +113,7 @@ def get_text_query_on_title(search_term, search_lang=None):
                 fields.append('title_{0}.ngram'.format(lang))
                 fields.append('title_{0}.raw^2'.format(lang))
 
-        return MultiMatch(query=search_term, fields=fields)
+        return MultiMatch(query=search_term,type='phrase',fields=fields)
 
 
 search_documents = {
