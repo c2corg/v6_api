@@ -80,6 +80,7 @@ def create_search(document_type):
         index=elasticsearch_config['index'],
         doc_type=search_documents[document_type])
 
+
 def get_text_query_on_title(search_term, search_lang=None):
     fields = []
     # search in all title* (title_en, title_fr, ...) fields.
