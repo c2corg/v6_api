@@ -68,6 +68,27 @@ def validate_json_password(request, **kwargs):
         request.errors.add('body', 'password', 'Invalid')
 
 
+def validate_json_username(request, **kwargs):
+    """Checks if the username was given, removes leading and trailing
+       whitespaces and eventually checks it's unique.
+    """
+
+    if 'username' not in request.json:
+        request.errors.add('body', 'username', 'Required')
+        return
+
+    username = request.json['username'].strip()
+    if not username:
+        request.errors.add('body', 'username',
+                           'Username cannot be empty or whitespaces')
+        return
+
+    if not is_unused_user_attribute('username', username, lowercase=True):
+        request.errors.add('body', 'username', 'This username already exists')
+
+    request.validated['username'] = username
+
+
 def is_unused_user_attribute(attrname, value, lowercase=False):
     attr = getattr(User, attrname)
     query = DBSession.query(User)
@@ -188,8 +209,8 @@ class UserRegistrationRest(object):
         validators=[
             colander_body_validator,
             validate_json_password,
+            validate_json_username,
             partial(validate_unique_attribute, "email"),
-            partial(validate_unique_attribute, "username"),
             partial(validate_unique_attribute,
                     "forum_username",
                     lowercase=True),

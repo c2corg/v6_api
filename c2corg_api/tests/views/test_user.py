@@ -197,6 +197,35 @@ class TestUserRest(BaseUserTestRest):
                          'already used forum_username')
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_register_stripped_username(self, _send_email):
+        request_body = {
+            'username': ' contributor ',
+            'forum_username': 'Foo',
+            'name': 'Max Mustermann',
+            'password': 'super secret',
+            'email': 'some_user@camptocamp.org'
+        }
+        url = self._prefix + '/register'
+        json = self.app_post_json(url, request_body, status=400).json
+        self.assertEqual(json['errors'][0]['description'],
+                         'This username already exists')
+
+        request_body = {
+            'username': ' username with spaces ',
+            'forum_username': 'Spaceman',
+            'name': 'Max Mustermann',
+            'password': 'super secret',
+            'email': 'space@camptocamp.org'
+        }
+        url = self._prefix + '/register'
+        body = self.app_post_json(url, request_body, status=200).json
+        self.assertBodyEqual(body, 'username', 'username with spaces')
+        user_id = body.get('id')
+        user = self.session.query(User).get(user_id)
+        self.assertIsNotNone(user)
+        self.assertEqual(user.username, 'username with spaces')
+
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_register_username_email_not_equals_email(self, _send_email):
         request_body = {
             'username': 'someone_else@camptocamp.org',
