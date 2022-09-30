@@ -1,30 +1,30 @@
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.book import BOOK_TYPE
+from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
+from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.search.mappings.area_mapping import SearchArea
 from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.book_mapping import SearchBook
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
-from c2corg_api.search.mappings.xreport_mapping import SearchXreport
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
-from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.search.mappings.xreport_mapping import SearchXreport
 from elasticsearch import Elasticsearch
-from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import Search
-from elasticsearch_dsl.query import MultiMatch, Bool
-from kombu.connection import Connection
+from elasticsearch_dsl.connections import connections
+from elasticsearch_dsl.query import MultiMatch
 from kombu import Exchange, Queue, pools
+from kombu.connection import Connection
 
 # the maximum number of documents that can be returned for each document type
 SEARCH_LIMIT_MAX = 50
@@ -81,28 +81,14 @@ def create_search(document_type):
         doc_type=search_documents[document_type])
 
 
-def get_text_query(search_term, lang=None):
-    # search in all title* (title_en, title_fr, ...), summary* and
-    # description* fields. "boost" title fields and summary fields.
-    return Bool(
-        should=[
-            MultiMatch(
-                query=search_term,
-                fields=['summary*^2', 'description*'], boost=0.5),
-            get_text_query_on_title(search_term, lang)
-        ])
-
-
 def get_text_query_on_title(search_term, search_lang=None):
+    fields = []
     # search in all title* (title_en, title_fr, ...) fields.
     if not search_lang:
-        return MultiMatch(
-            query=search_term,
-            fields=['title_*.ngram', 'title_*.raw^2']
-        )
+        fields.append('title_*.ngram')
+        fields.append('title_*.raw^2')
     else:
         # if a language is given, boost the fields for the language
-        fields = []
         for lang in default_langs:
             if lang == search_lang:
                 fields.append('title_{0}.ngram^2'.format(lang))
@@ -111,7 +97,12 @@ def get_text_query_on_title(search_term, search_lang=None):
                 fields.append('title_{0}.ngram'.format(lang))
                 fields.append('title_{0}.raw^2'.format(lang))
 
-        return MultiMatch(query=search_term, fields=fields)
+    return MultiMatch(
+        query=search_term,
+        fuzziness='auto',
+        operator='and',
+        fields=fields
+    )
 
 
 search_documents = {
