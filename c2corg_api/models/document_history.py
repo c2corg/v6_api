@@ -1,6 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from c2corg_api.models.user import User
 from sqlalchemy import (
+    Boolean,
     Column,
     Integer,
     String,
@@ -71,6 +72,9 @@ class DocumentVersion(Base):
         index=True)
     history_metadata = relationship(
         HistoryMetaData, primaryjoin=history_metadata_id == HistoryMetaData.id)
+
+    masked = Column(
+        Boolean, nullable=False, server_default='false', default=False)
 
 
 def get_creators(document_ids):
