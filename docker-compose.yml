@@ -44,6 +44,8 @@ services:
     ports:
       - 9200:9200
     command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon
+    volumes:
+      - ./docker-compose/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
 
   redis:
     image: 'docker.io/redis:3.2'
