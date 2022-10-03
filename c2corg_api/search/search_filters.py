@@ -85,6 +85,8 @@ def create_filter(field_name, query_term, search_model):
         return create_id_filter(field, query_term)
     elif hasattr(field, '_date_range') and field._date_range:
         return create_date_range_filter(field, query_term)
+    elif hasattr(field, '_period') and field._period:
+        return create_period_filter(field, query_term)
     elif hasattr(field, '_date') and field._date:
         return create_date_filter(field, query_term)
     elif hasattr(field, '_integer_range') and field._integer_range:
@@ -240,7 +242,7 @@ def create_date_range_filter(field, query_term):
 
     """
     query_terms = query_term.split(',')
-    range_values = list(map(parse_date, query_terms))
+    range_values = list(map(parse_full_date, query_terms))
     range_values = [t for t in range_values if t is not None]
 
     n = len(range_values)
@@ -264,6 +266,28 @@ def create_date_range_filter(field, query_term):
         ]))
 
 
+def create_period_filter(field, query_term):
+    """Creates an ElasticSearch period filter.
+
+    This filter type is currently only used for Outing.date_start/date_end.
+
+    Valid query terms are:
+        01-01
+        01-01,01-01
+        01-01,01-03
+
+    """
+    query_terms = query_term.split(',')
+    range_values = list(map(parse_date_without_year, query_terms))
+    range_values = [t for t in range_values if t is not None]
+
+    n = len(range_values)
+    if n == 0 or n==1:
+        return None
+    else:
+        return None
+
+
 def create_date_filter(field, query_term):
     """Creates an ElasticSearch date-range filter for a single field.
 
@@ -276,7 +300,7 @@ def create_date_filter(field, query_term):
 
     """
     query_terms = query_term.split(',')
-    range_values = list(map(parse_date, query_terms))
+    range_values = list(map(parse_full_date, query_terms))
     range_values = [t for t in range_values if t is not None]
 
     n = len(range_values)
@@ -376,11 +400,20 @@ def parse_enum_value(valid_values, s):
         return None
 
 
-DATE_REGEX = re.compile('^(?:[0-9]{2})?[0-9]{2}-[0-3]?[0-9]-[0-3]?[0-9]$')
+FULL_DATE_REGEX = re.compile('^(?:[0-9]{2})?[0-9]{2}-[0-3]?[0-9]-[0-3]?[0-9]$')
+DATE_WITHOUT_YEAR_REGEX = re.compile('^[0-3]?[0-9]-[0-3]?[0-9]$')
 
 
-def parse_date(s):
-    if DATE_REGEX.match(s):
+def parse_full_date(s):
+    return parse_date(s, FULL_DATE_REGEX)
+
+
+def parse_date_without_year(s):
+    return parse_date(s, DATE_WITHOUT_YEAR_REGEX)
+
+
+def parse_date(s, regex):
+    if regex.match(s):
         return s
     else:
         return None

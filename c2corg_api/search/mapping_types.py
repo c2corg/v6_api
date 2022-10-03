@@ -32,6 +32,9 @@ class QueryableMixin(object):
         if 'date_range' in kwargs:
             self._date_range = kwargs['date_range']
             del kwargs['date_range']
+        if 'period' in kwargs:
+            self._period = kwargs['period']
+            del kwargs['period']
         if 'date' in kwargs:
             self._date = kwargs['date']
             del kwargs['date']
@@ -108,6 +111,18 @@ class QDateRange(QueryableMixin):
         self.field_date_end = field_date_end
         kwargs['date_range'] = True
         super(QDateRange, self).__init__(query_name, *args, **kwargs)
+
+
+class QPeriod(QueryableMixin):
+    """Search field for period with two fields (start/end). Used for
+    `date_start`/`date_end` for outings, regardless of the year.
+    """
+    def __init__(self, query_name, field_date_start, field_date_end,
+                 *args, **kwargs):
+        self.field_date_start = field_date_start
+        self.field_date_end = field_date_end
+        kwargs['period'] = True
+        super(QPeriod, self).__init__(query_name, *args, **kwargs)
 
 
 class QDate(QueryableMixin, Date):
