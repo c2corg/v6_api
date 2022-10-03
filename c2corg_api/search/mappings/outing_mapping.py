@@ -156,5 +156,5 @@ SearchOuting.queryable_fields = QueryableMixin.get_queryable_fields(
     SearchOuting)
 SearchOuting.queryable_fields['date'] = QDateRange(
     'date', 'date_start', 'date_end')
-SearchOuting.queryable_fields['period'] = QDateRange(
+SearchOuting.queryable_fields['period'] = QPeriod(
     'period', 'date_start', 'date_end')

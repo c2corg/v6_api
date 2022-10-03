@@ -10,7 +10,7 @@ from functools import partial
 from c2corg_api.search import create_search, search_documents, \
     get_text_query_on_title
 from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox, \
-    Missing
+    Missing, Script
 
 log = logging.getLogger(__name__)
 
@@ -281,11 +281,23 @@ def create_period_filter(field, query_term):
     range_values = list(map(parse_date_without_year, query_terms))
     range_values = [t for t in range_values if t is not None]
 
+    log.debug(query_terms)
+    log.debug(range_values)
+
     n = len(range_values)
+
+    log.debug(n)
+
     if n == 0 or n==1:
         return None
     else:
-        return None
+        return Script(
+            script="doc['date_end'].value%31556952000 >= min && doc['date_start'].value%31556952000 <= max",
+            params= {
+						"min": 23620896000,
+						"max": 24854040000
+					}
+        )
 
 
 def create_date_filter(field, query_term):
