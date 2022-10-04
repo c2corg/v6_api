@@ -283,7 +283,9 @@ def create_period_filter(field, query_term):
     range_values = [t for t in range_values if t is not None]
 
     def milliseconds_since_first_day_of_year(month_and_day):
-        seconds_since_epoch = datetime.strptime('2000-{}'.format(month_and_day),'%Y-%m-%d').timestamp()
+        seconds_since_epoch = datetime.strptime(
+            '2000-{}'.format(month_and_day), '%Y-%m-%d'
+        ).timestamp()
 
         return int(1000 * seconds_since_epoch) % milliseconds_in_one_year
 
@@ -292,13 +294,15 @@ def create_period_filter(field, query_term):
     if n != 2:
         return None
 
+    template = "doc['{0}'].value%{2} >= min && doc['{1}'].value%{2} <= max"
+
     return Script(
-        script="doc['{0}'].value%{2} >= min && doc['{1}'].value%{2} <= max".format(
+        script=template.format(
             field.field_date_end,
             field.field_date_start,
             milliseconds_in_one_year
         ),
-        params= {
+        params={
             "min": milliseconds_since_first_day_of_year(range_values[0]),
             "max": milliseconds_since_first_day_of_year(range_values[1])
         }
