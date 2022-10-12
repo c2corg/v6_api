@@ -106,7 +106,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Docker meta
         id: docker_meta
-        uses: crazy-max/ghaction-docker-meta@v2.3.0
+        uses: crazy-max/ghaction-docker-meta@v4.1.0
         with:
           images: c2corg/v6_api
       - name: Checkout repository
