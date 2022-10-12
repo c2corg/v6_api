@@ -137,7 +137,8 @@ class DocumentTaggedRest(object):
 
     @restricted_json_view(validators=[validate_document_id])
     def get(self):
-        """ Check if the authenticated user has tagged the given document as todo.
+        """
+        Check if the authenticated user has tagged the given document as todo.
 
         Request:
             `GET` `tags/has/{document_id}`

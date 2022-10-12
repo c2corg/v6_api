@@ -171,7 +171,7 @@ def _is_main_waypoint_association(association):
 
 
 def _is_last_waypoint_of_route(association):
-    if not(association.parent_document_type == WAYPOINT_TYPE and
+    if not (association.parent_document_type == WAYPOINT_TYPE and
             association.child_document_type == ROUTE_TYPE):
         # other association type, nothing to check
         return False
@@ -188,7 +188,7 @@ def _is_last_waypoint_of_route(association):
 
 
 def _is_last_route_of_outing(association):
-    if not(association.parent_document_type == ROUTE_TYPE and
+    if not (association.parent_document_type == ROUTE_TYPE and
             association.child_document_type == OUTING_TYPE):
         # other association type, nothing to check
         return False
