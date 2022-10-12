@@ -114,12 +114,13 @@ def _get_cleaner():
             allowed_css_properties=bleach.css_sanitizer.ALLOWED_CSS_PROPERTIES
             + ['clear'])
 
-        _cleaner = bleach.sanitizer.Cleaner(tags=allowed_tags,
-                                  attributes=allowed_attributes,
-                                  css_sanitizer=css_sanitizer,
-                                  protocols=bleach.sanitizer.ALLOWED_PROTOCOLS,
-                                  strip=False,
-                                  strip_comments=True)
+        _cleaner = bleach.sanitizer.Cleaner(
+            tags=allowed_tags,
+            attributes=allowed_attributes,
+            css_sanitizer=css_sanitizer,
+            protocols=bleach.sanitizer.ALLOWED_PROTOCOLS,
+            strip=False,
+            strip_comments=True)
 
     return _cleaner
 
