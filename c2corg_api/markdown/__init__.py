@@ -111,7 +111,8 @@ def _get_cleaner():
             allowed_attributes[key] += allowed_extra_attributes[key]
 
         css_sanitizer = bleach.css_sanitizer.CSSSanitizer(
-            allowed_css_properties=bleach.css_sanitizer.ALLOWED_CSS_PROPERTIES + ["clear"])
+            allowed_css_properties=bleach.css_sanitizer.ALLOWED_CSS_PROPERTIES
+            + ['clear'])
 
         _cleaner = bleach.sanitizer.Cleaner(tags=allowed_tags,
                                   attributes=allowed_attributes,
