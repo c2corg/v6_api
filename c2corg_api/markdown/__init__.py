@@ -52,7 +52,7 @@ def _get_cleaner():
     global _cleaner
 
     if not _cleaner:
-        allowed_tags = bleach.ALLOWED_TAGS + [
+        allowed_tags = bleach.sanitizer.ALLOWED_TAGS + [
             # headers
             "h1", "h2", "h3", "h4", "h5", "h6",
 
@@ -71,7 +71,7 @@ def _get_cleaner():
             "table", "tr", "td", "th", "tbody"
         ]
 
-        allowed_attributes = dict(bleach.ALLOWED_ATTRIBUTES)
+        allowed_attributes = dict(bleach.sanitizer.ALLOWED_ATTRIBUTES)
         allowed_extra_attributes = {
             "a": [
                 "c2c:role",
@@ -110,10 +110,13 @@ def _get_cleaner():
 
             allowed_attributes[key] += allowed_extra_attributes[key]
 
-        _cleaner = bleach.Cleaner(tags=allowed_tags,
+        css_sanitizer = bleach.css_sanitizer.CSSSanitizer(
+            allowed_css_properties=bleach.css_sanitizer.ALLOWED_CSS_PROPERTIES + ["clear"])
+
+        _cleaner = bleach.sanitizer.Cleaner(tags=allowed_tags,
                                   attributes=allowed_attributes,
-                                  styles=bleach.ALLOWED_STYLES + ["clear"],
-                                  protocols=bleach.ALLOWED_PROTOCOLS,
+                                  css_sanitizer=css_sanitizer,
+                                  protocols=bleach.sanitizer.ALLOWED_PROTOCOLS,
                                   strip=False,
                                   strip_comments=True)
 
