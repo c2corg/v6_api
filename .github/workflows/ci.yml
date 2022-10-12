@@ -113,7 +113,7 @@ jobs:
         uses: actions/checkout@v2
       - run: git archive --format=tar --output project.tar "$GITHUB_SHA"
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       - name: Publish the docker image
         uses: docker/build-push-action@v3
         with:
