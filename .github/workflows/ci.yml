@@ -46,7 +46,7 @@ jobs:
         with:
           python-version: 3.7
       - name: Cache pip
-        uses: actions/cache@v2.1.4
+        uses: actions/cache@v3.0.10
         with:
           path: ~/.cache/pip # This path is specific to Ubuntu
           # Look to see if there is a cache hit for the corresponding requirements file
