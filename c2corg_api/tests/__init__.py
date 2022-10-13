@@ -157,8 +157,7 @@ def _add_global_test_data(session):
 
     for user in [robot, moderator, contributor, contributor2, contributor3]:
         claims = create_claims(user, exp)
-        token = jwt.encode(claims, key=key, algorithm=algorithm). \
-            decode('utf-8')
+        token = jwt.encode(claims, key=key, algorithm=algorithm)
         add_or_retrieve_token(token, exp, user.id)
         global_userids[user.username] = user.id
         global_tokens[user.username] = token
