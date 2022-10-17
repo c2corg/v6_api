@@ -107,7 +107,7 @@ upgrade-dev: .build/venv/bin/pip
 
 .build/venv/bin/pip:
 	mkdir -p $(dir .build/venv)
-	virtualenv --no-site-packages -p python3 .build/venv
+	virtualenv -p python3 .build/venv
 	.build/venv/bin/pip install --upgrade -r requirements_pip.txt
 
 .build/requirements.timestamp: .build/venv/bin/pip requirements.txt setup.py
