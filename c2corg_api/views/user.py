@@ -34,6 +34,15 @@ VALIDATION_EXPIRE_DAYS = 3
 MINIMUM_PASSWORD_LENGTH = 3
 
 
+def valid_email(email):
+    """Checks if a string is a valid email."""
+    try:
+        colander.Email()(None, email)
+    except colander.Invalid:
+        return False
+    return True
+
+
 def validate_json_password(request, **kwargs):
     """Checks if the password was given and encodes it.
        This is done here as the password is not an SQLAlchemy field.
@@ -113,6 +122,24 @@ def validate_forum_username(request, **kwargs):
             request.errors.add('body', attrname, res)
 
 
+def validate_username(request, **kwargs):
+    """
+    Check that the username is not an email,
+    or that it is the same as the actual email.
+    """
+    attrname = 'username'
+    if attrname in request.json and 'email' in request.json:
+        value = request.json[attrname]
+        email = request.json['email']
+        if (valid_email(value) and email != value):
+            request.errors.add(
+                'body',
+                attrname,
+                'You cannot use someone else\'s email as username')
+            return
+        request.validated[attrname] = value
+
+
 def validate_captcha(request, **kwargs):
     """Validate the recaptcha sent by UI.
     """
@@ -166,11 +193,13 @@ class UserRegistrationRest(object):
             partial(validate_unique_attribute,
                     "forum_username",
                     lowercase=True),
+            validate_username,
             validate_forum_username,
             validate_captcha])
     def post(self):
         user = schema_create_user.objectify(self.request.validated)
         user.password = self.request.validated['password']
+        user.email = self.request.validated['email']
         user.update_validation_nonce(
                 Purpose.registration,
                 VALIDATION_EXPIRE_DAYS)
@@ -446,6 +475,10 @@ class UserLoginRest(object):
         password = request.validated['password']
         user = DBSession.query(User). \
             filter(User.username == username).first()
+        # try to use the username as email if we didn't find the user
+        if user is None and valid_email(username):
+            user = DBSession.query(User). \
+                filter(User.email == username).first()
 
         token = try_login(user, password, request) if user else None
         if token:

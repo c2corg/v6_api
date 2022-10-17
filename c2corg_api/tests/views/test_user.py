@@ -102,7 +102,8 @@ class TestUserRest(BaseUserTestRest):
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_always_register_non_validated_users(self, _send_email):
         request_body = {
-            'username': 'test', 'forum_username': 'test',
+            'username': 'test',
+            'forum_username': 'test',
             'name': 'Max Mustermann',
             'password': 'super secret',
             'email_validated': True,
@@ -196,9 +197,50 @@ class TestUserRest(BaseUserTestRest):
                          'already used forum_username')
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_register_username_not_email(self, _send_email):
+        request_body = {
+            'username': 'someone_else@camptocamp.org',
+            'forum_username': 'Contributor4',
+            'name': 'Max Mustermann',
+            'password': 'super secret',
+            'email': 'some_user@camptocamp.org'
+        }
+        url = self._prefix + '/register'
+        json = self.app_post_json(url, request_body, status=400).json
+        self.assertEqual(json['errors'][0]['description'],
+                         'You cannot use someone else\'s email as username')
+
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_register_username_email_equals_email(self, _send_email):
+        request_body = {
+            'username': 'some_user@camptocamp.org',
+            'forum_username': 'Contributor4',
+            'name': 'Frankie Vincent',
+            'password': 'super secret',
+            'email': 'some_user@camptocamp.org'
+        }
+        url = self._prefix + '/register'
+        self.app_post_json(url, request_body, status=200)
+
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
+    def test_register_invalid_email(self, _send_email):
+        request_body = {
+            'username': 'test',
+            'forum_username': 'Contributor',
+            'name': 'Max Mustermann',
+            'password': 'super secret',
+            'email': 'some_useratcamptocamp.org'
+        }
+        url = self._prefix + '/register'
+        json = self.app_post_json(url, request_body, status=400).json
+        self.assertEqual(json['errors'][0]['description'],
+                         'Invalid email address')
+
+    @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_register_discourse_up(self, _send_email):
         request_body = {
-            'username': 'test', 'forum_username': 'testf',
+            'username': 'test',
+            'forum_username': 'testf',
             'name': 'Max Mustermann',
             'password': 'super secret',
             'email': 'some_user@camptocamp.org'
@@ -461,6 +503,14 @@ class TestUserRest(BaseUserTestRest):
     def test_login_success_discourse_down(self):
         # Topoguide login allowed even if Discourse is down.
         body = self.login('moderator', status=200).json
+        self.assertTrue('token' in body)
+
+    def test_login_success_use_email(self):
+        # login allowed if providing the email instead of login
+        body = self.login(
+            'moderator@camptocamp.org',
+            self.global_passwords['moderator'],
+            status=200).json
         self.assertTrue('token' in body)
 
     def test_login_blocked_account(self):
