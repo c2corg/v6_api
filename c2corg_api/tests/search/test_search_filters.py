@@ -408,7 +408,7 @@ class AdvancedSearchTest(BaseTestCase):
             create_filter('period', '2016-12-31, 10-01', SearchOuting),
             None)
 
-        script_expected_string = "doc['date_end'].value%31556952000 >= min && doc['date_start'].value%31556952000 <= max"
+        script_expected_string = "doc['date_end'].value%31556952000 >= min && doc['date_start'].value%31556952000 <= max"  # noqa: E501
 
         self.assertEqual(
             create_filter('period', '01-02,01-02', SearchOuting),
