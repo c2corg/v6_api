@@ -272,7 +272,6 @@ def create_period_filter(field, query_term):
     This filter type is currently only used for Outing.date_start/date_end.
 
     Valid query terms are:
-        01-01
         01-01,01-01
         01-01,01-03
 
