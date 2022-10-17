@@ -1,4 +1,4 @@
-FROM docker.io/debian:buster-slim
+FROM docker.io/debian:bullseye-slim
 
 ENV DEBIAN_FRONTEND noninteractive
 
