@@ -29,7 +29,7 @@ RUN set -x \
     python3-urllib3 \
     libgeos-c1v5 \
     libpq5 \
-    libffi6 \
+    libffi7 \
     make \
     python3-dev \
     python3-pip \
