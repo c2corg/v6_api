@@ -242,7 +242,7 @@ def create_date_range_filter(field, query_term):
 
     """
     query_terms = query_term.split(',')
-    range_values = list(map(parse_full_date, query_terms))
+    range_values = list(map(parse_date, query_terms))
     range_values = [t for t in range_values if t is not None]
 
     n = len(range_values)
@@ -272,19 +272,18 @@ def create_period_filter(field, query_term):
     This filter type is currently only used for Outing.date_start/date_end.
 
     Valid query terms are:
-        01-01,01-01
-        01-01,01-03
+        2022-01-01,2022-01-01
+        2022-01-01,2022-01-03
+    Search will ignore the year.
 
     """
     milliseconds_in_one_year = int(365.2425 * 24 * 3600 * 1000)
     query_terms = query_term.split(',')
-    range_values = list(map(parse_date_without_year, query_terms))
+    range_values = list(map(parse_date, query_terms))
     range_values = [t for t in range_values if t is not None]
 
-    def milliseconds_since_first_day_of_year(month_and_day):
-        seconds_since_epoch = datetime.strptime(
-            '2000-{}'.format(month_and_day), '%Y-%m-%d'
-        ).timestamp()
+    def milliseconds_since_first_day_of_year(date):
+        seconds_since_epoch = datetime.strptime(date, '%Y-%m-%d').timestamp()
 
         return int(1000 * seconds_since_epoch) % milliseconds_in_one_year
 
@@ -320,7 +319,7 @@ def create_date_filter(field, query_term):
 
     """
     query_terms = query_term.split(',')
-    range_values = list(map(parse_full_date, query_terms))
+    range_values = list(map(parse_date, query_terms))
     range_values = [t for t in range_values if t is not None]
 
     n = len(range_values)
@@ -420,20 +419,11 @@ def parse_enum_value(valid_values, s):
         return None
 
 
-FULL_DATE_REGEX = re.compile('^(?:[0-9]{2})?[0-9]{2}-[0-3]?[0-9]-[0-3]?[0-9]$')
-DATE_WITHOUT_YEAR_REGEX = re.compile('^[0-3]?[0-9]-[0-3]?[0-9]$')
+DATE_REGEX = re.compile('^(?:[0-9]{2})?[0-9]{2}-[0-3]?[0-9]-[0-3]?[0-9]$')
 
 
-def parse_full_date(s):
-    return parse_date(s, FULL_DATE_REGEX)
-
-
-def parse_date_without_year(s):
-    return parse_date(s, DATE_WITHOUT_YEAR_REGEX)
-
-
-def parse_date(s, regex):
-    if regex.match(s):
+def parse_date(s):
+    if DATE_REGEX.match(s):
         return s
     else:
         return None
