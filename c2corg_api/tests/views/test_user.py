@@ -197,7 +197,7 @@ class TestUserRest(BaseUserTestRest):
                          'already used forum_username')
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_register_username_not_email(self, _send_email):
+    def test_register_username_email_not_equals_email(self, _send_email):
         request_body = {
             'username': 'someone_else@camptocamp.org',
             'forum_username': 'Contributor4',
@@ -208,7 +208,8 @@ class TestUserRest(BaseUserTestRest):
         url = self._prefix + '/register'
         json = self.app_post_json(url, request_body, status=400).json
         self.assertEqual(json['errors'][0]['description'],
-                         'You cannot use someone else\'s email as username')
+                         'An email address used as username should be the ' +
+                         'same as the one used as the account email address.')
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_register_username_email_equals_email(self, _send_email):
