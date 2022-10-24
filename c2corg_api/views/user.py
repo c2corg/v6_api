@@ -34,6 +34,15 @@ VALIDATION_EXPIRE_DAYS = 3
 MINIMUM_PASSWORD_LENGTH = 3
 
 
+def is_valid_email(email):
+    """Checks if a string is a valid email."""
+    try:
+        colander.Email()(None, email)
+    except colander.Invalid:
+        return False
+    return True
+
+
 def validate_json_password(request, **kwargs):
     """Checks if the password was given and encodes it.
        This is done here as the password is not an SQLAlchemy field.
@@ -113,6 +122,24 @@ def validate_forum_username(request, **kwargs):
             request.errors.add('body', attrname, res)
 
 
+def validate_username(request, **kwargs):
+    """
+    Check that the username is not an email,
+    or that it is the same as the actual email.
+    """
+    if 'username' in request.json and 'email' in request.json:
+        value = request.json['username']
+        email = request.json['email']
+        if (is_valid_email(value) and email != value):
+            request.errors.add(
+                'body',
+                'username',
+                'An email address used as username should be the same as the' +
+                ' one used as the account email address.')
+            return
+        request.validated['username'] = value
+
+
 def validate_captcha(request, **kwargs):
     """Validate the recaptcha sent by UI.
     """
@@ -166,6 +193,7 @@ class UserRegistrationRest(object):
             partial(validate_unique_attribute,
                     "forum_username",
                     lowercase=True),
+            validate_username,
             validate_forum_username,
             validate_captcha])
     def post(self):
@@ -446,6 +474,10 @@ class UserLoginRest(object):
         password = request.validated['password']
         user = DBSession.query(User). \
             filter(User.username == username).first()
+        # try to use the username as email if we didn't find the user
+        if user is None and is_valid_email(username):
+            user = DBSession.query(User). \
+                filter(User.email == username).first()
 
         token = try_login(user, password, request) if user else None
         if token:
