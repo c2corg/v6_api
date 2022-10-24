@@ -107,7 +107,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Docker meta
         id: docker_meta
-        uses: docker/metadata-action@v4.1.0
+        uses: docker/metadata-action@v4.1.1
         with:
           images: c2corg/v6_api
       - name: Checkout repository
