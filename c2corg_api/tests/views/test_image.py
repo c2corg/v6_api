@@ -1038,3 +1038,23 @@ class TestImageProxyRest(BaseTestRest):
                             format(self.image2.document_id),
                             status=302)
         self.assertIn('imageBI.jpg', resp.headers['Location'])
+
+    def test_bad_extension(self):
+        resp = self.app.get('/images/proxy/{}?size=BI&extension=badextension'.
+                            format(self.image.document_id),
+                            status=400)
+        errors = resp.json.get('errors')
+        self.assertEqual('invalid extension', errors[0].get('description'))
+
+    def test_format_without_size(self):
+        resp = self.app.get('/images/proxy/{}?extension=webp'.
+                            format(self.image.document_id),
+                            status=400)
+        errors = resp.json.get('errors')
+        self.assertEqual('invalid extension', errors[0].get('description'))
+
+    def test_format_with_size(self):
+        resp = self.app.get('/images/proxy/{}?size=BI&extension=avif'.
+                            format(self.image.document_id),
+                            status=302)
+        self.assertIn('imageBI.avif', resp.headers['Location'])
