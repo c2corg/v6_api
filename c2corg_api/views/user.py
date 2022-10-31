@@ -123,21 +123,36 @@ def validate_forum_username(request, **kwargs):
 
 
 def validate_username(request, **kwargs):
+    """Checks username is set, strips leading/trailing whitespaces,
+       checks unicity and if an email, that it matches the provided email.
     """
-    Check that the username is not an email,
-    or that it is the same as the actual email.
-    """
-    if 'username' in request.json and 'email' in request.json:
-        value = request.json['username']
+
+    if 'username' not in request.json:
+        request.errors.add('body', 'username', 'Required')
+        return
+
+    username = request.json['username'].strip()
+    if not username:
+        request.errors.add('body', 'username',
+                           'Username cannot be empty or whitespaces')
+        return
+
+    if not is_unused_user_attribute('username', username, lowercase=True):
+        request.errors.add('body', 'username', 'This username already exists')
+
+    # Check that the username is not an email,
+    # or that it is the same as the actual email.
+    if 'email' in request.json:
         email = request.json['email']
-        if (is_valid_email(value) and email != value):
+        if (is_valid_email(username) and email != username):
             request.errors.add(
                 'body',
                 'username',
                 'An email address used as username should be the same as the' +
                 ' one used as the account email address.')
             return
-        request.validated['username'] = value
+
+    request.validated['username'] = username
 
 
 def validate_captcha(request, **kwargs):
@@ -189,7 +204,6 @@ class UserRegistrationRest(object):
             colander_body_validator,
             validate_json_password,
             partial(validate_unique_attribute, "email"),
-            partial(validate_unique_attribute, "username"),
             partial(validate_unique_attribute,
                     "forum_username",
                     lowercase=True),
