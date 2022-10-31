@@ -43,7 +43,7 @@ services:
     image: 'docker.io/c2corg/c2corg_es:anon-2018-11-02'
     ports:
       - 9200:9200
-    command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon
+    command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon -Des.script.inline=true
 
   redis:
     image: 'docker.io/redis:3.2'

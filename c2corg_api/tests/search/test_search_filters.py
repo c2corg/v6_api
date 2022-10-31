@@ -6,8 +6,8 @@ from c2corg_api.search.search_filters import create_filter, build_query, \
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.tests import BaseTestCase
-from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox, \
-    Missing
+from elasticsearch_dsl.query import (Bool, GeoBoundingBox, Missing, Range,
+                                     Script, Term, Terms)
 
 
 class AdvancedSearchTest(BaseTestCase):
@@ -384,6 +384,44 @@ class AdvancedSearchTest(BaseTestCase):
                 Range(date_start={'gt': '2016-01-03'}),
                 Range(date_end={'lt': '2016-01-01'})
             ])))
+
+    def test_create_filter_period(self):
+        self.assertEqual(
+            create_filter('period', '', SearchOuting),
+            None)
+        self.assertEqual(
+            create_filter('period', 'invalid date', SearchOuting),
+            None)
+        self.assertEqual(
+            create_filter('period', '10-01', SearchOuting),
+            None)
+        self.assertEqual(
+            create_filter('period', '10-01,09-02', SearchOuting),
+            None)
+        self.assertEqual(
+            create_filter('period', '2016-10-01', SearchOuting),
+            None)
+        self.assertEqual(
+            create_filter('period', '2016-10-01, 12-31', SearchOuting),
+            None)
+        self.assertEqual(
+            create_filter('period', '12-31, 2016-10-01', SearchOuting),
+            None)
+
+        script_expected_string = "doc['date_end'].value%31556952000 >= min && doc['date_start'].value%31556952000 <= max"  # noqa: E501
+
+        self.assertEqual(
+            create_filter('period', '2016-01-02,2019-01-02', SearchOuting),
+            Script(
+                script=script_expected_string,
+                params={"min": 73008000, "max": 96552000}
+            ))
+        self.assertEqual(
+            create_filter('period', '2017-10-04,2016-10-10', SearchOuting),
+            Script(
+                script=script_expected_string,
+                params={"min": 23898456000, "max": 24437808000}
+            ))
 
     def test_create_filter_date(self):
         self.assertEqual(

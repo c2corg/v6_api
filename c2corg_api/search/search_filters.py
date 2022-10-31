@@ -1,16 +1,16 @@
 import logging
 import math
-
-from pyproj import Transformer
 import re
-from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.search.mapping_types import reserved_query_fields
+from datetime import datetime
 from functools import partial
 
-from c2corg_api.search import create_search, search_documents, \
-    get_text_query_on_title
-from elasticsearch_dsl.query import Range, Term, Terms, Bool, GeoBoundingBox, \
-    Missing
+from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.search import (create_search, get_text_query_on_title,
+                               search_documents)
+from c2corg_api.search.mapping_types import reserved_query_fields
+from elasticsearch_dsl.query import (Bool, GeoBoundingBox, Missing, Range,
+                                     Script, Term, Terms)
+from pyproj import Transformer
 
 log = logging.getLogger(__name__)
 
@@ -85,6 +85,8 @@ def create_filter(field_name, query_term, search_model):
         return create_id_filter(field, query_term)
     elif hasattr(field, '_date_range') and field._date_range:
         return create_date_range_filter(field, query_term)
+    elif hasattr(field, '_period') and field._period:
+        return create_period_filter(field, query_term)
     elif hasattr(field, '_date') and field._date:
         return create_date_filter(field, query_term)
     elif hasattr(field, '_integer_range') and field._integer_range:
@@ -262,6 +264,47 @@ def create_date_range_filter(field, query_term):
             Range(**kwargs_start),
             Range(**kwargs_end)
         ]))
+
+
+def create_period_filter(field, query_term):
+    """Creates an ElasticSearch period filter.
+
+    This filter type is currently only used for Outing.date_start/date_end.
+
+    Valid query terms are:
+        2022-01-01,2022-01-01
+        2022-01-01,2022-01-03
+    Search will ignore the year.
+
+    """
+    milliseconds_in_one_year = int(365.2425 * 24 * 3600 * 1000)
+    query_terms = query_term.split(',')
+    range_values = list(map(parse_date, query_terms))
+    range_values = [t for t in range_values if t is not None]
+
+    def milliseconds_since_first_day_of_year(date):
+        seconds_since_epoch = datetime.strptime(date, '%Y-%m-%d').timestamp()
+
+        return int(1000 * seconds_since_epoch) % milliseconds_in_one_year
+
+    n = len(range_values)
+
+    if n != 2:
+        return None
+
+    template = "doc['{0}'].value%{2} >= min && doc['{1}'].value%{2} <= max"
+
+    return Script(
+        script=template.format(
+            field.field_date_end,
+            field.field_date_start,
+            milliseconds_in_one_year
+        ),
+        params={
+            "min": milliseconds_since_first_day_of_year(range_values[0]),
+            "max": milliseconds_since_first_day_of_year(range_values[1])
+        }
+    )
 
 
 def create_date_filter(field, query_term):
