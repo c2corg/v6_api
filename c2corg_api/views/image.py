@@ -267,16 +267,28 @@ def validate_size(request, **kwargs):
         request.errors.add('querystring', 'size', 'invalid size')
 
 
+def validate_extension(request, **kwargs):
+    """Checks if the extension is an modern one.
+    """
+    ext = request.GET.get('extension', None)
+    size = request.GET.get('size', None)
+    if (ext is None) or (ext in ('webp', 'avif') and size is not None):
+        request.validated['extension'] = ext
+    else:
+        request.errors.add('querystring', 'extension', 'invalid extension')
+
+
 @resource(path='/images/proxy/{id}', cors_policy=cors_policy)
 class ImageProxyRest(object):
 
     def __init__(self, request):
         self.request = request
 
-    @view(validators=[validate_id, validate_size])
+    @view(validators=[validate_id, validate_size, validate_extension])
     def get(self):
         document_id = self.request.validated['id']
         size = self.request.validated['size']
+        extension = self.request.validated['extension']
         query = DBSession. \
             query(Image.filename). \
             filter(Image.document_id == document_id)
@@ -288,7 +300,10 @@ class ImageProxyRest(object):
             return HTTPFound("{}{}".format(image_url, image.filename))
         else:
             base, ext = os.path.splitext(image.filename)
-            ext = '.jpg' if ext == '.svg' else ext
+            if extension is None:
+                ext = '.jpg' if ext == '.svg' else ext
+            else:
+                ext = '.' + extension
             return HTTPFound("{}{}{}{}".format(image_url, base, size, ext))
 
 
