@@ -39,7 +39,10 @@ class DocumentVersionRest(object):
             raise HTTPNotFound(
                 'no version for document {0}'.format(document_id))
         else:
-            cache_key = '{0}-{1}'.format(base_cache_key, version_id)
+            # version caching is distinct for moderators
+            cache_key = '{0}-{1}{2}'.format(
+                base_cache_key, version_id,
+                '-mod' if self.request.has_permission('moderator') else '')
             # set and check the etag: if the etag value provided in the
             # request equals the current etag, return 'NotModified'
             etag_cache(self.request, cache_key)
@@ -66,23 +69,28 @@ class DocumentVersionRest(object):
         if version is None:
             raise HTTPNotFound('invalid version')
 
-        archive_document = version.document_archive
-        archive_document.geometry = version.document_geometry_archive
-        archive_document.locales = [version.document_locales_archive]
+        document = None
+        if not version.masked or self.request.has_permission('moderator'):
+            archive_document = version.document_archive
+            archive_document.geometry = version.document_geometry_archive
+            archive_document.locales = [version.document_locales_archive]
 
-        if adapt_schema:
-            schema = adapt_schema(schema, archive_document)
+            if adapt_schema:
+                schema = adapt_schema(schema, archive_document)
+
+            document = to_json_dict(
+                archive_document,
+                schema,
+                cook_locale=True
+            )
+        # TODO if masked, return limited info as in DocumentInfoRest?
 
         previous_version_id, next_version_id = get_neighbour_version_ids(
             version_id, document_id, lang
         )
 
         return {
-            'document': to_json_dict(
-                archive_document,
-                schema,
-                cook_locale=True
-            ),
+            'document': document,
             'version': serialize_version(version),
             'previous_version_id': previous_version_id,
             'next_version_id': next_version_id,
@@ -95,7 +103,8 @@ def serialize_version(version):
         'user_id': version.history_metadata.user_id,
         'name': version.history_metadata.user.name,
         'comment': version.history_metadata.comment,
-        'written_at': version.history_metadata.written_at.isoformat()
+        'written_at': version.history_metadata.written_at.isoformat(),
+        'masked': version.masked,
     }
 
 
