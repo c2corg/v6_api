@@ -91,6 +91,7 @@ class TestChangesDocumentRest(BaseTestRest):
         self.session.add(self.profile2)
         self.session.flush()
 
+    def test_counts(self):
         version_count = self.session.query(DocumentVersion).count()
         self.assertEqual(4, version_count)
 
