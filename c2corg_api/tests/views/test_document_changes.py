@@ -51,7 +51,6 @@ class TestChangesDocumentRest(BaseTestRest):
 
         self.waypoint3 = Waypoint(
             waypoint_type='summit', elevation=4985,
-            redirects_to=self.waypoint1.document_id,
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
