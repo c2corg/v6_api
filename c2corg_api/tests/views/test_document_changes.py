@@ -51,7 +51,6 @@ class TestChangesDocumentRest(BaseTestRest):
 
         self.waypoint3 = Waypoint(
             waypoint_type='summit', elevation=4985,
-            redirects_to=self.waypoint1.document_id,
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
@@ -92,6 +91,7 @@ class TestChangesDocumentRest(BaseTestRest):
         self.session.add(self.profile2)
         self.session.flush()
 
+    def test_counts(self):
         version_count = self.session.query(DocumentVersion).count()
         self.assertEqual(4, version_count)
 
