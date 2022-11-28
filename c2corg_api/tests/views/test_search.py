@@ -15,11 +15,8 @@ class TestSearchRest(BaseTestRest):
         self._prefix = '/search'
 
         self.article1 = Article(
-            document_id=534684,
             categories=['site_info'], activities=['hiking'],
             article_type='collab',
-            geometry=DocumentGeometry(
-                geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
                 DocumentLocale(
                     lang='en', title='Lac d\'Annecy',
@@ -32,7 +29,6 @@ class TestSearchRest(BaseTestRest):
             ])
         self.session.add(self.article1)
         self.waypoint1 = Waypoint(
-            document_id=534681,
             waypoint_type='summit', elevation=2000,
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'),
@@ -48,7 +44,6 @@ class TestSearchRest(BaseTestRest):
             ])
         self.session.add(self.waypoint1)
         self.session.add(Waypoint(
-            document_id=534682,
             waypoint_type='summit', elevation=4985,
             geometry=DocumentGeometry(
                 geom='SRID=3857;POINT(635956 5723604)'),
@@ -59,7 +54,6 @@ class TestSearchRest(BaseTestRest):
                     summary='The heighest point in Europe')
             ]))
         self.session.add(Route(
-            document_id=534683,
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
             locales=[
                 RouteLocale(
@@ -67,11 +61,8 @@ class TestSearchRest(BaseTestRest):
                     description='...', summary='Ski')
             ]))
         self.book1 = Book(
-            document_id=534685,
             activities=['hiking'],
             book_types=['biography'],
-            geometry=DocumentGeometry(
-                geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
                 DocumentLocale(
                     lang='en', title='Lac d\'Annecy',
