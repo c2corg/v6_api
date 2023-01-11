@@ -4,7 +4,7 @@ bcrypt==4.0.1
 bleach[css]==5.0.1
 colander==2.0
 dogpile.cache==1.1.8
-elasticsearch==2.4.1
+elasticsearch==8.6.0
 elasticsearch_dsl==2.2.0
 geoalchemy2==0.4.2
 geojson==2.5.0
