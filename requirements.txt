@@ -7,7 +7,7 @@ dogpile.cache==1.1.8
 elasticsearch==2.4.1
 elasticsearch_dsl==2.2.0
 geoalchemy2==0.4.2
-geojson==2.5.0
+geojson==3.0.1
 geomet==1.0.0
 kombu==5.2.4
 Markdown==3.4.1 # at next update, please remove replace_marker() function in toc extension 
