@@ -123,4 +123,4 @@ jobs:
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
           build-args: |
-            VERSION=$GITHUB_SHA
+            VERSION=${{ github.sha }}
