@@ -5,7 +5,7 @@ bleach[css]==5.0.1
 colander==2.0
 dogpile.cache==1.1.8
 elasticsearch==2.4.1
-elasticsearch_dsl==2.2.0
+elasticsearch_dsl==7.4.1
 geoalchemy2==0.4.2
 geojson==3.0.1
 geomet==1.0.0
