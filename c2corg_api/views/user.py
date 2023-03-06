@@ -505,7 +505,7 @@ class UserLoginRest(object):
             # return a 403 with an explicit message that can be caught
             # by the frontend
             if user.tos_validated is None and accept_tos is not True:
-                raise HTTPForbidden('Terms of Service needs to be accepted')
+                raise HTTPForbidden('Terms of Service need to be accepted')
 
             # If the user has not validated Terms of Service, but the request
             # sends the accept field, store it in the database
