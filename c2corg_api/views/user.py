@@ -515,7 +515,7 @@ class UserLoginRest(object):
                         exc_info=True)
             return response
         else:
-            request.errors.status = 403
+            request.errors.status = 401
             request.errors.add('body', 'user', 'Login failed')
             return None
 
