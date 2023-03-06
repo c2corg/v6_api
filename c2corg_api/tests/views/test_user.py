@@ -580,7 +580,8 @@ class TestUserRest(BaseUserTestRest):
     def test_login_no_tos_failure(self):
         body = self.login('contributornotos', password='some pass',
                           status=403).json
-        self.assertErrorsContain(body, 'Forbidden', 'Terms of Service needs to be accepted')
+        self.assertErrorsContain(body, 'Forbidden',
+                                 'Terms of Service needs to be accepted')
 
     def test_login_no_tos_success(self):
         # A user which did not previously accepted ToS can login
