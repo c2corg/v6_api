@@ -53,7 +53,7 @@ def _get_cleaner():
     global _cleaner
 
     if not _cleaner:
-        allowed_tags = bleach.sanitizer.ALLOWED_TAGS + [
+        allowed_tags = bleach.sanitizer.ALLOWED_TAGS.union({
             # headers
             "h1", "h2", "h3", "h4", "h5", "h6",
 
@@ -70,7 +70,7 @@ def _get_cleaner():
 
             # tables
             "table", "tr", "td", "th", "tbody"
-        ]
+        })
 
         allowed_attributes = dict(bleach.sanitizer.ALLOWED_ATTRIBUTES)
         allowed_extra_attributes = {
