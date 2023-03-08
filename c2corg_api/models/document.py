@@ -283,6 +283,10 @@ class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
     )
 
 
+# `geomet` does not support EWKB, so load geometries as WKB
+Geometry.as_binary = 'ST_AsBinary'
+
+
 class _DocumentGeometryMixin(object):
     version = Column(Integer, nullable=False)
 
