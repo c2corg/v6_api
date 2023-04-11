@@ -14,7 +14,7 @@ Markdown==3.4.3 # at next update, please remove replace_marker() function in toc
 phpserialize==1.3.0 # phpserialize is only required during the migration
 psycopg2==2.9.6
 pyjwt==1.7.1
-pymdown-extensions==9.10
+pymdown-extensions==9.11
 pyproj==3.5.0
 pyramid-jwtauth==0.1.3
 pyramid==1.10.8
