@@ -174,7 +174,7 @@ class TestWaypoint(BaseTestCase):
         waypoint_in = Waypoint(
             document_id=1, waypoint_type='summit', elevation=14,
             geometry=DocumentGeometry(
-                geom='SRID=3857;POINT(445279.0 1.0)')
+                geom='SRID=3857;POINT(445279.1 1.0)')
         )
         waypoint_db.update(waypoint_in)
         self.assertNotEqual(waypoint_db.geometry.geom, geom1)

@@ -322,7 +322,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'quality': quality_types[1],
                 'geometry': {
                     'version': self.area1.geometry.version,
-                    'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
+                    'geom_detail': '{"type":"Polygon","coordinates":[[[668515.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668515.249382151,5728802.39591739]]]}'  # noqa
                 },
                 'locales': [
                     {'lang': 'en', 'title': 'New title',
@@ -340,6 +340,7 @@ class TestAreaRest(BaseDocumentTestRest):
         version_en = area.versions[2]
 
         # geometry has been changed because the user is a moderator
+        # (and geometry is not the same)
         archive_geometry_en = version_en.document_geometry_archive
         self.assertEqual(archive_geometry_en.version, 2)
 
