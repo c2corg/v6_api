@@ -41,7 +41,7 @@ jobs:
           git add Changelog.md
           git commit -m "Update changelog"
       - name: Push changes
-        uses: ad-m/github-push-action@v0.6.0
+        uses: ad-m/github-push-action@v0.8.0
         with:
           directory: wiki
           repository: c2corg/v6_api.wiki
