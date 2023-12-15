@@ -1,6 +1,6 @@
 alembic==1.12.1
 apscheduler==3.9.1.post1
-bcrypt==4.0.1
+bcrypt==4.1.2
 bleach[css]==6.1.0
 colander==2.0
 dogpile.cache==1.2.2
