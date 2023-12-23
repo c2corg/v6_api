@@ -134,6 +134,21 @@ class ProfileFeedRest(object):
             raise HTTPForbidden('no permission to see the feed')
 
 
+def get_params_type_filter(request, default_page_limit=DEFAULT_PAGE_LIMIT):
+    lang, token_id, token_time, limit = get_params(request, default_page_limit)
+    filters = {}
+    for (param, key) in [('t', 'doc_type'), ('lic', 'license_type'),
+                         ('qual', 'quality')]:
+        if param in request.params:
+            param_list = request.params[param].split(',')
+            filters[key] = {
+                'included': [t for t in param_list if t[0] != '-'],
+                'excluded': [t[1:] for t in param_list if t[0] == '-']
+            }
+
+    return lang, token_id, token_time, limit, filters
+
+
 def get_params(request, default_page_limit=DEFAULT_PAGE_LIMIT):
     lang = request.validated.get('lang')
     token_id = request.validated.get('token_id')
