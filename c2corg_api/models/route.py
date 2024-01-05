@@ -7,7 +7,7 @@ from sqlalchemy import (
     SmallInteger,
     String,
     ForeignKey
-    )
+)
 
 from colanderalchemy import SQLAlchemySchemaNode
 import colander
@@ -110,6 +110,9 @@ class _RouteMixin(object):
     # cotation libre FR
     rock_free_rating = Column(enums.climbing_rating)
 
+    # cotation libre FR
+    bouldering_rating = Column(enums.bouldering_rating)
+
     # cotation obligatoire FR
     rock_required_rating = Column(enums.climbing_rating)
 
@@ -162,8 +165,8 @@ attributes = [
     'lift_access', 'ski_rating', 'ski_exposition', 'labande_ski_rating',
     'labande_global_rating', 'global_rating', 'engagement_rating',
     'risk_rating', 'equipment_rating', 'ice_rating', 'mixed_rating',
-    'exposition_rock_rating', 'rock_free_rating', 'rock_required_rating',
-    'aid_rating', 'via_ferrata_rating', 'hiking_rating',
+    'exposition_rock_rating', 'rock_free_rating', 'bouldering_rating',
+    'rock_required_rating', 'aid_rating', 'via_ferrata_rating', 'hiking_rating',
     'hiking_mtb_exposition', 'snowshoe_rating', 'mtb_up_rating',
     'mtb_down_rating', 'mtb_length_asphalt', 'mtb_length_trail',
     'mtb_height_diff_portages', 'rock_types', 'climbing_outdoor_type',
@@ -258,8 +261,8 @@ class RouteLocale(_RouteLocaleMixin, DocumentLocale):
     __tablename__ = 'routes_locales'
 
     id = Column(
-                Integer,
-                ForeignKey(schema + '.documents_locales.id'), primary_key=True)
+        Integer,
+        ForeignKey(schema + '.documents_locales.id'), primary_key=True)
 
     __mapper_args__ = {
         'polymorphic_identity': ROUTE_TYPE,

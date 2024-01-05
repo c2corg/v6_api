@@ -44,16 +44,16 @@ class SearchRoute(SearchDocument):
     height_diff_difficulties = QInteger(
         'dhei', range=True)
     route_types = QEnumArray(
-         'rtyp', model_field=Route.route_types)
+        'rtyp', model_field=Route.route_types)
     orientations = QEnumArray(
-         'fac', model_field=Route.orientations)
+        'fac', model_field=Route.orientations)
     durations = QEnumRange(
         'time', model_field=Route.durations,
         enum_mapper=sortable_route_duration_types)
     glacier_gear = QEnum(
-         'glac', model_field=Route.glacier_gear)
+        'glac', model_field=Route.glacier_gear)
     configuration = QEnumArray(
-         'conf', model_field=Route.configuration)
+        'conf', model_field=Route.configuration)
     ski_rating = QEnumRange(
         'trat', model_field=Route.ski_rating,
         enum_mapper=sortable_ski_ratings)
@@ -90,6 +90,9 @@ class SearchRoute(SearchDocument):
     rock_free_rating = QEnumRange(
         'frat', model_field=Route.rock_free_rating,
         enum_mapper=sortable_climbing_ratings)
+    bouldering_rating = QEnumRange(
+        'frat', model_field=Route.bouldering_rating,
+        enum_mapper=sortable_climbing_ratings)
     rock_required_rating = QEnumRange(
         'rrat', model_field=Route.rock_required_rating,
         enum_mapper=sortable_climbing_ratings)
@@ -121,11 +124,11 @@ class SearchRoute(SearchDocument):
     mtb_height_diff_portages = QInteger(
         'mbpush', range=True)
     rock_types = QEnumArray(
-         'rock', model_field=Route.rock_types)
+        'rock', model_field=Route.rock_types)
     climbing_outdoor_type = QEnumArray(
-         'crtyp', model_field=Route.climbing_outdoor_type)
+        'crtyp', model_field=Route.climbing_outdoor_type)
     slackline_type = QEnum(
-         'sltyp', model_field=Route.slackline_type)
+        'sltyp', model_field=Route.slackline_type)
 
     FIELDS = [
         'activities', 'elevation_min', 'elevation_max', 'height_diff_up',
