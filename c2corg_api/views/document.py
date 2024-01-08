@@ -20,6 +20,8 @@ from c2corg_api.models.topo_map import schema_listing_topo_map, \
     MAP_TYPE
 from c2corg_api.models.topo_map_association import update_maps_for_document, \
     get_maps
+from c2corg_api.models.document_views import DocumentViews
+
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import etag_cache, set_best_locale
@@ -106,6 +108,19 @@ class DocumentRest(object):
 
         return document_ids, total
 
+    def increment_views(self,document_id):
+        document_views = DBSession.query(DocumentViews) \
+            .filter(DocumentViews.document_id == document_id) \
+            .first()
+        if document_views:
+            document_views.view_count = DocumentViews.view_count + 1 
+        else:
+            views = DocumentViews(
+                    document_id=document_id,
+                    view_count=1
+                )
+            DBSession.add(views)
+
     def _get(self, document_config, schema, clazz_locale=None,
              adapt_schema=None, include_maps=False, include_areas=True,
              set_custom_associations=None, set_custom_fields=None,
@@ -129,7 +144,7 @@ class DocumentRest(object):
             lang = cook
 
         cache = cache_document_cooked if cook else cache_document_detail
-
+        self.increment_views(id)
         def create_response():
             return self._get_in_lang(
                 id, lang, document_config.clazz, schema, editing_view,
