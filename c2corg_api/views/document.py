@@ -132,6 +132,12 @@ class DocumentRest(object):
 
         cache = cache_document_cooked if cook else cache_document_detail
 
+        claims = self.request.environ.get('jwtauth.claims', {})
+        is_bot = claims.get('robot', False)
+        user_agent = self.request.headers.get('User-Agent', '')
+        if not (is_bot or is_crawler(user_agent)):
+            publish(self.request.registry.documents_views_queue_config, id)
+
         def create_response():
             return self._get_in_lang(
                 id, lang, document_config.clazz, schema, editing_view,
