@@ -4,6 +4,7 @@ import logging
 from apscheduler.events import EVENT_JOB_ERROR
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from c2corg_api.jobs.increment_documents_views import increment_documents_views
 from c2corg_api.jobs.purge_expired_tokens import purge_token
 from c2corg_api.jobs.purge_non_activated_accounts import purge_account
 
@@ -37,6 +38,16 @@ def configure_scheduler_from_config(settings):
         trigger='cron',
         minute=30,
         kwargs={'settings': settings},
+    )
+
+    # run `increment_documents_views` job every 5 minutes
+    scheduler.add_job(
+        increment_documents_views,
+        args=[settings],
+        id='increment_documents_views',
+        name='Increment documents views',
+        trigger='interval',
+        minutes=5,
     )
 
     scheduler.add_listener(exception_listener, EVENT_JOB_ERROR)

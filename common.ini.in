@@ -45,6 +45,7 @@ redis.db_jobs = {redis_db_jobs}
 # queue configuration
 redis.exchange = {redis_exchange}
 redis.queue_es_sync = {redis_queue_es}
+redis.queue_documents_views_sync = {redis_queue_documents_views}
 redis.queue_pool = 20
 
 # cache configuration

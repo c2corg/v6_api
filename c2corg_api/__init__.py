@@ -9,7 +9,8 @@ from c2corg_api.caching import configure_caches
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route
-from c2corg_api.search import configure_es_from_config, get_queue_config
+from c2corg_api.queues.queues_service import get_queue_config
+from c2corg_api.search import configure_es_from_config
 from c2corg_api.views import configure_cors_policy
 
 log = logging.getLogger(__name__)
@@ -43,7 +44,11 @@ def create_app(settings):
 
     registry = Registry(
         settings,
-        queue_config=get_queue_config(settings),
+        queue_config=get_queue_config(settings, settings['redis.queue_es_sync']),
+        # the queue of the documents views
+        documents_views_queue_config=get_queue_config(
+            settings, settings['redis.queue_documents_views_sync']
+        ),
         feed_admin_user_account_id=_account_id(settings, 'feed.admin_user_account'),
         anonymous_user_id=_account_id(settings, 'guidebook.anonymous_user_account'),
     )

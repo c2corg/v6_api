@@ -100,6 +100,11 @@ class ValidatedRequest:
         return self.json_body
 
     @property
+    def is_robot(self):
+        """Whether the authenticated user is a bot account."""
+        return self._user is not None and self._user.is_robot
+
+    @property
     def authenticated_userid(self):
         return None if self._user is None else self._user.id
 
