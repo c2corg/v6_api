@@ -76,6 +76,7 @@ class Document(Base, _DocumentMixin):
     """
     __tablename__ = 'documents'
     document_id = Column(Integer, primary_key=True)
+    view_count = Column(Integer, nullable=False, server_default='0')
 
     locales = relationship('DocumentLocale')
     geometry = relationship('DocumentGeometry', uselist=False)

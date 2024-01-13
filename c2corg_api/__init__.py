@@ -6,7 +6,8 @@ from sqlalchemy import engine_from_config, exc, event
 from sqlalchemy.pool import Pool
 
 from c2corg_api.models import DBSession, Base
-from c2corg_api.search import configure_es_from_config, get_queue_config
+from c2corg_api.queues.queues_service import get_queue_config
+from c2corg_api.search import configure_es_from_config
 
 from pyramid.security import Allow, Everyone, Authenticated
 
@@ -41,7 +42,18 @@ def main(global_config, **settings):
 
     config = Configurator(settings=settings)
     config.include('cornice')
-    config.registry.queue_config = get_queue_config(settings)
+    config.registry.queue_config = get_queue_config(
+        settings,
+        settings['redis.queue_es_sync']
+    )
+
+    # Configure documents views queue
+    config.registry.documents_views_queue_config = (
+        get_queue_config(
+            settings,
+            settings['redis.queue_documents_views_sync']
+        )
+    )
 
     # FIXME? Make sure this tween is run after the JWT validation
     # Using an explicit ordering in config files might be needed.

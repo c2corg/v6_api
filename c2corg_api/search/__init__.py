@@ -23,8 +23,6 @@ from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl.query import MultiMatch
-from kombu import Exchange, Queue, pools
-from kombu.connection import Connection
 
 # the maximum number of documents that can be returned for each document type
 SEARCH_LIMIT_MAX = 50
@@ -56,22 +54,6 @@ def configure_es_from_config(settings):
     elasticsearch_config['index'] = settings['elasticsearch.index']
     elasticsearch_config['host'] = settings['elasticsearch.host']
     elasticsearch_config['port'] = int(settings['elasticsearch.port'])
-
-
-def get_queue_config(settings):
-    # set the number of connections to Redis
-    pools.set_limit(int(settings['redis.queue_pool']))
-
-    class QueueConfiguration(object):
-        def __init__(self, settings):
-            self.connection = Connection(
-                settings['redis.url'],
-                virtual_host=settings['redis.db_queue']
-            )
-            self.exchange = Exchange(settings['redis.exchange'], type='direct')
-            self.queue = Queue(settings['redis.queue_es_sync'], self.exchange)
-
-    return QueueConfiguration(settings)
 
 
 def create_search(document_type):
