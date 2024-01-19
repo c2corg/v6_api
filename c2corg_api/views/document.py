@@ -111,7 +111,7 @@ class DocumentRest(object):
     def _get(self, document_config, schema, clazz_locale=None,
              adapt_schema=None, include_maps=False, include_areas=True,
              set_custom_associations=None, set_custom_fields=None,
-             custom_cache_key=None):
+             custom_cache_key=None, adapt_response=None):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')
         editing_view = self.request.GET.get('e', '0') != '0'
@@ -138,12 +138,16 @@ class DocumentRest(object):
         if not (is_bot or is_crawler(user_agent)):
             publish(self.request.registry.documents_views_queue_config, id)
 
+        user_id = claims.get('sub', False)
+
         def create_response():
             return self._get_in_lang(
                 id, lang, document_config.clazz, schema, editing_view,
                 clazz_locale, adapt_schema, include_maps, include_areas,
                 set_custom_associations, set_custom_fields,
                 cook_locale=cook)
+
+        response = None
 
         if not editing_view:
             increment_document_view_count(self.request, id)
@@ -158,11 +162,16 @@ class DocumentRest(object):
                 # set and check the etag: if the etag value provided in the
                 # request equals the current etag, return 'NotModified'
                 etag_cache(self.request, cache_key)
+                response = get_or_create(cache, cache_key, create_response)
 
-                return get_or_create(cache, cache_key, create_response)
+        if response is None:
+            # don't cache if requesting a document for editing
+            response = create_response()
 
-        # don't cache if requesting a document for editing
-        return create_response()
+        if adapt_response:
+            return adapt_response(response, user_id)
+
+        return response
 
     def _get_in_lang(self, id, lang, clazz, schema, editing_view,
                      clazz_locale=None, adapt_schema=None,
@@ -204,12 +213,14 @@ class DocumentRest(object):
         if adapt_schema:
             schema = adapt_schema(schema, document)
 
-        return to_json_dict(
+        response = to_json_dict(
             document,
             schema,
             with_special_locales_attrs=True,
             cook_locale=cook_locale
         )
+
+        return response
 
     def _set_associations(self, document, lang, editing_view):
         document.associations = doc_associations.get_associations(
