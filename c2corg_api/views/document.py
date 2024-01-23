@@ -12,7 +12,8 @@ from c2corg_api.models.cache_version import update_cache_version, \
     update_cache_version_associations, get_cache_key
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
-    ArchiveDocumentGeometry, set_available_langs, get_available_langs)
+    ArchiveDocumentGeometry, set_available_langs, get_available_langs,
+    Document)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.feed import update_feed_document_create, \
     update_feed_document_update
@@ -132,14 +133,6 @@ class DocumentRest(object):
 
         cache = cache_document_cooked if cook else cache_document_detail
 
-        claims = self.request.environ.get('jwtauth.claims', {})
-        is_bot = claims.get('robot', False)
-        user_agent = self.request.headers.get('User-Agent', '')
-        if not (is_bot or is_crawler(user_agent)):
-            publish(self.request.registry.documents_views_queue_config, id)
-
-        user_id = claims.get('sub', False)
-
         def create_response():
             return self._get_in_lang(
                 id, lang, document_config.clazz, schema, editing_view,
@@ -148,9 +141,11 @@ class DocumentRest(object):
                 cook_locale=cook)
 
         response = None
+        claims = self.request.environ.get('jwtauth.claims', {})
+        user_id = claims.get('sub', False)
 
         if not editing_view:
-            increment_document_view_count(self.request, id)
+            increment_document_view_count(self.request, id, claims)
 
             cache_key = get_cache_key(
                 id,
@@ -431,6 +426,12 @@ class DocumentRest(object):
             if document.type != MAP_TYPE and UpdateType.GEOM in update_types:
                 update_maps_for_document(document, reset=True)
 
+            if UpdateType.DISABLE_VIEW_COUNT in update_types:
+                update_disable_view_count_for_document(
+                    document_in.document_id,
+                    document_in.disable_view_count
+                )
+
             if after_update:
                 after_update(document, update_types, user_id=user_id)
 
@@ -680,9 +681,16 @@ def make_validator_update(fields, type_field=None, valid_type_values=None):
     return f
 
 
-def increment_document_view_count(request, doc_id):
-    claims = request.environ.get('jwtauth.claims', {})
+def increment_document_view_count(request, doc_id, claims):
     is_bot = claims.get('robot', False)
     user_agent = request.headers.get('User-Agent', '')
     if not (is_bot or is_crawler(user_agent)):
         publish(request.registry.documents_views_queue_config, doc_id)
+
+
+def update_disable_view_count_for_document(document_id, disable_view_count):
+    """ Update document disable_view_count value
+    """
+    DBSession.query(Document). \
+        filter(Document.document_id == document_id). \
+        update({"disable_view_count": disable_view_count})
