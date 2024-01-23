@@ -162,6 +162,11 @@ def update_document(
         if document.type != MAP_TYPE and UpdateType.GEOM in update_types:
             update_maps_for_document(document, reset=True)
 
+        if UpdateType.DISABLE_VIEW_COUNT in update_types:
+            update_disable_view_count_for_document(
+                document_in.document_id, document_in.disable_view_count
+            )
+
         if after_update:
             after_update(document, update_types, user_id=user_id)
 
@@ -670,6 +675,7 @@ def read_document(
     set_custom_associations=None,
     set_custom_fields=None,
     custom_cache_key=None,
+    adapt_response=None,
 ):
     """Return a document in a language, cached, with its associations."""
     id = request.validated['id']
@@ -704,6 +710,9 @@ def read_document(
             cook_locale=cook,
         )
 
+    response = None
+    user_id = request.authenticated_userid
+
     if not editing_view:
         cache_key = get_cache_key(
             id,
@@ -719,11 +728,16 @@ def read_document(
             # set and check the etag: if the etag value provided in the
             # request equals the current etag, return 'NotModified'
             etag_cache(request, cache_key)
+            response = get_or_create(cache, cache_key, create_response)
 
-            return get_or_create(cache, cache_key, create_response)
+    if response is None:
+        # don't cache if requesting a document for editing
+        response = create_response()
 
-    # don't cache if requesting a document for editing
-    return create_response()
+    if adapt_response:
+        return adapt_response(response, user_id)
+
+    return response
 
 
 def document_in_lang(
@@ -778,6 +792,13 @@ def document_in_lang(
     )
     doc_dict['license'] = get_license(document.type, doc_dict)
     return doc_dict
+
+
+def update_disable_view_count_for_document(document_id, disable_view_count):
+    """Update document disable_view_count value."""
+    DBSession.query(Document).filter(Document.document_id == document_id).update(
+        {'disable_view_count': disable_view_count}
+    )
 
 
 def set_associations(document, lang, editing_view):

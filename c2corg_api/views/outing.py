@@ -30,6 +30,7 @@ from c2corg_api.views.document import (
 )
 from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import (
+    adapt_get_outing_response,
     outing_documents_config,
     outing_schema_adaptor,
 )
@@ -181,6 +182,7 @@ def get_outing(request):
         outing_documents_config,
         outing_schema,
         adapt_schema=outing_schema_adaptor,
+        adapt_response=adapt_get_outing_response,
     )
 
 
