@@ -244,9 +244,12 @@ class _WaypointLocaleMixin(object):
     # date de deneigment ou d'ouverture (access)
     access_period = Column(String)
 
+    # bibliographie et webographie
+    external_resources = Column(String)
+
 
 attributes_locales = [
-    'access', 'access_period'
+    'access', 'access_period', 'external_resources'
 ]
 
 
