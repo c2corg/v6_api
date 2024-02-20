@@ -15,7 +15,7 @@ def validate_mailinglist_statuses(request, **kwargs):
         if ml not in valid_mailinglists:
             request.errors.add(
                 'body', ml, 'Mailing list `{0}` does not exist'.format(ml))
-        elif type(data[ml]) != bool:
+        elif not isinstance(data[ml], bool):
             request.errors.add(
                 'body', ml,
                 'Status `{0}` of mailing list `{1}` should be boolean'.format(

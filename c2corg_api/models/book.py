@@ -1,7 +1,7 @@
 from c2corg_api.models import schema, Base, enums
 from c2corg_api.models.document import (
     ArchiveDocument, Document, schema_document_locale, schema_attributes)
-from c2corg_api.models.schema_utils import get_update_schema,\
+from c2corg_api.models.schema_utils import get_update_schema, \
     restrict_schema, get_create_schema
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from sqlalchemy.dialects.postgresql.array import ARRAY

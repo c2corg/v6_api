@@ -5,7 +5,7 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
 from c2corg_api.models.area_association import update_areas_for_document, \
     get_areas
-from c2corg_api.models.association import create_associations,\
+from c2corg_api.models.association import create_associations, \
     synchronize_associations
 from c2corg_api.models.cache_version import update_cache_version, \
     update_cache_version_associations, get_cache_key
