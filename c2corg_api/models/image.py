@@ -1,4 +1,4 @@
-from c2corg_api.models.schema_utils import restrict_schema,\
+from c2corg_api.models.schema_utils import restrict_schema, \
     get_update_schema, get_create_schema
 from c2corg_api.models.common.fields_image import fields_image
 from sqlalchemy import (
