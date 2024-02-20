@@ -1,5 +1,5 @@
 alembic==1.13.1
-apscheduler==3.9.1.post1
+apscheduler==3.10.4
 bcrypt==4.1.2
 bleach[css]==6.1.0
 colander==2.0
