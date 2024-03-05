@@ -1437,6 +1437,70 @@ class TestWaypointRest(BaseDocumentTestRest):
     def test_get_associations_history(self):
         self._get_association_logs(self.waypoint)
 
+    def test_get_with_external_resources(self):
+        """Test getting a document with locale and external resources.
+        """
+        response = self.get(self.waypoint4)
+        locale_en = self.get_locale('en', response.get('locales'))
+        self.assertEqual(
+            locale_en.get('external_resources'),
+            'https://wikipedia.com/en'
+        )
+
+    def test_put_success_external_resource(self):
+        """Test updating a document by adding a locale with external resources.
+        """
+        external_resources = 'https://wikipedia.com/en'
+        body_put = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.waypoint.document_id,
+                'version': self.waypoint.version,
+                'quality': quality_types[1],
+                'waypoint_type': 'summit',
+                'elevation': 1234,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Granier',
+                     'description': 'A.', 'access': 'n',
+                     'version': self.locale_en.version,
+                     'external_resources': external_resources}
+                ],
+                'geometry': None,
+            }
+        }
+        (body, waypoint) = self.put_success_all(
+            body_put, self.waypoint, cache_version=3)
+        locale_en = waypoint.get_locale('en')
+        self.assertEqual(locale_en.external_resources, external_resources)
+
+    def test_post_success_external_resource(self):
+        """Test creating a document with external resources in locale.
+        """
+        external_resources = 'https://wikipedia.com/en'
+        body = {
+            'geometry': {
+                'document_id': 5678, 'version': 6789,
+                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
+                'geom_detail':
+                    '{"type": "Point", "coordinates": [635956, 5723604]}'
+            },
+            'waypoint_type': 'summit',
+            'elevation': 3779,
+            'locales': [{
+                'id': 3456, 'version': 4567,
+                'lang': 'en', 'title': 'Mont Pourri',
+                'access': 'y', 'external_resources': external_resources}
+            ],
+            'associations': {
+                'waypoint_children': [
+                    {'document_id': self.waypoint2.document_id}
+                ]
+            }
+        }
+        (body, waypoint) = self.post_success(body)
+        locale_en = waypoint.get_locale('en')
+        self.assertEqual(locale_en.external_resources, external_resources)
+
     def _add_test_data(self):
         self.waypoint = Waypoint(
             waypoint_type='summit', elevation=2203)
@@ -1483,10 +1547,10 @@ class TestWaypointRest(BaseDocumentTestRest):
                 geom='SRID=3857;POINT(659775 5694854)'))
         self.waypoint4.locales.append(WaypointLocale(
             lang='en', title='Mont Granier', description='...',
-            access='yep'))
+            access='yep', external_resources='https://wikipedia.com/en'))
         self.waypoint4.locales.append(WaypointLocale(
             lang='fr', title='Mont Granier', description='...',
-            access='ouai'))
+            access='ouai', external_resources='https://wikipedia.com/fr'))
         self.session.add(self.waypoint4)
 
         self.waypoint5 = Waypoint(
