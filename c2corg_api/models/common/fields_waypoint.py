@@ -193,7 +193,9 @@ fields_waypoint = {
             'parking_fee'
         ],
         'required': DEFAULT_REQUIRED,
-        'listing': DEFAULT_LISTING
+        'listing': DEFAULT_LISTING + [
+            'public_transportation_rating'
+        ]
     },
     'local_product': {
         'fields': DEFAULT_FIELDS + [
