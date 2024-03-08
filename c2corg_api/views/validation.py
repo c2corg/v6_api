@@ -14,7 +14,7 @@ from c2corg_api.models.user import User
 from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.models.waypoint import WAYPOINT_TYPE
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.views.document_associations import get_first_column
 
 from c2corg_api.models.common.associations import valid_associations
@@ -604,6 +604,22 @@ def _get_linked_document_ids(associations):
         ])
 
 
+def _is_any_climbing_indoor_waypoint(associations_in):
+    """ Check if there is any climbing indoor waypoints in the linked waypoints
+    """
+    waypoints_id = [doc['document_id'] for doc in associations_in['waypoints']]
+
+    # load the waypoint type for each linked waypoint
+    if waypoints_id:
+        query_waypoints_with_type = DBSession. \
+            query(Waypoint.waypoint_type). \
+            filter(Waypoint.document_id.in_(waypoints_id))
+        for waypoint in query_waypoints_with_type.all():
+            if waypoint.waypoint_type == 'climbing_indoor':
+                return True
+    return False
+
+
 def _add_associations(
         associations, associations_in, main_document_type,
         document_key, other_document_type, errors):
@@ -624,18 +640,26 @@ def _add_associations(
             errors.add(
                 'body', 'associations.' + document_key,
                 'invalid association type')
-        else:
-            if document_key == 'waypoints' and main_document_type != BOOK_TYPE:
-                is_parent = True
-            elif document_key == 'waypoint_children':
-                is_parent = False
+            return
 
-            associations[document_key] = [
-                {
-                    'document_id': doc['document_id'],
-                    'is_parent': is_parent
-                } for doc in associations_in[document_key]
-                ]
+        if document_key == 'waypoints' and main_document_type == ROUTE_TYPE:
+            if _is_any_climbing_indoor_waypoint(associations_in):
+                errors.add(
+                    'body',
+                    'associations.climbing_indoor_waypoint',
+                    'climbing_indoor waypoint cannot be linked to a route')
+                return
+        elif document_key == 'waypoints' and main_document_type != BOOK_TYPE:
+            is_parent = True
+        elif document_key == 'waypoint_children':
+            is_parent = False
+
+        associations[document_key] = [
+            {
+                'document_id': doc['document_id'],
+                'is_parent': is_parent
+            } for doc in associations_in[document_key]
+            ]
 
 
 def _is_parent_of_association(main_document_type, other_document_type):
