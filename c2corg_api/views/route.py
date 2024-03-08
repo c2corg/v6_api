@@ -63,7 +63,7 @@ def validate_main_waypoint(is_on_create, request, **kwargs):
 
     # no association found
     request.errors.add(
-        'body', 'main_waypoint_id', 'no association for the main waypoint')
+        'body', 'main_waypoint_id', 'no association to the main waypoint')
 
 
 def validate_required_associations(request, **kwargs):
