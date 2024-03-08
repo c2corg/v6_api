@@ -114,13 +114,19 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertIn('books', associations)
 
         linked_waypoints = associations.get('waypoints')
-        self.assertEqual(1, len(linked_waypoints))
+        self.assertEqual(2, len(linked_waypoints))
         self.assertEqual(
             self.waypoint.document_id, linked_waypoints[0].get('document_id'))
+        self.assertEqual(
+            self.waypoint3.document_id, linked_waypoints[1].get('document_id'))
         # check waypoint data in listing
         self.assertEqual(
             self.waypoint.locales[0].access_period,
             linked_waypoints[0].get('locales')[0].get('access_period')
+        )
+        self.assertEqual(
+            self.waypoint3.public_transportation_rating,
+            linked_waypoints[1].get('public_transportation_rating')
         )
         self.assertIn('geometry', linked_waypoints[0])
         self.assertIn('geom', linked_waypoints[0].get('geometry'))
@@ -812,7 +818,8 @@ class TestRouteRest(BaseDocumentTestRest):
                         '[[635956, 5723604], [635976, 5723654]]}'
                 },
                 'associations': {
-                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                    'waypoints': [{'document_id': self.waypoint.document_id},
+                                  {'document_id': self.waypoint3.document_id}]
                 }
             }
         }
@@ -865,7 +872,8 @@ class TestRouteRest(BaseDocumentTestRest):
                      'title_prefix': 'Should be ignored'}
                 ],
                 'associations': {
-                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                    'waypoints': [{'document_id': self.waypoint.document_id},
+                                  {'document_id': self.waypoint3.document_id}]
                 }
             }
         }
@@ -905,7 +913,8 @@ class TestRouteRest(BaseDocumentTestRest):
                         '{"type": "Point", "coordinates": [635000, 5723000]}'
                 },
                 'associations': {
-                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                    'waypoints': [{'document_id': self.waypoint.document_id},
+                                  {'document_id': self.waypoint3.document_id}]
                 }
             }
         }
@@ -934,7 +943,8 @@ class TestRouteRest(BaseDocumentTestRest):
                 ],
                 'associations': {
                     'waypoints': [
-                        {'document_id': self.waypoint2.document_id}
+                        {'document_id': self.waypoint2.document_id},
+                        {'document_id': self.waypoint3.document_id}
                     ]
                 }
             }
@@ -983,7 +993,8 @@ class TestRouteRest(BaseDocumentTestRest):
                      'version': self.locale_en.version}
                 ],
                 'associations': {
-                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                    'waypoints': [{'document_id': self.waypoint.document_id},
+                                  {'document_id': self.waypoint3.document_id}]
                 }
             }
         }
@@ -1012,7 +1023,8 @@ class TestRouteRest(BaseDocumentTestRest):
                      'description': '...', 'gear': 'si'}
                 ],
                 'associations': {
-                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                    'waypoints': [{'document_id': self.waypoint.document_id},
+                                  {'document_id': self.waypoint3.document_id}]
                 }
             }
         }
@@ -1211,6 +1223,16 @@ class TestRouteRest(BaseDocumentTestRest):
             lang='en', title='Mont Granier 2 (en)', description='...',
             access='yep'))
         self.session.add(self.waypoint2)
+        self.waypoint3 = Waypoint(
+            waypoint_type='access', elevation=1776,
+            public_transportation_rating='poor service',
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(778846 5580167)'))
+        self.waypoint3.locales.append(WaypointLocale(
+            lang='fr', title='Roche écroulée', description='...',
+            access='yep', access_period='hiver'
+        ))
+        self.session.add(self.waypoint3)
         self.session.flush()
         self._add_association(Association.create(
             parent_document=self.route,
@@ -1220,6 +1242,9 @@ class TestRouteRest(BaseDocumentTestRest):
             child_document=self.route), user_id)
         self._add_association(Association.create(
             parent_document=self.waypoint,
+            child_document=self.route), user_id)
+        self._add_association(Association.create(
+            parent_document=self.waypoint3,
             child_document=self.route), user_id)
 
         # add a map
