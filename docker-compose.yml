@@ -2,8 +2,8 @@ version: "3.7"
 services:
   api:
     build:
-      context: .
-      dockerfile: dev_api.Dockerfile
+      context: ./docker
+      dockerfile: Dockerfile.dev
     depends_on:
       - postgresql
       - elasticsearch
@@ -37,7 +37,7 @@ services:
       POSTGRES_PASSWORD: test
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgresql.conf:/etc/postgresql.conf
+      - ./docker/conf/postgresql.conf:/etc/postgresql.conf
       - .:/v6_api
     command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
 

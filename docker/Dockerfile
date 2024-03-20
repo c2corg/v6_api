@@ -43,9 +43,6 @@ RUN set -x \
     git
 
 RUN set -x \
- && make -f config/dev install \
- && py3compile -f .build/venv/ \
- && rm -fr .cache \
  && apt-get -y purge \
  && apt-get -y --purge autoremove \
  && apt-get clean \
@@ -56,7 +53,7 @@ ENV version=$VERSION \
     PATH=/var/www/.build/venv/bin/:$PATH
 
 COPY /docker-entrypoint.sh /
-COPY /docker-entrypoint.d/* /docker-entrypoint.d/
+COPY /docker-entrypoint.d/prod/* /docker-entrypoint.d/
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
 EXPOSE 8080
