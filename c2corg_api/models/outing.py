@@ -119,6 +119,8 @@ attributes = [
     'via_ferrata_rating', 'mtb_up_rating', 'mtb_down_rating'
     ]
 
+document_outing_attribute = ['view_count', 'disable_view_count']
+
 
 class Outing(_OutingMixin, Document):
     """
@@ -238,11 +240,7 @@ schema_outing_locale = SQLAlchemySchemaNode(
         }
     })
 
-schema_outing = SQLAlchemySchemaNode(
-    Outing,
-    # whitelisted attributes
-    includes=schema_attributes + attributes,
-    overrides={
+schema_outing_overrides = {
         'document_id': {
             'missing': None
         },
@@ -257,7 +255,21 @@ schema_outing = SQLAlchemySchemaNode(
         },
         'geometry': get_geometry_schema_overrides(
             ['LINESTRING', 'MULTILINESTRING'])
-    })
+    }
+
+schema_outing = SQLAlchemySchemaNode(
+    Outing,
+    # whitelisted attributes
+    includes=schema_attributes + attributes + document_outing_attribute,
+    overrides=schema_outing_overrides
+)
+
+schema_outing_collection = SQLAlchemySchemaNode(
+    Outing,
+    # whitelisted attributes
+    includes=schema_attributes + attributes,
+    overrides=schema_outing_overrides
+)
 
 schema_create_outing = get_create_schema(schema_outing)
 schema_update_outing = get_update_schema(schema_outing)
