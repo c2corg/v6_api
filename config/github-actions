@@ -2,10 +2,10 @@ include config/dev
 
 export instanceid = github
 export base_url = /${instanceid}
-export db_name = c2corg_github_tests
-export tests_db_name = c2corg_github_tests
+export db_name = c2corg_tests
+export tests_db_name = c2corg_tests
 export elasticsearch_port = 9200
-export elasticsearch_index = c2corg_github_tests
+export elasticsearch_index = c2corg_tests
 export tests_elasticsearch_port = 9200
-export tests_elasticsearch_index = c2corg_github_tests
+export tests_elasticsearch_index = c2corg_tests
 export redis_url = redis://localhost:6379/

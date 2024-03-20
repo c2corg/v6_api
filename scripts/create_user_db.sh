@@ -1,12 +1,14 @@
 #!/bin/sh
+DBNAME="c2corg"
+
 sudo -u postgres psql <<EOF
-create database c2corg_$USER owner "www-data";
-\c c2corg_$USER
+create database ${DBNAME} owner "postgres";
+\c ${DBNAME}
 create extension postgis;
-create schema guidebook authorization "www-data";
-create schema users authorization "www-data";
-create schema sympa authorization "www-data";
-create schema alembic authorization "www-data";
+create schema guidebook authorization "postgres";
+create schema users authorization "postgres";
+create schema sympa authorization "postgres";
+create schema alembic authorization "postgres";
 \q
 EOF
 # to also set up the database, uncomment the following line
