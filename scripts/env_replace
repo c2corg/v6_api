@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
 import os
 import sys
+from dotenv import load_dotenv
 
-sys.stdout.write(sys.stdin.read().format(**os.environ))
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: {} env_file1 env_file2 ...".format(sys.argv[0]))
+        sys.exit(1)
+
+    env_files = sys.argv[1:]
+
+    for env_file in env_files:
+        load_dotenv(env_file, override=True)
+
+    sys.stdout.write(sys.stdin.read().format(**os.environ))

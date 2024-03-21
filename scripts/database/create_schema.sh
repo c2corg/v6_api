@@ -1,7 +1,7 @@
 #!/bin/sh
 DBNAME="c2corg"
 
-sudo -u postgres psql <<EOF
+psql <<EOF
 create database ${DBNAME} owner "postgres";
 \c ${DBNAME}
 create extension postgis;
