@@ -1,132 +1,128 @@
-SITE_PACKAGES = $(shell .build/venv/bin/python -c "import distutils; print(distutils.sysconfig.get_python_lib())" 2> /dev/null)
-TEMPLATE_FILES_IN = $(filter-out ./.build/%, $(shell find . -type f -name '*.in'))
+TEMPLATE_FILES_IN = $(filter-out ./.build/% ./apache/%, $(shell find . -type f -name '*.in'))
 TEMPLATE_FILES = $(TEMPLATE_FILES_IN:.in=)
 
-# variables used in config files (*.in)
-export base_dir = $(abspath .)
-export site_packages = $(SITE_PACKAGES)
+ENV_FILES = config/env.default config/env.dev
 
-include config/default
+ifdef CONFIG
+	ENV_FILES += $(CONFIG)
+endif
 
-.PHONY: help
+ifneq ($(wildcard config/env.local),)
+	ENV_FILES += config/env.local
+endif
+
+SRC_DIRS = c2corg_api es_migration
+
+DOCKER_COMPOSE = docker compose
+DOCKER_EXEC = $(DOCKER_COMPOSE) exec
+
+ifdef DETACHED
+	API_EXEC=$(DOCKER_EXEC) -d api
+else
+	API_EXEC=$(DOCKER_EXEC) api
+endif
+
+DB_EXEC = $(DOCKER_EXEC) -u postgres -T postgresql
+
+PYTHON = $(API_EXEC) python
+PYTHON_BG = $(API_EXEC_BG) python
+
+PYTEST = $(API_EXEC) pytest
+FLAKE = $(API_EXEC) flake8
+PIP = $(API_EXEC) pip
+PY3COMPILE = $(API_EXEC) py3compile
+
 help:
 	@echo "Usage: make <target>"
 	@echo
 	@echo "Main targets:"
 	@echo
-	@echo "- check			Perform a number of checks on the code (runs flake 8 and test)"
-	@echo "- test			Run the unit tests"
-	@echo "- clean			Remove generated files"
-	@echo "- cleanall		Remove all the build artefacts"
-	@echo "- install		Install and build the project"
-	@echo "- serve			Run the development server"
-	@echo "- run-syncer		Run the ElasticSearch syncer script."
-	@echo "- template		Replace the config vars in the .in templates"
-	@echo "- clear-cache		Reset the server cache container"
-	@echo "- clear-cache-prod	Reset the server cache container in prod environment"
+	@echo "- bootstrap"				Bootstraps the project for the first time
+	@echo "- run-syncer				Run the ElasticSearch syncer script."
+	@echo "- run-background-jobs"	Run the background jobs
+	@echo
+	@echo "- test					Run the unit tests"
+	@echo "- lint					Run flake8 checker on the Python code"
 	@echo
 	@echo "Secondary targets:"
 	@echo
-	@echo "- lint			Run flake8 checker on the Python code"
-	@echo "- upgrade		Upgrade the dependencies."
-	@echo "- upgrade-dev		Upgrade the dev. dependencies."
-	@echo "- publish		Push docker image to dockerhub from travis-ci"
+	@echo "- start"					Start the docker containers
+	@echo "- stop"					Stop the docker containers
+	@echo "- serve"					Start the Python webserver
+	@echo
+	@echo "- init-database" 		Initialize the dev database
+	@echo "- init-test-database" 	Initialize the test database
+	@echo "- init-elastic"			Initialize the elasticsearch index
+	@echo "- flush-redis			Clear the Redis cache"
+	@echo
+	@echo "- install				Install the project dependencies"
+	@echo "- loadenv				Replace the env vars in the .in templates"
+	@echo "- upgrade				Upgrade the dependencies."
+	@echo "- upgrade-dev			Upgrade the dev. dependencies."
 
-.PHONY: check
-check: lint test
 
-.PHONY: clean
-clean:
-	rm -f .build/dev-requirements.timestamp
-	rm -f $(TEMPLATE_FILES)
+bootstrap:
+		$(MAKE) start
+		$(MAKE) install
+		$(MAKE) load-env
+		$(MAKE) DETACHED=true serve
+		$(MAKE) init-database
+		$(MAKE) init-elastic
+		$(MAKE) DETACHED=true run-syncer
+		$(MAKE) DETACHED=true run-background-jobs
 
-.PHONY: cleanall
-cleanall: clean
-	rm -rf .build
+start:
+		$(DOCKER_COMPOSE) up -d
 
-.PHONY: test
-test: .build/venv/bin/pytest template .build/dev-requirements.timestamp .build/requirements.timestamp
-	# All tests must be run with authentication/authorization enabled
-	.build/venv/bin/pytest --cov=c2corg_api
+stop:
+		$(DOCKER_COMPOSE) stop
 
-.PHONY: lint
-lint: .build/venv/bin/flake8
-	.build/venv/bin/flake8 c2corg_api es_migration
-	@echo "Wonderful, python style is Ok! Here is a beer : 🍺"
+serve:
+		$(API_EXEC) pserve development.ini --reload
 
-.PHONY: install
-install: .build/requirements.timestamp .build/dev-requirements.timestamp template
+lint: 
+		$(FLAKE) $(SRC_DIRS)
+		@echo "Wonderful, python style is Ok!"
 
-.PHONY: template
-template: $(TEMPLATE_FILES)
+test:
+		$(MAKE) init-test-database
+		$(PYTEST) --cov=c2corg_api
 
-.PHONY: serve
-serve: install development.ini
-	echo "#\n# Also remember to start the ElasticSearch syncer script with:\n# make -f ... run-syncer\n#"
-	.build/venv/bin/pserve development.ini --reload
+init-database:
+		$(DB_EXEC) /v6_api/scripts/database/create_schema.sh
+		$(API_EXEC) initialize_c2corg_api_db development.ini
 
-.PHONY: run-syncer
-run-syncer: install development.ini
-	.build/venv/bin/python c2corg_api/scripts/es/syncer.py development.ini
+init-test-database:
+		$(DB_EXEC) /v6_api/scripts/database/create_test_schema.sh
 
-.PHONY: run-syncer-prod
-run-syncer-prod: install production.ini
-	.build/venv/bin/python c2corg_api/scripts/es/syncer.py production.ini
+init-elastic:
+		$(API_EXEC) fill_es_index development.ini
 
-.PHONY: run-background-jobs
-run-background-jobs: install development.ini
-	.build/venv/bin/python c2corg_api/scripts/jobs/scheduler.py development.ini
+install:
+		$(PIP) install -r dev-requirements.txt
+		$(PIP) install -r requirements.txt
+		$(PY3COMPILE) -f .build/venv/
 
-.PHONY: run-background-jobs-prod
-run-background-jobs-prod: install production.ini
-	.build/venv/bin/python c2corg_api/scripts/jobs/scheduler.py production.ini
+upgrade:
+		$(PIP) install install --upgrade -r requirements.txt
 
-.PHONY: clear-cache
-clear-cache: install development.ini
-	.build/venv/bin/python c2corg_api/scripts/redis-flushdb.py development.ini
+upgrade-dev:
+		$(PIP) install --upgrade -r dev-requirements.txt
 
-.PHONY: clear-cache-prod
-clear-cache-prod: install production.ini
-	.build/venv/bin/python c2corg_api/scripts/redis-flushdb.py production.ini
 
-.PHONY: upgrade
-upgrade: .build/venv/bin/pip
-	.build/venv/bin/pip install --upgrade -r requirements.txt
+run-syncer:
+		$(PYTHON) c2corg_api/scripts/es/syncer.py development.ini
 
-.PHONY: upgrade-dev
-upgrade-dev: .build/venv/bin/pip
-	.build/venv/bin/pip install --upgrade -r dev-requirements.txt
+run-background-jobs: 
+		$(PYTHON) c2corg_api/scripts/jobs/scheduler.py development.ini
 
-.build/venv/bin/flake8: .build/dev-requirements.timestamp
+flush-redis: 
+		$(PYTHON) c2corg_api/scripts/redis-flushdb.py development.ini
 
-.build/venv/bin/pytest: .build/dev-requirements.timestamp
+load-env: $(TEMPLATE_FILES)
 
-.build/dev-requirements.timestamp: .build/venv/bin/pip dev-requirements.txt
-	.build/venv/bin/pip install -r dev-requirements.txt
-	touch $@
-
-.build/venv/bin/pip:
-	mkdir -p $(dir .build/venv)
-	virtualenv -p python3 .build/venv
-	.build/venv/bin/pip install --upgrade -r requirements_pip.txt
-
-.build/requirements.timestamp: .build/venv/bin/pip requirements.txt setup.py
-	.build/venv/bin/pip -V
-	.build/venv/bin/pip install -r requirements.txt
-	touch $@
-
-development.ini production.ini: common.ini
-
-apache/app-c2corg_api.wsgi: production.ini
-
-apache/wsgi.conf: apache/app-c2corg_api.wsgi
+development.ini: common.ini
 
 .PHONY: $(TEMPLATE_FILES)
 $(TEMPLATE_FILES): %: %.in
-	scripts/env_replace < $< > $@
-	chmod --reference $< $@
-
-.PHONY: publish
-publish: template
-	scripts/travis-build.sh
-	scripts/travis-publish.sh
+		$(API_EXEC) scripts/env_replace ${ENV_FILES} < $< > $@

@@ -32,6 +32,7 @@ transaction==4.0
 waitress==3.0.0
 zope.sqlalchemy==3.1
 gunicorn==21.2.0
+python-dotenv==1.0.1
 
 # ColanderAlchemy>=0.3.2
 # needed for ColanderAlchemy: https://github.com/stefanofontanelli/ColanderAlchemy/pull/90

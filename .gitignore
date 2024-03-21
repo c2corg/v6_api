@@ -20,3 +20,4 @@
 config/docker
 .coverage
 coverage.xml
+/config/env.local
