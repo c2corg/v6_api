@@ -1,0 +1,59 @@
+SITE_PACKAGES = $(shell .build/venv/bin/python -c "import distutils; print(distutils.sysconfig.get_python_lib())" 2> /dev/null)
+TEMPLATE_FILES_IN = $(filter-out ./.build/%, $(shell find . -type f -name '*.in'))
+TEMPLATE_FILES = $(TEMPLATE_FILES_IN:.in=)
+
+ENV_FILES = config/env.default config/env.prod
+
+# variables used in config files (*.in)
+export base_dir = $(abspath .)
+export site_packages = $(SITE_PACKAGES)
+
+PYTHON = python
+PYTEST = pytest
+FLAKE = flake8
+PIP = pip
+
+.PHONY: help
+help:
+	@echo "Usage: make <target>"
+	@echo
+	@echo "Main targets:"
+	@echo
+	@echo "- bootstrap"				Bootstraps the project for the first time
+	@echo "- run-syncer				Run the ElasticSearch syncer script."
+	@echo "- run-background-jobs"	Run the background jobs
+	@echo "- flush-redis			Clear the Redis cache"
+	@echo "- install				Install the project dependencies"
+
+bootstrap:
+		$(MAKE) install
+		$(MAKE) load-env
+		$(MAKE) run-syncer
+		$(MAKE) run-background-jobs
+
+install:
+	$(PIP) install -r requirements.txt
+	$(PY3COMPILE) -f .build/venv/
+
+run-syncer: install production.ini
+	$(PYTHON) c2corg_api/scripts/es/syncer.py production.ini
+
+run-background-jobs: install production.ini
+	$(PYTHON) c2corg_api/scripts/jobs/scheduler.py production.ini
+
+flush-redis: install production.ini
+	$(PYTHON) c2corg_api/scripts/redis-flushdb.py production.ini
+
+load-env: $(TEMPLATE_FILES)
+
+production.ini: common.ini
+
+apache/app-c2corg_api.wsgi: production.ini
+
+apache/wsgi.conf: apache/app-c2corg_api.wsgi
+
+.PHONY: $(TEMPLATE_FILES)
+$(TEMPLATE_FILES): %: %.in
+	scripts/env_replace < $< > $@
+	chmod --reference $< $@
+

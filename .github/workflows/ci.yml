@@ -31,7 +31,7 @@ jobs:
         image: postgis/postgis
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_PASSWORD: test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -62,19 +62,18 @@ jobs:
         run: flake8 c2corg_api es_migration
       - name: Configure postgres
         run: |
-          echo "create user \"www-data\" with password 'www-data'" | psql
-          USER=github scripts/create_user_db_test.sh
+          scripts/database/create_test_schema.sh
         env:
-          PGPASSWORD: postgres
+          PGPASSWORD: test
           PGUSER: postgres
           PGHOST: localhost
           PGPORT: 5432
       - name: Create config from templates
-        run: make -f config/github-actions template
+        run: make CONFIG=config/env.test load-env
       - name: Install java 8 for (old) elasticsearch
         uses: actions/setup-java@v4
         with:
-          distribution: 'adopt'
+          distribution: "adopt"
           java-version: 8
       - name: Run (old) elasticsearch
         run: |
@@ -118,7 +117,8 @@ jobs:
       - name: Publish the docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./docker
+          file: ./Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
