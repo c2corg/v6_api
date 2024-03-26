@@ -1,6 +1,7 @@
 import logging
 
 from c2corg_api.caching import cache_document_detail, cache_document_cooked
+from c2corg_api.crawler.crawler_service import is_crawler
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
 from c2corg_api.models.area_association import update_areas_for_document, \
@@ -20,6 +21,7 @@ from c2corg_api.models.topo_map import schema_listing_topo_map, \
     MAP_TYPE
 from c2corg_api.models.topo_map_association import update_maps_for_document, \
     get_maps
+from c2corg_api.queues.queues_service import publish
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import etag_cache, set_best_locale
@@ -138,6 +140,8 @@ class DocumentRest(object):
                 cook_locale=cook)
 
         if not editing_view:
+            increment_document_view_count(self.request, id)
+
             cache_key = get_cache_key(
                 id,
                 lang,
@@ -657,3 +661,11 @@ def make_validator_update(fields, type_field=None, valid_type_values=None):
                     document, request, fields, type_field, valid_type_values,
                     updating=True)
     return f
+
+
+def increment_document_view_count(request, doc_id):
+    claims = request.environ.get('jwtauth.claims', {})
+    is_bot = claims.get('robot', False)
+    user_agent = request.headers.get('User-Agent', '')
+    if not (is_bot or is_crawler(user_agent)):
+        publish(request.registry.documents_views_queue_config, doc_id)

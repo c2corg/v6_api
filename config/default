@@ -25,6 +25,7 @@ export redis_db_queue = 4
 export redis_db_cache = 5
 export redis_exchange = c2corg_$(instanceid)
 export redis_queue_es = c2corg_$(instanceid)_es_sync
+export redis_queue_documents_views = c2corg_$(instanceid)_documents_views_sync
 export redis_cache_key_prefix = c2corg_$(instanceid)
 export redis_cache_status_refresh_period = 30
 
