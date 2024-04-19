@@ -110,7 +110,7 @@ jobs:
         id: docker_meta
         uses: docker/metadata-action@v5.5.1
         with:
-          images: c2corg/v6_api
+          images: ghcr.io/c2corg/v6_api
       - name: Checkout repository
         uses: actions/checkout@v4.1.1
       - run: git archive --format=tar --output project.tar "$GITHUB_SHA"
