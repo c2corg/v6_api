@@ -11,7 +11,8 @@ from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import waypoint_documents_config, \
     waypoint_schema_adaptor, outing_documents_config, route_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.route import set_route_title_prefix
+from c2corg_api.views.route import set_route_title_prefix, \
+    update_pt_rating
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
 
@@ -32,7 +33,7 @@ from c2corg_api.models.common.attributes import waypoint_types
 from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.orm.util import aliased
 from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import and_, union
+from sqlalchemy.sql.expression import and_, text, union, column
 
 # the number of routes that are included for waypoints
 NUM_ROUTES = 400
@@ -234,7 +235,7 @@ class WaypointRest(DocumentRest):
               given, the route associations will not be changed.
         """
         return self._put(
-            Waypoint, schema_waypoint, after_update=update_linked_route_titles)
+            Waypoint, schema_waypoint, after_update=update_linked_routes)
 
 
 def set_custom_associations(waypoint, lang):
@@ -392,6 +393,11 @@ class WaypointInfoRest(DocumentInfoRest):
         return self._get_document_info(waypoint_documents_config)
 
 
+def update_linked_routes(waypoint, update_types, user_id):
+    update_linked_route_titles(waypoint, update_types, user_id)
+    update_linked_routes_public_transportation_rating(waypoint, update_types)
+
+
 def update_linked_route_titles(waypoint, update_types, user_id):
     """When a waypoint is the main waypoint of a route, the field
     `title_prefix`, which caches the waypoint name, has to be updated.
@@ -417,3 +423,39 @@ def update_linked_route_titles(waypoint, update_types, user_id):
         for route in linked_routes:
             set_route_title_prefix(
                 route, waypoint_locales, waypoint_locales_index)
+
+
+def update_linked_routes_public_transportation_rating(waypoint, update_types):
+    if (
+        waypoint.waypoint_type != "access"
+        or "public_transportation_rating" not in update_types
+    ):
+        return
+
+    route_type = text('\'' + ROUTE_TYPE + '\'')
+
+    # Get all parent routes
+    parent_routes = DBSession. \
+        query(
+            Association.parent_document_id.label('route_id')
+        ) \
+        .filter(Association.parent_document_type == route_type) \
+        .filter(Association.child_document_id == waypoint.document_id) \
+        .subquery()
+    # Get all children routes
+    children_routes = DBSession. \
+        query(
+            Association.child_document_id.label('route_id')
+        ) \
+        .filter(Association.child_document_type == route_type) \
+        .filter(Association.parent_document_id == waypoint.document_id) \
+        .subquery()
+    # Merge all routes
+    routes = DBSession \
+        .query(Route) \
+        .select_from(union(parent_routes.select(), children_routes.select())) \
+        .join(Route, Route.document_id == column('route_id')) \
+        .all()
+
+    for route in routes:
+        update_pt_rating(route)

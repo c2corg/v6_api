@@ -17,6 +17,7 @@ DEFAULT_FIELDS = [
     'height_diff_down',
     'height_diff_access',
     'height_diff_difficulties',
+    'public_transportation_rating',
     'lift_access',
     'route_types',
     'orientations',
@@ -40,6 +41,7 @@ DEFAULT_LISTING = [
     'height_diff_up',
     'height_diff_down',
     'height_diff_difficulties',
+    'public_transportation_rating',
     'activities',
     'quality',
     'orientations'
