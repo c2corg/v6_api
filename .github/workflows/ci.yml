@@ -83,9 +83,9 @@ jobs:
           /tmp/elasticsearch/bin/elasticsearch --daemonize --path.data /tmp
           sleep 30 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
       - run: curl -v http://localhost:9200
-      - name: Run tests
+      - name: Install elasticSearch plugin analysis-icu
       - run: /tmp/elasticsearch/bin/plugin install analysis-icu
-      - name: install elasticsearch plugin analysis-icu
+      - name: Run tests
         run: pytest --cov-report term --cov-report xml --cov=c2corg_api
       - name: Send coverage to codacy
         # secrets are not available for PR from forks, and dependabot PRs
