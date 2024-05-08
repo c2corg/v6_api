@@ -19,7 +19,7 @@ class BaseMeta:
 # the configuration is based on the one by Photon:
 # https://github.com/komoot/photon/blob/master/es/mappings.json
 # https://github.com/komoot/photon/blob/master/es/index_settings.json
-def default_title_field(lang:None):
+def default_title_field(lang: None):
     if lang is None:
         return String(
             index='not_analyzed',
