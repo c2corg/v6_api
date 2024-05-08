@@ -22,14 +22,9 @@ from c2corg_api.search.mappings.xreport_mapping import SearchXreport
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
 from elasticsearch_dsl.connections import connections
-from elasticsearch_dsl.query import MultiMatch, Match, MatchPhrase, MatchAll
+from elasticsearch_dsl.query import MultiMatch
 from kombu import Exchange, Queue, pools
 from kombu.connection import Connection
-
-#JPR
-import logging
-log = logging.getLogger(__name__)
-#JPR
 
 # the maximum number of documents that can be returned for each document type
 SEARCH_LIMIT_MAX = 50
@@ -88,28 +83,28 @@ def create_search(document_type):
 
 def get_text_query_on_title(search_term, search_lang=None):
     fields = []
-    # search in all title* (title_en, title_fr, ...) fields.
+
     if search_term.count(' ') == 0 :
-        motOrPhrase = False
+        mots = False
     else:
-        motOrPhrase = True
+        mots = True
 
     if not search_lang:
-        if not motOrPhrase :
+        if not mots :
             fields.append('title_*.ngram')
         else:
             fields.append('title_*.contentheavy')
-            #fields.append('title_*.ngram')
+
     else:
         for lang in default_langs:
             if lang == search_lang:
-                if not motOrPhrase:
+                if not mots:
                     fields.append('title_{0}.ngram'.format(lang))
                 else:
                     fields.append('title_{0}.contentheavy'.format(lang))
-                    #fields.append('title_{0}.ngram'.format(lang))
 
-    if not motOrPhrase:
+
+    if not mots:
         return MultiMatch(
             query=search_term,
             fields=fields,
@@ -129,6 +124,7 @@ def get_text_query_on_title(search_term, search_lang=None):
             zero_terms_query="none",
             slop=4,
         )
+
 
 search_documents = {
     AREA_TYPE: SearchArea,
