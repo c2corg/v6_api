@@ -82,10 +82,8 @@ jobs:
           wget -O - https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.4.6/elasticsearch-2.4.6.tar.gz | tar xz --directory=/tmp/elasticsearch --strip-components=1
           /tmp/elasticsearch/bin/elasticsearch --daemonize --path.data /tmp
           sleep 30 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
-      - run: curl -v http://localhost:9200
-      - name: Install elasticSearch plugin analysis-icu
-      - run: | 
           /tmp/elasticsearch/bin/plugin install analysis-icu
+      - run: curl -v http://localhost:9200
       - name: Run tests
         run: pytest --cov-report term --cov-report xml --cov=c2corg_api
       - name: Send coverage to codacy
