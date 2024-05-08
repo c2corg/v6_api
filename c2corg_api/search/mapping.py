@@ -40,7 +40,7 @@ def default_title_field(lang:None):
                 'raw': String(
                     analyzer='index_raw', search_analyzer='search_raw'),
                 'contentheavy': String(
-                    analyzer='{0}_heavy'.format(lang) )
+                    analyzer='{0}_heavy'.format(lang))
             })
 
 

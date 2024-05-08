@@ -84,13 +84,13 @@ def create_search(document_type):
 def get_text_query_on_title(search_term, search_lang=None):
     fields = []
 
-    if search_term.count(' ') == 0 :
+    if search_term.count(' ') == 0:
         mots = False
     else:
         mots = True
 
     if not search_lang:
-        if not mots :
+        if not mots:
             fields.append('title_*.ngram')
         else:
             fields.append('title_*.contentheavy')
@@ -103,15 +103,14 @@ def get_text_query_on_title(search_term, search_lang=None):
                 else:
                     fields.append('title_{0}.contentheavy'.format(lang))
 
-
     if not mots:
         return MultiMatch(
             query=search_term,
             fields=fields,
             type='best_fields',
-            fuzziness= 1,
+            fuzziness=1,
             max_expansions=2,
-            zero_terms_query= "none",
+            zero_terms_query="none",
             slop=4,
         )
     else:
