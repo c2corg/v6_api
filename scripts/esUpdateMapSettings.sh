@@ -3,9 +3,9 @@
 #installation du plugin es et reboot
 #Install elastic plugin analysis-icu
 echo 'Installing es plugin to elasticsearch docker'
-docker exec -it v6_api-elasticsearch-1 bin/plugin install analysis-icu
+docker-compose exec -it elasticsearch bin/plugin install analysis-icu
 echo 'Installing done - restarting es docker'
-docker restart v6_api-elasticsearch-1
+docker-compose restart elasticsearch
 sleep 10 #in sec to let the docker restart
 
 #2. closing the index to upgrade settings

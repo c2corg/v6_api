@@ -19,15 +19,29 @@ class BaseMeta:
 # the configuration is based on the one by Photon:
 # https://github.com/komoot/photon/blob/master/es/mappings.json
 # https://github.com/komoot/photon/blob/master/es/index_settings.json
-def default_title_field():
-    return String(
-        index='not_analyzed',
-        similarity='c2corgsimilarity',
-        fields={
-            'ngram': String(
-                analyzer='index_ngram', search_analyzer='search_ngram'),
-            'raw': String(
-                analyzer='index_raw', search_analyzer='search_raw')})
+def default_title_field(lang:None):
+    if lang is None:
+        return String(
+            index='not_analyzed',
+            similarity='c2corgsimilarity',
+            fields={
+                'ngram': String(
+                    analyzer='index_ngram', search_analyzer='search_ngram'),
+                'raw': String(
+                    analyzer='index_raw', search_analyzer='search_raw')
+            })
+    else:
+        return String(
+            index='not_analyzed',
+            similarity='c2corgsimilarity',
+            fields={
+                'ngram': String(
+                    analyzer='index_ngram', search_analyzer='search_ngram'),
+                'raw': String(
+                    analyzer='index_raw', search_analyzer='search_raw'),
+                'contentheavy': String(
+                    analyzer='{0}_heavy'.format(lang) )
+            })
 
 
 class SearchDocument(DocType):
@@ -59,49 +73,49 @@ class SearchDocument(DocType):
     areas = QLong('a', is_id=True)
 
     # fr
-    title_fr = default_title_field()
+    title_fr = default_title_field("french")
     summary_fr = String(
         analyzer='index_french', search_analyzer='search_french')
     description_fr = String(
         analyzer='index_french', search_analyzer='search_french')
 
     # it
-    title_it = default_title_field()
+    title_it = default_title_field("italian")
     summary_it = String(
         analyzer='index_italian', search_analyzer='search_italian')
     description_it = String(
         analyzer='index_italian', search_analyzer='search_italian')
 
     # de
-    title_de = default_title_field()
+    title_de = default_title_field("german")
     summary_de = String(
         analyzer='index_german', search_analyzer='search_german')
     description_de = String(
         analyzer='index_german', search_analyzer='search_german')
 
     # en
-    title_en = default_title_field()
+    title_en = default_title_field("english")
     summary_en = String(
         analyzer='index_english', search_analyzer='search_english')
     description_en = String(
         analyzer='index_english', search_analyzer='search_english')
 
     # es
-    title_es = default_title_field()
+    title_es = default_title_field("spanish")
     summary_es = String(
         analyzer='index_spanish', search_analyzer='search_spanish')
     description_es = String(
         analyzer='index_spanish', search_analyzer='search_spanish')
 
     # ca
-    title_ca = default_title_field()
+    title_ca = default_title_field("catalan")
     summary_ca = String(
         analyzer='index_catalan', search_analyzer='search_catalan')
     description_ca = String(
         analyzer='index_catalan', search_analyzer='search_catalan')
 
     # eu
-    title_eu = default_title_field()
+    title_eu = default_title_field("basque")
     summary_eu = String(
         analyzer='index_basque', search_analyzer='search_basque')
     description_eu = String(
@@ -190,8 +204,12 @@ analysis_settings = {
     "filter": {
         "autocomplete_filter": {
             "type": "edge_ngram",
-            "min_gram": 2,
-            "max_gram": 20
+            "min_gram": "2",
+            "max_gram": "15",
+            "token_chars": [
+                "letter",
+                "digit"
+            ]
         },
         # filters for the english analyzers
         "english_stop": {
@@ -300,9 +318,9 @@ analysis_settings = {
         "index_ngram": {
             "char_filter": ["punctuationgreedy"],
             "filter": [
-                "word_delimiter", "lowercase", "asciifolding", "unique",
+                "word_delimiter", "lowercase", "icu_folding",
                 "autocomplete_filter"],
-            "tokenizer": "standard"
+            "tokenizer": "icu_tokenizer"
         },
         "search_ngram": {
             "char_filter": ["punctuationgreedy"],
@@ -452,6 +470,72 @@ analysis_settings = {
                 "lowercase",
                 "basque_stop",
                 "basque_stemmer"
+            ]
+        },
+        "french_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "french_elision",
+                "french_stop",
+                "icu_folding",
+                "lowercase",
+                "french_stemmer"
+            ]
+        },
+        "german_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "german_stop",
+                "german_stemmer",
+                "lowercase",
+                "icu_folding"
+            ]
+        },
+        "english_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "english_possessive_stemmer",
+                "english_stop",
+                "lowercase",
+                "icu_folding"
+            ]
+        },
+        "italian_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "italian_elision",
+                "italian_stop",
+                "lowercase",
+                "icu_folding",
+                "italian_stemmer"
+            ]
+        },
+        "spanish_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "lowercase",
+                "spanish_stop",
+                "spanish_stemmer",
+                "icu_folding"
+            ]
+        },
+        "catalan_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "catalan_elision",
+                "lowercase",
+                "catalan_stop",
+                "catalan_stemmer",
+                "icu_folding"
+            ]
+        },
+        "basque_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "lowercase",
+                "basque_stop",
+                "basque_stemmer",
+                "icu_folding"
             ]
         }
     }
