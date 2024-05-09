@@ -92,6 +92,49 @@
                     "basque_stemmer",
                     "icu_folding"
                 ]
+            },
+            "index_slovene": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+                "autocomplete_filter",
+                "lowercase"
+            ]
+            },
+            "search_slovene": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase"
+                ]
+            },
+            "slovene_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "lowercase",
+                    "icu_folding"
+                ]
+            },
+            "index_chinois": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "autocomplete_filter"
+                ]
+            },
+            "search_chinois": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase"
+                ]
+            },
+            "chinois_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "lowercase",
+                    "icu_folding"
+                ]
             }
         }
     }

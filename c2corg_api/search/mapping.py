@@ -121,6 +121,20 @@ class SearchDocument(DocType):
     description_eu = String(
         analyzer='index_basque', search_analyzer='search_basque')
 
+    # sl
+    title_sl = default_title_field("slovene")
+    summary_sl = String(
+        analyzer='index_slovene', search_analyzer='search_slovene')
+    description_sl = String(
+        analyzer='index_slovene', search_analyzer='search_slovene')
+
+    # zh
+    title_zh = default_title_field("chinois")
+    summary_zh = String(
+        analyzer='index_chinois', search_analyzer='search_chinois')
+    description_zh = String(
+        analyzer='index_chinois', search_analyzer='search_chinois')
+
     @staticmethod
     def to_search_document(document, index, include_areas=True):
         search_document = {
@@ -535,6 +549,49 @@ analysis_settings = {
                 "lowercase",
                 "basque_stop",
                 "basque_stemmer",
+                "icu_folding"
+            ]
+        },
+        "index_slovene": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+                "autocomplete_filter",
+                "lowercase"
+            ]
+        },
+        "search_slovene": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+                "lowercase"
+            ]
+        },
+        "slovene_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "lowercase",
+                "icu_folding"
+            ]
+        },
+        "index_chinois": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+                "autocomplete_filter"
+            ]
+        },
+        "search_chinois": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+                "lowercase"
+            ]
+        },
+        "chinois_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "lowercase",
                 "icu_folding"
             ]
         }
