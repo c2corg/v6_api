@@ -8,8 +8,7 @@ from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.search import (create_search, get_text_query_on_title,
                                search_documents)
 from c2corg_api.search.mapping_types import reserved_query_fields
-from elasticsearch_dsl.query import (Bool, GeoBoundingBox, Range,
-                                     Script, Term, Terms, Q)  # Missing not more exist
+from elasticsearch_dsl.query import (Bool, GeoBoundingBox, Range, Script, Term, Terms, Q)
 from pyproj import Transformer
 
 log = logging.getLogger(__name__)
@@ -351,8 +350,8 @@ def create_number_range_filter(field, query_term):
         Range(**kwargs_start),
         Range(**kwargs_end),
         Bool(must_not=[
-            Q('exists',field=field.field_min ),
-            Q('exists',field=field.field_max )
+            Q('exists', field=field.field_min),
+            Q('exists', field=field.field_max)
         ])
     ]))
 

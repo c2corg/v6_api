@@ -6,7 +6,7 @@ from c2corg_api.search.mapping_types import Enum, QEnumArray, QLong, \
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.common.sortable_search_attributes import \
     sortable_quality_types
-from elasticsearch_dsl import DocType, MetaField, Long, GeoPoint, Text, Keyword
+from elasticsearch_dsl import DocType, MetaField, Long, GeoPoint, Text
 
 
 class BaseMeta:
@@ -23,7 +23,6 @@ def default_title_field(lang: None):
     if lang is None:
         return Text(
             index='not_analyzed',
-            #BM25 use by default by lucene not required : similarity='c2corgsimilarity',
             fields={
                 'ngram': Text(
                     analyzer='index_ngram', search_analyzer='search_ngram'),
@@ -33,7 +32,6 @@ def default_title_field(lang: None):
     else:
         return Text(
             index='not_analyzed',
-            #BM25 use by default by lucene not required : similarity='c2corgsimilarity',
             fields={
                 'ngram': Text(
                     analyzer='index_ngram', search_analyzer='search_ngram'),
