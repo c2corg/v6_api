@@ -118,10 +118,10 @@ def get_text_query_on_title(search_term, search_lang=None):
             query=search_term,
             fields=fields,
             type='phrase',
-            fuzziness=2,
             max_expansions=3,
             zero_terms_query="none",
             slop=4,
+            operator="and"
         )
 
 
