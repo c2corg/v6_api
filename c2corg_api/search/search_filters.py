@@ -8,7 +8,8 @@ from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.search import (create_search, get_text_query_on_title,
                                search_documents)
 from c2corg_api.search.mapping_types import reserved_query_fields
-from elasticsearch_dsl.query import (Bool, GeoBoundingBox, Range, Script, Term, Terms, Q)
+from elasticsearch_dsl.query import (Bool, GeoBoundingBox, Range,
+                                     Script, Term, Terms, Q)
 from pyproj import Transformer
 
 log = logging.getLogger(__name__)
