@@ -57,14 +57,13 @@ services:
       network: host
     environment:
        - discovery.type=single-node
-       - cluster.initial_master_nodes="docker-cluster"
     ports:
       - 9200:9200
       - 9300:9300
 
   logstash5:
     platform: linux/x86_64
-    name: logstash5
+    container_name: logstash5
     build:
       context: .
       dockerfile: logstash5.Dockerfile
