@@ -8,8 +8,8 @@ from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.search import (create_search, get_text_query_on_title,
                                search_documents)
 from c2corg_api.search.mapping_types import reserved_query_fields
-from elasticsearch_dsl.query import (Bool, GeoBoundingBox, Missing, Range,
-                                     Script, Term, Terms)
+from elasticsearch_dsl.query import (Bool, GeoBoundingBox, Range,
+                                     Script, Term, Terms, Q)
 from pyproj import Transformer
 
 log = logging.getLogger(__name__)
@@ -35,8 +35,7 @@ def build_query(url_params, meta_params, doc_type):
         if filter:
             search = search.filter(filter)
 
-    search = search.\
-        fields([]).\
+    search = search. \
         extra(from_=offset, size=limit)
 
     if url_params.get('bbox'):
@@ -171,9 +170,9 @@ def create_enum_range_min_max_filter(field, query_term):
     return Bool(must_not=Bool(should=[
         Range(**kwargs_start),
         Range(**kwargs_end),
-        Bool(must=[
-            Missing(field=field.field_min),
-            Missing(field=field.field_max)
+        Bool(must_not=[
+            Q("exists", field=field.field_min),
+            Q("exists", field=field.field_max)
         ])
     ]))
 
@@ -351,9 +350,9 @@ def create_number_range_filter(field, query_term):
     return Bool(must_not=Bool(should=[
         Range(**kwargs_start),
         Range(**kwargs_end),
-        Bool(must=[
-            Missing(field=field.field_min),
-            Missing(field=field.field_max)
+        Bool(must_not=[
+            Q('exists', field=field.field_min),
+            Q('exists', field=field.field_max)
         ])
     ]))
 

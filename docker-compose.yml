@@ -4,6 +4,7 @@ services:
     build:
       context: .
       dockerfile: dev_api.Dockerfile
+      network: host
     depends_on:
       - postgresql
       - elasticsearch
@@ -25,6 +26,7 @@ services:
       - ./development.ini.in:/var/www/development.ini.in
       - ./test.ini.in:/var/www/test.ini.in
       - ./pytest.ini:/var/www/pytest.ini
+      - ./requirements.txt:/var/www/requirements.txt
     command: make -f config/docker-dev serve
     links:
       - postgresql
@@ -39,11 +41,37 @@ services:
       - ./docker-compose/pgsql-settings.d/:/c2corg_anon/pgsql-settings.d/
       - .:/v6_api
 
-  elasticsearch:
+  elasticsearch26:
     image: 'docker.io/c2corg/c2corg_es:anon-2018-11-02'
+    container_name: elasticsearch26
+    ports:
+      - 9201:9200
+    command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon -Des.script.inline=true
+
+  elasticsearch:
+    platform: linux/x86_64
+    container_name: elasticsearch
+    build:
+      context: .
+      dockerfile: elasticsearch5.Dockerfile
+      network: host
+    environment:
+       - discovery.type=single-node
     ports:
       - 9200:9200
-    command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon -Des.script.inline=true
+      - 9300:9300
+
+  logstash5:
+    platform: linux/x86_64
+    container_name: logstash5
+    build:
+      context: .
+      dockerfile: logstash5.Dockerfile
+      network: host
+    ports:
+      -  5044:5044
+    volumes:
+      - ./dataMigration/v5/logstash.conf:/root/logstash.conf
 
   redis:
     image: 'docker.io/redis:3.2'

@@ -79,9 +79,9 @@ jobs:
       - name: Run (old) elasticsearch
         run: |
           mkdir /tmp/elasticsearch
-          wget -O - https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.4.6/elasticsearch-2.4.6.tar.gz | tar xz --directory=/tmp/elasticsearch --strip-components=1
-          /tmp/elasticsearch/bin/plugin install analysis-icu
-          /tmp/elasticsearch/bin/elasticsearch --daemonize --path.data /tmp
+          wget -O - https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.10.tar.gz | tar xz --directory=/tmp/elasticsearch --strip-components=1
+          /tmp/elasticsearch/bin/elasticsearch-plugin install analysis-icu
+          /tmp/elasticsearch/bin/elasticsearch --daemonize
           sleep 30 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
       - run: curl -v http://localhost:9200
       - name: Run tests
