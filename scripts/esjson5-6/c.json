@@ -1,0 +1,247 @@
+{
+				"properties": {
+					"activities": {
+						"type": "text",
+						"index": false
+					},
+					"areas": {
+						"type": "long"
+					},
+					"article_categories": {
+						"type": "text",
+						"index": false
+					},
+					"article_type": {
+						"type": "text",
+						"index": false
+					},
+					"available_locales": {
+						"type": "text",
+						"index": false
+					},
+					"description_ca": {
+						"type": "text",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"description_de": {
+						"type": "text",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"description_en": {
+						"type": "text",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"description_es": {
+						"type": "text",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"description_eu": {
+						"type": "text",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"description_fr": {
+						"type": "text",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"description_it": {
+						"type": "text",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"doc_type": {
+						"type": "text",
+						"index": false
+					},
+					"geom": {
+						"type": "geo_point",
+						"ignore_malformed": true
+					},
+					"id": {
+						"type": "long"
+					},
+					"quality": {
+						"type": "integer"
+					},
+					"summary_ca": {
+						"type": "text",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"summary_de": {
+						"type": "text",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"summary_en": {
+						"type": "text",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"summary_es": {
+						"type": "text",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"summary_eu": {
+						"type": "text",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"summary_fr": {
+						"type": "text",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"summary_it": {
+						"type": "text",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"title_ca": {
+						"type": "text",
+						"index": false,
+						"fields": {
+							"ngram": {
+								"type": "text",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "text",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "text",
+								"analyzer": "catalan_heavy"
+							}
+						}
+					},
+					"title_de": {
+						"type": "text",
+						"index": false,
+						"fields": {
+							"ngram": {
+								"type": "text",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "text",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "text",
+								"analyzer": "german_heavy"
+							}
+						}
+					},
+					"title_en": {
+						"type": "text",
+						"index": false,
+						"fields": {
+							"ngram": {
+								"type": "text",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "text",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "text",
+								"analyzer": "english_heavy"
+							}
+						}
+					},
+					"title_es": {
+						"type": "text",
+						"index": false,
+						"fields": {
+							"ngram": {
+								"type": "text",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "text",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "text",
+								"analyzer": "spanish_heavy"
+							}
+						}
+					},
+					"title_eu": {
+						"type": "text",
+						"index": false,
+						"fields": {
+							"ngram": {
+								"type": "text",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "text",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "text",
+								"analyzer": "basque_heavy"
+							}
+						}
+					},
+					"title_fr": {
+						"type": "text",
+						"index": false,
+						"fields": {
+							"ngram": {
+								"type": "text",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "text",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "text",
+								"analyzer": "french_heavy"
+							}
+						}
+					},
+					"title_it": {
+						"type": "text",
+						"index": false,
+						"fields": {
+							"ngram": {
+								"type": "text",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "text",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "text",
+								"analyzer": "italian_heavy"
+							}
+						}
+					}
+				}
+			}
