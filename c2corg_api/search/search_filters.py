@@ -35,8 +35,6 @@ def build_query(url_params, meta_params, doc_type):
         if filter:
             search = search.filter(filter)
 
-    #TODO: Remettre le filtre
-    #search.filter(Q("term", c2corg_doc_type=doc_type))
     search = search.filter(Q("match", c2corg_doc_type=doc_type))
 
     search = search. \

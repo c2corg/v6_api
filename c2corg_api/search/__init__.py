@@ -78,8 +78,6 @@ def get_queue_config(settings):
 
 
 def create_search(document_type=None):
-    #TODO: En fonction du document type envoyer vers le bon index
-    #en fonction document_type qui contient le suffixe de l'index
     return Search(
         using=elasticsearch_config['client'],
         index=(elasticsearch_config['index']),
