@@ -1,3 +1,5 @@
+import logging
+
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.book import BOOK_TYPE
@@ -25,6 +27,7 @@ from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl.query import MultiMatch
 from kombu import Exchange, Queue, pools
 from kombu.connection import Connection
+from pprint import pprint
 
 # the maximum number of documents that can be returned for each document type
 SEARCH_LIMIT_MAX = 50
@@ -74,11 +77,14 @@ def get_queue_config(settings):
     return QueueConfiguration(settings)
 
 
-def create_search(document_type):
+def create_search(document_type=None):
+    #TODO: En fonction du document type envoyer vers le bon index
+    #en fonction document_type qui contient le suffixe de l'index
     return Search(
         using=elasticsearch_config['client'],
-        index=elasticsearch_config['index'],
-        doc_type=search_documents[document_type])
+        index=(elasticsearch_config['index']),
+        doc_type="_doc", #search_documents[document_type]
+    )
 
 
 def get_text_query_on_title(search_term, search_lang=None):

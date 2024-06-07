@@ -61,7 +61,7 @@ class SearchDocument(DocType):
         pass
 
     id = Long()
-    doc_type = Enum()
+    c2corg_doc_type = Enum()
     quality = QEnumRange(
         'qa', model_field=Document.quality, enum_mapper=sortable_quality_types)
     available_locales = QEnumArray('l', enum=default_langs)
@@ -138,7 +138,7 @@ class SearchDocument(DocType):
         search_document = {
             '_index': index,
             '_id': document.document_id,
-            '_type': document.type,
+            '_type': "_doc",#document.type,
             'id': document.document_id
         }
 
@@ -147,7 +147,7 @@ class SearchDocument(DocType):
             search_document['_op_type'] = 'delete'
         else:
             search_document['_op_type'] = 'index'
-            search_document['doc_type'] = document.type
+            search_document['c2corg_doc_type'] = document.type
 
             available_locales = []
             for locale in document.locales:

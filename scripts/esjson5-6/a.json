@@ -2,14 +2,14 @@
 				"properties": {
 					"area_type": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"areas": {
 						"type": "long"
 					},
 					"available_locales": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"description_ca": {
 						"type": "text",
@@ -232,6 +232,46 @@
 							"contentheavy": {
 								"type": "text",
 								"analyzer": "italian_heavy"
+							}
+						}
+					},
+					"title_sl": {
+						"type": "text",
+						"index": false,
+						"fields": {
+							"ngram": {
+								"type": "text",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "text",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "text",
+								"analyzer": "slovene_heavy"
+							}
+						}
+					},
+					"title_zh": {
+						"type": "text",
+						"index": false,
+						"fields": {
+							"ngram": {
+								"type": "text",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "text",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "text",
+								"analyzer": "chinois_heavy"
 							}
 						}
 					}

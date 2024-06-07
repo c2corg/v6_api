@@ -2,18 +2,18 @@
 				"properties": {
 					"activities": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"areas": {
 						"type": "long"
 					},
 					"available_locales": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"avalanche_signs": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"condition_rating": {
 						"type": "integer"
@@ -330,6 +330,46 @@
 					},
 					"waypoints": {
 						"type": "long"
+					},
+					"title_sl": {
+						"type": "text",
+						"index": false,
+						"fields": {
+							"ngram": {
+								"type": "text",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "text",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "text",
+								"analyzer": "slovene_heavy"
+							}
+						}
+					},
+					"title_zh": {
+						"type": "text",
+						"index": false,
+						"fields": {
+							"ngram": {
+								"type": "text",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "text",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "text",
+								"analyzer": "chinois_heavy"
+							}
+						}
 					}
 				}
 			}

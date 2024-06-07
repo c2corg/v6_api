@@ -4,8 +4,8 @@ from c2corg_api.search.mapping_types import QueryableMixin, QEnum
 
 
 class SearchArea(SearchDocument):
-    class Meta(BaseMeta):
-        doc_type = AREA_TYPE
+#    class Meta(BaseMeta):
+#        doc_type = AREA_TYPE
 
     area_type = QEnum('atyp', model_field=Area.area_type)
 

@@ -348,7 +348,7 @@ class TestUserRest(BaseUserTestRest):
         sync_es(self.session)
         search_doc = search_documents[USERPROFILE_TYPE].get(
             id=user_id,
-            index=elasticsearch_config['index'], ignore=404)
+            index=elasticsearch_config['index'][:-1]+'u', ignore=404)
         self.assertIsNone(search_doc)
 
         # Simulate confirmation email validation
@@ -360,10 +360,10 @@ class TestUserRest(BaseUserTestRest):
         self.sync_es()
         search_doc = search_documents[USERPROFILE_TYPE].get(
             id=user_id,
-            index=elasticsearch_config['index'])
+            index=elasticsearch_config['index'][:-1]+'u')
         self.assertIsNotNone(search_doc)
 
-        self.assertIsNotNone(search_doc['doc_type'])
+        self.assertIsNotNone(search_doc['c2corg_doc_type'])
         self.assertEqual(search_doc['title_fr'], 'Max Mustermann testf')
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')

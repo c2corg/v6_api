@@ -1,4 +1,5 @@
 import logging
+from pprint import pprint
 
 from c2corg_api.caching import cache_document_detail, cache_document_cooked
 from c2corg_api.models import DBSession
@@ -60,6 +61,8 @@ ES_MAX_RESULT_WINDOW = 10000
 class DocumentRest(object):
 
     def __init__(self, request):
+        pprint(self)
+        pprint(request)
         self.request = request
 
     # TODO: remove doc_type, it's in documents_config

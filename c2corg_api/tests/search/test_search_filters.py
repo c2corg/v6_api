@@ -23,12 +23,13 @@ class AdvancedSearchTest(BaseTestCase):
             'limit': 10,
             'offset': 0
         }
-        query = build_query(params, meta_params, 'w')
+        query = build_query(params, meta_params,'w')
         expected_query = create_search('w'). \
             query(get_text_query_on_title('search word')). \
             filter(Term(available_locales='fr')).\
             filter(Terms(areas=[1234, 4567])). \
             filter(Range(elevation={'gte': 1500})). \
+            filter(Q("match", c2corg_doc_type='w')). \
             extra(from_=0, size=10)
         self.assertQueryEqual(query, expected_query)
 
@@ -51,6 +52,7 @@ class AdvancedSearchTest(BaseTestCase):
                     'left': 6.28279913, 'bottom': 46.03129072,
                     'right': 6.28369744, 'top': 46.03191439},
                 type='indexed')). \
+            filter(Q("match", c2corg_doc_type='w')). \
             extra(from_=0, size=10)
         self.assertQueryEqual(query, expected_query)
 
@@ -65,6 +67,7 @@ class AdvancedSearchTest(BaseTestCase):
         query = build_query(params, meta_params, 'w')
         expected_query = create_search('w'). \
             query(get_text_query_on_title('search word')). \
+            filter(Q("match", c2corg_doc_type='w')). \
             extra(from_=40, size=20)
         self.assertQueryEqual(query, expected_query)
 
@@ -79,6 +82,7 @@ class AdvancedSearchTest(BaseTestCase):
         query = build_query(params, meta_params, 'o')
         expected_query = create_search('o'). \
             filter(Term(activities='skitouring')). \
+            filter(Q("match", c2corg_doc_type='o')). \
             sort({'date_end': {'order': 'desc'}}, {'id': {'order': 'desc'}}). \
             extra(from_=40, size=20)
         self.assertQueryEqual(query, expected_query)

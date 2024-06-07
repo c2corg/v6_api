@@ -4,8 +4,8 @@ from c2corg_api.search.mapping_types import QueryableMixin, QEnumArray
 
 
 class SearchBook(SearchDocument):
-    class Meta(BaseMeta):
-        doc_type = BOOK_TYPE
+#    class Meta(BaseMeta):
+#        doc_type = BOOK_TYPE
 
     activities = QEnumArray(
         'act', model_field=Book.activities)

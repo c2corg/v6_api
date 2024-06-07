@@ -8,11 +8,11 @@
 					},
 					"available_locales": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"best_periods": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"capacity": {
 						"type": "integer"
@@ -22,15 +22,15 @@
 					},
 					"children_proof": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"climbing_indoor_types": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"climbing_outdoor_types": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"climbing_rating_max": {
 						"type": "integer"
@@ -43,11 +43,11 @@
 					},
 					"climbing_styles": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"custodianship": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"description_ca": {
 						"type": "text",
@@ -121,43 +121,43 @@
 					},
 					"orientations": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"paragliding_rating": {
 						"type": "integer"
 					},
 					"product_types": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"prominence": {
 						"type": "integer"
 					},
 					"public_transportation_rating": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"public_transportation_types": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"quality": {
 						"type": "integer"
 					},
 					"rain_proof": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"rock_types": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"routes_quantity": {
 						"type": "integer"
 					},
 					"snow_clearance_rating": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"summary_ca": {
 						"type": "text",
@@ -336,11 +336,51 @@
 					},
 					"waypoint_type": {
 						"type": "text",
-						"index": false
+						"index": true
 					},
 					"weather_station_types": {
 						"type": "text",
-						"index": false
+						"index": true
+					},
+					"title_sl": {
+						"type": "text",
+						"index": false,
+						"fields": {
+							"ngram": {
+								"type": "text",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "text",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "text",
+								"analyzer": "slovene_heavy"
+							}
+						}
+					},
+					"title_zh": {
+						"type": "text",
+						"index": false,
+						"fields": {
+							"ngram": {
+								"type": "text",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "text",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "text",
+								"analyzer": "chinois_heavy"
+							}
+						}
 					}
 				}
 			}
