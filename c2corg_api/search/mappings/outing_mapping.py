@@ -17,7 +17,6 @@ from elasticsearch_dsl import Date
 
 class SearchOuting(SearchDocument):
     class Meta(BaseMeta):
-#        doc_type = OUTING_TYPE
         c2corg_doc_type = OUTING_TYPE
 
     date_start = Date()

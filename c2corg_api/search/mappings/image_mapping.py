@@ -6,7 +6,6 @@ from c2corg_api.search.mapping_types import QueryableMixin, QEnumArray, \
 
 class SearchImage(SearchDocument):
     class Meta(BaseMeta):
-#        doc_type = IMAGE_TYPE
         c2corg_doc_type = IMAGE_TYPE
 
     activities = QEnumArray(

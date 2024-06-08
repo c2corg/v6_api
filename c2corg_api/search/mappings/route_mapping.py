@@ -17,7 +17,6 @@ from c2corg_api.models.common.sortable_search_attributes import \
 
 class SearchRoute(SearchDocument):
     class Meta(BaseMeta):
-#        doc_type = ROUTE_TYPE
         c2corg_doc_type = ROUTE_TYPE
 
     # array of waypoint ids

@@ -52,7 +52,8 @@ def do_multi_search_for_types(search_types, search_term, limit, lang):
         (_, get_documents_config) = search_type
         search = create_search(get_documents_config.document_type).\
             query(get_text_query_on_title(search_term, lang)). \
-            filter(Q("match", c2corg_doc_type=get_documents_config.document_type)). \
+            filter(Q("match",
+              c2corg_doc_type=get_documents_config.document_type)). \
             extra(from_=0, size=limit)
         multi_search = multi_search.add(search)
 
