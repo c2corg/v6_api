@@ -8,7 +8,7 @@ services:
       network: host
     depends_on:
       - postgresql
-#      - elasticsearch
+      - elasticsearch
       - redis
     ports:
       - 6543:6543
@@ -30,12 +30,12 @@ services:
       - ./test.ini.in:/var/www/test.ini.in
       - ./pytest.ini:/var/www/pytest.ini
       - ./requirements.txt:/var/www/requirements.txt
-      - ./config:/var/www/config
+      - ./config/docker-dev:/var/www/config/docker-dev
       - ./scripts:/var/www/scripts
     command: make -f config/docker-dev serve
     links:
       - postgresql
-#      - elasticsearch
+      - elasticsearch
       - redis
 
   postgresql:
