@@ -193,7 +193,7 @@ class FillIndexTest(BaseTestCase):
 
         # merged document is ignored
         self.assertIsNone(SearchWaypoint.get(id=71174,
-                    index='c2corg_tests_w', ignore=404))
+                                             index='c2corg_tests_w', ignore=404))
 
         # check that the sync. status was updated
         last_update, _ = es_sync.get_status(self.session)

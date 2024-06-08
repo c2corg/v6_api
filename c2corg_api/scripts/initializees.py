@@ -77,7 +77,7 @@ def setup_es():
         indice_settings_update(cible, index_name[:-2]+index_suffix)
         print('Index "{0}" settings'.format(index_name[:-2] + index_suffix))
         indice_mapping_update(cible,
-                              index_name[:-2]+index_suffix,index_suffix[1])
+                              index_name[:-2]+index_suffix, index_suffix[1])
         print('Index "{0}" mappings'.format(index_name[:-2] + index_suffix))
 
     print('all indexes are created')
