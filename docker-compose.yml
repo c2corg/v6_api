@@ -15,10 +15,10 @@ services:
     environment:
       db_host: 'postgresql'
       tests_db_host: 'postgresql'
-      elasticsearch_host: '192.168.1.120'
-      elasticsearch_port: 9203
-      tests_elasticsearch_host: '192.168.1.120'
-      tests_elasticsearch_port: 9203
+      elasticsearch_host: 'elasticsearch'
+      elasticsearch_port: 9200
+      tests_elasticsearch_host: 'elasticsearch'
+      tests_elasticsearch_port: 9200
       redis_url: 'redis://redis:6379/'
       version: ''
     volumes:
@@ -67,7 +67,7 @@ services:
 #      - 9202:9200
 #      - 9302:9300
 
-  elasticsearch68:
+  elasticsearch:
     platform: linux/amd64
     container_name: elasticsearch
     build:

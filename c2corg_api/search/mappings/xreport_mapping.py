@@ -8,8 +8,8 @@ from c2corg_api.models.common.sortable_search_attributes import \
 
 
 class SearchXreport(SearchDocument):
-#    class Meta(BaseMeta):
-#        doc_type = XREPORT_TYPE
+    class Meta(BaseMeta):
+        c2corg_doc_type = XREPORT_TYPE
 
     event_activity = QEnumArray(
         'act', model_field=Xreport.event_activity)

@@ -3,16 +3,16 @@ import sys
 import pycurl
 from io import BytesIO
 
-from c2corg_api.search.mappings.area_mapping import SearchArea
-from c2corg_api.search.mappings.article_mapping import SearchArticle
-from c2corg_api.search.mappings.book_mapping import SearchBook
-from c2corg_api.search.mappings.image_mapping import SearchImage
-from c2corg_api.search.mappings.outing_mapping import SearchOuting
-from c2corg_api.search.mappings.xreport_mapping import SearchXreport
-from c2corg_api.search.mappings.route_mapping import SearchRoute
-from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
-from c2corg_api.search.mappings.user_mapping import SearchUser
-from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
+#from c2corg_api.search.mappings.area_mapping import SearchArea
+#from c2corg_api.search.mappings.article_mapping import SearchArticle
+#from c2corg_api.search.mappings.book_mapping import SearchBook
+#from c2corg_api.search.mappings.image_mapping import SearchImage
+#from c2corg_api.search.mappings.outing_mapping import SearchOuting
+#from c2corg_api.search.mappings.xreport_mapping import SearchXreport
+#from c2corg_api.search.mappings.route_mapping import SearchRoute
+#from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
+#from c2corg_api.search.mappings.user_mapping import SearchUser
+#from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 
 from elasticsearch_dsl import Index
 
@@ -23,7 +23,7 @@ from pyramid.paster import (
 
 from pyramid.scripts.common import parse_vars
 
-from c2corg_api.search.mapping import analysis_settings
+#from c2corg_api.search.mapping import analysis_settings
 from c2corg_api.search import configure_es_from_config, elasticsearch_config
 
 
@@ -48,7 +48,7 @@ def main(argv=sys.argv):
 def setup_es():
     """Create the ElasticSearch index and configure the mapping.
     """
-    index_suffix_list=["_a","_b","_c","_i","_m","_o","_r","_u","_w","_x"]
+    index_suffix_list = ["_a", "_b", "_c", "_i", "_m", "_o", "_r", "_u", "_w", "_x"]
 
     client = elasticsearch_config['client']
     index_name = elasticsearch_config['index']
@@ -63,20 +63,20 @@ def setup_es():
         if client.indices.exists(index_name[:-2]+index_suffix):
             print('Index "{0}" already exists. deleting it {0}... '
                   .format(index_name[:-2]+index_suffix))
-            #print('To delete the index run:')
-            #print('curl -XDELETE \'http://{0}:{1}/{2}/\''.format(
+            # print('To delete the index run:')
+            # print('curl -XDELETE \'http://{0}:{1}/{2}/\''.format(
             #    elasticsearch_config['host'], elasticsearch_config['port'],
             #    index_name+index_suffix))
             delete_indice(cible, index_name[:-2]+index_suffix)
-            #sys.exit(0)
+            # sys.exit(0)
 
     for index_suffix in index_suffix_list:
         print('Index "{0}" to create'.format(index_name[:-2]+index_suffix))
-        create_indice(cible,index_name[:-2]+index_suffix)
+        create_indice(cible, index_name[:-2]+index_suffix)
         print('Index "{0}" created'.format(index_name[:-2]+index_suffix))
-        indice_settings_update(cible,index_name[:-2]+index_suffix)
+        indice_settings_update(cible, index_name[:-2]+index_suffix)
         print('Index "{0}" settings'.format(index_name[:-2] + index_suffix))
-        indice_mapping_update(cible,index_name[:-2]+index_suffix,index_suffix[1])
+        indice_mapping_update(cible, index_name[:-2]+index_suffix,index_suffix[1])
         print('Index "{0}" mappings'.format(index_name[:-2] + index_suffix))
 
     print('all indexes are created')
@@ -99,7 +99,7 @@ def delete_indice(cible, indice_name):
     header = ['Content-Type: application/json']
     c.setopt(c.HTTPHEADER, header)
     c.setopt(c.CUSTOMREQUEST, 'DELETE')
-    c.setopt(c.URL, 'http://' + cible + '/' + indice_name )
+    c.setopt(c.URL, 'http://' + cible + '/' + indice_name)
     c.setopt(c.WRITEDATA, buffer)
     c.perform()
     c.close()
@@ -114,7 +114,7 @@ def create_indice(cible, indice_name):
     header = ['Content-Type: application/json']
     c.setopt(c.HTTPHEADER, header)
     c.setopt(c.CUSTOMREQUEST, 'PUT')
-    c.setopt(c.URL, 'http://' + cible + '/' + indice_name )
+    c.setopt(c.URL, 'http://' + cible + '/' + indice_name)
     c.setopt(c.WRITEDATA, buffer)
     c.perform()
     c.close()
@@ -122,9 +122,11 @@ def create_indice(cible, indice_name):
     body = buffer.getvalue()
     print(body.decode('iso-8859-1'))
 
+
 def indice_settings_update(cible, indice_name):
     """curl -X POST -H "Content-Type: application/json" http://192.168.1.120:9203/c2corg_a/_close"""
-    """curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson5-6/settings.json http://192.168.1.120:9203/c2corg_a/_settings"""
+    """curl -X PUT -H "Content-Type: application/json" 
+              -d @./scripts/esjson5-6/settings.json http://192.168.1.120:9203/c2corg_a/_settings"""
     """curl -X POST -H "Content-Type: application/json" http://192.168.1.120:9203/c2corg_a/_open"""
     buffer = BytesIO()
     c = pycurl.Curl()

@@ -5,9 +5,10 @@ from elasticsearch_dsl import Q
 from c2corg_api.search import create_search, elasticsearch_config, \
     get_text_query_on_title
 from c2corg_api.views.document_listings import get_documents
-from elasticsearch_dsl.search import MultiSearch, Search
+from elasticsearch_dsl.search import MultiSearch   # , Search
 
 log = logging.getLogger(__name__)
+
 
 def search_for_types(search_types, search_term, limit, lang):
     """Get results for all given types.

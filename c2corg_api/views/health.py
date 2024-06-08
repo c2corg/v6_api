@@ -1,5 +1,4 @@
 import logging
-import sys
 
 from c2corg_api.caching import cache_document_detail
 from c2corg_api.models import DBSession, es_sync
@@ -68,8 +67,9 @@ class HealthRest(object):
             stats = client.indices.stats(index, metric='docs')
             document_count_all_indice = 0
             for indice in stats['indices']:
-                document_count_all_indice += stats['indices'][indice]['total']['docs']['count']
-            #es_docs = stats['indices'][index]['total']['docs']['count']
+                document_count_all_indice += \
+                    stats['indices'][indice]['total']['docs']['count']
+            # es_docs = stats['indices'][index]['total']['docs']['count']
             es_docs = document_count_all_indice
             success = True
         except Exception:

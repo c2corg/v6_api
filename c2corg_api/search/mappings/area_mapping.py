@@ -1,11 +1,11 @@
-from c2corg_api.models.area import AREA_TYPE, Area
+from c2corg_api.models.area import Area, AREA_TYPE
 from c2corg_api.search.mapping import SearchDocument, BaseMeta
 from c2corg_api.search.mapping_types import QueryableMixin, QEnum
 
 
 class SearchArea(SearchDocument):
-#    class Meta(BaseMeta):
-#        doc_type = AREA_TYPE
+    class Meta(BaseMeta):
+        c2corg_doc_type = AREA_TYPE
 
     area_type = QEnum('atyp', model_field=Area.area_type)
 

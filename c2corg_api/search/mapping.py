@@ -138,7 +138,7 @@ class SearchDocument(DocType):
         search_document = {
             '_index': index,
             '_id': document.document_id,
-            '_type': "_doc",#document.type,
+            '_type': "_doc",   # document.type,
             'id': document.document_id
         }
 

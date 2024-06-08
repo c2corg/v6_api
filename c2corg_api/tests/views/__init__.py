@@ -1,10 +1,7 @@
 import json
-import logging
 import urllib.request
 import urllib.parse
 import urllib.error
-
-from IPython.lib.pretty import pprint
 
 from c2corg_api.caching import cache_document_detail
 from c2corg_api.models.cache_version import CacheVersion, get_cache_key

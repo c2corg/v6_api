@@ -10,7 +10,6 @@ from c2corg_api.models.common.sortable_search_attributes import \
 
 class SearchWaypoint(SearchDocument):
     class Meta(BaseMeta):
-        #doc_type = WAYPOINT_TYPE
         c2corg_doc_type = WAYPOINT_TYPE
 
     elevation = QInteger(

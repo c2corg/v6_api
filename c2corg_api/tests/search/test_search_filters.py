@@ -23,7 +23,7 @@ class AdvancedSearchTest(BaseTestCase):
             'limit': 10,
             'offset': 0
         }
-        query = build_query(params, meta_params,'w')
+        query = build_query(params, meta_params, 'w')
         expected_query = create_search('w'). \
             query(get_text_query_on_title('search word')). \
             filter(Term(available_locales='fr')).\
