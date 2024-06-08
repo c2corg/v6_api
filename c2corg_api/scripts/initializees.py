@@ -48,7 +48,7 @@ def main(argv=sys.argv):
 def setup_es():
     """Create the ElasticSearch index and configure the mapping.
     """
-    index_suffix_list = ["_a", "_b", "_c", "_i", \
+    index_suffix_list = ["_a", "_b", "_c", "_i",
                 "_m", "_o", "_r", "_u", "_w", "_x"]
 
     client = elasticsearch_config['client']
@@ -77,7 +77,7 @@ def setup_es():
         print('Index "{0}" created'.format(index_name[:-2]+index_suffix))
         indice_settings_update(cible, index_name[:-2]+index_suffix)
         print('Index "{0}" settings'.format(index_name[:-2] + index_suffix))
-        indice_mapping_update(cible, \
+        indice_mapping_update(cible,
                               index_name[:-2]+index_suffix,index_suffix[1])
         print('Index "{0}" mappings'.format(index_name[:-2] + index_suffix))
 
