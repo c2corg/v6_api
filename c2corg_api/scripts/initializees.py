@@ -49,7 +49,7 @@ def setup_es():
     """Create the ElasticSearch index and configure the mapping.
     """
     index_suffix_list = ["_a", "_b", "_c", "_i",
-                "_m", "_o", "_r", "_u", "_w", "_x"]
+                         "_m", "_o", "_r", "_u", "_w", "_x"]
 
     client = elasticsearch_config['client']
     index_name = elasticsearch_config['index']
@@ -64,12 +64,11 @@ def setup_es():
         if client.indices.exists(index_name[:-2]+index_suffix):
             print('Index "{0}" already exists. deleting it {0}... '
                   .format(index_name[:-2]+index_suffix))
-            # print('To delete the index run:')
-            # print('curl -XDELETE \'http://{0}:{1}/{2}/\''.format(
-            #    elasticsearch_config['host'], elasticsearch_config['port'],
-            #    index_name+index_suffix))
+            """ print('To delete the index run:')
+            print('curl -XDELETE \'http://{0}:{1}/{2}/\''.format(
+               elasticsearch_config['host'], elasticsearch_config['port'],
+               index_name+index_suffix)) """
             delete_indice(cible, index_name[:-2]+index_suffix)
-            # sys.exit(0)
 
     for index_suffix in index_suffix_list:
         print('Index "{0}" to create'.format(index_name[:-2]+index_suffix))
