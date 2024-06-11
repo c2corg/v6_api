@@ -16,6 +16,7 @@ from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.tests import BaseTestCase
 from c2corg_api.scripts.es.fill_index import fill_index
+from c2corg_api.search import elasticsearch_config
 
 
 class FillIndexTest(BaseTestCase):
@@ -141,8 +142,8 @@ class FillIndexTest(BaseTestCase):
 
         # fill the ElasticSearch index
         fill_index(self.session)
-
-        waypoint1 = SearchWaypoint.get(id=71171, index='c2corg_tests_w')
+        index = elasticsearch_config['index']
+        waypoint1 = SearchWaypoint.get(id=71171, index=index[:-1]+'w')
         self.assertIsNotNone(waypoint1)
         self.assertEqual(waypoint1.title_en, 'Mont Granier')
         self.assertEqual(waypoint1.title_fr, 'Mont Granier')
@@ -153,47 +154,47 @@ class FillIndexTest(BaseTestCase):
         self.assertAlmostEqual(waypoint1.geom[0], 5.71288994)
         self.assertAlmostEqual(waypoint1.geom[1], 45.64476395)
 
-        waypoint2 = SearchWaypoint.get(id=71172, index='c2corg_tests_w')
+        waypoint2 = SearchWaypoint.get(id=71172, index=index[:-1]+'w')
         self.assertIsNotNone(waypoint2)
         self.assertEqual(waypoint2.title_en, 'Mont Blanc')
         self.assertIsNone(waypoint2.title_fr)
         self.assertEqual(waypoint2.c2corg_doc_type, 'w')
 
-        route = SearchRoute.get(id=71173, index='c2corg_tests_r')
+        route = SearchRoute.get(id=71173, index=index[:-1]+'r')
         self.assertIsNotNone(route)
         self.assertEqual(route.title_en, 'Mont Blanc : Face N')
         self.assertIsNone(route.title_fr)
         self.assertEqual(route.c2corg_doc_type, 'r')
         self.assertEqual(route.durations, [0])
 
-        outing = SearchOuting.get(id=71175, index='c2corg_tests_o')
+        outing = SearchOuting.get(id=71175, index=index[:-1]+'o')
         self.assertIsNotNone(outing)
         self.assertEqual(outing.title_en, 'Mont Blanc : Face N !')
         self.assertIsNone(outing.title_fr)
         self.assertEqual(outing.c2corg_doc_type, 'o')
         self.assertEqual(outing.frequentation, 3)
 
-        article = SearchArticle.get(id=71176, index='c2corg_tests_c')
+        article = SearchArticle.get(id=71176, index=index[:-1]+'c')
         self.assertIsNotNone(article)
         self.assertEqual(article.title_en, 'Lac d\'Annecy')
         self.assertEqual(article.title_fr, 'Lac d\'Annecy')
         self.assertEqual(article.c2corg_doc_type, 'c')
 
-        book = SearchBook.get(id=71177, index='c2corg_tests_b')
+        book = SearchBook.get(id=71177, index=index[:-1]+'b')
         self.assertIsNotNone(book)
         self.assertEqual(book.title_en, 'Escalades au Thaurac')
         self.assertEqual(book.title_fr, 'Escalades au Thaurac')
         self.assertEqual(book.c2corg_doc_type, 'b')
         self.assertEqual(book.book_types, ['biography'])
 
-        xreport = SearchXreport.get(id=71178, index='c2corg_tests_x')
+        xreport = SearchXreport.get(id=71178, index=index[:-1]+'x')
         self.assertIsNotNone(xreport)
         self.assertEqual(xreport.title_en, 'Death in the mountains')
         self.assertEqual(xreport.c2corg_doc_type, 'x')
 
         # merged document is ignored
         self.assertIsNone(SearchWaypoint.get(id=71174,
-                                             index='c2corg_tests_w',
+                                             index=index[:-1]+'w',
                                              ignore=404))
 
         # check that the sync. status was updated
