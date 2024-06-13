@@ -68,17 +68,31 @@ services:
 #      - 9302:9300
 
   elasticsearch:
-    platform: linux/amd64
+    #platform: linux/amd64
     container_name: elasticsearch
     build:
       context: .
-      dockerfile: elasticsearch6.Dockerfile
+      dockerfile: elasticsearch7.Dockerfile
       network: host
     environment:
        - discovery.type=single-node
     ports:
       - 9200:9200
       - 9300:9300
+#
+
+#  elasticsearch68:
+#    platform: linux/amd64
+#    container_name: elasticsearch68
+#    build:
+#      context: .
+#      dockerfile: elasticsearch6.Dockerfile
+#      network: host
+#    environment:
+#       - discovery.type=single-node
+#    ports:
+#      - 9200:9200
+#      - 9300:9300
 #    volumes:
 #      - ./volumes/es6/data:/usr/share/elasticsearch/data
 #      - ./volumes/es6/config/jvm.options:/usr/share/elasticsearch/config/jvm.options

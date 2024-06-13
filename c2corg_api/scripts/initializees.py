@@ -136,7 +136,7 @@ def indice_settings_update(cible, indice_name):
     body = buffer.getvalue()
     print(body.decode('iso-8859-1'))
 
-    file = "./scripts/esjson5-6/settings.json"
+    file = "./scripts/esjson6-7/settings.json"
     f = open(file)
     post_data = f.read()
     c.setopt(c.CUSTOMREQUEST, 'PUT')
@@ -146,7 +146,10 @@ def indice_settings_update(cible, indice_name):
     c.perform()
     body = buffer.getvalue()
     print(body.decode('iso-8859-1'))
+    c.close()
 
+    c = pycurl.Curl()
+    header = ['Content-Type: application/json']
     c.setopt(c.HTTPHEADER, header)
     c.setopt(c.CUSTOMREQUEST, 'POST')
     c.setopt(c.URL, 'http://' + cible + '/' + indice_name + '/_open')
@@ -159,13 +162,13 @@ def indice_settings_update(cible, indice_name):
 
 
 def indice_mapping_update(cible, indice_name, mapping_type):
-    file = "./scripts/esjson5-6/"+mapping_type+".json"
+    file = "./scripts/esjson6-7/"+mapping_type+".json"
     f = open(file)
     post_data = f.read()
 
     buffer = BytesIO()
     c = pycurl.Curl()
-    c.setopt(c.URL, 'http://'+cible+'/'+indice_name+'/_mapping/_doc')
+    c.setopt(c.URL, 'http://'+cible+'/'+indice_name+'/_mapping')
     header = ['Content-Type: application/json']
     c.setopt(c.HTTPHEADER, header)
     c.setopt(c.CUSTOMREQUEST, 'PUT')

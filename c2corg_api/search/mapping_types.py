@@ -1,3 +1,5 @@
+import pprint
+
 from elasticsearch_dsl import Text, Long, Integer, Boolean, Date
 
 # this module contains classes to mark the fields of a mapping that can be
@@ -58,6 +60,7 @@ class QueryableMixin(object):
     @staticmethod
     def get_queryable_fields(search_model):
         queryable_fields = {}
+        pprint.pprint(search_model)
         fields = search_model._doc_type.mapping
         for field_name in fields:
             field = fields[field_name]

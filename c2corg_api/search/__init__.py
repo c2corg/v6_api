@@ -79,7 +79,7 @@ def create_search(document_type=None):
     return Search(
         using=elasticsearch_config['client'],
         index=(elasticsearch_config['index']),
-        doc_type="_doc"   # search_documents[document_type]
+        #doc_type="_doc"   # search_documents[document_type]
     )
 
 
