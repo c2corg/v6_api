@@ -70,23 +70,23 @@ sleep 2
 #5. Docs Mappings update
 echo 'updating doc type mappings'
 echo 'doc type : a'
-curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/a.json http://localhost:9200/c2corg_a/_mapping/a
+curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/a.json http://localhost:9200/c2corg_a/_mapping/a?include_type_name=true
 echo -e '\n doc type : b'
-curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/b.json http://localhost:9200/c2corg_b/_mapping/b
+curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/b.json http://localhost:9200/c2corg_b/_mapping/b?include_type_name=true
 echo -e '\n doc type : c'
-curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/c.json http://localhost:9200/c2corg_c/_mapping/c
+curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/c.json http://localhost:9200/c2corg_c/_mapping/c?include_type_name=true
 echo -e  '\n doc type : i'
-curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/i.json http://localhost:9200/c2corg_i/_mapping/i
+curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/i.json http://localhost:9200/c2corg_i/_mapping/i?include_type_name=true
 echo -e  '\n doc type : m'
-curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/m.json http://localhost:9200/c2corg_m/_mapping/m
+curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/m.json http://localhost:9200/c2corg_m/_mapping/m?include_type_name=true
 echo -e  '\n doc type : o'
-curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/o.json http://localhost:9200/c2corg_o/_mapping/o
+curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/o.json http://localhost:9200/c2corg_o/_mapping/o?include_type_name=true
 echo -e  '\n doc type : r'
-curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/r.json http://localhost:9200/c2corg_r/_mapping/r
+curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/r.json http://localhost:9200/c2corg_r/_mapping/r?include_type_name=true
 echo -e  '\n doc type : u'
-curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/u.json http://localhost:9200/c2corg_u/_mapping/u
+curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/u.json http://localhost:9200/c2corg_u/_mapping/u?include_type_name=true
 echo -e  '\n doc type : w'
-curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/w.json http://localhost:9200/c2corg_w/_mapping/w
+curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/w.json http://localhost:9200/c2corg_w/_mapping/w?include_type_name=true
 echo -e  '\n doc type : x'
-curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/x.json http://localhost:9200/c2corg_x/_mapping/x
+curl -X PUT -H "Content-Type: application/json" -d @./scripts/esjson6-7/x.json http://localhost:9200/c2corg_x/_mapping/x?include_type_name=true
 sleep 2
