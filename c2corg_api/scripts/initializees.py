@@ -115,7 +115,7 @@ def create_indice(cible, indice_name):
     header = ['Content-Type: application/json']
     c.setopt(c.HTTPHEADER, header)
     c.setopt(c.CUSTOMREQUEST, 'PUT')
-    c.setopt(c.URL, 'http://' + cible + '/' + indice_name)
+    c.setopt(c.URL, 'http://' + cible + '/' + indice_name + "?include_type_name=true")
     c.setopt(c.WRITEDATA, buffer)
     c.perform()
     c.close()
@@ -168,7 +168,7 @@ def indice_mapping_update(cible, indice_name, mapping_type):
 
     buffer = BytesIO()
     c = pycurl.Curl()
-    c.setopt(c.URL, 'http://'+cible+'/'+indice_name+'/_mapping')
+    c.setopt(c.URL, 'http://'+cible+'/'+indice_name+'/_mapping'+'/'+mapping_type)
     header = ['Content-Type: application/json']
     c.setopt(c.HTTPHEADER, header)
     c.setopt(c.CUSTOMREQUEST, 'PUT')
