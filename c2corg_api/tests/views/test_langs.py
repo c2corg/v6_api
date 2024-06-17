@@ -1,3 +1,5 @@
+import logging
+import sys
 from datetime import date, datetime
 
 from c2corg_api.models.feed import DocumentChange

@@ -51,7 +51,8 @@
 						"ignore_malformed": true
 					},
 					"id": {
-						"type": "long"
+						"type": "long",
+						"index": true
 					},
 					"quality": {
 						"type": "integer"

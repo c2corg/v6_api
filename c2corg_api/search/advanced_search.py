@@ -1,3 +1,7 @@
+import logging
+import sys
+
+
 from c2corg_api.search.mapping_types import meta_param_keys
 from c2corg_api.search.search_filters import build_query
 
@@ -21,8 +25,12 @@ def search(url_params, meta_params, doc_type):
 
     # only request the document ids from ES
     response = query.execute()
-    document_ids = [int(doc.meta.id) for doc in response]
-    total = response.hits.total
+
+    for doc in response.hits:
+        logging.warning('doc.id : %s', doc.meta.id)
+
+    document_ids = [int(doc.meta.id) for doc in response.hits]
+    total = response.hits.total.value
 
     return document_ids, total
 

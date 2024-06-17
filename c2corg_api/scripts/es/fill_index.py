@@ -81,7 +81,6 @@ def fill_index(session, batch_size=1000):
 
             for doc in sync.get_documents(session, doc_type, batch_size,
                                           ignore_redirects=True):
-                logging.warning("JPR fill_index doc_type : %s", doc_type)
                 batch.add(to_search_document(doc, index_name[:-1] + doc_type))
 
                 count += 1

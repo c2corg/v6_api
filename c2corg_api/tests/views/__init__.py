@@ -1,7 +1,10 @@
 import json
+import logging
 import urllib.request
 import urllib.parse
 import urllib.error
+from inspect import getmembers
+from pprint import pprint
 
 from c2corg_api.caching import cache_document_detail
 from c2corg_api.models.cache_version import CacheVersion, get_cache_key
@@ -178,11 +181,14 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def get_collection_search(self, params=None, user=None):
         prefix = self._prefix
+
         if params:
             prefix += "?" + urllib.parse.urlencode(params)
 
         headers = {} if not user else \
             self.add_authorization_header(username=user)
+
+        #pprint(getmembers(prefix))
 
         response = self.app.get(prefix, headers=headers, status=200)
         self.assertEqual(response.content_type, 'application/json')

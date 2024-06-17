@@ -8,7 +8,7 @@ from c2corg_api.search.mapping_types import Enum, QEnumArray, QLong, \
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.common.sortable_search_attributes import \
     sortable_quality_types
-from elasticsearch_dsl import MetaField, Long, GeoPoint, Text
+from elasticsearch_dsl import MetaField, Long, GeoPoint, Text, DocType
 
 
 class BaseMeta:
@@ -44,7 +44,7 @@ def default_title_field(lang: None):
             })
 
 
-class SearchDocument():
+class SearchDocument(DocType):
     """The base ElasticSearch mapping for documents. Each document type has
     its own specific mapping.
 
@@ -140,7 +140,7 @@ class SearchDocument():
         search_document = {
             '_index': index,
             '_id': document.document_id,
-            #'_type': "_doc",   # document.type,
+            '_type': "_doc",   # document.type,
             'id': document.document_id
         }
 
@@ -195,8 +195,7 @@ class SearchDocument():
     @staticmethod
     def copy_enum_range_fields(
             search_document, document, fields, search_model):
-
-        search_fields = search_model.c2corg_doc_type.mapping
+        search_fields = search_model._doc_type.mapping
         logging.warning("search_fields : %s", search_fields)
 
         for field in fields:

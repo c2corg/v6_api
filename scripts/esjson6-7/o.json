@@ -109,7 +109,8 @@
 						"type": "integer"
 					},
 					"id": {
-						"type": "long"
+						"type": "long",
+						"index": true
 					},
 					"labande_global_rating": {
 						"type": "integer"

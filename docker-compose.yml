@@ -121,6 +121,18 @@ services:
 #    volumes:
 #      - ./dataMigration/v6:/usr/share/logstash/pipeline
 
+  logstash7:
+    platform: linux/amd64
+    container_name: logstash7
+    build:
+      context: .
+      dockerfile: logstash7.Dockerfile
+      network: host
+    ports:
+      -  5044:5044
+    volumes:
+      - ./dataMigration/v7:/usr/share/logstash/pipeline
+
   redis:
     image: 'docker.io/redis:3.2'
     ports:

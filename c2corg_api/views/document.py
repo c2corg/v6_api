@@ -73,7 +73,6 @@ class DocumentRest(object):
             'limit': min(validated.get('limit', LIMIT_DEFAULT), LIMIT_MAX),
             'lang': validated.get('lang')
         }
-
         if meta_params['offset'] + meta_params['limit'] > ES_MAX_RESULT_WINDOW:
             # ES does not process requests where offset + limit is greater
             # than 10000, see:

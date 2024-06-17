@@ -54,13 +54,13 @@ def setup_es():
     client = elasticsearch_config['client']
     index_name = elasticsearch_config['index']
     cible = elasticsearch_config['host']+':'+str(elasticsearch_config['port'])
-    print('cible es: %s', cible)
+    #print('cible es: %s', cible)
 
     info = client.info()
     print('ElasticSearch version: {0}'.format(info['version']['number']))
 
     for index_suffix in index_suffix_list:
-        print("suffix : ", index_suffix)
+        #print("suffix : ", index_suffix)
         if client.indices.exists(index_name[:-2]+index_suffix):
             print('Index "{0}" already exists. deleting it {0}... '
                   .format(index_name[:-2]+index_suffix))
@@ -71,14 +71,14 @@ def setup_es():
             delete_indice(cible, index_name[:-2]+index_suffix)
 
     for index_suffix in index_suffix_list:
-        print('Index "{0}" to create'.format(index_name[:-2]+index_suffix))
+        #print('Index "{0}" to create'.format(index_name[:-2]+index_suffix))
         create_indice(cible, index_name[:-2]+index_suffix)
-        print('Index "{0}" created'.format(index_name[:-2]+index_suffix))
+        #print('Index "{0}" created'.format(index_name[:-2]+index_suffix))
         indice_settings_update(cible, index_name[:-2]+index_suffix)
-        print('Index "{0}" settings'.format(index_name[:-2] + index_suffix))
+        #print('Index "{0}" settings'.format(index_name[:-2] + index_suffix))
         indice_mapping_update(cible,
                               index_name[:-2]+index_suffix, index_suffix[1])
-        print('Index "{0}" mappings'.format(index_name[:-2] + index_suffix))
+        #print('Index "{0}" mappings'.format(index_name[:-2] + index_suffix))
 
     print('all indexes are created')
 
@@ -106,7 +106,7 @@ def delete_indice(cible, indice_name):
     c.close()
 
     body = buffer.getvalue()
-    print(body.decode('iso-8859-1'))
+    #print(body.decode('iso-8859-1'))
 
 
 def create_indice(cible, indice_name):
@@ -121,7 +121,7 @@ def create_indice(cible, indice_name):
     c.close()
 
     body = buffer.getvalue()
-    print(body.decode('iso-8859-1'))
+    #print(body.decode('iso-8859-1'))
 
 
 def indice_settings_update(cible, indice_name):
@@ -134,7 +134,7 @@ def indice_settings_update(cible, indice_name):
     c.setopt(c.WRITEDATA, buffer)
     c.perform()
     body = buffer.getvalue()
-    print(body.decode('iso-8859-1'))
+    #print(body.decode('iso-8859-1'))
 
     file = "./scripts/esjson6-7/settings.json"
     f = open(file)
@@ -145,7 +145,7 @@ def indice_settings_update(cible, indice_name):
     c.setopt(c.WRITEDATA, buffer)
     c.perform()
     body = buffer.getvalue()
-    print(body.decode('iso-8859-1'))
+    #print(body.decode('iso-8859-1'))
     c.close()
 
     c = pycurl.Curl()
@@ -156,7 +156,7 @@ def indice_settings_update(cible, indice_name):
     c.setopt(c.WRITEDATA, buffer)
     c.perform()
     body = buffer.getvalue()
-    print(body.decode('iso-8859-1'))
+    #print(body.decode('iso-8859-1'))
 
     c.close()
 
@@ -168,7 +168,7 @@ def indice_mapping_update(cible, indice_name, mapping_type):
 
     buffer = BytesIO()
     c = pycurl.Curl()
-    c.setopt(c.URL, 'http://'+cible+'/'+indice_name+'/_mapping'+'/'+mapping_type)
+    c.setopt(c.URL, 'http://'+cible+'/'+indice_name+'/_mapping'+'/'+mapping_type+'?include_type_name=true')
     header = ['Content-Type: application/json']
     c.setopt(c.HTTPHEADER, header)
     c.setopt(c.CUSTOMREQUEST, 'PUT')
@@ -178,4 +178,4 @@ def indice_mapping_update(cible, indice_name, mapping_type):
     c.close()
 
     body = buffer.getvalue()
-    print(body.decode('iso-8859-1'))
+    #print(body.decode('iso-8859-1'))
