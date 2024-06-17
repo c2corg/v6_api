@@ -584,6 +584,7 @@ class BaseDocumentTestRest(BaseTestRest):
                                       headers=headers, status=200)
 
         body = response.json
+
         if skip_validation:
             document_id = body.get('document_id')
             response = self.app.get(
@@ -639,10 +640,9 @@ class BaseDocumentTestRest(BaseTestRest):
         self.sync_es()
         search_doc = search_documents[self._doc_type].get(
             id=doc.document_id,
-            index=elasticsearch_config['index'])
-
-        self.assertIsNotNone(search_doc['doc_type'])
-        self.assertEqual(search_doc['doc_type'], doc.type)
+            index=elasticsearch_config['index'][:-1]+self._doc_type)
+        self.assertIsNotNone(search_doc['c2corg_doc_type'])
+        self.assertEqual(search_doc['c2corg_doc_type'], doc.type)
 
         if isinstance(doc, Route):
             title = waypoint_locale_en.title_prefix + ' : ' + \
@@ -826,9 +826,9 @@ class BaseDocumentTestRest(BaseTestRest):
             # check updates to the search index
             search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
-                index=elasticsearch_config['index'])
+                index=elasticsearch_config['index'][:-1]+self._doc_type)
 
-            self.assertEqual(search_doc['doc_type'], document.type)
+            self.assertEqual(search_doc['c2corg_doc_type'], document.type)
             self.assertEqual(search_doc['title_en'], archive_locale.title)
             self.assertEqual(search_doc['title_fr'], archive_locale_fr.title)
 
@@ -911,9 +911,9 @@ class BaseDocumentTestRest(BaseTestRest):
         sync_es(self.session)
         search_doc = search_documents[self._doc_type].get(
             id=document.document_id,
-            index=elasticsearch_config['index'])
+            index=elasticsearch_config['index'][:-1]+self._doc_type)
 
-        self.assertEqual(search_doc['doc_type'], document.type)
+        self.assertEqual(search_doc['c2corg_doc_type'], document.type)
 
         if isinstance(document, Route) and document.main_waypoint_id:
             locale_en = document.get_locale('en')
@@ -1007,9 +1007,9 @@ class BaseDocumentTestRest(BaseTestRest):
             sync_es(self.session)
             search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
-                index=elasticsearch_config['index'])
+                index=elasticsearch_config['index'][:-1]+self._doc_type)
 
-            self.assertEqual(search_doc['doc_type'], document.type)
+            self.assertEqual(search_doc['c2corg_doc_type'], document.type)
             self.assertEqual(
                 search_doc['title_en'], document.get_locale('en').title)
             self.assertEqual(
@@ -1099,9 +1099,9 @@ class BaseDocumentTestRest(BaseTestRest):
             sync_es(self.session)
             search_doc = search_documents[self._doc_type].get(
                 id=document.document_id,
-                index=elasticsearch_config['index'])
+                index=elasticsearch_config['index'][:-1]+self._doc_type)
 
-            self.assertEqual(search_doc['doc_type'], document.type)
+            self.assertEqual(search_doc['c2corg_doc_type'], document.type)
             self.assertEqual(
                 search_doc['title_en'], document.get_locale('en').title)
             self.assertEqual(

@@ -5,7 +5,7 @@ from c2corg_api.search.mapping_types import QueryableMixin
 
 class SearchTopoMap(SearchDocument):
     class Meta(BaseMeta):
-        doc_type = MAP_TYPE
+        c2corg_doc_type = MAP_TYPE
 
     FIELDS = []
 

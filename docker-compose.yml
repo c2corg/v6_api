@@ -1,9 +1,11 @@
 version: "3.7"
 services:
   api:
+    platform: linux/amd64
     build:
       context: .
       dockerfile: dev_api.Dockerfile
+      network: host
     depends_on:
       - postgresql
       - elasticsearch
@@ -14,7 +16,9 @@ services:
       db_host: 'postgresql'
       tests_db_host: 'postgresql'
       elasticsearch_host: 'elasticsearch'
+      elasticsearch_port: 9200
       tests_elasticsearch_host: 'elasticsearch'
+      tests_elasticsearch_port: 9200
       redis_url: 'redis://redis:6379/'
       version: ''
     volumes:
@@ -25,6 +29,9 @@ services:
       - ./development.ini.in:/var/www/development.ini.in
       - ./test.ini.in:/var/www/test.ini.in
       - ./pytest.ini:/var/www/pytest.ini
+      - ./requirements.txt:/var/www/requirements.txt
+      - ./config/docker-dev:/var/www/config/docker-dev
+      - ./scripts:/var/www/scripts
     command: make -f config/docker-dev serve
     links:
       - postgresql
@@ -39,11 +46,66 @@ services:
       - ./docker-compose/pgsql-settings.d/:/c2corg_anon/pgsql-settings.d/
       - .:/v6_api
 
+#  elasticsearch26:
+#    platform: linux/amd64
+#    image: 'docker.io/c2corg/c2corg_es:anon-2018-11-02'
+#    container_name: elasticsearch26
+#    ports:
+#      - 9201:9200
+#    command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon -Des.script.inline=true
+
+#  elasticsearch56:
+#    platform: linux/amd64
+#    container_name: elasticsearch56
+#    build:
+#      context: .
+#      dockerfile: elasticsearch5.Dockerfile
+#      network: host
+#    environment:
+#      - discovery.type=single-node
+#    ports:
+#      - 9202:9200
+#      - 9302:9300
+
   elasticsearch:
-    image: 'docker.io/c2corg/c2corg_es:anon-2018-11-02'
+    platform: linux/amd64
+    container_name: elasticsearch
+    build:
+      context: .
+      dockerfile: elasticsearch6.Dockerfile
+      network: host
+    environment:
+       - discovery.type=single-node
     ports:
       - 9200:9200
-    command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon -Des.script.inline=true
+      - 9300:9300
+#    volumes:
+#      - ./volumes/es6/data:/usr/share/elasticsearch/data
+#      - ./volumes/es6/config/jvm.options:/usr/share/elasticsearch/config/jvm.options
+
+#  logstash5:
+#    platform: linux/amd64
+#    container_name: logstash5
+#    build:
+#      context: .
+#      dockerfile: logstash5.Dockerfile
+#      network: host
+#    ports:
+#      -  5045:5044
+#    volumes:
+#      - ./dataMigration/v5/logstash.conf:/root/logstash.conf
+
+#  logstash6:
+#    platform: linux/amd64
+#    container_name: logstash6
+#    build:
+#      context: .
+#      dockerfile: logstash6.Dockerfile
+#      network: host
+#    ports:
+#      -  5044:5044
+#    volumes:
+#      - ./dataMigration/v6:/usr/share/logstash/pipeline
 
   redis:
     image: 'docker.io/redis:3.2'

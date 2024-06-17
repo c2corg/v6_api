@@ -293,9 +293,9 @@ def sync_deleted_documents(session, deleted_documents, batch_size):
     with batch:
         for document_id, doc_type in deleted_documents:
             batch.add({
-                '_index': index,
+                '_index': index[:-1]+doc_type,
                 '_id': document_id,
-                '_type': doc_type,
+                'c2corg_doc_type': doc_type,
                 'id': document_id,
                 '_op_type': 'delete'
             })
@@ -375,7 +375,7 @@ def create_search_documents(doc_type, documents, batch):
     index = elasticsearch_config['index']
     n = 0
     for doc in documents:
-        batch.add(to_search_document(doc, index))
+        batch.add(to_search_document(doc, index[:-1]+doc_type))
         n += 1
     log.info('Sent {} document(s) of type {}'.format(n, doc_type))
 

@@ -6,7 +6,7 @@ from c2corg_api.search.mapping_types import Enum, QEnumArray, QLong, \
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.common.sortable_search_attributes import \
     sortable_quality_types
-from elasticsearch_dsl import DocType, String, MetaField, Long, GeoPoint
+from elasticsearch_dsl import DocType, MetaField, Long, GeoPoint, Text
 
 
 class BaseMeta:
@@ -19,15 +19,27 @@ class BaseMeta:
 # the configuration is based on the one by Photon:
 # https://github.com/komoot/photon/blob/master/es/mappings.json
 # https://github.com/komoot/photon/blob/master/es/index_settings.json
-def default_title_field():
-    return String(
-        index='not_analyzed',
-        similarity='c2corgsimilarity',
-        fields={
-            'ngram': String(
-                analyzer='index_ngram', search_analyzer='search_ngram'),
-            'raw': String(
-                analyzer='index_raw', search_analyzer='search_raw')})
+def default_title_field(lang: None):
+    if lang is None:
+        return Text(
+            index='not_analyzed',
+            fields={
+                'ngram': Text(
+                    analyzer='index_ngram', search_analyzer='search_ngram'),
+                'raw': Text(
+                    analyzer='index_raw', search_analyzer='search_raw')
+            })
+    else:
+        return Text(
+            index='not_analyzed',
+            fields={
+                'ngram': Text(
+                    analyzer='index_ngram', search_analyzer='search_ngram'),
+                'raw': Text(
+                    analyzer='index_raw', search_analyzer='search_raw'),
+                'contentheavy': Text(
+                    analyzer='{0}_heavy'.format(lang))
+            })
 
 
 class SearchDocument(DocType):
@@ -49,7 +61,7 @@ class SearchDocument(DocType):
         pass
 
     id = Long()
-    doc_type = Enum()
+    c2corg_doc_type = Enum()
     quality = QEnumRange(
         'qa', model_field=Document.quality, enum_mapper=sortable_quality_types)
     available_locales = QEnumArray('l', enum=default_langs)
@@ -59,60 +71,74 @@ class SearchDocument(DocType):
     areas = QLong('a', is_id=True)
 
     # fr
-    title_fr = default_title_field()
-    summary_fr = String(
+    title_fr = default_title_field("french")
+    summary_fr = Text(
         analyzer='index_french', search_analyzer='search_french')
-    description_fr = String(
+    description_fr = Text(
         analyzer='index_french', search_analyzer='search_french')
 
     # it
-    title_it = default_title_field()
-    summary_it = String(
+    title_it = default_title_field("italian")
+    summary_it = Text(
         analyzer='index_italian', search_analyzer='search_italian')
-    description_it = String(
+    description_it = Text(
         analyzer='index_italian', search_analyzer='search_italian')
 
     # de
-    title_de = default_title_field()
-    summary_de = String(
+    title_de = default_title_field("german")
+    summary_de = Text(
         analyzer='index_german', search_analyzer='search_german')
-    description_de = String(
+    description_de = Text(
         analyzer='index_german', search_analyzer='search_german')
 
     # en
-    title_en = default_title_field()
-    summary_en = String(
+    title_en = default_title_field("english")
+    summary_en = Text(
         analyzer='index_english', search_analyzer='search_english')
-    description_en = String(
+    description_en = Text(
         analyzer='index_english', search_analyzer='search_english')
 
     # es
-    title_es = default_title_field()
-    summary_es = String(
+    title_es = default_title_field("spanish")
+    summary_es = Text(
         analyzer='index_spanish', search_analyzer='search_spanish')
-    description_es = String(
+    description_es = Text(
         analyzer='index_spanish', search_analyzer='search_spanish')
 
     # ca
-    title_ca = default_title_field()
-    summary_ca = String(
+    title_ca = default_title_field("catalan")
+    summary_ca = Text(
         analyzer='index_catalan', search_analyzer='search_catalan')
-    description_ca = String(
+    description_ca = Text(
         analyzer='index_catalan', search_analyzer='search_catalan')
 
     # eu
-    title_eu = default_title_field()
-    summary_eu = String(
+    title_eu = default_title_field("basque")
+    summary_eu = Text(
         analyzer='index_basque', search_analyzer='search_basque')
-    description_eu = String(
+    description_eu = Text(
         analyzer='index_basque', search_analyzer='search_basque')
+
+    # sl
+    title_sl = default_title_field("slovene")
+    summary_sl = Text(
+        analyzer='index_slovene', search_analyzer='search_slovene')
+    description_sl = Text(
+        analyzer='index_slovene', search_analyzer='search_slovene')
+
+    # zh
+    title_zh = default_title_field("chinois")
+    summary_zh = Text(
+        analyzer='index_chinois', search_analyzer='search_chinois')
+    description_zh = Text(
+        analyzer='index_chinois', search_analyzer='search_chinois')
 
     @staticmethod
     def to_search_document(document, index, include_areas=True):
         search_document = {
             '_index': index,
             '_id': document.document_id,
-            '_type': document.type,
+            '_type': "_doc",   # document.type,
             'id': document.document_id
         }
 
@@ -121,7 +147,7 @@ class SearchDocument(DocType):
             search_document['_op_type'] = 'delete'
         else:
             search_document['_op_type'] = 'index'
-            search_document['doc_type'] = document.type
+            search_document['c2corg_doc_type'] = document.type
 
             available_locales = []
             for locale in document.locales:
@@ -190,8 +216,12 @@ analysis_settings = {
     "filter": {
         "autocomplete_filter": {
             "type": "edge_ngram",
-            "min_gram": 2,
-            "max_gram": 20
+            "min_gram": "2",
+            "max_gram": "15",
+            "token_chars": [
+                "letter",
+                "digit"
+            ]
         },
         # filters for the english analyzers
         "english_stop": {
@@ -300,9 +330,9 @@ analysis_settings = {
         "index_ngram": {
             "char_filter": ["punctuationgreedy"],
             "filter": [
-                "word_delimiter", "lowercase", "asciifolding", "unique",
+                "word_delimiter", "lowercase", "icu_folding",
                 "autocomplete_filter"],
-            "tokenizer": "standard"
+            "tokenizer": "icu_tokenizer"
         },
         "search_ngram": {
             "char_filter": ["punctuationgreedy"],
@@ -452,6 +482,115 @@ analysis_settings = {
                 "lowercase",
                 "basque_stop",
                 "basque_stemmer"
+            ]
+        },
+        "french_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "french_elision",
+                "french_stop",
+                "icu_folding",
+                "lowercase",
+                "french_stemmer"
+            ]
+        },
+        "german_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "german_stop",
+                "german_stemmer",
+                "lowercase",
+                "icu_folding"
+            ]
+        },
+        "english_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "english_possessive_stemmer",
+                "english_stop",
+                "lowercase",
+                "icu_folding"
+            ]
+        },
+        "italian_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "italian_elision",
+                "italian_stop",
+                "lowercase",
+                "icu_folding",
+                "italian_stemmer"
+            ]
+        },
+        "spanish_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "lowercase",
+                "spanish_stop",
+                "spanish_stemmer",
+                "icu_folding"
+            ]
+        },
+        "catalan_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "catalan_elision",
+                "lowercase",
+                "catalan_stop",
+                "catalan_stemmer",
+                "icu_folding"
+            ]
+        },
+        "basque_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "lowercase",
+                "basque_stop",
+                "basque_stemmer",
+                "icu_folding"
+            ]
+        },
+        "index_slovene": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+                "autocomplete_filter",
+                "lowercase"
+            ]
+        },
+        "search_slovene": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+                "lowercase"
+            ]
+        },
+        "slovene_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "lowercase",
+                "icu_folding"
+            ]
+        },
+        "index_chinois": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+                "autocomplete_filter"
+            ]
+        },
+        "search_chinois": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+                "lowercase"
+            ]
+        },
+        "chinois_heavy": {
+            "tokenizer": "icu_tokenizer",
+            "filter": [
+                "lowercase",
+                "icu_folding"
             ]
         }
     }

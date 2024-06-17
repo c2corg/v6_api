@@ -1,0 +1,141 @@
+{
+    "analysis": {
+        "filter": {
+            "french_stemmer": {
+                "type": "stemmer",
+                "language": "light_french"
+            },
+            "autocomplete_filter": {
+                "type": "edge_ngram",
+                "min_gram": "2",
+                "max_gram": "15",
+                "token_chars": [
+                    "letter",
+                    "digit"
+                ]
+            }
+        },
+        "analyzer": {
+            "index_ngram": {
+                "filter": [
+                    "word_delimiter",
+                    "lowercase",
+                    "autocomplete_filter"
+                ],
+                "char_filter": [
+                    "punctuationgreedy"
+                ],
+                "tokenizer": "icu_tokenizer"
+            },
+            "french_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "french_elision",
+                    "french_stop",
+                    "icu_folding",
+                    "lowercase",
+                    "french_stemmer"
+                ]
+            },
+            "german_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "german_stop",
+                    "german_stemmer",
+                    "lowercase",
+                    "icu_folding"
+                ]
+            },
+            "english_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "english_possessive_stemmer",
+                    "english_stop",
+                    "lowercase",
+                    "icu_folding"
+                ]
+            },
+            "italian_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "italian_elision",
+                    "italian_stop",
+                    "lowercase",
+                    "icu_folding",
+                    "italian_stemmer"
+                ]
+            },
+            "spanish_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "lowercase",
+                    "spanish_stop",
+                    "spanish_stemmer",
+                    "icu_folding"
+                ]
+            },
+            "catalan_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "catalan_elision",
+                    "lowercase",
+                    "catalan_stop",
+                    "catalan_stemmer",
+                    "icu_folding"
+                ]
+            },
+            "basque_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "lowercase",
+                    "basque_stop",
+                    "basque_stemmer",
+                    "icu_folding"
+                ]
+            },
+            "index_slovene": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+                "autocomplete_filter",
+                "lowercase"
+            ]
+            },
+            "search_slovene": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase"
+                ]
+            },
+            "slovene_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "lowercase",
+                    "icu_folding"
+                ]
+            },
+            "index_chinois": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "autocomplete_filter"
+                ]
+            },
+            "search_chinois": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase"
+                ]
+            },
+            "chinois_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "lowercase",
+                    "icu_folding"
+                ]
+            }
+        }
+    }
+}

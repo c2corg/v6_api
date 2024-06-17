@@ -65,7 +65,12 @@ class HealthRest(object):
             client = elasticsearch_config['client']
             index = elasticsearch_config['index']
             stats = client.indices.stats(index, metric='docs')
-            es_docs = stats['indices'][index]['total']['docs']['count']
+            document_count_all_indice = 0
+            for indice in stats['indices']:
+                document_count_all_indice += \
+                    stats['indices'][indice]['total']['docs']['count']
+            # es_docs = stats['indices'][index]['total']['docs']['count']
+            es_docs = document_count_all_indice
             success = True
         except Exception:
             log.exception('Getting indexed docs count failed')

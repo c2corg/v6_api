@@ -1,7 +1,13 @@
+import logging
+
+from elasticsearch_dsl import Q
+
 from c2corg_api.search import create_search, elasticsearch_config, \
     get_text_query_on_title
 from c2corg_api.views.document_listings import get_documents
-from elasticsearch_dsl.search import MultiSearch
+from elasticsearch_dsl.search import MultiSearch   # , Search
+
+log = logging.getLogger(__name__)
 
 
 def search_for_types(search_types, search_term, limit, lang):
@@ -40,13 +46,14 @@ def do_multi_search_for_types(search_types, search_term, limit, lang):
     and returns a list of tuples (document_ids, total) containing the results
     for each type.
     """
-    multi_search = MultiSearch(index=elasticsearch_config['index'])
+    multi_search = MultiSearch(index=elasticsearch_config['index'],)
 
     for search_type in search_types:
         (_, get_documents_config) = search_type
         search = create_search(get_documents_config.document_type).\
-            query(get_text_query_on_title(search_term, lang)).\
-            fields([]).\
+            query(get_text_query_on_title(search_term, lang)). \
+            filter(Q("match",
+                     c2corg_doc_type=get_documents_config.document_type)). \
             extra(from_=0, size=limit)
         multi_search = multi_search.add(search)
 

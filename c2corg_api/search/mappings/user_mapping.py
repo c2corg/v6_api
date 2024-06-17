@@ -5,7 +5,7 @@ from c2corg_api.search.mapping_types import QueryableMixin
 
 class SearchUser(SearchDocument):
     class Meta(BaseMeta):
-        doc_type = USERPROFILE_TYPE
+        c2corg_doc_type = USERPROFILE_TYPE
 
     FIELDS = []
 

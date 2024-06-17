@@ -356,8 +356,8 @@ class TestUserProfileRest(BaseDocumentTestRest):
         sync_es(self.session)
         search_doc = SearchUser.get(
             id=self.profile1.document_id,
-            index=elasticsearch_config['index'])
-        self.assertEqual(search_doc['doc_type'], self.profile1.type)
+            index=elasticsearch_config['index'][:-1]+'u')
+        self.assertEqual(search_doc['c2corg_doc_type'], self.profile1.type)
         self.assertEqual(
             search_doc['title_en'], 'Contributor contributor')
         self.assertEqual(
