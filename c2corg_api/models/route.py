@@ -153,6 +153,8 @@ class _RouteMixin(object):
 
     slackline_height = Column(SmallInteger)
 
+    public_transportation_rating = Column(enums.public_transportation_rating)
+
 
 attributes = [
     'main_waypoint_id', 'activities', 'elevation_min', 'elevation_max',
@@ -167,7 +169,7 @@ attributes = [
     'hiking_mtb_exposition', 'snowshoe_rating', 'mtb_up_rating',
     'mtb_down_rating', 'mtb_length_asphalt', 'mtb_length_trail',
     'mtb_height_diff_portages', 'rock_types', 'climbing_outdoor_type',
-    'slackline_type', 'slackline_height']
+    'slackline_type', 'slackline_height', 'public_transportation_rating']
 
 
 class Route(_RouteMixin, Document):

@@ -12,7 +12,8 @@ from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.views.route import check_title_prefix
+from c2corg_api.views.route import check_title_prefix, \
+    _pt_rating, _find_starting_and_ending_points
 from c2corg_api.models.common.attributes import quality_types
 from shapely.geometry import shape, LineString
 
@@ -1363,3 +1364,437 @@ class TestRouteRest(BaseDocumentTestRest):
 
         self.session.add_all([self.area1, self.area2])
         self.session.flush()
+
+    def test_public_transportation_rating(self):
+        # Test case 1: Starting and ending waypoints with different ratings
+        starting_waypoints = [
+            Waypoint(
+                document_id=1,
+                public_transportation_rating='good service'
+            )
+        ]
+        ending_waypoints = [
+            Waypoint(
+                document_id=2,
+                public_transportation_rating='poor service'
+            )
+        ]
+        route_types = ['traverse']
+        self.assertEqual(
+            _pt_rating(
+                starting_waypoints,
+                ending_waypoints,
+                route_types
+            ),
+            'poor service'
+        )
+
+        # Test case 2: Starting and ending waypoints with the same ratings
+        starting_waypoints = [
+            Waypoint(
+                document_id=1,
+                public_transportation_rating='poor service'
+            )
+        ]
+        ending_waypoints = [
+            Waypoint(
+                document_id=2,
+                public_transportation_rating='poor service'
+            )
+        ]
+        route_types = ['raid']
+        self.assertEqual(
+            _pt_rating(
+                starting_waypoints,
+                ending_waypoints,
+                route_types
+            ),
+            'poor service'
+        )
+
+        # Test case 3: Starting and ending waypoints with missing ratings
+        starting_waypoints = [
+            Waypoint(
+                document_id=1,
+                public_transportation_rating=None
+            )
+        ]
+        ending_waypoints = [
+            Waypoint(
+                document_id=2,
+                public_transportation_rating=None
+            )
+        ]
+        route_types = ['traverse']
+        self.assertEqual(
+            _pt_rating(
+                starting_waypoints,
+                ending_waypoints,
+                route_types
+            ),
+            'unknown service'
+        )
+
+        # Test case 4: No waypoints provided
+        starting_waypoints = []
+        ending_waypoints = []
+        route_types = []
+        self.assertEqual(
+            _pt_rating(
+                starting_waypoints,
+                ending_waypoints,
+                route_types
+            ),
+            'unknown service'
+        )
+
+        # Test case 5: Different route types with no service
+        starting_waypoints = [
+            Waypoint(
+                document_id=1,
+                public_transportation_rating='good service'
+            )
+        ]
+        ending_waypoints = [
+            Waypoint(
+                document_id=2,
+                public_transportation_rating='no service'
+            )
+        ]
+        route_types = ['expedition']
+        self.assertEqual(
+            _pt_rating(
+                starting_waypoints,
+                ending_waypoints,
+                route_types
+            ),
+            'no service'
+        )
+
+        # Test case 6: Different route types with service
+        starting_waypoints = [
+            Waypoint(
+                document_id=1,
+                public_transportation_rating='good service'
+            )
+        ]
+        ending_waypoints = [
+            Waypoint(
+                document_id=2,
+                public_transportation_rating='poor service'
+            )
+        ]
+        route_types = ['traverse']
+        self.assertEqual(
+            _pt_rating(
+                starting_waypoints,
+                ending_waypoints,
+                route_types
+            ),
+            'poor service'
+        )
+
+        # Test case 7: Multiple starting and ending waypoints with ratings
+        starting_waypoints = [
+            Waypoint(
+                document_id=1,
+                public_transportation_rating='good service'
+            ),
+            Waypoint(
+                document_id=2,
+                public_transportation_rating='seasonal service'
+            ),
+            Waypoint(
+                document_id=3,
+                public_transportation_rating='poor service'
+            )
+        ]
+        ending_waypoints = [
+            Waypoint(
+                document_id=4,
+                public_transportation_rating='nearby service'
+            ),
+            Waypoint(
+                document_id=5,
+                public_transportation_rating='no service'
+            ),
+            Waypoint(
+                document_id=6,
+                public_transportation_rating='good service'
+            )
+        ]
+        route_types = ['traverse']
+        self.assertEqual(
+            _pt_rating(
+                starting_waypoints,
+                ending_waypoints,
+                route_types
+            ),
+            'good service'
+        )
+
+        # Test case 8: Multiple starting waypoints
+        # with ratings and no ending waypoints
+        starting_waypoints = [
+            Waypoint(
+                document_id=1,
+                public_transportation_rating='poor service'
+            ),
+            Waypoint(
+                document_id=2,
+                public_transportation_rating='nearby service'
+            ),
+            Waypoint(
+                document_id=3,
+                public_transportation_rating='good service'
+            )
+        ]
+        ending_waypoints = []
+        route_types = ['traverse']
+        self.assertEqual(
+            _pt_rating(
+                starting_waypoints,
+                ending_waypoints,
+                route_types
+            ),
+            'unknown service'
+        )
+
+        # Test case 9: No starting waypoints
+        # and multiple ending waypoints with ratings
+        starting_waypoints = []
+        ending_waypoints = [
+            Waypoint(
+                document_id=4,
+                public_transportation_rating='good service'
+            ),
+            Waypoint(
+                document_id=5,
+                public_transportation_rating='seasonal service'
+            ),
+            Waypoint(
+                document_id=6,
+                public_transportation_rating='poor service'
+            )
+        ]
+        route_types = ['traverse']
+        self.assertEqual(
+            _pt_rating(
+                starting_waypoints,
+                ending_waypoints,
+                route_types
+            ),
+            'unknown service'
+        )
+
+        # Test case 10: Multiple starting and ending waypoints with no ratings
+        starting_waypoints = [
+            Waypoint(
+                document_id=1,
+                public_transportation_rating=None
+            ),
+            Waypoint(
+                document_id=2,
+                public_transportation_rating=None
+            )
+        ]
+        ending_waypoints = [
+            Waypoint(
+                document_id=4,
+                public_transportation_rating=None
+            ),
+            Waypoint(
+                document_id=5,
+                public_transportation_rating=None
+            )
+        ]
+        route_types = ['traverse']
+        self.assertEqual(
+            _pt_rating(
+                starting_waypoints,
+                ending_waypoints,
+                route_types
+            ),
+            'unknown service'
+        )
+
+        # Test case 11: Multiple starting and ending waypoints,
+        # some with ratings and some without
+        starting_waypoints = [
+            Waypoint(
+                document_id=1,
+                public_transportation_rating='poor service'
+            ),
+            Waypoint(
+                document_id=2,
+                public_transportation_rating=None
+            ),
+            Waypoint(
+                document_id=3,
+                public_transportation_rating='good service'
+            )
+        ]
+        ending_waypoints = [
+            Waypoint(
+                document_id=4,
+                public_transportation_rating=None
+            ),
+            Waypoint(
+                document_id=5,
+                public_transportation_rating='good service'
+            ),
+            Waypoint(
+                document_id=6,
+                public_transportation_rating='no service'
+            )
+        ]
+        route_types = ['traverse']
+        self.assertEqual(
+            _pt_rating(
+                starting_waypoints,
+                ending_waypoints,
+                route_types
+            ),
+            'good service'
+        )
+
+        # Test case 12: Multiple starting points
+        starting_waypoints = [
+            Waypoint(
+                document_id=1,
+                public_transportation_rating=None
+            ),
+            Waypoint(
+                document_id=2,
+                public_transportation_rating='seasonal service'
+            ),
+            Waypoint(
+                document_id=3,
+                public_transportation_rating='poor service'
+            )
+        ]
+        ending_waypoints = []
+        route_types = ['loop']
+        self.assertEqual(
+            _pt_rating(
+                starting_waypoints,
+                ending_waypoints,
+                route_types
+            ),
+            'seasonal service'
+        )
+
+    def test_find_starting_and_ending_points(self):
+        waypoints = [
+            Waypoint(
+                waypoint_type='access',
+                geometry=DocumentGeometry(
+                    geom='SRID=3857;POINT(659775 5694854)'
+                )
+            ),
+            Waypoint(
+                waypoint_type='access',
+                geometry=DocumentGeometry(
+                    geom='SRID=3857;POINT(659800 5694854)'
+                )),
+            Waypoint(
+                waypoint_type='access',
+                geometry=DocumentGeometry(
+                    geom='SRID=3857;POINT(659900 5694854)'
+                )
+            ),
+            Waypoint(
+                waypoint_type='access',
+                geometry=DocumentGeometry(
+                    geom='SRID=3857;POINT(659950 5694854)'
+                )
+            )
+        ]
+        expected_start = 'SRID=3857;POINT(659775 5694854)'
+
+        # Test case 1: crossings with multiple waypoints
+        route_types = ['traverse']
+        starts, ends = \
+            _find_starting_and_ending_points(waypoints, route_types)
+        self.assertEqual(
+            starts[0].geometry.geom,
+            expected_start
+        )
+        self.assertEqual(
+            ends[0].geometry.geom,
+            'SRID=3857;POINT(659950 5694854)'
+        )
+
+        # Test case 2: crossings with two waypoints
+        route_types = ['raid']
+        starts, ends = _find_starting_and_ending_points(
+                [waypoints[0], waypoints[1]],
+                route_types
+            )
+
+        self.assertEqual(
+            starts[0].geometry.geom,
+            expected_start
+        )
+        self.assertEqual(
+            ends[0].geometry.geom,
+            'SRID=3857;POINT(659800 5694854)'
+        )
+
+        # Test case 3: loops
+        route_types = ['loop', 'traverse']
+        starts, ends = \
+            _find_starting_and_ending_points(waypoints, route_types)
+        self.assertEqual(starts, waypoints)
+        self.assertEqual(ends, [])
+
+        # Test case 4: single access other cases
+        route_types = ['some_other_route_type']
+        starts, ends =  \
+            _find_starting_and_ending_points([waypoints[0]], route_types)
+        self.assertEqual(
+            starts[0].geometry.geom,
+            expected_start
+        )
+        self.assertEqual(ends, [])  # No end point expected
+
+        # Test case 5: multi waypoints other cases
+        route_types = ['some_other_route_type']
+        start, end = _find_starting_and_ending_points(
+                [waypoints[0], waypoints[1]],
+                route_types
+            )
+        # No start or end points expected for multiple waypoints
+        self.assertEqual(start, [])
+        self.assertEqual(end, [])
+
+    def test_update_all_routes(self):
+        # Test case 1: collaborators cannot update all routes:
+        headers = self.add_authorization_header(username='contributor')
+        prefix = '/routes/update_public_transportation_rating'
+        self.app.get(prefix, headers=headers, status=403)
+
+        # Test case 2: Moderators can, with waypoints_extrapolation
+        headers = self.add_authorization_header(username='moderator')
+        self.app.get(prefix, headers=headers, status=200)
+        self.session.flush()
+        self.session.refresh(self.route)
+        self.assertEqual(
+            self.route.public_transportation_rating,
+            'poor service'
+        )
+
+        # Test case 3: Moderators can, without waypoints_extrapolation
+        self.route.route_types = ['traverse']
+        self.session.flush()
+        self.app.get(
+            prefix+'?waypoint_extrapolation=false',
+            headers=headers,
+            status=200
+        )
+        self.session.flush()
+        self.session.refresh(self.route)
+        self.assertEqual(
+            self.route.public_transportation_rating,
+            'unknown service'
+        )
