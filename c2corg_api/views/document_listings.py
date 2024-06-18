@@ -1,6 +1,3 @@
-import json
-import logging
-
 from c2corg_api.caching import cache_document_listing
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import schema_listing_area
@@ -49,7 +46,8 @@ def get_documents(documents_config, meta_params, search_documents):
             documents_config.clazz.document_id.desc())
 
     document_ids, total = search_documents(base_query, base_total_query)
-    if total is not None and type(total) is not int :
+
+    if total is not None and type(total) is not int:
         total = int(total['value'])
 
     cache_keys = get_cache_keys(

@@ -1,6 +1,4 @@
 import functools
-import logging
-
 from c2corg_api.models.area import schema_area, Area, schema_update_area, \
     AREA_TYPE, schema_create_area, ArchiveArea
 from c2corg_api.models.area_association import update_area

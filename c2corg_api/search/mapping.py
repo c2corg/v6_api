@@ -1,7 +1,5 @@
 import json
 import logging
-import pprint
-
 from c2corg_api.models.document import Document
 from c2corg_api.search.mapping_types import Enum, QEnumArray, QLong, \
     QEnumRange

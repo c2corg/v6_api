@@ -16,7 +16,6 @@ class SearchArticle(SearchDocument):
 
     FIELDS = ['activities', 'article_type']
 
-
     @staticmethod
     def to_search_document(document, index):
         search_document = SearchDocument.to_search_document(document, index)
