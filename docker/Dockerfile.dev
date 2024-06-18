@@ -13,8 +13,6 @@ RUN set -x \
     && dpkg-reconfigure locales \
     && /usr/sbin/update-locale LANG=en_US.UTF-8
 
-COPY ./ /var/www/
-
 WORKDIR /var/www/
 
 RUN set -x \
@@ -41,10 +39,6 @@ RUN set -x \
     git
 
 RUN set -x \
- && make -f config/docker-dev install \
- && make -f config/docker-dev .build/dev-requirements.timestamp \
- && py3compile -f .build/venv/ \
- && rm -fr .cache \
  && apt-get -y purge \
  && apt-get -y --purge autoremove \
  && apt-get clean \
@@ -53,4 +47,6 @@ RUN set -x \
 ENV version='' \
     PATH=/var/www/.build/venv/bin/:$PATH
 
-RUN make -f config/docker-dev template
+COPY /docker-entrypoint.sh /
+COPY /docker-entrypoint.d/dev/* /docker-entrypoint.d/
+ENTRYPOINT ["/docker-entrypoint.sh"]
