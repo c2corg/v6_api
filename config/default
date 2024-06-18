@@ -10,8 +10,8 @@ export noauthorization = False
 
 export db_host = localhost
 export db_port = 5432
-export db_user = www-data
-export db_password = www-data
+export db_user = postgres
+export db_password = test
 export db_name = c2corg
 
 export elasticsearch_host = localhost
@@ -38,8 +38,8 @@ export discourse_category = Commentaires
 # database to run the unit tests
 export tests_db_host = localhost
 export tests_db_port = 5432
-export tests_db_user = www-data
-export tests_db_password = www-data
+export tests_db_user = postgres
+export tests_db_password = test
 export tests_db_name = c2corg_tests
 
 # ElasticSearch instance to run the unit tests
@@ -53,8 +53,8 @@ export tests_discourse_url = http://localhost:3000
 # database from which to import data from
 export migration_db_host = localhost
 export migration_db_port = 5432
-export migration_db_user = www-data
-export migration_db_password = www-data
+export migration_db_user = postgres
+export migration_db_password = test
 export migration_db_name = c2corg
 
 export logging_level = WARNING
