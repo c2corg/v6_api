@@ -1,3 +1,30 @@
+# ElasticSearch Upgrade from v6.5 to V7.0 for docker env. like dev one.
+
+The docker-compose file has been updated in order to facilitate and automotive plugins installation and prepare the environment for migration.
+The ElasticSearch 6.8 is still build and run but would not be the main ES for the service. It could be decommissioned after migration. 
+docker-compose file contains as well :
+
+- api building with integration of the requirements.txt for python pip installation (component updates)
+- ES 6.8 listening on port 9201 instead of 9200 : > elasticsearch68
+- redis no change
+- postgresql no change
+- ES 7.0 listening on port 9200 and 9300 (elasticsearch7.Dockerfile) > elasticsearch
+- Logstash 7.0 for data migration purpose. (logstash7.Dockerfile) 
+
+## migration steps
+
+ 1. **build the environment :**  ` docker-compose build `
+ 2. **Launch the environment :** ` docker-compose up -d `
+ 3. **Create the index and its mapping :** `./scripts/esUpdateMappings67.sh` 
+ 4. **Data Migration :** `docker-compose start logstash7` It will stop by itself when migration would be achieved
+ 5. **postgresql shema up to date:** `docker-compose exec api .build/venv/bin/alembic upgrade head`
+
+## post migration
+
+if all the process has been passed without issues. you can comment or remove in the docker-compose.yml services :
+- logstash
+- elasticsearch68
+
 # ElasticSearch Upgrade from v5.6 to V6.8 for docker env. like dev one.
 
 The docker-compose file has been updated in order to facilitate and automotive plugins installation and prepare the environment for migration.
