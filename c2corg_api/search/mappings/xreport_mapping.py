@@ -11,6 +11,9 @@ class SearchXreport(SearchDocument):
     class Meta(BaseMeta):
         c2corg_doc_type = XREPORT_TYPE
 
+    class Index:
+        name = 'c2corg_x'
+
     event_activity = QEnumArray(
         'act', model_field=Xreport.event_activity)
     date = QDate('xdate', 'date')

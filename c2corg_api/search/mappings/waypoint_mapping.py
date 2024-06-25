@@ -12,6 +12,9 @@ class SearchWaypoint(SearchDocument):
     class Meta(BaseMeta):
         c2corg_doc_type = WAYPOINT_TYPE
 
+    class Index:
+        name = 'c2corg_w'
+
     elevation = QInteger(
         'walt', range=True)
     prominence = QInteger(

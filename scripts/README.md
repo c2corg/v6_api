@@ -1,4 +1,4 @@
-# ElasticSearch Upgrade from v6.5 to V7.0 for docker env. like dev one.
+# ElasticSearch Upgrade from v6.8 to V7.22 for docker env. like dev one.
 
 The docker-compose file has been updated in order to facilitate and automotive plugins installation and prepare the environment for migration.
 The ElasticSearch 6.8 is still build and run but would not be the main ES for the service. It could be decommissioned after migration. 
@@ -8,8 +8,8 @@ docker-compose file contains as well :
 - ES 6.8 listening on port 9201 instead of 9200 : > elasticsearch68
 - redis no change
 - postgresql no change
-- ES 7.0 listening on port 9200 and 9300 (elasticsearch7.Dockerfile) > elasticsearch
-- Logstash 7.0 for data migration purpose. (logstash7.Dockerfile) 
+- ES 7.22 listening on port 9200 and 9300 (elasticsearch7.Dockerfile) > elasticsearch
+- Logstash 7.22 for data migration purpose. (logstash7.Dockerfile) 
 
 ## migration steps
 

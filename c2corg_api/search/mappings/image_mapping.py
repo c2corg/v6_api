@@ -8,6 +8,9 @@ class SearchImage(SearchDocument):
     class Meta(BaseMeta):
         c2corg_doc_type = IMAGE_TYPE
 
+    class Index:
+        name = 'c2corg_i'
+
     activities = QEnumArray(
         'act', model_field=Image.activities)
     categories = QEnumArray(

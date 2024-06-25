@@ -7,6 +7,9 @@ class SearchArea(SearchDocument):
     class Meta(BaseMeta):
         c2corg_doc_type = AREA_TYPE
 
+    class Index:
+        name = 'c2corg_a'
+
     area_type = QEnum('atyp', model_field=Area.area_type)
 
     FIELDS = ['area_type']

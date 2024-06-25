@@ -7,6 +7,9 @@ class SearchArticle(SearchDocument):
     class Meta(BaseMeta):
         c2corg_doc_type = ARTICLE_TYPE
 
+    class Index:
+        name = 'c2corg_c'
+
     activities = QEnumArray(
         'act', model_field=Article.activities)
     article_categories = QEnumArray(

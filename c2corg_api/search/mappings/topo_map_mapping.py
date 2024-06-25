@@ -7,6 +7,9 @@ class SearchTopoMap(SearchDocument):
     class Meta(BaseMeta):
         c2corg_doc_type = MAP_TYPE
 
+    class Index:
+        name = 'c2corg_m'
+
     FIELDS = []
 
     @staticmethod

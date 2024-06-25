@@ -68,7 +68,7 @@ services:
 #      - 9302:9300
 
   elasticsearch:
-    #platform: linux/amd64
+    platform: linux/amd64
     container_name: elasticsearch
     build:
       context: .

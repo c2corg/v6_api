@@ -7,6 +7,9 @@ class SearchUser(SearchDocument):
     class Meta(BaseMeta):
         c2corg_doc_type = USERPROFILE_TYPE
 
+    class Index:
+        name = 'c2corg_u'
+
     FIELDS = []
 
     @staticmethod

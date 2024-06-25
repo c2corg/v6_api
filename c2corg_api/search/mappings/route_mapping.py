@@ -19,6 +19,9 @@ class SearchRoute(SearchDocument):
     class Meta(BaseMeta):
         c2corg_doc_type = ROUTE_TYPE
 
+    class Index:
+        name = 'c2corg_r'
+
     # array of waypoint ids
     waypoints = QLong('w', is_id=True)
 
