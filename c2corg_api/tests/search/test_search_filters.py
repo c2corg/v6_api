@@ -51,7 +51,6 @@ class AdvancedSearchTest(BaseTestCase):
                 geom={
                     'left': 6.28279913, 'bottom': 46.03129072,
                     'right': 6.28369744, 'top': 46.03191439}
-                    #  , type='indexed'
             )). \
             filter(Q("match", c2corg_doc_type='w')). \
             extra(from_=0, size=10)
@@ -462,7 +461,6 @@ class AdvancedSearchTest(BaseTestCase):
                 geom={
                     'left': 6.28279913, 'bottom': 46.03129072,
                     'right': 6.28369744, 'top': 46.03191439}
-                    # ,type='indexed'
             ).to_dict())
 
 
