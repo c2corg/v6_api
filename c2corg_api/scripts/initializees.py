@@ -2,18 +2,6 @@ import os
 import sys
 import pycurl
 from io import BytesIO
-
-# from c2corg_api.search.mappings.area_mapping import SearchArea
-# from c2corg_api.search.mappings.article_mapping import SearchArticle
-# from c2corg_api.search.mappings.book_mapping import SearchBook
-# from c2corg_api.search.mappings.image_mapping import SearchImage
-# from c2corg_api.search.mappings.outing_mapping import SearchOuting
-# from c2corg_api.search.mappings.xreport_mapping import SearchXreport
-# from c2corg_api.search.mappings.route_mapping import SearchRoute
-# from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
-# from c2corg_api.search.mappings.user_mapping import SearchUser
-# from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
-
 from elasticsearch_dsl import Index
 
 from pyramid.paster import (
@@ -22,8 +10,6 @@ from pyramid.paster import (
     )
 
 from pyramid.scripts.common import parse_vars
-
-# from c2corg_api.search.mapping import analysis_settings
 from c2corg_api.search import configure_es_from_config, elasticsearch_config
 
 
@@ -52,6 +38,10 @@ def setup_es():
                          "_m", "_o", "_r", "_u", "_w", "_x"]
 
     client = elasticsearch_config['client']
+    elasticsearch_user = elasticsearch_config['user']
+    elasticsearch_password = elasticsearch_config['passwd']
+    global authentification
+    authentification = elasticsearch_user+':'+elasticsearch_password
     index_name = elasticsearch_config['index']
     cible = elasticsearch_config['host']+':'+str(elasticsearch_config['port'])
     # print('cible es: %s', cible)
@@ -60,8 +50,8 @@ def setup_es():
     print('ElasticSearch version: {0}'.format(info['version']['number']))
 
     for index_suffix in index_suffix_list:
-        # print("suffix : ", index_suffix)
-        if client.indices.exists(index_name[:-2]+index_suffix):
+        indice = index_name[:-2]+index_suffix
+        if client.indices.exists(index=indice):
             print('Index "{0}" already exists. deleting it {0}... '
                   .format(index_name[:-2]+index_suffix))
             """ print('To delete the index run:')
@@ -102,9 +92,9 @@ def delete_indice(cible, indice_name):
     c.setopt(c.CUSTOMREQUEST, 'DELETE')
     c.setopt(c.URL, 'http://' + cible + '/' + indice_name)
     c.setopt(c.WRITEDATA, buffer)
+    c.setopt(c.USERPWD, authentification)
     c.perform()
     c.close()
-
     # body = buffer.getvalue()
     # print(body.decode('iso-8859-1'))
 
@@ -115,12 +105,11 @@ def create_indice(cible, indice_name):
     header = ['Content-Type: application/json']
     c.setopt(c.HTTPHEADER, header)
     c.setopt(c.CUSTOMREQUEST, 'PUT')
-    c.setopt(c.URL, 'http://' + cible + '/' + indice_name
-             + "?include_type_name=true")
+    c.setopt(c.URL, 'http://' + cible + '/' + indice_name)
     c.setopt(c.WRITEDATA, buffer)
+    c.setopt(c.USERPWD, authentification)
     c.perform()
     c.close()
-
     # body = buffer.getvalue()
     # print(body.decode('iso-8859-1'))
 
@@ -133,6 +122,7 @@ def indice_settings_update(cible, indice_name):
     c.setopt(c.CUSTOMREQUEST, 'POST')
     c.setopt(c.URL, 'http://' + cible + '/' + indice_name + '/_close')
     c.setopt(c.WRITEDATA, buffer)
+    c.setopt(c.USERPWD, authentification)
     c.perform()
     # body = buffer.getvalue()
     # print(body.decode('iso-8859-1'))
@@ -144,6 +134,7 @@ def indice_settings_update(cible, indice_name):
     c.setopt(c.URL, 'http://' + cible + '/' + indice_name + '/_settings')
     c.setopt(c.POSTFIELDS, post_data)
     c.setopt(c.WRITEDATA, buffer)
+    c.setopt(c.USERPWD, authentification)
     c.perform()
     # body = buffer.getvalue()
     # print(body.decode('iso-8859-1'))
@@ -155,6 +146,7 @@ def indice_settings_update(cible, indice_name):
     c.setopt(c.CUSTOMREQUEST, 'POST')
     c.setopt(c.URL, 'http://' + cible + '/' + indice_name + '/_open')
     c.setopt(c.WRITEDATA, buffer)
+    c.setopt(c.USERPWD, authentification)
     c.perform()
     # body = buffer.getvalue()
     # print(body.decode('iso-8859-1'))
@@ -169,13 +161,13 @@ def indice_mapping_update(cible, indice_name, mapping_type):
 
     buffer = BytesIO()
     c = pycurl.Curl()
-    c.setopt(c.URL, 'http://'+cible+'/'+indice_name+'/_mapping'
-             + '/'+mapping_type+'?include_type_name=true')
+    c.setopt(c.URL, 'http://'+cible+'/'+indice_name+'/_mapping')
     header = ['Content-Type: application/json']
     c.setopt(c.HTTPHEADER, header)
     c.setopt(c.CUSTOMREQUEST, 'PUT')
     c.setopt(c.POSTFIELDS, post_data)
     c.setopt(c.WRITEDATA, buffer)
+    c.setopt(c.USERPWD, authentification)
     c.perform()
     c.close()
 

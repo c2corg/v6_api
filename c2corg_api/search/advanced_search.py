@@ -1,4 +1,5 @@
 import logging
+
 from c2corg_api.search.mapping_types import meta_param_keys
 from c2corg_api.search.search_filters import build_query
 

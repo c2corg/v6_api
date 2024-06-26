@@ -64,7 +64,7 @@ class HealthRest(object):
         try:
             client = elasticsearch_config['client']
             index = elasticsearch_config['index']
-            stats = client.indices.stats(index, metric='docs')
+            stats = client.indices.stats(index=index, metric='docs')
             document_count_all_indice = 0
             for indice in stats['indices']:
                 document_count_all_indice += \

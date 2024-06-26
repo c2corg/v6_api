@@ -50,8 +50,8 @@ class AdvancedSearchTest(BaseTestCase):
             filter(GeoBoundingBox(
                 geom={
                     'left': 6.28279913, 'bottom': 46.03129072,
-                    'right': 6.28369744, 'top': 46.03191439},
-                type='indexed')). \
+                    'right': 6.28369744, 'top': 46.03191439}  #  , type='indexed'
+            )). \
             filter(Q("match", c2corg_doc_type='w')). \
             extra(from_=0, size=10)
         self.assertQueryEqual(query, expected_query)
@@ -460,8 +460,9 @@ class AdvancedSearchTest(BaseTestCase):
             GeoBoundingBox(
                 geom={
                     'left': 6.28279913, 'bottom': 46.03129072,
-                    'right': 6.28369744, 'top': 46.03191439},
-                type='indexed').to_dict())
+                    'right': 6.28369744, 'top': 46.03191439}  # ,type='indexed'
+            ).to_dict())
+
 
     def assertBboxFilterEqual(self, f1, f2):  # noqa
         self.assertIn('geo_bounding_box', f1)

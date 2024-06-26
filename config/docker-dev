@@ -6,15 +6,23 @@ include Makefile
 
 export db_host = postgresql
 export db_name = c2corg
+
 export elasticsearch_host = elasticsearch
 export elasticsearch_port = 9200
 export elasticsearch_index = c2corg_*
+export elasticsearch_user = elastic
+export elasticsearch_passwd = elastic2024
+export elasticsearch_scheme = http
 
 export tests_db_host = postgresql
 export tests_db_name = c2corg_tests
+
 export tests_elasticsearch_host = elasticsearch
 export tests_elasticsearch_port = 9200
 export tests_elasticsearch_index = c2corg_tests_*
+export tests_elasticsearch_user = elastic
+export tests_elasticsearch_passwd = elastic2024
+export tests_elasticsearch_scheme = http
 
 export redis_db_queue = 6
 export redis_db_cache = 7

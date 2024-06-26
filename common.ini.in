@@ -15,6 +15,9 @@ sqlalchemy.pool_size=20
 elasticsearch.host = {elasticsearch_host}
 elasticsearch.port = {elasticsearch_port}
 elasticsearch.index = {elasticsearch_index}
+elasticsearch.scheme = {elasticsearch_scheme}
+elasticsearch.user = {elasticsearch_user}
+elasticsearch.passwd = {elasticsearch_passwd}
 elasticsearch.pool = 50
 
 # batch size for fill_index

@@ -68,17 +68,33 @@ services:
 #      - 9302:9300
 
   elasticsearch:
-    platform: linux/amd64
+    #platform: linux/amd64
     container_name: elasticsearch
     build:
       context: .
-      dockerfile: elasticsearch7.Dockerfile
+      dockerfile: elasticsearch8.Dockerfile
       network: host
     environment:
-       - discovery.type=single-node
+      - ELASTIC_PASSWORD='elastic2024'
+      - discovery.type=single-node
+      - xpack.security.http.ssl.enabled=false
+      - xpack.license.self_generated.type=basic
     ports:
       - 9200:9200
       - 9300:9300
+
+#  elasticsearch7:
+#    platform: linux/amd64
+#    container_name: elasticsearch
+#    build:
+#      context: .
+#      dockerfile: elasticsearch7.Dockerfile
+#      network: host
+#    environment:
+#       - discovery.type=single-node
+#    ports:
+#      - 9200:9200
+#      - 9300:9300
 #
 
 #  elasticsearch68:
@@ -121,17 +137,43 @@ services:
 #    volumes:
 #      - ./dataMigration/v6:/usr/share/logstash/pipeline
 
-  logstash7:
-    platform: linux/amd64
-    container_name: logstash7
+  logstash:
+    #platform: linux/amd64
+    container_name: logstash
     build:
       context: .
-      dockerfile: logstash7.Dockerfile
+      dockerfile: logstash8.Dockerfile
       network: host
     ports:
       -  5044:5044
     volumes:
       - ./dataMigration/v7:/usr/share/logstash/pipeline
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD="kibana2024"
+      - xpack.security.enabled=false
+      #- xpack.license.self_generated.type=trial
+
+  ## configure the Kibana password in the ES container
+  #curl -u elastic:$ELASTIC_PASSWORD \
+  #  -X POST \
+  #  http://localhost:9200/_security/user/kibana_system/_password \
+  #  -d '{"password":"'"kibana2024"'"}' \
+  #  -H 'Content-Type: application/json'
+
+#  logstash7:
+#    platform: linux/amd64
+#    container_name: logstash7
+#    build:
+#      context: .
+#      dockerfile: logstash7.Dockerfile
+#      network: host
+#    ports:
+#      -  5044:5044
+#    volumes:
+#      - ./dataMigration/v7:/usr/share/logstash/pipeline
 
   redis:
     image: 'docker.io/redis:3.2'

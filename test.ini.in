@@ -10,6 +10,10 @@ jwtauth.master_secret = The master key
 elasticsearch.host = {tests_elasticsearch_host}
 elasticsearch.port = {tests_elasticsearch_port}
 elasticsearch.index = {tests_elasticsearch_index}
+elasticsearch.scheme = {tests_elasticsearch_scheme}
+elasticsearch.user = {tests_elasticsearch_user}
+elasticsearch.passwd = {tests_elasticsearch_passwd}
+
 redis.url = {redis_url}
 redis.cache_key_prefix = {redis_cache_key_prefix}_tests
 cache_version_timestamp = True

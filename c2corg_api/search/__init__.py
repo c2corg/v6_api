@@ -38,15 +38,21 @@ elasticsearch_config = {
     'client': None,
     'index': None,
     'host': None,
-    'port': None
+    'port': None,
+    'scheme': None,
+    'user': None,
+    'passwd': None,
 }
 
 
 def client_from_config(settings):
     return Elasticsearch([{
         'host': settings['elasticsearch.host'],
-        'port': int(settings['elasticsearch.port'])
-    }], maxsize=int(settings['elasticsearch.pool']))
+        'port': int(settings['elasticsearch.port']),
+        'scheme': settings['elasticsearch.scheme']
+    }], basic_auth=(settings['elasticsearch.user'],
+                    settings['elasticsearch.passwd']),
+        maxsize=int(settings['elasticsearch.pool']))
 
 
 def configure_es_from_config(settings):
@@ -57,6 +63,9 @@ def configure_es_from_config(settings):
     elasticsearch_config['index'] = settings['elasticsearch.index']
     elasticsearch_config['host'] = settings['elasticsearch.host']
     elasticsearch_config['port'] = int(settings['elasticsearch.port'])
+    elasticsearch_config['scheme'] = settings['elasticsearch.scheme']
+    elasticsearch_config['user'] = settings['elasticsearch.user']
+    elasticsearch_config['passwd'] = settings['elasticsearch.passwd']
 
 
 def get_queue_config(settings):

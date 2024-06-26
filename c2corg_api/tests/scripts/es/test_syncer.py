@@ -61,4 +61,4 @@ class SyncWorkerTest(BaseTestCase):
 
         next(syncer.consume(limit=1))
         with self.assertRaises(NotFoundError):
-            SearchWaypoint.get(id=document_id, index=index)
+            SearchWaypoint.get(id=document_id)  # JPR8 , index=index

@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from urllib.parse import urlencode
 
 import pycurl
@@ -10,7 +11,7 @@ post_data = f.read()
 
 buffer = BytesIO()
 c = pycurl.Curl()
-c.setopt(c.URL, 'http://192.168.1.120:9203/c2corg_tests_a/_mapping/_doc')
+c.setopt(c.URL, 'http://127.0.0.1:9200/c2corg_tests_a/_mapping')
 header = ['Content-Type: application/json']
 c.setopt(c.HTTPHEADER, header)
 c.setopt(c.CUSTOMREQUEST, 'PUT')
@@ -18,6 +19,7 @@ c.setopt(c.CUSTOMREQUEST, 'PUT')
 # Sets request method to POST,
 # Content-Type header to application/x-www-form-urlencoded
 # and data to send in request body.
+c.setopt(c.USERPWD, 'elastic:elastic2024')
 c.setopt(c.POSTFIELDS, post_data)
 c.setopt(c.WRITEDATA, buffer)
 c.perform()

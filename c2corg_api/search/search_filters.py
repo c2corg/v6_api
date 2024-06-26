@@ -371,8 +371,8 @@ def create_bbox_filter(query_term):
         return None
 
     return GeoBoundingBox(
-        geom={'left': xmin, 'bottom': ymin, 'right': xmax, 'top': ymax},
-        type='indexed'
+        geom={'left': xmin, 'bottom': ymin, 'right': xmax, 'top': ymax}
+        # type='indexed'
     )
 
 
