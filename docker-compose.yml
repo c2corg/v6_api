@@ -147,14 +147,14 @@ services:
     ports:
       -  5044:5044
     volumes:
-      - ./dataMigration/v7:/usr/share/logstash/pipeline
+      - ./dataMigration/v8:/usr/share/logstash/pipeline
     environment:
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=kibana_system
-      - ELASTICSEARCH_PASSWORD="kibana2024"
+      - ELASTICSEARCH_URL=elasticsearch
+      - ELASTICSEARCH_HOSTS=elasticsearch
+      - ELASTICSEARCH_USERNAME='elastic'
+      - ELASTICSEARCH_PASSWORD='elastic2024'
       - xpack.security.enabled=false
-      #- xpack.license.self_generated.type=trial
+      - xpack.license.self_generated.type=basic
 
   ## configure the Kibana password in the ES container
   #curl -u elastic:$ELASTIC_PASSWORD \
