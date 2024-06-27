@@ -80,11 +80,10 @@ jobs:
         run: |
           mkdir /tmp/elasticsearch
           wget -O - https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.14.0-linux-x86_64.tar.gz | tar xz --directory=/tmp/elasticsearch --strip-components=1
-          truncate -s0 /tmp/elasticsearch/config/elasticsearch.yml
           sed -i 's/true/false/g' /tmp/elasticsearch/config/elasticsearch.yml
           /tmp/elasticsearch/bin/elasticsearch-plugin install analysis-icu
           /tmp/elasticsearch/bin/elasticsearch --daemonize
-          sleep 200 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
+          sleep 180 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
       #- name: ElasticSearch ChangeMe password update
       #  run: |
       #    /tmp/elasticsearch/bin/elasticsearch-keystore add -x -f "bootstrap.password" "elastic2024"
