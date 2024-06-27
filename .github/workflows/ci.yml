@@ -89,7 +89,6 @@ jobs:
           pgrep -f elasticsearch | xargs kill -9
           /tmp/elasticsearch/bin/elasticsearch --daemonize
           sleep 30 # Password change requires time
-          #/tmp/elasticsearch/bin/elasticsearch-keystore add -x -f "bootstrap.password" "elastic2024"
       - name: Check elasticsearch
         run: curl -v http://localhost:9200
       - name: Run tests

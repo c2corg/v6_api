@@ -1,3 +1,63 @@
+# ElasticSearch Upgrade from v7.22 to V8.14 for docker env. like dev one.
+
+The docker-compose file has been updated in order to facilitate and automotive plugins installation and prepare the environment for migration.
+The ElasticSearch 7.22 is still build and run but would not be the main ES for the service. It could be decommissioned after migration. 
+docker-compose file contains as well :
+
+- api building with integration of the requirements.txt for python pip installation (component updates)
+- ES 7.22 listening on port 9201 instead of 9200 : > elasticsearch72
+- redis no change
+- postgresql no change
+- ES 8.14 listening on port 9200 and 9300 (elasticsearch8.Dockerfile) > elasticsearch
+- Logstash 8.14 for data migration purpose. (logstash8.Dockerfile) 
+
+## migration steps
+
+ 1. **build the environment :**  ` docker-compose build `
+ 2. **Launch the environment :** ` docker-compose up -d `
+ 3. **Create the index and its mapping :** `./scripts/esUpdateMappings78.sh` 
+ 4. **Data Migration :** `docker-compose start logstash8` It will stop by itself when migration would be achieved
+ 5. **postgresql shema up to date:** `docker-compose exec api .build/venv/bin/alembic upgrade head`
+
+## post migration
+
+if all the process has been passed without issues. you can comment or remove in the docker-compose.yml services :
+- logstash
+- elasticsearch72
+
+## special note
+ElasticSearch 8 integrate new security settings and configuration by design like:
+- https
+- user account (id, pwd)
+
+in the docker for dev, I let a basic authentification working and keep http.
+
+### Base upon the way you make the configuration some adjustments have to be realized.
+
+- with the docker provided:
+  - elasticsearch listen on http => app config file : `elasticsearch_sheme = http` && `tests_elasticsearch_scheme = http` https instead for tls
+  - elastic user elastic have a bootstrap passwd define : `elasticsearch/bin/elasticsearch-keystore add "bootstrap.password" `value `elastic2024`
+
+- in app config file, it is necessary to report this authentification : 
+  - `elasticsearch_user = elastic` & `elasticsearch_passwd = elastic2024`
+  - `tests_elasticsearch_user = elastic` & `tests_elasticsearch_passwd = elastic2024`
+      
+- in the logstash pipeline file for data migration purpose, it is also required to report this authentification as well :
+  ```
+  output
+  {
+  elasticsearch
+      {
+          hosts => [elasticsearch]
+          index => "c2corg_%{[c2corg_doc_type]}"
+          #document_type => "_doc"
+          document_id => "%{[@metadata][_id]}"
+          user => 'elastic'
+          password => 'elastic2024'
+      }
+  } 
+
+
 # ElasticSearch Upgrade from v6.8 to V7.22 for docker env. like dev one.
 
 The docker-compose file has been updated in order to facilitate and automotive plugins installation and prepare the environment for migration.
