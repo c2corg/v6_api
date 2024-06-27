@@ -84,7 +84,7 @@ jobs:
           sed -i 's/true/false/g' /tmp/elasticsearch/config/elasticsearch.yml
           /tmp/elasticsearch/bin/elasticsearch-plugin install analysis-icu
           /tmp/elasticsearch/bin/elasticsearch --daemonize
-          sleep 180 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
+          sleep 200 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
       #- name: ElasticSearch ChangeMe password update
       #  run: |
       #    /tmp/elasticsearch/bin/elasticsearch-keystore add -x -f "bootstrap.password" "elastic2024"
