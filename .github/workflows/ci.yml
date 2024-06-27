@@ -84,7 +84,7 @@ jobs:
           /tmp/elasticsearch/bin/elasticsearch --daemonize
           /tmp/elasticsearch/bin/elasticsearch-keystore add -x -f "bootstrap.password" "elastic2024"
           sleep 30 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
-      - run: curl -v http://localhost:9200
+      - run: curl -u elastic:elastic2024 -v http://localhost:9200
       - name: Run tests
         run: pytest --cov-report term --cov-report xml --cov=c2corg_api
       - name: Send coverage to codacy

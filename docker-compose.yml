@@ -75,7 +75,7 @@ services:
       dockerfile: elasticsearch8.Dockerfile
       network: host
     environment:
-      - ELASTIC_PASSWORD='elastic2024'
+      - ELASTIC_PASSWORD=elastic2024
       - discovery.type=single-node
       - xpack.security.http.ssl.enabled=false
       - xpack.license.self_generated.type=basic
@@ -151,8 +151,8 @@ services:
     environment:
       - ELASTICSEARCH_URL=elasticsearch
       - ELASTICSEARCH_HOSTS=elasticsearch
-      - ELASTICSEARCH_USERNAME='elastic'
-      - ELASTICSEARCH_PASSWORD='elastic2024'
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=elastic2024
       - xpack.security.enabled=false
       - xpack.license.self_generated.type=basic
 
