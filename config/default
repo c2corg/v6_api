@@ -17,6 +17,9 @@ export db_name = c2corg
 export elasticsearch_host = localhost
 export elasticsearch_port = 9200
 export elasticsearch_index = c2corg
+export elasticsearch_user = elastic
+export elasticsearch_passwd = elastic2024
+export elasticsearch_scheme = http
 export elasticsearch_batch_size_fill_index = 1000
 export elasticsearch_batch_size_syncer = 1000
 
@@ -46,6 +49,9 @@ export tests_db_name = c2corg_tests
 export tests_elasticsearch_host = localhost
 export tests_elasticsearch_port = 9200
 export tests_elasticsearch_index = c2corg_tests
+export tests_elasticsearch_user = elastic
+export tests_elasticsearch_passwd = elastic2024
+export tests_elasticsearch_scheme = http
 
 # Discourse instance to run the unit tests
 export tests_discourse_url = http://localhost:3000
