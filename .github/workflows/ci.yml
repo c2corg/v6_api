@@ -81,19 +81,16 @@ jobs:
           mkdir /tmp/elasticsearch
           wget -O - https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.14.0-linux-x86_64.tar.gz | tar xz --directory=/tmp/elasticsearch --strip-components=1
           truncate -s0 /tmp/elasticsearch/config/elasticsearch.yml
-          cat >> /tmp/elasticsearch/config/elasticsearch.yml << EOF
-          cluster.name: "docker-cluster"
-          network.host: 0.0.0.0
-          EOF
+          sed -i 's/true/false/g' /tmp/elasticsearch/config/elasticsearch.yml
           /tmp/elasticsearch/bin/elasticsearch-plugin install analysis-icu
           /tmp/elasticsearch/bin/elasticsearch --daemonize
           sleep 30 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
-      - name: ElasticSearch ChangeMe password update
-        run: | 
-          /tmp/elasticsearch/bin/elasticsearch-keystore add -x -f "bootstrap.password" "elastic2024"
-          sleep 15 # Password change requires time
+      #- name: ElasticSearch ChangeMe password update
+      #  run: |
+      #    /tmp/elasticsearch/bin/elasticsearch-keystore add -x -f "bootstrap.password" "elastic2024"
+      #    sleep 15 # Password change requires time
       - name: Check elasticsearch
-        run: curl -u elastic:elastic2024 -v http://localhost:9200
+        run: curl -v http://localhost:9200
       - name: Run tests
         run: pytest --cov-report term --cov-report xml --cov=c2corg_api
       - name: Send coverage to codacy
