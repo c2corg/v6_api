@@ -71,11 +71,11 @@ jobs:
           PGPORT: 5432
       - name: Create config from templates
         run: make -f config/github-actions template
-      - name: Install java 22 for elasticsearch
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'adopt'
-          java-version: 22
+      #- name: Install java 22 for elasticsearch
+      #  uses: actions/setup-java@v4
+      #  with:
+      #    distribution: 'adopt'
+      #    java-version: 22
       - name: Install elasticsearch
         run: |
           mkdir /tmp/elasticsearch
@@ -88,8 +88,10 @@ jobs:
           /tmp/elasticsearch/bin/elasticsearch-plugin install analysis-icu
           /tmp/elasticsearch/bin/elasticsearch --daemonize
           sleep 30 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
-      - name: ChangeMe password update
-        run: /tmp/elasticsearch/bin/elasticsearch-keystore add -x -f "bootstrap.password" "elastic2024"
+      - name: ElasticSearch ChangeMe password update
+        run: | 
+          /tmp/elasticsearch/bin/elasticsearch-keystore add -x -f "bootstrap.password" "elastic2024"
+          sleep 15 # Password change requires time
       - name: Check elasticsearch
         run: curl -u elastic:elastic2024 -v http://localhost:9200
       - name: Run tests
