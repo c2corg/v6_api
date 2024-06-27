@@ -76,18 +76,20 @@ jobs:
       #  with:
       #    distribution: 'adopt'
       #    java-version: 22
-      - name: Install elasticsearch
+      - name: Install elasticsearch & plugin & 1st start
         run: |
           mkdir /tmp/elasticsearch
-          wget -O - https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.14.0-linux-x86_64.tar.gz | tar xz --directory=/tmp/elasticsearch --strip-components=1
-          sed -i 's/true/false/g' /tmp/elasticsearch/config/elasticsearch.yml
+          wget -O - https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.14.1-linux-x86_64.tar.gz | tar xz --directory=/tmp/elasticsearch --strip-components=1
           /tmp/elasticsearch/bin/elasticsearch-plugin install analysis-icu
           /tmp/elasticsearch/bin/elasticsearch --daemonize
-          sleep 180 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
-      #- name: ElasticSearch ChangeMe password update
-      #  run: |
-      #    /tmp/elasticsearch/bin/elasticsearch-keystore add -x -f "bootstrap.password" "elastic2024"
-      #    sleep 15 # Password change requires time
+          sleep 30 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
+      - name: ElasticSearch settings update after auto configuration at 1st start & restart
+        run: |
+          sed -i 's/true/false/g' /tmp/elasticsearch/config/elasticsearch.yml
+          pgrep -f elasticsearch | xargs kill -9
+          /tmp/elasticsearch/bin/elasticsearch --daemonize
+          sleep 30 # Password change requires time
+          #/tmp/elasticsearch/bin/elasticsearch-keystore add -x -f "bootstrap.password" "elastic2024"
       - name: Check elasticsearch
         run: curl -v http://localhost:9200
       - name: Run tests
