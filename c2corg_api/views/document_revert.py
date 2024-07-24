@@ -21,7 +21,7 @@ from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.area import update_associations
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.waypoint import update_linked_route_titles
-from c2corg_api.views.route import update_title_prefix
+from c2corg_api.views.route import update_linked_attributes
 from c2corg_api.models.common.attributes import default_langs
 from colander import (
     MappingSchema, SchemaNode, Integer, String, required, OneOf)
@@ -202,7 +202,7 @@ class DocumentRevertRest(object):
         if document_type == WAYPOINT_TYPE:
             return update_linked_route_titles
         if document_type == ROUTE_TYPE:
-            return update_title_prefix
+            return update_linked_attributes
         if document_type == AREA_TYPE:
             return update_associations
         return None
