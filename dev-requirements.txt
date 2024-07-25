@@ -6,5 +6,5 @@ httmock==1.4.0
 pytest==8.3.1
 pytest-cov==5.0.0
 pygments>=2.7.4 # not directly required, pinned by Snyk to avoid a vulnerability
-setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
+setuptools>=70.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
 ipython>=8.10.0 # not directly required, pinned by Snyk to avoid a vulnerability
