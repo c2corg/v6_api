@@ -148,8 +148,6 @@ jobs:
             latest=auto
             prefix=
             suffix=-legacy,onlatest=true
-          tags: |
-            type=semver,pattern={{version}}
       - name: Checkout repository
         uses: actions/checkout@v4.1.1
       - run: git archive --format=tar --output project.tar "$GITHUB_SHA"
