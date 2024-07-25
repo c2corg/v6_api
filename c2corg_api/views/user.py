@@ -217,13 +217,16 @@ class UserRegistrationRest(object):
                 Purpose.registration,
                 VALIDATION_EXPIRE_DAYS)
 
-        # directly create the user profile, the document id of the profile
+        # Directly create the user profile, the document id of the profile
         # is the user id
         lang = user.lang
         user.profile = UserProfile(
             categories=['amateur'],
             locales=[DocumentLocale(lang=lang, title='')]
         )
+        # Checkbox is mandatory on the frontend when registering
+        # so we can store ToS acceptance.
+        user.tos_validated = datetime.datetime.utcnow()
 
         DBSession.add(user)
         try:
@@ -453,6 +456,7 @@ class UserChangeEmailNonceValidationRest(object):
 class LoginSchema(colander.MappingSchema):
     username = colander.SchemaNode(colander.String())
     password = colander.SchemaNode(colander.String())
+    accept_tos = colander.SchemaNode(colander.Boolean(), missing=False)
 
 
 login_schema = LoginSchema()
@@ -486,8 +490,10 @@ class UserLoginRest(object):
         request = self.request
         username = request.validated['username']
         password = request.validated['password']
+        accept_tos = request.validated['accept_tos']
         user = DBSession.query(User). \
             filter(User.username == username).first()
+
         # try to use the username as email if we didn't find the user
         if user is None and is_valid_email(username):
             user = DBSession.query(User). \
@@ -495,6 +501,26 @@ class UserLoginRest(object):
 
         token = try_login(user, password, request) if user else None
         if token:
+            # Check if the user has validated Terms of Service, if not,
+            # return a 403 with an explicit message that can be caught
+            # by the frontend
+            if user.tos_validated is None and accept_tos is not True:
+                raise HTTPForbidden('Terms of Service need to be accepted')
+
+            # If the user has not validated Terms of Service, but the request
+            # sends the accept field, store it in the database
+            if user.tos_validated is None and accept_tos is True:
+                try:
+                    DBSession.execute(
+                        User.__table__.update().
+                        where(User.id == user.id).
+                        values(tos_validated=datetime.datetime.utcnow())
+                    )
+                    DBSession.flush()
+                except Exception:
+                    log.warning('Error persisting user', exc_info=True)
+                    raise HTTPInternalServerError('Error persisting user')
+
             response = token_to_response(user, token, request)
             if 'discourse' in request.json:
                 settings = request.registry.settings
