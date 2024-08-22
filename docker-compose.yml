@@ -2,8 +2,8 @@ version: "3.7"
 services:
   api:
     build:
-      context: .
-      dockerfile: dev_api.Dockerfile
+      context: ./docker
+      dockerfile: Dockerfile.dev
     depends_on:
       - postgresql
       - elasticsearch
@@ -11,12 +11,12 @@ services:
     ports:
       - 6543:6543
     environment:
-      db_host: 'postgresql'
-      tests_db_host: 'postgresql'
-      elasticsearch_host: 'elasticsearch'
-      tests_elasticsearch_host: 'elasticsearch'
-      redis_url: 'redis://redis:6379/'
-      version: ''
+      db_host: "postgresql"
+      tests_db_host: "postgresql"
+      elasticsearch_host: "elasticsearch"
+      tests_elasticsearch_host: "elasticsearch"
+      redis_url: "redis://redis:6379/"
+      version: ""
     volumes:
       - ./alembic_migration:/var/www/alembic_migration
       - ./c2corg_api:/var/www/c2corg_api
@@ -26,26 +26,35 @@ services:
       - ./test.ini.in:/var/www/test.ini.in
       - ./pytest.ini:/var/www/pytest.ini
     command: make -f config/docker-dev serve
-    links:
-      - postgresql
-      - elasticsearch
-      - redis
 
   postgresql:
-    image: docker.io/c2corg/c2corg_pgsql:anon-2018-11-02
+    image: postgis/postgis:16-3.4
+    container_name: postgresql
+    ports:
+      - "5432:5432"
     environment:
-      PGDATA: '/c2corg_anon'
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test
     volumes:
-      - ./docker-compose/pgsql-settings.d/:/c2corg_anon/pgsql-settings.d/
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/conf/postgresql.conf:/etc/postgresql.conf
       - .:/v6_api
+    command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
 
   elasticsearch:
-    image: 'docker.io/c2corg/c2corg_es:anon-2018-11-02'
+    image: "docker.io/c2corg/c2corg_es:anon-2018-11-02"
     ports:
       - 9200:9200
     command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon -Des.script.inline=true
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
   redis:
-    image: 'docker.io/redis:3.2'
+    image: redis:7.2
     ports:
       - 6379:6379
+
+volumes:
+  postgres_data:
