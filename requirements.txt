@@ -1,4 +1,4 @@
-alembic==1.13.2
+alembic==1.14.0
 apscheduler==3.10.4
 bcrypt==4.2.0
 bleach[css]==6.1.0
