@@ -3,7 +3,7 @@ pep8-naming==0.14.1
 WebTest==3.0.1
 ipdb==0.13.13
 httmock==1.4.0
-pytest==8.3.3
+pytest==8.3.4
 pytest-cov==5.0.0
 pygments>=2.7.4 # not directly required, pinned by Snyk to avoid a vulnerability
 setuptools>=70.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
