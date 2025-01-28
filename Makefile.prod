@@ -11,7 +11,6 @@ export site_packages = $(SITE_PACKAGES)
 PYTHON = python
 PYTEST = pytest
 FLAKE = flake8
-PIP = pip
 
 .PHONY: help
 help:
@@ -23,17 +22,11 @@ help:
 	@echo "- run-syncer				Run the ElasticSearch syncer script."
 	@echo "- run-background-jobs"	Run the background jobs
 	@echo "- flush-redis			Clear the Redis cache"
-	@echo "- install				Install the project dependencies"
 
 bootstrap:
-		$(MAKE) install
 		$(MAKE) load-env
 		$(MAKE) run-syncer
 		$(MAKE) run-background-jobs
-
-install:
-	$(PIP) install -r requirements.txt
-	$(PY3COMPILE) -f .build/venv/
 
 run-syncer: install production.ini
 	$(PYTHON) c2corg_api/scripts/es/syncer.py production.ini
@@ -56,4 +49,3 @@ apache/wsgi.conf: apache/app-c2corg_api.wsgi
 $(TEMPLATE_FILES): %: %.in
 	scripts/env_replace < $< > $@
 	chmod --reference $< $@
-

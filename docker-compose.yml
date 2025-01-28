@@ -1,22 +1,4 @@
-version: "3.7"
 services:
-  api:
-    build:
-      context: ./docker
-      dockerfile: Dockerfile.dev
-      args:
-        - UID=${UID:-1000}
-        - GID=${GID:-1000}
-    depends_on:
-      - postgresql
-      - elasticsearch
-      - redis
-    ports:
-      - 6543:6543
-    volumes:
-      - ./:/var/www
-      - /var/www/.build
-
   postgresql:
     image: postgis/postgis:16-3.4
     container_name: postgresql

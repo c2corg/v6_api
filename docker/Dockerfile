@@ -1,8 +1,7 @@
-FROM docker.io/debian:bullseye-slim
+FROM docker.io/python:3.9-slim-bullseye
 
-ENV DEBIAN_FRONTEND noninteractive
-
-ENV LC_ALL en_US.UTF-8
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LC_ALL=en_US.UTF-8
 
 RUN set -x \
     && apt-get update \
@@ -13,48 +12,30 @@ RUN set -x \
     && dpkg-reconfigure locales \
     && /usr/sbin/update-locale LANG=en_US.UTF-8
 
-COPY project.tar /tmp
-
-WORKDIR /var/www/
-
-RUN tar -xvf /tmp/project.tar && chown -R root:root /var/www
-
 RUN set -x \
     && apt-get -y --no-install-recommends install \
-    python3 \
-    python3-chardet \
-    python3-colorama \
-    python3-html5lib \
-    python3-pkg-resources \
-    python3-requests \
-    python3-six \
-    python3-urllib3 \
-    libgeos-c1v5 \
-    libpq5 \
+    git \
     libffi7 \
-    make \
-    python3-dev \
-    python3-pip \
-    libgeos-dev \
-    libffi-dev \
-    libpq-dev \
-    virtualenv \
-    gcc \
-    git
+    libgeos-c1v5 \
+    libpq5
 
 RUN set -x \
  && apt-get -y purge \
  && apt-get -y --purge autoremove \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
+RUN pip install --upgrade pip
 
 ARG VERSION
-ENV version=$VERSION \
-    PATH=/var/www/.build/venv/bin/:$PATH
+ENV version=$VERSION
 
-COPY /docker-entrypoint.sh /
-COPY /docker-entrypoint.d/prod/* /docker-entrypoint.d/
-ENTRYPOINT ["/docker-entrypoint.sh"]
+WORKDIR /var/www/
+
+COPY project.tar .
+RUN tar -xvf project.tar && chown -R root:root /var/www \
+ && rm -rf project.tar \
+ && pip install .
+
 
 EXPOSE 8080
 CMD ["gunicorn", "--paste", "production.ini", "-u", "www-data", "-g", "www-data", "-b", ":8080"]
