@@ -9,7 +9,7 @@ elasticsearch_dsl==2.2.0
 geoalchemy2==0.4.2
 geojson==3.1.0
 geomet==1.1.0
-kombu==5.4.1
+kombu==5.4.2
 Markdown==3.5.2 # at next update, please remove replace_marker() function in toc extension 
 phpserialize==1.3.0 # phpserialize is only required during the migration
 psycopg2==2.9.9
