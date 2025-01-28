@@ -13,8 +13,8 @@ truncate users.token, users.sso_external_id, users.sso_key;
 truncate sympa.subscriber_table;
 
 -- Remove personal data in xreports
-update guidebook.xreports set author_status = null, activity_rate = null, nb_outings = null, age = null, gender = null, previous_injuries = null, autonomy = null;
-update guidebook.xreports_archives set author_status = null, activity_rate = null, nb_outings = null, age = null, gender = null, previous_injuries = null, autonomy = null;
+update guidebook.xreports set author_status = null, activity_rate = null, age = null, gender = null, previous_injuries = null, autonomy = null, supervision = null, qualification = null;
+update guidebook.xreports_archives set author_status = null, activity_rate = null, age = null, gender = null, previous_injuries = null, autonomy = null, supervision = null, qualification = null;
 
 -- Remove personal data in profiles
 update guidebook.user_profiles set activities = null, categories = null;
@@ -31,4 +31,7 @@ truncate guidebook.feed_followed_users, guidebook.feed_filter_area;
 
 -- Remove ES indexing related data
 truncate guidebook.es_deleted_documents, guidebook.es_deleted_locales, guidebook.es_sync_status;
-insert into guidebook.es_sync_status VALUES (to_timestamp(0), 1)
+insert into guidebook.es_sync_status VALUES (to_timestamp(0), 1);
+
+-- remove tracking data
+truncate tracking.users, tracking.activities, tracking.polar, tracking.strava;
