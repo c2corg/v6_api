@@ -23,7 +23,7 @@ pyramid_mailer==0.15.1
 pyramid_tm==2.3
 python-json-logger==2.0.7
 python-slugify==8.0.4
-redis==5.0.8
+redis==5.2.1
 requests==2.32.3
 setuptools==74.1.2
 Shapely==2.0.6
