@@ -13,4 +13,10 @@ if __name__ == "__main__":
     for env_file in env_files:
         load_dotenv(env_file, override=True)
 
-    sys.stdout.write(sys.stdin.read().format(**os.environ))
+    env = dict(**os.environ)
+    # Because on Windows, environment variables are upper cased by default
+    if os.name == "nt":
+        for k, v in list(env.items()):
+            env[k.lower()] = v
+
+    sys.stdout.write(sys.stdin.read().format(**env))

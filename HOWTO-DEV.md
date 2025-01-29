@@ -22,8 +22,8 @@ python3.9 -m venv venv
 ```shell
 # Linux (or WSL)
 source venv/bin/activate
-# Or windows powershell
-./venv/bin/Activate.ps1
+# Or Windows Powershell
+.\venv\Scripts\Activate.ps1
 ```
 - Install the API and its python dependencies in the virtual environment with the following command:
 ```shell
@@ -35,9 +35,16 @@ docker compose up -d
 ```
 - Go to the config directory and copy the `env.local.sample` to `env.local`
 - You should not need to modify it as it is already filled with the necessary values to be compatible with the docker compose defaults but if necessary you can
-- Update the `development.ini` file:
+- Update the `*.ini` file:
 ```shell
+# Linux or WSL
+./scripts/env_replace config/env.default config/env.dev config/env.local < alembic.ini.in > alembic.ini
+./scripts/env_replace config/env.default config/env.dev config/env.local < common.ini.in > common.ini
 ./scripts/env_replace config/env.default config/env.dev config/env.local < development.ini.in > development.ini
+# Or Windows Powershell (Yes you should really have a look at WSL)
+Get-Content alembic.ini.in | cmd /c "python .\scripts\env_replace config/env.default config/env.dev config/env.local > alembic.ini"
+Get-Content common.ini.in | cmd /c "python .\scripts\env_replace config/env.default config/env.dev config/env.local > common.ini"
+Get-Content development.ini.in | cmd /c "python .\scripts\env_replace config/env.default config/env.dev config/env.local > development.ini"
 ```
 - Initialize database:
 ```shell
@@ -69,6 +76,7 @@ pserve development.ini --reload
 - Run background jobs (run each of these commands in a separate terminal, as they will not exit):
 ```shell
 python c2corg_api/scripts/es/syncer.py development.ini
+# Does not work in Windows, as it uses signal.pause() which is only available in unix based OSes (Did I already tell you that you should really look at WSL ?)
 python c2corg_api/scripts/jobs/scheduler.py development.ini
 ```
 - To check that everything is OK, go to http://localhost:6543/health in your browser
@@ -77,9 +85,13 @@ python c2corg_api/scripts/jobs/scheduler.py development.ini
 
 - Update the test.ini file:
 ```shell
+# Linux or WSL
 ./scripts/env_replace config/env.default config/env.dev config/env.local < test.ini.in > test.ini
+# Or Windows Powershell
+Get-Content test.ini.in | cmd /c "python .\scripts\env_replace config/env.default config/env.dev config/env.local > test.ini"
+
 ```
-- To run tests , you can either run them directly with pytest :
+- To run tests , you can either run them directly with pytest (Again, it looks like some tests will not pass in Windows):
 ```shell
 pytest
 ```
