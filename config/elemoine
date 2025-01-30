@@ -1,9 +1,0 @@
-include config/dev
-
-export debug_port = 6550
-export instanceid = elemoine
-export base_url = /${instanceid}
-export db_name = c2corg_elemoine
-export tests_db_name = c2corg_elemoine_tests
-export elasticsearch_index = c2corg_elemoine
-export tests_elasticsearch_index = c2corg_elemoine_tests

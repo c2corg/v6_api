@@ -1,9 +1,0 @@
-include config/dev
-
-export debug_port = 6547
-export instanceid = agina
-export base_url = /${instanceid}
-export db_name = c2corg_agina
-export tests_db_name = c2corg_agina_tests
-export elasticsearch_index = c2corg_agina
-export tests_elasticsearch_index = c2corg_agina_tests
