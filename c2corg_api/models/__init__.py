@@ -47,6 +47,8 @@ from c2corg_api.models import book  # noqa
 from c2corg_api.models import feed  # noqa
 from c2corg_api.models import mailinglist  # noqa
 from c2corg_api.models import sso  # noqa
+from c2corg_api.models import stop
+from c2corg_api.models import waypoint_stop
 
 document_types = {
     xreport.XREPORT_TYPE: xreport.Xreport,
@@ -58,7 +60,9 @@ document_types = {
     user_profile.USERPROFILE_TYPE: user_profile.UserProfile,
     topo_map.MAP_TYPE: topo_map.TopoMap,
     area.AREA_TYPE: area.Area,
-    outing.OUTING_TYPE: outing.Outing
+    outing.OUTING_TYPE: outing.Outing,
+    stop.STOP_TYPE: stop.Stop,  
+    waypoint_stop.WAYPOINT_STOP_TYPE: waypoint_stop.WaypointStop,
 }
 
 document_locale_types = {
@@ -71,5 +75,7 @@ document_locale_types = {
     user_profile.USERPROFILE_TYPE: document.DocumentLocale,
     topo_map.MAP_TYPE: document.DocumentLocale,
     area.AREA_TYPE: document.DocumentLocale,
-    outing.OUTING_TYPE: outing.OutingLocale
+    outing.OUTING_TYPE: outing.OutingLocale,
+    stop.STOP_TYPE: document.DocumentLocale,  
+    waypoint_stop.WAYPOINT_STOP_TYPE: document.DocumentLocale,
 }
