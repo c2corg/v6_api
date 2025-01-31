@@ -237,10 +237,26 @@ user_profile_documents_config = GetDocumentsConfig(
 def adapt_waypoint_schema_for_type(waypoint_type, field_list_type):
     """Get the schema for a waypoint type.
     `field_list_type` should be either "fields" or "listing".
-    All schemas are cached using memoization with @lru_cache.
     """
-    fields = fields_waypoint.get(waypoint_type).get(field_list_type)
-    return restrict_schema(schema_waypoint, fields)
+    fields = fields_waypoint.get(waypoint_type, {}).get(field_list_type, [])
+
+    schema = restrict_schema(schema_waypoint, fields)
+
+    # Si "stops" est demandé, on ajoute manuellement le champ
+    if "stops" in fields:
+        schema["stops"] = {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "document_id": {"type": "integer"},
+                    "title": {"type": "string"}
+                }
+            }
+        }
+
+    return schema
+
 
 
 waypoint_schema_adaptor = make_schema_adaptor(

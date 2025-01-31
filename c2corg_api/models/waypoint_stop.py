@@ -1,5 +1,10 @@
 from sqlalchemy import Column, Integer, Float, ForeignKey
 from colanderalchemy import SQLAlchemySchemaNode
+from sqlalchemy.orm import relationship
+
+
+from c2corg_api.models.schema_utils import restrict_schema, \
+    get_update_schema, get_create_schema
 
 from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import copy_attributes
@@ -48,6 +53,9 @@ class WaypointStop(_WaypointStopMixin, Document, Base):
         'inherit_condition': Document.document_id == document_id
     }
 
+    id = Column(Integer, primary_key=True)
+    waypoint = relationship("Waypoint", back_populates="waypoints_stops")
+
     def to_archive(self):
         waypoint_stop = ArchiveWaypointStop()
         super(WaypointStop, self)._to_archive(waypoint_stop)
@@ -88,3 +96,6 @@ schema_waypoint_stop = SQLAlchemySchemaNode(
         'geometry': get_geometry_schema_overrides(['POINT'])
     }
 )
+
+schema_update_waypoint_stop = get_create_schema(schema_waypoint_stop)
+schema_create_waypoint_stop = get_update_schema(schema_waypoint_stop)

@@ -6,8 +6,11 @@ from sqlalchemy import (
     Integer,
     SmallInteger,
     String,
-    ForeignKey
+    ForeignKey,
     )
+
+from sqlalchemy.orm import relationship
+
 
 from colanderalchemy import SQLAlchemySchemaNode
 
@@ -202,6 +205,12 @@ class Waypoint(_WaypointMixin, Document):
         'polymorphic_identity': WAYPOINT_TYPE,
         'inherit_condition': Document.document_id == document_id
     }
+
+    waypoints_stops = relationship(
+        "WaypointStop", 
+        back_populates="waypoint",
+        cascade="all, delete-orphan"
+    )
 
     def to_archive(self):
         waypoint = ArchiveWaypoint()
