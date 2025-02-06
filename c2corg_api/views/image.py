@@ -204,9 +204,14 @@ class ImageRest(DocumentRest):
             image = DBSession.query(Image).get(image_id)
             if image is None:
                 raise HTTPNotFound('No image found for id {}'.format(image_id))
-            if image.image_type == 'collaborative':
-                image_type = self.request.validated['document']['image_type']
-                if image_type != image.image_type:
+            new_image_type = self.request.validated['document']['image_type']
+            if new_image_type == 'copyright':
+                if new_image_type != image.image_type:
+                    raise HTTPForbidden(
+                        'No permission to change to copyright type'
+                    )
+            elif image.image_type == 'collaborative':
+                if new_image_type != image.image_type:
                     raise HTTPBadRequest(
                         'Image type cannot be changed for collaborative images'
                     )
