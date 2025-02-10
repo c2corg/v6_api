@@ -66,7 +66,7 @@ In another terminal (`docker-compose up` must be running) :
 ./scripts/test.sh c2corg_api/tests/models/test_book.py::TestBook::test_to_archive
 ```
 
-Note: if you're using MinGW on Windows, be sure to prefix the command with `MSYS_PATH_NOCONV=1`
+Note: if you're using MinGW on Windows, be sure to prefix the command with `MSYS_NO_PATHCONV=1`
 
 ## Useful links in [wiki](https://github.com/c2corg/v6_api/wiki)
 
