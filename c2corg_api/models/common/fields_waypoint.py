@@ -3,6 +3,7 @@ DEFAULT_FIELDS = [
     'locales.title',
     'locales.summary',
     'locales.description',
+    'locales.external_resources',
     'geometry.geom',
     'elevation',
     'maps_info',
@@ -192,7 +193,9 @@ fields_waypoint = {
             'parking_fee'
         ],
         'required': DEFAULT_REQUIRED,
-        'listing': DEFAULT_LISTING
+        'listing': DEFAULT_LISTING + [
+            'public_transportation_rating'
+        ]
     },
     'local_product': {
         'fields': DEFAULT_FIELDS + [

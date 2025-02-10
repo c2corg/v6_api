@@ -114,13 +114,21 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertIn('books', associations)
 
         linked_waypoints = associations.get('waypoints')
-        self.assertEqual(1, len(linked_waypoints))
+        self.assertEqual(2, len(linked_waypoints))
         self.assertEqual(
-            self.waypoint.document_id, linked_waypoints[0].get('document_id'))
+            self.waypoint.document_id,
+            linked_waypoints[0].get('document_id'))
+        self.assertEqual(
+            self.waypoint_tc.document_id,
+            linked_waypoints[1].get('document_id'))
         # check waypoint data in listing
         self.assertEqual(
             self.waypoint.locales[0].access_period,
             linked_waypoints[0].get('locales')[0].get('access_period')
+        )
+        self.assertEqual(
+            self.waypoint_tc.public_transportation_rating,
+            linked_waypoints[1].get('public_transportation_rating')
         )
         self.assertIn('geometry', linked_waypoints[0])
         self.assertIn('geom', linked_waypoints[0].get('geometry'))
@@ -250,6 +258,41 @@ class TestRouteRest(BaseDocumentTestRest):
             errors, 'activities', 'Shorter than minimum length 1')
         self.assertError(
             errors, 'associations.waypoints', 'at least one waypoint required')
+
+    def test_climing_indoor_waypoint_association(self):
+        body_post = {
+            'main_waypoint_id': self.waypoint_climbing_indoor.document_id,
+            'activities': ['hiking', 'skitouring'],
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'geometry': {
+                'id': 5678, 'version': 6789,
+                'geom_detail':
+                    '{"type": "LineString", "coordinates": ' +
+                    '[[635956, 5723604], [635966, 5723644]]}'
+            },
+            'locales': [
+                {'lang': 'en', 'title': 'Some nice loop',
+                 'gear': 'shoes'}
+            ],
+            'associations': {
+                'waypoints': [
+                    {'document_id': self.waypoint_climbing_indoor.document_id}
+                ]
+            }
+        }
+        body = self.post_error(body_post)
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 3)
+        self.assertEqual(
+            errors[0].get('description'),
+            'climbing_indoor waypoint cannot be linked to a route')
+        self.assertEqual(
+            errors[0].get('name'),
+            'associations.climbing_indoor_waypoint')
 
     def test_post_invalid_activity(self):
         body_post = {
@@ -679,7 +722,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 {'lang': 'en', 'title': 'Some nice loop',
                  'gear': 'shoes'}
             ],
-            # no association for the main waypoint
+            # no association to the main waypoint
             'associations': {
                 'waypoints': [
                     {'document_id': self.waypoint2.document_id}
@@ -690,7 +733,7 @@ class TestRouteRest(BaseDocumentTestRest):
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
         self.assertError(
-            errors, 'main_waypoint_id', 'no association for the main waypoint')
+            errors, 'main_waypoint_id', 'no association to the main waypoint')
 
     def test_put_wrong_document_id(self):
         body = {
@@ -812,7 +855,10 @@ class TestRouteRest(BaseDocumentTestRest):
                         '[[635956, 5723604], [635976, 5723654]]}'
                 },
                 'associations': {
-                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                    'waypoints': [
+                        {'document_id': self.waypoint.document_id},
+                        {'document_id': self.waypoint_tc.document_id}
+                    ]
                 }
             }
         }
@@ -865,7 +911,10 @@ class TestRouteRest(BaseDocumentTestRest):
                      'title_prefix': 'Should be ignored'}
                 ],
                 'associations': {
-                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                    'waypoints': [
+                        {'document_id': self.waypoint.document_id},
+                        {'document_id': self.waypoint_tc.document_id}
+                    ]
                 }
             }
         }
@@ -905,7 +954,10 @@ class TestRouteRest(BaseDocumentTestRest):
                         '{"type": "Point", "coordinates": [635000, 5723000]}'
                 },
                 'associations': {
-                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                    'waypoints': [
+                        {'document_id': self.waypoint.document_id},
+                        {'document_id': self.waypoint_tc.document_id}
+                    ]
                 }
             }
         }
@@ -934,7 +986,8 @@ class TestRouteRest(BaseDocumentTestRest):
                 ],
                 'associations': {
                     'waypoints': [
-                        {'document_id': self.waypoint2.document_id}
+                        {'document_id': self.waypoint2.document_id},
+                        {'document_id': self.waypoint_tc.document_id}
                     ]
                 }
             }
@@ -983,7 +1036,10 @@ class TestRouteRest(BaseDocumentTestRest):
                      'version': self.locale_en.version}
                 ],
                 'associations': {
-                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                    'waypoints': [
+                        {'document_id': self.waypoint.document_id},
+                        {'document_id': self.waypoint_tc.document_id}
+                    ]
                 }
             }
         }
@@ -1012,7 +1068,10 @@ class TestRouteRest(BaseDocumentTestRest):
                      'description': '...', 'gear': 'si'}
                 ],
                 'associations': {
-                    'waypoints': [{'document_id': self.waypoint.document_id}]
+                    'waypoints': [
+                        {'document_id': self.waypoint.document_id},
+                        {'document_id': self.waypoint_tc.document_id}
+                    ]
                 }
             }
         }
@@ -1191,7 +1250,7 @@ class TestRouteRest(BaseDocumentTestRest):
             gear='paraglider'))
         self.session.add(self.route4)
 
-        # add some associations
+        # waypoints
         self.waypoint = Waypoint(
             waypoint_type='climbing_outdoor', elevation=4,
             geometry=DocumentGeometry(
@@ -1211,7 +1270,24 @@ class TestRouteRest(BaseDocumentTestRest):
             lang='en', title='Mont Granier 2 (en)', description='...',
             access='yep'))
         self.session.add(self.waypoint2)
+        self.waypoint_tc = Waypoint(
+            waypoint_type='access', elevation=1776,
+            public_transportation_rating='poor service',
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(778846 5580167)'))
+        self.waypoint_tc.locales.append(WaypointLocale(
+            lang='fr', title='Roche écroulée', description='...',
+            access='yep', access_period='hiver'
+        ))
+        self.session.add(self.waypoint_tc)
+        self.waypoint_climbing_indoor = Waypoint(
+            waypoint_type='climbing_indoor', elevation=1,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'))
+        self.session.add(self.waypoint_climbing_indoor)
         self.session.flush()
+
+        # associations
         self._add_association(Association.create(
             parent_document=self.route,
             child_document=self.route4), user_id)
@@ -1220,6 +1296,9 @@ class TestRouteRest(BaseDocumentTestRest):
             child_document=self.route), user_id)
         self._add_association(Association.create(
             parent_document=self.waypoint,
+            child_document=self.route), user_id)
+        self._add_association(Association.create(
+            parent_document=self.waypoint_tc,
             child_document=self.route), user_id)
 
         # add a map

@@ -574,7 +574,7 @@ class TestUserRest(BaseUserTestRest):
         self.assertEqual(redirect1, redirect2)
 
     def test_login_failure(self):
-        body = self.login('moderator', password='invalid', status=403).json
+        body = self.login('moderator', password='invalid', status=401).json
         self.assertEqual(body['status'], 'error')
 
     def test_login_no_tos_failure(self):

@@ -1,6 +1,6 @@
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.search.mapping import SearchDocument, BaseMeta
-from c2corg_api.search.mapping_types import QueryableMixin, QInteger,\
+from c2corg_api.search.mapping_types import QueryableMixin, QInteger, \
     QEnumArray, QEnum, QLong, QEnumRange, QNumberRange
 from c2corg_api.search.utils import get_title
 from c2corg_api.models.common.sortable_search_attributes import \

@@ -1,6 +1,6 @@
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.search.mapping import SearchDocument, BaseMeta
-from c2corg_api.search.mapping_types import QueryableMixin, QInteger,\
+from c2corg_api.search.mapping_types import QueryableMixin, QInteger, \
     QEnumArray, QEnum, QBoolean, QEnumRange, QEnumRangeMinMax, QNumberRange
 from c2corg_api.models.common.sortable_search_attributes import \
     sortable_access_times, sortable_climbing_ratings, \

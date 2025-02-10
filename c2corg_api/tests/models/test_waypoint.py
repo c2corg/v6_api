@@ -465,6 +465,32 @@ class TestWaypoint(BaseTestCase):
             self.session.add(archive)
             self.session.flush()
 
+    def test_set_local_external_resource(self):
+        en_external_resources = 'https://wikipedia.com/en'
+        fr_external_resources = 'https://wikipedia.com/fr'
+        waypoint = Waypoint(
+            waypoint_type='summit', elevation=2203,
+            locales=[
+                WaypointLocale(
+                    lang='en', title='English', description='abc',
+                    access='y', external_resources=en_external_resources),
+                WaypointLocale(
+                    lang='fr', title='French', description='bcd',
+                    access='y', external_resources=fr_external_resources)
+            ],
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956.075332665 5723604.677994)')
+        )
+        self.session.add(waypoint)
+        self.session.flush()
+        self.session.refresh(waypoint)
+        fr_local = [local for local in waypoint.locales
+                    if local.title == 'French'][0]
+        en_local = [local for local in waypoint.locales
+                    if local.title == 'English'][0]
+        self.assertEqual(en_local.external_resources, en_external_resources)
+        self.assertEqual(fr_local.external_resources, fr_external_resources)
+
     def _get_waypoint(self):
         return Waypoint(
             waypoint_type='summit', elevation=2203,
