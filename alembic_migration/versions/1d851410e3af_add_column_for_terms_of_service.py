@@ -1,7 +1,7 @@
 """Add column for terms of service
 
 Revision ID: 1d851410e3af
-Revises: 305b064bdf66
+Revises: 626354ffcda0
 Create Date: 2023-03-03 17:29:38.587079
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '1d851410e3af'
-down_revision = '305b064bdf66'
+down_revision = '626354ffcda0'
 branch_labels = None
 depends_on = None
 
