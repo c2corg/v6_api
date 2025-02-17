@@ -214,6 +214,15 @@ class Waypoint(_WaypointMixin, Document):
         super(Waypoint, self).update(other)
         copy_attributes(other, self, attributes)
 
+    def get_update_type(self, old_versions):
+        update_types = super(Waypoint, self).get_update_type(old_versions)
+
+        if self.public_transportation_rating != \
+                old_versions.get('public_transportation_rating', None):
+            update_types[0].append('public_transportation_rating')
+
+        return update_types
+
 
 class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
     """
@@ -328,5 +337,6 @@ schema_waypoint = SQLAlchemySchemaNode(
 schema_create_waypoint = get_create_schema(schema_waypoint)
 schema_update_waypoint = get_update_schema(schema_waypoint)
 schema_association_waypoint = restrict_schema(schema_waypoint, [
-    'elevation', 'locales.title', 'locales.access_period', 'geometry.geom'
+    'elevation', 'locales.title', 'locales.access_period', 'geometry.geom',
+    'public_transportation_rating'
 ])

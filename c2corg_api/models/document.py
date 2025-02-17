@@ -349,6 +349,18 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
         return self._almost_equals(self.geom, other.geom) and \
                self._almost_equals(self.geom_detail, other.geom_detail)
 
+    def get_shape(self, geom):
+        if isinstance(geom, WKBElement):
+            g = wkb_to_shape(geom)
+            proj = geom.srid
+        else:
+            # WKT are used in the tests.
+            split = str.split(geom, ';')
+            proj = int(str.split(split[0], '=')[1])
+            str1 = split[1]
+            g = wkt.loads(str1)
+        return g, proj
+
     def _almost_equals(self, geom, other_geom):
         if geom is None and other_geom is None:
             return True
@@ -357,29 +369,8 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
         elif geom is None and other_geom is not None:
             return False
 
-        g1 = None
-        proj1 = None
-        if isinstance(geom, WKBElement):
-            g1 = wkb_to_shape(geom)
-            proj1 = geom.srid
-        else:
-            # WKT are used in the tests.
-            split1 = str.split(geom, ';')
-            proj1 = int(str.split(split1[0], '=')[1])
-            str1 = split1[1]
-            g1 = wkt.loads(str1)
-
-        g2 = None
-        proj2 = None
-        if isinstance(other_geom, WKBElement):
-            g2 = wkb_to_shape(other_geom)
-            proj2 = other_geom.srid
-        else:
-            # WKT are used in the tests.
-            split2 = str.split(other_geom, ';')
-            proj2 = int(str.split(split2[0], '=')[1])
-            str2 = split2[1]
-            g2 = wkt.loads(str2)
+        g1, proj1 = self.get_shape(geom)
+        g2, proj2 = self.get_shape(other_geom)
 
         # https://github.com/Toblerity/Shapely/blob/
         # 8df2b1b718c89e7d644b246ab07ad3670d25aa6a/shapely/geometry/base.py#L673
@@ -400,6 +391,15 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
             raise HTTPInternalServerError('Bad projection')
 
         return g1.almost_equals(g2, decimals)
+
+    def distance(self, geom, other_geom):
+        if geom is None or other_geom is None:
+            return None
+
+        g1, _ = self.get_shape(geom)
+        g2, _ = self.get_shape(other_geom)
+
+        return g1.distance(g2)
 
 
 DocumentGeometry.lon_lat = column_property(
