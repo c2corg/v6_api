@@ -28,6 +28,9 @@ from c2corg_api.models.common.fields_image import fields_image
 from c2corg_api.models.common.fields_topo_map import fields_topo_map
 from c2corg_api.models.common.fields_user_profile import fields_user_profile
 from functools import lru_cache
+from c2corg_api.models.waypoint_stop import WAYPOINT_STOP_TYPE, WaypointStop, schema_waypoint_stop
+from c2corg_api.models.stop import STOP_TYPE, Stop, schema_stop
+
 
 
 class GetDocumentsConfig:
@@ -232,7 +235,6 @@ user_profile_documents_config = GetDocumentsConfig(
 
 # waypoint
 
-
 @lru_cache(maxsize=None)
 def adapt_waypoint_schema_for_type(waypoint_type, field_list_type):
     """Get the schema for a waypoint type.
@@ -241,19 +243,6 @@ def adapt_waypoint_schema_for_type(waypoint_type, field_list_type):
     fields = fields_waypoint.get(waypoint_type, {}).get(field_list_type, [])
 
     schema = restrict_schema(schema_waypoint, fields)
-
-    # Si "stops" est demandé, on ajoute manuellement le champ
-    if "stops" in fields:
-        schema["stops"] = {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "document_id": {"type": "integer"},
-                    "title": {"type": "string"}
-                }
-            }
-        }
 
     return schema
 
@@ -267,6 +256,24 @@ waypoint_listing_schema_adaptor = make_schema_adaptor(
 waypoint_documents_config = GetDocumentsConfig(
     WAYPOINT_TYPE, Waypoint, schema_waypoint, clazz_locale=WaypointLocale,
     fields=fields_waypoint, adapt_schema=waypoint_listing_schema_adaptor)
+
+
+# waypoint_stop
+
+
+waypoint_stop_documents_config = GetDocumentsConfig(
+    WAYPOINT_STOP_TYPE, WaypointStop, schema_waypoint_stop,
+    listing_fields=['waypoint_id', 'stop_id', 'distance']
+)
+
+
+# stop
+
+
+stop_documents_config = GetDocumentsConfig(
+    STOP_TYPE, Stop, schema_stop,
+    listing_fields=['stop_name']
+)
 
 document_configs = {
     WAYPOINT_TYPE: waypoint_documents_config,

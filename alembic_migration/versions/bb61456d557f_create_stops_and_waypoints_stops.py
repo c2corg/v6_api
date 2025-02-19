@@ -8,22 +8,31 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    op.create_table(
-        "stops",
-        sa.Column("document_id", sa.Integer(), primary_key=True),
-        sa.Column("name", sa.String(), nullable=False),
-        schema="guidebook"
+    # Créer la table stops
+    op.create_table('stops',
+        sa.Column('document_id', sa.Integer(), nullable=False),
+        sa.Column('stop_name', sa.String(), nullable=False),
+        sa.Column('line', sa.String(), nullable=False),
+        sa.Column('operator', sa.String(), nullable=False),
+        sa.ForeignKeyConstraint(['document_id'], ['guidebook.documents.document_id']),
+        sa.PrimaryKeyConstraint('document_id'),
+        schema='guidebook'
     )
 
-    op.create_table(
-        "waypoints_stops",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("waypoint_id", sa.Integer(), sa.ForeignKey("guidebook.waypoints.document_id")),
-        sa.Column("stop_id", sa.Integer(), sa.ForeignKey("guidebook.stops.document_id")),  
-        schema="guidebook"
+    # Créer la table waypoints_stops (table de jointure many-to-many)
+    op.create_table('waypoints_stops',
+        sa.Column('document_id', sa.Integer(), nullable=False),
+        sa.Column('stop_id', sa.Integer(), nullable=False),
+        sa.Column('waypoint_id', sa.Integer(), nullable=False),
+        sa.Column('distance', sa.Float(), nullable=False),
+        sa.ForeignKeyConstraint(['document_id'], ['guidebook.documents.document_id']),
+        sa.ForeignKeyConstraint(['stop_id'], ['guidebook.stops.document_id'], name='fk_waypoint_stop_stop_id', use_alter=True),
+        sa.ForeignKeyConstraint(['waypoint_id'], ['guidebook.waypoints.document_id'], name='fk_waypoint_stop_waypoint_id', use_alter=True),
+        sa.PrimaryKeyConstraint('document_id', 'stop_id', 'waypoint_id'),  
+        schema='guidebook'
     )
+
 
 def downgrade():
-    op.drop_table("waypoints_stops", schema="guidebook")
-
-    op.drop_table("stops", schema="guidebook")
+    op.drop_table('waypoints_stops', schema='guidebook')
+    op.drop_table('stops', schema='guidebook')

@@ -5,7 +5,6 @@ from c2corg_api.models.association import Association
 from c2corg_api.models.document import UpdateType
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
-from c2corg_api.models.waypoint_stop import WaypointStop
 from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_listings import get_documents_for_ids
@@ -34,9 +33,6 @@ from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.orm.util import aliased
 from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import and_, union
-from c2corg_api.models.waypoint import Waypoint
-from v6_api.c2corg_api.models.waypoint_stop import WaypointStop
-
 
 # the number of routes that are included for waypoints
 NUM_ROUTES = 400
@@ -118,11 +114,8 @@ class WaypointRest(DocumentRest):
             Dates must be given as `yyyy-mm-dd`, e.g `2016-12-31`. If only one
             date is given, from and to are both set to that date.
         """
-        query = DBSession.query(Waypoint).options(
-            joinedload(Waypoint.waypoints_stops).joinedload(WaypointStop.stop)
-        )
-        return self._collection_get(WAYPOINT_TYPE, waypoint_documents_config, query=query)
-    
+        return self._collection_get(WAYPOINT_TYPE, waypoint_documents_config)
+
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         """

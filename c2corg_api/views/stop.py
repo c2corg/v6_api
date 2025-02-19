@@ -6,10 +6,11 @@ from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
+from c2corg_api.views.document_schemas import stop_documents_config
 
 from c2corg_api.models.stop import (
     Stop, schema_stop, schema_update_stop,
-    ArchiveStop, STOP_TYPE, schema_create_stop)
+    STOP_TYPE, schema_create_stop)
 
 from c2corg_api.views.document import (
     DocumentRest, make_validator_create, make_validator_update)
@@ -32,14 +33,14 @@ class StopRest(DocumentRest):
         """
         Get a list of stops.
         """
-        return self._collection_get(STOP_TYPE)
+        return self._collection_get(STOP_TYPE, stop_documents_config)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
         """
         Get a single stop.
         """
-        return self._get(schema_stop)
+        return self._get(stop_documents_config, schema_stop)
 
     @restricted_json_view(schema=schema_create_stop,
                           validators=[
@@ -62,13 +63,6 @@ class StopRest(DocumentRest):
         """
         return self._put(Stop, schema_stop)
 
-@resource(path='/stops/{id}/{lang}/{version_id}', cors_policy=cors_policy)
-class StopVersionRest(DocumentVersionRest):
-
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveStop, STOP_TYPE, schema_stop)
 
 @resource(path='/stops/{id}/{lang}/info', cors_policy=cors_policy)
 class StopInfoRest(DocumentInfoRest):

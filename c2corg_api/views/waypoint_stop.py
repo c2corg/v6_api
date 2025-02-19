@@ -6,10 +6,10 @@ from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
+from c2corg_api.views.document_schemas import waypoint_stop_documents_config
 
 from c2corg_api.models.waypoint_stop import (
-    WaypointStop, schema_waypoint_stop, schema_update_waypoint_stop,
-    ArchiveWaypointStop, WAYPOINT_STOP_TYPE, schema_create_waypoint_stop)
+    WaypointStop, schema_waypoint_stop, schema_update_waypoint_stop, WAYPOINT_STOP_TYPE, schema_create_waypoint_stop)
 
 from c2corg_api.views.document import (
     DocumentRest, make_validator_create, make_validator_update)
@@ -32,14 +32,15 @@ class WaypointStopRest(DocumentRest):
         """
         Get a list of waypoint-stop associations.
         """
-        return self._collection_get(WAYPOINT_STOP_TYPE)
+        return self._collection_get(WAYPOINT_STOP_TYPE, waypoint_stop_documents_config)
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
         """
         Get a single waypoint-stop association.
         """
-        return self._get(schema_waypoint_stop)
+
+        return self._get(waypoint_stop_documents_config, schema_waypoint_stop)
 
     @restricted_json_view(schema=schema_create_waypoint_stop,
                           validators=[
@@ -61,14 +62,6 @@ class WaypointStopRest(DocumentRest):
         Update a waypoint-stop association.
         """
         return self._put(WaypointStop, schema_waypoint_stop)
-
-@resource(path='/waypoints_stops/{id}/{lang}/{version_id}', cors_policy=cors_policy)
-class WaypointStopVersionRest(DocumentVersionRest):
-
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveWaypointStop, WAYPOINT_STOP_TYPE, schema_waypoint_stop)
 
 @resource(path='/waypoints_stops/{id}/{lang}/info', cors_policy=cors_policy)
 class WaypointStopInfoRest(DocumentInfoRest):

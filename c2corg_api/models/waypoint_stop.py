@@ -1,34 +1,59 @@
 from sqlalchemy import Column, Integer, Float, ForeignKey
 from colanderalchemy import SQLAlchemySchemaNode
-from sqlalchemy.orm import relationship
-
+from sqlalchemy.ext.declarative import declared_attr
 
 from c2corg_api.models.schema_utils import restrict_schema, \
     get_update_schema, get_create_schema
-
 from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
     ArchiveDocument, Document, schema_attributes, get_geometry_schema_overrides
 )
 from c2corg_api.models.common import document_types
+from sqlalchemy.orm import relationship
+from c2corg_api.models.waypoint import Waypoint # don't remove this import
+
+
 
 WAYPOINT_STOP_TYPE = document_types.WAYPOINT_STOP_TYPE
 
-class _WaypointStopMixin(object):
+class _WaypointStopMixin:
     # Distance entre le waypoint et l'arrêt
     distance = Column(Float, nullable=False)
 
+    @declared_attr
+    def document_id(cls):
+        return Column(
+            Integer,
+            ForeignKey(schema + '.documents.document_id'),
+            primary_key=True
+        )
+    
+    @declared_attr
+    def stop_id(cls):
+        return Column(
+            Integer,
+            ForeignKey(schema + '.stops.document_id'),
+            nullable=False
+        )
+    
+    @declared_attr
+    def waypoint_id(cls):
+        return Column(
+            Integer,
+            ForeignKey(schema + '.waypoints.document_id'),
+            nullable=False
+        )
 
-attributes = ['distance']
+attributes = ['distance', 'stop_id', 'waypoint_id']
 
-
-class WaypointStop(_WaypointStopMixin, Document, Base):
-    """
-    Modélise la relation entre un Waypoint et un Stop.
-    """
+class WaypointStop(_WaypointStopMixin, Document):
+   
     __tablename__ = 'waypoints_stops'
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {
+        'schema': schema,
+        'extend_existing': True
+    }
 
     document_id = Column(
         Integer,
@@ -36,56 +61,34 @@ class WaypointStop(_WaypointStopMixin, Document, Base):
         primary_key=True
     )
 
-    waypoint_id = Column(
+    stop_id = Column(
         Integer,
-        ForeignKey(schema + '.waypoints.document_id'),
+        ForeignKey(schema + '.stops.document_id', 
+                  use_alter=True, 
+                  name='fk_waypoint_stop_stop_id'),
         nullable=False
     )
 
-    stop_id = Column(
+    waypoint_id = Column(
         Integer,
-        ForeignKey(schema + '.stops.document_id'),
+        ForeignKey(schema + '.waypoints.document_id', 
+                  use_alter=True, 
+                  name='fk_waypoint_stop_waypoint_id'),
         nullable=False
     )
+
+    distance = Column(Float, nullable=False)
+
+    waypoint = relationship("Waypoint", foreign_keys=[waypoint_id])
 
     __mapper_args__ = {
         'polymorphic_identity': WAYPOINT_STOP_TYPE,
         'inherit_condition': Document.document_id == document_id
     }
 
-    id = Column(Integer, primary_key=True)
-    waypoint = relationship("Waypoint", back_populates="waypoints_stops")
-
-    def to_archive(self):
-        waypoint_stop = ArchiveWaypointStop()
-        super(WaypointStop, self)._to_archive(waypoint_stop)
-        copy_attributes(self, waypoint_stop, attributes)
-        return waypoint_stop
-
     def update(self, other):
         super(WaypointStop, self).update(other)
         copy_attributes(other, self, attributes)
-
-
-class ArchiveWaypointStop(_WaypointStopMixin, ArchiveDocument):
-    """
-    Archive de WaypointStop.
-    """
-    __tablename__ = 'waypoints_stops_archives'
-    __table_args__ = {'extend_existing': True}
-
-    id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_archives.id'),
-        primary_key=True
-    )
-    __mapper_args__ = {
-        'polymorphic_identity': WAYPOINT_STOP_TYPE,
-        'inherit_condition': ArchiveDocument.id == id
-    }
-
-    __table_args__ = Base.__table_args__
-
 
 schema_waypoint_stop = SQLAlchemySchemaNode(
     WaypointStop,

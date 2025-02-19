@@ -23,6 +23,7 @@ from c2corg_api.models.document import (
 from c2corg_api.models import enums
 from c2corg_api.models.common import document_types
 
+
 WAYPOINT_TYPE = document_types.WAYPOINT_TYPE
 
 
@@ -206,11 +207,6 @@ class Waypoint(_WaypointMixin, Document):
         'inherit_condition': Document.document_id == document_id
     }
 
-    waypoints_stops = relationship(
-        "WaypointStop", 
-        back_populates="waypoint",
-        cascade="all, delete-orphan"
-    )
 
     def to_archive(self):
         waypoint = ArchiveWaypoint()
