@@ -65,37 +65,37 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.app.get("/waypoints?offset=invalid", status=400)
 
         self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 0}), [], 4)
+            self.get_collection({'offset': 0, 'limit': 0}), [], 5)
 
         self.assertResultsEqual(
             self.get_collection({'offset': 0, 'limit': 1}),
-            [self.waypoint4.document_id], 4)
+            [self.waypoint6.document_id], 5)
         self.assertResultsEqual(
             self.get_collection({'offset': 0, 'limit': 2}),
-            [self.waypoint4.document_id, self.waypoint3.document_id], 4)
+            [self.waypoint6.document_id, self.waypoint4.document_id], 5)
         self.assertResultsEqual(
             self.get_collection({'offset': 1, 'limit': 2}),
-            [self.waypoint3.document_id, self.waypoint2.document_id], 4)
+            [self.waypoint4.document_id, self.waypoint3.document_id], 5)
 
     def test_get_collection_caching(self):
-        cache_key_2 = get_cache_key(
-            self.waypoint2.document_id, None, WAYPOINT_TYPE)
         cache_key_3 = get_cache_key(
             self.waypoint3.document_id, None, WAYPOINT_TYPE)
         cache_key_4 = get_cache_key(
             self.waypoint4.document_id, None, WAYPOINT_TYPE)
+        cache_key_6 = get_cache_key(
+            self.waypoint6.document_id, None, WAYPOINT_TYPE)
 
-        self.assertEqual(cache_document_listing.get(cache_key_2), NO_VALUE)
         self.assertEqual(cache_document_listing.get(cache_key_3), NO_VALUE)
         self.assertEqual(cache_document_listing.get(cache_key_4), NO_VALUE)
+        self.assertEqual(cache_document_listing.get(cache_key_6), NO_VALUE)
 
         # check that documents returned in the response are cached
         self.assertResultsEqual(
             self.get_collection({'offset': 0, 'limit': 2}),
-            [self.waypoint4.document_id, self.waypoint3.document_id], 4)
+            [self.waypoint6.document_id, self.waypoint4.document_id], 5)
 
-        self.assertNotEqual(cache_document_listing.get(cache_key_3), NO_VALUE)
         self.assertNotEqual(cache_document_listing.get(cache_key_4), NO_VALUE)
+        self.assertNotEqual(cache_document_listing.get(cache_key_6), NO_VALUE)
 
         # check that values are returned from the cache
         fake_cache_value = {'document_id': 'fake_id'}
@@ -104,8 +104,8 @@ class TestWaypointRest(BaseDocumentTestRest):
         body = self.get_collection({'offset': 1, 'limit': 2})
         self.assertResultsEqual(
             body,
-            ['fake_id', self.waypoint2.document_id], 4)
-        self.assertNotEqual(cache_document_listing.get(cache_key_2), NO_VALUE)
+            [self.waypoint4.document_id, 'fake_id'], 5)
+        self.assertNotEqual(cache_document_listing.get(cache_key_3), NO_VALUE)
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
@@ -1501,6 +1501,42 @@ class TestWaypointRest(BaseDocumentTestRest):
         locale_en = waypoint.get_locale('en')
         self.assertEqual(locale_en.external_resources, external_resources)
 
+    def test_update_access_waypoints_pt(self):
+        """Test updating waypoint public transportation rating
+        """
+        body_put = {
+            'message': 'Changing figures',
+            'document': {
+                'document_id': self.waypoint6.document_id,
+                'version': self.waypoint6.version,
+                'waypoint_type': 'access',
+                'elevation': self.waypoint6.elevation,
+                'public_transportation_rating': 'good service',
+                'geometry': {
+                    'version': self.waypoint6.geometry.version,
+                    'geom': '{"type": "Point", "coordinates": [657403, 5691411]}'  # noqa
+                },
+                'associations': {
+                    'routes': [
+                        {'document_id': self.route1.document_id}
+                    ]
+                }
+            }
+        }
+        self.put_success_figures_only(body_put, self.waypoint6)
+        self.session.flush()
+        self.session.refresh(self.route1)
+        self.session.refresh(self.waypoint6)
+        self.assertEqual(self.waypoint6.waypoint_type, 'access')
+        self.assertEqual(
+            self.waypoint6.public_transportation_rating,
+            'good service'
+        )
+        self.assertEqual(
+            self.route1.public_transportation_rating,
+            'good service'
+        )
+
     def _add_test_data(self):
         self.waypoint = Waypoint(
             waypoint_type='summit', elevation=2203)
@@ -1562,10 +1598,23 @@ class TestWaypointRest(BaseDocumentTestRest):
             lang='en', title='Mont Granier', description='...',
             access='yep'))
         self.session.add(self.waypoint5)
+
+        self.waypoint6 = Waypoint(
+            waypoint_type='access', elevation=1096,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(657403 5691411)'))
+        self.waypoint6.locales.append(WaypointLocale(
+            lang='fr', title='La Plagne', description='...',
+            access='ouai'))
+        self.waypoint6.locales.append(WaypointLocale(
+            lang='en', title='La Plagne', description='...',
+            access='yep'))
+        self.session.add(self.waypoint6)
         self.session.flush()
 
         DocumentRest.create_new_version(self.waypoint4, user_id)
         DocumentRest.create_new_version(self.waypoint5, user_id)
+        DocumentRest.create_new_version(self.waypoint6, user_id)
 
         # add some associations
         route1_geometry = DocumentGeometry(
@@ -1610,6 +1659,9 @@ class TestWaypointRest(BaseDocumentTestRest):
         self._add_association(Association.create(
             parent_document=self.waypoint4,
             child_document=self.route3), user_id)
+        self._add_association(Association.create(
+            parent_document=self.route1,
+            child_document=self.waypoint6), user_id)
 
         # article
         self.article1 = Article(
