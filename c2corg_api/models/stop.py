@@ -13,12 +13,13 @@ STOP_TYPE = document_types.STOP_TYPE
 
 
 class _StopMixin(object):
+    navitia_id = Column(String, nullable=False)
     stop_name = Column(String, nullable=False)
     line = Column(String, nullable=False)
     operator = Column(String, nullable=False)
 
 
-attributes = ['stop_name', 'line', 'operator']
+attributes = ['navitia_id','stop_name', 'line', 'operator']
 
 
 class Stop(_StopMixin, Document):
@@ -42,6 +43,15 @@ class Stop(_StopMixin, Document):
     def update(self, other):
         super(Stop, self).update(other)
         copy_attributes(other, self, attributes)
+
+    def to_dict(self):
+        return {
+            "id": self.document_id,
+            "navitia_id":self.navitia_id,
+            "stop_name": self.stop_name,
+            "line": self.line,
+            "operator": self.operator,
+        }
 
 
 schema_stop = SQLAlchemySchemaNode(

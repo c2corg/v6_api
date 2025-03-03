@@ -20,9 +20,9 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_preferred_lang_param
 
 validate_stop_create = make_validator_create(
-    ['stop_name', 'line', 'operator'], 'stop_name')
+    ['navitia_id', 'stop_name', 'line', 'operator'], 'stop_name')
 validate_stop_update = make_validator_update(
-    ['stop_name', 'line', 'operator'], 'stop_name')
+    ['navitia_id', 'stop_name', 'line', 'operator'], 'stop_name')
 
 @resource(collection_path='/stops', path='/stops/{id}',
           cors_policy=cors_policy)

@@ -11,6 +11,7 @@ def upgrade():
     # Créer la table stops
     op.create_table('stops',
         sa.Column('document_id', sa.Integer(), nullable=False),
+        sa.Column('navitia_id', sa.String(), nullable=False),
         sa.Column('stop_name', sa.String(), nullable=False),
         sa.Column('line', sa.String(), nullable=False),
         sa.Column('operator', sa.String(), nullable=False),
