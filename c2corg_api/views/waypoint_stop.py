@@ -8,7 +8,7 @@ from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
 from c2corg_api.views.document_schemas import waypoint_stop_documents_config
 from pyramid.httpexceptions import HTTPBadRequest
-from sqlalchemy import func
+from sqlalchemy import func, exists
 
 
 
@@ -120,3 +120,20 @@ class WaypointStopsByWaypointRest:
         ]
 
         return {"waypoint_id": waypoint_id, "stops": stops_data}
+    
+@resource(path='/waypoints/{waypoint_id}/isReachable', cors_policy=cors_policy)
+class WaypointStopsReachableRest:
+    
+    def __init__(self, request):
+        self.request = request
+
+    @view(validators=[validate_waypoint_id])
+    def get(self):
+        """Returns true if the waypoint has at least one stop associated with it, false otherwise."""
+        waypoint_id = self.request.matchdict['waypoint_id']
+
+        has_stops = DBSession.query(
+            exists().where(WaypointStop.waypoint_id == waypoint_id)
+        ).scalar()
+
+        return has_stops
