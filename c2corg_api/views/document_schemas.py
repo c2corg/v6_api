@@ -28,8 +28,8 @@ from c2corg_api.models.common.fields_image import fields_image
 from c2corg_api.models.common.fields_topo_map import fields_topo_map
 from c2corg_api.models.common.fields_user_profile import fields_user_profile
 from functools import lru_cache
-from c2corg_api.models.waypoint_stop import WAYPOINT_STOP_TYPE, WaypointStop, schema_waypoint_stop
-from c2corg_api.models.stop import STOP_TYPE, Stop, schema_stop
+from c2corg_api.models.waypoint_stoparea import WAYPOINT_STOPAREA_TYPE, WaypointStoparea, schema_waypoint_stoparea
+from c2corg_api.models.stoparea import STOPAREA_TYPE, Stoparea, schema_stoparea
 
 
 
@@ -258,21 +258,21 @@ waypoint_documents_config = GetDocumentsConfig(
     fields=fields_waypoint, adapt_schema=waypoint_listing_schema_adaptor)
 
 
-# waypoint_stop
+# waypoint_stoparea
 
 
-waypoint_stop_documents_config = GetDocumentsConfig(
-    WAYPOINT_STOP_TYPE, WaypointStop, schema_waypoint_stop,
-    listing_fields=['waypoint_id', 'stop_id', 'distance']
+waypoint_stoparea_documents_config = GetDocumentsConfig(
+    WAYPOINT_STOPAREA_TYPE, WaypointStoparea, schema_waypoint_stoparea,
+    listing_fields=['waypoint_id', 'stoparea_id', 'distance']
 )
 
 
-# stop
+# stoparea
 
 
-stop_documents_config = GetDocumentsConfig(
-    STOP_TYPE, Stop, schema_stop,
-    listing_fields=['stop_name']
+stoparea_documents_config = GetDocumentsConfig(
+    STOPAREA_TYPE, Stoparea, schema_stoparea,
+    listing_fields=['stoparea_name']
 )
 
 document_configs = {

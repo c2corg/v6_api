@@ -15,9 +15,9 @@ from c2corg_api.models.waypoint import Waypoint # don't remove this import
 
 
 
-WAYPOINT_STOP_TYPE = document_types.WAYPOINT_STOP_TYPE
+WAYPOINT_STOPAREA_TYPE = document_types.WAYPOINT_STOPAREA_TYPE
 
-class _WaypointStopMixin:
+class _WaypointStopareaMixin:
     # Distance entre le waypoint et l'arrêt
     distance = Column(Float, nullable=False)
 
@@ -30,10 +30,10 @@ class _WaypointStopMixin:
         )
     
     @declared_attr
-    def stop_id(cls):
+    def stoparea_id(cls):
         return Column(
             Integer,
-            ForeignKey(schema + '.stops.document_id'),
+            ForeignKey(schema + '.stopareas.document_id'),
             nullable=False
         )
     
@@ -47,9 +47,9 @@ class _WaypointStopMixin:
 
 attributes = ['distance', 'stop_id', 'waypoint_id']
 
-class WaypointStop(_WaypointStopMixin, Document):
+class WaypointStoparea(_WaypointStopareaMixin, Document):
    
-    __tablename__ = 'waypoints_stops'
+    __tablename__ = 'waypoints_stopareas'
     __table_args__ = {
         'schema': schema,
         'extend_existing': True
@@ -61,11 +61,11 @@ class WaypointStop(_WaypointStopMixin, Document):
         primary_key=True
     )
 
-    stop_id = Column(
+    stoparea_id = Column(
         Integer,
-        ForeignKey(schema + '.stops.document_id', 
+        ForeignKey(schema + '.stopareas.document_id', 
                   use_alter=True, 
-                  name='fk_waypoint_stop_stop_id'),
+                  name='fk_waypoint_stoparea_stoparea_id'),
         nullable=False
     )
 
@@ -73,7 +73,7 @@ class WaypointStop(_WaypointStopMixin, Document):
         Integer,
         ForeignKey(schema + '.waypoints.document_id', 
                   use_alter=True, 
-                  name='fk_waypoint_stop_waypoint_id'),
+                  name='fk_waypoint_stoparea_waypoint_id'),
         nullable=False
     )
 
@@ -82,16 +82,16 @@ class WaypointStop(_WaypointStopMixin, Document):
     waypoint = relationship("Waypoint", foreign_keys=[waypoint_id])
 
     __mapper_args__ = {
-        'polymorphic_identity': WAYPOINT_STOP_TYPE,
+        'polymorphic_identity': WAYPOINT_STOPAREA_TYPE,
         'inherit_condition': Document.document_id == document_id
     }
 
     def update(self, other):
-        super(WaypointStop, self).update(other)
+        super(WaypointStoparea, self).update(other)
         copy_attributes(other, self, attributes)
 
-schema_waypoint_stop = SQLAlchemySchemaNode(
-    WaypointStop,
+schema_waypoint_stoparea = SQLAlchemySchemaNode(
+    WaypointStoparea,
     includes=schema_attributes + attributes,
     overrides={
         'document_id': {'missing': None},
@@ -100,5 +100,5 @@ schema_waypoint_stop = SQLAlchemySchemaNode(
     }
 )
 
-schema_update_waypoint_stop = get_create_schema(schema_waypoint_stop)
-schema_create_waypoint_stop = get_update_schema(schema_waypoint_stop)
+schema_update_waypoint_stoparea = get_create_schema(schema_waypoint_stoparea)
+schema_create_waypoint_stoparea = get_update_schema(schema_waypoint_stoparea)
