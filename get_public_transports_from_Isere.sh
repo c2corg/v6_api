@@ -24,13 +24,13 @@ get_last_document_id() {
     docker-compose -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "SELECT MAX(document_id) FROM guidebook.documents;" | tr -d ' '
 }
 
-# Initialize log file
-> $LOG_FILE
-
 # Fetch waypoints from API
 curl -s "$API_URL" | jq -r '.documents[] | .document_id' > "$OUTPUT_FILE"
 
 nb_waypoints=$(wc -l < "$OUTPUT_FILE")
+
+echo "Start time :" >> $LOG_FILE
+echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 
 for ((k=1; k<=nb_waypoints; k++)); do
     # Log progress every 10 waypoints
@@ -157,3 +157,6 @@ done
 
 # Log final progress
 echo "Completed: $nb_waypoints/$nb_waypoints waypoints processed. Total Navitia API requests: $NAVITIA_REQUEST_COUNT" >> $LOG_FILE
+
+echo "Stop time :" >> $LOG_FILE
+echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
