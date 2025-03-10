@@ -1,0 +1,115 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "c2corg_api"
+dynamic = ["version"]
+description = "c2corg_api"
+readme = "README.md"
+classifiers=[
+    "Programming Language :: Python",
+    "Framework :: Pyramid",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+]
+authors = [
+    {name = "Camp to Camp", email = "dev@camptocamp.org"},
+]
+keywords = ["web", "wsgi", "bfg", "pylons", "pyramid"]
+requires-python = ">=3.9"
+dependencies = [
+    "alembic==1.14.1",
+    "apscheduler==3.10.4",
+    "bcrypt==4.3.0",
+    "bleach[css]==6.2.0",
+    "colander==2.0",
+    "dogpile.cache==1.3.4",
+    "elasticsearch==2.4.1",
+    "elasticsearch_dsl==2.2.0",
+    "geoalchemy2==0.4.2",
+    "geojson==3.2.0",
+    "geomet==1.1.0",
+    "kombu==5.4.2",
+    "Markdown==3.5.2", # at next update, please remove replace_marker() function in toc extension
+    "phpserialize==1.3.0", # phpserialize is only required during the migration
+    "psycopg2==2.9.10",
+    "pyjwt==1.7.1",
+    "pymdown-extensions==10.7.1",
+    "pyproj==3.6.1",
+    "pyramid-jwtauth==0.1.3",
+    "pyramid==1.10.8",
+    "pyramid_debugtoolbar==4.12.1",
+    "pyramid_mailer==0.15.1",
+    "pyramid_tm==2.3",
+    "python-json-logger==3.3.0",
+    "python-slugify==8.0.4",
+    "redis==5.2.1",
+    "requests==2.32.3",
+    "setuptools==76.0.0",
+    "Shapely==2.0.7",
+    "SQLAlchemy==1.3.24",
+    "transaction==5.0",
+    "waitress==3.0.2",
+    "zope.sqlalchemy==3.1",
+    "gunicorn==23.0.0",
+    # ColanderAlchemy>=0.3.2
+    # needed for ColanderAlchemy: https://github.com/stefanofontanelli/ColanderAlchemy/pull/90 + #91
+    "ColanderAlchemy @ https://github.com/tsauerwein/ColanderAlchemy/archive/refs/heads/c2corg.tar.gz",
+    # Cornice>1.2.1
+    # needs: https://github.com/mozilla-services/cornice/pull/359
+    "Cornice @ https://github.com/tsauerwein/cornice/archive/refs/heads/nested-none-2.1.0-c2corg.tar.gz",
+    # Discourse API client
+    "pydiscourse @ https://github.com/c2corg/pydiscourse/archive/ea03a3a.tar.gz",
+
+    "pygments>=2.7.4", # not directly required, pinned by Snyk to avoid a vulnerability
+    "numpy>=1.22.2", # not directly required, pinned by Snyk to avoid a vulnerability
+    "zipp>=3.19.1", # not directly required, pinned by Snyk to avoid a vulnerability
+
+]
+
+[dependency-groups]
+dev = [
+    "flake8==7.1.2",
+    "pep8-naming==0.14.1",
+    "WebTest==3.0.4",
+    "ipdb==0.13.13",
+    "httmock==1.4.0",
+    "pytest==8.3.4",
+    "pytest-cov==6.0.0",
+    "pygments>=2.7.4", # not directly required, pinned by Snyk to avoid a vulnerability
+    "setuptools>=70.0.0", # not directly required, pinned by Snyk to avoid a vulnerability
+    "ipython>=8.10.0", # not directly required, pinned by Snyk to avoid a vulnerability
+]
+
+[project.entry-points."paste.app_factory"]
+main = "c2corg_api:main"
+
+[project.scripts]
+initialize_c2corg_api_db = "c2corg_api.scripts.initializedb:main"
+initialize_c2corg_api_es = "c2corg_api.scripts.initializees:main"
+fill_es_index = "c2corg_api.scripts.es.fill_index:main"
+
+[project.urls]
+Homepage = "https://www.camptocamp.org/"
+Repository = "http://github.com/c2corg/v6_api"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+version_scheme = "no-guess-dev"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--cov-report=term",
+    "--cov-report=xml",
+    "--cov=c2corg_api",
+    "--import-mode=importlib",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
