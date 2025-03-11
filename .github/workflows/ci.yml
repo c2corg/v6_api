@@ -2,7 +2,7 @@ name: Continuous integration
 
 on: [push, pull_request]
 jobs:
-  Test:
+  test:
     runs-on: ubuntu-latest
     services:
       redis:
@@ -120,45 +120,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.docker_meta.outputs.tags }}
-          labels: ${{ steps.docker_meta.outputs.labels }}
-          build-args: |
-            VERSION=${{ github.sha }}
-
-  DockerLegacy:
-    # only publish if tests passed
-    needs: test
-    # secrets are not available for PR from forks, and dependabot PRs, we don't want to build them
-    if: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Docker meta
-        id: docker_meta
-        uses: docker/metadata-action@v5.7.0
-        with:
-          images: ghcr.io/c2corg/v6_api
-          flavor: |
-            latest=auto
-            prefix=
-            suffix=-legacy,onlatest=true
-      - name: Checkout repository
-        uses: actions/checkout@v4.1.1
-      - run: git archive --format=tar --output project.tar "$GITHUB_SHA"
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          version: v0.9.1 # use pre 10 version of buildx
-      - name: Publish the docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
+          provenance: false # true creates issues with the old docker compose used in prod
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
