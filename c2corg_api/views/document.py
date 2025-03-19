@@ -1,6 +1,7 @@
 import logging
 
 from c2corg_api.caching import cache_document_detail, cache_document_cooked
+from c2corg_api.crawler.crawler_service import is_crawler
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
 from c2corg_api.models.area_association import update_areas_for_document, \
@@ -11,7 +12,8 @@ from c2corg_api.models.cache_version import update_cache_version, \
     update_cache_version_associations, get_cache_key
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
-    ArchiveDocumentGeometry, set_available_langs, get_available_langs)
+    ArchiveDocumentGeometry, set_available_langs, get_available_langs,
+    Document)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.feed import update_feed_document_create, \
     update_feed_document_update
@@ -20,6 +22,7 @@ from c2corg_api.models.topo_map import schema_listing_topo_map, \
     MAP_TYPE
 from c2corg_api.models.topo_map_association import update_maps_for_document, \
     get_maps
+from c2corg_api.queues.queues_service import publish
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import etag_cache, set_best_locale
@@ -109,7 +112,7 @@ class DocumentRest(object):
     def _get(self, document_config, schema, clazz_locale=None,
              adapt_schema=None, include_maps=False, include_areas=True,
              set_custom_associations=None, set_custom_fields=None,
-             custom_cache_key=None):
+             custom_cache_key=None, adapt_response=None):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')
         editing_view = self.request.GET.get('e', '0') != '0'
@@ -137,7 +140,13 @@ class DocumentRest(object):
                 set_custom_associations, set_custom_fields,
                 cook_locale=cook)
 
+        response = None
+        claims = self.request.environ.get('jwtauth.claims', {})
+        user_id = claims.get('sub', False)
+
         if not editing_view:
+            increment_document_view_count(self.request, id, claims)
+
             cache_key = get_cache_key(
                 id,
                 lang,
@@ -148,11 +157,16 @@ class DocumentRest(object):
                 # set and check the etag: if the etag value provided in the
                 # request equals the current etag, return 'NotModified'
                 etag_cache(self.request, cache_key)
+                response = get_or_create(cache, cache_key, create_response)
 
-                return get_or_create(cache, cache_key, create_response)
+        if response is None:
+            # don't cache if requesting a document for editing
+            response = create_response()
 
-        # don't cache if requesting a document for editing
-        return create_response()
+        if adapt_response:
+            return adapt_response(response, user_id)
+
+        return response
 
     def _get_in_lang(self, id, lang, clazz, schema, editing_view,
                      clazz_locale=None, adapt_schema=None,
@@ -194,12 +208,14 @@ class DocumentRest(object):
         if adapt_schema:
             schema = adapt_schema(schema, document)
 
-        return to_json_dict(
+        response = to_json_dict(
             document,
             schema,
             with_special_locales_attrs=True,
             cook_locale=cook_locale
         )
+
+        return response
 
     def _set_associations(self, document, lang, editing_view):
         document.associations = doc_associations.get_associations(
@@ -409,6 +425,12 @@ class DocumentRest(object):
 
             if document.type != MAP_TYPE and UpdateType.GEOM in update_types:
                 update_maps_for_document(document, reset=True)
+
+            if UpdateType.DISABLE_VIEW_COUNT in update_types:
+                update_disable_view_count_for_document(
+                    document_in.document_id,
+                    document_in.disable_view_count
+                )
 
             if after_update:
                 after_update(document, update_types, user_id=user_id)
@@ -657,3 +679,18 @@ def make_validator_update(fields, type_field=None, valid_type_values=None):
                     document, request, fields, type_field, valid_type_values,
                     updating=True)
     return f
+
+
+def increment_document_view_count(request, doc_id, claims):
+    is_bot = claims.get('robot', False)
+    user_agent = request.headers.get('User-Agent', '')
+    if not (is_bot or is_crawler(user_agent)):
+        publish(request.registry.documents_views_queue_config, doc_id)
+
+
+def update_disable_view_count_for_document(document_id, disable_view_count):
+    """ Update document disable_view_count value
+    """
+    DBSession.query(Document). \
+        filter(Document.document_id == document_id). \
+        update({"disable_view_count": disable_view_count})

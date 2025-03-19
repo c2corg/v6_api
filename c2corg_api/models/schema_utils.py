@@ -1,6 +1,12 @@
 from colander import MappingSchema, SchemaNode, String, Integer, Sequence
 
-default_fields_doc = ['document_id', 'version', 'waypoint_type']
+default_fields_doc = [
+    'document_id',
+    'version',
+    'waypoint_type',
+    'disable_view_count',
+    'view_count'
+]
 default_fields_locale = ['version', 'lang']
 default_fields_geometry = ['version']
 

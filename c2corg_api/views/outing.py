@@ -11,7 +11,8 @@ from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import outing_documents_config, \
-    outing_schema_adaptor
+    outing_schema_adaptor, adapt_get_outing_response, \
+    outing_documents_collection_config
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
@@ -130,14 +131,19 @@ class OutingRest(DocumentRest):
     @view(validators=[
         validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        return self._collection_get(OUTING_TYPE, outing_documents_config)
+        return self._collection_get(
+            OUTING_TYPE,
+            outing_documents_collection_config,
+        )
 
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(
             outing_documents_config,
             schema_outing,
-            adapt_schema=outing_schema_adaptor)
+            adapt_schema=outing_schema_adaptor,
+            adapt_response=adapt_get_outing_response
+        )
 
     @restricted_json_view(
         schema=schema_create_outing,

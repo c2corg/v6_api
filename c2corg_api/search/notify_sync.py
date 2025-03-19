@@ -1,7 +1,6 @@
 import transaction
+from c2corg_api.queues.queues_service import publish
 import logging
-from kombu.pools import producers
-
 
 log = logging.getLogger(__name__)
 
@@ -11,33 +10,8 @@ def notify_es_syncer(queue_config):
     syncer script that a document has changed by pushing a friendly message
     into the Redis queue.
     """
-    def push_notification():
-        def on_revive(channel):
-            """ Try to re-create the Redis queue on connection errors.
-            """
-            try:
-                # try to unbind the queue, ignore errors
-                channel.queue_unbind(
-                    queue_config.queue.name,
-                    exchange=queue_config.exchange.name)
-            except Exception:
-                pass
-
-            # the re-create the queue
-            channel.queue_bind(
-                queue_config.queue.name, exchange=queue_config.exchange.name)
-
-        with producers[queue_config.connection].acquire(
-                block=True, timeout=3) as producer:
-            log.info('Notifying ElasticSearch syncer')
-            producer.publish(
-                'please sync',
-                exchange=queue_config.exchange,
-                declare=[queue_config.exchange, queue_config.queue],
-                retry=True,
-                retry_policy={'max_retries': 3, 'on_revive': on_revive})
-
-    run_on_successful_transaction(push_notification)
+    log.info('Notifying ElasticSearch syncer')
+    run_on_successful_transaction(publish(queue_config, 'please sync'))
 
 
 def run_on_successful_transaction(operation):
