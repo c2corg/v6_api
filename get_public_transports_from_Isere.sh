@@ -177,7 +177,6 @@ echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 
 # Execute all SQL commands in one go
 echo "Sql file length : $(wc -l < "$SQL_FILE") lines." >> $LOG_FILE
-$CCOMPOSE -p "${PROJECT_NAME}" cp "$SQL_FILE" $SERVICE_NAME:/tmp/sql_commands.sql
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME -f "/tmp/sql_commands.sql"
+$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME < /tmp/sql_commands.sql
 
 echo "Inserts done." >> $LOG_FILE
