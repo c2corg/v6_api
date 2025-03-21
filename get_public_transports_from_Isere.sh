@@ -13,27 +13,30 @@ DURATION=$(echo "scale=0; $MAXDISTANCEWAYPOINT2STOPAREA / $WALKING_SPEED" | bc)
 
 PROJECT_NAME=${PROJECT_NAME:-""}           
 API_PORT=${API_PORT:-6543} 
+CCOMPOSE=${CCOMPOSE:-"podman-compose"}
+STANDALONE=${PODMAN_ENV:-""}
 
 API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=14328&offset=0&limit=10000"
 OUTPUT_FILE="/tmp/waypoints_ids.txt"
 LOG_FILE="log-navitia.txt"
 NAVITIA_REQUEST_COUNT=0
+SQL_FILE="/tmp/sql_commands.sql"
 
-SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPTPATH"/.. || exit
+if [[ -n "$STANDALONE" ]]; then
+    SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    cd "$SCRIPTPATH"/.. || exit
+fi
 
-# Function to get the last document_id used
-get_last_document_id() {
-    docker compose -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "SELECT MAX(document_id) FROM guidebook.documents;" | tr -d ' '
-}
+echo "Start time :" >> $LOG_FILE
+echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 
 # Fetch waypoints from API
 curl -s "$API_URL" | jq -r '.documents[] | .document_id' > "$OUTPUT_FILE"
 
 nb_waypoints=$(wc -l < "$OUTPUT_FILE")
 
-echo "Start time :" >> $LOG_FILE
-echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
+# Initialize SQL file
+> "$SQL_FILE"
 
 for ((k=1; k<=nb_waypoints; k++)); do
     # Log progress every 10 waypoints
@@ -44,7 +47,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
     WAYPOINT_ID=$(sed "${k}q;d" /tmp/waypoints_ids.txt)
 
     # Get waypoint coordinates from backend
-    lon_lat=$(docker compose -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "
+    lon_lat=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "
         SELECT ST_X(ST_Transform(geom, 4326)) || ',' || ST_Y(ST_Transform(geom, 4326)) 
         FROM guidebook.documents_geometries 
         WHERE document_id = $WAYPOINT_ID;
@@ -100,8 +103,9 @@ for ((k=1; k<=nb_waypoints; k++)); do
             distance_km=$(awk "BEGIN {printf \"%.2f\", ($duration * $WALKING_SPEED) / 1000}")
 
             # Check if the stop already exists
-            existing_stop_id=$(docker compose -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "SELECT document_id FROM guidebook.stopareas WHERE navitia_id = '$stop_id' LIMIT 1;" | tr -d ' \n\r')
+            existing_stop_id=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "SELECT document_id FROM guidebook.stopareas WHERE navitia_id = '$stop_id' LIMIT 1;" | tr -d ' \n\r')
 
+            # For new stop areas
             if [[ -z "$existing_stop_id" ]]; then
                 # Get the stop_area information
                 stop_info=$(curl -s -H "Authorization: $API_KEY" "https://api.navitia.io/v1/places/$stop_id")
@@ -111,6 +115,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
                 echo "$stop_info" | jq -r '.places[0].stop_area.lines[].name' > /tmp/lines.txt
                 echo "$stop_info" | jq -r '.places[0].stop_area.lines[].code' > /tmp/code.txt
                 echo "$stop_info" | jq -r '.places[0].stop_area.lines[].network.name' > /tmp/network.txt
+                echo "$stop_info" | jq -r '.places[0].stop_area.lines[].commercial_mode.name' > /tmp/mode.txt
 
                 # Count the number of lines
                 stop_count=$(wc -l < /tmp/lines.txt)
@@ -120,36 +125,42 @@ for ((k=1; k<=nb_waypoints; k++)); do
                     line_full_name=$(sed "${j}q;d" /tmp/lines.txt)
                     line_name=$(sed "${j}q;d" /tmp/code.txt)
                     operator_name=$(sed "${j}q;d" /tmp/network.txt)
+                    mode=$(sed "${j}q;d" /tmp/mode.txt)
 
-                    # Get the last document_id and calculate new ones
-                    last_id=$(get_last_document_id)
-                    new_stop_id=$((last_id + 1))
-
-                    # Insert into documents and stops - add -q for quiet mode
-                    docker compose -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME -c "INSERT INTO guidebook.documents (document_id, type) VALUES ($new_stop_id, 's');"
-
-                    # Insert into database with apostrophe escaping
-                    safe_stop_name=$(echo "$stop_name" | sed "s/'/''/g")
-                    safe_line_full_name=$(echo "$line_full_name" | sed "s/'/''/g") 
-                    safe_operator_name=$(echo "$operator_name" | sed "s/'/''/g")
-
-                    docker compose -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME -c "INSERT INTO guidebook.stopareas (document_id, navitia_id, stoparea_name, line, operator) VALUES ($new_stop_id, '$stop_id', '$safe_stop_name', 'Bus $line_name - $safe_line_full_name', '$safe_operator_name');"
-                    docker compose -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -v ON_ERROR_STOP=1 -U $DB_USER -d $DB_NAME -c "INSERT INTO guidebook.documents_geometries (version, document_id, geom, geom_detail) VALUES (1, $new_stop_id, ST_Transform(ST_SetSRID(ST_MakePoint($lon_stop, $lat_stop), 4326), 3857), NULL) ON CONFLICT (document_id) DO UPDATE SET geom = ST_Transform(ST_SetSRID(ST_MakePoint($lon_stop, $lat_stop), 4326), 3857);"
-                    
-                    # Add relationship in waypoints_stops
-                    last_doc_id=$(get_last_document_id)
-                    new_waypoint_stop_id=$((last_doc_id + 1))
-                    
-                    docker compose -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME -c "INSERT INTO guidebook.documents (document_id, type) VALUES ($new_waypoint_stop_id, 'z');"
-                    docker compose -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME -c "INSERT INTO guidebook.waypoints_stopareas (document_id, stoparea_id, waypoint_id, distance) VALUES ($new_waypoint_stop_id, $new_stop_id, $WAYPOINT_ID, $distance_km);"
+                    # Create a stoparea document and save its ID
+                    echo "DO \$\$ 
+                    DECLARE stoparea_doc_id integer;
+                    DECLARE relation_doc_id integer;
+                    BEGIN
+                        INSERT INTO guidebook.documents (type) VALUES ('s') RETURNING document_id INTO stoparea_doc_id;
+                        
+                        INSERT INTO guidebook.stopareas (document_id, navitia_id, stoparea_name, line, operator) 
+                        VALUES (stoparea_doc_id, '$stop_id', '$(echo "$stop_name" | sed "s/'/''/g")', '$mode $line_name - $(echo "$line_full_name" | sed "s/'/''/g")', '$(echo "$operator_name" | sed "s/'/''/g")');
+                        
+                        INSERT INTO guidebook.documents_geometries (version, document_id, geom, geom_detail) 
+                        VALUES (1, stoparea_doc_id, ST_Transform(ST_SetSRID(ST_MakePoint($lon_stop, $lat_stop), 4326), 3857), NULL) 
+                        ON CONFLICT (document_id) DO UPDATE SET geom = ST_Transform(ST_SetSRID(ST_MakePoint($lon_stop, $lat_stop), 4326), 3857);
+                        
+                        -- Create relation document
+                        INSERT INTO guidebook.documents (type) VALUES ('z') RETURNING document_id INTO relation_doc_id;
+                        
+                        -- Insert relationship
+                        INSERT INTO guidebook.waypoints_stopareas (document_id, stoparea_id, waypoint_id, distance) 
+                        VALUES (relation_doc_id, stoparea_doc_id, $WAYPOINT_ID, $distance_km);
+                    END \$\$;" >> "$SQL_FILE"
                 done
             else
-                new_stop_id=$(echo "$existing_stop_id" | tr -d '\n\r')
-                last_doc_id=$(get_last_document_id | tr -d '\n\r')
-                new_waypoint_stop_id=$((last_doc_id + 1))
-                
-                docker compose -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME -c "INSERT INTO guidebook.documents (document_id, type) VALUES ($new_waypoint_stop_id, 'z');"
-                docker compose -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME -c "INSERT INTO guidebook.waypoints_stopareas (document_id, stoparea_id, waypoint_id, distance) VALUES ($new_waypoint_stop_id, $new_stop_id, $WAYPOINT_ID, $distance_km);"
+                # For existing stop areas
+                echo "DO \$\$ 
+                DECLARE relation_doc_id integer;
+                BEGIN
+                    -- Create relation document
+                    INSERT INTO guidebook.documents (type) VALUES ('z') RETURNING document_id INTO relation_doc_id;
+                    
+                    -- Insert relationship
+                    INSERT INTO guidebook.waypoints_stopareas (document_id, stoparea_id, waypoint_id, distance) 
+                    VALUES (relation_doc_id, $existing_stop_id, $WAYPOINT_ID, $distance_km);
+                END \$\$;" >> "$SQL_FILE"
             fi
         done
 
@@ -163,3 +174,10 @@ echo "Completed: $nb_waypoints/$nb_waypoints waypoints processed. Total Navitia 
 
 echo "Stop time :" >> $LOG_FILE
 echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
+
+# Execute all SQL commands in one go
+echo "Sql file length : $(wc -l < "$SQL_FILE") lines." >> $LOG_FILE
+$CCOMPOSE -p "${PROJECT_NAME}" cp "$SQL_FILE" $SERVICE_NAME:/tmp/sql_commands.sql
+$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME -f "/tmp/sql_commands.sql"
+
+echo "Inserts done." >> $LOG_FILE
