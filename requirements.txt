@@ -1,18 +1,18 @@
-alembic==1.13.2
+alembic==1.14.1
 apscheduler==3.10.4
-bcrypt==4.2.0
-bleach[css]==6.1.0
+bcrypt==4.3.0
+bleach[css]==6.2.0
 colander==2.0
-dogpile.cache==1.3.3
+dogpile.cache==1.3.4
 elasticsearch==2.4.1
 elasticsearch_dsl==2.2.0
 geoalchemy2==0.4.2
-geojson==3.1.0
+geojson==3.2.0
 geomet==1.1.0
-kombu==5.4.0
-Markdown==3.7 # at next update, please remove replace_marker() function in toc extension 
+kombu==5.4.2
+Markdown==3.7
 phpserialize==1.3.0 # phpserialize is only required during the migration
-psycopg2==2.9.9
+psycopg2==2.9.10
 pyjwt==1.7.1
 pymdown-extensions==10.7.1
 pyproj==3.6.1
@@ -21,15 +21,15 @@ pyramid==1.10.8
 pyramid_debugtoolbar==4.12.1
 pyramid_mailer==0.15.1
 pyramid_tm==2.3
-python-json-logger==2.0.7
+python-json-logger==3.3.0
 python-slugify==8.0.4
-redis==5.0.8
+redis==5.2.1
 requests==2.32.3
-setuptools==73.0.0
-Shapely==2.0.5
+setuptools==77.0.3
+Shapely==2.0.7
 SQLAlchemy==1.3.24
-transaction==4.0
-waitress==3.0.0
+transaction==5.0
+waitress==3.0.2
 zope.sqlalchemy==3.1
 gunicorn==23.0.0
 

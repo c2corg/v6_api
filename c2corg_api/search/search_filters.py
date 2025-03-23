@@ -1,7 +1,7 @@
 import logging
 import math
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import partial
 
 from c2corg_api.models.outing import OUTING_TYPE
@@ -35,8 +35,8 @@ def build_query(url_params, meta_params, doc_type):
         if filter:
             search = search.filter(filter)
 
-    search = search.\
-        fields([]).\
+    search = search. \
+        fields([]). \
         extra(from_=offset, size=limit)
 
     if url_params.get('bbox'):
@@ -283,7 +283,11 @@ def create_period_filter(field, query_term):
     range_values = [t for t in range_values if t is not None]
 
     def milliseconds_since_first_day_of_year(date):
-        seconds_since_epoch = datetime.strptime(date, '%Y-%m-%d').timestamp()
+        processed_date = datetime.strptime(date, '%Y-%m-%d')
+        # Force UTC, to avoid problems when running on a machine that is not
+        # set to UTC
+        seconds_since_epoch = (processed_date.replace(tzinfo=timezone.utc)
+                               .timestamp())
 
         return int(1000 * seconds_since_epoch) % milliseconds_in_one_year
 
