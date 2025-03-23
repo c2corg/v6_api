@@ -1,0 +1,2823 @@
+{
+	"c2corg": {
+		"mappings": {
+			"x": {
+				"_all": {
+					"enabled": false
+				},
+				"properties": {
+					"activities": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"areas": {
+						"type": "long"
+					},
+					"available_locales": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"avalanche_level": {
+						"type": "integer"
+					},
+					"avalanche_slope": {
+						"type": "integer"
+					},
+					"date": {
+						"type": "date",
+						"format": "strict_date_optional_time||epoch_millis"
+					},
+					"description_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"description_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"description_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"description_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"description_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"description_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"description_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"doc_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"elevation": {
+						"type": "integer"
+					},
+					"event_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"geom": {
+						"type": "geo_point"
+					},
+					"id": {
+						"type": "long"
+					},
+					"nb_impacted": {
+						"type": "integer"
+					},
+					"nb_participants": {
+						"type": "integer"
+					},
+					"quality": {
+						"type": "integer"
+					},
+					"severity": {
+						"type": "integer"
+					},
+					"summary_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"summary_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"summary_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"summary_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"summary_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"summary_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"summary_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"title_ca": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "catalan_heavy"
+							}
+						}
+					},
+					"title_de": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "german_heavy"
+							}
+						}
+					},
+					"title_en": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "english_heavy"
+							}
+						}
+					},
+					"title_es": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "spanish_heavy"
+							}
+						}
+					},
+					"title_eu": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "basque_heavy"
+							}
+						}
+					},
+					"title_fr": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "french_heavy"
+							}
+						}
+					},
+					"title_it": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "italian_heavy"
+							}
+						}
+					}
+				}
+			},
+			"c": {
+				"_all": {
+					"enabled": false
+				},
+				"properties": {
+					"activities": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"areas": {
+						"type": "long"
+					},
+					"article_categories": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"article_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"available_locales": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"description_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"description_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"description_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"description_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"description_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"description_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"description_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"doc_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"geom": {
+						"type": "geo_point"
+					},
+					"id": {
+						"type": "long"
+					},
+					"quality": {
+						"type": "integer"
+					},
+					"summary_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"summary_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"summary_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"summary_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"summary_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"summary_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"summary_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"title_ca": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "catalan_heavy"
+							}
+						}
+					},
+					"title_de": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "german_heavy"
+							}
+						}
+					},
+					"title_en": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "english_heavy"
+							}
+						}
+					},
+					"title_es": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "spanish_heavy"
+							}
+						}
+					},
+					"title_eu": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "basque_heavy"
+							}
+						}
+					},
+					"title_fr": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "french_heavy"
+							}
+						}
+					},
+					"title_it": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "italian_heavy"
+							}
+						}
+					}
+				}
+			},
+			"u": {
+				"_all": {
+					"enabled": false
+				},
+				"properties": {
+					"areas": {
+						"type": "long"
+					},
+					"available_locales": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"description_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"description_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"description_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"description_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"description_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"description_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"description_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"doc_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"geom": {
+						"type": "geo_point"
+					},
+					"id": {
+						"type": "long"
+					},
+					"quality": {
+						"type": "integer"
+					},
+					"summary_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"summary_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"summary_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"summary_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"summary_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"summary_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"summary_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"title_ca": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "catalan_heavy"
+							}
+						}
+					},
+					"title_de": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "german_heavy"
+							}
+						}
+					},
+					"title_en": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "english_heavy"
+							}
+						}
+					},
+					"title_es": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "spanish_heavy"
+							}
+						}
+					},
+					"title_eu": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "basque_heavy"
+							}
+						}
+					},
+					"title_fr": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "french_heavy"
+							}
+						}
+					},
+					"title_it": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "italian_heavy"
+							}
+						}
+					}
+				}
+			},
+			"o": {
+				"_all": {
+					"enabled": false
+				},
+				"properties": {
+					"activities": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"areas": {
+						"type": "long"
+					},
+					"available_locales": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"avalanche_signs": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"condition_rating": {
+						"type": "integer"
+					},
+					"date_end": {
+						"type": "date",
+						"format": "strict_date_optional_time||epoch_millis"
+					},
+					"date_start": {
+						"type": "date",
+						"format": "strict_date_optional_time||epoch_millis"
+					},
+					"description_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"description_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"description_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"description_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"description_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"description_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"description_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"doc_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"elevation_access": {
+						"type": "integer"
+					},
+					"elevation_down_snow": {
+						"type": "integer"
+					},
+					"elevation_max": {
+						"type": "integer"
+					},
+					"elevation_up_snow": {
+						"type": "integer"
+					},
+					"engagement_rating": {
+						"type": "integer"
+					},
+					"equipment_rating": {
+						"type": "integer"
+					},
+					"frequentation": {
+						"type": "integer"
+					},
+					"geom": {
+						"type": "geo_point"
+					},
+					"glacier_rating": {
+						"type": "integer"
+					},
+					"global_rating": {
+						"type": "integer"
+					},
+					"height_diff_difficulties": {
+						"type": "integer"
+					},
+					"height_diff_up": {
+						"type": "integer"
+					},
+					"hiking_rating": {
+						"type": "integer"
+					},
+					"ice_rating": {
+						"type": "integer"
+					},
+					"id": {
+						"type": "long"
+					},
+					"labande_global_rating": {
+						"type": "integer"
+					},
+					"length_total": {
+						"type": "integer"
+					},
+					"mtb_down_rating": {
+						"type": "integer"
+					},
+					"mtb_up_rating": {
+						"type": "integer"
+					},
+					"public_transport": {
+						"type": "boolean"
+					},
+					"quality": {
+						"type": "integer"
+					},
+					"rock_free_rating": {
+						"type": "integer"
+					},
+					"routes": {
+						"type": "long"
+					},
+					"ski_rating": {
+						"type": "integer"
+					},
+					"snow_quality": {
+						"type": "integer"
+					},
+					"snow_quantity": {
+						"type": "integer"
+					},
+					"snowshoe_rating": {
+						"type": "integer"
+					},
+					"summary_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"summary_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"summary_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"summary_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"summary_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"summary_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"summary_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"title_ca": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "catalan_heavy"
+							}
+						}
+					},
+					"title_de": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "german_heavy"
+							}
+						}
+					},
+					"title_en": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "english_heavy"
+							}
+						}
+					},
+					"title_es": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "spanish_heavy"
+							}
+						}
+					},
+					"title_eu": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "basque_heavy"
+							}
+						}
+					},
+					"title_fr": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "french_heavy"
+							}
+						}
+					},
+					"title_it": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "italian_heavy"
+							}
+						}
+					},
+					"users": {
+						"type": "long"
+					},
+					"via_ferrata_rating": {
+						"type": "integer"
+					},
+					"waypoints": {
+						"type": "long"
+					}
+				}
+			},
+			"m": {
+				"_all": {
+					"enabled": false
+				},
+				"properties": {
+					"areas": {
+						"type": "long"
+					},
+					"available_locales": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"description_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"description_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"description_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"description_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"description_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"description_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"description_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"doc_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"geom": {
+						"type": "geo_point"
+					},
+					"id": {
+						"type": "long"
+					},
+					"quality": {
+						"type": "integer"
+					},
+					"summary_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"summary_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"summary_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"summary_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"summary_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"summary_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"summary_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"title_ca": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "catalan_heavy"
+							}
+						}
+					},
+					"title_de": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "german_heavy"
+							}
+						}
+					},
+					"title_en": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "english_heavy"
+							}
+						}
+					},
+					"title_es": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "spanish_heavy"
+							}
+						}
+					},
+					"title_eu": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "basque_heavy"
+							}
+						}
+					},
+					"title_fr": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "french_heavy"
+							}
+						}
+					},
+					"title_it": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "italian_heavy"
+							}
+						}
+					}
+				}
+			},
+			"b": {
+				"_all": {
+					"enabled": false
+				},
+				"properties": {
+					"activities": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"areas": {
+						"type": "long"
+					},
+					"available_locales": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"book_types": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"description_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"description_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"description_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"description_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"description_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"description_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"description_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"doc_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"geom": {
+						"type": "geo_point"
+					},
+					"id": {
+						"type": "long"
+					},
+					"quality": {
+						"type": "integer"
+					},
+					"summary_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"summary_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"summary_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"summary_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"summary_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"summary_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"summary_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"title_ca": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "catalan_heavy"
+							}
+						}
+					},
+					"title_de": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "german_heavy"
+							}
+						}
+					},
+					"title_en": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "english_heavy"
+							}
+						}
+					},
+					"title_es": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "spanish_heavy"
+							}
+						}
+					},
+					"title_eu": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "basque_heavy"
+							}
+						}
+					},
+					"title_fr": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "french_heavy"
+							}
+						}
+					},
+					"title_it": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "italian_heavy"
+							}
+						}
+					}
+				}
+			},
+			"w": {
+				"_all": {
+					"enabled": false
+				},
+				"properties": {
+					"access_time": {
+						"type": "integer"
+					},
+					"areas": {
+						"type": "long"
+					},
+					"available_locales": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"best_periods": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"capacity": {
+						"type": "integer"
+					},
+					"capacity_staffed": {
+						"type": "integer"
+					},
+					"children_proof": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"climbing_indoor_types": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"climbing_outdoor_types": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"climbing_rating_max": {
+						"type": "integer"
+					},
+					"climbing_rating_median": {
+						"type": "integer"
+					},
+					"climbing_rating_min": {
+						"type": "integer"
+					},
+					"climbing_styles": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"custodianship": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"description_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"description_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"description_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"description_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"description_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"description_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"description_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"doc_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"elevation": {
+						"type": "integer"
+					},
+					"equipment_ratings": {
+						"type": "integer"
+					},
+					"exposition_rating": {
+						"type": "integer"
+					},
+					"geom": {
+						"type": "geo_point"
+					},
+					"height_max": {
+						"type": "integer"
+					},
+					"height_median": {
+						"type": "integer"
+					},
+					"height_min": {
+						"type": "integer"
+					},
+					"id": {
+						"type": "long"
+					},
+					"length": {
+						"type": "integer"
+					},
+					"lift_access": {
+						"type": "boolean"
+					},
+					"orientations": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"paragliding_rating": {
+						"type": "integer"
+					},
+					"product_types": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"prominence": {
+						"type": "integer"
+					},
+					"public_transportation_rating": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"public_transportation_types": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"quality": {
+						"type": "integer"
+					},
+					"rain_proof": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"rock_types": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"routes_quantity": {
+						"type": "integer"
+					},
+					"snow_clearance_rating": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"summary_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"summary_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"summary_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"summary_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"summary_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"summary_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"summary_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"title_ca": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "catalan_heavy"
+							}
+						}
+					},
+					"title_de": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "german_heavy"
+							}
+						}
+					},
+					"title_en": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "english_heavy"
+							}
+						}
+					},
+					"title_es": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "spanish_heavy"
+							}
+						}
+					},
+					"title_eu": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "basque_heavy"
+							}
+						}
+					},
+					"title_fr": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "french_heavy"
+							}
+						}
+					},
+					"title_it": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "italian_heavy"
+							}
+						}
+					},
+					"waypoint_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"weather_station_types": {
+						"type": "string",
+						"index": "not_analyzed"
+					}
+				}
+			},
+			"a": {
+				"_all": {
+					"enabled": false
+				},
+				"properties": {
+					"area_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"areas": {
+						"type": "long"
+					},
+					"available_locales": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"description_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"description_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"description_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"description_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"description_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"description_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"description_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"doc_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"geom": {
+						"type": "geo_point"
+					},
+					"id": {
+						"type": "long"
+					},
+					"quality": {
+						"type": "integer"
+					},
+					"summary_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"summary_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"summary_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"summary_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"summary_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"summary_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"summary_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"title_ca": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							}
+						}
+					},
+					"title_ca": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "catalan_heavy"
+							}
+						}
+					},
+					"title_de": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "german_heavy"
+							}
+						}
+					},
+					"title_en": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "english_heavy"
+							}
+						}
+					},
+					"title_es": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "spanish_heavy"
+							}
+						}
+					},
+					"title_eu": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "basque_heavy"
+							}
+						}
+					},
+					"title_fr": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "french_heavy"
+							}
+						}
+					},
+					"title_it": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "italian_heavy"
+							}
+						}
+					}
+				}
+			},
+			"i": {
+				"_all": {
+					"enabled": false
+				},
+				"properties": {
+					"activities": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"areas": {
+						"type": "long"
+					},
+					"available_locales": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"categories": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"date_time": {
+						"type": "date",
+						"format": "strict_date_optional_time||epoch_millis"
+					},
+					"description_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"description_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"description_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"description_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"description_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"description_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"description_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"doc_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"elevation": {
+						"type": "integer"
+					},
+					"geom": {
+						"type": "geo_point"
+					},
+					"id": {
+						"type": "long"
+					},
+					"image_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"quality": {
+						"type": "integer"
+					},
+					"summary_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"summary_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"summary_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"summary_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"summary_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"summary_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"summary_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"title_ca": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							}
+						}
+					},
+					"title_ca": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "catalan_heavy"
+							}
+						}
+					},
+					"title_de": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "german_heavy"
+							}
+						}
+					},
+					"title_en": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "english_heavy"
+							}
+						}
+					},
+					"title_es": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "spanish_heavy"
+							}
+						}
+					},
+					"title_eu": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "basque_heavy"
+							}
+						}
+					},
+					"title_fr": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "french_heavy"
+							}
+						}
+					},
+					"title_it": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "italian_heavy"
+							}
+						}
+					}
+				}
+			},
+			"r": {
+				"_all": {
+					"enabled": false
+				},
+				"properties": {
+					"activities": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"aid_rating": {
+						"type": "integer"
+					},
+					"areas": {
+						"type": "long"
+					},
+					"available_locales": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"climbing_outdoor_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"configuration": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"description_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"description_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"description_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"description_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"description_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"description_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"description_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"difficulties_height": {
+						"type": "integer"
+					},
+					"doc_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"durations": {
+						"type": "integer"
+					},
+					"elevation_max": {
+						"type": "integer"
+					},
+					"elevation_min": {
+						"type": "integer"
+					},
+					"engagement_rating": {
+						"type": "integer"
+					},
+					"equipment_rating": {
+						"type": "integer"
+					},
+					"exposition_rock_rating": {
+						"type": "integer"
+					},
+					"geom": {
+						"type": "geo_point"
+					},
+					"glacier_gear": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"global_rating": {
+						"type": "integer"
+					},
+					"height_diff_access": {
+						"type": "integer"
+					},
+					"height_diff_difficulties": {
+						"type": "integer"
+					},
+					"height_diff_down": {
+						"type": "integer"
+					},
+					"height_diff_up": {
+						"type": "integer"
+					},
+					"hiking_mtb_exposition": {
+						"type": "integer"
+					},
+					"hiking_rating": {
+						"type": "integer"
+					},
+					"ice_rating": {
+						"type": "integer"
+					},
+					"id": {
+						"type": "long"
+					},
+					"labande_global_rating": {
+						"type": "integer"
+					},
+					"labande_ski_rating": {
+						"type": "integer"
+					},
+					"mixed_rating": {
+						"type": "integer"
+					},
+					"mtb_down_rating": {
+						"type": "integer"
+					},
+					"mtb_height_diff_portages": {
+						"type": "integer"
+					},
+					"mtb_length_asphalt": {
+						"type": "integer"
+					},
+					"mtb_length_trail": {
+						"type": "integer"
+					},
+					"mtb_up_rating": {
+						"type": "integer"
+					},
+					"orientations": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"quality": {
+						"type": "integer"
+					},
+					"risk_rating": {
+						"type": "integer"
+					},
+					"rock_free_rating": {
+						"type": "integer"
+					},
+					"rock_required_rating": {
+						"type": "integer"
+					},
+					"rock_types": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"route_length": {
+						"type": "integer"
+					},
+					"route_types": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"ski_exposition": {
+						"type": "integer"
+					},
+					"ski_rating": {
+						"type": "integer"
+					},
+					"slackline_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"snowshoe_rating": {
+						"type": "integer"
+					},
+					"summary_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"summary_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"summary_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"summary_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"summary_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"summary_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"summary_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"title_ca": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "catalan_heavy"
+							}
+						}
+					},
+					"title_de": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "german_heavy"
+							}
+						}
+					},
+					"title_en": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "english_heavy"
+							}
+						}
+					},
+					"title_es": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "spanish_heavy"
+							}
+						}
+					},
+					"title_eu": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "basque_heavy"
+							}
+						}
+					},
+					"title_fr": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "french_heavy"
+							}
+						}
+					},
+					"title_it": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "italian_heavy"
+							}
+						}
+					},
+					"via_ferrata_rating": {
+						"type": "integer"
+					},
+					"waypoints": {
+						"type": "long"
+					}
+				}
+			}
+		}
+	}
+}

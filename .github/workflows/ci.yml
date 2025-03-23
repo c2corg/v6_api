@@ -80,6 +80,7 @@ jobs:
         run: |
           mkdir /tmp/elasticsearch
           wget -O - https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.4.6/elasticsearch-2.4.6.tar.gz | tar xz --directory=/tmp/elasticsearch --strip-components=1
+          /tmp/elasticsearch/bin/plugin install analysis-icu
           /tmp/elasticsearch/bin/elasticsearch --daemonize --path.data /tmp
           sleep 30 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
       - run: curl -v http://localhost:9200
