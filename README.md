@@ -4,7 +4,6 @@
 ![Build status](https://github.com/c2corg/v6_api/actions/workflows/ci.yml/badge.svg)
 ![Github Code scanning](https://github.com/c2corg/v6_api/workflows/Github%20Code%20scanning/badge.svg?branch=master)
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/323754cf688042688899e6028fdfeff7)](https://www.codacy.com/gh/c2corg/v6_api/dashboard?utm_source=github.com&utm_medium=referral&utm_content=c2corg/v6_api&utm_campaign=Badge_Coverage)
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/c2corg/v6_api.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/c2corg/v6_api/alerts/)
 [![Known Vulnerabilities](https://snyk.io/test/github/c2corg/v6_api/badge.svg)](https://snyk.io/test/github/c2corg/v6_api)
 
 ## Development environment
