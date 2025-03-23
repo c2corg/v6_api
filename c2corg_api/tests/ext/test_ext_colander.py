@@ -102,7 +102,7 @@ class TestGeometry(BaseTestCase):
         self.session.flush()
 
         geom = wkbelement_from_geojson(
-            '{"type": "Point", "coordinates": [1.0, 2.0]}', 3857)
+            json.loads('{"type": "Point", "coordinates": [1.0, 2.0]}'), 3857)
         geometry = DocumentGeometry(
             document_id=fake_doc.document_id, geom=geom)
         self.session.add(geometry)
@@ -120,8 +120,8 @@ class TestGeometry(BaseTestCase):
         self.session.add(fake_doc)
         self.session.flush()
 
-        geom = wkbelement_from_geojson(
-            '{"type": "Point", "coordinates": [1.0, 2.0, 3.0]}', 3857)
+        geom = wkbelement_from_geojson(json.loads(
+            '{"type": "Point", "coordinates": [1.0, 2.0, 3.0]}'), 3857)
         geometry = DocumentGeometry(
             document_id=fake_doc.document_id, geom_detail=geom)
         self.session.add(geometry)
@@ -141,7 +141,9 @@ class TestGeometry(BaseTestCase):
         self.session.flush()
 
         geom = wkbelement_from_geojson(
-            '{"type": "Point", "coordinates": [1.0, 2.0, 3.0, 4.0]}', 3857)
+            json.loads('{"type": "Point", "coordinates": [1.0, 2.0, 3.0, 4.0]}'),
+            3857,
+        )
         geometry = DocumentGeometry(
             document_id=fake_doc.document_id, geom_detail=geom)
         self.session.add(geometry)
