@@ -58,7 +58,8 @@ class FilterArea(Base):
 User.has_area_filter = column_property(
     select([func.count(FilterArea.area_id) > 0]).
     where(FilterArea.user_id == User.id).
-    correlate_except(FilterArea),
+    correlate_except(FilterArea).
+    scalar_subquery(),
     deferred=True
 )
 User.feed_filter_areas = relationship('Area', secondary=FilterArea.__table__)
@@ -98,7 +99,8 @@ class FollowedUser(Base):
 User.is_following_users = column_property(
     select([func.count(FollowedUser.followed_user_id) > 0]).
     where(FollowedUser.follower_user_id == User.id).
-    correlate_except(FollowedUser),
+    correlate_except(FollowedUser).
+    scalar_subquery(),
     deferred=True
 )
 
@@ -474,7 +476,7 @@ def update_langs_of_changes(document_id):
     DBSession.execute(
         DocumentChange.__table__.update().
         where(DocumentChange.document_id == document_id).
-        values(langs=langs.select()))
+        values(langs=langs.select().scalar_subquery()))
 
 
 def get_linked_document(images_in):
