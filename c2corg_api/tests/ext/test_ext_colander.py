@@ -55,7 +55,7 @@ class TestGeometry(BaseTestCase):
 
     def test_deserialize_valid_geojson(self):
         from c2corg_api.ext.colander_ext import Geometry
-        geom_schema = Geometry()
+        geom_schema = Geometry(["POINT"])
 
         from shapely.geometry.point import Point
         expected_wkb = WKBElement(Point(1.0, 2.0).wkb)
@@ -66,7 +66,7 @@ class TestGeometry(BaseTestCase):
 
     def test_deserialize_4d(self):
         from c2corg_api.ext.colander_ext import Geometry
-        geom_schema = Geometry()
+        geom_schema = Geometry(["Point"])
 
         expected_wkb = from_wkb(geomet_wkb.dumps(
             {'type': 'Point', 'coordinates': [1.0, 2.0, 3.0, 4.0]},
