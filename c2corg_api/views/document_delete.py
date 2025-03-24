@@ -256,8 +256,8 @@ class DeleteBase(object):
     def _remove_merged_documents(self, document_id, document_type):
         merged_document_ids = DBSession.query(ArchiveDocument.document_id). \
             filter(ArchiveDocument.redirects_to == document_id).all()
-        for merged_document_id in merged_document_ids:
-            self._delete_document(merged_document_id, document_type, True)
+        for row in merged_document_ids:
+            self._delete_document(row.document_id, document_type, True)
 
 
 @resource(path='/documents/delete/{id}', cors_policy=cors_policy)
@@ -365,10 +365,11 @@ def remove_from_cache(document_id):
 
 
 def _remove_versions(document_id):
-    history_metadata_ids = DBSession. \
-        query(DocumentVersion.history_metadata_id). \
-        filter(DocumentVersion.document_id == document_id). \
-        all()
+    history_metadata_ids = [
+        row.history_metadata_id for row in
+        DBSession.query(DocumentVersion.history_metadata_id)\
+        .filter(DocumentVersion.document_id == document_id).all()
+    ]
     DBSession.query(DocumentVersion). \
         filter(DocumentVersion.document_id == document_id). \
         delete()
@@ -391,8 +392,11 @@ def _remove_locale_versions(document_id, lang):
         subquery('t')
     # Gets the list of history_metadata_id associated only
     # to the current locale:
-    history_metadata_ids = DBSession.query(t.c.history_metadata_id). \
-        filter(t.c.lang == lang).filter(t.c.cnt == 1).all()
+    history_metadata_ids = [
+        row.history_metadata_id
+        for row in DBSession.query(t.c.history_metadata_id)\
+        .filter(t.c.lang == lang).filter(t.c.cnt == 1).all()
+    ]
 
     DBSession.query(DocumentVersion). \
         filter(DocumentVersion.document_id == document_id). \
