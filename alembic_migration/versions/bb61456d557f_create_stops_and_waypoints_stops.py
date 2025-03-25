@@ -11,27 +11,28 @@ depends_on = None
 def upgrade():
     # stopareas
     op.create_table('stopareas',
-        sa.Column('stoparea_id', sa.Integer(), nullable=False),
+        sa.Column('stoparea_id', sa.Integer(), nullable=False, primary_key=True, autoincrement=True),
         sa.Column('navitia_id', sa.String(), nullable=False),
         sa.Column('stoparea_name', sa.String(), nullable=False),
         sa.Column('line', sa.String(), nullable=False),
         sa.Column('operator', sa.String(), nullable=False),
         sa.Column('geom', geoalchemy2.types.Geometry(geometry_type='POINT', srid=3857, management=True), nullable=True),
-        sa.PrimaryKeyConstraint('stoparea_id'),
         schema='guidebook'
     )
 
     # waypoints_stopareas 
-    op.create_table('waypoints_stopareas',
-        sa.Column('waypoint_stoparea_id', sa.Integer(), nullable=False),
+    op.create_table(
+        'waypoints_stopareas',
+        sa.Column('waypoint_stoparea_id', sa.Integer(), primary_key=True, autoincrement=True),
         sa.Column('stoparea_id', sa.Integer(), nullable=False),
         sa.Column('waypoint_id', sa.Integer(), nullable=False),
         sa.Column('distance', sa.Float(), nullable=False),
         sa.ForeignKeyConstraint(['stoparea_id'], ['guidebook.stopareas.stoparea_id'], name='fk_waypoint_stoparea_stoparea_id', use_alter=True),
         sa.ForeignKeyConstraint(['waypoint_id'], ['guidebook.waypoints.document_id'], name='fk_waypoint_stoparea_waypoint_id', use_alter=True),
-        sa.PrimaryKeyConstraint('waypoint_stoparea_id', 'stoparea_id', 'waypoint_id'),  
+        sa.UniqueConstraint('stoparea_id', 'waypoint_id', name='uq_waypoints_stopareas'),
         schema='guidebook'
     )
+
 
 
 def downgrade():

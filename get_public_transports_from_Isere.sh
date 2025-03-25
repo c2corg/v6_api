@@ -34,6 +34,7 @@ echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 curl -s "$API_URL" | jq -r '.documents[] | .document_id' > "$OUTPUT_FILE"
 
 nb_waypoints=$(wc -l < "$OUTPUT_FILE")
+echo $nb_waypoints
 
 # Initialize SQL file
 > "$SQL_FILE"
@@ -103,7 +104,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
             distance_km=$(awk "BEGIN {printf \"%.2f\", ($duration * $WALKING_SPEED) / 1000}")
 
             # Check if the stop already exists
-            existing_stop_id=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "SELECT document_id FROM guidebook.stopareas WHERE navitia_id = '$stop_id' LIMIT 1;" | tr -d ' \n\r')
+            existing_stop_id=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "SELECT stoparea_id FROM guidebook.stopareas WHERE navitia_id = '$stop_id' LIMIT 1;" | tr -d ' \n\r')
 
             # For new stop areas
             if [[ -z "$existing_stop_id" ]]; then
@@ -130,37 +131,20 @@ for ((k=1; k<=nb_waypoints; k++)); do
                     # Create a stoparea document and save its ID
                     echo "DO \$\$ 
                     DECLARE stoparea_doc_id integer;
-                    DECLARE relation_doc_id integer;
-                    BEGIN
-                        INSERT INTO guidebook.documents (type) VALUES ('s') RETURNING document_id INTO stoparea_doc_id;
-                        
-                        INSERT INTO guidebook.stopareas (document_id, navitia_id, stoparea_name, line, operator) 
-                        VALUES (stoparea_doc_id, '$stop_id', '$(echo "$stop_name" | sed "s/'/''/g")', '$mode $line_name - $(echo "$line_full_name" | sed "s/'/''/g")', '$(echo "$operator_name" | sed "s/'/''/g")');
-                        
-                        INSERT INTO guidebook.documents_geometries (version, document_id, geom, geom_detail) 
-                        VALUES (1, stoparea_doc_id, ST_Transform(ST_SetSRID(ST_MakePoint($lon_stop, $lat_stop), 4326), 3857), NULL) 
-                        ON CONFLICT (document_id) DO UPDATE SET geom = ST_Transform(ST_SetSRID(ST_MakePoint($lon_stop, $lat_stop), 4326), 3857);
-                        
-                        -- Create relation document
-                        INSERT INTO guidebook.documents (type) VALUES ('z') RETURNING document_id INTO relation_doc_id;
+                    BEGIN     
+                        -- Insert stopareas                   
+                        INSERT INTO guidebook.stopareas (navitia_id, stoparea_name, line, operator, geom) 
+                        VALUES ('$stop_id', '$(echo "$stop_name" | sed "s/'/''/g")', '$mode $line_name - $(echo "$line_full_name" | sed "s/'/''/g")', '$(echo "$operator_name" | sed "s/'/''/g")', ST_Transform(ST_SetSRID(ST_MakePoint($lon_stop, $lat_stop), 4326), 3857))
+                        RETURNING stoparea_id INTO stoparea_doc_id;
                         
                         -- Insert relationship
-                        INSERT INTO guidebook.waypoints_stopareas (document_id, stoparea_id, waypoint_id, distance) 
-                        VALUES (relation_doc_id, stoparea_doc_id, $WAYPOINT_ID, $distance_km);
+                        INSERT INTO guidebook.waypoints_stopareas (stoparea_id, waypoint_id, distance) 
+                        VALUES (stoparea_doc_id, $WAYPOINT_ID, $distance_km);
                     END \$\$;" >> "$SQL_FILE"
                 done
             else
                 # For existing stop areas
-                echo "DO \$\$ 
-                DECLARE relation_doc_id integer;
-                BEGIN
-                    -- Create relation document
-                    INSERT INTO guidebook.documents (type) VALUES ('z') RETURNING document_id INTO relation_doc_id;
-                    
-                    -- Insert relationship
-                    INSERT INTO guidebook.waypoints_stopareas (document_id, stoparea_id, waypoint_id, distance) 
-                    VALUES (relation_doc_id, $existing_stop_id, $WAYPOINT_ID, $distance_km);
-                END \$\$;" >> "$SQL_FILE"
+                echo "INSERT INTO guidebook.waypoints_stopareas (stoparea_id, waypoint_id, distance) VALUES ($existing_stop_id, $WAYPOINT_ID, $distance_km);" >> "$SQL_FILE"
             fi
         done
 
