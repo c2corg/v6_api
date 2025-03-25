@@ -417,7 +417,7 @@ def _remove_archive_locale(archive_clazz_locale, document_id, lang=None):
         archive_document_locale_ids = query.subquery()
         DBSession.execute(archive_clazz_locale.__table__.delete().where(
             getattr(archive_clazz_locale, 'id').in_(
-                archive_document_locale_ids)
+                archive_document_locale_ids.select())
         ))
 
     query = DBSession.query(ArchiveDocumentLocale). \
@@ -435,12 +435,12 @@ def _remove_locale(clazz_locale, document_id, lang=None):
     document_locale_ids = query.subquery()
     # Remove links to comments (comments themselves are not removed)
     DBSession.execute(DocumentTopic.__table__.delete().where(
-        DocumentTopic.document_locale_id.in_(document_locale_ids)
+        DocumentTopic.document_locale_id.in_(document_locale_ids.select())
     ))
 
     if clazz_locale:
         DBSession.execute(clazz_locale.__table__.delete().where(
-            getattr(clazz_locale, 'id').in_(document_locale_ids)
+            getattr(clazz_locale, 'id').in_(document_locale_ids.select())
         ))
 
     query = DBSession.query(DocumentLocale). \
@@ -467,7 +467,7 @@ def _remove_archive(archive_clazz, document_id):
         filter(ArchiveDocument.document_id == document_id). \
         subquery()
     DBSession.execute(archive_clazz.__table__.delete().where(
-        getattr(archive_clazz, 'id').in_(archive_document_ids)
+        getattr(archive_clazz, 'id').in_(archive_document_ids.select())
     ))
 
     DBSession.query(ArchiveDocument). \
