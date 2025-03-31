@@ -39,9 +39,8 @@ pytz==2025.2
 # + #91
 git+https://github.com/tsauerwein/ColanderAlchemy.git@c2corg
 
-# Cornice>1.2.1
 # needs: https://github.com/mozilla-services/cornice/pull/359
-git+https://github.com/tsauerwein/cornice.git@nested-none-2.1.0-c2corg
+git+https://github.com/c2corg/cornice.git@6.1.0+c2corg
 
 # Discourse API client
 https://github.com/c2corg/pydiscourse/archive/ea03a3a.zip
