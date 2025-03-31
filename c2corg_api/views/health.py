@@ -1,5 +1,6 @@
 import logging
 
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.caching import cache_document_detail
 from c2corg_api.models import DBSession, es_sync
 from c2corg_api.search import elasticsearch_config
@@ -11,10 +12,7 @@ log = logging.getLogger(__name__)
 
 
 @resource(path='/health', cors_policy=cors_policy)
-class HealthRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class HealthRest(ACLDefault):
 
     @view()
     def get(self):

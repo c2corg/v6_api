@@ -1,6 +1,7 @@
 import logging
 
 import colander
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api import DBSession
 from c2corg_api.emails.email_service import get_email_service
 from c2corg_api.models.cache_version import update_cache_version
@@ -26,11 +27,8 @@ class UpdatePreferredLangSchema(colander.MappingSchema):
 
 
 @resource(path='/users/update_preferred_language', cors_policy=cors_policy)
-class UserPreferredLanguageRest(object):
+class UserPreferredLanguageRest(ACLDefault):
     schema = UpdatePreferredLangSchema()
-
-    def __init__(self, request):
-        self.request = request
 
     @restricted_json_view(
         renderer='json', schema=schema, validators=[colander_body_validator])
@@ -83,11 +81,8 @@ class UpdateAccountSchema(colander.MappingSchema):
 
 
 @resource(path='/users/account', cors_policy=cors_policy)
-class UserAccountRest(object):
+class UserAccountRest(ACLDefault):
     updateschema = UpdateAccountSchema()
-
-    def __init__(self, request):
-        self.request = request
 
     def get_user(self):
         userid = self.request.authenticated_userid

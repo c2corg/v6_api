@@ -1,5 +1,6 @@
 import logging
 
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api import DBSession
 from c2corg_api.models.area import AREA_TYPE, Area, ArchiveArea
 from c2corg_api.models.article import ARTICLE_TYPE, Article, ArchiveArticle
@@ -71,10 +72,7 @@ def validate_version(request, **kwargs):
 
 
 @resource(path='/documents/revert', cors_policy=cors_policy)
-class DocumentRevertRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class DocumentRevertRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',

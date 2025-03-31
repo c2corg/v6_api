@@ -1,3 +1,4 @@
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.cache_version import \
@@ -94,10 +95,7 @@ def validate_documents(request, **kwargs):
 
 
 @resource(path='/documents/merge', cors_policy=cors_policy)
-class MergeDocumentRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class MergeDocumentRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',

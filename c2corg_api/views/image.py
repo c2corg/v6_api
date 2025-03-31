@@ -9,6 +9,7 @@ from c2corg_api.models.feed import update_feed_images_upload
 from c2corg_api.models.image import Image, schema_image, schema_update_image, \
     IMAGE_TYPE, schema_create_image, schema_create_image_list, ArchiveImage
 from c2corg_api.search.notify_sync import run_on_successful_transaction
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import image_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
@@ -284,10 +285,7 @@ def validate_extension(request, **kwargs):
 
 
 @resource(path='/images/proxy/{id}', cors_policy=cors_policy)
-class ImageProxyRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class ImageProxyRest(ACLDefault):
 
     @view(validators=[validate_id, validate_size, validate_extension])
     def get(self):

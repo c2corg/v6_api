@@ -1,5 +1,6 @@
 import logging
 
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api import DBSession
 from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.common.attributes import default_langs
@@ -68,10 +69,7 @@ def _get_version(request):
 
 
 @resource(path='/versions/mask', cors_policy=cors_policy)
-class VersionMaskRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class VersionMaskRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',
@@ -100,10 +98,7 @@ class VersionMaskRest(object):
 
 
 @resource(path='/versions/unmask', cors_policy=cors_policy)
-class VersionUnmaskRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class VersionUnmaskRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',
