@@ -89,12 +89,20 @@ class DocumentInfoRest(object):
                 filter(getattr(clazz, 'document_id') == document_id). \
                 options(joinedload(locales_type_eager).
                         load_only(*locales_load_only))
+
             document_query = add_load_for_profiles(document_query, clazz)
             document = document_query.first()
 
             if not document:
                 raise HTTPNotFound('document not found')
 
+            if document.document_id:
+                # TODO: find a better way than this workaround which calls
+                # `document_id` before `set_best_locale` expunge the object
+                # leading in: sqlalchemy.orm.exc.DetachedInstanceError:
+                # Parent instance <Article at ...> is not bound to a Session;
+                # deferred load operation of attribute 'document_id' cannot proceed
+                pass
             set_best_locale([document], lang)
 
         if document.redirects_to:
