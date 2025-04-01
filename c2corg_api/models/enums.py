@@ -53,6 +53,8 @@ access_time_type = enum(
     'access_time_type', attributes.access_times)
 climbing_rating = enum(
     'climbing_rating', attributes.climbing_ratings)
+bouldering_rating = enum(
+    'bouldering_rating', attributes.bouldering_rating)
 equipment_rating = enum(
     'equipment_rating', attributes.equipment_ratings)
 route_type = enum(

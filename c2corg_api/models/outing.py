@@ -96,6 +96,8 @@ class _OutingMixin(object):
 
     rock_free_rating = Column(enums.climbing_rating)
 
+    bouldering_rating = Column(enums.bouldering_rating)
+
     ice_rating = Column(enums.ice_rating)
 
     via_ferrata_rating = Column(enums.via_ferrata_rating)
@@ -116,7 +118,8 @@ attributes = [
     'hiking_rating', 'ski_rating', 'labande_global_rating', 'ice_rating',
     'snowshoe_rating', 'global_rating', 'height_diff_difficulties',
     'engagement_rating', 'equipment_rating', 'rock_free_rating',
-    'via_ferrata_rating', 'mtb_up_rating', 'mtb_down_rating'
+	'bouldering_rating', 'via_ferrata_rating', 'mtb_up_rating',
+	'mtb_down_rating'
     ]
 
 
