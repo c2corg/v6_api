@@ -1,15 +1,19 @@
 #!/bin/bash
 
 # Configuration
-API_KEY="eb6b9684-0714-4dd9-aba4-ce47c3368666"
 SERVICE_NAME="postgresql"
 DB_USER="postgres"  
 DB_NAME="c2corg"
-MAXDISTANCEWAYPOINT2STOPAREA=5000 # Maximum distance between a waypoint and a stop area, in meters
-WALKING_SPEED=1.12 # Walking speed in m/s
-MAXSTOPAREA=5
 
-DURATION=$(echo "scale=0; $MAXDISTANCEWAYPOINT2STOPAREA / $WALKING_SPEED" | bc)
+if [ -f ./.env ]; then
+    # Load .env data
+    export $(grep -v '^#' ./.env | xargs)
+else
+    echo ".env file not found!"
+    exit 1
+fi
+
+DURATION=$(echo "scale=0; $MAX_DISTANCE_WAYPOINT_TO_STOPAREA / $WALKING_SPEED" | bc)
 
 PROJECT_NAME=${PROJECT_NAME:-""}           
 API_PORT=${API_PORT:-6543} 
@@ -64,7 +68,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
     fi
 
     # Query Navitia to retrieve nearby stopareas
-    response=$(curl -s -H "Authorization: $API_KEY" "https://api.navitia.io/v1/coord/$lon%3B$lat/places_nearby?type%5B%5D=stop_area&count=$MAXSTOPAREA&distance=$MAXDISTANCEWAYPOINT2STOPAREA")
+    response=$(curl -s -H "Authorization: $NAVITIA_API_KEY" "https://api.navitia.io/v1/coord/$lon%3B$lat/places_nearby?type%5B%5D=stop_area&count=$MAX_STOP_AREA_FOR_1_WAYPOINT&distance=$MAX_DISTANCE_WAYPOINT_TO_STOPAREA")
     ((NAVITIA_REQUEST_COUNT++))
 
     has_places=$(echo "$response" | jq 'has("places_nearby") and (.places_nearby | length > 0)')
@@ -87,7 +91,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
             lon_stop=$(sed "${i}q;d" /tmp/lon.txt)
 
             # Get walking travel time via Navitia
-            journey_response=$(curl -s -H "Authorization: $API_KEY" "https://api.navitia.io/v1/journeys?to=$lon%3B$lat&walking_speed=$WALKING_SPEED&max_walking_direct_path_duration=$DURATION&direct_path_mode%5B%5D=walking&from=$stop_id&direct_path=only_with_alternatives")
+            journey_response=$(curl -s -H "Authorization: $NAVITIA_API_KEY" "https://api.navitia.io/v1/journeys?to=$lon%3B$lat&walking_speed=$WALKING_SPEED&max_walking_direct_path_duration=$DURATION&direct_path_mode%5B%5D=walking&from=$stop_id&direct_path=only_with_alternatives")
             ((NAVITIA_REQUEST_COUNT++))
 
             # Check if Navitia found a solution or returns an error
@@ -109,7 +113,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
             # For new stop areas
             if [[ -z "$existing_stop_id" ]]; then
                 # Get the stop_area information
-                stop_info=$(curl -s -H "Authorization: $API_KEY" "https://api.navitia.io/v1/places/$stop_id")
+                stop_info=$(curl -s -H "Authorization: $NAVITIA_API_KEY" "https://api.navitia.io/v1/places/$stop_id")
                 ((NAVITIA_REQUEST_COUNT++))
 
                 # Loop through lines
