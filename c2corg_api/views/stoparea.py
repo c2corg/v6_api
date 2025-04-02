@@ -1,72 +1,81 @@
-import functools
 
 from c2corg_api.models import DBSession
-from c2corg_api.models.document import UpdateType
-from c2corg_api.views.document_info import DocumentInfoRest
-from c2corg_api.views.document_version import DocumentVersionRest
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
-from c2corg_api.views.document_schemas import stoparea_documents_config
 
-from c2corg_api.models.stoparea import (
-    Stoparea, schema_stoparea, schema_update_stoparea,
-    STOPAREA_TYPE, schema_create_stoparea)
+from c2corg_api.models.stoparea import (Stoparea)
 
-from c2corg_api.views.document import (
-    DocumentRest, make_validator_create, make_validator_update)
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import cors_policy
 from c2corg_api.views.validation import validate_id, validate_pagination, \
-    validate_lang, validate_version_id, validate_lang_param, \
+    validate_lang, validate_lang_param, \
     validate_preferred_lang_param
 
-validate_stoparea_create = make_validator_create(
-    ['navitia_id', 'stop_name', 'line', 'operator'], 'stop_name')
-validate_stoparea_update = make_validator_update(
-    ['navitia_id', 'stop_name', 'line', 'operator'], 'stop_name')
+validate_stoparea_create = [
+    'navitia_id', 'stoparea_name', 'line', 'operator', 'geom'
+]
+
+validate_stoparea_update = validate_stoparea_create
 
 @resource(collection_path='/stopareas', path='/stopareas/{id}',
           cors_policy=cors_policy)
-class StopareaRest(DocumentRest):
+class StopareaRest:
+
+    def __init__(self, request):
+        self.request = request
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
         """
         Get a list of stopareas.
         """
-        return self._collection_get(STOPAREA_TYPE, stoparea_documents_config)
+        page_id = self.request.GET.get('page_id', 1)
+        nb_items = self.request.GET.get('nb_items', 30)
+        
+        query = DBSession.query(Stoparea)
+        total_results = query.count()
+        
+        stopareas = query.offset((page_id - 1) * nb_items).limit(nb_items).all()
+        
+        return {
+            'documents': [stoparea.to_dict() for stoparea in stopareas],
+            'total_results': total_results
+        }
 
     @view(validators=[validate_id, validate_lang_param])
     def get(self):
         """
         Get a single stoparea.
         """
-        return self._get(stoparea_documents_config, schema_stoparea)
-
-    @restricted_json_view(schema=schema_create_stoparea,
-                          validators=[
-                              colander_body_validator,
-                              validate_stoparea_create])
-    def collection_post(self):
-        """
-        Create a new stoparea.
-        """
-        return self._collection_post(schema_stoparea)
-
-    @restricted_json_view(schema=schema_update_stoparea,
-                          validators=[
-                              colander_body_validator,
-                              validate_id,
-                              validate_stoparea_update])
-    def put(self):
-        """
-        Update a stoparea.
-        """
-        return self._put(Stoparea, schema_stoparea)
-
+        stoparea_id = self.request.matchdict['id']
+        stoparea = DBSession.query(Stoparea).filter_by(stoparea_id=stoparea_id).first()
+        
+        if not stoparea:
+            self.request.response.status = 404
+            return {'error': 'Stoparea not found'}
+        
+        return stoparea.to_dict()
 
 @resource(path='/stopareas/{id}/{lang}/info', cors_policy=cors_policy)
-class StopareaInfoRest(DocumentInfoRest):
+class StopareaInfoRest:
+
+    def __init__(self, request):
+        self.request = request
 
     @view(validators=[validate_id, validate_lang])
     def get(self):
-        return self._get_document_info(schema_stoparea)
+        stoparea_id = self.request.matchdict['id']
+        stoparea = DBSession.query(Stoparea).filter_by(stoparea_id=stoparea_id).first()
+        
+        if not stoparea:
+            self.request.response.status = 404
+            return {'error': 'Stoparea not found'}
+        
+        return {
+            'stoparea_id': stoparea.stoparea_id,
+            'attributes': {
+                'navitia_id': stoparea.navitia_id,
+                'stoparea_name': stoparea.stoparea_name,
+                'line': stoparea.line,
+                'operator': stoparea.operator,
+                'geom': str(stoparea.geom)
+            }
+        }
