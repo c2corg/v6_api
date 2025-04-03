@@ -33,6 +33,7 @@ waitress==3.0.2
 zope.sqlalchemy==3.1
 gunicorn==23.0.0
 pytz==2025.2
+python-dotenv==1.0.1
 
 # ColanderAlchemy>=0.3.2
 # needed for ColanderAlchemy: https://github.com/stefanofontanelli/ColanderAlchemy/pull/90

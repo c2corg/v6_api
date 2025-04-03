@@ -62,14 +62,14 @@ jobs:
         run: flake8 c2corg_api es_migration
       - name: Configure postgres
         run: |
-          scripts/create_user_db_test.sh
+          scripts/database/create_test_schema.sh
         env:
           PGPASSWORD: test
           PGUSER: postgres
           PGHOST: localhost
           PGPORT: 5432
       - name: Create config from templates
-        run: make -f config/github-actions template
+        run: make CONFIG=config/env.test load-env
       - name: Install java 8 for (old) elasticsearch
         uses: actions/setup-java@v4
         with:
