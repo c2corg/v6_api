@@ -49,7 +49,6 @@ caches = [
 def configure_caches(settings):
     global KEY_PREFIX
     global CACHE_VERSION
-    global cache_status
     KEY_PREFIX = settings['redis.cache_key_prefix']
 
     # append a timestamp to the cache key when running in dev. mode
