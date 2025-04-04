@@ -7,6 +7,7 @@ from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_listings import get_documents_for_ids
@@ -179,7 +180,7 @@ class RouteInfoRest(DocumentInfoRest):
 
 @resource(path="/routes/update_public_transportation_rating",
           cors_policy=cors_policy)
-class RoutePublicTransportationRatingRest(object):
+class RoutePublicTransportationRatingRest(ACLDefault):
     """
     Update all route public transportation rating
 
@@ -193,9 +194,6 @@ class RoutePublicTransportationRatingRest(object):
         allows to reset public_transportation_rating values
         set to true by default
     """
-
-    def __init__(self, request):
-        self.request = request
 
     @restricted_view(permission='moderator')
     def get(self):

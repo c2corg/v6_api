@@ -34,14 +34,11 @@ zope.sqlalchemy==3.1
 gunicorn==23.0.0
 pytz==2025.2
 
-# ColanderAlchemy>=0.3.2
-# needed for ColanderAlchemy: https://github.com/stefanofontanelli/ColanderAlchemy/pull/90
-# + #91
-git+https://github.com/tsauerwein/ColanderAlchemy.git@c2corg
+# needs: https://github.com/stefanofontanelli/ColanderAlchemy/pull/90 + 91
+git+https://github.com/c2corg/ColanderAlchemy.git@v0.3.4+c2corg.1
 
-# Cornice>1.2.1
 # needs: https://github.com/mozilla-services/cornice/pull/359
-git+https://github.com/tsauerwein/cornice.git@nested-none-2.1.0-c2corg
+git+https://github.com/c2corg/cornice.git@6.1.0+c2corg
 
 # Discourse API client
 https://github.com/c2corg/pydiscourse/archive/ea03a3a.zip

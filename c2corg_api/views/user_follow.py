@@ -1,5 +1,6 @@
 import logging
 
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api import DBSession
 from c2corg_api.models.feed import FollowedUser
 from c2corg_api.views import cors_policy, restricted_json_view
@@ -27,10 +28,7 @@ def get_follower_relation(followed_user_id, follower_user_id):
 
 
 @resource(path='/users/follow', cors_policy=cors_policy)
-class UserFollowRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class UserFollowRest(ACLDefault):
 
     @restricted_json_view(
         schema=FollowSchema(),
@@ -62,10 +60,7 @@ class UserFollowRest(object):
 
 
 @resource(path='/users/unfollow', cors_policy=cors_policy)
-class UserUnfollowRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class UserUnfollowRest(ACLDefault):
 
     @restricted_json_view(
         schema=FollowSchema(),
@@ -96,10 +91,7 @@ class UserUnfollowRest(object):
 
 
 @resource(path='/users/following-user/{id}', cors_policy=cors_policy)
-class UserFollowingUserRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class UserFollowingUserRest(ACLDefault):
 
     @restricted_json_view(validators=[validate_id])
     def get(self):
@@ -124,10 +116,7 @@ class UserFollowingUserRest(object):
 
 
 @resource(path='/users/following', cors_policy=cors_policy)
-class UserFollowingRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class UserFollowingRest(ACLDefault):
 
     @restricted_json_view(validators=[validate_preferred_lang_param])
     def get(self):

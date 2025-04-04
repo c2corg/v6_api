@@ -1,5 +1,6 @@
 import logging
 
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.caching import cache_document_detail, cache_document_cooked
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
@@ -57,10 +58,7 @@ NUM_RECENT_OUTINGS = 10
 ES_MAX_RESULT_WINDOW = 10000
 
 
-class DocumentRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class DocumentRest(ACLDefault):
 
     # TODO: remove doc_type, it's in documents_config
     def _collection_get(self, doc_type, documents_config):
