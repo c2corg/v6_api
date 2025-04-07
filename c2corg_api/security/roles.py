@@ -72,7 +72,8 @@ def create_claims(user, exp):
     return {
         'sub': user.id,
         'username': user.username,
-        'exp': int((exp - datetime.datetime(1970, 1, 1)).total_seconds())
+        'robot': user.robot,
+        'exp': int((exp - datetime.datetime(1970, 1, 1)).total_seconds()),
     }
 
 
