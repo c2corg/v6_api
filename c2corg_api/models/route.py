@@ -3,6 +3,7 @@ from c2corg_api.models.schema_utils import restrict_schema, \
 from sqlalchemy import (
     Column,
     Integer,
+    Float,
     Boolean,
     SmallInteger,
     String,
@@ -60,8 +61,11 @@ class _RouteMixin(object):
     # orientations
     orientations = Column(ArrayOfEnum(enums.orientation_type))
 
-    # temps de parcours total
+    # temps de parcours total, renseigné par l'utilisateur
     durations = Column(ArrayOfEnum(enums.route_duration_type))
+
+    # temps de parcours total estimé, calculé
+    calculated_duration = Column(Float, nullable=True)
 
     # crampons et materiel de securite sur glacier
     glacier_gear = Column(
@@ -156,7 +160,7 @@ class _RouteMixin(object):
 
 attributes = [
     'main_waypoint_id', 'activities', 'elevation_min', 'elevation_max',
-    'height_diff_up', 'height_diff_down', 'route_length', 'durations',
+    'height_diff_up', 'height_diff_down', 'route_length', 'durations', 'calculated_duration',
     'difficulties_height', 'height_diff_access', 'height_diff_difficulties',
     'route_types', 'orientations', 'glacier_gear', 'configuration',
     'lift_access', 'ski_rating', 'ski_exposition', 'labande_ski_rating',
