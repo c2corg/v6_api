@@ -10,6 +10,7 @@ from sqlalchemy import text
 from dotenv import load_dotenv
 
 from c2corg_api.models.document import DocumentGeometry;
+from c2corg_api.models.route import Route
 
 from c2corg_api.models import DBSession, Base
 from c2corg_api.search import configure_es_from_config, get_queue_config
@@ -264,4 +265,74 @@ def process_new_waypoint(mapper, connection, geometry):
             })
     
     log.warning(f"Traitement terminé pour le waypoint {waypoint_id}")
+
+@event.listens_for(Route, 'after_insert')
+@event.listens_for(Route, 'after_update')
+def calculate_route_duration(mapper, connection, route):
+    """Calcule la du d'un itinéraire après son insertion ou sa mise à jour."""
+    route_id = route.document_id
+    
+    log.warn(f"Calculating duration for route ID: {route_id}")
+    
+    activities = route.activities
+    if any(activity in ['rock_climbing', 'ice_climbing', 'mountain_climbing'] for activity in activities):
+        log.info(f"Route {route_id} is a climbing route - no duration calculation")
+        connection.execute(text("""
+            UPDATE guidebook.routes
+            SET calculated_durarée estiméetion = NULL
+            WHERE document_id = :route_id
+        """), {"route_id": route_id})
+        return
+    
+    if route.route_length is None or route.route_length == 0 or \
+       route.height_diff_up is None or route.height_diff_down is None:
+        log.info(f"Route {route_id} has null or zero values - no duration calculation")
+        connection.execute(text("""
+            UPDATE guidebook.routes
+            SET calculated_duration = NULL
+            WHERE document_id = :route_id
+        """), {"route_id": route_id})
+        return
+    
+    h = float(route.route_length) / 1000  # km
+    dp = float(route.height_diff_up)      # m
+    dn = float(route.height_diff_down)    # m
+    
+    if 'hiking' in activities:
+        v = 5.0    # km/h (horizontal speed)
+        a = 300.0  # m/h (ascent)
+        d = 500.0  # m/h (descent)
+    elif 'snowshoeing' in activities:
+        v = 4.5
+        a = 250.0
+        d = 400.0
+    elif 'skitouring' in activities:
+        v = 5.0
+        a = 300.0
+        d = 1500.0
+    elif 'mountain_biking' in activities:
+        v = 15.0
+        a = 250.0
+        d = 1000.0
+    else:
+        v = 5.0
+        a = 300.0
+        d = 500.0
+    
+    dh = h / v                  # duration based on horizontal distance
+    dv = (dp / a) + (dn / d)    # duration based on elevation differences
+    
+    # Calculation of the final duration in hours
+    if dh < dv:
+        dm = dv + (dh / 2)
+    else:
+        dm = (dv / 2) + dh
+    
+    log.info(f"Calculated duration for route {route_id}: {dm} hours")
+    
+    connection.execute(text("""
+        UPDATE guidebook.routes
+        SET calculated_duration = :duration
+        WHERE document_id = :route_id
+    """), {"duration": dm, "route_id": route_id})
 

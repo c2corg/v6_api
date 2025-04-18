@@ -14,7 +14,12 @@ def upgrade():
         sa.Column('calculated_duration', sa.Float(), nullable=True),
         schema='guidebook'
     )
+    op.add_column('routes_archives',
+            sa.Column('calculated_duration', sa.Float(), nullable=True),
+            schema='guidebook'
+        )
 
 
 def downgrade():
     op.drop_column('routes', 'calculated_duration', schema='guidebook')
+    op.drop_column('routes_archives', 'calculated_duration', schema='guidebook')
