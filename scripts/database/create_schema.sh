@@ -1,7 +1,9 @@
 #!/bin/sh
 DBNAME="c2corg"
 
-psql <<EOF
+set -x
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<EOF
 create database ${DBNAME} owner "postgres";
 \c ${DBNAME}
 create extension postgis;
