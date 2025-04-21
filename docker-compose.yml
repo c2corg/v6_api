@@ -7,6 +7,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: test
+      POSTGRES_HOST_AUTH_METHOD: "trust"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/conf/postgresql.conf:/etc/postgresql.conf
@@ -16,7 +17,7 @@ services:
   elasticsearch:
     image: "docker.io/c2corg/c2corg_es:anon-2018-11-02"
     ports:
-      - 9200:9200
+      - "9200:9200"
     command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon -Des.script.inline=true
     ulimits:
       nofile:
@@ -26,7 +27,7 @@ services:
   redis:
     image: redis:7.2
     ports:
-      - 6379:6379
+      - "6379:6379"
 
 volumes:
   postgres_data:
