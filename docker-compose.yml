@@ -11,6 +11,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/conf/postgresql.conf:/etc/postgresql.conf
+#      - "./scripts/database/create_schema.sh:/docker-entrypoint-initdb.d/create_schema.sh"
+      - "./scripts/database/create_test_schema.sh:/docker-entrypoint-initdb.d/create_test_schema.sh"
       - .:/v6_api
     command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
 
