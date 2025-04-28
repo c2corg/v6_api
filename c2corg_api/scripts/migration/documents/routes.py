@@ -45,7 +45,7 @@ class MigrateRoutes(MigrateDocuments):
             '   ra.toponeige_technical_rating, '
             '   ra.toponeige_exposition_rating, ra.labande_ski_rating, '
             '   ra.labande_global_rating, ra.ice_rating, ra.mixed_rating, '
-            '   ra.rock_free_rating, ra.rock_required_rating, ra.aid_rating, '
+            '   ra.rock_free_rating, ra.bouldering_rating, ra.rock_required_rating, ra.aid_rating, '
             '   ra.hiking_rating, ra.snowshoeing_rating, '
             '   ra.objective_risk_rating, ra.rock_exposition_rating '
             'from app_routes_archives ra join routes r on ra.id = r.id '
@@ -161,6 +161,9 @@ class MigrateRoutes(MigrateDocuments):
                 MigrateRoutes.mixed_ratings),
             rock_free_rating=self.convert_type(
                 document_in.rock_free_rating,
+                MigrateRoutes.climbing_rating),
+            bouldering_rating=self.convert_type(
+                document_in.bouldering_rating,
                 MigrateRoutes.climbing_rating),
             rock_required_rating=self.convert_type(
                 document_in.rock_required_rating,

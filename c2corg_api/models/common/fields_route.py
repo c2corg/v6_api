@@ -135,6 +135,7 @@ fields_route = {
             'equipment_rating',
             'exposition_rock_rating',
             'rock_free_rating',
+            'bouldering_rating',
             'rock_required_rating',
             'aid_rating',
             'rock_types',
@@ -148,6 +149,7 @@ fields_route = {
             'equipment_rating',
             'exposition_rock_rating',
             'rock_free_rating',
+            'bouldering_rating',
             'rock_required_rating',
             'aid_rating',
             'climbing_outdoor_type'
