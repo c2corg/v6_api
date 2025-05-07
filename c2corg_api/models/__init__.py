@@ -58,7 +58,7 @@ document_types = {
     user_profile.USERPROFILE_TYPE: user_profile.UserProfile,
     topo_map.MAP_TYPE: topo_map.TopoMap,
     area.AREA_TYPE: area.Area,
-    outing.OUTING_TYPE: outing.Outing
+    outing.OUTING_TYPE: outing.Outing,
 }
 
 document_locale_types = {
@@ -71,5 +71,5 @@ document_locale_types = {
     user_profile.USERPROFILE_TYPE: document.DocumentLocale,
     topo_map.MAP_TYPE: document.DocumentLocale,
     area.AREA_TYPE: document.DocumentLocale,
-    outing.OUTING_TYPE: outing.OutingLocale
+    outing.OUTING_TYPE: outing.OutingLocale,
 }
