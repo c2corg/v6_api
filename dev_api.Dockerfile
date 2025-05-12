@@ -53,4 +53,6 @@ RUN set -x \
 ENV version='' \
     PATH=/var/www/.build/venv/bin/:$PATH
 
+RUN pip install dotenv
+
 RUN make -f config/docker-dev template
