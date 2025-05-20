@@ -269,24 +269,19 @@ def process_new_waypoint(mapper, connection, geometry):
 @event.listens_for(Route, 'after_insert')
 @event.listens_for(Route, 'after_update')
 def calculate_route_duration(mapper, connection, route):
-    """Calcule la du d'un itinéraire après son insertion ou sa mise à jour."""
+    """Calcule la durée estimée d'un itinéraire après son insertion ou sa mise à jour."""
     route_id = route.document_id
     
     log.warn(f"Calculating duration for route ID: {route_id}")
     
+    # Récupération des activités
     activities = route.activities
-    if any(activity in ['rock_climbing', 'ice_climbing', 'mountain_climbing'] for activity in activities):
-        log.info(f"Route {route_id} is a climbing route - no duration calculation")
-        connection.execute(text("""
-            UPDATE guidebook.routes
-            SET calculated_durarée estiméetion = NULL
-            WHERE document_id = :route_id
-        """), {"route_id": route_id})
-        return
+    is_climbing = any(activity in ['rock_climbing', 'ice_climbing', 'mountain_climbing'] for activity in activities)
     
+    # Si length, height_diff_up ou height_diff_down sont NULL ou si length = 0, pas de calcul
     if route.route_length is None or route.route_length == 0 or \
        route.height_diff_up is None or route.height_diff_down is None:
-        log.info(f"Route {route_id} has null or zero values - no duration calculation")
+        log.warn(f"Route {route_id} has null or zero values - no duration calculation")
         connection.execute(text("""
             UPDATE guidebook.routes
             SET calculated_duration = NULL
@@ -294,45 +289,99 @@ def calculate_route_duration(mapper, connection, route):
         """), {"route_id": route_id})
         return
     
+    # Convertir les valeurs de base
     h = float(route.route_length) / 1000  # km
-    dp = float(route.height_diff_up)      # m
+    dp = float(route.height_diff_up)      # m (dénivelé positif total)
     dn = float(route.height_diff_down)    # m
     
-    if 'hiking' in activities:
-        v = 5.0    # km/h (horizontal speed)
-        a = 300.0  # m/h (ascent)
-        d = 500.0  # m/h (descent)
-    elif 'snowshoeing' in activities:
-        v = 4.5
-        a = 250.0
-        d = 400.0
-    elif 'skitouring' in activities:
-        v = 5.0
-        a = 300.0
-        d = 1500.0
-    elif 'mountain_biking' in activities:
-        v = 15.0
-        a = 250.0
-        d = 1000.0
+    # CALCUL POUR LES ITINÉRAIRES DE GRIMPE
+    if is_climbing:
+        # Vitesse ascensionnelle pour les difficultés (m/h)
+        v_diff = 50.0
+        
+        # Récupération du dénivelé des difficultés
+        # Note: Il faut s'assurer que cet attribut existe dans votre modèle Route
+        diff_height = getattr(route, 'difficulties_height', None)
+        
+        if diff_height is not None and diff_height > 0:
+            # Calcul spécifique pour les itinéraires grimpants avec dénivelé des difficultés
+            d_diff = float(diff_height)  # Dénivelé des difficultés
+            d_app = dp - d_diff         # Dénivelé de l'approche
+            
+            # Temps pour parcourir les difficultés (en heures)
+            t_diff = d_diff / v_diff
+            
+            # Calcul du temps d'approche (même formule que randonnée)
+            if d_app > 0:
+                # Paramètres par défaut pour l'approche (comme randonnée)
+                v = 5.0    # km/h (vitesse horizontale)
+                a = 300.0  # m/h (montée)
+                d = 500.0  # m/h (descente)
+                
+                dh = h / v                  # durée basée sur la distance horizontale
+                dv = (d_app / a) + (dn / d) # durée basée sur le dénivelé d'approche et la descente
+                
+                # Temps d'approche
+                if dh < dv:
+                    t_app = dv + (dh / 2)
+                else:
+                    t_app = (dv / 2) + dh
+            else:
+                t_app = 0
+                
+            # Temps total selon la formule : T = max(Tdiff, Tapp) + 0.5 * min(Tdiff, Tapp)
+            dm = max(t_diff, t_app) + 0.5 * min(t_diff, t_app)
+            
+        else:
+            # Si dénivelé des difficultés non disponible, on utilise le dénivelé total
+            dm = dp / v_diff
+            
+        log.warn(f"Calculated climbing route duration for route {route_id}: {dm} hours")
+        
+    # CALCUL POUR LES AUTRES ITINÉRAIRES (NON GRIMPANTS)
     else:
-        v = 5.0
-        a = 300.0
-        d = 500.0
-    
-    dh = h / v                  # duration based on horizontal distance
-    dv = (dp / a) + (dn / d)    # duration based on elevation differences
-    
-    # Calculation of the final duration in hours
-    if dh < dv:
-        dm = dv + (dh / 2)
-    else:
-        dm = (dv / 2) + dh
-    
-    log.info(f"Calculated duration for route {route_id}: {dm} hours")
-    
+        # Définir les paramètres selon l'activité
+        if 'hiking' in activities:
+            v = 5.0    # km/h (vitesse horizontale)
+            a = 300.0  # m/h (montée)
+            d = 500.0  # m/h (descente)
+        elif 'snowshoeing' in activities:
+            v = 4.5
+            a = 250.0
+            d = 400.0
+        elif 'skitouring' in activities:
+            v = 5.0
+            a = 300.0
+            d = 1500.0
+        elif 'mountain_biking' in activities:
+            v = 15.0
+            a = 250.0
+            d = 1000.0
+        else:
+            # Valeurs par défaut
+            v = 5.0
+            a = 300.0
+            d = 500.0
+        
+        # Calcul de la durée
+        dh = h / v                  # durée basée sur la distance horizontale
+        dv = (dp / a) + (dn / d)    # durée basée sur les dénivelés
+        
+        # Calcul de la durée finale en heures
+        if dh < dv:
+            dm = dv + (dh / 2)
+        else:
+            dm = (dv / 2) + dh
+        
+        log.warn(f"Calculated standard route duration for route {route_id}: {dm} hours")
+
+     # Conversion de la durée finale d'heures en jours
+    if dm:
+        dm = dm/24 
+
+    # Mise à jour de la durée calculée dans la base de données
     connection.execute(text("""
         UPDATE guidebook.routes
         SET calculated_duration = :duration
         WHERE document_id = :route_id
     """), {"duration": dm, "route_id": route_id})
-
