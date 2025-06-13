@@ -15,7 +15,7 @@ fi
 
 PROJECT_NAME=${PROJECT_NAME:-""}           
 API_PORT=${API_PORT:-6543} 
-CCOMPOSE=${CCOMPOSE:-"docker-compose"}
+CCOMPOSE=${CCOMPOSE:-"podman-compose"}
 STANDALONE=${PODMAN_ENV:-""}
 
 API_URL="http://localhost:${API_PORT}/routes"
