@@ -34,8 +34,6 @@ echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 # Fetch routes from API
 curl -s "$API_URL" | jq -r '.documents[] | .document_id' > "$OUTPUT_FILE"
 
-nb_routes=$(wc -l < "$OUTPUT_FILE")
-echo "Total routes to process: $nb_routes"
 
 # Initialize SQL file
 echo "-- SQL commands to update calculated_duration" > "$SQL_FILE"
@@ -45,9 +43,9 @@ cat << EOF > "$SQL_FILE"
 -- Réinitialiser toutes les durées calculées au début
 UPDATE guidebook.routes SET calculated_duration = NULL;
 
--- Créer la fonction de calcul de durée
+-- Créer la fonction de calcul de durée pour une activité donnée
 CREATE OR REPLACE FUNCTION guidebook.calculate_duration(
-    activities guidebook.activity_type[],
+    activity guidebook.activity_type,
     route_length integer,
     height_diff_up smallint,
     height_diff_down smallint,
@@ -69,11 +67,12 @@ DECLARE
     t_diff float;
     t_app float;
     v_diff float := 50.0; -- Vitesse ascensionnelle des difficultés (m/h)
+    min_duration_hours float := 0.5; -- 30 minutes
+    max_duration_hours float := 18.0; -- 18 heures
 BEGIN
     -- Vérifier s'il s'agit d'un itinéraire de grimpe
-    is_climbing := 'rock_climbing' = ANY(activities) OR 
-                  'ice_climbing' = ANY(activities) OR 
-                  'mountain_climbing' = ANY(activities);
+    is_climbing := activity IN ('rock_climbing', 'ice_climbing', 'mountain_climbing', 
+                               'snow_ice_mixed', 'via_ferrata', 'paragliding', 'slacklining');
     
     -- Vérification des valeurs nulles ou route_length = 0
     IF route_length IS NULL OR route_length = 0 OR height_diff_up IS NULL OR height_diff_down IS NULL THEN
@@ -87,16 +86,23 @@ BEGIN
     -- CALCUL POUR LES ITINÉRAIRES DE GRIMPE
     IF is_climbing THEN
         -- Si nous avons le dénivelé des difficultés
+        
         IF difficulties_height IS NOT NULL AND difficulties_height > 0 THEN
             d_diff := difficulties_height::float;
+            
+            -- Vérifier la cohérence : le dénivelé des difficultés ne peut pas être supérieur au dénivelé total
+            IF d_diff > dp THEN
+                RETURN NULL; -- Données incohérentes
+            END IF;
+            
             d_app := dp - d_diff;
             
             -- Temps pour parcourir les difficultés (en heures)
             t_diff := d_diff / v_diff;
             
-            -- Calcul du temps d'approche (comme randonnée)
+            -- Calcul du temps d'approche (comme randonnée) seulement s'il y a une approche
             IF d_app > 0 THEN
-                -- Paramètres par défaut pour l'approche
+                -- Paramètres par défaut pour l'approche (randonnée)
                 v := 5.0;    -- km/h (vitesse horizontale)
                 a := 300.0;  -- m/h (montée)
                 d := 500.0;  -- m/h (descente)
@@ -124,23 +130,24 @@ BEGIN
     -- CALCUL POUR LES AUTRES ITINÉRAIRES (NON GRIMPANTS)
     ELSE
         -- Définir les paramètres selon l'activité
-        IF 'hiking' = ANY(activities) THEN
+        IF activity = 'hiking' THEN
             v := 5.0;
             a := 300.0;
             d := 500.0;
-        ELSIF 'snowshoeing' = ANY(activities) THEN
+        ELSIF activity = 'snowshoeing' THEN
             v := 4.5;
             a := 250.0;
             d := 400.0;
-        ELSIF 'skitouring' = ANY(activities) THEN
+        ELSIF activity = 'skitouring' THEN
             v := 5.0;
             a := 300.0;
             d := 1500.0;
-        ELSIF 'mountain_biking' = ANY(activities) THEN
+        ELSIF activity = 'mountain_biking' THEN
             v := 15.0;
             a := 250.0;
             d := 1000.0;
         ELSE
+            -- Valeurs par défaut (randonnée)
             v := 5.0;
             a := 300.0;
             d := 500.0;
@@ -158,38 +165,53 @@ BEGIN
         END IF;
     END IF;
     
+    -- Validation des bornes de cohérence
+    IF dm < min_duration_hours OR dm > max_duration_hours THEN
+        RETURN NULL; -- Durée aberrante
+    END IF;
+        
     -- Convertir les heures en jours (24h = 1 jour)
     RETURN dm / 24.0;
+    END;
+\$\$ LANGUAGE plpgsql;
+
+-- Créer la fonction principale de calcul de durée (gère multi-activités)
+CREATE OR REPLACE FUNCTION guidebook.calculate_duration(
+    activities guidebook.activity_type[],
+    route_length integer,
+    height_diff_up smallint,
+    height_diff_down smallint,
+    difficulties_height smallint DEFAULT NULL
+) RETURNS float AS \$\$
+DECLARE
+    activity guidebook.activity_type;
+    duration float;
+    min_duration float := NULL;
+BEGIN
+    -- Pour chaque activité, calculer la durée et garder la plus courte
+    FOREACH activity IN ARRAY activities LOOP
+        duration := guidebook.calculate_duration(
+            activity, route_length, height_diff_up, height_diff_down, difficulties_height
+        );
+        
+        -- Si cette durée est valide et plus courte que la précédente (ou c'est la première)
+        IF duration IS NOT NULL AND (min_duration IS NULL OR duration < min_duration) THEN
+            min_duration := duration;
+        END IF;
+    END LOOP;
+    
+    RETURN min_duration;
 END;
 \$\$ LANGUAGE plpgsql;
 
--- Mise à jour des itinéraires non grimpants avec la durée calculée
-UPDATE guidebook.routes r
-SET calculated_duration = guidebook.calculate_duration(
-    r.activities,
-    r.route_length,
-    r.height_diff_up,
-    r.height_diff_down
-)
-WHERE NOT (
-    'rock_climbing' = ANY(r.activities) OR 
-    'ice_climbing' = ANY(r.activities) OR 
-    'mountain_climbing' = ANY(r.activities)
-);
-
--- Mise à jour des itinéraires grimpants avec la durée calculée
+-- Mise à jour de tous les itinéraires avec la durée calculée
 UPDATE guidebook.routes r
 SET calculated_duration = guidebook.calculate_duration(
     r.activities,
     r.route_length,
     r.height_diff_up,
     r.height_diff_down,
-    r.difficulties_height
-)
-WHERE (
-    'rock_climbing' = ANY(r.activities) OR 
-    'ice_climbing' = ANY(r.activities) OR 
-    'mountain_climbing' = ANY(r.activities)
+    r.height_diff_difficulties
 );
 EOF
 
@@ -205,9 +227,20 @@ update_count=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_
     SELECT COUNT(*) FROM guidebook.routes WHERE calculated_duration IS NOT NULL;
 ")
 
+# Check how many routes were rejected due to incoherent data
+rejected_count=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "
+    SELECT COUNT(*) FROM guidebook.routes 
+    WHERE calculated_duration IS NULL 
+    AND route_length IS NOT NULL 
+    AND height_diff_up IS NOT NULL 
+    AND height_diff_down IS NOT NULL;
+")
+
 # Log completion
 echo "Update completed. $update_count routes updated with calculated_duration." >> $LOG_FILE
+echo "$rejected_count routes rejected due to incoherent data." >> $LOG_FILE
 echo "Stop time :" >> $LOG_FILE
 echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 
 echo "Update completed. $update_count routes updated with calculated_duration (in days)."
+echo "$rejected_count routes rejected due to incoherent data (duration < 30min or > 18h, or inconsistent elevation data)."
