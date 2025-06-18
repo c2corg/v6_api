@@ -6,7 +6,7 @@ from c2corg_api.views import cors_policy
 
 
 def validate_navitia_params(request, **kwargs):
-    """Valide les paramètres requis pour l'API Navitia"""
+    """Validates the required parameters for the Navitia API"""
     required_params = ['from', 'to', 'datetime', 'datetime_represents']
     
     for param in required_params:
@@ -23,13 +23,13 @@ class NavitiaRest:
     @view(validators=[validate_navitia_params])
     def get(self):
         """
-        Endpoint pour récupérer les trajets depuis l'API Navitia
+        Endpoint to retrieve trips from the Navitia API
         
-        Paramètres query string requis:
-        - from: coordonnées de départ (format: longitude;latitude)
-        - to: coordonnées d'arrivée (format: longitude;latitude) 
-        - datetime: date et heure (format ISO 8601)
-        - datetime_represents: 'departure' ou 'arrival'
+        Required query string parameters:
+        - from: starting coordinates (format: longitude;latitude)
+        - to: arrival coordinates (format: longitude;latitude) 
+        - datetime: date and hour (format ISO 8601)
+        - datetime_represents: 'departure' or 'arrival'
         """
         try:
             # Récupération de la clé API depuis les variables d'environnement
@@ -68,18 +68,18 @@ class NavitiaRest:
 
             # Vérification du statut de la réponse
             if response.status_code == 401:
-                raise HTTPInternalServerError('Erreur d\'authentification avec l\'API Navitia')
+                raise HTTPInternalServerError('Authentication error with Navitia API')
             elif response.status_code == 400:
-                raise HTTPBadRequest('Paramètres invalides pour l\'API Navitia')
+                raise HTTPBadRequest('Invalid parameters for Navitia API')
             elif not response.ok:
-                raise HTTPInternalServerError(f'Erreur API Navitia: {response.status_code}')
+                raise HTTPInternalServerError(f'Navitia API error: {response.status_code}')
 
             # Retour des données JSON
             return response.json()
 
         except requests.exceptions.Timeout:
-            raise HTTPInternalServerError('Timeout lors de l\'appel à l\'API Navitia')
+            raise HTTPInternalServerError('Timeout when calling the Navitia API')
         except requests.exceptions.RequestException as e:
-            raise HTTPInternalServerError(f'Erreur réseau: {str(e)}')
+            raise HTTPInternalServerError(f'Network error: {str(e)}')
         except Exception as e:
-            raise HTTPInternalServerError(f'Erreur interne: {str(e)}')
+            raise HTTPInternalServerError(f'Internal error: {str(e)}')
