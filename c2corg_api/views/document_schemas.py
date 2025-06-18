@@ -232,15 +232,17 @@ user_profile_documents_config = GetDocumentsConfig(
 
 # waypoint
 
-
 @lru_cache(maxsize=None)
 def adapt_waypoint_schema_for_type(waypoint_type, field_list_type):
     """Get the schema for a waypoint type.
     `field_list_type` should be either "fields" or "listing".
-    All schemas are cached using memoization with @lru_cache.
     """
-    fields = fields_waypoint.get(waypoint_type).get(field_list_type)
-    return restrict_schema(schema_waypoint, fields)
+    fields = fields_waypoint.get(waypoint_type, {}).get(field_list_type, [])
+
+    schema = restrict_schema(schema_waypoint, fields)
+
+    return schema
+
 
 
 waypoint_schema_adaptor = make_schema_adaptor(
@@ -251,6 +253,8 @@ waypoint_listing_schema_adaptor = make_schema_adaptor(
 waypoint_documents_config = GetDocumentsConfig(
     WAYPOINT_TYPE, Waypoint, schema_waypoint, clazz_locale=WaypointLocale,
     fields=fields_waypoint, adapt_schema=waypoint_listing_schema_adaptor)
+
+
 
 document_configs = {
     WAYPOINT_TYPE: waypoint_documents_config,
