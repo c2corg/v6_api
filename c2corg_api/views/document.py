@@ -44,7 +44,7 @@ from sqlalchemy.orm.util import with_polymorphic
 log = logging.getLogger(__name__)
 
 # the maximum number of documents that can be returned in a request
-LIMIT_MAX = 10000
+LIMIT_MAX = 100
 
 # the default limit value (how much documents are returned at once in a
 # listing request)
