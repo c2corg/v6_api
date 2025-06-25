@@ -183,7 +183,7 @@ def process_new_waypoint(mapper, connection, geometry):
         journey_params = {
             "to": f"{lon};{lat}",
             "walking_speed": walking_speed,
-            "max_walking_direct_path_duration": max_duration,
+            "max_walking_duration_to_pt": max_duration,
             "direct_path_mode[]": "walking",
             "from": stop_id,
             "direct_path": "only_with_alternatives"
