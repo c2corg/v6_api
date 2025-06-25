@@ -15,7 +15,7 @@ fi
 
 PROJECT_NAME=${PROJECT_NAME:-""}           
 API_PORT=${API_PORT:-6543} 
-CCOMPOSE=${CCOMPOSE:-"podman-compose"}
+CCOMPOSE=${CCOMPOSE:-"docker-compose"}
 STANDALONE=${PODMAN_ENV:-""}
 
 API_URL="http://localhost:${API_PORT}/routes"
@@ -70,10 +70,13 @@ DECLARE
     min_duration_hours float := 0.5; -- 30 minutes
     max_duration_hours float := 18.0; -- 18 heures
 BEGIN
-    -- Vérifier s'il s'agit d'un itinéraire de grimpe
-    is_climbing := activity IN ('rock_climbing', 'ice_climbing', 'mountain_climbing', 
-                               'snow_ice_mixed', 'via_ferrata', 'paragliding', 'slacklining');
-    
+    -- Règle : Si un dénivelé est null et l'autre non, les égaliser
+    IF height_diff_up IS NULL AND height_diff_down IS NOT NULL THEN
+        height_diff_up := height_diff_down;
+    ELSIF height_diff_down IS NULL AND height_diff_up IS NOT NULL THEN
+        height_diff_down := height_diff_up;
+    END IF;
+
     -- Vérification des valeurs nulles ou route_length = 0
     IF route_length IS NULL OR route_length = 0 OR height_diff_up IS NULL OR height_diff_down IS NULL THEN
         RETURN NULL;
@@ -188,6 +191,9 @@ DECLARE
     duration float;
     min_duration float := NULL;
 BEGIN
+    -- Règle : Si un dénivelé est null et l'autre non, les égaliser avant de passer à la fonction mono-activité
+    -- Ceci est géré par la fonction calculate_duration à activité unique.
+    
     -- Pour chaque activité, calculer la durée et garder la plus courte
     FOREACH activity IN ARRAY activities LOOP
         duration := guidebook.calculate_duration(

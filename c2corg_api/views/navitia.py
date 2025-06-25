@@ -1,6 +1,6 @@
 import os
 import requests
-from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError
+from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound
 from cornice.resource import resource, view
 from c2corg_api.views import cors_policy
 
@@ -72,6 +72,8 @@ class NavitiaRest:
                 raise HTTPInternalServerError('Authentication error with Navitia API')
             elif response.status_code == 400:
                 raise HTTPBadRequest('Invalid parameters for Navitia API')
+            elif response.status_code == 404:
+                return {}
             elif not response.ok:
                 raise HTTPInternalServerError(f'Navitia API error: {response.status_code}')
 
