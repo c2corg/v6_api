@@ -51,6 +51,7 @@ class NavitiaRest:
                 'bss_speed', 'car_speed', 'forbidden_uris', 'allowed_id',
                 'first_section_mode', 'last_section_mode', 'max_walking_duration_to_pt',
                 'max_bike_duration_to_pt', 'max_bss_duration_to_pt', 'max_car_duration_to_pt',
+                'max_walking_direct_path_duration',
                 'wheelchair', 'traveler_type', 'data_freshness'
             ]
             
