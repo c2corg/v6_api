@@ -20,7 +20,7 @@ API_PORT=${API_PORT:-6543}
 CCOMPOSE=${CCOMPOSE:-"podman-compose"}
 STANDALONE=${PODMAN_ENV:-""}
 
-API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=14328&offset=0&limit=10000"
+BASE_API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=14328&limit=100" 
 OUTPUT_FILE="/tmp/waypoints_ids.txt"
 LOG_FILE="log-navitia.txt"
 NAVITIA_REQUEST_COUNT=0
@@ -31,14 +31,41 @@ if [[ -n "$STANDALONE" ]]; then
     cd "$SCRIPTPATH"/.. || exit
 fi
 
-echo "Start time :" >> $LOG_FILE
-echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
+echo "Start time :" >> "$LOG_FILE"
+echo $(date +"%Y-%m-%d-%H-%M-%S") >> "$LOG_FILE"
 
-# Fetch waypoints from API
-curl -s "$API_URL" | jq -r '.documents[] | .document_id' > "$OUTPUT_FILE"
+# --- Pagination logic ---
+OFFSET=0
+LIMIT=100 # The default API limit
+TOTAL_WAYPOINTS=0
+
+
+> "$OUTPUT_FILE"
+
+while true; do
+    API_URL="${BASE_API_URL}&offset=${OFFSET}"
+    echo "Fetching: $API_URL" >> "$LOG_FILE"
+    WAYPOINTS_IDS=$(curl -s "$API_URL" | jq -r '.documents[] | .document_id' 2>/dev/null)
+    
+    nb_current_waypoints=$(echo "$WAYPOINTS_IDS" | wc -l)
+
+    # If jq returned one line (no waypoint message), or if wc -l returned 0 ==> there is nothing left
+    if [ "$nb_current_waypoints" -eq 1 ]; then
+        echo "No more waypoints to fetch. Breaking loop." >> "$LOG_FILE"
+        break
+    fi
+
+    echo "$WAYPOINTS_IDS" >> "$OUTPUT_FILE"
+    
+    TOTAL_WAYPOINTS=$((TOTAL_WAYPOINTS + nb_current_waypoints))
+    OFFSET=$((OFFSET + LIMIT))
+
+done
 
 nb_waypoints=$(wc -l < "$OUTPUT_FILE")
-echo $nb_waypoints
+echo "Total waypoints fetched: $nb_waypoints" >> "$LOG_FILE"
+echo "Total waypoints fetched: $nb_waypoints"
+
 
 # Initialize SQL file
 > "$SQL_FILE"
