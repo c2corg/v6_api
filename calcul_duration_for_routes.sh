@@ -43,7 +43,6 @@ cat << EOF > "$SQL_FILE"
 -- Réinitialiser toutes les durées calculées au début
 UPDATE guidebook.routes SET calculated_duration = NULL;
 
--- Créer la fonction de calcul de durée pour une activité donnée
 CREATE OR REPLACE FUNCTION guidebook.calculate_duration(
     activity guidebook.activity_type,
     route_length integer,
@@ -70,23 +69,38 @@ DECLARE
     min_duration_hours float := 0.5; -- 30 minutes
     max_duration_hours float := 18.0; -- 18 heures
 BEGIN
-    -- Vérifier s'il s'agit d'un itinéraire de grimpe
-    is_climbing := activity IN ('rock_climbing', 'ice_climbing', 'mountain_climbing', 
-                               'snow_ice_mixed', 'via_ferrata', 'paragliding', 'slacklining');
-    
-    -- Vérification des valeurs nulles ou route_length = 0
-    IF route_length IS NULL OR route_length = 0 OR height_diff_up IS NULL OR height_diff_down IS NULL THEN
-        RETURN NULL;
+    -- Déterminer si c'est un itinéraire de grimpe
+    is_climbing := activity IN ('rock_climbing', 'mountain_climbing', 'ice_climbing');
+
+    -- Règle : Si un dénivelé est null et l'autre non, les égaliser
+    IF height_diff_up IS NULL AND height_diff_down IS NOT NULL THEN
+        height_diff_up := height_diff_down;
+    ELSIF height_diff_down IS NULL AND height_diff_up IS NOT NULL THEN
+        height_diff_down := height_diff_up;
+    END IF;
+
+    -- Vérification des valeurs nulles selon le type d'itinéraire
+    IF is_climbing THEN
+        -- Pour la grimpe, seuls les dénivelés sont obligatoires
+        IF height_diff_up IS NULL OR height_diff_down IS NULL THEN
+            RETURN NULL;
+        END IF;
+        -- La longueur peut être nulle pour la grimpe
+        h := COALESCE(route_length::float / 1000, 0);
+    ELSE
+        -- Pour les autres activités, tous les paramètres sont obligatoires
+        IF route_length IS NULL OR route_length = 0 OR height_diff_up IS NULL OR height_diff_down IS NULL THEN
+            RETURN NULL;
+        END IF;
+        h := route_length::float / 1000;
     END IF;
     
-    h := route_length::float / 1000;
     dp := height_diff_up::float;
     dn := height_diff_down::float;
     
     -- CALCUL POUR LES ITINÉRAIRES DE GRIMPE
     IF is_climbing THEN
         -- Si nous avons le dénivelé des difficultés
-        
         IF difficulties_height IS NOT NULL AND difficulties_height > 0 THEN
             d_diff := difficulties_height::float;
             
@@ -107,7 +121,7 @@ BEGIN
                 a := 300.0;  -- m/h (montée)
                 d := 500.0;  -- m/h (descente)
                 
-                dh := h / v;                 -- durée basée sur distance horizontale
+                dh := h / v;                 -- durée basée sur distance horizontale (peut être 0)
                 dv := (d_app / a) + (dn / d); -- durée basée sur dénivelé d'approche et descente
                 
                 -- Temps d'approche
@@ -188,6 +202,9 @@ DECLARE
     duration float;
     min_duration float := NULL;
 BEGIN
+    -- Règle : Si un dénivelé est null et l'autre non, les égaliser avant de passer à la fonction mono-activité
+    -- Ceci est géré par la fonction calculate_duration à activité unique.
+    
     -- Pour chaque activité, calculer la durée et garder la plus courte
     FOREACH activity IN ARRAY activities LOOP
         duration := guidebook.calculate_duration(
