@@ -15,7 +15,7 @@ fi
 
 PROJECT_NAME=${PROJECT_NAME:-""}           
 API_PORT=${API_PORT:-6543} 
-CCOMPOSE=${CCOMPOSE:-"docker-compose"}
+CCOMPOSE=${CCOMPOSE:-"podman-compose"}
 STANDALONE=${PODMAN_ENV:-""}
 
 API_URL="http://localhost:${API_PORT}/routes"
@@ -67,7 +67,7 @@ DECLARE
     t_app float;
     v_diff float := 50.0; -- Vitesse ascensionnelle des difficultés (m/h)
     min_duration_hours float := 0.5; -- 30 minutes
-    max_duration_hours float := 19.0; -- 19 heures
+    max_duration_hours float := 18.0; -- 18 heures
 BEGIN
     -- Déterminer si c'est un itinéraire de grimpe
     is_climbing := activity IN ('rock_climbing', 'mountain_climbing', 'ice_climbing');
@@ -260,4 +260,4 @@ echo "Stop time :" >> $LOG_FILE
 echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 
 echo "Update completed. $update_count routes updated with calculated_duration (in days)."
-echo "$rejected_count routes rejected due to incoherent data (duration < 30min or > 19h, or inconsistent elevation data)."
+echo "$rejected_count routes rejected due to incoherent data (duration < 30min or > 18h, or inconsistent elevation data)."
