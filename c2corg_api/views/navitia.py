@@ -49,8 +49,8 @@ class NavitiaRest:
             optional_params = [
                 'max_duration_to_pt', 'walking_speed', 'bike_speed', 
                 'bss_speed', 'car_speed', 'forbidden_uris', 'allowed_id',
-                'first_section_mode', 'last_section_mode', 'max_walking_duration_to_pt',
-                'max_bike_duration_to_pt', 'max_bss_duration_to_pt', 'max_car_duration_to_pt',
+                'first_section_mode', 'last_section_mode', 'max_walking_duration_to_pt','max_nb_transfers', 'min_nb_journeys',
+                'max_bike_duration_to_pt', 'max_bss_duration_to_pt', 'max_car_duration_to_pt', 'timeframe_duration',
                 'max_walking_direct_path_duration',
                 'wheelchair', 'traveler_type', 'data_freshness'
             ]
