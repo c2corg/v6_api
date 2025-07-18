@@ -7,7 +7,8 @@ DEFAULT_FIELDS = [
     'geometry.geom',
     'elevation',
     'maps_info',
-    'quality'
+    'quality',
+    'stopareas'
 ]
 DEFAULT_REQUIRED = [
     'locales',
