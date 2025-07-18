@@ -1,5 +1,4 @@
 from c2corg_api.models import DBSession
-from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.views.document_info import DocumentInfoRest
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPBadRequest
@@ -49,8 +48,8 @@ class WaypointStopareasByWaypointRest:
 
     @view(validators=[validate_waypoint_id])
     def get(self):
-        """Returns all stopareas associated with a waypoint, with their full attributes and distance."""
-        waypoint_id = self.request.matchdict['waypoint_id']
+        """Returns all stopareas associated with a waypoint, with their full attributes and distance."""  # noqa: E501
+        waypoint_id = self.request.matchdict['waypoint_id']  # noqa: E501
 
         query = (
             DBSession.query(
@@ -59,7 +58,7 @@ class WaypointStopareasByWaypointRest:
                 func.ST_X(Stoparea.geom).label('x'),
                 func.ST_Y(Stoparea.geom).label('y')
             )
-            .join(WaypointStoparea, Stoparea.stoparea_id == WaypointStoparea.stoparea_id)
+            .join(WaypointStoparea, Stoparea.stoparea_id == WaypointStoparea.stoparea_id)  # noqa: E501
             .filter(WaypointStoparea.waypoint_id == waypoint_id)
             .all()
         )
@@ -83,7 +82,7 @@ class WaypointStopareasReachableRest:
 
     @view(validators=[validate_waypoint_id])
     def get(self):
-        """Returns true if the waypoint has at least one stoparea associated with it, false otherwise."""
+        """Returns true if the waypoint has at least one stoparea associated with it, false otherwise."""  # noqa: E501
         waypoint_id = self.request.matchdict['waypoint_id']
 
         has_stopareas = DBSession.query(

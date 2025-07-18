@@ -1,6 +1,6 @@
 import os
 import requests
-from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound
+from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError  # noqa: E501
 from cornice.resource import resource, view
 from c2corg_api.views import cors_policy
 
@@ -46,7 +46,8 @@ class NavitiaRest:
                 'from': self.request.params.get('from'),
                 'to': self.request.params.get('to'),
                 'datetime': self.request.params.get('datetime'),
-                'datetime_represents': self.request.params.get('datetime_represents')}
+                'datetime_represents': self.request.params.get('datetime_represents')  # noqa: E501
+            }
 
             # Ajout des paramètres optionnels s'ils sont présents
             optional_params = [
