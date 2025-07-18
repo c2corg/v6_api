@@ -271,7 +271,7 @@ def process_new_waypoint(mapper, connection, geometry):
 def calculate_route_duration(mapper, connection, route):
     """
     Calcule la durée estimée d'un itinéraire après son insertion ou sa mise à jour,
-    en intégrant les règles métier du script bash.
+    en intégrant les règles métier mises à jour du script bash.
     """
     route_id = route.document_id
     
@@ -287,137 +287,148 @@ def calculate_route_duration(mapper, connection, route):
     ]
     is_climbing = any(activity in climbing_activities for activity in activities)
     
-    # Si length, height_diff_up ou height_diff_down sont NULL ou si length = 0, pas de calcul
-    if route.route_length is None or route.route_length == 0 or \
-       route.height_diff_up is None or route.height_diff_down is None:
-        log.warn(f"Route {route_id} has null or zero values for essential parameters - no duration calculation")
-        connection.execute(text("""
-            UPDATE guidebook.routes
-            SET calculated_duration = NULL
-            WHERE document_id = :route_id
-        """), {"route_id": route_id})
-        return
-    
-    # Convertir les valeurs de base
-    h = float(route.route_length) / 1000  # km
-    dp = float(route.height_diff_up)      # m (dénivelé positif total)
-    dn = float(route.height_diff_down)    # m
-
     # Définition des bornes de cohérence de durée (en heures)
     min_duration_hours = 0.5  # 30 minutes
     max_duration_hours = 18.0 # 18 heures
     
-    dm = None # Initialiser la durée calculée en heures
+    # MODIFICATION 1: Égaliser les dénivelés si l'un est NULL et l'autre non
+    height_diff_up = route.height_diff_up
+    height_diff_down = route.height_diff_down
+    if height_diff_up is None and height_diff_down is not None:
+        height_diff_up = height_diff_down
+    elif height_diff_down is None and height_diff_up is not None:
+        height_diff_down = height_diff_up
     
-    # CALCUL POUR LES ITINÉRAIRES DE GRIMPE
-    if is_climbing:
-        v_diff = 50.0 # Vitesse ascensionnelle pour les difficultés (m/h)
+    # MODIFICATION 2: Pour la grimpe, permettre le calcul avec seulement difficulties_height
+    if is_climbing and getattr(route, 'height_diff_difficulties', None) is not None:
+        if (route.route_length is None or height_diff_up is None) and route.height_diff_difficulties > 0:
+            # Cas spécial : calcul uniquement avec difficulties_height
+            v_diff = 50.0  # Vitesse ascensionnelle pour les difficultés (m/h)
+            dm = float(route.height_diff_difficulties) / v_diff
+            
+            # Validation des bornes de cohérence
+            if dm < min_duration_hours or dm > max_duration_hours:
+                log.warn(f"Route {route_id}: Calculated duration ({dm:.2f} hours) is out of bounds - setting to NULL")
+                calculated_duration_in_days = None
+            else:
+                calculated_duration_in_days = dm / 24.0
+            
+            # Mise à jour de la durée calculée dans la base de données
+            connection.execute(text("""
+                UPDATE guidebook.routes
+                SET calculated_duration = :duration
+                WHERE document_id = :route_id
+            """), {"duration": calculated_duration_in_days, "route_id": route_id})
+            log.warn(f"Route {route_id}: Database updated with calculated_duration = {calculated_duration_in_days} days (based on difficulties_height only).")
+            return
+    
+    # Convertir les valeurs de base (avec COALESCE pour remplacer NULL par 0)
+    h = float(route.route_length if route.route_length is not None else 0) / 1000  # km
+    dp = float(height_diff_up if height_diff_up is not None else 0)      # m (dénivelé positif total)
+    dn = float(height_diff_down if height_diff_down is not None else 0)    # m
+    
+    # Initialiser la durée minimale
+    min_duration = None
+    
+    # MODIFICATION 3: Calculer la durée pour chaque activité et garder la plus courte
+    for activity in activities:
+        dm = None
         
-        # Récupération du dénivelé des difficultés (si l'attribut existe)
-        diff_height = getattr(route, 'height_diff_difficulties', None) # Assurez-vous que c'est le bon nom d'attribut
-        
-        if diff_height is not None and diff_height > 0:
-            d_diff = float(diff_height)  # Dénivelé des difficultés
-
-            # Vérifier la cohérence: le dénivelé des difficultés ne peut pas être supérieur au dénivelé total positif
-            if d_diff > dp:
-                log.warn(f"Route {route_id}: Inconsistent difficulties_height ({d_diff}m) > height_diff_up ({dp}m). Setting duration to NULL.")
-                connection.execute(text("""
-                    UPDATE guidebook.routes
-                    SET calculated_duration = NULL
-                    WHERE document_id = :route_id
-                """), {"route_id": route_id})
-                return # Données incohérentes, on ne calcule pas
+        # CALCUL POUR LES ITINÉRAIRES DE GRIMPE
+        if activity in climbing_activities:
+            v_diff = 50.0 # Vitesse ascensionnelle pour les difficultés (m/h)
             
-            d_app = dp - d_diff         # Dénivelé de l'approche
+            # Récupération du dénivelé des difficultés (si l'attribut existe)
+            diff_height = getattr(route, 'height_diff_difficulties', None)
             
-            # Temps pour parcourir les difficultés (en heures)
-            t_diff = d_diff / v_diff
+            if diff_height is not None and diff_height > 0:
+                d_diff = float(diff_height)  # Dénivelé des difficultés
+                
+                # Vérifier la cohérence: le dénivelé des difficultés ne peut pas être supérieur au dénivelé total positif
+                if dp > 0 and d_diff > dp:
+                    log.warn(f"Route {route_id}: Inconsistent difficulties_height ({d_diff}m) > height_diff_up ({dp}m). Skipping for this activity.")
+                    continue # Passer à l'activité suivante
+                
+                d_app = max(dp - d_diff, 0)  # Dénivelé de l'approche (au moins 0)
+                
+                # Temps pour parcourir les difficultés (en heures)
+                t_diff = d_diff / v_diff
+                
+                # Calcul du temps d'approche (même formule que randonnée)
+                if d_app > 0:
+                    # Paramètres par défaut pour l'approche (comme randonnée)
+                    v = 5.0    # km/h (vitesse horizontale)
+                    a = 300.0  # m/h (montée)
+                    d = 500.0  # m/h (descente)
+                    
+                    dh = h / v                  # durée basée sur la distance horizontale
+                    dv = (d_app / a) + (dn / d) # durée basée sur le dénivelé d'approche et la descente
+                    
+                    # Temps d'approche
+                    if dh < dv:
+                        t_app = dv + (dh / 2)
+                    else:
+                        t_app = (dv / 2) + dh
+                else:
+                    t_app = 0
+                    
+                # Temps total selon la formule : T = max(Tdiff, Tapp) + 0.5 * min(Tdiff, Tapp)
+                dm = max(t_diff, t_app) + 0.5 * min(t_diff, t_app)
+                
+            else:
+                # Si dénivelé des difficultés non disponible ou nul, on utilise le dénivelé total
+                dm = dp / v_diff
+                
+            log.warn(f"Calculated climbing route duration for route {route_id} (activity {activity}): {dm:.2f} hours")
             
-            # Calcul du temps d'approche (même formule que randonnée)
-            if d_app > 0:
-                # Paramètres par défaut pour l'approche (comme randonnée)
+        # CALCUL POUR LES AUTRES ITINÉRAIRES (NON GRIMPANTS)
+        else:
+            # Définir les paramètres selon l'activité
+            if activity == 'hiking':
                 v = 5.0    # km/h (vitesse horizontale)
                 a = 300.0  # m/h (montée)
                 d = 500.0  # m/h (descente)
-                
-                dh = h / v                  # durée basée sur la distance horizontale
-                dv = (d_app / a) + (dn / d) # durée basée sur le dénivelé d'approche et la descente
-                
-                # Temps d'approche
-                if dh < dv:
-                    t_app = dv + (dh / 2)
-                else:
-                    t_app = (dv / 2) + dh
+            elif activity == 'snowshoeing':
+                v = 4.5
+                a = 250.0
+                d = 400.0
+            elif activity == 'skitouring':
+                v = 5.0
+                a = 300.0
+                d = 1500.0
+            elif activity == 'mountain_biking':
+                v = 15.0
+                a = 250.0
+                d = 1000.0
             else:
-                t_app = 0
-                
-            # Temps total selon la formule : T = max(Tdiff, Tapp) + 0.5 * min(Tdiff, Tapp)
-            dm = max(t_diff, t_app) + 0.5 * min(t_diff, t_app)
+                # Valeurs par défaut (comme randonnée)
+                v = 5.0
+                a = 300.0
+                d = 500.0
             
-        else:
-            # Si dénivelé des difficultés non disponible ou nul, on utilise le dénivelé total pour une estimation très basique
-            # C'est une divergence mineure avec le script Bash qui retourne dp / v_diff directement.
-            # Pour rester plus proche du comportement Bash pour le cas sans difficulties_height, on applique cette formule.
-            dm = dp / v_diff
+            # Calcul de la durée
+            dh = h / v                  # durée basée sur la distance horizontale
+            dv = (dp / a) + (dn / d)    # durée basée sur les dénivelés
             
-        log.warn(f"Calculated climbing route duration for route {route_id}: {dm:.2f} hours")
+            # Calcul de la durée finale en heures
+            if dh < dv:
+                dm = dv + (dh / 2)
+            else:
+                dm = (dv / 2) + dh
+            
+            log.warn(f"Calculated standard route duration for route {route_id} (activity {activity}): {dm:.2f} hours")
         
-    # CALCUL POUR LES AUTRES ITINÉRAIRES (NON GRIMPANTS)
-    else:
-        # Définir les paramètres selon l'activité
-        # Prioriser 'hiking' si présent, sinon le premier de la liste, sinon les valeurs par défaut
-        selected_activity = 'default'
-        if 'hiking' in activities:
-            selected_activity = 'hiking'
-        elif 'snowshoeing' in activities:
-            selected_activity = 'snowshoeing'
-        elif 'skitouring' in activities:
-            selected_activity = 'skitouring'
-        elif 'mountain_biking' in activities:
-            selected_activity = 'mountain_biking'
-       
-        if selected_activity == 'hiking':
-            v = 5.0    # km/h (vitesse horizontale)
-            a = 300.0  # m/h (montée)
-            d = 500.0  # m/h (descente)
-        elif selected_activity == 'snowshoeing':
-            v = 4.5
-            a = 250.0
-            d = 400.0
-        elif selected_activity == 'skitouring':
-            v = 5.0
-            a = 300.0
-            d = 1500.0
-        elif selected_activity == 'mountain_biking':
-            v = 15.0
-            a = 250.0
-            d = 1000.0
-        else:
-            # Valeurs par défaut (comme randonnée)
-            v = 5.0
-            a = 300.0
-            d = 500.0
-        
-        # Calcul de la durée
-        dh = h / v                  # durée basée sur la distance horizontale
-        dv = (dp / a) + (dn / d)    # durée basée sur les dénivelés
-        
-        # Calcul de la durée finale en heures
-        if dh < dv:
-            dm = dv + (dh / 2)
-        else:
-            dm = (dv / 2) + dh
-        
-        log.warn(f"Calculated standard route duration for route {route_id}: {dm:.2f} hours (activity: {selected_activity})")
-
+        # Garder la durée la plus courte parmi toutes les activités
+        if dm is not None and (min_duration is None or dm < min_duration):
+            min_duration = dm
+    
     # Validation des bornes de cohérence
-    if dm is None or dm < min_duration_hours or dm > max_duration_hours:
-        log.warn(f"Route {route_id}: Calculated duration ({dm:.2f} hours) is out of bounds (min={min_duration_hours}h, max={max_duration_hours}h) or NULL. Setting duration to NULL.")
+    if min_duration is None or min_duration < min_duration_hours or min_duration > max_duration_hours:
+        log.warn(f"Route {route_id}: Calculated duration ({min_duration:.2f} hours) is out of bounds (min={min_duration_hours}h, max={max_duration_hours}h) or NULL. Setting duration to NULL.")
         calculated_duration_in_days = None
     else:
         # Conversion de la durée finale d'heures en jours pour la base de données
-        calculated_duration_in_days = dm / 24.0
+        calculated_duration_in_days = min_duration / 24.0
 
     # Mise à jour de la durée calculée dans la base de données
     connection.execute(text("""
