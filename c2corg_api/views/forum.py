@@ -1,5 +1,6 @@
 import colander
 
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.models.common import document_types
 
 from c2corg_api.models import DBSession
@@ -23,9 +24,7 @@ log = logging.getLogger(__name__)
 
 
 @resource(path='/forum/private-messages/unread-count', cors_policy=cors_policy)
-class PrivateMessageRest(object):
-    def __init__(self, request):
-        self.request = request
+class PrivateMessageRest(ACLDefault):
 
     @restricted_view(renderer='json')
     def get(self):
@@ -87,9 +86,7 @@ def validate_topic_create(request, **kwargs):
 # as far as we only need collection_post to create topic in discourse
 @resource(collection_path='/forum/topics', path='/forum/topics/{id}',
           cors_policy=cors_policy)
-class ForumTopicRest(object):
-    def __init__(self, request):
-        self.request = request
+class ForumTopicRest(ACLDefault):
 
     @restricted_view(
         schema=schema_topic_create,

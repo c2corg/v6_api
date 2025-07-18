@@ -1,3 +1,4 @@
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import ARTICLE_TYPE, Article, ArchiveArticle
@@ -209,10 +210,7 @@ def validate_requestor(request, **kwargs):
         'No permission to delete this document')
 
 
-class DeleteBase(object):
-
-    def __init__(self, request):
-        self.request = request
+class DeleteBase(ACLDefault):
 
     def _delete(self, document_id, document_type):
         if document_type == IMAGE_TYPE:

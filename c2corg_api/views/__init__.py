@@ -13,8 +13,9 @@ from colander import null
 from pyramid.httpexceptions import HTTPError, HTTPNotFound, HTTPForbidden, \
     HTTPNotModified
 from pyramid.view import view_config
+from pyramid.interfaces import IRendererFactory
 from cornice import Errors
-from cornice.util import json_error, _JSONError
+from cornice.renderer import JSONError
 from cornice.resource import view
 from geoalchemy2 import WKBElement
 from sqlalchemy.inspection import inspect
@@ -49,7 +50,7 @@ def http_error_handler(exc, request):
             ]
         }
     """
-    if isinstance(exc, _JSONError):
+    if isinstance(exc, JSONError):
         # if it is an error from Cornice, just return it
         return exc
 
@@ -293,3 +294,11 @@ def etag_cache(request, key):
 
 def set_private_cache_header(request):
     request.response.headers['Cache-Control'] = 'private'
+
+
+def json_error(request):
+    # Get the cornice renderer and use its render_errors method
+    return request.registry.queryUtility(
+        provided=IRendererFactory,
+        name="cornicejson",
+    ).render_errors(request)

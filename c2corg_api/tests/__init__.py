@@ -83,7 +83,8 @@ def _add_global_test_data(session):
         name='Contributor',
         username='contributor', email='contributor@camptocamp.org',
         forum_username='contributor', password='super pass',
-        email_validated=True, profile=contributor_profile)
+        tos_validated=datetime.datetime(2020, 12, 28), email_validated=True,
+        profile=contributor_profile)
 
     contributor2_profile = UserProfile(
         categories=['amateur'],
@@ -94,6 +95,7 @@ def _add_global_test_data(session):
         username='contributor2', email='contributor2@camptocamp.org',
         forum_username='contributor2',
         password='better pass', email_validated=True,
+        tos_validated=datetime.datetime(2021, 2, 12),
         profile=contributor2_profile)
 
     contributor3_profile = UserProfile(
@@ -105,7 +107,19 @@ def _add_global_test_data(session):
         username='contributor3', email='contributor3@camptocamp.org',
         forum_username='contributor3',
         password='poor pass', email_validated=True,
+        tos_validated=datetime.datetime(2006, 1, 1),
         profile=contributor3_profile)
+
+    contributor_notos_profile = UserProfile(
+        categories=['amateur'],
+        locales=[DocumentLocale(title='...', lang='en')])
+
+    contributor_notos = User(
+        name='Contributor no ToS',
+        username='contributornotos', email='contributornotos@camptocamp.org',
+        forum_username='contributornotos',
+        password='some pass', email_validated=True,
+        profile=contributor_notos_profile)
 
     moderator_profile = UserProfile(
         categories=['mountain_guide'],
@@ -116,6 +130,7 @@ def _add_global_test_data(session):
         username='moderator', email='moderator@camptocamp.org',
         forum_username='moderator',
         moderator=True, password='even better pass',
+        tos_validated=datetime.datetime(2021, 2, 12),
         email_validated=True, profile=moderator_profile)
 
     robot_profile = UserProfile(
@@ -126,9 +141,11 @@ def _add_global_test_data(session):
         username='robot', email='robot@camptocamp.org',
         forum_username='robot',
         robot=True, password='bombproof pass',
+        tos_validated=datetime.datetime(2021, 6, 6),
         email_validated=True, profile=robot_profile)
 
-    users = [robot, moderator, contributor, contributor2, contributor3]
+    users = [robot, moderator, contributor, contributor2,
+             contributor3, contributor_notos]
     session.add_all(users)
     session.flush()
 
@@ -155,7 +172,7 @@ def _add_global_test_data(session):
     now = datetime.datetime.utcnow()
     exp = now + datetime.timedelta(weeks=10)
 
-    for user in [robot, moderator, contributor, contributor2, contributor3]:
+    for user in users:
         claims = create_claims(user, exp)
         token = jwt.encode(claims, key=key, algorithm=algorithm). \
             decode('utf-8')

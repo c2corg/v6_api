@@ -3,6 +3,7 @@ import os
 import requests
 
 from c2corg_api.caching import configure_caches
+from c2corg_api.security.acl import ACLDefault
 from pyramid.config import Configurator
 from sqlalchemy import engine_from_config, exc, event
 from sqlalchemy.pool import Pool
@@ -15,24 +16,14 @@ from c2corg_api.models.route import Route
 from c2corg_api.models import DBSession, Base
 from c2corg_api.search import configure_es_from_config, get_queue_config
 
-from pyramid.security import Allow, Everyone, Authenticated
-
 from pyramid.settings import asbool
 
 log = logging.getLogger(__name__)
 load_dotenv()
 
 
-class RootFactory(object):
+class RootFactory(ACLDefault):
     __name__ = 'RootFactory'
-    __acl__ = [
-            (Allow, Everyone, 'public'),
-            (Allow, Authenticated, 'authenticated'),
-            (Allow, 'group:moderators', 'moderator')
-    ]
-
-    def __init__(self, request):
-        pass
 
 
 def main(global_config, **settings):

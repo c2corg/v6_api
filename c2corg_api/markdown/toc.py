@@ -14,9 +14,10 @@ License: [BSD](http://www.opensource.org/licenses/bsd-license.php)
 Modified for C2C : remove title emphasis, toc HTML class. Add c2c:role
 """
 
+from markdown.util import code_escape
 from markdown.extensions.toc import (TocExtension, TocTreeprocessor,
                                      stashedHTML2text, unescape,
-                                     unique, nest_toc_tokens, code_escape,
+                                     unique, nest_toc_tokens,
                                      AtomicString, html)
 
 
@@ -110,23 +111,6 @@ class C2CTocTreeprocessor(TocTreeprocessor):
             toc = pp.run(toc)
         self.md.toc_tokens = toc_tokens
         self.md.toc = toc
-
-    # waiting for 3.3.5 version
-    def replace_marker(self, root, elem):
-        ''' Replace marker with elem. '''
-        for (p, c) in self.iterparent(root):
-            text = ''.join(c.itertext()).strip()
-            if not text:
-                continue
-
-            # To keep the output from screwing up the
-            # validation by putting a <div> inside of a <p>
-            # we actually replace the <p> in its entirety.
-            if c.text and c.text.strip() == self.marker and len(c) == 0:
-                for i in range(len(p)):
-                    if p[i] == c:
-                        p[i] = elem
-                        break
 
 
 class C2CTocExtension(TocExtension):

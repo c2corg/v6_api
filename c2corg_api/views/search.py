@@ -10,6 +10,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.search import search, SEARCH_LIMIT_DEFAULT, SEARCH_LIMIT_MAX
 from c2corg_api.views import cors_policy
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.area import area_documents_config
 from c2corg_api.views.article import article_documents_config
 from c2corg_api.views.book import book_documents_config
@@ -26,9 +27,7 @@ from cornice.resource import resource, view
 
 
 @resource(path='/search', cors_policy=cors_policy)
-class SearchRest(object):
-    def __init__(self, request):
-        self.request = request
+class SearchRest(ACLDefault):
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def get(self):
