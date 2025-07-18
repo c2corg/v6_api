@@ -93,9 +93,7 @@ class NavitiaRest:
             elif response.status_code == 404:
                 return {}
             elif not response.ok:
-                raise HTTPInternalServerError(
-                    f'Navitia API error: {
-                        response.status_code}')
+                raise HTTPInternalServerError(f'Navitia API error: {response.status_code}')  # noqa: E501
 
             # Retour des données JSON
             return response.json()

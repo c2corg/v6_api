@@ -356,9 +356,7 @@ def calculate_route_duration(mapper, connection, route):
             # Validation des bornes de cohérence
             if dm < min_duration_hours or dm > max_duration_hours:
                 log.warn(
-                    f"Route {route_id}: Calculated duration ({
-                        dm:.2f} hours) is out of bounds - setting to NULL"
-                )
+                    f"Route {route_id}: Calculated duration ({dm:.2f} hours) is out of bounds - setting to NULL")  # noqa: E501
                 calculated_duration_in_days = None
             else:
                 calculated_duration_in_days = dm / 24.0

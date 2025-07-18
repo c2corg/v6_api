@@ -13,14 +13,14 @@ class _WaypointStopareaMixin:
     distance = Column(Float, nullable=False)
 
     @declared_attr
-    def waypoint_stoparea_id(cls):
+    def waypoint_stoparea_id(cls):  # noqa: N805
         return Column(
             Integer,
             primary_key=True
         )
 
     @declared_attr
-    def stoparea_id(cls):
+    def stoparea_id(cls):  # noqa: N805
         return Column(
             Integer,
             ForeignKey(schema + '.stopareas.stoparea_id'),
@@ -28,7 +28,7 @@ class _WaypointStopareaMixin:
         )
 
     @declared_attr
-    def waypoint_id(cls):
+    def waypoint_id(cls):  # noqa: N805
         return Column(
             Integer,
             ForeignKey(schema + '.waypoints.document_id'),
