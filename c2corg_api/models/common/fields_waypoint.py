@@ -272,5 +272,6 @@ fields_waypoint = {
             'slackline_length_min',
             'slackline_length_max',
         ]
-    }
+    },
+    'stopareas': DEFAULT_ATTRIBUTES_SETTINGS
 }
