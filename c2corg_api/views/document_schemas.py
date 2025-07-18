@@ -244,7 +244,6 @@ def adapt_waypoint_schema_for_type(waypoint_type, field_list_type):
     return schema
 
 
-
 waypoint_schema_adaptor = make_schema_adaptor(
     adapt_waypoint_schema_for_type, 'waypoint_type', 'fields')
 waypoint_listing_schema_adaptor = make_schema_adaptor(
@@ -253,7 +252,6 @@ waypoint_listing_schema_adaptor = make_schema_adaptor(
 waypoint_documents_config = GetDocumentsConfig(
     WAYPOINT_TYPE, Waypoint, schema_waypoint, clazz_locale=WaypointLocale,
     fields=fields_waypoint, adapt_schema=waypoint_listing_schema_adaptor)
-
 
 
 document_configs = {

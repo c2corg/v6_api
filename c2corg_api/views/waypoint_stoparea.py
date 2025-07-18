@@ -6,7 +6,6 @@ from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy import func, exists
 
 
-
 from c2corg_api.models.waypoint_stoparea import (
     WaypointStoparea, schema_waypoint_stoparea)
 
@@ -15,7 +14,7 @@ from c2corg_api.views.document import (
 from c2corg_api.views import cors_policy
 from c2corg_api.views.validation import validate_id, \
     validate_lang
-    
+
 from c2corg_api.models.stoparea import Stoparea
 
 validate_waypoint_stoparea_create = make_validator_create(
@@ -23,23 +22,28 @@ validate_waypoint_stoparea_create = make_validator_create(
 validate_waypoint_stoparea_update = make_validator_update(
     ['waypoint_id', 'stoparea_id', 'distance'], 'waypoint_id')
 
-@resource(path='/waypoints_stopareas/{id}/{lang}/info', cors_policy=cors_policy)
+
+@resource(path='/waypoints_stopareas/{id}/{lang}/info',
+          cors_policy=cors_policy)
 class WaypointStopareaInfoRest(DocumentInfoRest):
 
     @view(validators=[validate_id, validate_lang])
     def get(self):
         return self._get_document_info(schema_waypoint_stoparea),
 
+
 def validate_waypoint_id(request, *args, **kwargs):
     """Check if waypoint_stoparea_id is valid."""
     try:
-        request.matchdict['waypoint_id'] = int(request.matchdict['waypoint_id'])
+        request.matchdict['waypoint_id'] = int(
+            request.matchdict['waypoint_id'])
     except (KeyError, ValueError):
         raise HTTPBadRequest(json_body={"error": "Invalid waypoint_id"})
 
+
 @resource(path='/waypoints/{waypoint_id}/stopareas', cors_policy=cors_policy)
 class WaypointStopareasByWaypointRest:
-    
+
     def __init__(self, request):
         self.request = request
 
@@ -50,7 +54,7 @@ class WaypointStopareasByWaypointRest:
 
         query = (
             DBSession.query(
-                Stoparea, 
+                Stoparea,
                 WaypointStoparea.distance,
                 func.ST_X(Stoparea.geom).label('x'),
                 func.ST_Y(Stoparea.geom).label('y')
@@ -69,10 +73,11 @@ class WaypointStopareasByWaypointRest:
         ]
 
         return {"waypoint_id": waypoint_id, "stopareas": stopareas_data}
-    
+
+
 @resource(path='/waypoints/{waypoint_id}/isReachable', cors_policy=cors_policy)
 class WaypointStopareasReachableRest:
-    
+
     def __init__(self, request):
         self.request = request
 
