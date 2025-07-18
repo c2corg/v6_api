@@ -8,7 +8,6 @@ DEFAULT_FIELDS = [
     'elevation',
     'maps_info',
     'quality',
-    'stopareas'
 ]
 DEFAULT_REQUIRED = [
     'locales',
