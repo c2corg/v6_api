@@ -90,7 +90,7 @@ class TestFields(unittest.TestCase):
             # Skip the stopareas field check
             if field == 'stopareas':
                 continue
-                
+
             if '.' in field:
                 field_parts = field.split('.')
                 self.assertEqual(
