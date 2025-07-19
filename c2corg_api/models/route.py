@@ -236,17 +236,16 @@ class Route(_RouteMixin, Document):
         return route
 
     def update(self, other):
-        old_version = self.version
         super(Route, self).update(other)
-        if not self._is_major_change(other):
-            self.version = old_version
         copy_attributes(other, self, attributes)
 
-    def _is_major_change(self, other):
-        """Détermine si le changement justifie une nouvelle version"""
-        return (
-            other.calculated_duration is not None and other.calculated_duration != self.calculated_duration  # noqa: E501
-        )
+    def get_update_type(self, old_versions):
+        update_types, changed_langs = super(Route, self).get_update_type(old_versions)  # noqa: E501
+
+        if 'calculated_duration' in update_types and len(update_types) == 1:
+            update_types.remove('calculated_duration')
+
+        return update_types, changed_langs
 
 
 class ArchiveRoute(_RouteMixin, ArchiveDocument):
