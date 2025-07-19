@@ -237,19 +237,15 @@ class Route(_RouteMixin, Document):
 
     def update(self, other):
         old_version = self.version
-        
         super(Route, self).update(other)
-        
         if not self._is_major_change(other):
             self.version = old_version
-        
         copy_attributes(other, self, attributes)
 
     def _is_major_change(self, other):
         """Détermine si le changement justifie une nouvelle version"""
         return (
-            other.calculated_duration is not None and 
-            other.calculated_duration != self.calculated_duration
+            other.calculated_duration is not None and other.calculated_duration != self.calculated_duration  # noqa: E501
         )
 
 
