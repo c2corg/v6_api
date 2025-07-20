@@ -302,6 +302,7 @@ def process_new_waypoint(mapper, connection, geometry):
 
 @event.listens_for(Route, "after_insert")
 @event.listens_for(Route, "after_update")
+# codacy:disable-next-line:MC0001
 def calculate_route_duration(mapper, connection, route):
     """
     Calcule la durée estimée d'un itinéraire
