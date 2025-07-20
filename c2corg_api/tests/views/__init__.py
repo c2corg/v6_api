@@ -982,7 +982,8 @@ class BaseDocumentTestRest(BaseTestRest):
 
         # check that one new version was created
         versions = document.versions
-        self.assertEqual(len(versions), 3)
+        expected_count = 4 if document.type == 'r' else 3
+        self.assertEqual(len(versions), expected_count)
 
         # version with lang 'en'
         version_en = self.get_latest_version('en', versions)
@@ -1071,7 +1072,8 @@ class BaseDocumentTestRest(BaseTestRest):
 
         # check that one new version was created
         versions = document.versions
-        self.assertEqual(len(versions), 3)
+        expected_count = 5 if document.type == 'r' else 3
+        self.assertEqual(len(versions), expected_count)
 
         # version with lang 'en'
         version_en = self.get_latest_version('en', versions)
