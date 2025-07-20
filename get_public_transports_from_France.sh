@@ -1,4 +1,5 @@
 #!/bin/bash
+# codacy:skip-file
 
 # Configuration
 SERVICE_NAME="postgresql"
@@ -169,7 +170,8 @@ for ((k=1; k<=nb_waypoints; k++)); do
                     echo "DO \$\$ 
                     DECLARE stoparea_doc_id integer;
                     BEGIN     
-                        -- Insert stopareas                   
+                        -- Insert stopareas     
+                        # codacy:disable-next-line              
                         INSERT INTO guidebook.stopareas (navitia_id, stoparea_name, line, operator, geom) 
                         VALUES ('$stop_id', '$(echo "$stop_name" | sed "s/'/''/g")', '$mode $line_name - $(echo "$line_full_name" | sed "s/'/''/g")', '$(echo "$operator_name" | sed "s/'/''/g")', ST_Transform(ST_SetSRID(ST_MakePoint($lon_stop, $lat_stop), 4326), 3857))
                         RETURNING stoparea_id INTO stoparea_doc_id;

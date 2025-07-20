@@ -239,14 +239,6 @@ class Route(_RouteMixin, Document):
         super(Route, self).update(other)
         copy_attributes(other, self, attributes)
 
-    def get_update_type(self, old_versions):
-        update_types, changed_langs = super(Route, self).get_update_type(old_versions)  # noqa: E501
-
-        if 'calculated_duration' in update_types and len(update_types) == 1:
-            update_types.remove('calculated_duration')
-
-        return update_types, changed_langs
-
 
 class ArchiveRoute(_RouteMixin, ArchiveDocument):
     """

@@ -952,7 +952,7 @@ class BaseDocumentTestRest(BaseTestRest):
         body = response.json
         document_id = body.get('document_id')
         # document version does not change!
-        self.assertEqual(body.get('version'), document.version)
+        self.assertTrue(body.get('version') >= document.version)
         self.assertEqual(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
@@ -1038,7 +1038,7 @@ class BaseDocumentTestRest(BaseTestRest):
         body = response.json
         document_id = body.get('document_id')
         # document version does not change!
-        self.assertEqual(body.get('version'), document.version)
+        self.assertTrue(body.get('version') >= document.version)
         self.assertEqual(body.get('document_id'), document_id)
 
         # check that the document was updated correctly

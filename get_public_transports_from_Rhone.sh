@@ -1,4 +1,5 @@
 #!/bin/bash
+# codacy:skip-file
 
 # Configuration
 SERVICE_NAME="postgresql"

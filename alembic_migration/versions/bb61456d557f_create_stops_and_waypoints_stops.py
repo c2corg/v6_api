@@ -20,7 +20,7 @@ def upgrade():
         schema='guidebook'
     )
 
-    # waypoints_stopareas 
+    # waypoints_stopareas
     op.create_table(
         'waypoints_stopareas',
         sa.Column('waypoint_stoparea_id', sa.Integer(), primary_key=True, autoincrement=True),
