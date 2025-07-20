@@ -7,6 +7,7 @@ from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import get_geometry_schema_overrides
 from sqlalchemy.orm import relationship
 # don't remove this import
+# pylint: disable=unused-import
 from c2corg_api.models.waypoint import Waypoint  # noqa: F401, E501
 
 
