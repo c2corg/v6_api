@@ -952,7 +952,7 @@ class BaseDocumentTestRest(BaseTestRest):
         body = response.json
         document_id = body.get('document_id')
         # document version does not change!
-        self.assertTrue(body.get('version') >= document.version)
+        self.assertEqual(body.get('version'), document.version)
         self.assertEqual(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
@@ -965,7 +965,9 @@ class BaseDocumentTestRest(BaseTestRest):
             filter(
                 getattr(self._model_archive, 'document_id') == document_id). \
             count()
-        self.assertEqual(archive_count, 1)
+
+        expected_count = 2 if document.type == 'r' else 1
+        self.assertEqual(archive_count, expected_count)
 
         # check that one new archive_document_locale was created
         archive_locale_count = \
@@ -1038,7 +1040,7 @@ class BaseDocumentTestRest(BaseTestRest):
         body = response.json
         document_id = body.get('document_id')
         # document version does not change!
-        self.assertTrue(body.get('version') >= document.version)
+        self.assertEqual(body.get('version'), document.version)
         self.assertEqual(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
@@ -1051,7 +1053,9 @@ class BaseDocumentTestRest(BaseTestRest):
             filter(
                 getattr(self._model_archive, 'document_id') == document_id). \
             count()
-        self.assertEqual(archive_count, 1)
+
+        expected_count = 2 if document.type == 'r' else 1
+        self.assertEqual(archive_count, expected_count)
 
         # check that one new archive_document_locale was created
         archive_locale_count = \
