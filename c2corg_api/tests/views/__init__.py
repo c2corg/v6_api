@@ -1000,7 +1000,10 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(version_fr.lang, 'fr')
 
         meta_data_fr = version_fr.history_metadata
-        self.assertIsNot(meta_data_en, meta_data_fr)
+        if document.type == 'r':
+            self.assertEqual(meta_data_en, meta_data_fr)
+        else:
+            self.assertIsNot(meta_data_en, meta_data_fr)
 
         archive_waypoint_en = version_en.document_archive
         archive_waypoint_fr = version_fr.document_archive
@@ -1097,7 +1100,10 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(version_es.lang, 'es')
 
         meta_data_es = version_es.history_metadata
-        self.assertIsNot(meta_data_en, meta_data_es)
+        if document.type == 'r':
+            self.assertEqual(meta_data_en, meta_data_es)
+        else:
+            self.assertIsNot(meta_data_en, meta_data_es)
 
         archive_document_es = version_es.document_archive
         self.assertIs(archive_document_es, archive_document_fr)

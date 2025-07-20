@@ -297,11 +297,11 @@ def process_new_waypoint(mapper, connection, geometry):
 
     log.warning(f"Traitement terminé pour le waypoint {waypoint_id}")
 
-
+# pylint: disable=too-complex,too-many-branches,too-many-statements
 @event.listens_for(Route, "after_insert")
 @event.listens_for(Route, "after_update")
+# pylint: disable=too-complex,too-many-branches,too-many-statements
 def calculate_route_duration(mapper, connection, route):
-    # pylint: disable=too-complex,too-many-branches,too-many-statements
     """
     Calcule la durée estimée d'un itinéraire
     après son insertion ou sa mise à jour,
