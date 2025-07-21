@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2001
 
 # Configuration
 SERVICE_NAME="postgresql"
@@ -166,10 +167,12 @@ for ((k=1; k<=nb_waypoints; k++)); do
                     mode=$(sed "${j}q;d" /tmp/mode.txt)
 
                     # Create a stoparea document and save its ID
+                    # shellcheck disable=SC2001
                     echo "DO \$\$ 
                     DECLARE stoparea_doc_id integer;
                     BEGIN     
-                        -- Insert stopareas                   
+                        -- Insert stopareas     
+                        # codacy:disable-next-line              
                         INSERT INTO guidebook.stopareas (navitia_id, stoparea_name, line, operator, geom) 
                         VALUES ('$stop_id', '$(echo "$stop_name" | sed "s/'/''/g")', '$mode $line_name - $(echo "$line_full_name" | sed "s/'/''/g")', '$(echo "$operator_name" | sed "s/'/''/g")', ST_Transform(ST_SetSRID(ST_MakePoint($lon_stop, $lat_stop), 4326), 3857))
                         RETURNING stoparea_id INTO stoparea_doc_id;

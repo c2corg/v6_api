@@ -6,38 +6,43 @@ from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import get_geometry_schema_overrides
 from sqlalchemy.orm import relationship
-from c2corg_api.models.waypoint import Waypoint # don't remove this import
+# don't remove this import
+# pylint: disable=unused-import
+from c2corg_api.models.waypoint import Waypoint  # noqa: F401, E501
+
 
 class _WaypointStopareaMixin:
     distance = Column(Float, nullable=False)
 
     @declared_attr
-    def waypoint_stoparea_id(cls):
+    def waypoint_stoparea_id(cls):  # noqa: N805
         return Column(
             Integer,
             primary_key=True
         )
-    
+
     @declared_attr
-    def stoparea_id(cls):
+    def stoparea_id(cls):  # noqa: N805
         return Column(
             Integer,
             ForeignKey(schema + '.stopareas.stoparea_id'),
             nullable=False
         )
-    
+
     @declared_attr
-    def waypoint_id(cls):
+    def waypoint_id(cls):  # noqa: N805
         return Column(
             Integer,
             ForeignKey(schema + '.waypoints.document_id'),
             nullable=False
         )
 
+
 attributes = ['distance', 'stoparea_id', 'waypoint_id']
 
+
 class WaypointStoparea(Base, _WaypointStopareaMixin):
-   
+
     __tablename__ = 'waypoints_stopareas'
     __table_args__ = {
         'schema': schema,
@@ -51,17 +56,17 @@ class WaypointStoparea(Base, _WaypointStopareaMixin):
 
     stoparea_id = Column(
         Integer,
-        ForeignKey(schema + '.stopareas.stoparea_id', 
-                  use_alter=True, 
-                  name='fk_waypoint_stoparea_stoparea_id'),
+        ForeignKey(schema + '.stopareas.stoparea_id',
+                   use_alter=True,
+                   name='fk_waypoint_stoparea_stoparea_id'),
         nullable=False
     )
 
     waypoint_id = Column(
         Integer,
-        ForeignKey(schema + '.waypoints.document_id', 
-                  use_alter=True, 
-                  name='fk_waypoint_stoparea_waypoint_id'),
+        ForeignKey(schema + '.waypoints.document_id',
+                   use_alter=True,
+                   name='fk_waypoint_stoparea_waypoint_id'),
         nullable=False
     )
 
@@ -71,6 +76,7 @@ class WaypointStoparea(Base, _WaypointStopareaMixin):
 
     def update(self, other):
         copy_attributes(other, self, attributes)
+
 
 schema_waypoint_stoparea = SQLAlchemySchemaNode(
     WaypointStoparea,

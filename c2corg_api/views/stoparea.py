@@ -15,6 +15,7 @@ validate_stoparea_create = [
 
 validate_stoparea_update = validate_stoparea_create
 
+
 @resource(collection_path='/stopareas', path='/stopareas/{id}',
           cors_policy=cors_policy)
 class StopareaRest:
@@ -29,12 +30,13 @@ class StopareaRest:
         """
         page_id = self.request.GET.get('page_id', 1)
         nb_items = self.request.GET.get('nb_items', 30)
-        
+
         query = DBSession.query(Stoparea)
         total_results = query.count()
-        
-        stopareas = query.offset((page_id - 1) * nb_items).limit(nb_items).all()
-        
+
+        stopareas = query.offset(
+            (page_id - 1) * nb_items).limit(nb_items).all()
+
         return {
             'documents': [stoparea.to_dict() for stoparea in stopareas],
             'total_results': total_results
@@ -46,13 +48,15 @@ class StopareaRest:
         Get a single stoparea.
         """
         stoparea_id = self.request.matchdict['id']
-        stoparea = DBSession.query(Stoparea).filter_by(stoparea_id=stoparea_id).first()
-        
+        stoparea = DBSession.query(Stoparea).filter_by(
+            stoparea_id=stoparea_id).first()
+
         if not stoparea:
             self.request.response.status = 404
             return {'error': 'Stoparea not found'}
-        
+
         return stoparea.to_dict()
+
 
 @resource(path='/stopareas/{id}/{lang}/info', cors_policy=cors_policy)
 class StopareaInfoRest:
@@ -63,12 +67,13 @@ class StopareaInfoRest:
     @view(validators=[validate_id, validate_lang])
     def get(self):
         stoparea_id = self.request.matchdict['id']
-        stoparea = DBSession.query(Stoparea).filter_by(stoparea_id=stoparea_id).first()
-        
+        stoparea = DBSession.query(Stoparea).filter_by(
+            stoparea_id=stoparea_id).first()
+
         if not stoparea:
             self.request.response.status = 404
             return {'error': 'Stoparea not found'}
-        
+
         return {
             'stoparea_id': stoparea.stoparea_id,
             'attributes': {

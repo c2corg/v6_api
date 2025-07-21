@@ -8,7 +8,6 @@ DEFAULT_FIELDS = [
     'elevation',
     'maps_info',
     'quality',
-    'stopareas'
 ]
 DEFAULT_REQUIRED = [
     'locales',
@@ -272,5 +271,5 @@ fields_waypoint = {
             'slackline_length_min',
             'slackline_length_max',
         ]
-    }
+    },
 }

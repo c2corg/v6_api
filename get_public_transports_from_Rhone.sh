@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2001
 
 # Configuration
 SERVICE_NAME="postgresql"
@@ -166,6 +167,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
                     mode=$(sed "${j}q;d" /tmp/mode.txt)
 
                     # Create a stoparea document and save its ID
+                    # shellcheck disable=SC2001
                     echo "DO \$\$ 
                     DECLARE stoparea_doc_id integer;
                     BEGIN     

@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String
 from geoalchemy2.types import Geometry
 from colanderalchemy import SQLAlchemySchemaNode
 import colander
-from geoalchemy2 import shape 
+from geoalchemy2 import shape
 
 
 from c2corg_api.models import schema, Base
@@ -35,7 +35,7 @@ class Stoparea(Base, _StopareaMixin):
     def update(self, other):
         copy_attributes(other, self, attributes)
 
-    def to_dict(self):        
+    def to_dict(self):
         return {
             "id": self.stoparea_id,
             "navitia_id": self.navitia_id,
@@ -54,6 +54,6 @@ schema_stoparea = SQLAlchemySchemaNode(
     includes=attributes,
     overrides={
         'stoparea_id': {'missing': None},
-        'geom': {'typ': colander.String()} 
+        'geom': {'typ': colander.String()}
     }
 )
