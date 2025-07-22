@@ -15,7 +15,6 @@ fi
 
 PROJECT_NAME=${PROJECT_NAME:-""}           
 API_PORT=${API_PORT:-6543} 
-CCOMPOSE=${CCOMPOSE:-"podman-compose"}
 STANDALONE=${PODMAN_ENV:-""}
 
 API_URL="http://localhost:${API_PORT}/routes"
@@ -250,15 +249,15 @@ echo "SQL file prepared with update commands." >> $LOG_FILE
 
 # Execute all SQL commands
 echo "Executing SQL commands..." >> $LOG_FILE
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME < "$SQL_FILE"
+psql -q -U $DB_USER -d $DB_NAME < "$SQL_FILE"
 
 # Check how many routes were updated
-update_count=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "
+update_count=$(psql -U $DB_USER -d $DB_NAME -t -c "
     SELECT COUNT(*) FROM guidebook.routes WHERE calculated_duration IS NOT NULL;
 ")
 
 # Check how many routes were rejected due to incoherent data
-rejected_count=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "
+rejected_count=$(psql -U $DB_USER -d $DB_NAME -t -c "
     SELECT COUNT(*) FROM guidebook.routes 
     WHERE calculated_duration IS NULL;
 ")
