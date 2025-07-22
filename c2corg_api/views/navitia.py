@@ -20,7 +20,7 @@ def validate_navitia_params(request, **kwargs):
 @resource(path='/navitia/journeys', cors_policy=cors_policy)
 class NavitiaRest:
 
-    def __init__(self, request):
+    def __init__(self, request, context=None):
         self.request = request
 
     @view(validators=[validate_navitia_params])

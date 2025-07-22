@@ -43,7 +43,7 @@ def validate_waypoint_id(request, *args, **kwargs):
 @resource(path='/waypoints/{waypoint_id}/stopareas', cors_policy=cors_policy)
 class WaypointStopareasByWaypointRest:
 
-    def __init__(self, request):
+    def __init__(self, request, context=None):
         self.request = request
 
     @view(validators=[validate_waypoint_id])
@@ -77,7 +77,7 @@ class WaypointStopareasByWaypointRest:
 @resource(path='/waypoints/{waypoint_id}/isReachable', cors_policy=cors_policy)
 class WaypointStopareasReachableRest:
 
-    def __init__(self, request):
+    def __init__(self, request, context=None):
         self.request = request
 
     @view(validators=[validate_waypoint_id])
