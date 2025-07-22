@@ -41,8 +41,8 @@ RUN set -x \
     git
 
 RUN set -x \
- && make -f config/docker-dev install \
- && make -f config/docker-dev .build/dev-requirements.timestamp \
+ && make -f config/so.dev install \
+ && make -f config/so.dev .build/dev-requirements.timestamp \
  && py3compile -f .build/venv/ \
  && rm -fr .cache \
  && apt-get -y purge \
@@ -53,6 +53,4 @@ RUN set -x \
 ENV version='' \
     PATH=/var/www/.build/venv/bin/:$PATH
 
-RUN pip install dotenv
-
-RUN make -f config/docker-dev template
+RUN make -f config/so.dev template
