@@ -1,5 +1,4 @@
 #!/bin/bash
-# shellcheck disable=SC2001
 
 # Configuration
 SERVICE_NAME="postgresql"
@@ -70,8 +69,8 @@ echo "Total waypoints fetched: $nb_waypoints"
 # Initialize SQL file
 > "$SQL_FILE"
 
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "TRUNCATE TABLE guidebook.waypoints_stopareas RESTART IDENTITY;"
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "TRUNCATE TABLE guidebook.stopareas RESTART IDENTITY;"
+psql -U $DB_USER -d $DB_NAME -t -c "TRUNCATE TABLE guidebook.waypoints_stopareas RESTART IDENTITY;"
+psql -U $DB_USER -d $DB_NAME -t -c "TRUNCATE TABLE guidebook.stopareas RESTART IDENTITY;"
 
 
 
@@ -85,7 +84,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
     WAYPOINT_ID=$(sed "${k}q;d" /tmp/waypoints_ids.txt)
 
     # Get waypoint coordinates from backend
-    lon_lat=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "
+    lon_lat=$(psql -U $DB_USER -d $DB_NAME -t -c "
         SELECT ST_X(ST_Transform(geom, 4326)) || ',' || ST_Y(ST_Transform(geom, 4326)) 
         FROM guidebook.documents_geometries 
         WHERE document_id = $WAYPOINT_ID;
@@ -141,7 +140,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
             distance_km=$(awk "BEGIN {printf \"%.2f\", ($duration * $WALKING_SPEED) / 1000}")
 
             # Check if the stop already exists
-            existing_stop_id=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "SELECT stoparea_id FROM guidebook.stopareas WHERE navitia_id = '$stop_id' LIMIT 1;" | tr -d ' \n\r')
+            existing_stop_id=$(psql -U $DB_USER -d $DB_NAME -t -c "SELECT stoparea_id FROM guidebook.stopareas WHERE navitia_id = '$stop_id' LIMIT 1;" | tr -d ' \n\r')
 
             # For new stop areas
             if [[ -z "$existing_stop_id" ]]; then
@@ -199,6 +198,6 @@ echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 
 # Execute all SQL commands in one go
 echo "Sql file length : $(wc -l < "$SQL_FILE") lines." >> $LOG_FILE
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME < /tmp/sql_commands.sql
+psql -q -U $DB_USER -d $DB_NAME < /tmp/sql_commands.sql
 
 echo "Inserts done." >> $LOG_FILE

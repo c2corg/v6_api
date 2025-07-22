@@ -32,7 +32,7 @@ if [[ -n "$STANDALONE" ]]; then
     cd "$SCRIPTPATH"/.. || exit
 fi
 
-echo "Start time :" >> "$LOG_FILE"
+echo "Start time :" > "$LOG_FILE"
 echo $(date +"%Y-%m-%d-%H-%M-%S") >> "$LOG_FILE"
 
 # --- Pagination logic ---
@@ -171,8 +171,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
                     echo "DO \$\$ 
                     DECLARE stoparea_doc_id integer;
                     BEGIN     
-                        -- Insert stopareas     
-                        # codacy:disable-next-line              
+                        -- Insert stopareas
                         INSERT INTO guidebook.stopareas (navitia_id, stoparea_name, line, operator, geom) 
                         VALUES ('$stop_id', '$(echo "$stop_name" | sed "s/'/''/g")', '$mode $line_name - $(echo "$line_full_name" | sed "s/'/''/g")', '$(echo "$operator_name" | sed "s/'/''/g")', ST_Transform(ST_SetSRID(ST_MakePoint($lon_stop, $lat_stop), 4326), 3857))
                         RETURNING stoparea_id INTO stoparea_doc_id;
@@ -189,7 +188,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
         done
 
         # Cleanup
-        rm /tmp/stop_names.txt /tmp/stop_ids.txt /tmp/lat.txt /tmp/lon.txt
+        rm /tmp/stop_names.txt /tmp/stop_ids.txt /tmp/lat.txt /tmp/lon.txt /tmp/lines.txt /tmp/code.txt /tmp/network.txt /tmp/mode.txt
     fi
 done
 

@@ -20,7 +20,7 @@ validate_stoparea_update = validate_stoparea_create
           cors_policy=cors_policy)
 class StopareaRest:
 
-    def __init__(self, request):
+    def __init__(self, request, context=None):
         self.request = request
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
@@ -61,7 +61,7 @@ class StopareaRest:
 @resource(path='/stopareas/{id}/{lang}/info', cors_policy=cors_policy)
 class StopareaInfoRest:
 
-    def __init__(self, request):
+    def __init__(self, request, context=None):
         self.request = request
 
     @view(validators=[validate_id, validate_lang])
