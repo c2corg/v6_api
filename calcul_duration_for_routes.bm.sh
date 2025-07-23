@@ -2,8 +2,6 @@
 
 # Configuration
 SERVICE_NAME="postgresql"
-DB_USER="postgres"  
-DB_NAME="c2corg"
 
 if [ -f ./.env ]; then
     # Load .env data
@@ -249,15 +247,15 @@ echo "SQL file prepared with update commands." >> $LOG_FILE
 
 # Execute all SQL commands
 echo "Executing SQL commands..." >> $LOG_FILE
-psql -q -U $DB_USER -d $DB_NAME < "$SQL_FILE"
+psql -q < "$SQL_FILE"
 
 # Check how many routes were updated
-update_count=$(psql -U $DB_USER -d $DB_NAME -t -c "
+update_count=$(psql -t -c "
     SELECT COUNT(*) FROM guidebook.routes WHERE calculated_duration IS NOT NULL;
 ")
 
 # Check how many routes were rejected due to incoherent data
-rejected_count=$(psql -U $DB_USER -d $DB_NAME -t -c "
+rejected_count=$(psql -t -c "
     SELECT COUNT(*) FROM guidebook.routes 
     WHERE calculated_duration IS NULL;
 ")
