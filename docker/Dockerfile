@@ -14,6 +14,9 @@ RUN set -x \
 
 RUN set -x \
     && apt-get -y --no-install-recommends install \
+    curl \
+    jq \
+    postgresql-client \
     git \
     libffi7 \
     libgeos-c1v5 \
