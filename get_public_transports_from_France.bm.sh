@@ -1,33 +1,16 @@
 #!/bin/bash
 # shellcheck disable=SC2001
 
-# Configuration
-SERVICE_NAME="postgresql"
-
-if [ -f ./.env ]; then
-    # Load .env data
-    export $(grep -v '^#' ./.env | xargs)
-else
-    echo ".env file not found!"
-    exit 1
-fi
-
 DURATION=$(echo "scale=0; $MAX_DISTANCE_WAYPOINT_TO_STOPAREA / $WALKING_SPEED" | bc)
 
 PROJECT_NAME=${PROJECT_NAME:-""}           
 API_PORT=${API_PORT:-6543} 
-STANDALONE=${PODMAN_ENV:-""}
 
 BASE_API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=14274&limit=100" 
 OUTPUT_FILE="/tmp/waypoints_ids.txt"
 LOG_FILE="log-navitia.txt"
 NAVITIA_REQUEST_COUNT=0
 SQL_FILE="/tmp/sql_commands.sql"
-
-if [[ -n "$STANDALONE" ]]; then
-    SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    cd "$SCRIPTPATH"/.. || exit
-fi
 
 echo "Start time :" > "$LOG_FILE"
 echo $(date +"%Y-%m-%d-%H-%M-%S") >> "$LOG_FILE"
