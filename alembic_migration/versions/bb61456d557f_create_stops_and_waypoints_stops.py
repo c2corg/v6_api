@@ -1,10 +1,17 @@
+"""Create stops and waypoints stops
+
+Revision ID: bb61456d557f
+Revises: b59d3efaf2a1
+Create Date: 2025-01-31 11:47:00.000000
+
+"""
 from alembic import op
 import sqlalchemy as sa
 import geoalchemy2
 
 # revision identifiers, used by Alembic.
 revision = "bb61456d557f"
-down_revision = "889705aa08df"
+down_revision = "b59d3efaf2a1"
 branch_labels = None
 depends_on = None
 
