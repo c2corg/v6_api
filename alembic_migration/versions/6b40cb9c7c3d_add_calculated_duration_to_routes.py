@@ -1,3 +1,10 @@
+"""Add calculated duration to routes
+
+Revision ID: 6b40cb9c7c3d
+Revises: bb61456d557f
+Create Date: 2025-06-13 13:33:00.000000
+
+"""
 from alembic import op
 import sqlalchemy as sa
 
