@@ -112,14 +112,13 @@ jobs:
           images: ghcr.io/c2corg/v6_api
       - name: Checkout repository
         uses: actions/checkout@v4.1.1
-      - run: git archive --format=tar --output project.tar "$GITHUB_SHA"
+      - run: git archive --format=tar --output docker/project.tar "$GITHUB_SHA"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Publish the docker image
         uses: docker/build-push-action@v6
         with:
           context: ./docker
-          file: ./Dockerfile
           provenance: false # true creates issues with the old docker compose used in prod
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.docker_meta.outputs.tags }}
