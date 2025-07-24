@@ -1,7 +1,7 @@
 """Add column public_transportation_rating to route.py
 
 Revision ID: b59d3efaf2a1
-Revises: 626354ffcda0
+Revises: 1d851410e3af
 Create Date: 2024-05-07 16:13:17.458223
 
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'b59d3efaf2a1'
-down_revision = '626354ffcda0'
+down_revision = '1d851410e3af'
 branch_labels = None
 depends_on = None
 
