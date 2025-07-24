@@ -13,9 +13,11 @@ RUN set -x \
     && dpkg-reconfigure locales \
     && /usr/sbin/update-locale LANG=en_US.UTF-8
 
-COPY ./ /var/www/
+COPY project.tar /tmp
 
 WORKDIR /var/www/
+
+RUN tar -xvf /tmp/project.tar && chown -R root:root /var/www
 
 RUN set -x \
     && apt-get -y --no-install-recommends install \
@@ -41,8 +43,7 @@ RUN set -x \
     git
 
 RUN set -x \
- && make -f config/docker-dev install \
- && make -f config/docker-dev .build/dev-requirements.timestamp \
+ && make -f config/dev install \
  && py3compile -f .build/venv/ \
  && rm -fr .cache \
  && apt-get -y purge \
@@ -50,7 +51,13 @@ RUN set -x \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-ENV version='' \
+ARG VERSION
+ENV version=$VERSION \
     PATH=/var/www/.build/venv/bin/:$PATH
 
-RUN make -f config/docker-dev template
+COPY /docker-entrypoint.sh /
+COPY /docker-entrypoint.d/* /docker-entrypoint.d/
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+EXPOSE 8080
+CMD ["gunicorn", "--paste", "production.ini", "-u", "www-data", "-g", "www-data", "-b", ":8080"]
