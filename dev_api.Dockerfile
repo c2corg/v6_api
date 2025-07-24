@@ -38,17 +38,20 @@ RUN set -x \
     libpq-dev \
     virtualenv \
     gcc \
-    git
+    git \
+    curl \
+    jq \
+    postgresql-client
 
 RUN set -x \
- && make -f config/docker-dev install \
- && make -f config/docker-dev .build/dev-requirements.timestamp \
- && py3compile -f .build/venv/ \
- && rm -fr .cache \
- && apt-get -y purge \
- && apt-get -y --purge autoremove \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+    && make -f config/docker-dev install \
+    && make -f config/docker-dev .build/dev-requirements.timestamp \
+    && py3compile -f .build/venv/ \
+    && rm -fr .cache \
+    && apt-get -y purge \
+    && apt-get -y --purge autoremove \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV version='' \
     PATH=/var/www/.build/venv/bin/:$PATH
