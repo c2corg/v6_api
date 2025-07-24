@@ -1,43 +1,30 @@
-from pathlib import Path
+import os
 
 from setuptools import setup, find_packages
 
+here = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(here, 'README.md')) as f:
+    README = f.read()
 
-def remove_comment(item: str) -> str:
-    if "#" in item:
-        item = item[0:item.find("#")]
-    return item
-
-
-def clean_requirements(req_list: list[str]) -> list[str]:
-    result = [remove_comment(item).strip() for item in req_list]
-    return list(filter(lambda item: len(item) > 0, result))
-
-
-readme = Path("README.md").read_text()
-requirements = clean_requirements(Path("requirements.txt").read_text().split("\n"))
-dev_requirements = clean_requirements(Path("dev-requirements.txt").read_text().split("\n"))
-
-setup(name="c2corg_api",
-      version="0.0",
-      description="c2corg_api",
-      long_description=readme,
+setup(name='c2corg_api',
+      version='0.0',
+      description='c2corg_api',
+      long_description=README,
       classifiers=[
-          "Programming Language :: Python",
-          "Framework :: Pyramid",
-          "Topic :: Internet :: WWW/HTTP",
-          "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
-      ],
-      author="",
-      author_email="",
-      url="",
-      keywords="web wsgi bfg pylons pyramid",
+        "Programming Language :: Python",
+        "Framework :: Pyramid",
+        "Topic :: Internet :: WWW/HTTP",
+        "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+        ],
+      author='',
+      author_email='',
+      url='',
+      keywords='web wsgi bfg pylons pyramid',
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
-      test_suite="c2corg_api",
-      install_requires=requirements,
-      extras_require={"dev": dev_requirements},
+      test_suite='c2corg_api',
+      install_requires=[],
       entry_points="""\
       [paste.app_factory]
       main = c2corg_api:main
