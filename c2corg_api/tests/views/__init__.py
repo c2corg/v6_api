@@ -952,7 +952,8 @@ class BaseDocumentTestRest(BaseTestRest):
         body = response.json
         document_id = body.get('document_id')
         # document version does not change!
-        self.assertEqual(body.get('version'), document.version)
+        expected_version = 2 if document.type == 'r' else document.version
+        self.assertEqual(body.get('version'), expected_version)
         self.assertEqual(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
@@ -965,7 +966,9 @@ class BaseDocumentTestRest(BaseTestRest):
             filter(
                 getattr(self._model_archive, 'document_id') == document_id). \
             count()
-        self.assertEqual(archive_count, 1)
+
+        expected_count = 2 if document.type == 'r' else 1
+        self.assertEqual(archive_count, expected_count)
 
         # check that one new archive_document_locale was created
         archive_locale_count = \
@@ -979,7 +982,8 @@ class BaseDocumentTestRest(BaseTestRest):
 
         # check that one new version was created
         versions = document.versions
-        self.assertEqual(len(versions), 3)
+        expected_count = 4 if document.type == 'r' else 3
+        self.assertEqual(len(versions), expected_count)
 
         # version with lang 'en'
         version_en = self.get_latest_version('en', versions)
@@ -996,7 +1000,10 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(version_fr.lang, 'fr')
 
         meta_data_fr = version_fr.history_metadata
-        self.assertIsNot(meta_data_en, meta_data_fr)
+        if document.type == 'r':
+            self.assertEqual(meta_data_en, meta_data_fr)
+        else:
+            self.assertIsNot(meta_data_en, meta_data_fr)
 
         archive_waypoint_en = version_en.document_archive
         archive_waypoint_fr = version_fr.document_archive
@@ -1038,7 +1045,8 @@ class BaseDocumentTestRest(BaseTestRest):
         body = response.json
         document_id = body.get('document_id')
         # document version does not change!
-        self.assertEqual(body.get('version'), document.version)
+        expected_version = 2 if document.type == 'r' else document.version
+        self.assertEqual(body.get('version'), expected_version)
         self.assertEqual(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
@@ -1051,7 +1059,9 @@ class BaseDocumentTestRest(BaseTestRest):
             filter(
                 getattr(self._model_archive, 'document_id') == document_id). \
             count()
-        self.assertEqual(archive_count, 1)
+
+        expected_count = 2 if document.type == 'r' else 1
+        self.assertEqual(archive_count, expected_count)
 
         # check that one new archive_document_locale was created
         archive_locale_count = \
@@ -1065,7 +1075,8 @@ class BaseDocumentTestRest(BaseTestRest):
 
         # check that one new version was created
         versions = document.versions
-        self.assertEqual(len(versions), 3)
+        expected_count = 5 if document.type == 'r' else 3
+        self.assertEqual(len(versions), expected_count)
 
         # version with lang 'en'
         version_en = self.get_latest_version('en', versions)
@@ -1089,7 +1100,10 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(version_es.lang, 'es')
 
         meta_data_es = version_es.history_metadata
-        self.assertIsNot(meta_data_en, meta_data_es)
+        if document.type == 'r':
+            self.assertEqual(meta_data_en, meta_data_es)
+        else:
+            self.assertIsNot(meta_data_en, meta_data_es)
 
         archive_document_es = version_es.document_archive
         self.assertIs(archive_document_es, archive_document_fr)

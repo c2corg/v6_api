@@ -3,11 +3,12 @@ from c2corg_api.models.schema_utils import restrict_schema, \
 from sqlalchemy import (
     Column,
     Integer,
+    Float,
     Boolean,
     SmallInteger,
     String,
     ForeignKey
-    )
+)
 
 from colanderalchemy import SQLAlchemySchemaNode
 import colander
@@ -60,8 +61,11 @@ class _RouteMixin(object):
     # orientations
     orientations = Column(ArrayOfEnum(enums.orientation_type))
 
-    # temps de parcours total
+    # temps de parcours total, renseigné par l'utilisateur
     durations = Column(ArrayOfEnum(enums.route_duration_type))
+
+    # temps de parcours total estimé, calculé
+    calculated_duration = Column(Float, nullable=True)
 
     # crampons et materiel de securite sur glacier
     glacier_gear = Column(
@@ -157,19 +161,51 @@ class _RouteMixin(object):
 
 
 attributes = [
-    'main_waypoint_id', 'activities', 'elevation_min', 'elevation_max',
-    'height_diff_up', 'height_diff_down', 'route_length', 'durations',
-    'difficulties_height', 'height_diff_access', 'height_diff_difficulties',
-    'route_types', 'orientations', 'glacier_gear', 'configuration',
-    'lift_access', 'ski_rating', 'ski_exposition', 'labande_ski_rating',
-    'labande_global_rating', 'global_rating', 'engagement_rating',
-    'risk_rating', 'equipment_rating', 'ice_rating', 'mixed_rating',
-    'exposition_rock_rating', 'rock_free_rating', 'rock_required_rating',
-    'aid_rating', 'via_ferrata_rating', 'hiking_rating',
-    'hiking_mtb_exposition', 'snowshoe_rating', 'mtb_up_rating',
-    'mtb_down_rating', 'mtb_length_asphalt', 'mtb_length_trail',
-    'mtb_height_diff_portages', 'rock_types', 'climbing_outdoor_type',
-    'slackline_type', 'slackline_height', 'public_transportation_rating']
+    'main_waypoint_id',
+    'activities',
+    'elevation_min',
+    'elevation_max',
+    'height_diff_up',
+    'height_diff_down',
+    'route_length',
+    'durations',
+    'calculated_duration',
+    'difficulties_height',
+    'height_diff_access',
+    'height_diff_difficulties',
+    'route_types',
+    'orientations',
+    'glacier_gear',
+    'configuration',
+    'lift_access',
+    'ski_rating',
+    'ski_exposition',
+    'labande_ski_rating',
+    'labande_global_rating',
+    'global_rating',
+    'engagement_rating',
+    'risk_rating',
+    'equipment_rating',
+    'ice_rating',
+    'mixed_rating',
+    'exposition_rock_rating',
+    'rock_free_rating',
+    'rock_required_rating',
+    'aid_rating',
+    'via_ferrata_rating',
+    'hiking_rating',
+    'hiking_mtb_exposition',
+    'snowshoe_rating',
+    'mtb_up_rating',
+    'mtb_down_rating',
+    'mtb_length_asphalt',
+    'mtb_length_trail',
+    'mtb_height_diff_portages',
+    'rock_types',
+    'climbing_outdoor_type',
+    'slackline_type',
+    'slackline_height',
+    'public_transportation_rating']
 
 
 class Route(_RouteMixin, Document):
@@ -260,8 +296,8 @@ class RouteLocale(_RouteLocaleMixin, DocumentLocale):
     __tablename__ = 'routes_locales'
 
     id = Column(
-                Integer,
-                ForeignKey(schema + '.documents_locales.id'), primary_key=True)
+        Integer,
+        ForeignKey(schema + '.documents_locales.id'), primary_key=True)
 
     __mapper_args__ = {
         'polymorphic_identity': ROUTE_TYPE,

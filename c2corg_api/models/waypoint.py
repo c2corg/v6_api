@@ -6,8 +6,9 @@ from sqlalchemy import (
     Integer,
     SmallInteger,
     String,
-    ForeignKey
+    ForeignKey,
     )
+
 
 from colanderalchemy import SQLAlchemySchemaNode
 
@@ -19,6 +20,7 @@ from c2corg_api.models.document import (
     get_geometry_schema_overrides)
 from c2corg_api.models import enums
 from c2corg_api.models.common import document_types
+
 
 WAYPOINT_TYPE = document_types.WAYPOINT_TYPE
 

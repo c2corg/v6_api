@@ -22,6 +22,7 @@ DEFAULT_FIELDS = [
     'route_types',
     'orientations',
     'durations',
+    'calculated_duration',
     'main_waypoint_id',
     'quality'
 ]
@@ -44,7 +45,9 @@ DEFAULT_LISTING = [
     'public_transportation_rating',
     'activities',
     'quality',
-    'orientations'
+    'orientations',
+    'durations',
+    'calculated_duration'
 ]
 DEFAULT_ATTRIBUTES_SETTINGS = {
     'fields': DEFAULT_FIELDS,
