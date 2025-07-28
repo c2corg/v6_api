@@ -1,34 +1,15 @@
 #!/bin/bash
 
-# Configuration
-SERVICE_NAME="postgresql"
-
-if [ -f ./.env ]; then
-    # Load .env data
-    export $(grep -v '^#' ./.env | xargs)
-else
-    echo ".env file not found!"
-    exit 1
-fi
-
-PROJECT_NAME=${PROJECT_NAME:-""}           
-STANDALONE=${PODMAN_ENV:-""}
-
 OUTPUT_FILE="/tmp/routes_ids.txt"
 LOG_FILE="log-duration-update.txt"
 SQL_FILE="/tmp/duration_sql_commands.sql"
-
-if [[ -n "$STANDALONE" ]]; then
-    SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    cd "$SCRIPTPATH"/.. || exit
-fi
 
 echo "Start time :" > $LOG_FILE
 echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 
 # Get routes from bdd (area_id=14274)
 echo "Fetching routes from database for France (area_id=14274)..." >> $LOG_FILE
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "
+psql -t -c "
     SELECT r.document_id 
     FROM guidebook.routes r 
     NATURAL JOIN guidebook.area_associations aa 
@@ -36,6 +17,7 @@ $CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAM
 " | tr -d ' ' | grep -v '^$' > "$OUTPUT_FILE"
 
 route_count=$(wc -l < "$OUTPUT_FILE")
+rm $OUTPUT_FILE
 echo "Found $route_count routes in France" >> $LOG_FILE
 
 # Initialize SQL file
@@ -328,7 +310,7 @@ update_count=$(psql -t -c "
 ")
 
 # Check how many routes were rejected due to incoherent data
-update_count=$(psql -t -c "
+rejected_count=$(psql -t -c "
     SELECT COUNT(*) 
     FROM guidebook.routes r 
     NATURAL JOIN guidebook.area_associations aa 

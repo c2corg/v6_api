@@ -5,16 +5,8 @@ SERVICE_NAME="postgresql"
 DB_USER="postgres"  
 DB_NAME="c2corg"
 
-if [ -f ./.env ]; then
-    # Load .env data
-    export $(grep -v '^#' ./.env | xargs)
-else
-    echo ".env file not found!"
-    exit 1
-fi
-
 PROJECT_NAME=${PROJECT_NAME:-""}           
-CCOMPOSE=${CCOMPOSE:-"docker-compose"}
+CCOMPOSE=${CCOMPOSE:-"podman-compose"}
 STANDALONE=${PODMAN_ENV:-""}
 
 OUTPUT_FILE="/tmp/routes_ids.txt"
@@ -39,6 +31,7 @@ $CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAM
 " | tr -d ' ' | grep -v '^$' > "$OUTPUT_FILE"
 
 route_count=$(wc -l < "$OUTPUT_FILE")
+rm $OUTPUT_FILE
 echo "Found $route_count routes in France" >> $LOG_FILE
 
 # Initialize SQL file
