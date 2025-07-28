@@ -3,7 +3,6 @@
 
 DURATION=$(echo "scale=0; $MAX_DISTANCE_WAYPOINT_TO_STOPAREA / $WALKING_SPEED" | bc)
 
-PROJECT_NAME=${PROJECT_NAME:-""}           
 API_PORT=${API_PORT:-6543} 
 
 BASE_API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=14328&limit=100" 
