@@ -303,7 +303,6 @@ def process_new_waypoint(mapper, connection, geometry):
 @event.listens_for(Route, "after_insert")
 @event.listens_for(Route, "after_update")
 def calculate_route_duration(mapper, connection, route):
-    # pylint: disable=too-complex,too-many-branches,too-many-statements
     """
     Calcule la durée estimée d'un itinéraire
     après son insertion ou sa mise à jour,
