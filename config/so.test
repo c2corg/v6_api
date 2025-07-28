@@ -1,14 +1,13 @@
-#!/bin/sh
+include config/dev
 
-instanceid="github"
-base_url="/${instanceid}"
-db_name="c2corg_tests"
-tests_db_host=postgresql
-tests_db_name="c2corg_tests"
-elasticsearch_port=9200
-elasticsearch_index="c2corg_tests"
-tests_elasticsearch_host=elasticsearch
-tests_elasticsearch_port=9200
-tests_elasticsearch_index="c2corg_tests"
-redis_url="redis://redis:6379/"
-version=0.0.0dev0
+export instanceid = github
+export base_url = /${instanceid}
+export db_name = c2corg_github_tests
+export tests_db_name = c2corg_github_tests
+export tests_db_host = postgresql
+export elasticsearch_port = 9200
+export elasticsearch_index = c2corg_github_tests
+export tests_elasticsearch_host = elasticsearch
+export tests_elasticsearch_port = 9200
+export tests_elasticsearch_index = c2corg_github_tests
+export redis_url = redis://redis:6379/
