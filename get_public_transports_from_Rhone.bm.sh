@@ -3,7 +3,6 @@
 
 DURATION=$(echo "scale=0; $MAX_DISTANCE_WAYPOINT_TO_STOPAREA / $WALKING_SPEED" | bc)
 
-PROJECT_NAME=${PROJECT_NAME:-""}           
 API_PORT=${API_PORT:-6543} 
 
 BASE_API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=14299&limit=100" 
@@ -161,6 +160,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
                         VALUES (stoparea_doc_id, $WAYPOINT_ID, $distance_km);
                     END \$\$;" >> "$SQL_FILE"
                 done
+                rm /tmp/lines.txt /tmp/code.txt /tmp/network.txt /tmp/mode.txt
             else
                 # For existing stop areas
                 echo "INSERT INTO guidebook.waypoints_stopareas (stoparea_id, waypoint_id, distance) VALUES ($existing_stop_id, $WAYPOINT_ID, $distance_km);" >> "$SQL_FILE"
@@ -168,7 +168,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
         done
 
         # Cleanup
-        rm /tmp/stop_names.txt /tmp/stop_ids.txt /tmp/lat.txt /tmp/lon.txt /tmp/lines.txt /tmp/code.txt /tmp/network.txt /tmp/mode.txt
+        rm /tmp/stop_names.txt /tmp/stop_ids.txt /tmp/lat.txt /tmp/lon.txt
     fi
 done
 
