@@ -19,4 +19,5 @@ echo "create user \"www-data\" with password 'www-data'" | psql
 USER=github scripts/create_user_db_test.sh
 make -f config/so.test template
 curl -v http://elasticsearch:9200
+export $(cat .env | grep -v "^#" | xargs)
 pytest --cov-report term --cov-report xml --cov=c2corg_api
