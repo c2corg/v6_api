@@ -108,7 +108,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Docker meta
         id: docker_meta
-        uses: docker/metadata-action@v5.7.0
+        uses: docker/metadata-action@v5.8.0
         with:
           images: ghcr.io/c2corg/v6_api
       - name: Checkout repository
