@@ -41,7 +41,7 @@ jobs:
           - 5432:5432
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v5
       - uses: actions/setup-python@v5
         with:
           python-version: 3.9
@@ -112,7 +112,7 @@ jobs:
         with:
           images: ghcr.io/c2corg/v6_api
       - name: Checkout repository
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v5
       - run: git archive --format=tar --output project.tar "$GITHUB_SHA"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
