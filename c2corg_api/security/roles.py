@@ -50,7 +50,7 @@ def is_valid_token(token):
 
 def add_or_retrieve_token(value, expire, userid):
     token = DBSession.query(Token). \
-        filter(Token.value == value, User.id == userid).first()
+        filter(Token.value == value, Token.userid == userid).first()
     if not token:
         token = Token(value=value, expire=expire, userid=userid)
         DBSession.add(token)
