@@ -1,0 +1,368 @@
+{
+				"_all": {
+					"enabled": false
+				},
+				"properties": {
+					"activities": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"aid_rating": {
+						"type": "integer"
+					},
+					"areas": {
+						"type": "long"
+					},
+					"available_locales": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"climbing_outdoor_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"configuration": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"description_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"description_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"description_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"description_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"description_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"description_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"description_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"difficulties_height": {
+						"type": "integer"
+					},
+					"doc_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"durations": {
+						"type": "integer"
+					},
+					"elevation_max": {
+						"type": "integer"
+					},
+					"elevation_min": {
+						"type": "integer"
+					},
+					"engagement_rating": {
+						"type": "integer"
+					},
+					"equipment_rating": {
+						"type": "integer"
+					},
+					"exposition_rock_rating": {
+						"type": "integer"
+					},
+					"geom": {
+						"type": "geo_point"
+					},
+					"glacier_gear": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"global_rating": {
+						"type": "integer"
+					},
+					"height_diff_access": {
+						"type": "integer"
+					},
+					"height_diff_difficulties": {
+						"type": "integer"
+					},
+					"height_diff_down": {
+						"type": "integer"
+					},
+					"height_diff_up": {
+						"type": "integer"
+					},
+					"hiking_mtb_exposition": {
+						"type": "integer"
+					},
+					"hiking_rating": {
+						"type": "integer"
+					},
+					"ice_rating": {
+						"type": "integer"
+					},
+					"id": {
+						"type": "long"
+					},
+					"labande_global_rating": {
+						"type": "integer"
+					},
+					"labande_ski_rating": {
+						"type": "integer"
+					},
+					"mixed_rating": {
+						"type": "integer"
+					},
+					"mtb_down_rating": {
+						"type": "integer"
+					},
+					"mtb_height_diff_portages": {
+						"type": "integer"
+					},
+					"mtb_length_asphalt": {
+						"type": "integer"
+					},
+					"mtb_length_trail": {
+						"type": "integer"
+					},
+					"mtb_up_rating": {
+						"type": "integer"
+					},
+					"orientations": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"quality": {
+						"type": "integer"
+					},
+					"risk_rating": {
+						"type": "integer"
+					},
+					"rock_free_rating": {
+						"type": "integer"
+					},
+					"rock_required_rating": {
+						"type": "integer"
+					},
+					"rock_types": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"route_length": {
+						"type": "integer"
+					},
+					"route_types": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"ski_exposition": {
+						"type": "integer"
+					},
+					"ski_rating": {
+						"type": "integer"
+					},
+					"slackline_type": {
+						"type": "string",
+						"index": "not_analyzed"
+					},
+					"snowshoe_rating": {
+						"type": "integer"
+					},
+					"summary_ca": {
+						"type": "string",
+						"analyzer": "index_catalan",
+						"search_analyzer": "search_catalan"
+					},
+					"summary_de": {
+						"type": "string",
+						"analyzer": "index_german",
+						"search_analyzer": "search_german"
+					},
+					"summary_en": {
+						"type": "string",
+						"analyzer": "index_english",
+						"search_analyzer": "search_english"
+					},
+					"summary_es": {
+						"type": "string",
+						"analyzer": "index_spanish",
+						"search_analyzer": "search_spanish"
+					},
+					"summary_eu": {
+						"type": "string",
+						"analyzer": "index_basque",
+						"search_analyzer": "search_basque"
+					},
+					"summary_fr": {
+						"type": "string",
+						"analyzer": "index_french",
+						"search_analyzer": "search_french"
+					},
+					"summary_it": {
+						"type": "string",
+						"analyzer": "index_italian",
+						"search_analyzer": "search_italian"
+					},
+					"title_ca": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "catalan_heavy"
+							}
+						}
+					},
+					"title_de": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "german_heavy"
+							}
+						}
+					},
+					"title_en": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "english_heavy"
+							}
+						}
+					},
+					"title_es": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "spanish_heavy"
+							}
+						}
+					},
+					"title_eu": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "basque_heavy"
+							}
+						}
+					},
+					"title_fr": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "french_heavy"
+							}
+						}
+					},
+					"title_it": {
+						"type": "string",
+						"index": "not_analyzed",
+						"fields": {
+							"ngram": {
+								"type": "string",
+								"analyzer": "index_ngram",
+								"search_analyzer": "search_ngram"
+							},
+							"raw": {
+								"type": "string",
+								"analyzer": "index_raw",
+								"search_analyzer": "search_raw"
+							},
+							"contentheavy": {
+								"type": "string",
+								"analyzer": "italian_heavy"
+							}
+						}
+					},
+					"via_ferrata_rating": {
+						"type": "integer"
+					},
+					"waypoints": {
+						"type": "long"
+					}
+				}
+			}
