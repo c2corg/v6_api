@@ -102,9 +102,11 @@ def configure_anonymous(settings, config):
 
 
 @event.listens_for(DocumentGeometry, "after_insert")
+@event.listens_for(DocumentGeometry, "after_update")
 def process_new_waypoint(mapper, connection, geometry):
     """Processes a new waypoint to find its public transports after
     inserting it into documents_geometries."""
+    log.debug("Entering process_new_waypoint callback")
     waypoint_id = geometry.document_id
 
     max_distance_waypoint_to_stoparea = int(
@@ -219,9 +221,25 @@ def process_new_waypoint(mapper, connection, geometry):
 
         # Si l'arrêt apporte au moins un nouveau transport, le sélectionner
         if new_transport_found:
+            place["stop_info"] = stop_info
             selected_stops.append(place)
             known_transports.update(current_stop_transports)
             selected_count += 1
+
+    # Delete existing stopareas for waypoint
+    delete_relation_query = text(
+        """
+        DELETE FROM guidebook.waypoints_stopareas
+        WHERE waypoint_id = :waypoint_id
+    """
+    )
+
+    connection.execute(
+        delete_relation_query,
+        {
+            "waypoint_id": waypoint_id,
+        },
+    )
 
     log.warning(f"Selected {selected_count} stops out of {len(places_data['places_nearby'])} for waypoint {waypoint_id}")  # noqa: E501
 
@@ -272,15 +290,7 @@ def process_new_waypoint(mapper, connection, geometry):
         ).scalar()
 
         if not existing_stop_id:
-            # Get stop informations (déjà récupérées plus haut pour le filtrage)  # noqa: E501
-            stop_info_url = f"https://api.navitia.io/v1/places/{stop_id}"
-            stop_info_response = requests.get(
-                stop_info_url, headers=navitia_headers
-            )
-            stop_info = stop_info_response.json()
-
-            if "places" not in stop_info or not stop_info["places"]:
-                continue
+            stop_info = place["stop_info"]
 
             # Traiter chaque ligne comme dans le bash
             for line in stop_info["places"][0]["stop_area"].get("lines", []):
