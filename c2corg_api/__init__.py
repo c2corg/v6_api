@@ -8,7 +8,6 @@ from pyramid.config import Configurator
 from sqlalchemy import engine_from_config, exc, event
 from sqlalchemy.pool import Pool
 from sqlalchemy import text
-from dotenv import load_dotenv
 
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route
@@ -19,7 +18,6 @@ from c2corg_api.search import configure_es_from_config, get_queue_config
 from pyramid.settings import asbool
 
 log = logging.getLogger(__name__)
-load_dotenv()
 
 
 class RootFactory(ACLDefault):
@@ -104,18 +102,23 @@ def configure_anonymous(settings, config):
 
 
 @event.listens_for(DocumentGeometry, "after_insert")
+@event.listens_for(DocumentGeometry, "after_update")
 def process_new_waypoint(mapper, connection, geometry):
     """Processes a new waypoint to find its public transports after
     inserting it into documents_geometries."""
+    log.debug("Entering process_new_waypoint callback")
     waypoint_id = geometry.document_id
 
     max_distance_waypoint_to_stoparea = int(
-        os.environ.get("MAX_DISTANCE_WAYPOINT_TO_STOPAREA")
+        os.getenv("MAX_DISTANCE_WAYPOINT_TO_STOPAREA")
     )
-    walking_speed = float(os.environ.get("WALKING_SPEED"))
-    max_stop_area = int(os.environ.get("MAX_STOP_AREA_FOR_1_WAYPOINT"))
-    api_key = os.environ.get("NAVITIA_API_KEY")
+    walking_speed = float(os.getenv("WALKING_SPEED"))
+    max_stop_area_for_1_waypoint = int(os.getenv("MAX_STOP_AREA_FOR_1_WAYPOINT"))  # noqa: E501
+    api_key = os.getenv("NAVITIA_API_KEY")
     max_duration = int(max_distance_waypoint_to_stoparea / walking_speed)
+
+    # Augmenter le nombre d'arrêts récupérés pour avoir plus de choix (comme dans le bash)  # noqa: E501
+    max_stop_area_fetched = max_stop_area_for_1_waypoint * 3
 
     # Check if document is a waypoint
     document_type = connection.execute(
@@ -164,11 +167,11 @@ def process_new_waypoint(mapper, connection, geometry):
 
     lon, lat = lon_lat.strip().split(",")
 
-    # Navitia request
+    # Navitia request - récupérer plus d'arrêts pour filtrage
     places_url = f"https://api.navitia.io/v1/coord/{lon};{lat}/places_nearby"
     places_params = {
         "type[]": "stop_area",
-        "count": max_stop_area,
+        "count": max_stop_area_fetched,  # Plus d'arrêts récupérés
         "distance": max_distance_waypoint_to_stoparea,
     }
     navitia_headers = {"Authorization": api_key}
@@ -182,22 +185,77 @@ def process_new_waypoint(mapper, connection, geometry):
         log.warning(f"No Navitia stops found for the waypoint {waypoint_id}")
         return
 
-    # For each result
+    # --- NOUVEAU : Filtrage par diversité de transport (comme dans bash) ---
+    selected_stops = []
+    known_transports = set()
+    selected_count = 0
+
+    # Traiter les arrêts dans l'ordre (déjà triés par distance par Navitia)
     for place in places_data["places_nearby"]:
         if place.get("embedded_type") != "stop_area":
             continue
 
+        if selected_count >= max_stop_area_for_1_waypoint:
+            break
+
+        stop_id = place["id"]
+
+        # Récupérer les informations de l'arrêt pour connaître ses transports
+        stop_info_url = f"https://api.navitia.io/v1/places/{stop_id}"
+        stop_info_response = requests.get(stop_info_url, headers=navitia_headers)  # noqa: E501
+        stop_info = stop_info_response.json()
+
+        if "places" not in stop_info or not stop_info["places"]:
+            continue
+
+        # Extraire les transports de cet arrêt
+        current_stop_transports = set()
+        for line in stop_info["places"][0]["stop_area"].get("lines", []):
+            mode = line.get("commercial_mode", {}).get("name", "")
+            code = line.get("code", "")
+            transport_key = f"{mode} {code}"
+            current_stop_transports.add(transport_key)
+
+        # Vérifier si cet arrêt apporte de nouveaux transports
+        new_transport_found = bool(current_stop_transports - known_transports)
+
+        # Si l'arrêt apporte au moins un nouveau transport, le sélectionner
+        if new_transport_found:
+            place["stop_info"] = stop_info
+            selected_stops.append(place)
+            known_transports.update(current_stop_transports)
+            selected_count += 1
+
+    # Delete existing stopareas for waypoint
+    delete_relation_query = text(
+        """
+        DELETE FROM guidebook.waypoints_stopareas
+        WHERE waypoint_id = :waypoint_id
+    """
+    )
+
+    connection.execute(
+        delete_relation_query,
+        {
+            "waypoint_id": waypoint_id,
+        },
+    )
+
+    log.warning(f"Selected {selected_count} stops out of {len(places_data['places_nearby'])} for waypoint {waypoint_id}")  # noqa: E501
+
+    # Traiter uniquement les arrêts sélectionnés
+    for place in selected_stops:
         stop_id = place["id"]
         stop_name = place["name"]
         lat_stop = place["stop_area"]["coord"]["lat"]
         lon_stop = place["stop_area"]["coord"]["lon"]
 
-        # Get the travel time by walking
+        # Get the travel time by walking - utiliser les mêmes paramètres que le bash  # noqa: E501
         journey_url = "https://api.navitia.io/v1/journeys"
         journey_params = {
             "to": f"{lon};{lat}",
             "walking_speed": walking_speed,
-            "max_walking_duration_to_pt": max_duration,
+            "max_walking_direct_path_duration": max_duration,  # Paramètre corrigé  # noqa: E501
             "direct_path_mode[]": "walking",
             "from": stop_id,
             "direct_path": "only_with_alternatives",
@@ -218,7 +276,7 @@ def process_new_waypoint(mapper, connection, geometry):
         duration = journey_data["journeys"][0].get("duration", 0)
 
         # Convert to distance
-        distance_km = (duration * walking_speed) / 1000
+        distance_km = round((duration * walking_speed) / 1000, 2)  # Arrondi à 2 décimales comme bash  # noqa: E501
 
         # Check if stop already exists
         existing_stop_query = text(
@@ -232,16 +290,9 @@ def process_new_waypoint(mapper, connection, geometry):
         ).scalar()
 
         if not existing_stop_id:
-            # Get stop informations
-            stop_info_url = f"https://api.navitia.io/v1/places/{stop_id}"
-            stop_info_response = requests.get(
-                stop_info_url, headers=navitia_headers
-            )
-            stop_info = stop_info_response.json()
+            stop_info = place["stop_info"]
 
-            if "places" not in stop_info or not stop_info["places"]:
-                continue
-
+            # Traiter chaque ligne comme dans le bash
             for line in stop_info["places"][0]["stop_area"].get("lines", []):
                 line_full_name = line.get("name", "")
                 line_name = line.get("code", "")
@@ -253,14 +304,16 @@ def process_new_waypoint(mapper, connection, geometry):
                     """
                     WITH new_stoparea AS (
                         INSERT INTO guidebook.stopareas
-                        (navitia_id, stoparea_name, line, operator, geom) VALUES (:stop_id, :stop_name, :line, :operator, ST_Transform(ST_SetSRID(ST_MakePoint(:lon_stop, :lat_stop), 4326), 3857))
+                        (navitia_id, stoparea_name, line, operator, geom) 
+                        VALUES (:stop_id, :stop_name, :line, :operator, 
+                                ST_Transform(ST_SetSRID(ST_MakePoint(:lon_stop, :lat_stop), 4326), 3857))
                         RETURNING stoparea_id
                     )
                     INSERT INTO guidebook.waypoints_stopareas
                     (stoparea_id, waypoint_id, distance)
                     SELECT stoparea_id, :waypoint_id, :distance_km
                     FROM new_stoparea
-                """  # noqa: E501
+                """  # noqa: E501, W291
                 )
 
                 connection.execute(
@@ -316,14 +369,7 @@ def calculate_route_duration(mapper, connection, route):
     activities = route.activities if route.activities is not None else []
     height_diff_up, height_diff_down = _normalize_height_differences(route)
 
-    # Vérification du cas spécial pour la grimpe avec seulement
-    # difficulties_height
-    if _should_calculate_with_difficulties_only(route, activities):
-        calculated_duration = _calculate_duration_from_difficulties_only(route, route_id)  # noqa: E501
-        _update_route_duration(connection, route_id, calculated_duration)
-        return
-
-    # Calcul standard pour toutes les activités
+    # Calcul pour toutes les activités et prendre le minimum
     min_duration = _calculate_min_duration_for_activities(
         route, activities, height_diff_up, height_diff_down, route_id
     )
@@ -338,10 +384,11 @@ def _normalize_height_differences(route):
     height_diff_up = route.height_diff_up
     height_diff_down = route.height_diff_down
 
-    if height_diff_up is None and height_diff_down is not None:
-        height_diff_up = height_diff_down
-    elif height_diff_down is None and height_diff_up is not None:
+    # Règle: si dénivelé négatif absent, égaler au positif
+    if height_diff_down is None and height_diff_up is not None:
         height_diff_down = height_diff_up
+    elif height_diff_up is None and height_diff_down is not None:
+        height_diff_up = height_diff_down
 
     return height_diff_up, height_diff_down
 
@@ -359,55 +406,16 @@ def _get_climbing_activities():
     ]
 
 
-def _should_calculate_with_difficulties_only(route, activities):
-    """Vérifie s'il faut calculer uniquement avec
-    height_diff_difficulties."""
-    climbing_activities = _get_climbing_activities()
-    is_climbing = any(activity in climbing_activities for activity in activities)  # noqa: E501
-
-    return (
-        is_climbing
-        and getattr(route, "height_diff_difficulties", None) is not None
-        and (route.route_length is None or route.height_diff_up is None)
-        and route.height_diff_difficulties > 0
-    )
-
-
-def _calculate_duration_from_difficulties_only(route, route_id):
-    """Calcule la durée uniquement basée sur height_diff_difficulties."""
-    v_diff = 50.0  # Vitesse ascensionnelle pour les difficultés (m/h)
-    dm = float(route.height_diff_difficulties) / v_diff
-
-    min_duration_hours = 0.5
-    max_duration_hours = 18.0
-
-    if dm < min_duration_hours or dm > max_duration_hours:
-        log.warn(
-            f"Route {route_id}: Calculated duration ({dm:.2f} hours) is out of bounds - setting to NULL"  # noqa: E501
-        )
-        return None
-
-    calculated_duration_in_days = dm / 24.0
-    log.warn(
-        f"Route {route_id}: Database updated with calculated_duration = {calculated_duration_in_days} days (based on difficulties_height only)."  # noqa: E501
-    )
-    return calculated_duration_in_days
-
-
 def _calculate_min_duration_for_activities(route, activities, height_diff_up, height_diff_down, route_id):  # noqa: E501
     """Calcule la durée minimale parmi toutes les activités."""
-    h = float(route.route_length if route.route_length is not None else 0) / 1000  # km  # noqa: E501
-    dp = float(height_diff_up if height_diff_up is not None else 0)  # m
-    dn = float(height_diff_down if height_diff_down is not None else 0)  # m
-
     min_duration = None
     climbing_activities = _get_climbing_activities()
 
     for activity in activities:
         if activity in climbing_activities:
-            dm = _calculate_climbing_duration(route, h, dp, dn, route_id, activity)  # noqa: E501
+            dm = _calculate_climbing_duration(route, height_diff_up, height_diff_down, route_id, activity)  # noqa: E501
         else:
-            dm = _calculate_standard_duration(activity, h, dp, dn, route_id)
+            dm = _calculate_standard_duration(activity, route, height_diff_up, height_diff_down, route_id)  # noqa: E501
 
         if dm is not None and (min_duration is None or dm < min_duration):
             min_duration = dm
@@ -415,52 +423,70 @@ def _calculate_min_duration_for_activities(route, activities, height_diff_up, he
     return min_duration
 
 
-def _calculate_climbing_duration(route, h, dp, dn, route_id, activity):
-    """Calcule la durée pour les activités de grimpe."""
+def _calculate_climbing_duration(route, height_diff_up, height_diff_down, route_id, activity):  # noqa: E501
+    """Calcule la durée pour les activités de grimpe selon la logique du bash."""  # noqa: E501
     v_diff = 50.0  # Vitesse ascensionnelle pour les difficultés (m/h)
-    diff_height = getattr(route, "height_diff_difficulties", None)
 
-    if diff_height is not None and diff_height > 0:
-        d_diff = float(diff_height)
+    h = float(route.route_length if route.route_length is not None else 0) / 1000  # km  # noqa: E501
+    dp = float(height_diff_up if height_diff_up is not None else 0)  # m
+    dn = float(height_diff_down if height_diff_down is not None else 0)  # m
 
-        # Vérification de cohérence
-        if dp > 0 and d_diff > dp:
-            log.warn(
-                f"Route {route_id}: Inconsistent difficulties_height ({d_diff}m) > height_diff_up ({dp}m). Skipping for this activity."  # noqa: E501
-            )
-            return None
+    difficulties_height = getattr(route, "height_diff_difficulties", None)
 
-        # Calcul des temps
-        d_app = max(dp - d_diff, 0)
-        t_diff = d_diff / v_diff
-        t_app = _calculate_approach_time(h, d_app, dn) if d_app > 0 else 0
+    # CAS 1: Le dénivelé des difficultés n'est pas renseigné
+    if difficulties_height is None or difficulties_height <= 0:
+        # On considère que tout l'itinéraire est grimpant et sans approche
+        if dp <= 0:
+            return None  # Pas de données utilisables pour le calcul
 
-        # Temps total selon la formule spéciale
-        dm = max(t_diff, t_app) + 0.5 * min(t_diff, t_app)
-    else:
-        # Si dénivelé des difficultés non disponible, utiliser le
-        # dénivelé total
         dm = dp / v_diff
+        log.warn(f"Calculated climbing route duration for route {route_id} (activity {activity}, no difficulties_height): {dm:.2f} hours")  # noqa: E501
+        return dm
 
-    log.warn(
-        f"Calculated climbing route duration for route {route_id} (activity {activity}): {dm:.2f} hours"  # noqa: E501
-    )
+    # CAS 2: Le dénivelé des difficultés est renseigné
+    d_diff = float(difficulties_height)
+
+    # Vérification de cohérence
+    if dp > 0 and d_diff > dp:
+        log.warn(f"Route {route_id}: Inconsistent difficulties_height ({d_diff}m) > height_diff_up ({dp}m). Returning NULL.")  # noqa: E501
+        return None
+
+    # Calcul du temps des difficultés
+    t_diff = d_diff / v_diff
+
+    # Calcul du dénivelé de l'approche
+    d_app = max(dp - d_diff, 0)
+
+    # Calcul du temps d'approche
+    if d_app > 0:
+        t_app = _calculate_approach_time(h, d_app, dn)
+    else:
+        t_app = 0
+
+    # Calcul final selon le cadrage: max(t_diff, t_app) + 0.5 * min(t_diff, t_app)  # noqa: E501
+    dm = max(t_diff, t_app) + 0.5 * min(t_diff, t_app)
+
+    log.warn(f"Calculated climbing route duration for route {route_id} (activity {activity}): {dm:.2f} hours (t_diff={t_diff:.2f}, t_app={t_app:.2f})")  # noqa: E501
     return dm
 
 
 def _calculate_approach_time(h, d_app, dn):
-    """Calcule le temps d'approche pour la grimpe."""
-    v = 5.0   # km/h (vitesse horizontale)
+    """Calcule le temps d'approche pour la grimpe selon la formule DIN 33466."""  # noqa: E501
+    # Paramètres pour l'approche (randonnée)
+    v = 5.0    # km/h (vitesse horizontale)
     a = 300.0  # m/h (montée)
     d = 500.0  # m/h (descente)
 
-    dh = h / v
-    dv = (d_app / a) + (dn / d)
+    dh_app = h / v                    # Composante horizontale de l'approche
+    dv_app = (d_app / a) + (dn / d)   # Composante verticale de l'approche (montée + descente)  # noqa: E501
 
-    if dh < dv:
-        return dv + (dh / 2)
+    # Appliquer la formule DIN 33466 pour le temps d'approche
+    if dh_app < dv_app:
+        t_app = dv_app + (dh_app / 2)
     else:
-        return (dv / 2) + dh
+        t_app = (dv_app / 2) + dh_app
+
+    return t_app
 
 
 def _get_activity_parameters(activity):
@@ -474,22 +500,24 @@ def _get_activity_parameters(activity):
     return parameters.get(activity, (5.0, 300.0, 500.0))  # Valeurs par défaut
 
 
-def _calculate_standard_duration(activity, h, dp, dn, route_id):
-    """Calcule la durée pour les activités standard (non grimpantes)."""
+def _calculate_standard_duration(activity, route, height_diff_up, height_diff_down, route_id):  # noqa: E501
+    """Calcule la durée pour les activités standard (non grimpantes) selon DIN 33466."""  # noqa: E501
     v, a, d = _get_activity_parameters(activity)
+
+    h = float(route.route_length if route.route_length is not None else 0) / 1000  # km  # noqa: E501
+    dp = float(height_diff_up if height_diff_up is not None else 0)  # m
+    dn = float(height_diff_down if height_diff_down is not None else 0)  # m
 
     dh = h / v  # durée basée sur la distance horizontale
     dv = (dp / a) + (dn / d)  # durée basée sur les dénivelés
 
-    # Calcul de la durée finale en heures
+    # Calcul de la durée finale en heures selon DIN 33466
     if dh < dv:
         dm = dv + (dh / 2)
     else:
         dm = (dv / 2) + dh
 
-    log.warn(
-        f"Calculated standard route duration for route {route_id} (activity {activity}): {dm:.2f} hours"  # noqa: E501
-    )
+    log.warn(f"Calculated standard route duration for route {route_id} (activity {activity}): {dm:.2f} hours")  # noqa: E501
     return dm
 
 
@@ -504,7 +532,7 @@ def _validate_and_convert_duration(min_duration, route_id):
         or min_duration > max_duration_hours
     ):
         log.warn(
-            f"Route {route_id}: Calculated duration ({min_duration:.2f} hours) is out of bounds (min={min_duration_hours}h, max={max_duration_hours}h) or NULL. Setting duration to NULL."  # noqa: E501
+            f"Route {route_id}: Calculated duration ({min_duration:.2f} hours if not None) is out of bounds (min={min_duration_hours}h, max={max_duration_hours}h) or NULL. Setting duration to NULL."  # noqa: E501
         )
         return None
 
