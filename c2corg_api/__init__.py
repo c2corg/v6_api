@@ -100,6 +100,7 @@ def configure_anonymous(settings, config):
         account_id = int(settings.get("guidebook.anonymous_user_account"))
     config.registry.anonymous_user_id = account_id
 
+
 def delete_waypoint_stopareas(connection, waypoint_id):
     # Delete existing stopareas for waypoint
     delete_relation_query = text(
@@ -115,6 +116,7 @@ def delete_waypoint_stopareas(connection, waypoint_id):
             "waypoint_id": waypoint_id,
         },
     )
+
 
 @event.listens_for(DocumentGeometry, "after_insert")
 @event.listens_for(DocumentGeometry, "after_update")
@@ -197,7 +199,7 @@ def process_new_waypoint(mapper, connection, geometry):
     places_data = places_response.json()
 
     if "places_nearby" not in places_data or not places_data["places_nearby"]:
-        log.warning(f"No Navitia stops found for the waypoint {waypoint_id}; deleting previously registered stops")
+        log.warning(f"No Navitia stops found for the waypoint {waypoint_id}; deleting previously registered stops")  # noqa: E501
         delete_waypoint_stopareas(connection, waypoint_id)
         return
 
@@ -244,7 +246,7 @@ def process_new_waypoint(mapper, connection, geometry):
 
     log.warning(f"Selected {selected_count} stops out of {len(places_data['places_nearby'])} for waypoint {waypoint_id}")  # noqa: E501
 
-    log.warning(f"Deleting previously registered stops")
+    log.warning("Deleting previously registered stops")
     delete_waypoint_stopareas(connection, waypoint_id)
 
     # Traiter uniquement les arrêts sélectionnés
@@ -535,9 +537,9 @@ def _validate_and_convert_duration(min_duration, route_id):
         or min_duration < min_duration_hours
         or min_duration > max_duration_hours
     ):
-        min_duration_str = "None" if min_duration is None else "{min_duration:.2f}"
+        min_duration_str = "None" if min_duration is None else f"{min_duration:.2f}"  # noqa: E501
         log.warning(
-            f"Route {route_id}: Calculated duration (min_duration={min_duration}) is out of bounds (min={min_duration_hours}h, max={max_duration_hours}h) or NULL. Setting duration to NULL."  # noqa: E501
+            f"Route {route_id}: Calculated duration (min_duration={min_duration_str}) is out of bounds (min={min_duration_hours}h, max={max_duration_hours}h) or NULL. Setting duration to NULL."  # noqa: E501
         )
         return None
 
