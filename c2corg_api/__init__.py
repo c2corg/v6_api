@@ -100,6 +100,21 @@ def configure_anonymous(settings, config):
         account_id = int(settings.get("guidebook.anonymous_user_account"))
     config.registry.anonymous_user_id = account_id
 
+def delete_waypoint_stopareas(connection, waypoint_id):
+    # Delete existing stopareas for waypoint
+    delete_relation_query = text(
+        """
+        DELETE FROM guidebook.waypoints_stopareas
+        WHERE waypoint_id = :waypoint_id
+    """
+    )
+
+    connection.execute(
+        delete_relation_query,
+        {
+            "waypoint_id": waypoint_id,
+        },
+    )
 
 @event.listens_for(DocumentGeometry, "after_insert")
 @event.listens_for(DocumentGeometry, "after_update")
@@ -182,7 +197,8 @@ def process_new_waypoint(mapper, connection, geometry):
     places_data = places_response.json()
 
     if "places_nearby" not in places_data or not places_data["places_nearby"]:
-        log.warning(f"No Navitia stops found for the waypoint {waypoint_id}")
+        log.warning(f"No Navitia stops found for the waypoint {waypoint_id}; deleting previously registered stops")
+        delete_waypoint_stopareas(connection, waypoint_id)
         return
 
     # --- NOUVEAU : Filtrage par diversité de transport (comme dans bash) ---
@@ -226,22 +242,10 @@ def process_new_waypoint(mapper, connection, geometry):
             known_transports.update(current_stop_transports)
             selected_count += 1
 
-    # Delete existing stopareas for waypoint
-    delete_relation_query = text(
-        """
-        DELETE FROM guidebook.waypoints_stopareas
-        WHERE waypoint_id = :waypoint_id
-    """
-    )
-
-    connection.execute(
-        delete_relation_query,
-        {
-            "waypoint_id": waypoint_id,
-        },
-    )
-
     log.warning(f"Selected {selected_count} stops out of {len(places_data['places_nearby'])} for waypoint {waypoint_id}")  # noqa: E501
+
+    log.warning(f"Deleting previously registered stops")
+    delete_waypoint_stopareas(connection, waypoint_id)
 
     # Traiter uniquement les arrêts sélectionnés
     for place in selected_stops:
