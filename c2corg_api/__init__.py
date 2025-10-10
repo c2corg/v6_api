@@ -535,8 +535,9 @@ def _validate_and_convert_duration(min_duration, route_id):
         or min_duration < min_duration_hours
         or min_duration > max_duration_hours
     ):
-        log.warn(
-            f"Route {route_id}: Calculated duration ({min_duration:.2f} hours if not None) is out of bounds (min={min_duration_hours}h, max={max_duration_hours}h) or NULL. Setting duration to NULL."  # noqa: E501
+        min_duration_str = "None" if min_duration is None else "{min_duration:.2f}"
+        log.warning(
+            f"Route {route_id}: Calculated duration (min_duration={min_duration}) is out of bounds (min={min_duration_hours}h, max={max_duration_hours}h) or NULL. Setting duration to NULL."  # noqa: E501
         )
         return None
 
