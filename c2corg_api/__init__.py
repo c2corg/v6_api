@@ -363,7 +363,7 @@ def calculate_route_duration(mapper, connection, route):
     jour du script bash.
     """
     route_id = route.document_id
-    log.warn(f"Calculating duration for route ID: {route_id}")
+    log.warning(f"Calculating duration for route ID: {route_id}")
 
     # Récupération des activités et normalisation des dénivelés
     activities = route.activities if route.activities is not None else []
@@ -440,7 +440,7 @@ def _calculate_climbing_duration(route, height_diff_up, height_diff_down, route_
             return None  # Pas de données utilisables pour le calcul
 
         dm = dp / v_diff
-        log.warn(f"Calculated climbing route duration for route {route_id} (activity {activity}, no difficulties_height): {dm:.2f} hours")  # noqa: E501
+        log.warning(f"Calculated climbing route duration for route {route_id} (activity {activity}, no difficulties_height): {dm:.2f} hours")  # noqa: E501
         return dm
 
     # CAS 2: Le dénivelé des difficultés est renseigné
@@ -448,7 +448,7 @@ def _calculate_climbing_duration(route, height_diff_up, height_diff_down, route_
 
     # Vérification de cohérence
     if dp > 0 and d_diff > dp:
-        log.warn(f"Route {route_id}: Inconsistent difficulties_height ({d_diff}m) > height_diff_up ({dp}m). Returning NULL.")  # noqa: E501
+        log.warning(f"Route {route_id}: Inconsistent difficulties_height ({d_diff}m) > height_diff_up ({dp}m). Returning NULL.")  # noqa: E501
         return None
 
     # Calcul du temps des difficultés
@@ -466,7 +466,7 @@ def _calculate_climbing_duration(route, height_diff_up, height_diff_down, route_
     # Calcul final selon le cadrage: max(t_diff, t_app) + 0.5 * min(t_diff, t_app)  # noqa: E501
     dm = max(t_diff, t_app) + 0.5 * min(t_diff, t_app)
 
-    log.warn(f"Calculated climbing route duration for route {route_id} (activity {activity}): {dm:.2f} hours (t_diff={t_diff:.2f}, t_app={t_app:.2f})")  # noqa: E501
+    log.warning(f"Calculated climbing route duration for route {route_id} (activity {activity}): {dm:.2f} hours (t_diff={t_diff:.2f}, t_app={t_app:.2f})")  # noqa: E501
     return dm
 
 
@@ -517,7 +517,7 @@ def _calculate_standard_duration(activity, route, height_diff_up, height_diff_do
     else:
         dm = (dv / 2) + dh
 
-    log.warn(f"Calculated standard route duration for route {route_id} (activity {activity}): {dm:.2f} hours")  # noqa: E501
+    log.warning(f"Calculated standard route duration for route {route_id} (activity {activity}): {dm:.2f} hours")  # noqa: E501
     return dm
 
 
@@ -551,6 +551,6 @@ def _update_route_duration(connection, route_id, calculated_duration_in_days):
         ),
         {"duration": calculated_duration_in_days, "route_id": route_id},
     )
-    log.warn(
+    log.warning(
         f"Route {route_id}: Database updated with calculated_duration = {calculated_duration_in_days} days."  # noqa: E501
     )
