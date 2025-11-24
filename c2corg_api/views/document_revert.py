@@ -1,5 +1,6 @@
 import logging
 
+from c2corg_api.models.coverage import COVERAGE_TYPE, ArchiveCoverage, Coverage
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api import DBSession
 from c2corg_api.models.area import AREA_TYPE, Area, ArchiveArea

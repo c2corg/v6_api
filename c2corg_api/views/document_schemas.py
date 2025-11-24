@@ -2,6 +2,7 @@ from c2corg_api.models.area import AREA_TYPE, Area, schema_listing_area
 from c2corg_api.models.article import ARTICLE_TYPE, Article, \
     schema_listing_article
 from c2corg_api.models.book import BOOK_TYPE, Book, schema_listing_book
+from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage, schema_listing_coverage
 from c2corg_api.models.image import IMAGE_TYPE, Image, schema_listing_image
 from c2corg_api.models.outing import OUTING_TYPE, Outing, schema_outing
 from c2corg_api.models.xreport import XREPORT_TYPE, Xreport, \
@@ -27,6 +28,7 @@ from c2corg_api.models.common.fields_book import fields_book
 from c2corg_api.models.common.fields_image import fields_image
 from c2corg_api.models.common.fields_topo_map import fields_topo_map
 from c2corg_api.models.common.fields_user_profile import fields_user_profile
+from c2corg_api.models.common.fields_coverage import fields_coverage
 from functools import lru_cache
 
 
@@ -253,6 +255,10 @@ waypoint_documents_config = GetDocumentsConfig(
     WAYPOINT_TYPE, Waypoint, schema_waypoint, clazz_locale=WaypointLocale,
     fields=fields_waypoint, adapt_schema=waypoint_listing_schema_adaptor)
 
+# coverages
+coverage_documents_config = GetDocumentsConfig(
+    COVERAGE_TYPE, Coverage, schema_listing_coverage,
+    listing_fields=fields_coverage['listing'])
 
 document_configs = {
     WAYPOINT_TYPE: waypoint_documents_config,
@@ -264,5 +270,6 @@ document_configs = {
     XREPORT_TYPE: xreport_documents_config,
     MAP_TYPE: topo_map_documents_config,
     ARTICLE_TYPE: article_documents_config,
-    USERPROFILE_TYPE: user_profile_documents_config
+    USERPROFILE_TYPE: user_profile_documents_config,
+    COVERAGE_TYPE: coverage_documents_config
 }
