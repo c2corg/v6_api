@@ -34,6 +34,33 @@ from c2corg_api.models.common.attributes import activities, \
 from sqlalchemy.orm import load_only
 from sqlalchemy.sql.expression import text, or_, column, union
 
+from operator import and_, or_
+from c2corg_api.models.area import Area
+from c2corg_api.models.area_association import AreaAssociation
+from c2corg_api.models.association import Association
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
+from c2corg_api.models.utils import ArrayOfEnum
+from c2corg_api.search.search_filters import build_query
+from c2corg_api.views.validation import validate_pagination, validate_preferred_lang_param
+from c2corg_api.views import cors_policy, to_json_dict
+from c2corg_api.views.document import (
+    LIMIT_DEFAULT, DocumentRest)
+from c2corg_api.models.waypoint_stoparea import (
+    WaypointStoparea)
+from c2corg_api.models import DBSession
+from c2corg_api.models.route import ROUTE_TYPE, Route
+from c2corg_api.models.waypoint import Waypoint
+from c2corg_api.models.area import schema_listing_area
+from c2corg_api.models.route import schema_route
+from shapely.geometry import Polygon
+from geoalchemy2.shape import from_shape
+from sqlalchemy import func, literal_column
+from geoalchemy2.functions import ST_Intersects, ST_Transform
+from cornice.resource import resource, view
+from c2corg_api.models.common.sortable_search_attributes import sortable_search_attr_by_field
+from sqlalchemy import nullslast
+
+
 validate_route_create = make_validator_create(
     fields_route, 'activities', activities)
 validate_route_update = make_validator_update(
@@ -200,6 +227,71 @@ class RoutePublicTransportationRatingRest(ACLDefault):
         waypoint_extrapolation = self.request.params.get(
             'waypoint_extrapolation') or True
         update_all_pt_rating(waypoint_extrapolation)
+
+
+@resource(path='/reachableroutes', cors_policy=cors_policy)
+class ReachableRouteRest(DocumentRest):
+
+    def __init__(self, request, context=None):
+        self.request = request
+
+    @view(validators=[validate_pagination, validate_preferred_lang_param])
+    def get(self):
+        """Returns a list of object {documents: Route[], total: Integer} ->
+        documents: routes reachable within offset and limit
+        total: number of documents returned by query without offset and limit"""
+
+        validated = self.request.validated
+
+        meta_params = {
+            'offset': validated.get('offset', 0),
+            'limit': validated.get('limit', LIMIT_DEFAULT),
+            'lang': validated.get('lang')
+        }
+
+        query = build_reachable_route_query(self.request.GET, meta_params)
+
+        count = query.count()
+
+        results = (
+            query
+            .limit(meta_params['limit'])
+            .offset(meta_params['offset'])
+            .all()
+        )
+
+        areas_id = set()
+        for route, areas in results:
+            if areas is None:
+                continue
+            for area in areas:
+                area_id = area.get("document_id")
+                if area_id is not None:
+                    areas_id.add(area_id)
+
+        areas_objects = DBSession.query(Area).filter(
+            Area.document_id.in_(areas_id)).all()
+
+        areas_map = {area.document_id: area for area in areas_objects}
+
+        routes = []
+        for route, areas in results:
+            json_areas = []
+            if areas is None:
+                areas = []
+
+            for area in areas:
+                area_obj = areas_map.get(area.get("document_id"))
+                if area_obj:
+                    json_areas.append(to_json_dict(
+                        area_obj, schema_listing_area))
+
+            # assign JSON areas to the waypoint
+            route.areas = json_areas
+            wp_dict = to_json_dict(route, schema_route, True)
+            routes.append(wp_dict)
+
+        return {'documents': routes, 'total': count}
 
 
 def set_default_geometry(linked_waypoints, route, user_id):
@@ -499,7 +591,7 @@ def _pt_rating(starting_waypoints, ending_waypoints, route_types):
     # Return the best starting rating if it's not a crossing
     if not (route_types and bool(
             set(["traverse", "raid", "expedition"]) & set(route_types)
-            )):
+    )):
         return best_starting_rating
 
     # If no ending point is provided
@@ -513,3 +605,187 @@ def _pt_rating(starting_waypoints, ending_waypoints, route_types):
 
     # Return the worst of the two ratings
     return worst_rating(best_starting_rating, best_ending_rating)
+
+
+def build_reachable_route_query(params, meta_params):
+    """build the query based on params and meta params.
+       this includes every filters on route, as well as offset + limit, sort, bbox...
+       returns a list of routes reachable (accessible by common transports), filtered with params
+    """
+    search = build_query(params, meta_params, ROUTE_TYPE)
+    search_dict = search.to_dict()
+    filters = search_dict.get('query', {}).get('bool', {}).get('filter', [])
+
+    filter_conditions = []
+
+    # Mapping filter keys to models
+    filter_map = {
+        'areas': Area,
+        'waypoints': Waypoint
+    }
+
+    # the array of conditions to filter the query results
+    filter_conditions = []
+
+    # the array of langs available
+    lang = []
+
+    # loop over each filter
+    for f in filters:
+        for filter_key, param in f.items():
+            for param_key, param_value in param.items():
+                # special cases
+                if param_key == 'available_locales':  # lang is determined by the available locales for the document
+                    if isinstance(param_value, list):
+                        lang = param_value
+                    else:
+                        lang = [param_value]
+                elif param_key == 'geom':
+                    col = getattr(DocumentGeometry, 'geom')
+                    polygon = Polygon([
+                        (param_value['left'], param_value['bottom']),
+                        (param_value['right'], param_value['bottom']),
+                        (param_value['right'], param_value['top']),
+                        (param_value['left'], param_value['top']),
+                        (param_value['left'], param_value['bottom'])
+                    ])
+                    polygon_wkb = from_shape(polygon, srid=4326)
+
+                    filter_conditions.append(ST_Intersects(
+                        ST_Transform(col, 4326), polygon_wkb))
+                elif param_key in filter_map:  # param_key is 'area' or 'waypoint'
+                    col = getattr(filter_map[param_key], 'document_id')
+                    if isinstance(param_value, list):
+                        filter_conditions.append(col.any(param_value))
+                    else:
+                        filter_conditions.append(col == param_value)
+                else:  # all filters on Route
+                    # col <=> Route.param_key
+                    col = getattr(Route, param_key)
+                    column = col.property.columns[0]
+                    col_type = column.type
+
+                    if filter_key == 'range':
+                        # lte and gte are integers
+                        gte = param_value.get('gte')
+                        lte = param_value.get('lte')
+                        mapper = sortable_search_attr_by_field[param_key]
+                        values = []
+                        if gte is not None and lte is not None:
+                            if gte == lte:
+                                values = [
+                                    val for val in mapper if mapper[val] == gte and mapper[val] == lte]
+                            else:
+                                # find array of possible values (not integers but enum values) between gte and lte
+                                values = [
+                                    val for val in mapper if mapper[val] >= gte and mapper[val] < lte]
+
+                        elif gte is not None:
+                            # find array of possible values (not integers but enum values) >= gte
+                            values = [
+                                val for val in mapper if mapper[val] >= gte]
+
+                        elif lte is not None:
+                            # find array of possible values (not integers but enum values) < lte
+                            values = [
+                                val for val in mapper if mapper[val] < lte]
+
+                        # then compare (==) col with each value
+                        # combine multiple checks with |
+                        checks = [(col == val) for val in values]
+                        if len(checks) > 0:
+                            or_expr = checks[0]
+                            for check in checks[1:]:
+                                or_expr = or_expr | check
+
+                            filter_conditions.append(or_expr)
+
+                    elif filter_key == 'terms':
+                        values = param_value if isinstance(
+                            param_value, (list, tuple)) else [param_value]
+
+                        if isinstance(col_type, ArrayOfEnum):
+                            # combine multiple checks with |
+                            checks = [col.any(v) for v in values]
+                            or_expr = checks[0]
+                            for check in checks[1:]:
+                                or_expr = or_expr | check
+                            filter_conditions.append(or_expr)
+                        else:
+                            filter_conditions.append(col.in_(values))
+
+                    elif filter_key == 'term':
+                        if isinstance(col_type, ArrayOfEnum):
+                            filter_conditions.append(col.any(param_value))
+                        else:
+                            filter_conditions.append(col == param_value)
+
+                    else:
+                        continue
+
+    # combine all conditions with &
+    if len(filter_conditions) == 0:
+        filter_conditions = True
+    elif len(filter_conditions) == 1:
+        filter_conditions = filter_conditions[0]
+    else:
+        final_expr = filter_conditions[0]
+        for cond in filter_conditions[1:]:
+            final_expr = final_expr & cond
+        filter_conditions = final_expr
+
+    # get sort information
+    sorts = search_dict.get('sort', [])
+    # compute sort expressions
+    sort_expressions = []
+    for sort in sorts:
+        if (sort == 'undefined'):
+            pass
+        # sort by desc
+        elif (hasattr(sort, 'items')):
+            for attribute, order in sort.items():
+                if (attribute == 'id'):
+                    sort_expressions.append(
+                        nullslast(getattr(Route, 'document_id').desc()))
+                else:
+                    sort_expressions.append(
+                        nullslast(getattr(Route, attribute).desc()))
+        else:
+            # sort by asc
+            sort_expressions.append(nullslast(getattr(Route, sort).asc()))
+
+    # perform query
+    query = DBSession.query(Route, func.jsonb_agg(func.distinct(
+        func.jsonb_build_object(
+            literal_column("'document_id'"), Area.document_id
+        ))).label("areas")). \
+        select_from(Association). \
+        join(Route, or_(
+            Route.document_id == Association.child_document_id,
+            Route.document_id == Association.parent_document_id
+        )). \
+        join(DocumentGeometry, Route.document_id == DocumentGeometry.document_id). \
+        join(Waypoint, or_(
+            Waypoint.document_id == Association.child_document_id,
+            Waypoint.document_id == Association.parent_document_id
+        )). \
+        filter(Waypoint.waypoint_type == 'access'). \
+        join(WaypointStoparea, WaypointStoparea.waypoint_id == Waypoint.document_id). \
+        join(AreaAssociation, or_(
+            AreaAssociation.document_id == Association.child_document_id,
+            AreaAssociation.document_id == Association.parent_document_id
+        )). \
+        join(Area, Area.document_id == AreaAssociation.area_id)
+
+    if (len(lang) > 0):
+        query = query.join(DocumentLocale, and_(
+            DocumentLocale.document_id == Route.document_id,
+            DocumentLocale.lang.in_(lang)
+        ))
+    query = query. \
+        filter(filter_conditions). \
+        order_by(*sort_expressions). \
+        group_by(Route). \
+        distinct()
+
+    return query
