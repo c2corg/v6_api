@@ -84,24 +84,26 @@ class WaypointCoverageRest(DocumentRest):
         lon = float(self.request.GET['lon'])
         lat = float(self.request.GET['lat'])
 
-        pt = Point(lon, lat)
+        return get_coverage(lon, lat)
 
-        coverageFound = None
+def get_coverage(lon, lat):
+    pt = Point(lon, lat)
 
-        coverages = DBSession.query(Coverage).all()
+    coverageFound = None
 
-        for coverage in coverages:
-            geom = coverage.geometry.geom_detail
-            
-            # convert WKB → Shapely polygon
-            poly = wkb_to_shape(geom)
-            
-            if poly.contains(pt) or poly.intersects(pt):
-                coverageFound = coverage
-                break
+    coverages = DBSession.query(Coverage).all()
+
+    for coverage in coverages:
+        geom = coverage.geometry.geom_detail
         
-        if (coverageFound):
-            return coverageFound.coverage_type
-        else:
-            return ""
+        # convert WKB → Shapely polygon
+        poly = wkb_to_shape(geom)
+        
+        if poly.contains(pt):
+            coverageFound = coverage
+            break
 
+    if (coverageFound):
+        return coverageFound.coverage_type
+    else:
+        return None

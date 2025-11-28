@@ -1,4 +1,5 @@
 import functools
+import logging
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
@@ -58,6 +59,8 @@ from geoalchemy2.functions import ST_Intersects, ST_Transform
 from cornice.resource import resource, view
 from c2corg_api.models.common.sortable_search_attributes import sortable_search_attr_by_field
 from sqlalchemy import nullslast
+
+log = logging.getLogger(__name__)
 
 # the number of routes that are included for waypoints
 NUM_ROUTES = 400
@@ -552,9 +555,9 @@ def update_linked_routes_public_transportation_rating(waypoint, update_types):
 def build_reachable_waypoints_query(params, meta_params):
     """build the query based on params and meta params.
        this includes every filters on waypoints, as well as offset + limit, sort, bbox...
-       returns a list of waypoints reachable (accessible by common transports), filtered with params
+       returns a list of waypoints reachable (can be accessible by public transports), filtered with params
     """
-    search = build_query(params, meta_params, ROUTE_TYPE)
+    search = build_query(params, meta_params, WAYPOINT_TYPE)
     search_dict = search.to_dict()
     filters = search_dict.get('query', {}).get('bool', {}).get('filter', [])
 
@@ -610,36 +613,44 @@ def build_reachable_waypoints_query(params, meta_params):
                         # lte and gte are integers
                         gte = param_value.get('gte')
                         lte = param_value.get('lte')
-                        mapper = sortable_search_attr_by_field[param_key]
-                        values = []
-                        if gte is not None and lte is not None:
-                            if gte == lte:
+                        mapper = sortable_search_attr_by_field.get(param_key)
+                        if mapper is not None:
+                            values = []
+                            if gte is not None and lte is not None:
+                                if gte == lte:
+                                    values = [
+                                        val for val in mapper if mapper[val] == gte and mapper[val] == lte]
+                                else:
+                                    # find array of possible values (not integers but enum values) between gte and lte
+                                    values = [
+                                        val for val in mapper if mapper[val] >= gte and mapper[val] < lte]
+
+                            elif gte is not None:
+                                # find array of possible values (not integers but enum values) >= gte
                                 values = [
-                                    val for val in mapper if mapper[val] == gte and mapper[val] == lte]
-                            else:
-                                # find array of possible values (not integers but enum values) between gte and lte
+                                    val for val in mapper if mapper[val] >= gte]
+
+                            elif lte is not None:
+                                # find array of possible values (not integers but enum values) < lte
                                 values = [
-                                    val for val in mapper if mapper[val] >= gte and mapper[val] < lte]
+                                    val for val in mapper if mapper[val] < lte]
 
-                        elif gte is not None:
-                            # find array of possible values (not integers but enum values) >= gte
-                            values = [
-                                val for val in mapper if mapper[val] >= gte]
+                            # then compare (==) col with each value
+                            # combine multiple checks with |
+                            checks = [(col == val) for val in values]
+                            if len(checks) > 0:
+                                or_expr = checks[0]
+                                for check in checks[1:]:
+                                    or_expr = or_expr | check
 
-                        elif lte is not None:
-                            # find array of possible values (not integers but enum values) < lte
-                            values = [
-                                val for val in mapper if mapper[val] < lte]
-
-                        # then compare (==) col with each value
-                        # combine multiple checks with |
-                        checks = [(col == val) for val in values]
-                        if len(checks) > 0:
-                            or_expr = checks[0]
-                            for check in checks[1:]:
-                                or_expr = or_expr | check
-
-                            filter_conditions.append(or_expr)
+                                filter_conditions.append(or_expr)
+                        else:
+                            if gte is not None and lte is not None:
+                                filter_conditions.append(and_(col > gte, col < lte))
+                            elif gte is not None:
+                                filter_conditions.append(col > gte)
+                            elif lte is not None:
+                                filter_conditions.append(col < lte)
 
                     elif filter_key == 'terms':
                         values = param_value if isinstance(
@@ -716,7 +727,7 @@ def build_reachable_waypoints_query(params, meta_params):
 
     if (len(lang) > 0):
         query = query.join(DocumentLocale, and_(
-            DocumentLocale.document_id == Route.document_id,
+            DocumentLocale.document_id == Waypoint.document_id,
             DocumentLocale.lang.in_(lang)
         ))
     query = query. \
