@@ -501,9 +501,14 @@ def is_wp_journey_reachable(waypoint, journey_params):
         elif not response.ok:
             return False
 
-        # Retour des données JSON
-        #TODO : return au moins 1 journey pour qui le jour de la date de départ (departure_date_time) est le même que le jour dans journey_params.date_time
-        return True
+        # make sure the waypoint is reachable if at least one journey's departure date time is the same day as the day in journey_params
+        for journey in response.json()['journeys']:
+            journey_day = int(journey['departure_date_time'][6:8])
+            param_day = int(journey_params['datetime'][6:8])
+            if journey_day == param_day:
+                return True
+            
+        return False
 
     except requests.exceptions.Timeout:
         return False
