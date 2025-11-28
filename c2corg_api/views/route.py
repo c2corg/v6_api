@@ -627,6 +627,23 @@ def build_reachable_route_query(params, meta_params):
     # the array of conditions to filter the query results
     filter_conditions = []
 
+    # Manage the filter for q="words in title locales"
+    # extract must → multi_match → query
+    must_list = search_dict.get('query', {}).get('bool', {}).get('must', [])
+    query_value = None
+
+    for item in must_list:
+        mm = item.get("multi_match")
+        if mm:
+            query_value = mm.get("query")
+            break
+
+    # add LIKE filter if query exists
+    if query_value:
+        col1 = getattr(DocumentLocale, "title")
+        col2 = getattr(RouteLocale, "title_prefix")
+        filter_conditions.append(or_(col1.ilike(f"%{query_value}%"), col2.ilike(f"%{query_value}%")))
+
     # the array of langs available
     lang = []
 
@@ -765,6 +782,8 @@ def build_reachable_route_query(params, meta_params):
             Route.document_id == Association.parent_document_id
         )). \
         join(DocumentGeometry, Route.document_id == DocumentGeometry.document_id). \
+        join(DocumentLocale, Route.document_id == DocumentLocale.document_id). \
+        join(RouteLocale, RouteLocale.id == DocumentLocale.id). \
         join(Waypoint, or_(
             Waypoint.document_id == Association.child_document_id,
             Waypoint.document_id == Association.parent_document_id
@@ -778,10 +797,7 @@ def build_reachable_route_query(params, meta_params):
         join(Area, Area.document_id == AreaAssociation.area_id)
 
     if (len(lang) > 0):
-        query = query.join(DocumentLocale, and_(
-            DocumentLocale.document_id == Route.document_id,
-            DocumentLocale.lang.in_(lang)
-        ))
+        query = query.filter(DocumentLocale.lang.in_(lang))
     query = query. \
         filter(filter_conditions). \
         order_by(*sort_expressions). \
@@ -810,6 +826,23 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
 
     # the array of conditions to filter the query results
     filter_conditions = []
+    
+    # Manage the filter for q="words in title locales"
+    # extract must → multi_match → query
+    must_list = search_dict.get('query', {}).get('bool', {}).get('must', [])
+    query_value = None
+
+    for item in must_list:
+        mm = item.get("multi_match")
+        if mm:
+            query_value = mm.get("query")
+            break
+
+    # add LIKE filter if query exists
+    if query_value:
+        col1 = getattr(DocumentLocale, "title")
+        col2 = getattr(RouteLocale, "title_prefix")
+        filter_conditions.append(or_(col1.ilike(f"%{query_value}%"), col2.ilike(f"%{query_value}%")))
 
     # the array of langs available
     lang = []
@@ -947,7 +980,8 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
                                 ))).label("areas"),
                             func.jsonb_agg(func.distinct(
                                 func.jsonb_build_object(
-                                    literal_column("'document_id'"), Waypoint.document_id
+                                    literal_column(
+                                        "'document_id'"), Waypoint.document_id
                                 ))).label("waypoints")). \
         select_from(Association). \
         join(Route, or_(
@@ -955,6 +989,8 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
             Route.document_id == Association.parent_document_id
         )). \
         join(DocumentGeometry, Route.document_id == DocumentGeometry.document_id). \
+        join(DocumentLocale, Route.document_id == DocumentLocale.document_id). \
+        join(RouteLocale, RouteLocale.id == DocumentLocale.id). \
         join(Waypoint, or_(
             Waypoint.document_id == Association.child_document_id,
             Waypoint.document_id == Association.parent_document_id
@@ -968,10 +1004,7 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
         join(Area, Area.document_id == AreaAssociation.area_id)
 
     if (len(lang) > 0):
-        query = query.join(DocumentLocale, and_(
-            DocumentLocale.document_id == Route.document_id,
-            DocumentLocale.lang.in_(lang)
-        ))
+        query = query.filter(DocumentLocale.lang.in_(lang))
     query = query. \
         filter(filter_conditions). \
         order_by(*sort_expressions). \

@@ -570,6 +570,22 @@ def build_reachable_waypoints_query(params, meta_params):
 
     # the array of conditions to filter the query results
     filter_conditions = []
+    
+    # Manage the filter for q="words in title locales"
+    # extract must → multi_match → query
+    must_list = search_dict.get('query', {}).get('bool', {}).get('must', [])
+    query_value = None
+
+    for item in must_list:
+        mm = item.get("multi_match")
+        if mm:
+            query_value = mm.get("query")
+            break
+
+    # add LIKE filter if query exists
+    if query_value:
+        col = getattr(DocumentLocale, "title")
+        filter_conditions.append(col.ilike(f"%{query_value}%"))
 
     # the array of langs available
     lang = []
@@ -717,6 +733,7 @@ def build_reachable_waypoints_query(params, meta_params):
             Waypoint.document_id == Association.parent_document_id
         )). \
         join(DocumentGeometry, Waypoint.document_id == DocumentGeometry.document_id). \
+        join(DocumentLocale, Waypoint.document_id == DocumentLocale.document_id). \
         filter(Waypoint.waypoint_type == 'access'). \
         join(WaypointStoparea, WaypointStoparea.waypoint_id == Waypoint.document_id). \
         join(AreaAssociation, or_(
@@ -726,10 +743,8 @@ def build_reachable_waypoints_query(params, meta_params):
         join(Area, Area.document_id == AreaAssociation.area_id)
 
     if (len(lang) > 0):
-        query = query.join(DocumentLocale, and_(
-            DocumentLocale.document_id == Waypoint.document_id,
-            DocumentLocale.lang.in_(lang)
-        ))
+        query = query.filter(DocumentLocale.lang.in_(lang))
+
     query = query. \
         filter(filter_conditions). \
         order_by(*sort_expressions). \
