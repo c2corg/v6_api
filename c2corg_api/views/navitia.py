@@ -23,6 +23,11 @@ from pyproj import Transformer
 
 log = logging.getLogger(__name__)
 
+# When editing these constants, make sure to edit them in the front too (itinevert-service)
+MAX_ROUTE_THRESHOLD = 50
+MAX_TRIP_DURATION = 240
+MIN_TRIP_DURATION = 20
+
 def validate_navitia_params(request, **kwargs):
     """Validates the required parameters for the Navitia API"""
     required_params = ['from', 'to', 'datetime', 'datetime_represents']
@@ -125,29 +130,31 @@ class NavitiaRest:
             raise HTTPInternalServerError(f'Internal error: {str(e)}')
 
 
+def validate_journey_reachable_params(request, **kwargs):
+    """Validates the required parameters for the journey reachable doc route"""
+    required_params = ['from', 'datetime', 'datetime_represents', 'walking_speed', 'max_walking_duration_to_pt']
+
+    for param in required_params:
+        if param not in request.params:
+            request.errors.add(
+                'querystring',
+                param,
+                f'Paramètre {param} requis')
+
 @resource(path='/navitia/journeyreachableroutes', cors_policy=cors_policy)
 class NavitiaJourneyReachableRoutesRest:
     def __init__(self, request, context=None):
         self.request = request
 
-    @view(validators=[])
+    @view(validators=[validate_journey_reachable_params])
     def get(self):
-        validated = self.request.validated
+        """
+        Get all routes matching filters in params, that are reachable (means there exists a Navitia journey for at least one of their waypoints of type access).
+        NOTE : the number of routes after applying filters, has to be < MAX_ROUTE_THRESHOLD, to reduce number of queries towards Navitia journey API
+        """
+        meta_params = extract_meta_params(self.request)
 
-        meta_params = {
-            'offset': validated.get('offset', 0),
-            'limit': validated.get('limit', LIMIT_DEFAULT),
-            'lang': validated.get('lang')
-        }
-
-        journey_params = {
-            'from': self.request.params.get('from'),
-            'datetime': self.request.params.get('datetime'),
-            'datetime_represents': self.request.params.get('datetime_represents'),
-            'walking_speed': self.request.params.get('walking_speed'),
-            'max_walking_duration_to_pt': self.request.params.get('max_walking_duration_to_pt'),
-            'to': ''
-        }
+        journey_params = extract_journey_params(self.request)
 
         query = build_reachable_route_query_with_waypoints(
             self.request.GET, meta_params)
@@ -155,37 +162,18 @@ class NavitiaJourneyReachableRoutesRest:
         results = (
             query.all()
         )
+        
+        # /!\ IMPORTANT
+        # Before doing any further computations, make sure the number of routes don't go above threshold.
+        # The Itinevert UI doesn't allow that, but a user could query the api with wrong parameters...
+        if len(results) > MAX_ROUTE_THRESHOLD:
+            raise HTTPBadRequest("Couldn't proceed with the computation : Too much routes found.")
 
-        # manage areas for routes
-        areas_id = set()
-        for route, areas, waypoints in results:
-            if areas is None:
-                continue
-            for area in areas:
-                area_id = area.get("document_id")
-                if area_id is not None:
-                    areas_id.add(area_id)
+        areas_map = collect_areas_from_results(results, 1)
 
-        areas_objects = DBSession.query(Area).filter(
-            Area.document_id.in_(areas_id)).all()
+        wp_objects = collect_waypoints_from_results(results)
 
-        areas_map = {area.document_id: area for area in areas_objects}
-
-        # manage waypoints
-        waypoints_id = set()
-        for route, areas, waypoints in results:
-            if waypoints is None:
-                return
-
-            for waypoint in waypoints:
-                wp_id = waypoint.get("document_id")
-                if wp_id is not None:
-                    waypoints_id.add(wp_id)
-
-        wp_objects = DBSession.query(Waypoint).filter(
-            Waypoint.document_id.in_(waypoints_id)).all()
-
-        log.warning("Number of NAVITIA journey queries : %d", len(wp_objects))
+        log.info("Number of NAVITIA journey queries : %d", len(wp_objects))
 
         navitia_wp_map = {wp.document_id: is_wp_journey_reachable(
             to_json_dict(wp, schema_waypoint), journey_params) for wp in wp_objects}
@@ -216,30 +204,33 @@ class NavitiaJourneyReachableRoutesRest:
 
         return {'documents': routes, 'total': len(routes)}
 
-
 @resource(path='/navitia/journeyreachablewaypoints', cors_policy=cors_policy)
 class NavitiaJourneyReachableWaypointsRest:
     def __init__(self, request, context=None):
         self.request = request
 
-    @view(validators=[])
+    @view(validators=[validate_journey_reachable_params])
     def get(self):
-        validated = self.request.validated
+        """
+        Get all waypoints matching filters in params, that are reachable (means there exists a Navitia journey).
+        NOTE : waypoints should be filtered with one area, to reduce the number of queries towards Navitia journey API.
+        """
+        meta_params = extract_meta_params(self.request)
 
-        meta_params = {
-            'offset': validated.get('offset', 0),
-            'limit': validated.get('limit', LIMIT_DEFAULT),
-            'lang': validated.get('lang')
-        }
+        journey_params = extract_journey_params(self.request)
+        
+        areas = None
+        try:
+            areas = self.request.GET['a'].split(",")
+        except Exception as e:
+            areas = None
 
-        journey_params = {
-            'from': self.request.params.get('from'),
-            'datetime': self.request.params.get('datetime'),
-            'datetime_represents': self.request.params.get('datetime_represents'),
-            'walking_speed': self.request.params.get('walking_speed'),
-            'max_walking_duration_to_pt': self.request.params.get('max_walking_duration_to_pt'),
-            'to': ''
-        }
+        # Normalize: allow single value or list
+        if areas is None:
+            raise HTTPBadRequest('Missing filter : area is required')
+        elif isinstance(areas, list):
+            if len(areas) > 1:
+                raise HTTPBadRequest('Only one filtering area is allowed')
 
         query = build_reachable_waypoints_query(
             self.request.GET, meta_params)
@@ -248,22 +239,9 @@ class NavitiaJourneyReachableWaypointsRest:
             query.all()
         )
 
-        # manage areas for waypoints
-        areas_id = set()
-        for waypoints, areas in results:
-            if areas is None:
-                continue
-            for area in areas:
-                area_id = area.get("document_id")
-                if area_id is not None:
-                    areas_id.add(area_id)
+        areas_map = collect_areas_from_results(results, 1)
 
-        areas_objects = DBSession.query(Area).filter(
-            Area.document_id.in_(areas_id)).all()
-
-        areas_map = {area.document_id: area for area in areas_objects}
-
-        log.warning("Number of NAVITIA journey queries : %d", len(results))
+        log.info("Number of NAVITIA journey queries : %d", len(results))
 
         waypoints = []
         for waypoint, areas in results:
@@ -286,47 +264,38 @@ class NavitiaJourneyReachableWaypointsRest:
 
         return {'documents': waypoints, 'total': len(waypoints)}
 
+def validate_isochrone_reachable_params(request, **kwargs):
+    """Validates the required parameters for the isochrone reachable doc route"""
+    required_params = ['from', 'datetime', 'datetime_represents', 'boundary_duration']
+
+    for param in required_params:
+        if param not in request.params:
+            request.errors.add(
+                'querystring',
+                param,
+                f'Paramètre {param} requis')
+
 @resource(path='/navitia/isochronesreachableroutes', cors_policy=cors_policy)
 class NavitiaIsochronesReachableRoutesRest:
     def __init__(self, request, context=None):
         self.request = request
 
-    @view(validators=[])
+    @view(validators=[validate_isochrone_reachable_params])
     def get(self):
-        validated = self.request.validated
+        """
+        Get all routes matching filters in params, that have at least one waypoint of type access that is inside the isochron.
+        The isochron is created by querying navitia api with specific parameters, see validate_isochrone_reachable_params func
+        """
+        meta_params = extract_meta_params(self.request)
 
-        meta_params = {
-            'offset': validated.get('offset', 0),
-            'limit': validated.get('limit', LIMIT_DEFAULT),
-            'lang': validated.get('lang')
-        }
-
-        isochrone_params = {
-            'from': self.request.params.get('from'),
-            'datetime': self.request.params.get('datetime'),
-            'boundary_duration[]': self.request.params.get('boundary_duration'),
-            'datetime_represents': self.request.params.get('datetime_represents')
-        }
+        isochrone_params = extract_isochrone_params(self.request)
 
         query = build_reachable_route_query_with_waypoints(
             self.request.GET, meta_params)
 
         results = query.all()
 
-        # manage areas for routes
-        areas_id = set()
-        for route, areas, waypoints in results:
-            if areas is None:
-                continue
-            for area in areas:
-                area_id = area.get("document_id")
-                if area_id is not None:
-                    areas_id.add(area_id)
-
-        areas_objects = DBSession.query(Area).filter(
-            Area.document_id.in_(areas_id)).all()
-
-        areas_map = {area.document_id: area for area in areas_objects}
+        areas_map = collect_areas_from_results(results, 1)
 
         response = get_navitia_isochrone(isochrone_params)
         
@@ -337,19 +306,7 @@ class NavitiaIsochronesReachableRoutesRest:
             geojson = response["isochrones"][0]["geojson"]
             isochrone_geom = shape(geojson)
             
-            # manage waypoints
-            waypoints_id = set()
-            for route, areas, waypoints in results:
-                if waypoints is None:
-                    return
-
-                for waypoint in waypoints:
-                    wp_id = waypoint.get("document_id")
-                    if wp_id is not None:
-                        waypoints_id.add(wp_id)
-
-            wp_objects = DBSession.query(Waypoint).filter(
-                Waypoint.document_id.in_(waypoints_id)).all()
+            wp_objects = collect_waypoints_from_results(results)
 
             navitia_wp_map = {wp.document_id: is_wp_in_isochrone(
                 to_json_dict(wp, schema_waypoint), isochrone_geom) for wp in wp_objects}
@@ -386,22 +343,15 @@ class NavitiaIsochronesReachableWaypointsRest:
     def __init__(self, request, context=None):
         self.request = request
 
-    @view(validators=[])
+    @view(validators=[validate_isochrone_reachable_params])
     def get(self):
-        validated = self.request.validated
+        """
+        Get all waypoints matching filters in params, that are inside the isochron.
+        The isochron is created by querying navitia api with specific parameters, see validate_isochrone_reachable_params func
+        """
+        meta_params = extract_meta_params(self.request)
 
-        meta_params = {
-            'offset': validated.get('offset', 0),
-            'limit': validated.get('limit', LIMIT_DEFAULT),
-            'lang': validated.get('lang')
-        }
-
-        isochrone_params = {
-            'from': self.request.params.get('from'),
-            'datetime': self.request.params.get('datetime'),
-            'boundary_duration[]': self.request.params.get('boundary_duration'),
-            'datetime_represents': self.request.params.get('datetime_represents')
-        }
+        isochrone_params = extract_isochrone_params(self.request)
 
         query = build_reachable_waypoints_query(
             self.request.GET, meta_params)
@@ -409,19 +359,7 @@ class NavitiaIsochronesReachableWaypointsRest:
         results = query.all()
 
         # manage areas for waypoints
-        areas_id = set()
-        for waypoints, areas in results:
-            if areas is None:
-                continue
-            for area in areas:
-                area_id = area.get("document_id")
-                if area_id is not None:
-                    areas_id.add(area_id)
-
-        areas_objects = DBSession.query(Area).filter(
-            Area.document_id.in_(areas_id)).all()
-
-        areas_map = {area.document_id: area for area in areas_objects}
+        areas_map = collect_areas_from_results(results, 1)
 
         response = get_navitia_isochrone(isochrone_params)
         
@@ -454,6 +392,10 @@ class NavitiaIsochronesReachableWaypointsRest:
 
 
 def is_wp_journey_reachable(waypoint, journey_params):
+    """
+    Query the navitia Journey api and returns true if the waypoint is reachable (at least one journey has been found)
+    NOTE : the journey's departure time has to be the same day as the datetime's day in journey_params
+    """
     # enhance journey params with the 'to' parameter, from the waypoint geometry.
     geom = shape(json.loads(waypoint.get("geometry").get("geom")))
 
@@ -519,6 +461,9 @@ def is_wp_journey_reachable(waypoint, journey_params):
 
 
 def get_navitia_isochrone(isochrone_params):
+    """
+    Query the navitia Isochrones api, and returns the isochrone object
+    """
     lon = isochrone_params.get("from").split(";")[0]
     lat = isochrone_params.get("from").split(";")[1]
     source_coverage = get_coverage(lon, lat)
@@ -569,6 +514,9 @@ def get_navitia_isochrone(isochrone_params):
 
 
 def is_wp_in_isochrone(waypoint, isochrone_geom):
+    """
+    Returns true if waypoints is contained in isochrone_geom
+    """
     # get lon & lat
     geom = shape(json.loads(waypoint.get("geometry").get("geom")))
 
@@ -580,3 +528,95 @@ def is_wp_in_isochrone(waypoint, isochrone_geom):
     
     return isochrone_geom.contains(pt)
     
+    
+def extract_meta_params(request):
+    """
+    Extract meta parameters such as offset, limit and lang
+    """
+    v = request.validated
+    return {
+        'offset': v.get('offset', 0),
+        'limit': v.get('limit', LIMIT_DEFAULT),
+        'lang': v.get('lang'),
+    }
+
+
+def extract_journey_params(request):
+    """
+    Extract parameters for journey query
+    """
+    return {
+        'from': request.params.get('from'),
+        'datetime': request.params.get('datetime'),
+        'datetime_represents': request.params.get('datetime_represents'),
+        'walking_speed': request.params.get('walking_speed'),
+        'max_walking_duration_to_pt': request.params.get('max_walking_duration_to_pt'),
+        'to': ''
+    }
+
+
+def extract_isochrone_params(request):
+    """
+    Extract parameters for isochrone query
+    NOTE : the boundary duration is bounded by constants MAX_TRIP_DURATION and MIN_TRIP_DURATION
+           if the boundary duration goes beyond limits, it is set to the limit it goes past.
+    """
+    params = {
+        'from': request.params.get('from'),
+        'datetime': request.params.get('datetime'),
+        'boundary_duration[]': request.params.get('boundary_duration'),
+        'datetime_represents': request.params.get('datetime_represents')
+    }
+    # normalize boundary
+    bd = params['boundary_duration[]']
+    if len(bd.split(",")) == 1:
+        duration = int(bd)
+        params['boundary_duration[]'] = max(min(duration, MAX_TRIP_DURATION * 60),
+                                            MIN_TRIP_DURATION * 60)
+    return params
+
+def collect_areas_from_results(results, areaIndex):
+    """
+    Extract all area document_ids from results, load Area objects from DB,
+    and return {document_id: Area}.
+    """
+    area_ids = set()
+
+    for row in results:
+        areas = row[areaIndex]
+
+        if not areas:
+            continue
+
+        for area in areas:
+            doc_id = area.get("document_id")
+            if doc_id:
+                area_ids.add(doc_id)
+
+    area_objects = DBSession.query(Area).filter(
+        Area.document_id.in_(area_ids)
+    ).all()
+
+    return {a.document_id: a for a in area_objects}
+
+def collect_waypoints_from_results(results):
+    """
+    Extract all waypoint document_ids from results, load Waypoint objects from DB,
+    and return {document_id: Waypoint}.
+    """
+    wp_ids = set()
+
+    for route, areas, waypoints in results:
+        if not waypoints:
+            continue
+
+        for wp in waypoints:
+            doc_id = wp.get("document_id")
+            if doc_id:
+                wp_ids.add(doc_id)
+
+    wp_objects = DBSession.query(Waypoint).filter(
+        Waypoint.document_id.in_(wp_ids)
+    ).all()
+
+    return {wp for wp in wp_objects}

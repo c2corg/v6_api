@@ -7,6 +7,7 @@ from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
+from c2corg_api.search.utils import build_sqlalchemy_filters
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.views.document_info import DocumentInfoRest
@@ -614,162 +615,15 @@ def build_reachable_route_query(params, meta_params):
     """
     search = build_query(params, meta_params, ROUTE_TYPE)
     search_dict = search.to_dict()
-    filters = search_dict.get('query', {}).get('bool', {}).get('filter', [])
-
-    filter_conditions = []
-
-    # Mapping filter keys to models
-    filter_map = {
-        'areas': Area,
-        'waypoints': Waypoint
-    }
-
-    # the array of conditions to filter the query results
-    filter_conditions = []
-
-    # Manage the filter for q="words in title locales"
-    # extract must → multi_match → query
-    must_list = search_dict.get('query', {}).get('bool', {}).get('must', [])
-    query_value = None
-
-    for item in must_list:
-        mm = item.get("multi_match")
-        if mm:
-            query_value = mm.get("query")
-            break
-
-    # add LIKE filter if query exists
-    if query_value:
-        col1 = getattr(DocumentLocale, "title")
-        col2 = getattr(RouteLocale, "title_prefix")
-        filter_conditions.append(or_(col1.ilike(f"%{query_value}%"), col2.ilike(f"%{query_value}%")))
-
-    # the array of langs available
-    lang = []
-
-    # loop over each filter
-    for f in filters:
-        for filter_key, param in f.items():
-            for param_key, param_value in param.items():
-                # special cases
-                if param_key == 'available_locales':  # lang is determined by the available locales for the document
-                    if isinstance(param_value, list):
-                        lang = param_value
-                    else:
-                        lang = [param_value]
-                elif param_key == 'geom':
-                    col = getattr(DocumentGeometry, 'geom')
-                    polygon = Polygon([
-                        (param_value['left'], param_value['bottom']),
-                        (param_value['right'], param_value['bottom']),
-                        (param_value['right'], param_value['top']),
-                        (param_value['left'], param_value['top']),
-                        (param_value['left'], param_value['bottom'])
-                    ])
-                    polygon_wkb = from_shape(polygon, srid=4326)
-
-                    filter_conditions.append(ST_Intersects(
-                        ST_Transform(col, 4326), polygon_wkb))
-                elif param_key in filter_map:  # param_key is 'area' or 'waypoint'
-                    col = getattr(filter_map[param_key], 'document_id')
-                    if isinstance(param_value, list):
-                        filter_conditions.append(col.any(param_value))
-                    else:
-                        filter_conditions.append(col == param_value)
-                else:  # all filters on Route
-                    # col <=> Route.param_key
-                    col = getattr(Route, param_key)
-                    column = col.property.columns[0]
-                    col_type = column.type
-
-                    if filter_key == 'range':
-                        # lte and gte are integers
-                        gte = param_value.get('gte')
-                        lte = param_value.get('lte')
-                        mapper = sortable_search_attr_by_field[param_key]
-                        values = []
-                        if gte is not None and lte is not None:
-                            if gte == lte:
-                                values = [
-                                    val for val in mapper if mapper[val] == gte and mapper[val] == lte]
-                            else:
-                                # find array of possible values (not integers but enum values) between gte and lte
-                                values = [
-                                    val for val in mapper if mapper[val] >= gte and mapper[val] < lte]
-
-                        elif gte is not None:
-                            # find array of possible values (not integers but enum values) >= gte
-                            values = [
-                                val for val in mapper if mapper[val] >= gte]
-
-                        elif lte is not None:
-                            # find array of possible values (not integers but enum values) < lte
-                            values = [
-                                val for val in mapper if mapper[val] < lte]
-
-                        # then compare (==) col with each value
-                        # combine multiple checks with |
-                        checks = [(col == val) for val in values]
-                        if len(checks) > 0:
-                            or_expr = checks[0]
-                            for check in checks[1:]:
-                                or_expr = or_expr | check
-
-                            filter_conditions.append(or_expr)
-
-                    elif filter_key == 'terms':
-                        values = param_value if isinstance(
-                            param_value, (list, tuple)) else [param_value]
-
-                        if isinstance(col_type, ArrayOfEnum):
-                            # combine multiple checks with |
-                            checks = [col.any(v) for v in values]
-                            or_expr = checks[0]
-                            for check in checks[1:]:
-                                or_expr = or_expr | check
-                            filter_conditions.append(or_expr)
-                        else:
-                            filter_conditions.append(col.in_(values))
-
-                    elif filter_key == 'term':
-                        if isinstance(col_type, ArrayOfEnum):
-                            filter_conditions.append(col.any(param_value))
-                        else:
-                            filter_conditions.append(col == param_value)
-
-                    else:
-                        continue
-
-    # combine all conditions with &
-    if len(filter_conditions) == 0:
-        filter_conditions = True
-    elif len(filter_conditions) == 1:
-        filter_conditions = filter_conditions[0]
-    else:
-        final_expr = filter_conditions[0]
-        for cond in filter_conditions[1:]:
-            final_expr = final_expr & cond
-        filter_conditions = final_expr
-
-    # get sort information
-    sorts = search_dict.get('sort', [])
-    # compute sort expressions
-    sort_expressions = []
-    for sort in sorts:
-        if (sort == 'undefined'):
-            pass
-        # sort by desc
-        elif (hasattr(sort, 'items')):
-            for attribute, order in sort.items():
-                if (attribute == 'id'):
-                    sort_expressions.append(
-                        nullslast(getattr(Route, 'document_id').desc()))
-                else:
-                    sort_expressions.append(
-                        nullslast(getattr(Route, attribute).desc()))
-        else:
-            # sort by asc
-            sort_expressions.append(nullslast(getattr(Route, sort).asc()))
+    
+    filter_conditions, sort_expressions, needs_locale_join, langs = build_sqlalchemy_filters(
+        search_dict,
+        document_model=Route,
+        filter_map={'areas': Area, 'waypoints': Waypoint},
+        geometry_model=DocumentGeometry,
+        range_enum_map=sortable_search_attr_by_field,
+        title_columns=[DocumentLocale.title, RouteLocale.title_prefix]
+    )
 
     # perform query
     query = DBSession.query(Route, func.jsonb_agg(func.distinct(
@@ -781,23 +635,29 @@ def build_reachable_route_query(params, meta_params):
             Route.document_id == Association.child_document_id,
             Route.document_id == Association.parent_document_id
         )). \
-        join(DocumentGeometry, Route.document_id == DocumentGeometry.document_id). \
-        join(DocumentLocale, Route.document_id == DocumentLocale.document_id). \
-        join(RouteLocale, RouteLocale.id == DocumentLocale.id). \
-        join(Waypoint, or_(
-            Waypoint.document_id == Association.child_document_id,
-            Waypoint.document_id == Association.parent_document_id
+        join(Waypoint, and_(
+            or_(
+                Waypoint.document_id == Association.child_document_id,
+                Waypoint.document_id == Association.parent_document_id
+            ),
+            Waypoint.waypoint_type == 'access'
         )). \
-        filter(Waypoint.waypoint_type == 'access'). \
         join(WaypointStoparea, WaypointStoparea.waypoint_id == Waypoint.document_id). \
+        join(DocumentGeometry, Route.document_id == DocumentGeometry.document_id). \
         join(AreaAssociation, or_(
             AreaAssociation.document_id == Association.child_document_id,
             AreaAssociation.document_id == Association.parent_document_id
         )). \
         join(Area, Area.document_id == AreaAssociation.area_id)
 
-    if (len(lang) > 0):
-        query = query.filter(DocumentLocale.lang.in_(lang))
+    if (needs_locale_join):
+        query = query. \
+            join(DocumentLocale, Route.document_id == DocumentLocale.document_id). \
+            join(RouteLocale, RouteLocale.id == DocumentLocale.id)
+
+    if (len(langs) > 0):
+        query = query.filter(DocumentLocale.lang.in_(langs))
+
     query = query. \
         filter(filter_conditions). \
         order_by(*sort_expressions). \
@@ -814,163 +674,16 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
     """
     search = build_query(params, meta_params, ROUTE_TYPE)
     search_dict = search.to_dict()
-    filters = search_dict.get('query', {}).get('bool', {}).get('filter', [])
-
-    filter_conditions = []
-
-    # Mapping filter keys to models
-    filter_map = {
-        'areas': Area,
-        'waypoints': Waypoint
-    }
-
-    # the array of conditions to filter the query results
-    filter_conditions = []
     
-    # Manage the filter for q="words in title locales"
-    # extract must → multi_match → query
-    must_list = search_dict.get('query', {}).get('bool', {}).get('must', [])
-    query_value = None
-
-    for item in must_list:
-        mm = item.get("multi_match")
-        if mm:
-            query_value = mm.get("query")
-            break
-
-    # add LIKE filter if query exists
-    if query_value:
-        col1 = getattr(DocumentLocale, "title")
-        col2 = getattr(RouteLocale, "title_prefix")
-        filter_conditions.append(or_(col1.ilike(f"%{query_value}%"), col2.ilike(f"%{query_value}%")))
-
-    # the array of langs available
-    lang = []
-
-    # loop over each filter
-    for f in filters:
-        for filter_key, param in f.items():
-            for param_key, param_value in param.items():
-                # special cases
-                if param_key == 'available_locales':  # lang is determined by the available locales for the document
-                    if isinstance(param_value, list):
-                        lang = param_value
-                    else:
-                        lang = [param_value]
-                elif param_key == 'geom':
-                    col = getattr(DocumentGeometry, 'geom')
-                    polygon = Polygon([
-                        (param_value['left'], param_value['bottom']),
-                        (param_value['right'], param_value['bottom']),
-                        (param_value['right'], param_value['top']),
-                        (param_value['left'], param_value['top']),
-                        (param_value['left'], param_value['bottom'])
-                    ])
-                    polygon_wkb = from_shape(polygon, srid=4326)
-
-                    filter_conditions.append(ST_Intersects(
-                        ST_Transform(col, 4326), polygon_wkb))
-                elif param_key in filter_map:  # param_key is 'area' or 'waypoint'
-                    col = getattr(filter_map[param_key], 'document_id')
-                    if isinstance(param_value, list):
-                        filter_conditions.append(col.any(param_value))
-                    else:
-                        filter_conditions.append(col == param_value)
-                else:  # all filters on Route
-                    # col <=> Route.param_key
-                    col = getattr(Route, param_key)
-                    column = col.property.columns[0]
-                    col_type = column.type
-
-                    if filter_key == 'range':
-                        # lte and gte are integers
-                        gte = param_value.get('gte')
-                        lte = param_value.get('lte')
-                        mapper = sortable_search_attr_by_field[param_key]
-                        values = []
-                        if gte is not None and lte is not None:
-                            if gte == lte:
-                                values = [
-                                    val for val in mapper if mapper[val] == gte and mapper[val] == lte]
-                            else:
-                                # find array of possible values (not integers but enum values) between gte and lte
-                                values = [
-                                    val for val in mapper if mapper[val] >= gte and mapper[val] < lte]
-
-                        elif gte is not None:
-                            # find array of possible values (not integers but enum values) >= gte
-                            values = [
-                                val for val in mapper if mapper[val] >= gte]
-
-                        elif lte is not None:
-                            # find array of possible values (not integers but enum values) < lte
-                            values = [
-                                val for val in mapper if mapper[val] < lte]
-
-                        # then compare (==) col with each value
-                        # combine multiple checks with |
-                        checks = [(col == val) for val in values]
-                        if len(checks) > 0:
-                            or_expr = checks[0]
-                            for check in checks[1:]:
-                                or_expr = or_expr | check
-
-                            filter_conditions.append(or_expr)
-
-                    elif filter_key == 'terms':
-                        values = param_value if isinstance(
-                            param_value, (list, tuple)) else [param_value]
-
-                        if isinstance(col_type, ArrayOfEnum):
-                            # combine multiple checks with |
-                            checks = [col.any(v) for v in values]
-                            or_expr = checks[0]
-                            for check in checks[1:]:
-                                or_expr = or_expr | check
-                            filter_conditions.append(or_expr)
-                        else:
-                            filter_conditions.append(col.in_(values))
-
-                    elif filter_key == 'term':
-                        if isinstance(col_type, ArrayOfEnum):
-                            filter_conditions.append(col.any(param_value))
-                        else:
-                            filter_conditions.append(col == param_value)
-
-                    else:
-                        continue
-
-    # combine all conditions with &
-    if len(filter_conditions) == 0:
-        filter_conditions = True
-    elif len(filter_conditions) == 1:
-        filter_conditions = filter_conditions[0]
-    else:
-        final_expr = filter_conditions[0]
-        for cond in filter_conditions[1:]:
-            final_expr = final_expr & cond
-        filter_conditions = final_expr
-
-    # get sort information
-    sorts = search_dict.get('sort', [])
-    # compute sort expressions
-    sort_expressions = []
-    for sort in sorts:
-        if (sort == 'undefined'):
-            pass
-        # sort by desc
-        elif (hasattr(sort, 'items')):
-            for attribute, order in sort.items():
-                if (attribute == 'id'):
-                    sort_expressions.append(
-                        nullslast(getattr(Route, 'document_id').desc()))
-                else:
-                    sort_expressions.append(
-                        nullslast(getattr(Route, attribute).desc()))
-        else:
-            # sort by asc
-            sort_expressions.append(nullslast(getattr(Route, sort).asc()))
-
+    filter_conditions, sort_expressions, needs_locale_join, langs = build_sqlalchemy_filters(
+        search_dict,
+        document_model=Route,
+        filter_map={'areas': Area, 'waypoints': Waypoint},
+        geometry_model=DocumentGeometry,
+        range_enum_map=sortable_search_attr_by_field,
+        title_columns=[DocumentLocale.title, RouteLocale.title_prefix]
+    )
+    
     # perform query
     query = DBSession.query(Route,
                             func.jsonb_agg(func.distinct(
@@ -988,23 +701,29 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
             Route.document_id == Association.child_document_id,
             Route.document_id == Association.parent_document_id
         )). \
-        join(DocumentGeometry, Route.document_id == DocumentGeometry.document_id). \
-        join(DocumentLocale, Route.document_id == DocumentLocale.document_id). \
-        join(RouteLocale, RouteLocale.id == DocumentLocale.id). \
-        join(Waypoint, or_(
-            Waypoint.document_id == Association.child_document_id,
-            Waypoint.document_id == Association.parent_document_id
+        join(Waypoint, and_(
+            or_(
+                Waypoint.document_id == Association.child_document_id,
+                Waypoint.document_id == Association.parent_document_id
+            ),
+            Waypoint.waypoint_type == 'access'
         )). \
-        filter(Waypoint.waypoint_type == 'access'). \
         join(WaypointStoparea, WaypointStoparea.waypoint_id == Waypoint.document_id). \
+        join(DocumentGeometry, Route.document_id == DocumentGeometry.document_id). \
         join(AreaAssociation, or_(
             AreaAssociation.document_id == Association.child_document_id,
             AreaAssociation.document_id == Association.parent_document_id
         )). \
         join(Area, Area.document_id == AreaAssociation.area_id)
 
-    if (len(lang) > 0):
-        query = query.filter(DocumentLocale.lang.in_(lang))
+    if (needs_locale_join):
+        query = query. \
+            join(DocumentLocale, Route.document_id == DocumentLocale.document_id). \
+            join(RouteLocale, RouteLocale.id == DocumentLocale.id)
+
+    if (len(langs) > 0):
+        query = query.filter(DocumentLocale.lang.in_(langs))
+
     query = query. \
         filter(filter_conditions). \
         order_by(*sort_expressions). \
