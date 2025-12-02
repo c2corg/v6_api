@@ -124,7 +124,12 @@ def build_sqlalchemy_filters(
                 elif param_key in filter_map:
                     col = getattr(filter_map[param_key], "document_id")
                     if isinstance(param_value, list):
-                        filter_conditions.append(col.any(param_value))
+                        checks = [col == v for v in param_value]
+                        if checks:
+                            or_expr = checks[0]
+                            for check in checks[1:]:
+                                or_expr = or_expr | check
+                        filter_conditions.append(or_expr)
                     else:
                         filter_conditions.append(col == param_value)
 
@@ -160,8 +165,6 @@ def build_sqlalchemy_filters(
 
     # combine and conditions
     final_filter = combine_conditions(filter_conditions)
-    
-    log.warning(final_filter)
 
     # build sort expressions
     sort_expressions = build_sort_expressions(
