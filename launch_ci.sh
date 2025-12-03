@@ -5,7 +5,7 @@ apt update
 apt install -y postgresql-client
 cd /c2c_ci
 python -V
-mkdir ~/.venvs
+mkdir -p ~/.venvs
 python -m venv ~/.venvs/ci
 source ~/.venvs/ci/bin/activate
 pip install --upgrade pip setuptools wheel
@@ -21,4 +21,4 @@ USER=github scripts/create_user_db_test.sh
 make -f config/so.test template
 curl -v http://elasticsearch:9200
 export $(cat .env | grep -v "^#" | xargs)
-pytest --cov-report term --cov-report xml --cov=c2corg_api
+pytest --cov-report term --cov-report xml --cov=c2corg_api # --log-level=DEBUG -v --trace -x
