@@ -5,7 +5,7 @@ apt update
 apt install -y postgresql-client
 cd /c2c_ci
 python -V
-mkdir ~/.venvs
+mkdir -p ~/.venvs
 python -m venv ~/.venvs/ci
 source ~/.venvs/ci/bin/activate
 pip install --upgrade pip setuptools wheel
