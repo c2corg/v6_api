@@ -35,8 +35,9 @@ pipeline {
                         catch (Exception e) {
                             currentBuild.result = 'FAILURE' // Mark the build as failed
                             error "CI failed: ${e.getMessage()}"
+                        } finally {
+                            sh "podman-compose ${env.PODMAN_ARGS} down"
                         }
-                        sh "podman-compose ${env.PODMAN_ARGS} down"
                 }
             }
         }
