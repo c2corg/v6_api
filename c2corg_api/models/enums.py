@@ -159,3 +159,5 @@ snow_quality_ratings = enum(
     'snow_quality_ratings', attributes.snow_quality_ratings)
 snow_quantity_ratings = enum(
     'snow_quantity_ratings', attributes.snow_quantity_ratings)
+coverage_types = enum(
+    'coverage_types', attributes.coverage_types)

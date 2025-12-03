@@ -123,21 +123,9 @@ def delete_waypoint_stopareas(connection, waypoint_id):
 def process_new_waypoint(mapper, connection, geometry):
     """Processes a new waypoint to find its public transports after
     inserting it into documents_geometries."""
-    log.debug("Entering process_new_waypoint callback")
-    waypoint_id = geometry.document_id
-
-    max_distance_waypoint_to_stoparea = int(
-        os.getenv("MAX_DISTANCE_WAYPOINT_TO_STOPAREA")
-    )
-    walking_speed = float(os.getenv("WALKING_SPEED"))
-    max_stop_area_for_1_waypoint = int(os.getenv("MAX_STOP_AREA_FOR_1_WAYPOINT"))  # noqa: E501
-    api_key = os.getenv("NAVITIA_API_KEY")
-    max_duration = int(max_distance_waypoint_to_stoparea / walking_speed)
-
-    # Augmenter le nombre d'arrêts récupérés pour avoir plus de choix (comme dans le bash)  # noqa: E501
-    max_stop_area_fetched = max_stop_area_for_1_waypoint * 3
-
     # Check if document is a waypoint
+    waypoint_id = geometry.document_id
+    
     document_type = connection.execute(
         text(
             """
@@ -150,6 +138,18 @@ def process_new_waypoint(mapper, connection, geometry):
 
     if document_type != "w":
         return
+    
+    log.debug("Entering process_new_waypoint callback")
+    max_distance_waypoint_to_stoparea = int(
+        os.getenv("MAX_DISTANCE_WAYPOINT_TO_STOPAREA")
+    )
+    walking_speed = float(os.getenv("WALKING_SPEED"))
+    max_stop_area_for_1_waypoint = int(os.getenv("MAX_STOP_AREA_FOR_1_WAYPOINT"))  # noqa: E501
+    api_key = os.getenv("NAVITIA_API_KEY")
+    max_duration = int(max_distance_waypoint_to_stoparea / walking_speed)
+
+    # Augmenter le nombre d'arrêts récupérés pour avoir plus de choix (comme dans le bash)  # noqa: E501
+    max_stop_area_fetched = max_stop_area_for_1_waypoint * 3
 
     waypoint_type = connection.execute(
         text(
