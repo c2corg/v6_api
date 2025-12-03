@@ -49,7 +49,7 @@ from c2corg_api.models.waypoint_stoparea import (
 from c2corg_api.models.area import schema_listing_area
 from sqlalchemy import func
 from c2corg_api.models.common.sortable_search_attributes import \
-    sortable_search_attr_by_field
+    search_attr_by_field
 
 log = logging.getLogger(__name__)
 
@@ -560,7 +560,7 @@ def build_reachable_waypoints_query(params, meta_params):
             document_model=Waypoint,
             filter_map={"areas": Area},
             geometry_model=DocumentGeometry,
-            range_enum_map=sortable_search_attr_by_field,
+            range_enum_map=search_attr_by_field,
             title_columns=[DocumentLocale.title]
         )
 

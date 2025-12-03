@@ -45,7 +45,7 @@ from c2corg_api.models.waypoint_stoparea import (WaypointStoparea)
 from c2corg_api.models.area import schema_listing_area
 from sqlalchemy import func, literal_column
 from c2corg_api.models.common.sortable_search_attributes import \
-    sortable_search_attr_by_field
+    search_attr_by_field
 
 
 validate_route_create = make_validator_create(
@@ -610,7 +610,7 @@ def build_reachable_route_query(params, meta_params):
             document_model=Route,
             filter_map={'areas': Area, 'waypoints': Waypoint},
             geometry_model=DocumentGeometry,
-            range_enum_map=sortable_search_attr_by_field,
+            range_enum_map=search_attr_by_field,
             title_columns=[DocumentLocale.title, RouteLocale.title_prefix]
         )
 
@@ -681,7 +681,7 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
             document_model=Route,
             filter_map={'areas': Area, 'waypoints': Waypoint},
             geometry_model=DocumentGeometry,
-            range_enum_map=sortable_search_attr_by_field,
+            range_enum_map=search_attr_by_field,
             title_columns=[DocumentLocale.title, RouteLocale.title_prefix]
         )
 

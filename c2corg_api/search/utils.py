@@ -50,7 +50,7 @@ def build_sqlalchemy_filters(
     # the Geometry model (where ce access to geometry)
     geometry_model,  # most likely always DocumentGeometry
     # the mapper for range enum
-    range_enum_map,  # most likely always sortable_search_attr_by_field
+    range_enum_map,  # most likely always search_attr_by_field
     # the column for the title
     # (ex:  Waypoint -> title, Route -> title and title_prefix)
     title_columns=None
@@ -73,7 +73,7 @@ def build_sqlalchemy_filters(
         document_model=Waypoint,
         filter_map={"areas": Area,},
         geometry_model=DocumentGeometry,
-        range_enum_map=sortable_search_attr_by_field,
+        range_enum_map=search_attr_by_field,
         title_columns=[DocumentLocale.title]
     )
 

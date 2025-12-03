@@ -350,7 +350,7 @@ sortable_avalanche_slopes = {
 }
 
 
-sortable_search_attr_by_field = {
+search_attr_by_field = {
     'quality': sortable_quality_types,
     'access_time': sortable_access_times,
     'paragliding_rating': sortable_paragliding_ratings,
