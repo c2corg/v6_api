@@ -76,7 +76,7 @@ def fill_index(session, batch_size=1000):
     count = 0
     with batch:
         for doc_type in document_types:
-            if doc_type == 'z':
+            if doc_type == 'v':
                 continue
             print('Importing document type {}'.format(doc_type))
             to_search_document = search_documents[doc_type].to_search_document
