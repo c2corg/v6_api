@@ -1,31 +1,24 @@
 
+from c2corg_api.views.validation import validate_associations, \
+    validate_pagination, validate_preferred_lang_param
+from c2corg_api.views import cors_policy, restricted_json_view
+from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
+from shapely.geometry import Point, shape
+from c2corg_api.views.document import DocumentRest, make_validator_create, \
+    make_validator_update
+from c2corg_api.views.validation import validate_cook_param, validate_id, \
+    validate_lang_param
+from c2corg_api.views.document_schemas import coverage_documents_config
+from c2corg_api.models.utils import wkb_to_shape
 import functools
 import json
 import logging
-from operator import and_, or_
-from c2corg_api.models import DBSession, coverage
-from shapely import transform
-from pyproj import Transformer
-from c2corg_api.models.area import Area, schema_area
-from c2corg_api.models.association import Association
+from c2corg_api.models import DBSession
 from c2corg_api.models.common.fields_coverage import fields_coverage
-from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage, schema_coverage, schema_create_coverage, schema_update_coverage
-from c2corg_api.models.document import DocumentGeometry
-from c2corg_api.models.utils import wkb_to_shape
-from c2corg_api.models.waypoint import Waypoint
-from c2corg_api.views.document_schemas import coverage_documents_config
-from c2corg_api.views.area import update_associations
-from c2corg_api.views.validation import validate_cook_param, validate_id, validate_lang_param
-from c2corg_api.views.document import DocumentRest, make_validator_create, make_validator_update
-from shapely import wkb
-from shapely.geometry import Point, shape
-from cornice.validators import colander_body_validator
-from cornice.resource import resource, view
-from sqlalchemy import func
+from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage, \
+    schema_coverage, schema_create_coverage, schema_update_coverage
 
-from c2corg_api.views import cors_policy, restricted_json_view, to_json_dict
-from c2corg_api.views.validation import validate_associations, validate_pagination, \
-    validate_preferred_lang_param
 
 log = logging.getLogger(__name__)
 
@@ -99,8 +92,10 @@ class PolygonCoverage(DocumentRest):
 
     @view(validators=[])
     def post(self):
-        """Returns the coverages from a geom_detail type polygon (geom_detail has to be EPSG 4326 since isochrone is 4326)"""
-        geom_detail = json.loads((json.loads(self.request.body)['geom_detail']))
+        """Returns the coverages from a geom_detail type polygon
+        (geom_detail has to be EPSG 4326 since isochrone is 4326)"""
+        geom_detail = json.loads(
+            (json.loads(self.request.body)['geom_detail']))
         polygon = shape(geom_detail)
         return get_coverages(polygon)
 
@@ -109,7 +104,7 @@ def get_coverage(lon, lat):
     """get the coverage that contains a point(lon, lat)"""
     pt = Point(lon, lat)
 
-    coverageFound = None
+    coverage_found = None
 
     coverages = DBSession.query(Coverage).all()
 
@@ -120,17 +115,18 @@ def get_coverage(lon, lat):
         poly = wkb_to_shape(geom)
 
         if poly.contains(pt):
-            coverageFound = coverage
+            coverage_found = coverage
             break
 
-    if (coverageFound):
-        return coverageFound.coverage_type
+    if (coverage_found):
+        return coverage_found.coverage_type
     else:
         return None
-    
+
+
 def get_coverages(polygon):
     """get all the coverages that intersects a polygon"""
-    coverageFound = []
+    coverage_found = []
 
     coverages = DBSession.query(Coverage).all()
 
@@ -144,6 +140,6 @@ def get_coverages(polygon):
 
         if poly.contains(polygon) or poly.intersects(polygon):
             log.warning("coverage found and added")
-            coverageFound.append(coverage.coverage_type)
+            coverage_found.append(coverage.coverage_type)
 
-    return coverageFound
+    return coverage_found

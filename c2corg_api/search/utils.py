@@ -43,25 +43,32 @@ def get_title(title, title_prefix):
 
 
 def build_sqlalchemy_filters(
-    search_dict, # elastic search dict
-    document_model, # the model (waypoint, routes, etc...)
-    filter_map, # for multicriteria search (ex : searching a waypoint by area id)
-    geometry_model, # the Geometry model (where ce access to geometry), most likely always DocumentGeometry
-    range_enum_map, # the mapper for range enum, most likely always sortable_search_attr_by_field
-    title_columns=None # the column for the title (ex:  Waypoint -> title, Route -> title and title_prefix)
+    search_dict,  # elastic search dict
+    document_model,  # the model (waypoint, routes, etc...)
+    # for multicriteria search (ex : searching a waypoint by area id)
+    filter_map,
+    # the Geometry model (where ce access to geometry)
+    geometry_model,  # most likely always DocumentGeometry
+    # the mapper for range enum
+    range_enum_map,  # most likely always sortable_search_attr_by_field
+    # the column for the title
+    # (ex:  Waypoint -> title, Route -> title and title_prefix)
+    title_columns=None
 ):
     """
-    Build SQLAlchemy filter for documents (Waypoint, Route, etc.) based on filters that would normally be used by ElasticSearch
-    
+    Build SQLAlchemy filter for documents (Waypoint, Route, etc.)
+    based on filters that would normally be used by ElasticSearch
+
     this can then be used to filter directly in a DB query
-    
-    Usage Example : 
-    
+
+    Usage Example :
+
     search = build_query(params, meta_params, WAYPOINT_TYPE)
 
     search_dict = search.to_dict()
-    
-    filter_conditions, sort_expressions, needs_locale_join, langs = build_sqlalchemy_filters(
+
+    filter_conditions, sort_expressions, needs_locale_join, langs =
+    build_sqlalchemy_filters(
         search_dict=search_dict,
         document_model=Waypoint,
         filter_map={"areas": Area,},
@@ -69,9 +76,11 @@ def build_sqlalchemy_filters(
         range_enum_map=sortable_search_attr_by_field,
         title_columns=[DocumentLocale.title]
     )
-    
-    query = DBSession.query(Waypoint).filter(filter_conditions).order_by(*sort_expressions)
-    
+
+    query = DBSession.query(Waypoint)
+    .filter(filter_conditions)
+    .order_by(*sort_expressions)
+
     """
 
     filters = search_dict.get("query", {}).get("bool", {}).get("filter", [])
@@ -143,7 +152,8 @@ def build_sqlalchemy_filters(
                     if filter_key == "range":
                         filter_conditions.append(
                             build_range_expression(
-                                col, param_value, range_enum_map.get(param_key))
+                                col, param_value, range_enum_map.get(param_key)
+                            )
                         )
 
                     # for terms
@@ -171,7 +181,7 @@ def build_sqlalchemy_filters(
         search_dict.get("sort", []), document_model
     )
 
-    # return each valuable variable to be used later in a sql alchemy DBSession.query
+    # return each valuable variable to be used later in a sql alchemy query
     return final_filter, sort_expressions, needs_locale_join, langs
 
 
@@ -189,7 +199,8 @@ def build_range_expression(col, param_value, enum_map):
             if gte == lte:
                 values = [val for val, num in enum_map.items() if num == gte]
             else:
-                values = [val for val, num in enum_map.items() if num >= gte and num < lte]
+                values = [val for val, num in enum_map.items() if num >=
+                          gte and num < lte]
         elif gte is not None:
             values = [val for val, num in enum_map.items() if num >= gte]
         elif lte is not None:
@@ -212,6 +223,7 @@ def build_range_expression(col, param_value, enum_map):
     if not clauses:
         return False
     return and_(*clauses)
+
 
 def build_terms_expression(col, values, col_type):
     """
@@ -236,6 +248,7 @@ def build_terms_expression(col, values, col_type):
     if len(values) == 1:
         return col == values[0]
     return col.in_(values)
+
 
 def build_term_expression(col, value, col_type):
     """

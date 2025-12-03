@@ -2,7 +2,8 @@ from c2corg_api.models.area import AREA_TYPE, Area, schema_listing_area
 from c2corg_api.models.article import ARTICLE_TYPE, Article, \
     schema_listing_article
 from c2corg_api.models.book import BOOK_TYPE, Book, schema_listing_book
-from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage, schema_listing_coverage
+from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage, \
+    schema_listing_coverage
 from c2corg_api.models.image import IMAGE_TYPE, Image, schema_listing_image
 from c2corg_api.models.outing import OUTING_TYPE, Outing, schema_outing
 from c2corg_api.models.xreport import XREPORT_TYPE, Xreport, \

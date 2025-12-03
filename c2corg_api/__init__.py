@@ -125,7 +125,7 @@ def process_new_waypoint(mapper, connection, geometry):
     inserting it into documents_geometries."""
     # Check if document is a waypoint
     waypoint_id = geometry.document_id
-    
+
     document_type = connection.execute(
         text(
             """
@@ -138,7 +138,7 @@ def process_new_waypoint(mapper, connection, geometry):
 
     if document_type != "w":
         return
-    
+
     log.debug("Entering process_new_waypoint callback")
     max_distance_waypoint_to_stoparea = int(
         os.getenv("MAX_DISTANCE_WAYPOINT_TO_STOPAREA")

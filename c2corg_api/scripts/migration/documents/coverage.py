@@ -47,7 +47,8 @@ class MigrateCoverages(MigrateDocuments):
     def get_count_query_locales(self):
         return (
             'select count(*) '
-            'from app_coverages_i18n_archives aa join coverages a on aa.id = a.id '
+            'from app_coverages_i18n_archives aa '
+            'join coverages a on aa.id = a.id '
             'where a.redirects_to is null;'
         )
 
@@ -56,7 +57,8 @@ class MigrateCoverages(MigrateDocuments):
             'select '
             '   aa.id, aa.document_i18n_archive_id, aa.is_latest_version, '
             '   aa.culture, aa.name, aa.description '
-            'from app_coverages_i18n_archives aa join coverages a on aa.id = a.id '
+            'from app_coverages_i18n_archives aa '
+            'join coverages a on aa.id = a.id '
             'where a.redirects_to is null '
             'order by aa.id, aa.culture, aa.document_i18n_archive_id;'
         )

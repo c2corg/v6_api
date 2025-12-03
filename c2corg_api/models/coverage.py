@@ -1,7 +1,11 @@
 from c2corg_api.models import Base, schema
 from c2corg_api.models.enums import coverage_types
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, get_geometry_schema_overrides, schema_document_locale, schema_attributes)
+    schema_document_locale,
+    ArchiveDocument,
+    Document,
+    get_geometry_schema_overrides,
+    schema_attributes)
 from c2corg_api.models.schema_utils import get_update_schema, \
     get_create_schema, restrict_schema
 from c2corg_api.models.utils import copy_attributes
@@ -51,6 +55,7 @@ class Coverage(_CoverageMixin, Document):
 schema_coverage_locale = schema_document_locale
 schema_coverage_attributes = list(schema_attributes)
 
+
 class ArchiveCoverage(_CoverageMixin, ArchiveDocument):
     """
     """
@@ -66,6 +71,7 @@ class ArchiveCoverage(_CoverageMixin, ArchiveDocument):
     }
 
     __table_args__ = Base.__table_args__
+
 
 schema_coverage = SQLAlchemySchemaNode(
     Coverage,
