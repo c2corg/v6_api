@@ -5,10 +5,15 @@ import requests
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import Area, schema_area
 from c2corg_api.models.coverage import Coverage
+from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.utils import wkb_to_shape
 from c2corg_api.models.waypoint import Waypoint, schema_waypoint
 from c2corg_api.views.coverage import get_coverage
 from c2corg_api.views.document import LIMIT_DEFAULT
+from shapely.geometry import Polygon
+from geoalchemy2.shape import from_shape
+from sqlalchemy import nullslast
+from geoalchemy2.functions import ST_Intersects, ST_Transform
 from c2corg_api.views.waypoint import build_reachable_waypoints_query
 from c2corg_api.views.route import build_reachable_route_query, build_reachable_route_query_with_waypoints
 from shapely import wkb
@@ -390,6 +395,33 @@ class NavitiaIsochronesReachableWaypointsRest:
 
         return {'documents': waypoints, 'total': len(waypoints), "isochron_geom": geojson}
 
+@resource(path='/navitia/areainisochrone', cors_policy=cors_policy)
+class AreaInIsochroneRest:
+    def __init__(self, request, context=None):
+        self.request = request
+
+    @view(validators=[])
+    def post(self):
+        """
+        returns all areas that are inside or that intersects an isochrone geometry
+        make sure the geom_detail in body is epsg:3857
+        """
+        polygon = shape(json.loads(json.loads(self.request.body)['geom_detail']))     
+        
+        query = (
+            DBSession.query(Area)
+        )
+        
+        results = query.all()
+        
+        areas = []
+        
+        for area in results:
+            if (polygon.intersects(wkb_to_shape(area.geometry.geom_detail))):
+                areas.append(area.document_id)
+        
+        return areas
+        
 
 def is_wp_journey_reachable(waypoint, journey_params):
     """

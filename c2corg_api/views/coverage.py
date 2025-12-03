@@ -1,8 +1,12 @@
 
 import functools
+import json
 import logging
 from operator import and_, or_
 from c2corg_api.models import DBSession, coverage
+from shapely import transform
+from pyproj import Transformer
+from c2corg_api.models.area import Area, schema_area
 from c2corg_api.models.association import Association
 from c2corg_api.models.common.fields_coverage import fields_coverage
 from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage, schema_coverage, schema_create_coverage, schema_update_coverage
@@ -14,7 +18,7 @@ from c2corg_api.views.area import update_associations
 from c2corg_api.views.validation import validate_cook_param, validate_id, validate_lang_param
 from c2corg_api.views.document import DocumentRest, make_validator_create, make_validator_update
 from shapely import wkb
-from shapely.geometry import Point
+from shapely.geometry import Point, shape
 from cornice.validators import colander_body_validator
 from cornice.resource import resource, view
 from sqlalchemy import func
@@ -45,7 +49,7 @@ class CoverageRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
         return self._collection_get(COVERAGE_TYPE, coverage_documents_config)
-    
+
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(
@@ -77,7 +81,7 @@ class WaypointCoverageRest(DocumentRest):
     def __init__(self, request, context=None):
         self.request = request
 
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
+    @view(validators=[])
     def get(self):
         """Returns the coverage from a longitude and a latitude"""
 
@@ -86,7 +90,23 @@ class WaypointCoverageRest(DocumentRest):
 
         return get_coverage(lon, lat)
 
+
+@resource(path='/getpolygoncoverage', cors_policy=cors_policy)
+class PolygonCoverage(DocumentRest):
+
+    def __init__(self, request, context=None):
+        self.request = request
+
+    @view(validators=[])
+    def post(self):
+        """Returns the coverages from a geom_detail type polygon (geom_detail has to be EPSG 4326 since isochrone is 4326)"""
+        geom_detail = json.loads((json.loads(self.request.body)['geom_detail']))
+        polygon = shape(geom_detail)
+        return get_coverages(polygon)
+
+
 def get_coverage(lon, lat):
+    """get the coverage that contains a point(lon, lat)"""
     pt = Point(lon, lat)
 
     coverageFound = None
@@ -95,10 +115,10 @@ def get_coverage(lon, lat):
 
     for coverage in coverages:
         geom = coverage.geometry.geom_detail
-        
+
         # convert WKB → Shapely polygon
         poly = wkb_to_shape(geom)
-        
+
         if poly.contains(pt):
             coverageFound = coverage
             break
@@ -107,3 +127,23 @@ def get_coverage(lon, lat):
         return coverageFound.coverage_type
     else:
         return None
+    
+def get_coverages(polygon):
+    """get all the coverages that intersects a polygon"""
+    coverageFound = []
+
+    coverages = DBSession.query(Coverage).all()
+
+    for coverage in coverages:
+        geom = coverage.geometry.geom_detail
+
+        # convert WKB → Shapely polygon
+        poly = wkb_to_shape(geom)
+        log.warning(poly)
+        log.warning(polygon)
+
+        if poly.contains(polygon) or poly.intersects(polygon):
+            log.warning("coverage found and added")
+            coverageFound.append(coverage.coverage_type)
+
+    return coverageFound
