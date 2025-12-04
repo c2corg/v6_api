@@ -450,7 +450,7 @@ class AreaInIsochroneRest:
             self.request.body)['geom_detail']))
 
         query = (
-            DBSession.query(Area)
+            DBSession.query(Area).filter(Area.area_type == 'range')
         )
 
         results = query.all()
