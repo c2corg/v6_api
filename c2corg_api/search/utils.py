@@ -152,7 +152,10 @@ def build_sqlalchemy_filters(
                     if filter_key == "range":
                         filter_conditions.append(
                             build_range_expression(
-                                col, param_value, range_enum_map.get(param_key)
+                                col,
+                                param_value,
+                                range_enum_map.get(param_key),
+                                col_type
                             )
                         )
 
@@ -185,7 +188,7 @@ def build_sqlalchemy_filters(
     return final_filter, sort_expressions, needs_locale_join, langs
 
 
-def build_range_expression(col, param_value, enum_map):
+def build_range_expression(col, param_value, enum_map, col_type):
     """
     build sql alchemy filter for range expressions
     """
@@ -200,15 +203,22 @@ def build_range_expression(col, param_value, enum_map):
                 values = [val for val, num in enum_map.items() if num == gte]
             else:
                 values = [val for val, num in enum_map.items() if num >=
-                          gte and num < lte]
+                          gte and num <= lte]
         elif gte is not None:
             values = [val for val, num in enum_map.items() if num >= gte]
         elif lte is not None:
-            values = [val for val, num in enum_map.items() if num < lte]
+            values = [val for val, num in enum_map.items() if num <= lte]
 
-        checks = [col == v for v in values]
+        # if col type is an array of enum
+        if isinstance(col_type, ArrayOfEnum):
+            checks = [col.any(v) for v in values]
+        else:
+            checks = [col == v for v in values]
+
         if not checks:
             return False
+
+        # build OR by folding with |
         or_expr = checks[0]
         for check in checks[1:]:
             or_expr = or_expr | check
