@@ -102,7 +102,10 @@ def build_sqlalchemy_filters(
     if query_value and title_columns:
         needs_locale_join = True
         like_clauses = [col.ilike(f"%{query_value}%") for col in title_columns]
-        filter_conditions.append(or_(*like_clauses))
+        if len(like_clauses) == 2:
+            filter_conditions.append(or_(*like_clauses))
+        elif len(like_clauses) == 1:
+            filter_conditions.append(like_clauses[0])
 
     # loop over all elastic search filters
     for f in filters:
