@@ -273,7 +273,7 @@ class ReachableRouteRest(DocumentRest):
                     json_areas.append(to_json_dict(
                         area_obj, schema_listing_area))
 
-            # assign JSON areas to the waypoint
+            # assign JSON areas to the route
             route.areas = json_areas
             wp_dict = to_json_dict(route, schema_route, True)
             routes.append(wp_dict)
@@ -645,13 +645,14 @@ def build_reachable_route_query(params, meta_params):
         )). \
         join(Area, Area.document_id == AreaAssociation.area_id)
 
-    if (needs_locale_join):
-        query = query. \
-            join(
+    if (needs_locale_join or len(langs) > 0):
+        query = query.join(
                 DocumentLocale,
                 Route.document_id == DocumentLocale.document_id
-            ). \
-            join(RouteLocale, RouteLocale.id == DocumentLocale.id)
+            )
+
+    if (needs_locale_join):
+        query = query.join(RouteLocale, RouteLocale.id == DocumentLocale.id)
 
     if (len(langs) > 0):
         query = query.filter(DocumentLocale.lang.in_(langs))
@@ -723,13 +724,14 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
         )). \
         join(Area, Area.document_id == AreaAssociation.area_id)
 
-    if (needs_locale_join):
-        query = query. \
-            join(
+    if (needs_locale_join or len(langs) > 0):
+        query = query.join(
                 DocumentLocale,
                 Route.document_id == DocumentLocale.document_id
-            ). \
-            join(RouteLocale, RouteLocale.id == DocumentLocale.id)
+            )
+
+    if (needs_locale_join):
+        query = query.join(RouteLocale, RouteLocale.id == DocumentLocale.id)
 
     if (len(langs) > 0):
         query = query.filter(DocumentLocale.lang.in_(langs))
