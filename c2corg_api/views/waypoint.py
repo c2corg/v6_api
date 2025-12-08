@@ -591,7 +591,7 @@ def build_reachable_waypoints_query(params, meta_params):
         join(DocumentGeometry, Waypoint.document_id ==
              DocumentGeometry.document_id)
 
-    if (needs_locale_join):
+    if (needs_locale_join or len(langs) > 0):
         query = query.join(
             DocumentLocale, Waypoint.document_id == DocumentLocale.document_id)
 
