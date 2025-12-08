@@ -583,10 +583,10 @@ def build_reachable_waypoints_query(params, meta_params):
             WaypointStoparea,
             WaypointStoparea.waypoint_id == Waypoint.document_id
         ). \
-        join(AreaAssociation, or_(
-            AreaAssociation.document_id == Association.child_document_id,
-            AreaAssociation.document_id == Association.parent_document_id
-        )). \
+        join(
+            AreaAssociation,
+            AreaAssociation.document_id == Waypoint.document_id
+        ). \
         join(Area, Area.document_id == AreaAssociation.area_id). \
         join(DocumentGeometry, Waypoint.document_id ==
              DocumentGeometry.document_id)

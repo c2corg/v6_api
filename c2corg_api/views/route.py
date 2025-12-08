@@ -634,15 +634,15 @@ def build_reachable_route_query(params, meta_params):
         join(
             WaypointStoparea,
             WaypointStoparea.waypoint_id == Waypoint.document_id
-    ). \
+        ). \
         join(
             DocumentGeometry,
             Waypoint.document_id == DocumentGeometry.document_id
-    ). \
-        join(AreaAssociation, or_(
-            AreaAssociation.document_id == Association.child_document_id,
-            AreaAssociation.document_id == Association.parent_document_id
-        )). \
+        ). \
+        join(
+            AreaAssociation,
+            AreaAssociation.document_id == Route.document_id
+        ). \
         join(Area, Area.document_id == AreaAssociation.area_id)
 
     if (needs_locale_join or len(langs) > 0):
@@ -718,20 +718,19 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
             DocumentGeometry,
             Waypoint.document_id == DocumentGeometry.document_id
         ). \
-        join(AreaAssociation, or_(
-            AreaAssociation.document_id == Association.child_document_id,
-            AreaAssociation.document_id == Association.parent_document_id
-        )). \
+        join(
+            AreaAssociation,
+            AreaAssociation.document_id == Route.document_id
+        ). \
         join(Area, Area.document_id == AreaAssociation.area_id)
 
-    if (needs_locale_join or len(langs) > 0):
-        query = query.join(
+    if (needs_locale_join):
+        query = query. \
+            join(
                 DocumentLocale,
                 Route.document_id == DocumentLocale.document_id
-            )
-
-    if (needs_locale_join):
-        query = query.join(RouteLocale, RouteLocale.id == DocumentLocale.id)
+            ). \
+            join(RouteLocale, RouteLocale.id == DocumentLocale.id)
 
     if (len(langs) > 0):
         query = query.filter(DocumentLocale.lang.in_(langs))
