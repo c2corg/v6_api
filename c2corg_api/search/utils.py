@@ -84,7 +84,10 @@ def build_sqlalchemy_filters(
     """
 
     filters = search_dict.get("query", {}).get("bool", {}).get("filter", [])
-    must_list = search_dict.get("query", {}).get("bool", {}).get("must", [])
+    if len(filters) > 0:
+        must_list = search_dict.get("query", {}).get("bool", {}).get("must", [])  # noqa
+    else:
+        must_list = [search_dict.get("query", {})]
 
     filter_conditions = []
     needs_locale_join = False
