@@ -724,13 +724,14 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
         ). \
         join(Area, Area.document_id == AreaAssociation.area_id)
 
-    if (needs_locale_join):
-        query = query. \
-            join(
+    if (needs_locale_join or len(langs) > 0):
+        query = query.join(
                 DocumentLocale,
                 Route.document_id == DocumentLocale.document_id
-            ). \
-            join(RouteLocale, RouteLocale.id == DocumentLocale.id)
+            )
+
+    if (needs_locale_join):
+        query = query.join(RouteLocale, RouteLocale.id == DocumentLocale.id)
 
     if (len(langs) > 0):
         query = query.filter(DocumentLocale.lang.in_(langs))
