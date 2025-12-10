@@ -166,7 +166,7 @@ class StartNavitiaJourneyReachableRoutesRest:
         start job to retrieve journey reachable routes
         returns job id
         """
-        return start_job_background(computeJourneyReachableRoutes, self.request)  # noqa
+        return start_job_background(compute_journey_reachable_routes, self.request)  # noqa
 
 
 @resource(path='/navitia/journeyreachablewaypoints/start', cors_policy=cors_policy)  # noqa
@@ -180,7 +180,7 @@ class StartNavitiaJourneyReachableWaypointsRest:
         start job to retrieve journey reachable waypoints
         returns job id
         """
-        return start_job_background(computeJourneyReachableWaypoints, self.request)  # noqa
+        return start_job_background(compute_journey_reachable_waypoints, self.request)  # noqa
 
 
 @resource(path='/navitia/journeyreachableroutes/result/{job_id}', cors_policy=cors_policy)  # noqa
@@ -247,7 +247,7 @@ class NavitiaJourneyReachableWaypointsProgressRest:
         return Response(app_iter=progress_stream(r, job_id), content_type="text/event-stream")  # noqa
 
 
-def computeJourneyReachableRoutes(job_id, request):
+def compute_journey_reachable_routes(job_id, request):
     """
         Get all waypoints matching filters in params, that are reachable
         (means there exists a Navitia journey for at least one of
@@ -316,7 +316,7 @@ def computeJourneyReachableRoutes(job_id, request):
         r.set(f"job:{job_id}:error", str(exc))
 
 
-def computeJourneyReachableWaypoints(job_id, request):
+def compute_journey_reachable_waypoints(job_id, request):
     """
         Get all routes matching filters in params, that are reachable
         (means there exists a Navitia journey for at least one of
