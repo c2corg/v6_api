@@ -9,6 +9,7 @@ from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.models.xreport import XREPORT_TYPE
+from c2corg_api.models.coverage import COVERAGE_TYPE
 from c2corg_api.search.mappings.area_mapping import SearchArea
 from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.book_mapping import SearchBook
@@ -19,6 +20,7 @@ from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.search.mappings.xreport_mapping import SearchXreport
+from c2corg_api.search.mappings.coverage_mapping import SearchCoverage
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
 from elasticsearch_dsl.connections import connections
@@ -114,5 +116,6 @@ search_documents = {
     ROUTE_TYPE: SearchRoute,
     MAP_TYPE: SearchTopoMap,
     USERPROFILE_TYPE: SearchUser,
-    WAYPOINT_TYPE: SearchWaypoint
+    WAYPOINT_TYPE: SearchWaypoint,
+    COVERAGE_TYPE: SearchCoverage,
 }
