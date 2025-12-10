@@ -785,3 +785,11 @@ slackline_types = [
     'highline',
     'waterline'
 ]
+
+coverage_types = [
+    'fr-idf',
+    'fr-ne',
+    'fr-nw',
+    'fr-se',
+    'fr-sw'
+]
