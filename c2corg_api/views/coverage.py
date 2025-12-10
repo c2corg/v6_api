@@ -135,11 +135,8 @@ def get_coverages(polygon):
 
         # convert WKB → Shapely polygon
         poly = wkb_to_shape(geom)
-        log.warning(poly)
-        log.warning(polygon)
 
         if poly.contains(polygon) or poly.intersects(polygon):
-            log.warning("coverage found and added")
             coverage_found.append(coverage.coverage_type)
 
     return coverage_found
