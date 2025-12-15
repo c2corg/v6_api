@@ -36,6 +36,8 @@ from c2corg_api.models.common.attributes import activities, \
 from sqlalchemy.orm import load_only
 from sqlalchemy.sql.expression import text, or_, column, union
 
+from c2corg_api.search.advanced_search import search_with_ids
+
 from operator import and_
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
