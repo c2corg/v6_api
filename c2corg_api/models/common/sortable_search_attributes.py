@@ -348,39 +348,3 @@ sortable_avalanche_slopes = {
     'slope_40_45': 3,
     'slope_gt_45': 4
 }
-
-
-search_attr_by_field = {
-    'quality': sortable_quality_types,
-    'access_time': sortable_access_times,
-    'paragliding_rating': sortable_paragliding_ratings,
-    'durations': sortable_route_duration_types,
-    'ski_rating': sortable_ski_ratings,
-    'ski_exposition': sortable_exposition_ratings,
-    'labande_ski_rating': sortable_labande_ski_ratings,
-    'labande_global_rating': sortable_global_ratings,
-    'global_rating': sortable_global_ratings,
-    'engagement_rating': sortable_engagement_ratings,
-    'risk_rating': sortable_risk_ratings,
-    'equipment_rating': sortable_equipment_ratings,
-    'ice_rating': sortable_ice_ratings,
-    'mixed_rating': sortable_mixed_ratings,
-    'exposition_rock_rating': sortable_exposition_rock_ratings,
-    'rock_free_rating': sortable_climbing_ratings,
-    'rock_required_rating': sortable_climbing_ratings,
-    'aid_rating': sortable_aid_ratings,
-    'via_ferrata_rating': sortable_via_ferrata_ratings,
-    'hiking_rating': sortable_hiking_ratings,
-    'hiking_mtb_exposition': sortable_exposition_ratings,
-    'snowshoe_rating': sortable_snowshoe_ratings,
-    'mtb_up_rating': sortable_mtb_up_ratings,
-    'mtb_down_rating': sortable_mtb_down_ratings,
-    'frequentation': sortable_frequentation_types,
-    'condition_rating': sortable_condition_ratings,
-    'snow_quality': sortable_snow_quality_ratings,
-    'snow_quantity': sortable_snow_quality_ratings,
-    'glacier_rating': sortable_glacier_ratings,
-    'severity': sortable_severities,
-    'avalanche_level': sortable_avalanche_levels,
-    'avalanche_slope': sortable_avalanche_slopes
-}
