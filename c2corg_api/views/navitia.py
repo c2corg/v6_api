@@ -263,8 +263,10 @@ def compute_journey_reachable_routes(job_id, request):
     try:
         meta_params = extract_meta_params(request)
         journey_params = extract_journey_params(request)
-        query = build_reachable_route_query_with_waypoints(
-            request.GET, meta_params)
+        query, count = build_reachable_route_query_with_waypoints(
+            request.GET,
+            meta_params
+        )
         results = query.all()
 
         if len(results) > MAX_ROUTE_THRESHOLD:
@@ -348,7 +350,10 @@ def compute_journey_reachable_waypoints(job_id, request):
         if len(areas_list) > 1:
             raise HTTPBadRequest('Only one filtering area is allowed')
 
-        query = build_reachable_waypoints_query(request.GET, meta_params)
+        query, count = build_reachable_waypoints_query(
+            request.GET,
+            meta_params
+        )
         results = query.all()
 
         areas_map = collect_areas_from_results(results, 1)
@@ -420,8 +425,10 @@ class NavitiaIsochronesReachableRoutesRest:
 
             isochrone_params = extract_isochrone_params(self.request)
 
-            query = build_reachable_route_query_with_waypoints(
-                self.request.GET, meta_params)
+            query, count = build_reachable_route_query_with_waypoints(
+                self.request.GET,
+                meta_params
+            )
 
             results = query.all()
 
@@ -498,8 +505,9 @@ class NavitiaIsochronesReachableWaypointsRest:
 
             isochrone_params = extract_isochrone_params(self.request)
 
-            query = build_reachable_waypoints_query(
-                self.request.GET, meta_params)
+            query, count = build_reachable_waypoints_query(
+                self.request.GET, meta_params
+            )
 
             results = query.all()
 
@@ -596,7 +604,7 @@ def is_wp_journey_reachable(waypoint, journey_params):
     destination_coverage = get_coverage(lon, lat)
 
     try:
-        # Récupération de la clé API depuis les variables d'environnement
+        # Get navitia API key from env variable
         api_key = os.getenv('NAVITIA_API_KEY')
         if not api_key:
             raise HTTPInternalServerError(
@@ -605,7 +613,7 @@ def is_wp_journey_reachable(waypoint, journey_params):
         response = {}
 
         if (destination_coverage):
-            # Appel à l'API Navitia Journey with coverage
+            # call to API Navitia Journey with coverage
             response = requests.get(
                 f'https://api.navitia.io/v1/coverage/{destination_coverage}/journeys',  # noqa: E501
                 params=journey_params,
@@ -613,7 +621,7 @@ def is_wp_journey_reachable(waypoint, journey_params):
                 timeout=30
             )
         else:
-            # Appel à l'API Navitia Journey
+            # call to API Navitia Journey
             response = requests.get(
                 'https://api.navitia.io/v1/journeys',
                 params=journey_params,
@@ -621,7 +629,7 @@ def is_wp_journey_reachable(waypoint, journey_params):
                 timeout=30
             )
 
-        # Vérification du statut de la réponse
+        # Check response status
         if response.status_code == 401:
             raise HTTPInternalServerError('Authentication error with Navitia API')  # noqa
         elif response.status_code == 400:
