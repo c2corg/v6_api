@@ -44,6 +44,10 @@ def search_with_ids(url_params, meta_params, doc_type, id_chunk=None):
             search_dict["query"]["bool"]["filter"] = []
 
         search_dict["query"]["bool"]["filter"].append(terms_filter)
+
+        search_dict["from"] = 0
+        search_dict["size"] = len(id_chunk)
+
     query.update_from_dict(search_dict)
 
     response = query.execute()
@@ -51,6 +55,43 @@ def search_with_ids(url_params, meta_params, doc_type, id_chunk=None):
     total = response.hits.total
 
     return document_ids, total
+
+
+def get_all_filtered_docs(
+    params,
+    meta_params,
+    ids,
+    keepOrder,
+    docType
+):
+    """get all docs ids, taking into account ES filter in params"""
+    filtered_doc_ids = []
+    total_hits = 0
+
+    # use elastic search to apply filters
+    # to documents of type ids
+    # do it by chunk of size 'limit'
+    for idx, id_chunk in enumerate(chunk_ids(
+        ids,
+        chunk_size=(len(ids) if keepOrder else 100)
+    ), start=1):
+        doc_ids, hits = search_with_ids(
+            params,
+            meta_params,
+            doc_type=docType,
+            id_chunk=id_chunk
+        )
+        filtered_doc_ids.extend(doc_ids)
+        total_hits += hits
+
+    return filtered_doc_ids, total_hits
+
+
+def chunk_ids(ids_set, chunk_size=100):
+    """Yield successive chunks of IDs from a set/list."""
+    ids_list = list(ids_set)
+    for i in range(0, len(ids_list), chunk_size):
+        yield ids_list[i:i + chunk_size]
 
 
 def contains_search_params(url_params):
