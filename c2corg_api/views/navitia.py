@@ -267,7 +267,10 @@ def compute_journey_reachable_routes(job_id, request):
             request.GET,
             meta_params
         )
-        results = query.all()
+        if query is None:
+            results = []
+        else:
+            results = query.all()
 
         if len(results) > MAX_ROUTE_THRESHOLD:
             raise HTTPBadRequest(
@@ -430,7 +433,10 @@ class NavitiaIsochronesReachableRoutesRest:
                 meta_params
             )
 
-            results = query.all()
+            if query is None:
+                results = []
+            else:
+                results = query.all()
 
             areas_map = collect_areas_from_results(results, 1)
 

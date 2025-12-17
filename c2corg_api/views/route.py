@@ -1,6 +1,7 @@
 from itertools import combinations
 
 import functools
+from sqlalchemy import case
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
@@ -15,6 +16,7 @@ from c2corg_api.views.document_schemas import route_documents_config, \
     route_schema_adaptor, outing_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.models.utils import get_mid_point
+from c2corg_api.search.advanced_search import get_all_filtered_docs
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
 
@@ -33,8 +35,6 @@ from c2corg_api.models.common.attributes import activities, \
     public_transportation_ratings
 from sqlalchemy.orm import load_only
 from sqlalchemy.sql.expression import text, or_, column, union
-
-from c2corg_api.search.advanced_search import search_with_ids
 
 from operator import and_
 from c2corg_api.models.area import Area
@@ -240,12 +240,16 @@ class ReachableRouteRest(DocumentRest):
             meta_params
         )
 
-        results = (
-            query
-            .limit(meta_params['limit'])
-            .offset(meta_params['offset'])
-            .all()
-        )
+        if query is None:
+            results = []
+        else:
+            # route, areas in results
+            results = (
+                query
+                .limit(meta_params['limit'])
+                .offset(meta_params['offset'])
+                .all()
+            )
 
         areas_id = set()
         for route, areas in results:
@@ -602,11 +606,29 @@ def build_reachable_route_query(params, meta_params):
        (can be accessible by public transports), filtered with params
     """
     all_filtered_routes_reachable_ids, \
-        total_hits = get_all_filtered_routes_reachable(
+        total_hits = get_all_filtered_docs(
             params,
-            meta_params
+            meta_params,
+            get_routes_reachable_ids(),
+            True,
+            ROUTE_TYPE
         )
-    # then query database with the ids from ES
+
+    if total_hits == 0:
+        return None, 0
+
+    # The order of ids within all_filtered_routes_reachable_ids order matters
+    # since a sort may have been applied by ES
+
+    ordering_case = case(
+        {
+            doc_id: idx for idx,
+            doc_id in enumerate(all_filtered_routes_reachable_ids)
+        },
+        value=Route.document_id
+    )
+
+    # Querying database with the ids from ES, mainting the order with the case
     query = (
         DBSession.
         query(Route,
@@ -626,6 +648,7 @@ def build_reachable_route_query(params, meta_params):
             Area.document_id == AreaAssociation.area_id
         ).
         group_by(Route).
+        order_by(ordering_case).
         limit(meta_params['limit']).
         offset(meta_params['offset'])
     )
@@ -642,10 +665,28 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
     """
 
     all_filtered_routes_reachable_ids, \
-        total_hits = get_all_filtered_routes_reachable(
+        total_hits = get_all_filtered_docs(
             params,
-            meta_params
+            meta_params,
+            get_routes_reachable_ids(),
+            True,
+            ROUTE_TYPE
         )
+
+    if total_hits == 0:
+        return None, 0
+
+    # The order of ids within all_filtered_routes_reachable_ids order matters
+    # since a sort may have been applied by ES
+
+    ordering_case = case(
+        {
+            doc_id: idx for idx,
+            doc_id in enumerate(all_filtered_routes_reachable_ids)
+        },
+        value=Route.document_id
+    )
+
     # then query database with the ids from ES
     query = (
         DBSession.
@@ -687,18 +728,12 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
             WaypointStoparea.waypoint_id == Waypoint.document_id
         ).
         group_by(Route).
+        order_by(ordering_case).
         limit(meta_params['limit']).
         offset(meta_params['offset'])
     )
 
     return query, total_hits
-
-
-def chunk_ids(ids_set, chunk_size=100):
-    """Yield successive chunks of IDs from a set/list."""
-    ids_list = list(ids_set)
-    for i in range(0, len(ids_list), chunk_size):
-        yield ids_list[i:i + chunk_size]
 
 
 def get_routes_reachable_ids():
@@ -730,31 +765,3 @@ def get_routes_reachable_ids():
         [r.document_id for r in all_routes_reachable])
 
     return all_routes_reachable_ids
-
-
-def get_all_filtered_routes_reachable(params, meta_params):
-    """get all routes reachable ids, taking into account ES filter in params"""
-    all_routes_reachable_ids = get_routes_reachable_ids()
-    all_filtered_routes_reachable_ids = []
-    total_hits = 0
-
-    # use elastic search to apply filters, but make sure the documents
-    # that will be returned can only be routes reachable.
-    # we do this by sending the previously collected ids
-    # as filters in ES.
-
-    # do it by chunk of size 'limit'
-    for idx, id_chunk in enumerate(chunk_ids(
-        all_routes_reachable_ids,
-        chunk_size=100
-    ), start=1):
-        doc_ids, hits = search_with_ids(
-            params,
-            meta_params,
-            doc_type=ROUTE_TYPE,
-            id_chunk=id_chunk
-        )
-        all_filtered_routes_reachable_ids.extend(doc_ids)
-        total_hits += hits
-
-    return all_filtered_routes_reachable_ids, total_hits
