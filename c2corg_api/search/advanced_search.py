@@ -61,8 +61,8 @@ def get_all_filtered_docs(
     params,
     meta_params,
     ids,
-    keepOrder,
-    docType
+    keep_order,
+    doc_type
 ):
     """get all docs ids, taking into account ES filter in params"""
     filtered_doc_ids = []
@@ -73,12 +73,12 @@ def get_all_filtered_docs(
     # do it by chunk of size 'limit'
     for idx, id_chunk in enumerate(chunk_ids(
         ids,
-        chunk_size=(len(ids) if keepOrder else 100)
+        chunk_size=(len(ids) if keep_order else 100)
     ), start=1):
         doc_ids, hits = search_with_ids(
             params,
             meta_params,
-            doc_type=docType,
+            doc_type=doc_type,
             id_chunk=id_chunk
         )
         filtered_doc_ids.extend(doc_ids)
