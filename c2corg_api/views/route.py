@@ -1,13 +1,13 @@
 from itertools import combinations
 
 import functools
+from sqlalchemy import case
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
-from c2corg_api.search.utils import build_sqlalchemy_filters
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.views.document_info import DocumentInfoRest
@@ -16,6 +16,7 @@ from c2corg_api.views.document_schemas import route_documents_config, \
     route_schema_adaptor, outing_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.models.utils import get_mid_point
+from c2corg_api.search.advanced_search import get_all_filtered_docs
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
 
@@ -38,14 +39,11 @@ from sqlalchemy.sql.expression import text, or_, column, union
 from operator import and_
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
-from c2corg_api.search.search_filters import build_query
 from c2corg_api.views import to_json_dict
 from c2corg_api.views.document import (LIMIT_DEFAULT)
 from c2corg_api.models.waypoint_stoparea import (WaypointStoparea)
 from c2corg_api.models.area import schema_listing_area
 from sqlalchemy import func, literal_column
-from c2corg_api.models.common.sortable_search_attributes import \
-    search_attr_by_field
 
 
 validate_route_create = make_validator_create(
@@ -226,7 +224,8 @@ class ReachableRouteRest(DocumentRest):
     def get(self):
         """Returns a list of object {documents: Route[], total: Integer} ->
         documents: routes reachable within offset and limit
-        total: number of documents returned by query without offset and limit"""  # noqa: E501
+        total: number of documents returned by query,
+        without offset and limit"""
 
         validated = self.request.validated
 
@@ -236,16 +235,21 @@ class ReachableRouteRest(DocumentRest):
             'lang': validated.get('lang')
         }
 
-        query = build_reachable_route_query(self.request.GET, meta_params)
-
-        count = query.count()
-
-        results = (
-            query
-            .limit(meta_params['limit'])
-            .offset(meta_params['offset'])
-            .all()
+        query, count = build_reachable_route_query(
+            self.request.GET,
+            meta_params
         )
+
+        if query is None:
+            results = []
+        else:
+            # route, areas in results
+            results = (
+                query
+                .limit(meta_params['limit'])
+                .offset(meta_params['offset'])
+                .all()
+            )
 
         areas_id = set()
         for route, areas in results:
@@ -601,69 +605,55 @@ def build_reachable_route_query(params, meta_params):
        returns a list of routes reachable
        (can be accessible by public transports), filtered with params
     """
-    search = build_query(params, meta_params, ROUTE_TYPE)
-    search_dict = search.to_dict()
-
-    filter_conditions, sort_expressions, needs_locale_join, langs = \
-        build_sqlalchemy_filters(
-            search_dict,
-            document_model=Route,
-            filter_map={'areas': Area, 'waypoints': Waypoint},
-            geometry_model=DocumentGeometry,
-            range_enum_map=search_attr_by_field,
-            title_columns=[DocumentLocale.title, RouteLocale.title_prefix]
+    all_filtered_routes_reachable_ids, \
+        total_hits = get_all_filtered_docs(
+            params,
+            meta_params,
+            get_routes_reachable_ids(),
+            True,
+            ROUTE_TYPE
         )
 
-    # perform query
-    query = DBSession.query(Route, func.jsonb_agg(func.distinct(
-        func.jsonb_build_object(
-            literal_column("'document_id'"), Area.document_id
-        ))).label("areas")). \
-        select_from(Association). \
-        join(Route, or_(
-            Route.document_id == Association.child_document_id,
-            Route.document_id == Association.parent_document_id
-        )). \
-        join(Waypoint, and_(
-            or_(
-                Waypoint.document_id == Association.child_document_id,
-                Waypoint.document_id == Association.parent_document_id
-            ),
-            Waypoint.waypoint_type == 'access'
-        )). \
-        join(
-            WaypointStoparea,
-            WaypointStoparea.waypoint_id == Waypoint.document_id
-        ). \
-        join(
-            DocumentGeometry,
-            Waypoint.document_id == DocumentGeometry.document_id
-        ). \
+    if total_hits == 0:
+        return None, 0
+
+    # The order of ids within all_filtered_routes_reachable_ids order matters
+    # since a sort may have been applied by ES
+
+    ordering_case = case(
+        {
+            doc_id: idx for idx,
+            doc_id in enumerate(all_filtered_routes_reachable_ids)
+        },
+        value=Route.document_id
+    )
+
+    # Querying database with the ids from ES, mainting the order with the case
+    query = (
+        DBSession.
+        query(Route,
+              func.jsonb_agg(func.distinct(
+                  func.jsonb_build_object(
+                      literal_column(
+                          "'document_id'"), Area.document_id
+                  ))).label("areas")).
+        filter(Route.document_id.in_(
+            all_filtered_routes_reachable_ids)).
         join(
             AreaAssociation,
             AreaAssociation.document_id == Route.document_id
-        ). \
-        join(Area, Area.document_id == AreaAssociation.area_id)
+        ).
+        join(
+            Area,
+            Area.document_id == AreaAssociation.area_id
+        ).
+        group_by(Route).
+        order_by(ordering_case).
+        limit(meta_params['limit']).
+        offset(meta_params['offset'])
+    )
 
-    if (needs_locale_join or len(langs) > 0):
-        query = query.join(
-                DocumentLocale,
-                Route.document_id == DocumentLocale.document_id
-            )
-
-    if (needs_locale_join):
-        query = query.join(RouteLocale, RouteLocale.id == DocumentLocale.id)
-
-    if (len(langs) > 0):
-        query = query.filter(DocumentLocale.lang.in_(langs))
-
-    query = query. \
-        filter(filter_conditions). \
-        order_by(*sort_expressions). \
-        group_by(Route). \
-        distinct()
-
-    return query
+    return query, total_hits
 
 
 def build_reachable_route_query_with_waypoints(params, meta_params):
@@ -673,73 +663,105 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
        returns a list of routes reachable
        (accessible by common transports), filtered with params
     """
-    search = build_query(params, meta_params, ROUTE_TYPE)
-    search_dict = search.to_dict()
 
-    filter_conditions, sort_expressions, needs_locale_join, langs = \
-        build_sqlalchemy_filters(
-            search_dict,
-            document_model=Route,
-            filter_map={'areas': Area, 'waypoints': Waypoint},
-            geometry_model=DocumentGeometry,
-            range_enum_map=search_attr_by_field,
-            title_columns=[DocumentLocale.title, RouteLocale.title_prefix]
+    all_filtered_routes_reachable_ids, \
+        total_hits = get_all_filtered_docs(
+            params,
+            meta_params,
+            get_routes_reachable_ids(),
+            True,
+            ROUTE_TYPE
         )
 
-    # perform query
-    query = DBSession.query(Route,
-                            func.jsonb_agg(func.distinct(
-                                func.jsonb_build_object(
-                                    literal_column(
-                                        "'document_id'"), Area.document_id
-                                ))).label("areas"),
-                            func.jsonb_agg(func.distinct(
-                                func.jsonb_build_object(
-                                    literal_column(
-                                        "'document_id'"), Waypoint.document_id
-                                ))).label("waypoints")). \
-        select_from(Association). \
-        join(Route, or_(
-            Route.document_id == Association.child_document_id,
-            Route.document_id == Association.parent_document_id
-        )). \
+    if total_hits == 0:
+        return None, 0
+
+    # The order of ids within all_filtered_routes_reachable_ids order matters
+    # since a sort may have been applied by ES
+
+    ordering_case = case(
+        {
+            doc_id: idx for idx,
+            doc_id in enumerate(all_filtered_routes_reachable_ids)
+        },
+        value=Route.document_id
+    )
+
+    # then query database with the ids from ES
+    query = (
+        DBSession.
+        query(Route,
+              func.jsonb_agg(func.distinct(
+                  func.jsonb_build_object(
+                      literal_column(
+                          "'document_id'"), Area.document_id
+                  ))).label("areas"),
+              func.jsonb_agg(func.distinct(
+                  func.jsonb_build_object(
+                      literal_column(
+                          "'document_id'"), Waypoint.document_id
+                  ))).label("waypoints")).
+        select_from(Association).
+        join(Route, and_(
+            or_(
+                Route.document_id == Association.child_document_id,
+                Route.document_id == Association.parent_document_id
+            ), Route.document_id.in_(all_filtered_routes_reachable_ids)
+        )).
+        join(
+            AreaAssociation,
+            AreaAssociation.document_id == Route.document_id
+        ).
+        join(
+            Area,
+            Area.document_id == AreaAssociation.area_id
+        ).
         join(Waypoint, and_(
             or_(
                 Waypoint.document_id == Association.child_document_id,
                 Waypoint.document_id == Association.parent_document_id
             ),
             Waypoint.waypoint_type == 'access'
-        )). \
+        )).
         join(
             WaypointStoparea,
             WaypointStoparea.waypoint_id == Waypoint.document_id
-        ). \
+        ).
+        group_by(Route).
+        order_by(ordering_case).
+        limit(meta_params['limit']).
+        offset(meta_params['offset'])
+    )
+
+    return query, total_hits
+
+
+def get_routes_reachable_ids():
+    """get all routes reachable ids"""
+    # get all routes reachable (join with waypoint stop area)
+    all_routes_reachable = (
+        DBSession.query(Route).
+        join(Association, or_(
+            Association.child_document_id == Route.document_id,
+            Association.parent_document_id == Route.document_id
+        )).
+        join(Waypoint, and_(
+            or_(
+                Waypoint.document_id == Association.child_document_id,
+                Waypoint.document_id == Association.parent_document_id
+            ),
+            Waypoint.waypoint_type == 'access'
+        )).
         join(
-            DocumentGeometry,
-            Waypoint.document_id == DocumentGeometry.document_id
-        ). \
-        join(
-            AreaAssociation,
-            AreaAssociation.document_id == Route.document_id
-        ). \
-        join(Area, Area.document_id == AreaAssociation.area_id)
+            WaypointStoparea,
+            WaypointStoparea.waypoint_id == Waypoint.document_id
+        )
+        .distinct()
+        .all()
+    )
 
-    if (needs_locale_join or len(langs) > 0):
-        query = query.join(
-                DocumentLocale,
-                Route.document_id == DocumentLocale.document_id
-            )
+    # extract their ids
+    all_routes_reachable_ids = set(
+        [r.document_id for r in all_routes_reachable])
 
-    if (needs_locale_join):
-        query = query.join(RouteLocale, RouteLocale.id == DocumentLocale.id)
-
-    if (len(langs) > 0):
-        query = query.filter(DocumentLocale.lang.in_(langs))
-
-    query = query. \
-        filter(filter_conditions). \
-        order_by(*sort_expressions). \
-        group_by(Route). \
-        distinct()
-
-    return query
+    return all_routes_reachable_ids
