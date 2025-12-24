@@ -50,12 +50,6 @@ echo "Total waypoints fetched: $nb_waypoints"
 # Initialize SQL file
 > "$SQL_FILE"
 
-psql -t -c "TRUNCATE TABLE guidebook.waypoints_stopareas RESTART IDENTITY;"
-psql -t -c "TRUNCATE TABLE guidebook.stopareas RESTART IDENTITY;"
-
-
-
-
 for ((k=1; k<=nb_waypoints; k++)); do
     # Log progress every 10 waypoints
     if (( k % 10 == 0 )) || (( k == 1 )); then
