@@ -1,39 +1,15 @@
 #!/bin/bash
 # shellcheck disable=SC2001
 
-# Configuration
-SERVICE_NAME="postgresql"
-DB_USER="postgres"  
-DB_NAME="c2corg"
-
-if [ -f ./.env ]; then
-    # Load .env data
-    export $(grep -v '^#' ./.env | xargs)
-else
-    echo ".env file not found!"
-    exit 1
-fi
-
 DURATION=$(echo "scale=0; $MAX_DISTANCE_WAYPOINT_TO_STOPAREA / $WALKING_SPEED" | bc)
 
-PROJECT_NAME=${PROJECT_NAME:-""}           
 API_PORT=${API_PORT:-6543} 
-CCOMPOSE=${CCOMPOSE:-"podman-compose"}
-STANDALONE=${PODMAN_ENV:-""}
 
-BASE_API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=14274&limit=100" 
+BASE_API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=14328&limit=100" 
 OUTPUT_FILE="/tmp/waypoints_ids.txt"
 LOG_FILE="log-navitia.txt"
 NAVITIA_REQUEST_COUNT=0
 SQL_FILE="/tmp/sql_commands.sql"
-
-# Augmenter le nombre d'arrêts récupérés pour avoir plus de choix
-MAX_STOP_AREA_FETCHED=$((MAX_STOP_AREA_FOR_1_WAYPOINT * 3))  
-
-if [[ -n "$STANDALONE" ]]; then
-    SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    cd "$SCRIPTPATH"/.. || exit
-fi
 
 echo "Start time :" > "$LOG_FILE"
 echo $(date +"%Y-%m-%d-%H-%M-%S") >> "$LOG_FILE"
@@ -74,8 +50,8 @@ echo "Total waypoints fetched: $nb_waypoints"
 # Initialize SQL file
 > "$SQL_FILE"
 
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "TRUNCATE TABLE guidebook.waypoints_stopareas RESTART IDENTITY;"
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "TRUNCATE TABLE guidebook.stopareas RESTART IDENTITY;"
+psql -t -c "TRUNCATE TABLE guidebook.waypoints_stopareas RESTART IDENTITY;"
+psql -t -c "TRUNCATE TABLE guidebook.stopareas RESTART IDENTITY;"
 
 
 
@@ -89,7 +65,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
     WAYPOINT_ID=$(sed "${k}q;d" /tmp/waypoints_ids.txt)
 
     # Get waypoint coordinates from backend
-    lon_lat=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "
+    lon_lat=$(psql -t -c "
         SELECT ST_X(ST_Transform(geom, 4326)) || ',' || ST_Y(ST_Transform(geom, 4326)) 
         FROM guidebook.documents_geometries 
         WHERE document_id = $WAYPOINT_ID;
@@ -104,8 +80,8 @@ for ((k=1; k<=nb_waypoints; k++)); do
         continue
     fi
 
-    # Query Navitia to retrieve nearby stopareas (récupérer plus d'arrêts)
-    response=$(curl -s -H "Authorization: $NAVITIA_API_KEY" "https://api.navitia.io/v1/coord/$lon%3B$lat/places_nearby?type%5B%5D=stop_area&count=$MAX_STOP_AREA_FETCHED&distance=$MAX_DISTANCE_WAYPOINT_TO_STOPAREA")
+    # Query Navitia to retrieve nearby stopareas
+    response=$(curl -s -H "Authorization: $NAVITIA_API_KEY" "https://api.navitia.io/v1/coord/$lon%3B$lat/places_nearby?type%5B%5D=stop_area&count=$MAX_STOP_AREA_FOR_1_WAYPOINT&distance=$MAX_DISTANCE_WAYPOINT_TO_STOPAREA")
     ((NAVITIA_REQUEST_COUNT++))
 
     has_places=$(echo "$response" | jq 'has("places_nearby") and (.places_nearby | length > 0)')
@@ -120,51 +96,12 @@ for ((k=1; k<=nb_waypoints; k++)); do
         # Count the number of stops
         stop_area_count=$(wc -l < /tmp/stop_ids.txt)
 
-        # --- NOUVEAU : Filtrage par diversité de transport ---
-        > /tmp/selected_stops.txt
-        > /tmp/known_transports.txt
-        selected_count=0
-
-        # Traiter les arrêts dans l'ordre (déjà triés par distance par Navitia)
-        for ((i=1; i<=stop_area_count && selected_count<MAX_STOP_AREA_FOR_1_WAYPOINT; i++)); do
+        # Process stops in parallel
+        for ((i=1; i<=stop_area_count; i++)); do
+            stop_name=$(sed "${i}q;d" /tmp/stop_names.txt)
             stop_id=$(sed "${i}q;d" /tmp/stop_ids.txt)
-            
-            # Récupérer les informations de l'arrêt
-            stop_info=$(curl -s -H "Authorization: $NAVITIA_API_KEY" "https://api.navitia.io/v1/places/$stop_id")
-            ((NAVITIA_REQUEST_COUNT++))
-
-            # Extraire les transports de cet arrêt
-            echo "$stop_info" | jq -r '.places[0].stop_area.lines[] | .commercial_mode.name + " " + .code' > /tmp/current_stop_transports.txt
-            
-            # Vérifier si cet arrêt apporte de nouveaux transports
-            new_transport_found=false
-            current_transport_count=$(wc -l < /tmp/current_stop_transports.txt)
-            
-            for ((t=1; t<=current_transport_count; t++)); do
-                transport=$(sed "${t}q;d" /tmp/current_stop_transports.txt)
-                if ! grep -Fxq "$transport" /tmp/known_transports.txt; then
-                    new_transport_found=true
-                    echo "$transport" >> /tmp/known_transports.txt
-                fi
-            done
-            
-            # Si l'arrêt apporte au moins un nouveau transport, le sélectionner
-            if [ "$new_transport_found" = true ]; then
-                echo "$i" >> /tmp/selected_stops.txt
-                ((selected_count++))
-            fi
-        done
-
-        echo "Selected $selected_count stops out of $stop_area_count for waypoint $WAYPOINT_ID" >> "$LOG_FILE"
-
-        # Traiter uniquement les arrêts sélectionnés
-        selected_stops_count=$(wc -l < /tmp/selected_stops.txt)
-        for ((s=1; s<=selected_stops_count; s++)); do
-            stop_index=$(sed "${s}q;d" /tmp/selected_stops.txt)
-            stop_name=$(sed "${stop_index}q;d" /tmp/stop_names.txt)
-            stop_id=$(sed "${stop_index}q;d" /tmp/stop_ids.txt)
-            lat_stop=$(sed "${stop_index}q;d" /tmp/lat.txt)
-            lon_stop=$(sed "${stop_index}q;d" /tmp/lon.txt)
+            lat_stop=$(sed "${i}q;d" /tmp/lat.txt)
+            lon_stop=$(sed "${i}q;d" /tmp/lon.txt)
 
             # Get walking travel time via Navitia
             journey_response=$(curl -s -H "Authorization: $NAVITIA_API_KEY" "https://api.navitia.io/v1/journeys?to=$lon%3B$lat&walking_speed=$WALKING_SPEED&max_walking_direct_path_duration=$DURATION&direct_path_mode%5B%5D=walking&from=$stop_id&direct_path=only_with_alternatives")
@@ -184,7 +121,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
             distance_km=$(awk "BEGIN {printf \"%.2f\", ($duration * $WALKING_SPEED) / 1000}")
 
             # Check if the stop already exists
-            existing_stop_id=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "SELECT stoparea_id FROM guidebook.stopareas WHERE navitia_id = '$stop_id' LIMIT 1;" | tr -d ' \n\r')
+            existing_stop_id=$(psql -t -c "SELECT stoparea_id FROM guidebook.stopareas WHERE navitia_id = '$stop_id' LIMIT 1;" | tr -d ' \n\r')
 
             # For new stop areas
             if [[ -z "$existing_stop_id" ]]; then
@@ -231,7 +168,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
         done
 
         # Cleanup
-        rm /tmp/stop_names.txt /tmp/stop_ids.txt /tmp/lat.txt /tmp/lon.txt /tmp/selected_stops.txt /tmp/known_transports.txt
+        rm /tmp/stop_names.txt /tmp/stop_ids.txt /tmp/lat.txt /tmp/lon.txt
     fi
 done
 
@@ -243,6 +180,12 @@ echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 
 # Execute all SQL commands in one go
 echo "Sql file length : $(wc -l < "$SQL_FILE") lines." >> $LOG_FILE
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME < /tmp/sql_commands.sql
 
-echo "Inserts done." >> $LOG_FILE
+if [ -s $SQL_FILE ]; then
+    psql -t -c "TRUNCATE TABLE guidebook.waypoints_stopareas RESTART IDENTITY;"
+    psql -t -c "TRUNCATE TABLE guidebook.stopareas RESTART IDENTITY;"
+    psql -q < $SQL_FILE
+    echo "Inserts done." >> $LOG_FILE
+else
+    echo "SQL file empty, aborting" >> $LOG_FILE
+fi

@@ -1,36 +1,15 @@
 #!/bin/bash
 # shellcheck disable=SC2001
 
-# Configuration
-SERVICE_NAME="postgresql"
-DB_USER="postgres"  
-DB_NAME="c2corg"
-
-if [ -f ./.env ]; then
-    # Load .env data
-    export $(grep -v '^#' ./.env | xargs)
-else
-    echo ".env file not found!"
-    exit 1
-fi
-
 DURATION=$(echo "scale=0; $MAX_DISTANCE_WAYPOINT_TO_STOPAREA / $WALKING_SPEED" | bc)
 
-PROJECT_NAME=${PROJECT_NAME:-""}           
 API_PORT=${API_PORT:-6543} 
-CCOMPOSE=${CCOMPOSE:-"podman-compose"}
-STANDALONE=${PODMAN_ENV:-""}
 
-BASE_API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=14274&limit=100" 
+BASE_API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=14299&limit=100" 
 OUTPUT_FILE="/tmp/waypoints_ids.txt"
 LOG_FILE="log-navitia.txt"
 NAVITIA_REQUEST_COUNT=0
 SQL_FILE="/tmp/sql_commands.sql"
-
-if [[ -n "$STANDALONE" ]]; then
-    SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    cd "$SCRIPTPATH"/.. || exit
-fi
 
 echo "Start time :" > "$LOG_FILE"
 echo $(date +"%Y-%m-%d-%H-%M-%S") >> "$LOG_FILE"
@@ -71,8 +50,8 @@ echo "Total waypoints fetched: $nb_waypoints"
 # Initialize SQL file
 > "$SQL_FILE"
 
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "TRUNCATE TABLE guidebook.waypoints_stopareas RESTART IDENTITY;"
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "TRUNCATE TABLE guidebook.stopareas RESTART IDENTITY;"
+psql -t -c "TRUNCATE TABLE guidebook.waypoints_stopareas RESTART IDENTITY;"
+psql -t -c "TRUNCATE TABLE guidebook.stopareas RESTART IDENTITY;"
 
 
 
@@ -86,7 +65,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
     WAYPOINT_ID=$(sed "${k}q;d" /tmp/waypoints_ids.txt)
 
     # Get waypoint coordinates from backend
-    lon_lat=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "
+    lon_lat=$(psql -t -c "
         SELECT ST_X(ST_Transform(geom, 4326)) || ',' || ST_Y(ST_Transform(geom, 4326)) 
         FROM guidebook.documents_geometries 
         WHERE document_id = $WAYPOINT_ID;
@@ -142,7 +121,7 @@ for ((k=1; k<=nb_waypoints; k++)); do
             distance_km=$(awk "BEGIN {printf \"%.2f\", ($duration * $WALKING_SPEED) / 1000}")
 
             # Check if the stop already exists
-            existing_stop_id=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "SELECT stoparea_id FROM guidebook.stopareas WHERE navitia_id = '$stop_id' LIMIT 1;" | tr -d ' \n\r')
+            existing_stop_id=$(psql -t -c "SELECT stoparea_id FROM guidebook.stopareas WHERE navitia_id = '$stop_id' LIMIT 1;" | tr -d ' \n\r')
 
             # For new stop areas
             if [[ -z "$existing_stop_id" ]]; then
@@ -201,6 +180,12 @@ echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 
 # Execute all SQL commands in one go
 echo "Sql file length : $(wc -l < "$SQL_FILE") lines." >> $LOG_FILE
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME < /tmp/sql_commands.sql
 
-echo "Inserts done." >> $LOG_FILE
+if [ -s $SQL_FILE ]; then
+    psql -t -c "TRUNCATE TABLE guidebook.waypoints_stopareas RESTART IDENTITY;"
+    psql -t -c "TRUNCATE TABLE guidebook.stopareas RESTART IDENTITY;"
+    psql -q < $SQL_FILE
+    echo "Inserts done." >> $LOG_FILE
+else
+    echo "SQL file empty, aborting" >> $LOG_FILE
+fi

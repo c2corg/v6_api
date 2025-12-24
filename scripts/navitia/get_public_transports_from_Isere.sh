@@ -18,9 +18,10 @@ DURATION=$(echo "scale=0; $MAX_DISTANCE_WAYPOINT_TO_STOPAREA / $WALKING_SPEED" |
 
 PROJECT_NAME=${PROJECT_NAME:-""}           
 API_PORT=${API_PORT:-6543} 
+CCOMPOSE=${CCOMPOSE:-"podman-compose"}
 STANDALONE=${PODMAN_ENV:-""}
 
-BASE_API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=14299&limit=100" 
+BASE_API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=14328&limit=100" 
 OUTPUT_FILE="/tmp/waypoints_ids.txt"
 LOG_FILE="log-navitia.txt"
 NAVITIA_REQUEST_COUNT=0
@@ -200,6 +201,12 @@ echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 
 # Execute all SQL commands in one go
 echo "Sql file length : $(wc -l < "$SQL_FILE") lines." >> $LOG_FILE
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME < /tmp/sql_commands.sql
 
-echo "Inserts done." >> $LOG_FILE
+if [ -s $SQL_FILE ]; then
+    $CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "TRUNCATE TABLE guidebook.waypoints_stopareas RESTART IDENTITY;"
+    $CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "TRUNCATE TABLE guidebook.stopareas RESTART IDENTITY;"
+    $CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME < /tmp/sql_commands.sql
+    echo "Inserts done." >> $LOG_FILE
+else
+    echo "SQL file empty, aborting" >> $LOG_FILE
+fi
