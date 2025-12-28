@@ -101,6 +101,23 @@ def configure_anonymous(settings, config):
     config.registry.anonymous_user_id = account_id
 
 
+def delete_waypoint_stopareas(connection, waypoint_id):
+    # Delete existing stopareas for waypoint
+    delete_relation_query = text(
+        """
+        DELETE FROM guidebook.waypoints_stopareas
+        WHERE waypoint_id = :waypoint_id
+    """
+    )
+
+    connection.execute(
+        delete_relation_query,
+        {
+            "waypoint_id": waypoint_id,
+        },
+    )
+
+
 @event.listens_for(DocumentGeometry, "after_insert")
 @event.listens_for(DocumentGeometry, "after_update")
 def process_new_waypoint(mapper, connection, geometry):
@@ -182,7 +199,8 @@ def process_new_waypoint(mapper, connection, geometry):
     places_data = places_response.json()
 
     if "places_nearby" not in places_data or not places_data["places_nearby"]:
-        log.warning(f"No Navitia stops found for the waypoint {waypoint_id}")
+        log.warning(f"No Navitia stops found for the waypoint {waypoint_id}; deleting previously registered stops")  # noqa: E501
+        delete_waypoint_stopareas(connection, waypoint_id)
         return
 
     # --- NOUVEAU : Filtrage par diversité de transport (comme dans bash) ---
@@ -226,22 +244,10 @@ def process_new_waypoint(mapper, connection, geometry):
             known_transports.update(current_stop_transports)
             selected_count += 1
 
-    # Delete existing stopareas for waypoint
-    delete_relation_query = text(
-        """
-        DELETE FROM guidebook.waypoints_stopareas
-        WHERE waypoint_id = :waypoint_id
-    """
-    )
-
-    connection.execute(
-        delete_relation_query,
-        {
-            "waypoint_id": waypoint_id,
-        },
-    )
-
     log.warning(f"Selected {selected_count} stops out of {len(places_data['places_nearby'])} for waypoint {waypoint_id}")  # noqa: E501
+
+    log.warning("Deleting previously registered stops")
+    delete_waypoint_stopareas(connection, waypoint_id)
 
     # Traiter uniquement les arrêts sélectionnés
     for place in selected_stops:
@@ -363,7 +369,7 @@ def calculate_route_duration(mapper, connection, route):
     jour du script bash.
     """
     route_id = route.document_id
-    log.warn(f"Calculating duration for route ID: {route_id}")
+    log.warning(f"Calculating duration for route ID: {route_id}")
 
     # Récupération des activités et normalisation des dénivelés
     activities = route.activities if route.activities is not None else []
@@ -440,7 +446,7 @@ def _calculate_climbing_duration(route, height_diff_up, height_diff_down, route_
             return None  # Pas de données utilisables pour le calcul
 
         dm = dp / v_diff
-        log.warn(f"Calculated climbing route duration for route {route_id} (activity {activity}, no difficulties_height): {dm:.2f} hours")  # noqa: E501
+        log.warning(f"Calculated climbing route duration for route {route_id} (activity {activity}, no difficulties_height): {dm:.2f} hours")  # noqa: E501
         return dm
 
     # CAS 2: Le dénivelé des difficultés est renseigné
@@ -448,7 +454,7 @@ def _calculate_climbing_duration(route, height_diff_up, height_diff_down, route_
 
     # Vérification de cohérence
     if dp > 0 and d_diff > dp:
-        log.warn(f"Route {route_id}: Inconsistent difficulties_height ({d_diff}m) > height_diff_up ({dp}m). Returning NULL.")  # noqa: E501
+        log.warning(f"Route {route_id}: Inconsistent difficulties_height ({d_diff}m) > height_diff_up ({dp}m). Returning NULL.")  # noqa: E501
         return None
 
     # Calcul du temps des difficultés
@@ -466,7 +472,7 @@ def _calculate_climbing_duration(route, height_diff_up, height_diff_down, route_
     # Calcul final selon le cadrage: max(t_diff, t_app) + 0.5 * min(t_diff, t_app)  # noqa: E501
     dm = max(t_diff, t_app) + 0.5 * min(t_diff, t_app)
 
-    log.warn(f"Calculated climbing route duration for route {route_id} (activity {activity}): {dm:.2f} hours (t_diff={t_diff:.2f}, t_app={t_app:.2f})")  # noqa: E501
+    log.warning(f"Calculated climbing route duration for route {route_id} (activity {activity}): {dm:.2f} hours (t_diff={t_diff:.2f}, t_app={t_app:.2f})")  # noqa: E501
     return dm
 
 
@@ -517,7 +523,7 @@ def _calculate_standard_duration(activity, route, height_diff_up, height_diff_do
     else:
         dm = (dv / 2) + dh
 
-    log.warn(f"Calculated standard route duration for route {route_id} (activity {activity}): {dm:.2f} hours")  # noqa: E501
+    log.warning(f"Calculated standard route duration for route {route_id} (activity {activity}): {dm:.2f} hours")  # noqa: E501
     return dm
 
 
@@ -531,8 +537,9 @@ def _validate_and_convert_duration(min_duration, route_id):
         or min_duration < min_duration_hours
         or min_duration > max_duration_hours
     ):
-        log.warn(
-            f"Route {route_id}: Calculated duration ({min_duration:.2f} hours if not None) is out of bounds (min={min_duration_hours}h, max={max_duration_hours}h) or NULL. Setting duration to NULL."  # noqa: E501
+        min_duration_str = "None" if min_duration is None else f"{min_duration:.2f}"  # noqa: E501
+        log.warning(
+            f"Route {route_id}: Calculated duration (min_duration={min_duration_str}) is out of bounds (min={min_duration_hours}h, max={max_duration_hours}h) or NULL. Setting duration to NULL."  # noqa: E501
         )
         return None
 
@@ -551,6 +558,6 @@ def _update_route_duration(connection, route_id, calculated_duration_in_days):
         ),
         {"duration": calculated_duration_in_days, "route_id": route_id},
     )
-    log.warn(
+    log.warning(
         f"Route {route_id}: Database updated with calculated_duration = {calculated_duration_in_days} days."  # noqa: E501
     )
