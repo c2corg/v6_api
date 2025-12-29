@@ -180,6 +180,12 @@ echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 
 # Execute all SQL commands in one go
 echo "Sql file length : $(wc -l < "$SQL_FILE") lines." >> $LOG_FILE
-psql -q < /tmp/sql_commands.sql
 
-echo "Inserts done." >> $LOG_FILE
+if [ -s $SQL_FILE ]; then
+    psql -t -c "TRUNCATE TABLE guidebook.waypoints_stopareas RESTART IDENTITY;"
+    psql -t -c "TRUNCATE TABLE guidebook.stopareas RESTART IDENTITY;"
+    psql -q < $SQL_FILE
+    echo "Inserts done." >> $LOG_FILE
+else
+    echo "SQL file empty, aborting" >> $LOG_FILE
+fi

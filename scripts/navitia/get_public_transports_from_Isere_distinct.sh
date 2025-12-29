@@ -74,12 +74,6 @@ echo "Total waypoints fetched: $nb_waypoints"
 # Initialize SQL file
 > "$SQL_FILE"
 
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "TRUNCATE TABLE guidebook.waypoints_stopareas RESTART IDENTITY;"
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "TRUNCATE TABLE guidebook.stopareas RESTART IDENTITY;"
-
-
-
-
 for ((k=1; k<=nb_waypoints; k++)); do
     # Log progress every 10 waypoints
     if (( k % 10 == 0 )) || (( k == 1 )); then
@@ -243,6 +237,12 @@ echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 
 # Execute all SQL commands in one go
 echo "Sql file length : $(wc -l < "$SQL_FILE") lines." >> $LOG_FILE
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME < /tmp/sql_commands.sql
 
-echo "Inserts done." >> $LOG_FILE
+if [ -s $SQL_FILE ]; then
+    $CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "TRUNCATE TABLE guidebook.waypoints_stopareas RESTART IDENTITY;"
+    $CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "TRUNCATE TABLE guidebook.stopareas RESTART IDENTITY;"
+    $CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME < /tmp/sql_commands.sql
+    echo "Inserts done." >> $LOG_FILE
+else
+    echo "SQL file empty, aborting" >> $LOG_FILE
+fi
