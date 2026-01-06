@@ -12,7 +12,6 @@ from c2corg_api.models.area import Area
 from c2corg_api.models.utils import wkb_to_shape
 from c2corg_api.models.waypoint import Waypoint, schema_waypoint
 from c2corg_api.views.coverage import get_coverage
-from c2corg_api.views.document import LIMIT_DEFAULT
 from c2corg_api.views.waypoint import build_reachable_waypoints_query
 from c2corg_api.views.route import build_reachable_route_query_with_waypoints
 from shapely.geometry import Point
@@ -751,8 +750,8 @@ def extract_meta_params(request):
     """
     v = request.validated
     return {
-        'offset': v.get('offset', 0),
-        'limit': v.get('limit', LIMIT_DEFAULT),
+        'offset': 0,
+        'limit': 2000,
         'lang': v.get('lang'),
     }
 

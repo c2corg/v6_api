@@ -639,6 +639,10 @@ def build_reachable_route_query(params, meta_params):
                   ))).label("areas")).
         filter(Route.document_id.in_(
             all_filtered_routes_reachable_ids)).
+        join(Association, or_(
+            Route.document_id == Association.child_document_id,
+            Route.document_id == Association.parent_document_id
+        )).
         join(
             AreaAssociation,
             AreaAssociation.document_id == Route.document_id
@@ -647,10 +651,19 @@ def build_reachable_route_query(params, meta_params):
             Area,
             Area.document_id == AreaAssociation.area_id
         ).
+        join(Waypoint, and_(
+            or_(
+                Waypoint.document_id == Association.child_document_id,
+                Waypoint.document_id == Association.parent_document_id
+            ),
+            Waypoint.waypoint_type == 'access'
+        )).
+        join(
+            WaypointStoparea,
+            WaypointStoparea.waypoint_id == Waypoint.document_id
+        ).
         group_by(Route).
-        order_by(ordering_case).
-        limit(meta_params['limit']).
-        offset(meta_params['offset'])
+        order_by(ordering_case)
     )
 
     return query, total_hits
@@ -728,9 +741,7 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
             WaypointStoparea.waypoint_id == Waypoint.document_id
         ).
         group_by(Route).
-        order_by(ordering_case).
-        limit(meta_params['limit']).
-        offset(meta_params['offset'])
+        order_by(ordering_case)
     )
 
     return query, total_hits
