@@ -125,6 +125,15 @@ class NavitiaRest:
             elif response.status_code == 400:
                 raise HTTPBadRequest('Invalid parameters for Navitia API')
             elif response.status_code == 404:
+                # no_destination -> public transport not reachable from dest
+                # no_origin -> public transport not reachable from origin
+                # these do not count as proper errors,
+                # more like no journey have been found
+                if response.json()['error']['id'] != 'no_destination' and \
+                        response.json()['error']['id'] != 'no_origin':
+                    raise HTTPInternalServerError(
+                        response.json()['error']['id']
+                    )
                 return {}
             elif not response.ok:
                 raise HTTPInternalServerError(f'Navitia API error: {response.status_code}')  # noqa: E501
@@ -136,9 +145,9 @@ class NavitiaRest:
             raise HTTPInternalServerError(
                 'Timeout when calling the Navitia API')
         except requests.exceptions.RequestException as e:
-            raise HTTPInternalServerError(f'Network error: {str(e)}')
+            raise HTTPInternalServerError(f'{str(e)}')
         except Exception as e:
-            raise HTTPInternalServerError(f'Internal error: {str(e)}')
+            raise HTTPInternalServerError(f'{str(e)}')
 
 
 def validate_journey_reachable_params(request, **kwargs):
