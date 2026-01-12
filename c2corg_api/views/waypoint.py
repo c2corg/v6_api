@@ -595,9 +595,7 @@ def build_reachable_waypoints_query(params, meta_params):
             Area.document_id == AreaAssociation.area_id
         ).
         group_by(Waypoint).
-        order_by(ordering_case).
-        limit(meta_params['limit']).
-        offset(meta_params['offset'])
+        order_by(ordering_case)
     )
 
     return query, total_hits
