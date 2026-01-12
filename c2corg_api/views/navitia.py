@@ -15,7 +15,7 @@ from c2corg_api.views.coverage import get_coverage
 from c2corg_api.views.waypoint import build_reachable_waypoints_query
 from c2corg_api.views.route import build_reachable_route_query_with_waypoints
 from shapely.geometry import Point
-from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError  # noqa: E501
+from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError
 from pyramid.response import Response
 from cornice.resource import resource, view
 from c2corg_api.views import cors_policy, to_json_dict
@@ -48,7 +48,7 @@ def validate_navitia_params(request, **kwargs):
             request.errors.add(
                 'querystring',
                 param,
-                f'Paramètre {param} requis')
+                'Parameter %s required' % param)
 
 
 @resource(path='/navitia/journeys', cors_policy=cors_policy)
@@ -68,86 +68,55 @@ class NavitiaRest:
         - datetime: date and hour (format ISO 8601)
         - datetime_represents: 'departure' or 'arrival'
         """
-        try:
-            # Récupération de la clé API depuis les variables d'environnement
-            api_key = os.getenv('NAVITIA_API_KEY')
-            if not api_key:
-                raise HTTPInternalServerError(
-                    'Configuration API Navitia manquante')
-
-            # Construction des paramètres
-            params = {
-                'from': self.request.params.get('from'),
-                'to': self.request.params.get('to'),
-                'datetime': self.request.params.get('datetime'),
-                'datetime_represents': self.request.params.get('datetime_represents')  # noqa: E501
-            }
-
-            # Ajout des paramètres optionnels s'ils sont présents
-            optional_params = [
-                'max_duration_to_pt',
-                'walking_speed',
-                'bike_speed',
-                'bss_speed',
-                'car_speed',
-                'forbidden_uris',
-                'allowed_id',
-                'first_section_mode',
-                'last_section_mode',
-                'max_walking_duration_to_pt',
-                'max_nb_transfers',
-                'min_nb_journeys',
-                'max_bike_duration_to_pt',
-                'max_bss_duration_to_pt',
-                'max_car_duration_to_pt',
-                'timeframe_duration',
-                'max_walking_direct_path_duration',
-                'wheelchair',
-                'traveler_type',
-                'data_freshness']
-
-            for param in optional_params:
-                if param in self.request.params:
-                    params[param] = self.request.params.get(param)
-
-            # Appel à l'API Navitia
-            response = requests.get(
-                'https://api.navitia.io/v1/journeys',
-                params=params,
-                headers={'Authorization': api_key},
-                timeout=30
-            )
-
-            # Vérification du statut de la réponse
-            if response.status_code == 401:
-                raise HTTPInternalServerError(
-                    'Authentication error with Navitia API')
-            elif response.status_code == 400:
-                raise HTTPBadRequest('Invalid parameters for Navitia API')
-            elif response.status_code == 404:
-                # no_destination -> public transport not reachable from dest
-                # no_origin -> public transport not reachable from origin
-                # these do not count as proper errors,
-                # more like no journey have been found
-                if response.json()['error']['id'] != 'no_destination' and \
-                        response.json()['error']['id'] != 'no_origin':
-                    raise HTTPInternalServerError(
-                        response.json()['error']['id']
-                    )
-                return {}
-            elif not response.ok:
-                raise HTTPInternalServerError(f'Navitia API error: {response.status_code}')  # noqa: E501
-
-            # Retour des données JSON
-            return response.json()
-
-        except requests.exceptions.Timeout:
+        # Retrieve navitia API Key from env var
+        api_key = os.getenv("NAVITIA_API_KEY")
+        if not api_key:
             raise HTTPInternalServerError(
-                'Timeout when calling the Navitia API')
-        except requests.exceptions.RequestException as e:
-            raise HTTPInternalServerError(f'{str(e)}')
-        except Exception as e:
-            raise HTTPInternalServerError(f'{str(e)}')
+                "Navitia API config is missing")
+
+        # Build journey api parameters
+        params = {
+            "from": self.request.params.get("from"),
+            "to": self.request.params.get("to"),
+            "datetime": self.request.params.get("datetime"),
+            "datetime_represents": self.request.params.get(
+                "datetime_represents"
+            ),
+        }
+
+        # Add optional params
+        optional_params = [
+            "max_duration_to_pt",
+            "walking_speed",
+            "bike_speed",
+            "bss_speed",
+            "car_speed",
+            "forbidden_uris",
+            "allowed_id",
+            "first_section_mode",
+            "last_section_mode",
+            "max_walking_duration_to_pt",
+            "max_nb_transfers",
+            "min_nb_journeys",
+            "max_bike_duration_to_pt",
+            "max_bss_duration_to_pt",
+            "max_car_duration_to_pt",
+            "timeframe_duration",
+            "max_walking_direct_path_duration",
+            "wheelchair",
+            "traveler_type",
+            "data_freshness",
+        ]
+
+        for param in optional_params:
+            if param in self.request.params:
+                params[param] = self.request.params.get(param)
+
+        return navitia_get(
+            "https://api.navitia.io/v1/journeys",
+            params=params,
+            headers={"Authorization": api_key},
+        )
 
 
 def validate_journey_reachable_params(request, **kwargs):
@@ -160,10 +129,11 @@ def validate_journey_reachable_params(request, **kwargs):
             request.errors.add(
                 'querystring',
                 param,
-                f'Paramètre {param} requis')
+                'Parameter %s required' % param)
 
 
-@resource(path='/navitia/journeyreachableroutes/start', cors_policy=cors_policy)  # noqa
+@resource(path='/navitia/journeyreachableroutes/start',
+          cors_policy=cors_policy)
 class StartNavitiaJourneyReachableRoutesRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -174,10 +144,14 @@ class StartNavitiaJourneyReachableRoutesRest:
         start job to retrieve journey reachable routes
         returns job id
         """
-        return start_job_background(compute_journey_reachable_routes, self.request)  # noqa
+        return start_job_background(
+            compute_journey_reachable_routes,
+            self.request
+        )
 
 
-@resource(path='/navitia/journeyreachablewaypoints/start', cors_policy=cors_policy)  # noqa
+@resource(path='/navitia/journeyreachablewaypoints/start',
+          cors_policy=cors_policy)
 class StartNavitiaJourneyReachableWaypointsRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -188,10 +162,14 @@ class StartNavitiaJourneyReachableWaypointsRest:
         start job to retrieve journey reachable waypoints
         returns job id
         """
-        return start_job_background(compute_journey_reachable_waypoints, self.request)  # noqa
+        return start_job_background(
+            compute_journey_reachable_waypoints,
+            self.request
+        )
 
 
-@resource(path='/navitia/journeyreachableroutes/result/{job_id}', cors_policy=cors_policy)  # noqa
+@resource(path='/navitia/journeyreachableroutes/result/{job_id}',
+          cors_policy=cors_policy)
 class NavitiaJourneyReachableRoutesResultRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -207,7 +185,8 @@ class NavitiaJourneyReachableRoutesResultRest:
         return read_result_from_redis(r, job_id)
 
 
-@resource(path='/navitia/journeyreachablewaypoints/result/{job_id}', cors_policy=cors_policy)  # noqa
+@resource(path='/navitia/journeyreachablewaypoints/result/{job_id}',
+          cors_policy=cors_policy)
 class NavitiaJourneyReachableWaypointsResultRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -222,10 +201,9 @@ class NavitiaJourneyReachableWaypointsResultRest:
         job_id = self.request.matchdict.get("job_id")
         return read_result_from_redis(r, job_id)
 
-# Progress endpoints
 
-
-@resource(path='/navitia/journeyreachableroutes/progress/{job_id}', cors_policy=cors_policy)  # noqa
+@resource(path='/navitia/journeyreachableroutes/progress/{job_id}',
+          cors_policy=cors_policy)
 class NavitiaJourneyReachableRoutesProgressRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -237,10 +215,12 @@ class NavitiaJourneyReachableRoutesProgressRest:
         """
         r = redis_client()
         job_id = self.request.matchdict.get("job_id")
-        return Response(app_iter=progress_stream(r, job_id), content_type="text/event-stream")  # noqa
+        return Response(app_iter=progress_stream(r, job_id),
+                        content_type="text/event-stream")
 
 
-@resource(path='/navitia/journeyreachablewaypoints/progress/{job_id}', cors_policy=cors_policy)  # noqa
+@resource(path='/navitia/journeyreachablewaypoints/progress/{job_id}',
+          cors_policy=cors_policy)
 class NavitiaJourneyReachableWaypointsProgressRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -252,7 +232,8 @@ class NavitiaJourneyReachableWaypointsProgressRest:
         """
         r = redis_client()
         job_id = self.request.matchdict.get("job_id")
-        return Response(app_iter=progress_stream(r, job_id), content_type="text/event-stream")  # noqa
+        return Response(app_iter=progress_stream(r, job_id),
+                        content_type="text/event-stream")
 
 
 def compute_journey_reachable_routes(job_id, request):
@@ -289,7 +270,7 @@ def compute_journey_reachable_routes(job_id, request):
 
         total = len(wp_objects)
         log.info("Number of NAVITIA journey queries : %d", total)
-        r.set(f"job:{job_id}:total", total)
+        r.set("job:%s:total" % job_id, total)
 
         count = found = not_found = 0
         navitia_wp_map = {}
@@ -320,13 +301,13 @@ def compute_journey_reachable_routes(job_id, request):
             route.areas = json_areas
             routes.append(to_json_dict(route, schema_route, True))
 
-        r.set(f"job:{job_id}:result", json.dumps(
+        r.set("job:%s:result" % job_id, json.dumps(
             {'documents': routes, 'total': len(routes)}))
-        r.set(f"job:{job_id}:status", "done")
+        r.set("job:%s:status" % job_id, "done")
     except Exception as exc:
         log.exception(str(exc))
-        r.set(f"job:{job_id}:status", "error")
-        r.set(f"job:{job_id}:error", str(exc))
+        r.set("job:%s:status" % job_id, "error")
+        r.set("job:%s:error" % job_id, str(exc))
 
 
 def compute_journey_reachable_waypoints(job_id, request):
@@ -371,14 +352,14 @@ def compute_journey_reachable_waypoints(job_id, request):
 
         total = len(results)
         log.info("Number of NAVITIA journey queries : %d", total)
-        r.set(f"job:{job_id}:total", total)
+        r.set("job:%s:total" % job_id, total)
 
         count = found = not_found = 0
         waypoints = []
 
         for waypoint, areas in results:
             count += 1
-            r.publish(f"job:{job_id}:events", f"not_found:{not_found}")
+            r.publish("job:%s:events" % job_id, "not_found:%d" % not_found)
             reachable = is_wp_journey_reachable(to_json_dict(
                 waypoint, schema_waypoint), journey_params)
             if reachable:
@@ -395,13 +376,13 @@ def compute_journey_reachable_waypoints(job_id, request):
                 not_found += 1
             _store_job_progress(r, job_id, count, found, not_found)
 
-        r.set(f"job:{job_id}:result", json.dumps(
+        r.set("job:%s:result" % job_id, json.dumps(
             {'documents': waypoints, 'total': len(waypoints)}))
-        r.set(f"job:{job_id}:status", "done")
+        r.set("job:%s:status" % job_id, "done")
     except Exception as exc:
         log.exception("Error computing reachable waypoints")
-        r.set(f"job:{job_id}:status", "error")
-        r.set(f"job:{job_id}:error", str(exc))
+        r.set("job:%s:status" % job_id, "error")
+        r.set("job:%s:error" % job_id, str(exc))
 
 
 def validate_isochrone_reachable_params(request, **kwargs):
@@ -415,7 +396,7 @@ def validate_isochrone_reachable_params(request, **kwargs):
             request.errors.add(
                 'querystring',
                 param,
-                f'Paramètre {param} requis')
+                'Parameter %s required' % param)
 
 
 @resource(path='/navitia/isochronesreachableroutes', cors_policy=cors_policy)
@@ -494,7 +475,7 @@ class NavitiaIsochronesReachableRoutesRest:
                 'isochron_geom': geojson
             }
         except Exception as e:
-            return json.dumps(ast.literal_eval(str(e)))
+            return json.dumps(str(e))
 
 
 @resource(
@@ -563,7 +544,7 @@ class NavitiaIsochronesReachableWaypointsRest:
                 "isochron_geom": geojson
             }
         except Exception as e:
-            return json.dumps(ast.literal_eval(str(e)))
+            return json.dumps(str(e))
 
 
 @resource(path='/navitia/areainisochrone', cors_policy=cors_policy)
@@ -610,74 +591,41 @@ def is_wp_journey_reachable(waypoint, journey_params):
 
     src_epsg = 3857
     transformer = Transformer.from_crs(
-        f"EPSG:{src_epsg}", "EPSG:4326", always_xy=True)
+        "EPSG:%d" % src_epsg, "EPSG:4326", always_xy=True)
     lon, lat = transformer.transform(geom.x, geom.y)
 
-    journey_params['to'] = f"{lon};{lat}"
+    journey_params['to'] = "%s;%s" % (lon, lat)
 
     destination_coverage = get_coverage(lon, lat)
 
-    try:
-        # Get navitia API key from env variable
-        api_key = os.getenv('NAVITIA_API_KEY')
-        if not api_key:
-            raise HTTPInternalServerError(
-                'Configuration API Navitia manquante')
+    api_key = os.getenv("NAVITIA_API_KEY")
+    if not api_key:
+        raise HTTPInternalServerError("Navitia API config is missing")
 
-        response = {}
+    if destination_coverage:
+        url = "https://api.navitia.io/v1/coverage/%s/journeys" % \
+            destination_coverage
+    else:
+        url = "https://api.navitia.io/v1/journeys"
 
-        if (destination_coverage):
-            # call to API Navitia Journey with coverage
-            response = requests.get(
-                f'https://api.navitia.io/v1/coverage/{destination_coverage}/journeys',  # noqa: E501
-                params=journey_params,
-                headers={'Authorization': api_key},
-                timeout=30
-            )
-        else:
-            # call to API Navitia Journey
-            response = requests.get(
-                'https://api.navitia.io/v1/journeys',
-                params=journey_params,
-                headers={'Authorization': api_key},
-                timeout=30
-            )
+    json_response = navitia_get(
+        url,
+        params=journey_params,
+        headers={"Authorization": api_key},
+    )
 
-        # Check response status
-        if response.status_code == 401:
-            raise HTTPInternalServerError('Authentication error with Navitia API')  # noqa
-        elif response.status_code == 400:
-            raise HTTPBadRequest('Invalid parameters for Navitia API')
-        elif response.status_code == 404:
-            # no_destination -> public transport not reachable from destination
-            # no_origin -> public transport not reachable from origin
-            # these do not count as proper errors,
-            # more like the wp is just not reachable
-            if response.json()['error']['id'] != 'no_destination' and \
-               response.json()['error']['id'] != 'no_origin':
-                raise HTTPInternalServerError(response.json()['error'])
-            return False
-        elif not response.ok:
-            raise HTTPInternalServerError(f'Navitia API error: {response.status_code}')  # noqa: E501
-        else:
-            # code 200 OK
-            # make sure the waypoint is reachable if at least one journey's
-            # departure date time is the same day as the day in journey_params
-            for journey in response.json().get('journeys', []):
-                journey_day = int(journey['departure_date_time'][6:8])
-                param_day = int(journey_params['datetime'][6:8])
-                if journey_day == param_day:
-                    return True
+    # no_origin / no_destination
+    if json_response is None:
+        return False
 
-            return False
+    # Business logic only
+    for journey in json_response.get("journeys", []):
+        journey_day = int(journey["departure_date_time"][6:8])
+        param_day = int(journey_params["datetime"][6:8])
+        if journey_day == param_day:
+            return True
 
-    except requests.exceptions.Timeout:
-        raise HTTPInternalServerError(
-            'Timeout when calling the Navitia API')
-    except requests.exceptions.RequestException as e:
-        raise HTTPInternalServerError(f'{str(e)}')
-    except Exception as e:
-        raise HTTPInternalServerError(f'{str(e)}')
+    return False
 
 
 def get_navitia_isochrone(isochrone_params):
@@ -688,53 +636,19 @@ def get_navitia_isochrone(isochrone_params):
     lat = isochrone_params.get("from").split(";")[1]
     source_coverage = get_coverage(lon, lat)
 
-    try:
-        # Récupération de la clé API depuis les variables d'environnement
-        api_key = os.getenv('NAVITIA_API_KEY')
-        if not api_key:
-            raise HTTPInternalServerError(
-                'Configuration API Navitia manquante')
+    # Retrieve navitia API Key from env var
+    api_key = os.getenv('NAVITIA_API_KEY')
+    if not api_key:
+        raise HTTPInternalServerError("Navitia API config is missing")
 
-        response = {}
+    if not source_coverage:
+        raise HTTPInternalServerError("Coverage not found for source")
 
-        if (source_coverage):
-            # Appel à l'API Navitia Journey with coverage
-            response = requests.get(
-                f'https://api.navitia.io/v1/coverage/{source_coverage}/isochrones',  # noqa: E501
-                params=isochrone_params,
-                headers={'Authorization': api_key},
-                timeout=30
-            )
-        else:
-            # can't call isochrones api without coverage
-            raise HTTPInternalServerError(
-                'Coverage not found for source')
-
-    # Vérification du statut de la réponse
-        if response.status_code == 401:
-            raise HTTPInternalServerError(
-                'Authentication error with Navitia API')
-        elif response.status_code == 400:
-            raise HTTPBadRequest('Invalid parameters for Navitia API')
-        elif response.status_code == 404:
-            # no_destination -> public transport not reachable from destination
-            # no_origin -> public transport not reachable from origin
-            # these do not count as proper errors,
-            # more like the wp is just not reachable
-            raise HTTPInternalServerError(response.json()['error'])
-        elif not response.ok:
-            raise HTTPInternalServerError(f'Navitia API error: {response.status_code}')  # noqa: E501
-        else:
-            # Retour des données JSON
-            return response.json()
-
-    except requests.exceptions.Timeout:
-        raise HTTPInternalServerError(
-            'Timeout when calling the Navitia API')
-    except requests.exceptions.RequestException as e:
-        raise HTTPInternalServerError(f'{str(e)}')
-    except Exception as e:
-        raise HTTPInternalServerError(f'{str(e)}')
+    return navitia_get(
+        "https://api.navitia.io/v1/coverage/%s/isochrones" % source_coverage,
+        params=isochrone_params,
+        headers={"Authorization": api_key},
+    )
 
 
 def is_wp_in_isochrone(waypoint, isochrone_geom):
@@ -746,7 +660,7 @@ def is_wp_in_isochrone(waypoint, isochrone_geom):
 
     src_epsg = 3857
     transformer = Transformer.from_crs(
-        f"EPSG:{src_epsg}", "EPSG:4326", always_xy=True)
+        "EPSG:%d" % src_epsg, "EPSG:4326", always_xy=True)
     lon, lat = transformer.transform(geom.x, geom.y)
     pt = Point(lon, lat)
 
@@ -774,7 +688,9 @@ def extract_journey_params(request):
         'datetime': request.params.get('datetime'),
         'datetime_represents': request.params.get('datetime_represents'),
         'walking_speed': request.params.get('walking_speed'),
-        'max_walking_duration_to_pt': request.params.get('max_walking_duration_to_pt'),  # noqa: E501
+        'max_walking_duration_to_pt': request.params.get(
+            'max_walking_duration_to_pt'
+        ),
         'to': ''
     }
 
@@ -857,6 +773,56 @@ def collect_waypoints_from_results(results):
     return {wp for wp in wp_objects}
 
 
+def handle_navitia_response(response):
+    """
+    Handles Navitia HTTP errors and returns parsed JSON on success.
+    Raises HTTP* exceptions otherwise.
+    """
+
+    if response.status_code == 401:
+        raise HTTPInternalServerError("Authentication error with Navitia API")
+
+    elif response.status_code == 400:
+        raise HTTPBadRequest("Invalid parameters for Navitia API")
+
+    elif response.status_code == 404:
+        error_id = response.json().get("error", {}).get("id")
+
+        # Allowed "no journey found" cases
+        if error_id in ("no_destination", "no_origin"):
+            return None
+
+        # Raise with the payload as the detail
+        raise HTTPInternalServerError(
+            response.json().get("error", {}))
+
+    elif not response.ok:
+        raise HTTPInternalServerError("Navitia API error: %d ",
+                                      response.status_code)
+
+    return response.json()
+
+
+def navitia_get(url, *, params=None, headers=None, timeout=30):
+    try:
+        response = requests.get(
+            url,
+            params=params,
+            headers=headers,
+            timeout=timeout,
+        )
+        return handle_navitia_response(response)
+
+    except requests.exceptions.Timeout:
+        raise HTTPInternalServerError("Timeout when calling the Navitia API")
+
+    except requests.exceptions.RequestException as e:
+        raise HTTPInternalServerError(str(e))
+
+    except Exception as e:
+        raise HTTPInternalServerError(str(e))
+
+
 def redis_client():
     """ fast way to get redis client """
     return redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
@@ -868,8 +834,8 @@ def start_job_background(target, request):
     request is the request to pass to the function"""
     job_id = str(uuid.uuid4())
     r = redis_client()
-    r.set(f"job:{job_id}:progress", 0)
-    r.set(f"job:{job_id}:status", "running")
+    r.set("job:%s:progress" % job_id, 0)
+    r.set("job:%s:status" % job_id, "running")
     threading.Thread(target=target, args=(
         job_id, request), daemon=True).start()
     return {"job_id": job_id}
@@ -877,7 +843,7 @@ def start_job_background(target, request):
 
 def get_job_status(r, job_id):
     """ returns the ongoing job status """
-    status = r.get(f"job:{job_id}:status")
+    status = r.get("job:%s:status" % job_id)
     if status is None:
         return None, {"error": "unknown_job_id"}
     status = status.decode()
@@ -886,17 +852,20 @@ def get_job_status(r, job_id):
 
 def read_result_from_redis(r, job_id):
     """ returns the result from redis """
-    status = r.get(f"job:{job_id}:status")
+    status = r.get("job:%s:status" % job_id)
     if status is None:
         return {"error": "unknown_job_id"}
     status = status.decode()
     if status == "running":
         return {"status": "running"}
     if status == "error":
-        error_msg = r.get(f"job:{job_id}:error")
-        return {"status": "error", "message": error_msg.decode() if error_msg else "unknown error"}   # noqa
+        error_msg = r.get("job:%s:error" % job_id)
+        return {
+            "status": "error",
+            "message": error_msg.decode() if error_msg else "unknown error"
+        }
     if status == "done":
-        data = r.get(f"job:{job_id}:result")
+        data = r.get("job:%s:result" % job_id)
         if not data:
             return {"status": "error", "message": "missing_result"}
         return {"status": "done", "result": json.loads(data)}
@@ -906,10 +875,10 @@ def read_result_from_redis(r, job_id):
 def progress_stream(r, job_id, poll_interval=0.5):
     """ yield the job progress """
     while True:
-        raw_progress = r.get(f"job:{job_id}:progress")
-        raw_found = r.get(f"job:{job_id}:found")
-        raw_not_found = r.get(f"job:{job_id}:not_found")
-        raw_total = r.get(f"job:{job_id}:total")
+        raw_progress = r.get("job:%s:progress" % job_id)
+        raw_found = r.get("job:%s:found" % job_id)
+        raw_not_found = r.get("job:%s:not_found" % job_id)
+        raw_total = r.get("job:%s:total" % job_id)
 
         progress = int(raw_progress) if raw_progress is not None else 0
         found = int(raw_found) if raw_found is not None else 0
@@ -918,16 +887,16 @@ def progress_stream(r, job_id, poll_interval=0.5):
 
         payload = {"progress": progress, "total": total,
                    "found": found, "not_found": not_found}
-        yield (f"data: {json.dumps(payload)}\n\n").encode("utf-8")
+        yield ("data: %s\n\n" % json.dumps(payload)).encode("utf-8")
 
-        status = r.get(f"job:{job_id}:status")
+        status = r.get("job:%s:status" % job_id)
         if status and status.decode() == "done":
             yield b"event: done\ndata: done\n\n"
             break
         elif status and status.decode() == "error":
-            payload = r.get(f"job:{job_id}:error")
+            payload = r.get("job:%s:error" % job_id)
             json_payload = json.dumps(ast.literal_eval(payload.decode()))
-            yield f"event: error\ndata: {json_payload}\n\n".encode("utf-8")
+            yield ("event: error\ndata: %s\n\n" % json_payload).encode("utf-8")
             break
 
         time.sleep(poll_interval)
@@ -940,9 +909,9 @@ def _store_job_progress(r, job_id, count, found, not_found):
     found : the number of successful queries
     not_found: the number of unsuccessful queries
     """
-    r.set(f"job:{job_id}:progress", count)
-    r.set(f"job:{job_id}:found", found)
-    r.set(f"job:{job_id}:not_found", not_found)
-    r.publish(f"job:{job_id}:events", f"progress:{count}")
-    r.publish(f"job:{job_id}:events", f"found:{found}")
-    r.publish(f"job:{job_id}:events", f"not_found:{not_found}")
+    r.set("job:%s:progress" % job_id, count)
+    r.set("job:%s:found" % job_id, found)
+    r.set("job:%s:not_found" % job_id, not_found)
+    r.publish("job:%s:events" % job_id, "progress:%d" % count)
+    r.publish("job:%s:events" % job_id, "found:%d" % found)
+    r.publish("job:%s:events" % job_id, "not_found:%d" % not_found)
