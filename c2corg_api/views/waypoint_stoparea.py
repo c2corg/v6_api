@@ -48,8 +48,9 @@ class WaypointStopareasByWaypointRest:
 
     @view(validators=[validate_waypoint_id])
     def get(self):
-        """Returns all stopareas associated with a waypoint, with their full attributes and distance."""  # noqa: E501
-        waypoint_id = self.request.matchdict['waypoint_id']  # noqa: E501
+        """Returns all stopareas associated with a waypoint,
+            with their full attributes and distance."""
+        waypoint_id = self.request.matchdict['waypoint_id']
 
         query = (
             DBSession.query(
@@ -58,7 +59,8 @@ class WaypointStopareasByWaypointRest:
                 func.ST_X(Stoparea.geom).label('x'),
                 func.ST_Y(Stoparea.geom).label('y')
             )
-            .join(WaypointStoparea, Stoparea.stoparea_id == WaypointStoparea.stoparea_id)  # noqa: E501
+            .join(WaypointStoparea,
+                  Stoparea.stoparea_id == WaypointStoparea.stoparea_id)
             .filter(WaypointStoparea.waypoint_id == waypoint_id)
             .all()
         )
@@ -82,7 +84,8 @@ class WaypointStopareasReachableRest:
 
     @view(validators=[validate_waypoint_id])
     def get(self):
-        """Returns true if the waypoint has at least one stoparea associated with it, false otherwise."""  # noqa: E501
+        """Returns true if the waypoint has at least one stoparea
+            associated with it, false otherwise."""
         waypoint_id = self.request.matchdict['waypoint_id']
 
         has_stopareas = DBSession.query(
