@@ -7,13 +7,14 @@ This documentation concerns the **"Public Transport Access"** box code, which ap
 ```sh
 v6_api/.env.template #rename it into .env
 ```
+
+Variables defined in the above file must be available at runtime for the scripts to execute correctly.
+One can either source the env file, or update the compose configuration to include them in the api container runtime (this is the production approach).
+
 If you haven't already, update the database with Alembic (this will create the missing tables and fields) :
 ```bash
 docker-compose exec api .build/venv/bin/alembic upgrade head
 ```
-
-
-
 
 ## "Show Nearby Stops" section
 
@@ -21,12 +22,20 @@ This section is used to search for public transport stops around 'access' waypoi
 The public transport data comes from an external API called Navitia, which is stored in the CamptoCamp database.
 
 **IF YOU DON'T HAVE ANY RESULT ON THE "Public Transports Access" section** : this means that your imported database does not contain Navitia data. 
-To have visible results, **you must launch the script "get_public_transports_from_France.sh" in the backend (see backend documentation)**
+To have visible results, you must launch a `get_public_transports_*.sh` in the backend (see backend documentation).
+There are different versions of these scripts:
+- whose name is ending with "_France.sh", "_Rhone.sh", or "_Isere.sh": Navitia fetching scripts for France, Rhone, and Isere regions (resp.) that should be launched *outside containers* (from the host);
+- whose name is ending with "_France.bm.sh", "_Rhone.bm.sh", or "_Isere.bm.sh": Same but those should be launched *within containers*;
+- whose name is ending with "_distinct.sh": Navitia fetching scripts (there is also an Isere variant) that fetch **distincts** transport stops. Those make more requests than non-distinct scripts, but they avoid duplicated stops. Those scripts should be launched *outside containers* (from the host);
+- whose name is ending with "_distinct.bm.sh": Same but those should be launched *within containers*;
+
+On the production setup hosted by camptocamp, only scripts aimed at running within containers (ending with ".bm.sh") should be used.
+The result will always be fetched for the whole France area, and preferably using the distinct script.
 
 Warning ⚠️ : it takes a while (~3h, see other option below)
 ```
 (on api_v6/ )
-sh get_public_transports_from_France.sh
+sh get_public_transports_from_France_distinct.bm.sh
 ```
 
 If you just want to work with the Isère department for local dev, you can run this script instead (~18 minutes):
@@ -78,7 +87,9 @@ BACK-END :
 
 This section is used to plan a trip by calling the Navitia API.
 Unlike the previous section, we don't store the results in the database; we query Navitia directly by launching a query from the backend.
-This section uses the calculated_duration attribute, **which is calculated with the calcul_duration_for_routes.sh script in the backend (see backend documentation)**
+This section uses the calculated_duration attribute, **which is calculated with the `calcul_duration_for_routes.bm.sh` script in the backend (see backend documentation)**
+
+Note that the `calcul_duration_for_routes.bm.sh` is intended to run from within the container. A variant named `calcul_duration_for_routes.sh` can be used to launch the script from the host.
 
 If you need to update the calculated duration of itineraries, you can run this :
 
@@ -92,7 +103,7 @@ LIMIT_MAX = 100000
 2) Run the script
 ```
 (on api_v6/ )
-sh calcul_duration_for_routes.sh
+sh calcul_duration_for_routes.bm.sh
 ```
 3) Put the limit back to 100
 ```python
