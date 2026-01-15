@@ -9,7 +9,7 @@ model.
 
 Create the migration script with:
 
-```
+```bash
 docker-compose exec api .build/venv/bin/alembic revision -m 'Add column x'
 ```
 
@@ -26,6 +26,6 @@ is used.
 
 A migration should be run each time the application code is updated or if you have just created a migration script.
 
-```
+```bash
 docker-compose exec api .build/venv/bin/alembic upgrade head
 ```

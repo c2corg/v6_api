@@ -17,7 +17,7 @@ class HistoryDocumentRest(object):
     """ Unique class for returning history of a document.
     """
 
-    def __init__(self, request):
+    def __init__(self, request, **kwargs):
         self.request = request
 
     @view(validators=[validate_id, validate_lang])

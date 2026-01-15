@@ -8,11 +8,15 @@ from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.route import ROUTE_TYPE, RouteLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.views import cors_policy, etag_cache
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.validation import create_int_validator, \
     validate_document_type
 from c2corg_api.caching import get_or_create
+from cornice.renderer import JSONError
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPNotFound
+from pyramid.interfaces import IRendererFactory
+from pyramid.renderers import string_renderer_factory
 from sqlalchemy.sql.functions import func
 from math import ceil
 from datetime import date, datetime, timezone
@@ -42,13 +46,31 @@ UI_ENTRY_POINTS = {
 validate_page = create_int_validator('i')
 
 
+def render_errors(request):
+    """Returns an HTTPError with the given status and message.
+
+    Patch :func:`pyramid.renderers.string_renderer_factory` to add
+    a ``render_errors`` callable
+    expected by :meth:`cornice.service.Service.default_error_handler`.
+    """
+    cornicejson = request.registry.queryUtility(
+        IRendererFactory,
+        name='cornicejson',
+    )
+    return JSONError(
+        cornicejson.serializer,
+        cornicejson.kw,
+        request.errors + [dict(request.headers)]
+    )
+
+
+string_renderer_factory.render_errors = render_errors
+
+
 @resource(
     collection_path='/sitemaps.xml', path='/sitemaps.xml/{doc_type}/{i}.xml',
     cors_policy=cors_policy, renderer='string')
-class SitemapXml(object):
-
-    def __init__(self, request):
-        self.request = request
+class SitemapXml(ACLDefault):
 
     @view()
     def collection_get(self):

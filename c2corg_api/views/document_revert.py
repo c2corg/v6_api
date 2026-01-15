@@ -1,5 +1,6 @@
 import logging
 
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api import DBSession
 from c2corg_api.models.area import AREA_TYPE, Area, ArchiveArea
 from c2corg_api.models.article import ARTICLE_TYPE, Article, ArchiveArticle
@@ -21,7 +22,7 @@ from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.area import update_associations
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.waypoint import update_linked_route_titles
-from c2corg_api.views.route import update_title_prefix
+from c2corg_api.views.route import update_linked_attributes
 from c2corg_api.models.common.attributes import default_langs
 from colander import (
     MappingSchema, SchemaNode, Integer, String, required, OneOf)
@@ -71,10 +72,7 @@ def validate_version(request, **kwargs):
 
 
 @resource(path='/documents/revert', cors_policy=cors_policy)
-class DocumentRevertRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class DocumentRevertRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',
@@ -202,7 +200,7 @@ class DocumentRevertRest(object):
         if document_type == WAYPOINT_TYPE:
             return update_linked_route_titles
         if document_type == ROUTE_TYPE:
-            return update_title_prefix
+            return update_linked_attributes
         if document_type == AREA_TYPE:
             return update_associations
         return None

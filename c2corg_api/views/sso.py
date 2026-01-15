@@ -29,6 +29,7 @@ from c2corg_api.views import (
     cors_policy,
     json_view,
 )
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.user import (
     token_to_response,
     validate_unique_attribute,
@@ -117,9 +118,7 @@ def sso_sync_validator(request, **kwargs):
 
 
 @resource(path='/sso_sync', cors_policy=cors_policy)
-class SsoSyncRest(object):
-    def __init__(self, request):
-        self.request = request
+class SsoSyncRest(ACLDefault):
 
     @json_view(
         schema=sso_sync_schema,
@@ -265,9 +264,7 @@ def validate_token(request, **kwargs):
 
 
 @resource(path='/sso_login', cors_policy=cors_policy)
-class SsoLoginRest(object):
-    def __init__(self, request):
-        self.request = request
+class SsoLoginRest(ACLDefault):
 
     @view(
         schema=sso_login_schema,

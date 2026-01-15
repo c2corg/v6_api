@@ -26,7 +26,7 @@ class DocumentInfoRest(object):
     languages of the redirection document is returned.
     """
 
-    def __init__(self, request):
+    def __init__(self, request, **kwargs):
         self.request = request
 
     def _get_document_info(self, document_config):

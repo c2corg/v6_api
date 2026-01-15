@@ -2,7 +2,7 @@ name: Continuous integration
 
 on: [push, pull_request]
 jobs:
-  Test:
+  test:
     runs-on: ubuntu-latest
     services:
       redis:
@@ -46,7 +46,7 @@ jobs:
         with:
           python-version: 3.9
       - name: Cache pip
-        uses: actions/cache@v4.2.0
+        uses: actions/cache@v4.2.3
         with:
           path: ~/.cache/pip # This path is specific to Ubuntu
           # Look to see if there is a cache hit for the corresponding requirements file
@@ -83,7 +83,7 @@ jobs:
           sleep 30 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
       - run: curl -v http://localhost:9200
       - name: Run tests
-        run: pytest --cov-report term --cov-report xml --cov=c2corg_api
+        run: export $(cat .env | grep -v "^#" | xargs) && pytest --cov-report term --cov-report xml --cov=c2corg_api
       - name: Send coverage to codacy
         # secrets are not available for PR from forks, and dependabot PRs
         if: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
@@ -107,7 +107,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Docker meta
         id: docker_meta
-        uses: docker/metadata-action@v5.6.1
+        uses: docker/metadata-action@v5.7.0
         with:
           images: ghcr.io/c2corg/v6_api
       - name: Checkout repository
@@ -115,50 +115,12 @@ jobs:
       - run: git archive --format=tar --output project.tar "$GITHUB_SHA"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Publish the docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.docker_meta.outputs.tags }}
-          labels: ${{ steps.docker_meta.outputs.labels }}
-          build-args: |
-            VERSION=${{ github.sha }}
-
-  DockerLegacy:
-    # only publish if tests passed
-    needs: test
-    # secrets are not available for PR from forks, and dependabot PRs, we don't want to build them
-    if: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Docker meta
-        id: docker_meta
-        uses: docker/metadata-action@v5.6.1
-        with:
-          images: ghcr.io/c2corg/v6_api
-          flavor: |
-            latest=auto
-            prefix=
-            suffix=-legacy,onlatest=true
-      - name: Checkout repository
-        uses: actions/checkout@v4.1.1
-      - run: git archive --format=tar --output project.tar "$GITHUB_SHA"
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          version: v0.9.1 # use pre 10 version of buildx
       - name: Publish the docker image
         uses: docker/build-push-action@v6
         with:
           context: ./docker
           file: ./Dockerfile
+          provenance: false # true creates issues with the old docker compose used in prod
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}

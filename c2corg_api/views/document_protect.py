@@ -1,5 +1,6 @@
 import logging
 
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api import DBSession
 from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.document import Document, UpdateType
@@ -27,11 +28,7 @@ def _get_document(document_id):
 
 
 @resource(path='/documents/protect', cors_policy=cors_policy)
-class DocumentProtectRest(object):
-
-    def __init__(self, request):
-        self.request = request
-
+class DocumentProtectRest(ACLDefault):
     @restricted_json_view(
         permission='moderator',
         schema=ProtectSchema(),
@@ -66,10 +63,7 @@ class DocumentProtectRest(object):
 
 
 @resource(path='/documents/unprotect', cors_policy=cors_policy)
-class DocumentUnprotectRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class DocumentUnprotectRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',

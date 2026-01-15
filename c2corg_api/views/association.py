@@ -1,3 +1,4 @@
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import update_cache_version_associations
 from c2corg_api.models.document import Document
@@ -64,10 +65,7 @@ def validate_association(request, **kwargs):
 
 @resource(collection_path='/associations', path='/associations/{id}',
           cors_policy=cors_policy)
-class AssociationRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class AssociationRest(ACLDefault):
 
     @restricted_json_view(
         schema=schema_association,

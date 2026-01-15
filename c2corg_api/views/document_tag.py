@@ -1,5 +1,6 @@
 import logging
 
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api import DBSession
 from c2corg_api.models.document import Document
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
@@ -49,10 +50,7 @@ def validate_document(request, **kwargs):
 
 
 @resource(path='/tags/add', cors_policy=cors_policy)
-class DocumentTagRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class DocumentTagRest(ACLDefault):
 
     @restricted_json_view(
         schema=DocumentTagSchema(),
@@ -90,10 +88,7 @@ class DocumentTagRest(object):
 
 
 @resource(path='/tags/remove', cors_policy=cors_policy)
-class DocumentUntagRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class DocumentUntagRest(ACLDefault):
 
     @restricted_json_view(
         schema=DocumentTagSchema(),
@@ -130,10 +125,7 @@ class DocumentUntagRest(object):
 
 
 @resource(path='/tags/has/{document_id}', cors_policy=cors_policy)
-class DocumentTaggedRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class DocumentTaggedRest(ACLDefault):
 
     @restricted_json_view(validators=[validate_document_id])
     def get(self):

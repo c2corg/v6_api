@@ -770,6 +770,58 @@ class TestImageRest(BaseTestImage):
             self._prefix + '/' + str(self.image.document_id), body,
             headers=headers, status=400)
 
+    def test_change_image_type_copyright(self):
+        """Test that a non-moderator user cannot change the image_type
+        to copyright
+        """
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.image.document_id,
+                'version': self.image.version,
+                'filename': self.image.filename,
+                'quality': quality_types[1],
+                'activities': ['paragliding'],
+                'image_type': 'copyright',
+                'height': 1500,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...',
+                     'version': self.locale_en.version}
+                ]
+            }
+        }
+        headers = self.add_authorization_header(username='contributor')
+        self.app_put_json(
+            self._prefix + '/' + str(self.image.document_id), body,
+            headers=headers, status=403)
+
+    def test_change_image_type_copyright_moderator(self):
+        """Test that a moderator user can change the image_type
+        to copyright
+        """
+        body = {
+            'message': 'Update',
+            'document': {
+                'document_id': self.image.document_id,
+                'version': self.image.version,
+                'filename': self.image.filename,
+                'quality': quality_types[1],
+                'activities': ['paragliding'],
+                'image_type': 'copyright',
+                'height': 1500,
+                'locales': [
+                    {'lang': 'en', 'title': 'Mont Blanc from the air',
+                     'description': '...',
+                     'version': self.locale_en.version}
+                ]
+            }
+        }
+        headers = self.add_authorization_header(username='moderator')
+        self.app_put_json(
+            self._prefix + '/' + str(self.image.document_id), body,
+            headers=headers, status=200)
+
     def test_change_image_type_collaborative_moderator(self):
         """Test that a moderator can change the image_type
         of collaborative images
