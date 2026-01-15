@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.models import DBSession
 from c2corg_api.models.feed import DocumentChange, FollowedUser, FilterArea
 from c2corg_api.models.image import IMAGE_TYPE
@@ -22,10 +23,7 @@ MAX_PAGE_LIMIT = 50
 
 
 @resource(path='/feed', cors_policy=cors_policy)
-class FeedRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class FeedRest(ACLDefault):
 
     @view(validators=[
         validate_preferred_lang_param, validate_token_pagination])
@@ -63,10 +61,7 @@ class FeedRest(object):
 
 
 @resource(path='/personal-feed', cors_policy=cors_policy)
-class PersonalFeedRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class PersonalFeedRest(ACLDefault):
 
     @restricted_view(validators=[
         validate_preferred_lang_param, validate_token_pagination])
@@ -89,10 +84,7 @@ class PersonalFeedRest(object):
 
 
 @resource(path='/profile-feed', cors_policy=cors_policy)
-class ProfileFeedRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class ProfileFeedRest(ACLDefault):
 
     @view(validators=[
         validate_preferred_lang_param, validate_token_pagination,

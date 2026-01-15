@@ -7,7 +7,7 @@ DEFAULT_FIELDS = [
     'geometry.geom',
     'elevation',
     'maps_info',
-    'quality'
+    'quality',
 ]
 DEFAULT_REQUIRED = [
     'locales',
@@ -271,5 +271,5 @@ fields_waypoint = {
             'slackline_length_min',
             'slackline_length_max',
         ]
-    }
+    },
 }

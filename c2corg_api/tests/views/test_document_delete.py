@@ -718,7 +718,7 @@ class TestDocumentDeleteRest(BaseTestRest):
     def test_delete_collaborative_doc(self):
         # Collaborative documents cannot be deleted, even by their authors:
         headers = self.add_authorization_header(username='contributor')
-        return self.app.delete_json(
+        self.app.delete_json(
             self._prefix + str(self.waypoint4.document_id), {},
             headers=headers, status=400)
 
@@ -731,7 +731,7 @@ class TestDocumentDeleteRest(BaseTestRest):
     def test_delete_personal_doc_not_author(self):
         # Personal documents cannot be deleted by anyone:
         headers = self.add_authorization_header(username='contributor2')
-        return self.app.delete_json(
+        self.app.delete_json(
             self._prefix + str(self.article1.document_id), {},
             headers=headers, status=400)
 

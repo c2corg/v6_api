@@ -1,3 +1,4 @@
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api import DBSession
 from c2corg_api.models.area import schema_listing_area, Area
 from c2corg_api.models.schema_utils import SchemaAssociationDoc
@@ -28,10 +29,7 @@ class FilterPreferencesSchema(MappingSchema):
 
 
 @resource(path='/users/preferences', cors_policy=cors_policy)
-class UserFilterPreferencesRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class UserFilterPreferencesRest(ACLDefault):
 
     def get_user(self, with_area_locales=True):
         user_id = self.request.authenticated_userid

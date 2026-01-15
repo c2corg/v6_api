@@ -9,6 +9,7 @@ from c2corg_api.models.feed import update_feed_images_upload
 from c2corg_api.models.image import Image, schema_image, schema_update_image, \
     IMAGE_TYPE, schema_create_image, schema_create_image_list, ArchiveImage
 from c2corg_api.search.notify_sync import run_on_successful_transaction
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import image_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
@@ -204,9 +205,14 @@ class ImageRest(DocumentRest):
             image = DBSession.query(Image).get(image_id)
             if image is None:
                 raise HTTPNotFound('No image found for id {}'.format(image_id))
-            if image.image_type == 'collaborative':
-                image_type = self.request.validated['document']['image_type']
-                if image_type != image.image_type:
+            new_image_type = self.request.validated['document']['image_type']
+            if new_image_type == 'copyright':
+                if new_image_type != image.image_type:
+                    raise HTTPForbidden(
+                        'No permission to change to copyright type'
+                    )
+            elif image.image_type == 'collaborative':
+                if new_image_type != image.image_type:
                     raise HTTPBadRequest(
                         'Image type cannot be changed for collaborative images'
                     )
@@ -279,10 +285,7 @@ def validate_extension(request, **kwargs):
 
 
 @resource(path='/images/proxy/{id}', cors_policy=cors_policy)
-class ImageProxyRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class ImageProxyRest(ACLDefault):
 
     @view(validators=[validate_id, validate_size, validate_extension])
     def get(self):

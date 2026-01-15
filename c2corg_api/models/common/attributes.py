@@ -111,6 +111,7 @@ public_transportation_ratings = [
     'seasonal service',  # service saisonnier
     'poor service',      # service reduit
     'nearby service',    # service a proximite
+    'unknown service',    # service inconnu
     'no service'         # pas de service
 ]
 

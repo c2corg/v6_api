@@ -1,3 +1,4 @@
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api import DBSession
 from c2corg_api.models.user import User
 from c2corg_api.models.mailinglist import Mailinglist
@@ -26,10 +27,7 @@ def validate_mailinglist_statuses(request, **kwargs):
 
 
 @resource(path='/users/mailinglists', cors_policy=cors_policy)
-class UserMailinglistsRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class UserMailinglistsRest(ACLDefault):
 
     @restricted_view()
     def get(self):

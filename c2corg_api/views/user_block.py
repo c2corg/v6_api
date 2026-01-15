@@ -1,5 +1,6 @@
 import logging
 
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api import DBSession
 from c2corg_api.models.user import User
 from c2corg_api.security.discourse_client import get_discourse_client
@@ -30,10 +31,7 @@ def _get_user(user_id):
 
 
 @resource(path='/users/block', cors_policy=cors_policy)
-class UserBlockRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class UserBlockRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',
@@ -69,10 +67,7 @@ class UserBlockRest(object):
 
 
 @resource(path='/users/unblock', cors_policy=cors_policy)
-class UserUnblockRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class UserUnblockRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',
@@ -109,10 +104,7 @@ class UserUnblockRest(object):
 
 
 @resource(path='/users/blocked/{id}', cors_policy=cors_policy)
-class UserBlockedRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class UserBlockedRest(ACLDefault):
 
     @restricted_json_view(permission='moderator', validators=[validate_id])
     def get(self):
@@ -134,10 +126,7 @@ class UserBlockedRest(object):
 
 
 @resource(path='/users/blocked', cors_policy=cors_policy)
-class UserBlockedAllRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class UserBlockedAllRest(ACLDefault):
 
     @restricted_json_view(permission='moderator')
     def get(self):

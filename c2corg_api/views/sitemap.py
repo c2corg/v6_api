@@ -8,6 +8,7 @@ from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.route import ROUTE_TYPE, RouteLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.views import cors_policy, etag_cache
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.validation import create_int_validator, \
     validate_document_type
 from c2corg_api.caching import get_or_create
@@ -32,10 +33,7 @@ validate_page = create_int_validator('i')
 @resource(
     collection_path='/sitemaps', path='/sitemaps/{doc_type}/{i}',
     cors_policy=cors_policy)
-class SitemapRest(object):
-
-    def __init__(self, request):
-        self.request = request
+class SitemapRest(ACLDefault):
 
     @view()
     def collection_get(self):

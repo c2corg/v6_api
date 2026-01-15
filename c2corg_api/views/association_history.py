@@ -21,7 +21,7 @@ LIMIT_DEFAULT = 50
 class HistoryAssociationRest(object):
     """ Unique class for returning history of a document's associations.
     """
-    def __init__(self, request):
+    def __init__(self, request, **kwargs):
         self.request = request
 
     @view(validators=[validate_document_id_not_required,

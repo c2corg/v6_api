@@ -3,8 +3,7 @@
 [![GitHub license](https://img.shields.io/github/license/c2corg/v6_api.svg)](https://github.com/c2corg/v6_api/blob/master/LICENSE)
 ![Build status](https://github.com/c2corg/v6_api/actions/workflows/ci.yml/badge.svg)
 ![Github Code scanning](https://github.com/c2corg/v6_api/workflows/Github%20Code%20scanning/badge.svg?branch=master)
-[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/323754cf688042688899e6028fdfeff7)](https://www.codacy.com/gh/c2corg/v6_api/dashboard?utm_source=github.com&utm_medium=referral&utm_content=c2corg/v6_api&utm_campaign=Badge_Coverage)
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/c2corg/v6_api.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/c2corg/v6_api/alerts/)
+[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/323754cf688042688899e6028fdfeff7)](https://app.codacy.com/gh/c2corg/v6_api/dashboard)
 [![Known Vulnerabilities](https://snyk.io/test/github/c2corg/v6_api/badge.svg)](https://snyk.io/test/github/c2corg/v6_api)
 
 ## Development environment
@@ -66,7 +65,7 @@ In another terminal (`docker-compose up` must be running) :
 ./scripts/test.sh c2corg_api/tests/models/test_book.py::TestBook::test_to_archive
 ```
 
-Note: if you're using MinGW on Windows, be sure to prefix the command with `MSYS_PATH_NOCONV=1`
+Note: if you're using MinGW on Windows, be sure to prefix the command with `MSYS_NO_PATHCONV=1`
 
 ## Useful links in [wiki](https://github.com/c2corg/v6_api/wiki)
 

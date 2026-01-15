@@ -14,6 +14,8 @@ from c2corg_api.security.discourse_client import (
 from urllib.parse import urlparse
 
 import re
+import time
+import datetime
 
 from unittest.mock import Mock, MagicMock, patch
 
@@ -116,6 +118,7 @@ class TestUserRest(BaseUserTestRest):
         user_id = body.get('id')
         user = self.session.query(User).get(user_id)
         self.assertFalse(user.email_validated)
+        self.assertIsNotNone(user.tos_validated)
         _send_email.check_call_once()
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
@@ -506,7 +509,7 @@ class TestUserRest(BaseUserTestRest):
         self.assertEqual(0, query.count())
 
     def login(self, username, password=None, status=200, sso=None, sig=None,
-              discourse=None):
+              discourse=None, accept_tos=None):
         if not password:
             password = self.global_passwords[username]
 
@@ -521,6 +524,8 @@ class TestUserRest(BaseUserTestRest):
             request_body['sig'] = sig
         if discourse:
             request_body['discourse'] = discourse
+        if accept_tos:
+            request_body['accept_tos'] = accept_tos
 
         url = '/users/login'
         response = self.app_post_json(url, request_body, status=status)
@@ -572,8 +577,25 @@ class TestUserRest(BaseUserTestRest):
         body = self.login('moderator', password='invalid', status=401).json
         self.assertEqual(body['status'], 'error')
 
+    def test_login_no_tos_failure(self):
+        body = self.login('contributornotos', password='some pass',
+                          status=403).json
+        self.assertErrorsContain(body, 'Forbidden',
+                                 'Terms of Service need to be accepted')
+
+    def test_login_no_tos_success(self):
+        # A user which did not previously accepted ToS can login
+        # if he accepts them. It is stored in the db.
+        body = self.login('contributornotos', password='some pass',
+                          accept_tos=True, status=200).json
+        self.assertTrue('token' in body)
+        user = self.session.query(User).filter(
+                User.username == 'contributornotos').one()
+        self.assertTrue((
+            datetime.datetime.now(datetime.timezone.utc) -
+            user.tos_validated).total_seconds() < 5)
+
     def assertExpireAlmostEqual(self, expire, days, seconds_delta):  # noqa
-        import time
         now = int(round(time.time()))
         expected = days * 24 * 3600 + now  # 14 days from now
         if (abs(expected - expire) > seconds_delta):

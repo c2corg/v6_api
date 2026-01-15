@@ -1,3 +1,4 @@
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.caching import cache_document_version
 from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import get_cache_key
@@ -12,12 +13,9 @@ from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import union
 
 
-class DocumentVersionRest(object):
+class DocumentVersionRest(ACLDefault):
     """ Base class for all views that return a specific version of a document.
     """
-
-    def __init__(self, request):
-        self.request = request
 
     def _get_version(self, clazz, document_type, locale_clazz,
                      schema, adapt_schema=None):

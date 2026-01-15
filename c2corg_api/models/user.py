@@ -91,6 +91,8 @@ class User(Base):
         DateTime(timezone=True), default=func.now(), onupdate=func.now(),
         nullable=False, index=True)
     blocked = Column(Boolean, nullable=False, default=False)
+    tos_validated = Column(
+        DateTime(timezone=True), nullable=True, unique=False)
 
     lang = Column(
             String(2), ForeignKey(schema + '.langs.lang'),

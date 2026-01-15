@@ -19,6 +19,7 @@ WORKDIR /var/www/
 
 RUN tar -xvf /tmp/project.tar && chown -R root:root /var/www
 
+# Note: bc, curl, jq, and postgresql-client dependencies are needed for Navitia scripts
 RUN set -x \
     && apt-get -y --no-install-recommends install \
     python3 \
@@ -40,16 +41,20 @@ RUN set -x \
     libpq-dev \
     virtualenv \
     gcc \
-    git
+    git \
+    bc \
+    curl \
+    jq \
+    postgresql-client
 
 RUN set -x \
- && make -f config/dev install \
- && py3compile -f .build/venv/ \
- && rm -fr .cache \
- && apt-get -y purge \
- && apt-get -y --purge autoremove \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+    && make -f config/dev install \
+    && py3compile -f .build/venv/ \
+    && rm -fr .cache \
+    && apt-get -y purge \
+    && apt-get -y --purge autoremove \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ARG VERSION
 ENV version=$VERSION \

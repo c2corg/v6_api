@@ -20,7 +20,7 @@ class ChangesDocumentRest(object):
     """ Unique class for returning history of changes in documents.
     """
 
-    def __init__(self, request):
+    def __init__(self, request, **kwargs):
         self.request = request
 
     @view(validators=[validate_simple_token_pagination,
