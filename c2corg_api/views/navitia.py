@@ -417,7 +417,7 @@ class NavitiaIsochronesReachableRoutesRest:
 
             isochrone_params = extract_isochrone_params(self.request)
 
-            query, count = build_reachable_route_query_with_waypoints(
+            query, _ = build_reachable_route_query_with_waypoints(
                 self.request.GET,
                 meta_params
             )
@@ -500,7 +500,7 @@ class NavitiaIsochronesReachableWaypointsRest:
 
             isochrone_params = extract_isochrone_params(self.request)
 
-            query, count = build_reachable_waypoints_query(
+            query, _ = build_reachable_waypoints_query(
                 self.request.GET, meta_params
             )
 
@@ -757,7 +757,7 @@ def collect_waypoints_from_results(results):
     """
     wp_ids = set()
 
-    for route, areas, waypoints in results:
+    for _, areas, waypoints in results:
         if not waypoints:
             continue
 
