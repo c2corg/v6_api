@@ -103,7 +103,7 @@ if [ "$numberOfCoverage" != "0" ]; then
         status=$(echo "$deleteResponse" | jq -r '.status')
 
         # if we can't delete coverage, then we stop the script
-        if [ $status = "error" ]; then
+        if [ "$status" = "error" ]; then
             exit 1
         fi
     done
@@ -154,8 +154,6 @@ for region_id in "${regions[@]}"; do
     coordinates=${coordinates%?}
 
     coordinates+="]]"
-
-    type="Polygon"
 
     geom_detail="{\"type\": \"Polygon\", \"coordinates\": $coordinates}"
 

@@ -71,7 +71,7 @@ def get_all_filtered_docs(
     # use elastic search to apply filters
     # to documents of type ids
     # do it by chunk of size 'limit'
-    for idx, id_chunk in enumerate(chunk_ids(
+    for _, id_chunk in enumerate(chunk_ids(
         ids,
         chunk_size=(len(ids) if keep_order else 100)
     ), start=1):
