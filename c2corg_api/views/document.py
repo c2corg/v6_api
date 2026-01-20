@@ -9,7 +9,7 @@ from c2corg_api.models.area_association import update_areas_for_document, \
 from c2corg_api.models.association import create_associations, \
     synchronize_associations
 from c2corg_api.models.cache_version import update_cache_version, \
-    update_cache_version_associations, get_cache_key
+    update_cache_version_associations, get_cache_key, get_version_date
 from c2corg_api.models.document import (
     UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
     ArchiveDocumentGeometry, set_available_langs, get_available_langs)
@@ -191,7 +191,7 @@ class DocumentRest(ACLDefault):
 
         if adapt_schema:
             schema = adapt_schema(schema, document)
-
+        self._set_version_date(document)
         return to_json_dict(
             document,
             schema,
@@ -215,6 +215,9 @@ class DocumentRest(ACLDefault):
             to_json_dict(m, schema_listing_area) for m in areas
         ]
 
+    def _set_version_date(self, document):
+        date = get_version_date(document.document_id,document.version)
+        document.version_date = date
     def _collection_post(
             self, schema, before_add=None, after_add=None,
             allow_anonymous=False):
