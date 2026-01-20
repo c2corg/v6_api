@@ -96,7 +96,7 @@ def _get_select_waypoints_for_routes_aggregated():
                 type_=postgresql.ARRAY(Integer)).label('waypoint_ids')
         ]). \
         select_from(all_waypoints). \
-        group_by(all_waypoints.c.route_id)
+        group_by(all_waypoints.c.route_id).subquery()
 
 
 class WaypointsForRoutesView(Base):
@@ -157,7 +157,7 @@ def _get_select_waypoints_for_outings_aggregated():
                 type_=postgresql.ARRAY(Integer)).label('waypoint_ids')
         ]). \
         select_from(waypoints_for_outings). \
-        group_by(waypoints_for_outings.c.outing_id)
+        group_by(waypoints_for_outings.c.outing_id).subquery()
 
 
 class WaypointsForOutingsView(Base):
@@ -200,7 +200,7 @@ def _get_select_users_for_outings_aggregated():
             Association.parent_document_type == user_type,
             Association.child_document_type == outing_type
         )). \
-        group_by(Association.child_document_id)
+        group_by(Association.child_document_id).subquery()
 
 
 class UsersForOutingsView(Base):
@@ -243,7 +243,7 @@ def _get_select_routes_for_outings_aggregated():
             Association.parent_document_type == route_type,
             Association.child_document_type == outing_type
         )). \
-        group_by(Association.child_document_id)
+        group_by(Association.child_document_id).subquery()
 
 
 class RoutesForOutingsView(Base):
@@ -280,7 +280,7 @@ def _get_select_users_for_routes_aggregated():
                 type_=postgresql.ARRAY(Integer)).label('user_ids')
         ]). \
         select_from(DocumentTag). \
-        group_by(DocumentTag.document_id)
+        group_by(DocumentTag.document_id).subquery()
 
 
 class UsersForRoutesView(Base):
