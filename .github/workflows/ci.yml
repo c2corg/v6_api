@@ -96,7 +96,7 @@ jobs:
     # only publish if tests passed
     needs: test
     # secrets are not available for PR from forks, and dependabot PRs, we don't want to build them
-
+    if: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - name: Login to DockerHub
@@ -120,7 +120,7 @@ jobs:
         with:
           file: ./docker/Dockerfile
           provenance: false # true creates issues with the old docker compose used in prod
-          push: false
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
           build-args: |
