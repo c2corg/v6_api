@@ -9,7 +9,6 @@ import threading
 import ast
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import Area
-from c2corg_api.models.utils import wkb_to_shape
 from c2corg_api.models.waypoint import Waypoint, schema_waypoint
 from c2corg_api.views.coverage import get_coverage
 from c2corg_api.views.waypoint import build_reachable_waypoints_query
@@ -545,37 +544,6 @@ class NavitiaIsochronesReachableWaypointsRest:
             }
         except Exception as e:
             return json.dumps(str(e))
-
-
-@resource(path='/navitia/areainisochrone', cors_policy=cors_policy)
-class AreaInIsochroneRest:
-    def __init__(self, request, context=None):
-        self.request = request
-
-    @view(validators=[])
-    def post(self):
-        """
-        returns all areas that are inside
-        or that intersects an isochrone geometry
-
-        make sure the geom_detail in body is epsg:3857
-        """
-        polygon = shape(json.loads(json.loads(
-            self.request.body)['geom_detail']))
-
-        query = (
-            DBSession.query(Area).filter(Area.area_type == 'range')
-        )
-
-        results = query.all()
-
-        areas = []
-
-        for area in results:
-            if (polygon.intersects(wkb_to_shape(area.geometry.geom_detail))):
-                areas.append(area.document_id)
-
-        return areas
 
 
 def is_wp_journey_reachable(waypoint, journey_params):
