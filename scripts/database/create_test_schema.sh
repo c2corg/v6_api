@@ -1,14 +1,16 @@
 #!/bin/sh
 
+set -x
+
 DBNAME="c2corg_tests"
 
 if [ "$( psql -tAc "SELECT 1 FROM pg_database WHERE datname='${DBNAME}'" )" = '1' ]
 then
-    echo "Test database exists"
+    echo "Test database exists: ${DBNAME}"
 else
-    echo "Create test database"
+    echo "Create test database: ${DBNAME}"
 
-    psql <<EOF
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER"<<EOF
 create database ${DBNAME} owner "postgres";
 \c ${DBNAME}
 create extension postgis;

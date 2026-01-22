@@ -118,10 +118,9 @@ jobs:
       - name: Publish the docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./docker
-          file: ./Dockerfile
+          file: ./docker/Dockerfile
           provenance: false # true creates issues with the old docker compose used in prod
-          push: ${{ github.event_name != 'pull_request' }}
+          push: false
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
           build-args: |
