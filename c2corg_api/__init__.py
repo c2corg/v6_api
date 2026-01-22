@@ -590,8 +590,10 @@ def _validate_and_convert_duration(min_duration, route_id):
         or min_duration < min_duration_hours
         or min_duration > max_duration_hours
     ):
-        min_duration_str = "None" if min_duration is None else "%0.2f",
-        min_duration
+        if (min_duration is None):
+            min_duration_str = "None"
+        else:
+            min_duration_str = "%0.2f", min_duration
         log.info(
             "Route %d: Calculated duration (min_duration=%s) is out of bounds \
             (min=%fh, max=%fh) or NULL. Setting duration to NULL." %
@@ -619,5 +621,6 @@ def _update_route_duration(connection, route_id, calculated_duration_in_days):
     )
     log.info(
         "Route %d: Database updated with calculated_duration = %f days.",
+        route_id,
         calculated_duration_in_days
     )

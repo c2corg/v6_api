@@ -19,14 +19,6 @@
 
 # NOTE: the geometry returned by Navitia for the coverages are in WGS384.
 
-if [ -f ./.env ]; then
-    # Load .env data
-    export $(grep -v '^#' ./.env | xargs)
-else
-    echo ".env file not found!"
-    exit 1
-fi
-
 # Function to display usage
 usage() {
     echo "Usage: $0 <username> <password> <base_api_url> <api_port>"
@@ -103,7 +95,7 @@ if [ "$numberOfCoverage" != "0" ]; then
         status=$(echo "$deleteResponse" | jq -r '.status')
 
         # if we can't delete coverage, then we stop the script
-        if [ $status = "error" ]; then
+        if [ "$status" = "error" ]; then
             exit 1
         fi
     done
@@ -154,8 +146,6 @@ for region_id in "${regions[@]}"; do
     coordinates=${coordinates%?}
 
     coordinates+="]]"
-
-    type="Polygon"
 
     geom_detail="{\"type\": \"Polygon\", \"coordinates\": $coordinates}"
 

@@ -12,9 +12,9 @@ class SearchCoverage(SearchDocument):
     FIELDS = ['coverage_type']
 
     @staticmethod
-    def to_search_document(document, index):
+    def to_search_document(document, index, include_areas=False):
         search_document = SearchDocument.to_search_document(
-            document, index, include_areas=False)
+            document, index, include_areas)
 
         if document.redirects_to:
             return search_document
