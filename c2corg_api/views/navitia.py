@@ -725,7 +725,7 @@ def collect_waypoints_from_results(results):
     """
     wp_ids = set()
 
-    for _, areas, waypoints in results:
+    for _, _, waypoints in results:
         if not waypoints:
             continue
 
