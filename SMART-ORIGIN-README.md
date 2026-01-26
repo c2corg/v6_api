@@ -139,4 +139,97 @@ BACK-END :
 `v6_api/c2corg_api/__init__.py`=> sqlalchemy event (it's like db trigger) : after each route insert, we calculate the duration
 
 
-## Lot 3
+## Lot 3 - Itinévert
+
+
+
+****FRONT-END****
+
+`c2c_ui/src/components/itinevert/*` : 
+- **ItinevertBanner.vue** => The banner of the Itinevert tool
+- **ItinevertFilterView.vue** => The view displayed when too much routes are found when searching for routes in a mountain range
+- **ItinevertLoadingView.vue** => The view displayed when loading is needed in Itinévert (mostly isochrone/journey queries)
+- **ItinevertNoResultView.vue** => The view displayed when no results were found. Errors from API can also be seen in this view.
+- **ItinevertPageSelector.vue** => The pagination widget used for Itinévert since we can't rely on existing one (that is based on URL only)
+- **ItinevertResultView.vue** => Similar to DocumentsView, display the results on the map
+- **ItinevertWizard.vue** => The form for Itinévert, as well as the logic that orchestrate view display
+
+`c2c_ui/src/components/generic/inputs` : 
+- **InputRadioButton.vue** => Input for radio buttons
+- **InputAddress.vue** => Input for address, supports geolocation from browser as well as loading user address from its profile. Uses photon API.
+- **InputAutocomplete.vue** => Autocomplete input
+
+`c2c_ui/src/views/portal` : 
+- **ItinevertView.vue** : The root component for Itinévert
+
+`c2c_ui/src/assets/img/itinevert/banner-img/*` :
+- any images here will be shown randomly as a banner in Itinévert tool
+
+`c2c_ui/src/js/apis` : 
+- **itinevert-service.js** : The service for Itinévert dedicated route calls
+- **navitia-service.js** : The service for Navitia API calls
+
+****BACK-END****
+
+`v6_api/c2corg_api/views/navitia.py` :
+- calls to Navitia API (**isochrone**, **journey with coverage**), **job handling** for journey queries
+
+`v6_api/c2corg_api/views/route.py` :
+- add **/reachableroute** route to get routes that have an access waypoint that is associated to a waypoint stop area
+
+`v6_api/c2corg_api/views/waypoint.py` :
+- add **/reachablewaypoints** route to get access waypoints that are associated to a waypoint stop area
+
+`v6_api/c2corg_api/views/coverage.py` : 
+- routes for coverages
+
+`v6_api/c2corg_api/models/coverage.py` : 
+- model for coverages
+
+`v6_api/alembic_migration/versions/27bf1b7197a6_add_coverages.py`:
+- create **Coverage** table in database
+
+***
+Script `update_navitia_coverage.sh` :
+
+**When to run** 
+
+Everytime Navitia updates its coverage for France.
+
+**Where to run**
+
+The script can be launched from any machine with access to the API, including the API docker container itself in production.
+
+**What does it do**
+
+- Delete all coverages from C2C database (if any)
+- Get all coverages for France from navitia /coverages API
+- Insert all coverages for France in C2C database
+
+The coverages are stored in Coverage table.
+
+**Purpose of this script**
+
+Coverages are stored in database so that we don't have to call Navitia API every time we want to get coverage.
+
+Finding the coverage is mandatory for **/isochrone** Navitia calls, and give better results for **/journey** Navitia calls
+
+**Parameters**
+
+- Username ex: 'user123'  
+- Password ex: 'password123' (make sure to escape special characters) 
+- Base API URL ex: 'http://localhost' 
+- API Port ex: '6543' 
+
+**Who can run it**
+
+Any moderators, since deleting documents via API can only be done by moderators.
+
+**Volumetry**
+
+There are only five coverages for France :
+- fr-se
+- fr-ne
+- fr-sw
+- fr-nw
+- fr-idf
