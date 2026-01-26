@@ -1,4 +1,4 @@
-from c2corg_api.models.coverage import COVERAGE_TYPE, ArchiveCoverage, Coverage
+from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area_association import AreaAssociation
@@ -354,7 +354,7 @@ def _get_models(document_type):
     if document_type == BOOK_TYPE:
         return Book, None, ArchiveBook, None
     if document_type == COVERAGE_TYPE:
-        return Coverage, None, ArchiveCoverage, None
+        return Coverage, None, None, None
     if document_type == XREPORT_TYPE:
         return Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale
     assert False
