@@ -29,6 +29,27 @@ attributes = ['coverage_type']
 
 
 class Coverage(_CoverageMixin, Document):
+    """
+    Represents a Navitia Coverage, which defines a specific geographical area.
+
+    For example, France is divided into multiple coverages:
+    - 'fr-se' : South-East France
+    - 'fr-ne' : North-East France
+    - 'fr-nw' : North-West France
+    - 'fr-sw' : South-West France
+    - 'fr-idf': Île-de-France region
+
+    They are defined by Navitia, and might get updated,
+    hence the script 'update_navitia_coverage'
+
+    Usage:
+        Coverage is used to get more results when using journey API,
+        and is required when using Isochrone API
+
+    More information:
+        See the Navitia documentation for coverage details:
+        https://doc.navitia.io/#coverage
+    """
     __tablename__ = 'coverages'
 
     document_id = Column(
@@ -58,6 +79,7 @@ schema_coverage_attributes = list(schema_attributes)
 
 class ArchiveCoverage(_CoverageMixin, ArchiveDocument):
     """
+    Archive class of coverages, in case coverage archivage is needed
     """
     __tablename__ = 'coverages_archives'
 
