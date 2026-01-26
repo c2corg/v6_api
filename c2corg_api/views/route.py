@@ -610,7 +610,6 @@ def build_reachable_route_query(params, meta_params):
             params,
             meta_params,
             get_routes_reachable_ids(),
-            True,
             ROUTE_TYPE
         )
 
@@ -682,7 +681,6 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
             params,
             meta_params,
             get_routes_reachable_ids(),
-            True,
             ROUTE_TYPE
         )
 
