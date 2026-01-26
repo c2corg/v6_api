@@ -37,6 +37,8 @@ REDIS_HOST = "redis"
 REDIS_PORT = 6379
 REDIS_DB = 0
 
+BASE_URL = "https://api.navitia.io/v1"
+
 
 def validate_navitia_params(request, **kwargs):
     """Validates the required parameters for the Navitia API"""
@@ -112,7 +114,7 @@ class NavitiaRest:
                 params[param] = self.request.params.get(param)
 
         return navitia_get(
-            "https://api.navitia.io/v1/journeys",
+            BASE_URL + "/journeys",
             params=params,
             headers={"Authorization": api_key},
         )
@@ -571,10 +573,9 @@ def is_wp_journey_reachable(waypoint, journey_params):
         raise HTTPInternalServerError("Navitia API config is missing")
 
     if destination_coverage:
-        url = "https://api.navitia.io/v1/coverage/%s/journeys" % \
-            destination_coverage
+        url = BASE_URL + "/coverage/%s/journeys" % destination_coverage
     else:
-        url = "https://api.navitia.io/v1/journeys"
+        url = BASE_URL + "/journeys"
 
     json_response = navitia_get(
         url,
@@ -613,7 +614,7 @@ def get_navitia_isochrone(isochrone_params):
         raise HTTPInternalServerError("Coverage not found for source")
 
     return navitia_get(
-        "https://api.navitia.io/v1/coverage/%s/isochrones" % source_coverage,
+        BASE_URL + "/coverage/%s/isochrones" % source_coverage,
         params=isochrone_params,
         headers={"Authorization": api_key},
     )
