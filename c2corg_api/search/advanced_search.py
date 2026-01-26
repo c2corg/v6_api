@@ -61,7 +61,6 @@ def get_all_filtered_docs(
     params,
     meta_params,
     ids,
-    keep_order,
     doc_type
 ):
     """get all docs ids, taking into account ES filter in params"""
@@ -73,7 +72,6 @@ def get_all_filtered_docs(
     # do it by chunk of size 'limit'
     for _, id_chunk in enumerate(chunk_ids(
         ids,
-        chunk_size=(len(ids) if keep_order else 100)
     ), start=1):
         doc_ids, hits = search_with_ids(
             params,
@@ -87,11 +85,11 @@ def get_all_filtered_docs(
     return filtered_doc_ids, total_hits
 
 
-def chunk_ids(ids_set, chunk_size=100):
+def chunk_ids(ids_set):
     """Yield successive chunks of IDs from a set/list."""
     ids_list = list(ids_set)
-    for i in range(0, len(ids_list), chunk_size):
-        yield ids_list[i:i + chunk_size]
+    for i in range(0, len(ids_list), len(ids_set)):
+        yield ids_list[i:i + len(ids_set)]
 
 
 def contains_search_params(url_params):

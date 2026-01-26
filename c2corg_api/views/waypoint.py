@@ -557,7 +557,6 @@ def build_reachable_waypoints_query(params, meta_params):
             params,
             meta_params,
             get_waypoints_reachable_ids(),
-            True,
             WAYPOINT_TYPE
         )
 
