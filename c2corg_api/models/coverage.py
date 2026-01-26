@@ -1,8 +1,7 @@
-from c2corg_api.models import Base, schema
+from c2corg_api.models import schema
 from c2corg_api.models.enums import coverage_types
 from c2corg_api.models.document import (
     schema_document_locale,
-    ArchiveDocument,
     Document,
     get_geometry_schema_overrides,
     schema_attributes)
@@ -61,13 +60,6 @@ class Coverage(_CoverageMixin, Document):
         'inherit_condition': Document.document_id == document_id
     }
 
-    def to_archive(self):
-        coverage = ArchiveCoverage()
-        super(Coverage, self)._to_archive(coverage)
-        copy_attributes(self, coverage, attributes)
-
-        return coverage
-
     def update(self, other):
         super(Coverage, self).update(other)
         copy_attributes(other, self, attributes)
@@ -75,25 +67,6 @@ class Coverage(_CoverageMixin, Document):
 
 schema_coverage_locale = schema_document_locale
 schema_coverage_attributes = list(schema_attributes)
-
-
-class ArchiveCoverage(_CoverageMixin, ArchiveDocument):
-    """
-    Archive class of coverages, in case coverage archivage is needed
-    """
-    __tablename__ = 'coverages_archives'
-
-    id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_archives.id'), primary_key=True)
-
-    __mapper_args__ = {
-        'polymorphic_identity': COVERAGE_TYPE,
-        'inherit_condition': ArchiveDocument.id == id
-    }
-
-    __table_args__ = Base.__table_args__
-
 
 schema_coverage = SQLAlchemySchemaNode(
     Coverage,
