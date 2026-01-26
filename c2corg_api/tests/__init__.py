@@ -1,37 +1,34 @@
-import time
-
-import jwt
 import datetime
-from pytz import utc
-
-import transaction
-import os
+import jwt
 import logging
-from random import randint
-
-from alembic.command import downgrade
-from c2corg_api.models.document import DocumentLocale, DocumentGeometry
-from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.scripts.es.fill_index import fill_index
-from sqlalchemy import engine_from_config
-from pyramid.paster import get_appsettings
-from pyramid import testing
-from alembic.config import Config
-
+import os
+import time
+import transaction
 import unittest
+from alembic.command import downgrade
+from alembic.config import Config
+from dotenv import load_dotenv
+from pyramid import testing
+from pyramid.paster import get_appsettings
+from pytz import utc
+from random import randint
+from sqlalchemy import engine_from_config
 from webtest import TestApp
 
-from c2corg_api.emails.email_service import EmailService
-
-from c2corg_api import main, caching
 from c2corg_api import caching as caching_common
+from c2corg_api import main, caching
+from c2corg_api.emails.email_service import EmailService
 from c2corg_api.models import DBSession, sessionmaker
+from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from c2corg_api.models.sso import SsoExternalId, SsoKey
 from c2corg_api.models.user import User
-from c2corg_api.security.roles import create_claims, add_or_retrieve_token
+from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.scripts import initializedb, initializees
+from c2corg_api.scripts.es.fill_index import fill_index
 from c2corg_api.search import configure_es_from_config
+from c2corg_api.security.roles import create_claims, add_or_retrieve_token
 
+load_dotenv()
 
 log = logging.getLogger(__name__)
 
