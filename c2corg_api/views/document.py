@@ -4,6 +4,7 @@ from c2corg_api.security.acl import ACLDefault
 from c2corg_api.caching import cache_document_detail, cache_document_cooked
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
+from c2corg_api.models.coverage import COVERAGE_TYPE
 from c2corg_api.models.area_association import update_areas_for_document, \
     get_areas
 from c2corg_api.models.association import create_associations, \
@@ -240,7 +241,10 @@ class DocumentRest(ACLDefault):
 
         DBSession.add(document)
         DBSession.flush()
-        DocumentRest.create_new_version(document, user_id)
+
+        # don't create a new version for coverages (no archive for this class)
+        if document.type != COVERAGE_TYPE:
+            DocumentRest.create_new_version(document, user_id)
 
         if document.type != AREA_TYPE:
             update_areas_for_document(document, reset=False)
