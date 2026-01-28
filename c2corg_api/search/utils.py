@@ -1,4 +1,6 @@
+import logging
 import re
+log = logging.getLogger(__name__)
 
 BBCODE_TAGS = [
     'b', 'i', 'u', 's', 'q', 'c', 'sup', 'ind', 'url', 'email', 'acr(onym)?',
