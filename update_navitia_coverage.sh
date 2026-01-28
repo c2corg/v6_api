@@ -76,7 +76,8 @@ if [ "$numberOfCoverage" != "0" ]; then
     # check if logged user is a moderator
     found=false
     for role in "${roles[@]}"; do
-        if [[ "$role" == "moderator" ]]; then
+        echo "$role" | grep -q "moderator"
+        if [[ $? -eq "0" ]]; then
             found=true
             break
         fi
@@ -90,7 +91,7 @@ if [ "$numberOfCoverage" != "0" ]; then
     echo "$coverages" | jq -c '.documents[]' | while IFS= read -r coverage; do
         coverage_doc_id=$(echo "$coverage" | jq -r '.document_id')
 
-        deleteResponse=$(curl -X POST -v -H "Content-Type: application/json" -H "Authorization: JWT token=\"$JWTToken\"" "$base_api_url:$api_port/documents/delete/${coverage_doc_id}")
+        deleteResponse=$(curl -X DELETE -v -H "Content-Type: application/json" -H "Authorization: JWT token=\"$JWTToken\"" "$base_api_url:$api_port/documents/delete/${coverage_doc_id}")
 
         status=$(echo "$deleteResponse" | jq -r '.status')
 
@@ -99,6 +100,8 @@ if [ "$numberOfCoverage" != "0" ]; then
             exit 1
         fi
     done
+
+    numberOfCoverage=0
 fi
 
 # This define how much navitia request will be made executing this script
