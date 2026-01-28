@@ -5,14 +5,19 @@ DURATION=$(echo "scale=0; $MAX_DISTANCE_WAYPOINT_TO_STOPAREA / $WALKING_SPEED" |
 
 API_PORT=${API_PORT:-6543} 
 
-BASE_API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=14274&limit=100" 
+# the 'a' paramater can be changed to target a different area
+# Here are some values which can be used:
+# - France: 14274
+# - Isere: 14328
+# - Rhone: 14299
+BASE_API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=14274&limit=100"
 OUTPUT_FILE="/tmp/waypoints_ids.txt"
 LOG_FILE="log-navitia.txt"
 NAVITIA_REQUEST_COUNT=0
 SQL_FILE="/tmp/sql_commands.sql"
 
-# Augmenter le nombre d'arrêts récupérés pour avoir plus de choix
-MAX_STOP_AREA_FETCHED=$((MAX_STOP_AREA_FOR_1_WAYPOINT * 3))  # Récupérer 6 fois plus d'arrêts
+# Increase the stop number retrieved to have more choices
+MAX_STOP_AREA_FETCHED=$((MAX_STOP_AREA_FOR_1_WAYPOINT * 3))  # Retrieves 6x more stops
 
 echo "Start time :" > "$LOG_FILE"
 echo $(date +"%Y-%m-%d-%H-%M-%S") >> "$LOG_FILE"
