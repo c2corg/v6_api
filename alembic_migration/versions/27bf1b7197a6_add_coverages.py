@@ -24,16 +24,8 @@ def upgrade():
     sa.PrimaryKeyConstraint('document_id'),
     schema='guidebook'
     )
-    op.create_table('coverages_archives',
-    sa.Column('coverage_type', coverage_type, nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['id'], ['guidebook.documents_archives.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    schema='guidebook'
-    )
 
 
 def downgrade():
-    op.drop_table('coverages_archives', schema='guidebook')
     op.drop_table('coverages', schema='guidebook')
     sa.Enum('fr-idf', 'fr-ne', 'fr-nw', 'fr-se', 'fr-sw', name='coverage_type', schema='guidebook').drop(op.get_bind())
