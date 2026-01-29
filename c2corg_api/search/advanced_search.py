@@ -1,6 +1,9 @@
 from c2corg_api.search.mapping_types import meta_param_keys
 from c2corg_api.search.search_filters import build_query
-from c2corg_api.views.document import ES_MAX_RESULT_WINDOW
+
+# the chunk size for each elastic search request
+# should be <= ES_MAX_RESULT_WINDOW
+CHUNK_SIZE = 10000
 
 
 def get_search_documents(url_params, meta_params, doc_type):
@@ -91,8 +94,8 @@ def chunk_ids(ids_set):
     chunk size is ES_MAX_RESULT_WINDOW
     """
     ids_list = list(ids_set)
-    for i in range(0, len(ids_list), ES_MAX_RESULT_WINDOW):
-        yield ids_list[i:i + ES_MAX_RESULT_WINDOW]
+    for i in range(0, len(ids_list), CHUNK_SIZE):
+        yield ids_list[i:i + CHUNK_SIZE]
 
 
 def contains_search_params(url_params):
