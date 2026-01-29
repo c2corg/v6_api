@@ -1,4 +1,3 @@
-import sys
 from c2corg_api.caching import cache_document_version
 from c2corg_api.models.article import ArchiveArticle, Article, ARTICLE_TYPE
 from c2corg_api.models.association import AssociationLog, Association
@@ -117,8 +116,6 @@ class TestArticleRest(BaseDocumentTestRest):
         headers = {
             'If-None-Match': etag
         }
-        print(f"Headers sent to {url} for testing Etag : {headers}",
-              flush=True, file=sys.stderr)
         self.app.get(url, status=304, headers=headers)
 
     def test_get_version_caching(self):

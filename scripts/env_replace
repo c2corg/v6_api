@@ -4,14 +4,19 @@ import sys
 from dotenv import load_dotenv
 
 if __name__ == "__main__":
+    override_env = True
+    if "--keep-env" in sys.argv:
+        override_env = False
+        sys.argv.remove("--keep-env")
+
     if len(sys.argv) < 2:
-        print("Usage: {} env_file1 env_file2 ...".format(sys.argv[0]))
+        print("Usage: {} [--override-env] env_file1 env_file2 ...".format(sys.argv[0]))
         sys.exit(1)
 
     env_files = sys.argv[1:]
 
     for env_file in env_files:
-        load_dotenv(env_file, override=False)
+        load_dotenv(env_file, override=override_env)
 
     env = dict(**os.environ)
     # Because on Windows, environment variables are upper cased by default
