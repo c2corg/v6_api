@@ -36,4 +36,6 @@ RUN chown -R root:root /var/www \
  && pip install .
 
 EXPOSE 8080
+ENTRYPOINT ["./docker/scripts/entrypoint.sh"]
+
 CMD ["gunicorn", "--paste", "production.ini", "-u", "www-data", "-g", "www-data", "-b", ":8080"]
