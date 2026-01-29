@@ -1,5 +1,6 @@
 from c2corg_api.search.mapping_types import meta_param_keys
 from c2corg_api.search.search_filters import build_query
+from c2corg_api.views.document import ES_MAX_RESULT_WINDOW
 
 
 def get_search_documents(url_params, meta_params, doc_type):
@@ -69,7 +70,6 @@ def get_all_filtered_docs(
 
     # use elastic search to apply filters
     # to documents of type ids
-    # do it by chunk of size 'limit'
     for _, id_chunk in enumerate(chunk_ids(
         ids,
     ), start=1):
@@ -86,10 +86,13 @@ def get_all_filtered_docs(
 
 
 def chunk_ids(ids_set):
-    """Yield successive chunks of IDs from a set/list."""
+    """
+    Yield successive chunks of IDs from a set/list.
+    chunk size is ES_MAX_RESULT_WINDOW
+    """
     ids_list = list(ids_set)
-    for i in range(0, len(ids_list), len(ids_set)):
-        yield ids_list[i:i + len(ids_set)]
+    for i in range(0, len(ids_list), ES_MAX_RESULT_WINDOW):
+        yield ids_list[i:i + ES_MAX_RESULT_WINDOW]
 
 
 def contains_search_params(url_params):
