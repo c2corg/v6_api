@@ -1,6 +1,7 @@
 from itertools import combinations
 
 import functools
+from sqlalchemy import case
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
@@ -15,6 +16,7 @@ from c2corg_api.views.document_schemas import route_documents_config, \
     route_schema_adaptor, outing_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.models.utils import get_mid_point
+from c2corg_api.search.advanced_search import get_all_filtered_docs
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
 
@@ -33,6 +35,16 @@ from c2corg_api.models.common.attributes import activities, \
     public_transportation_ratings
 from sqlalchemy.orm import load_only
 from sqlalchemy.sql.expression import text, or_, column, union
+
+from operator import and_
+from c2corg_api.models.area import Area
+from c2corg_api.models.area_association import AreaAssociation
+from c2corg_api.views import to_json_dict
+from c2corg_api.views.document import (LIMIT_DEFAULT)
+from c2corg_api.models.waypoint_stoparea import (WaypointStoparea)
+from c2corg_api.models.area import schema_listing_area
+from sqlalchemy import func, literal_column
+
 
 validate_route_create = make_validator_create(
     fields_route, 'activities', activities)
@@ -200,6 +212,77 @@ class RoutePublicTransportationRatingRest(ACLDefault):
         waypoint_extrapolation = self.request.params.get(
             'waypoint_extrapolation') or True
         update_all_pt_rating(waypoint_extrapolation)
+
+
+@resource(path='/reachableroutes', cors_policy=cors_policy)
+class ReachableRouteRest(DocumentRest):
+
+    def __init__(self, request, context=None):
+        self.request = request
+
+    @view(validators=[validate_pagination, validate_preferred_lang_param])
+    def get(self):
+        """Returns a list of object {documents: Route[], total: Integer} ->
+        documents: routes reachable within offset and limit
+        total: number of documents returned by query,
+        without offset and limit"""
+
+        validated = self.request.validated
+
+        meta_params = {
+            'offset': validated.get('offset', 0),
+            'limit': validated.get('limit', LIMIT_DEFAULT),
+            'lang': validated.get('lang')
+        }
+
+        query, count = build_reachable_route_query(
+            self.request.GET,
+            meta_params
+        )
+
+        if query is None:
+            results = []
+        else:
+            # route, areas in results
+            results = (
+                query
+                .limit(meta_params['limit'])
+                .offset(meta_params['offset'])
+                .all()
+            )
+
+        areas_id = set()
+        for route, areas in results:
+            if areas is None:
+                continue
+            for area in areas:
+                area_id = area.get("document_id")
+                if area_id is not None:
+                    areas_id.add(area_id)
+
+        areas_objects = DBSession.query(Area).filter(
+            Area.document_id.in_(areas_id)).all()
+
+        areas_map = {area.document_id: area for area in areas_objects}
+
+        routes = []
+        for route, areas in results:
+            json_areas = []
+            if areas is None:
+                areas = []
+
+            for area in areas:
+                area_obj = areas_map.get(area.get("document_id"))
+                if area_obj:
+                    json_areas.append(to_json_dict(
+                        area_obj, schema_listing_area))
+
+            # assign JSON areas to the route
+            route.areas = json_areas
+            wp_dict = to_json_dict(route, schema_route, True)
+            routes.append(wp_dict)
+
+        return {'documents': routes, 'total': count}
 
 
 def set_default_geometry(linked_waypoints, route, user_id):
@@ -499,7 +582,7 @@ def _pt_rating(starting_waypoints, ending_waypoints, route_types):
     # Return the best starting rating if it's not a crossing
     if not (route_types and bool(
             set(["traverse", "raid", "expedition"]) & set(route_types)
-            )):
+    )):
         return best_starting_rating
 
     # If no ending point is provided
@@ -513,3 +596,181 @@ def _pt_rating(starting_waypoints, ending_waypoints, route_types):
 
     # Return the worst of the two ratings
     return worst_rating(best_starting_rating, best_ending_rating)
+
+
+def build_reachable_route_query(params, meta_params):
+    """build the query based on params and meta params.
+       this includes every filters on route,
+       as well as offset + limit, sort, bbox...
+       returns a list of routes reachable
+       (can be accessible by public transports), filtered with params
+    """
+    all_filtered_routes_reachable_ids, \
+        total_hits = get_all_filtered_docs(
+            params,
+            meta_params,
+            get_routes_reachable_ids(),
+            ROUTE_TYPE
+        )
+
+    if total_hits == 0:
+        return None, 0
+
+    # The order of ids within all_filtered_routes_reachable_ids order matters
+    # since a sort may have been applied by ES
+
+    ordering_case = case(
+        {
+            doc_id: idx for idx,
+            doc_id in enumerate(all_filtered_routes_reachable_ids)
+        },
+        value=Route.document_id
+    )
+
+    # Querying database with the ids from ES, mainting the order with the case
+    query = (
+        DBSession.
+        query(Route,
+              func.jsonb_agg(func.distinct(
+                  func.jsonb_build_object(
+                      literal_column(
+                          "'document_id'"), Area.document_id
+                  ))).label("areas")).
+        filter(Route.document_id.in_(
+            all_filtered_routes_reachable_ids)).
+        join(Association, or_(
+            Route.document_id == Association.child_document_id,
+            Route.document_id == Association.parent_document_id
+        )).
+        join(
+            AreaAssociation,
+            AreaAssociation.document_id == Route.document_id
+        ).
+        join(
+            Area,
+            Area.document_id == AreaAssociation.area_id
+        ).
+        join(Waypoint, and_(
+            or_(
+                Waypoint.document_id == Association.child_document_id,
+                Waypoint.document_id == Association.parent_document_id
+            ),
+            Waypoint.waypoint_type == 'access'
+        )).
+        join(
+            WaypointStoparea,
+            WaypointStoparea.waypoint_id == Waypoint.document_id
+        ).
+        group_by(Route).
+        order_by(ordering_case)
+    )
+
+    return query, total_hits
+
+
+def build_reachable_route_query_with_waypoints(params, meta_params):
+    """build the query based on params and meta params.
+       this includes every filters on route,
+       as well as offset + limit, sort, bbox...
+       returns a list of routes reachable
+       (accessible by common transports), filtered with params
+    """
+
+    all_filtered_routes_reachable_ids, \
+        total_hits = get_all_filtered_docs(
+            params,
+            meta_params,
+            get_routes_reachable_ids(),
+            ROUTE_TYPE
+        )
+
+    if total_hits == 0:
+        return None, 0
+
+    # The order of ids within all_filtered_routes_reachable_ids order matters
+    # since a sort may have been applied by ES
+
+    ordering_case = case(
+        {
+            doc_id: idx for idx,
+            doc_id in enumerate(all_filtered_routes_reachable_ids)
+        },
+        value=Route.document_id
+    )
+
+    # then query database with the ids from ES
+    query = (
+        DBSession.
+        query(Route,
+              func.jsonb_agg(func.distinct(
+                  func.jsonb_build_object(
+                      literal_column(
+                          "'document_id'"), Area.document_id
+                  ))).label("areas"),
+              func.jsonb_agg(func.distinct(
+                  func.jsonb_build_object(
+                      literal_column(
+                          "'document_id'"), Waypoint.document_id
+                  ))).label("waypoints")).
+        select_from(Association).
+        join(Route, and_(
+            or_(
+                Route.document_id == Association.child_document_id,
+                Route.document_id == Association.parent_document_id
+            ), Route.document_id.in_(all_filtered_routes_reachable_ids)
+        )).
+        join(
+            AreaAssociation,
+            AreaAssociation.document_id == Route.document_id
+        ).
+        join(
+            Area,
+            Area.document_id == AreaAssociation.area_id
+        ).
+        join(Waypoint, and_(
+            or_(
+                Waypoint.document_id == Association.child_document_id,
+                Waypoint.document_id == Association.parent_document_id
+            ),
+            Waypoint.waypoint_type == 'access'
+        )).
+        join(
+            WaypointStoparea,
+            WaypointStoparea.waypoint_id == Waypoint.document_id
+        ).
+        group_by(Route).
+        order_by(ordering_case)
+    )
+
+    return query, total_hits
+
+
+def get_routes_reachable_ids():
+    """get all routes reachable ids"""
+    # get all routes reachable (join with waypoint stop area)
+    all_routes_reachable = (
+        DBSession.query(Route).
+        join(Association, or_(
+            Association.child_document_id == Route.document_id,
+            Association.parent_document_id == Route.document_id
+        )).
+        join(Waypoint, and_(
+            or_(
+                Waypoint.document_id == Association.child_document_id,
+                Waypoint.document_id == Association.parent_document_id
+            ),
+            Waypoint.waypoint_type == 'access'
+        )).
+        join(
+            WaypointStoparea,
+            WaypointStoparea.waypoint_id == Waypoint.document_id
+        )
+        .distinct()
+        .all()
+    )
+
+    # extract their ids
+    all_routes_reachable_ids = set(
+        [r.document_id for r in all_routes_reachable])
+
+    return all_routes_reachable_ids

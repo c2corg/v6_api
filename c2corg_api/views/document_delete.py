@@ -1,3 +1,4 @@
+from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area_association import AreaAssociation
@@ -60,7 +61,8 @@ def validate_document_type(request, **kwargs):
                              IMAGE_TYPE,
                              ARTICLE_TYPE,
                              BOOK_TYPE,
-                             XREPORT_TYPE):
+                             XREPORT_TYPE,
+                             COVERAGE_TYPE):
         request.errors.add(
             'querystring',
             'document_id',
@@ -352,6 +354,8 @@ def _get_models(document_type):
         return Article, None, ArchiveArticle, None
     if document_type == BOOK_TYPE:
         return Book, None, ArchiveBook, None
+    if document_type == COVERAGE_TYPE:
+        return Coverage, None, ArchiveDocument, None
     if document_type == XREPORT_TYPE:
         return Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale
     assert False

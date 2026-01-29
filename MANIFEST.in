@@ -1,2 +1,3 @@
 include *.txt *.ini *.cfg *.md
 recursive-include c2corg_api *.ico *.png *.css *.gif *.jpg *.pt *.txt *.mak *.mako *.js *.html *.xml
+graft c2corg_api/emails/

@@ -1,4 +1,6 @@
 import functools
+import logging
+from sqlalchemy import case
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
@@ -15,6 +17,8 @@ from c2corg_api.views.route import set_route_title_prefix, \
     update_pt_rating
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
+
+from c2corg_api.search.advanced_search import get_all_filtered_docs
 
 from c2corg_api.models.waypoint import (
     Waypoint, schema_waypoint, schema_update_waypoint,
@@ -34,6 +38,17 @@ from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.orm.util import aliased
 from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import and_, text, union, column
+from c2corg_api.models.area import Area
+from c2corg_api.models.area_association import AreaAssociation
+from c2corg_api.views import to_json_dict
+from c2corg_api.views.document import (
+    LIMIT_DEFAULT)
+from c2corg_api.models.waypoint_stoparea import (
+    WaypointStoparea)
+from c2corg_api.models.area import schema_listing_area
+from sqlalchemy import func
+
+log = logging.getLogger(__name__)
 
 # the number of routes that are included for waypoints
 NUM_ROUTES = 400
@@ -287,7 +302,7 @@ def set_recent_outings(waypoint, lang):
         join(
             with_query_waypoints,
             with_query_waypoints.c.document_id == t_route_wp.parent_document_id
-        ). \
+    ). \
         distinct(). \
         count()
 
@@ -369,9 +384,9 @@ def _get_select_children(waypoint):
         cte('waypoint_grandchildren')
 
     return union(
-            select_waypoint.select(),
-            select_waypoint_children.select(),
-            select_waypoint_grandchildren.select()). \
+        select_waypoint.select(),
+        select_waypoint_children.select(),
+        select_waypoint_grandchildren.select()). \
         cte('select_all_waypoints')
 
 
@@ -391,6 +406,75 @@ class WaypointInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):
         return self._get_document_info(waypoint_documents_config)
+
+
+@resource(path='/reachablewaypoints', cors_policy=cors_policy)
+class ReachableWaypointRest(DocumentRest):
+
+    def __init__(self, request, context=None):
+        self.request = request
+
+    @view(validators=[validate_pagination, validate_preferred_lang_param])
+    def get(self):
+        """Returns a list of object {documents: Waypoint[], total: Integer} ->
+        documents: waypoints reachable within offset and limit
+        total: number of documents returned by query,
+        without offset and limit"""
+        validated = self.request.validated
+
+        meta_params = {
+            'offset': validated.get('offset', 0),
+            'limit': validated.get('limit', LIMIT_DEFAULT),
+            'lang': validated.get('lang')
+        }
+
+        query, count = build_reachable_waypoints_query(
+            self.request.GET,
+            meta_params
+        )
+
+        if query is None:
+            results = []
+        else:
+            results = (
+                query
+                .limit(meta_params['limit'])
+                .offset(meta_params['offset'])
+                .all()
+            )
+
+        areas_id = set()
+        for wp, areas in results:
+            if areas is None:
+                continue
+            for area in areas:
+                area_id = area.get("document_id")
+                if area_id is not None:
+                    areas_id.add(area_id)
+
+        areas_objects = DBSession.query(Area).filter(
+            Area.document_id.in_(areas_id)).all()
+
+        areas_map = {area.document_id: area for area in areas_objects}
+
+        waypoints = []
+        for wp, areas in results:
+            json_areas = []
+            if areas is None:
+                areas = []
+
+            for area in areas:
+                area_obj = areas_map.get(area.get("document_id"))
+                if area_obj:
+                    json_areas.append(to_json_dict(
+                        area_obj, schema_listing_area))
+
+            # assign JSON areas to the waypoint
+            wp.areas = json_areas
+            wp_dict = to_json_dict(wp, schema_waypoint, True)
+            waypoints.append(wp_dict)
+
+        return {'documents': waypoints, 'total': count}
 
 
 def update_linked_routes(waypoint, update_types, user_id):
@@ -459,3 +543,78 @@ def update_linked_routes_public_transportation_rating(waypoint, update_types):
 
     for route in routes:
         update_pt_rating(route)
+
+
+def build_reachable_waypoints_query(params, meta_params):
+    """build the query based on params and meta params.
+       this includes every filters on waypoints,
+       as well as offset + limit, sort, bbox...
+       returns a list of waypoints reachable
+       (can be accessible by public transports), filtered with params
+    """
+    all_filtered_waypoints_reachable_ids, \
+        total_hits = get_all_filtered_docs(
+            params,
+            meta_params,
+            get_waypoints_reachable_ids(),
+            WAYPOINT_TYPE
+        )
+
+    if total_hits == 0:
+        return None, 0
+
+    # The order of ids within all_filtered_waypoints_reachable_ids
+    #  order matters since a sort may have been applied by ES
+
+    ordering_case = case(
+        {
+            doc_id: idx for idx,
+            doc_id in enumerate(all_filtered_waypoints_reachable_ids)
+        },
+        value=Waypoint.document_id
+    )
+
+    # then query database with the ids from ES, maintaining order with the case
+    query = (
+        DBSession.
+        query(Waypoint,
+              func.jsonb_agg(func.distinct(
+                  func.jsonb_build_object(
+                      literal_column(
+                          "'document_id'"), Area.document_id
+                  ))).label("areas")).
+        filter(Waypoint.document_id.in_(
+            all_filtered_waypoints_reachable_ids)).
+        join(
+            AreaAssociation,
+            AreaAssociation.document_id == Waypoint.document_id
+        ).
+        join(
+            Area,
+            Area.document_id == AreaAssociation.area_id
+        ).
+        group_by(Waypoint).
+        order_by(ordering_case)
+    )
+
+    return query, total_hits
+
+
+def get_waypoints_reachable_ids():
+    """get all waypoints reachable ids"""
+    # get all waypoints reachable (join with waypoint stop area)
+    all_routes_reachable = (
+        DBSession.query(Waypoint).
+        join(
+            WaypointStoparea,
+            WaypointStoparea.waypoint_id == Waypoint.document_id
+        )
+        .distinct()
+        .all()
+    )
+
+    # extract their ids
+    all_waypoints_reachable_ids = set(
+        [r.document_id for r in all_routes_reachable])
+
+    return all_waypoints_reachable_ids
