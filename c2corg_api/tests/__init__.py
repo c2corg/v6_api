@@ -16,7 +16,7 @@ from sqlalchemy import engine_from_config
 from webtest import TestApp
 
 from c2corg_api import caching as caching_common
-from c2corg_api import main, caching
+from c2corg_api import main
 from c2corg_api.emails.email_service import EmailService
 from c2corg_api.models import DBSession, sessionmaker
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
@@ -322,7 +322,7 @@ def reset_queue(queue_config):
 
 def reset_cache_key():
     cache_version = settings['cache_version']
-    caching.CACHE_VERSION = '{0}-{1}-{2}'.format(
+    caching_common.CACHE_VERSION = '{0}-{1}-{2}'.format(
         cache_version, int(time.time()), randint(0, 10**9))
     caching_common.cache_status = caching_common.CacheStatus()
 

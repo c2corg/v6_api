@@ -31,11 +31,9 @@ ENV version=$VERSION
 
 WORKDIR /var/www/
 
-COPY project.tar .
-RUN tar -xvf project.tar && chown -R root:root /var/www \
- && rm -rf project.tar \
+ADD project.tar .
+RUN chown -R root:root /var/www \
  && pip install .
-
 
 EXPOSE 8080
 CMD ["gunicorn", "--paste", "production.ini", "-u", "www-data", "-g", "www-data", "-b", ":8080"]
