@@ -117,7 +117,7 @@ class TestArticleRest(BaseDocumentTestRest):
         headers = {
             'If-None-Match': etag
         }
-        print(f"Headers sent to {url} for testing Etag : {headers}", 
+        print(f"Headers sent to {url} for testing Etag : {headers}",
               flush=True, file=sys.stderr)
         self.app.get(url, status=304, headers=headers)
 
