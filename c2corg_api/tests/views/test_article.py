@@ -116,6 +116,7 @@ class TestArticleRest(BaseDocumentTestRest):
         headers = {
             'If-None-Match': etag
         }
+        print(f"Headers sent to {url} for testing Etag : {headers}")
         self.app.get(url, status=304, headers=headers)
 
     def test_get_version_caching(self):
