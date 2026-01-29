@@ -1,4 +1,7 @@
 .build/
 .git/
 .gitignore
+.gitattributes
 .travis.yml
+.github
+
