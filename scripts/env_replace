@@ -11,7 +11,7 @@ if __name__ == "__main__":
     env_files = sys.argv[1:]
 
     for env_file in env_files:
-        load_dotenv(env_file, override=True)
+        load_dotenv(env_file, override=False)
 
     env = dict(**os.environ)
     # Because on Windows, environment variables are upper cased by default
