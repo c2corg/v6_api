@@ -8,7 +8,7 @@ from c2corg_api.scripts.es import sync
 from pyramid.paster import (
     get_appsettings,
     setup_logging,
-    )
+)
 
 from pyramid.scripts.common import parse_vars
 from datetime import datetime, timedelta
@@ -90,3 +90,7 @@ def fill_index(session, batch_size=1000):
 
     duration = datetime.now() - status['start_time']
     print('Done (duration: {0})'.format(duration))
+
+
+if __name__ == "__main__":
+    main()

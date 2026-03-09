@@ -123,6 +123,14 @@ def delete_waypoint_stopareas(connection, waypoint_id):
 def process_new_waypoint(mapper, connection, geometry):
     """Processes a new waypoint to find its public transports after
     inserting it into documents_geometries."""
+
+    # When GHCI runs without access to GH secrets
+    # (eg. for PR triggered by dependabot)
+    # return immediatly by matching test key from .env
+    api_key = os.getenv("NAVITIA_API_KEY")
+    if api_key == "test-key":
+        return
+
     # Check if document is a waypoint
     waypoint_id = geometry.document_id
 
@@ -147,7 +155,6 @@ def process_new_waypoint(mapper, connection, geometry):
     max_stop_area_for_1_waypoint = int(
         os.getenv("MAX_STOP_AREA_FOR_1_WAYPOINT")
     )
-    api_key = os.getenv("NAVITIA_API_KEY")
     max_duration = int(max_distance_waypoint_to_stoparea / walking_speed)
 
     # increase number of retrieved stop areas,
@@ -226,7 +233,7 @@ def process_new_waypoint(mapper, connection, geometry):
         stop_id = place["id"]
 
         # Get informations of stopareas to know its transports
-        stop_info_url = "https://api.navitia.io/v1/places/%d", stop_id
+        stop_info_url = f"https://api.navitia.io/v1/places/{stop_id}"
         stop_info_response = requests.get(
             stop_info_url, headers=navitia_headers
         )
@@ -619,8 +626,12 @@ def _update_route_duration(connection, route_id, calculated_duration_in_days):
         ),
         {"duration": calculated_duration_in_days, "route_id": route_id},
     )
+    if (calculated_duration_in_days is None):
+        calculated_duration_in_days_str = "None"
+    else:
+        calculated_duration_in_days_str = "%f", calculated_duration_in_days
     log.info(
-        "Route %d: Database updated with calculated_duration = %f days.",
+        "Route %d: Database updated with calculated_duration = %s days.",
         route_id,
-        calculated_duration_in_days
+        calculated_duration_in_days_str
     )
