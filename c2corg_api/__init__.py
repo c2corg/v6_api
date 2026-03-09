@@ -123,6 +123,14 @@ def delete_waypoint_stopareas(connection, waypoint_id):
 def process_new_waypoint(mapper, connection, geometry):
     """Processes a new waypoint to find its public transports after
     inserting it into documents_geometries."""
+
+    # When GHCI runs without access to GH secrets
+    # (eg. for PR triggered by dependabot)
+    # return immediatly by matching test key from .env
+    api_key = os.getenv("NAVITIA_API_KEY")
+    if api_key == "test-key":
+        return
+
     # Check if document is a waypoint
     waypoint_id = geometry.document_id
 
@@ -147,7 +155,6 @@ def process_new_waypoint(mapper, connection, geometry):
     max_stop_area_for_1_waypoint = int(
         os.getenv("MAX_STOP_AREA_FOR_1_WAYPOINT")
     )
-    api_key = os.getenv("NAVITIA_API_KEY")
     max_duration = int(max_distance_waypoint_to_stoparea / walking_speed)
 
     # increase number of retrieved stop areas,
