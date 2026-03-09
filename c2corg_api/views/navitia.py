@@ -690,6 +690,9 @@ def extract_isochrone_params(request):
             ),
             MIN_TRIP_DURATION * 60
         )
+    else:
+        # default is max trip duration
+        params['boundary_duration[]'] = MAX_TRIP_DURATION * 60
     return params
 
 
@@ -766,8 +769,9 @@ def handle_navitia_response(response):
             response.json().get("error", {}))
 
     elif not response.ok:
-        raise HTTPInternalServerError("Navitia API error: %d ",
-                                      response.status_code)
+        raise HTTPInternalServerError(
+            "Navitia API error: %d " % response.status_code
+        )
 
     return response.json()
 
