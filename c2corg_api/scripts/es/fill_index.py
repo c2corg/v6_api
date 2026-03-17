@@ -90,3 +90,7 @@ def fill_index(session, batch_size=1000):
 
     duration = datetime.now() - status['start_time']
     print('Done (duration: {0})'.format(duration))
+
+
+if __name__ == '__main__':
+    main()
