@@ -76,7 +76,7 @@ For more details, see [`.devcontainer/README.md`](.devcontainer/README.md).
 ### Requirements
 
 - A computer running Linux or Windows (on Windows, take a look at [WSL](https://learn.microsoft.com/fr-fr/windows/wsl/install), it will make your developer life easier). Maybe MacOs can work, but it was not tested.
-- Python 3.9.x installed with pip and the virtualenv package (currently, it will not work with python 3.10+)
+- Python 3.10.x installed with pip and the virtualenv package
   - On Ubuntu, you can install it from the deadsnakes repository if your embedded python version is too recent (<https://askubuntu.com/questions/1318846/how-do-i-install-python-3-9>)
   - On Windows, use Microsoft Store to install it (<https://apps.microsoft.com/detail/9p7qfqmjrfp7>)
 - A docker environment with docker compose plugin (either [docker desktop](https://www.docker.com/products/docker-desktop/) or a manual installation)
@@ -90,7 +90,7 @@ For more details, see [`.devcontainer/README.md`](.devcontainer/README.md).
 - Create a virtual environment in it:
 
 ```shell
-python3.9 -m venv venv
+python3.10 -m venv venv
 ```
 
 - Activate the virtual environment (⚠️ Do not forget to activate it in all terminal instances you intend to use)

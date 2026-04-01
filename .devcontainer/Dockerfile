@@ -1,4 +1,4 @@
-FROM python:3.9-slim-bookworm
+FROM python:3.10-slim-trixie
 
 # Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive

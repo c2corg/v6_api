@@ -1,4 +1,4 @@
-FROM docker.io/python:3.9-slim-bullseye
+FROM docker.io/python:3.10-slim-trixie
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL=en_US.UTF-8
@@ -15,7 +15,7 @@ RUN set -x \
 RUN set -x \
     && apt-get -y --no-install-recommends install \
     git \
-    libffi7 \
+    libffi8 \
     libgeos-c1v5 \
     libpq5
 
@@ -33,7 +33,8 @@ WORKDIR /var/www/
 
 ADD project.tar .
 RUN chown -R root:root /var/www \
- && pip install .
+ && pip install . \
+ && pip install --no-deps 'ColanderAlchemy @ git+https://github.com/c2corg/ColanderAlchemy.git@v0.3.4+c2corg.1'
 
 EXPOSE 8080
 ENTRYPOINT ["./docker/scripts/entrypoint.sh"]
