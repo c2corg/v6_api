@@ -15,6 +15,7 @@ from c2corg_api.models.route import Route
 from c2corg_api.models import DBSession, Base
 from c2corg_api.search import configure_es_from_config, get_queue_config
 
+from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.settings import asbool
 
 log = logging.getLogger(__name__)
@@ -51,7 +52,19 @@ def main(global_config, **settings):
         bypass_auth = asbool(settings["noauthorization"])
 
     if not bypass_auth:
-        config.include("pyramid_jwtauth")
+        from c2corg_api.security.roles import groupfinder
+        from c2corg_api.security.jwt_policy import \
+            IntegerSubJWTAuthenticationPolicy
+        policy = IntegerSubJWTAuthenticationPolicy(
+            private_key=settings['jwt.private_key'],
+            algorithm='HS256',
+            auth_type='JWT',
+            callback=groupfinder,
+        )
+        config.set_authentication_policy(policy)
+        config.set_authorization_policy(ACLAuthorizationPolicy())
+        config.add_request_method(
+            policy.get_claims, 'jwt_claims', reify=True)
         # Intercept request handling to validate token against the database
         config.add_tween(
             "c2corg_api.tweens.jwt_database_validation."
