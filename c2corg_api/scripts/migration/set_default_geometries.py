@@ -28,8 +28,12 @@ class SetDefaultGeometries(MigrateBase):
         conn = engine.connect()
         old_lvl = conn.connection.isolation_level
         conn.connection.set_isolation_level(0)
-        conn.execute(text('vacuum analyze guidebook.documents_geometries;'))
-        conn.execute(text('vacuum analyze guidebook.documents_geometries_archives;'))
+        conn.execute(
+            text('vacuum analyze guidebook.documents_geometries;')
+        )
+        conn.execute(
+            text('vacuum analyze guidebook.documents_geometries_archives;')
+        )
         conn.connection.set_isolation_level(old_lvl)
         conn.close()
 
