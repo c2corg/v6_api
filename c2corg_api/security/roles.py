@@ -20,9 +20,12 @@ CONST_EXPIRE_AFTER_DAYS = 14
 
 
 def extract_token(request):
-    # Extract XXX from 'JWT token="XXX"'
-    splitted = request.authorization[1].split('"')
-    return splitted[1] if len(splitted) >= 2 else None
+    # Extract token from 'JWT token="XXX"' or 'JWT XXX'
+    params = request.authorization[1]
+    if 'token="' in params:
+        splitted = params.split('"')
+        return splitted[1] if len(splitted) >= 2 else None
+    return params
 
 
 def groupfinder(userid, request):

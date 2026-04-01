@@ -15,6 +15,7 @@ from c2corg_api.models.route import Route
 from c2corg_api.models import DBSession, Base
 from c2corg_api.search import configure_es_from_config, get_queue_config
 
+from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.settings import asbool
 
 log = logging.getLogger(__name__)
@@ -61,11 +62,9 @@ def main(global_config, **settings):
             callback=groupfinder,
         )
         config.set_authentication_policy(policy)
+        config.set_authorization_policy(ACLAuthorizationPolicy())
         config.add_request_method(
-            lambda request: policy, 'authentication_policy', reify=True)
-        config.add_request_method(
-            lambda request: policy.get_claims(request),
-            'jwt_claims', reify=True)
+            policy.get_claims, 'jwt_claims', reify=True)
         # Intercept request handling to validate token against the database
         config.add_tween(
             "c2corg_api.tweens.jwt_database_validation."
