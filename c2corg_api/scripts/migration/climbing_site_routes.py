@@ -212,8 +212,8 @@ class CreateClimbingSiteRoutes(MigrateBase):
                     association_log_batch.add(link_outing_route_log)
 
     def _remove_waypoint_outing_links(self):
-        self.session_target.execute(SQL_DELETE_WP_OUTING_LINKS)
-        self.session_target.execute(SQL_DELETE_WP_OUTING_LOGS_LINKS)
+        self.session_target.execute(text(SQL_DELETE_WP_OUTING_LINKS))
+        self.session_target.execute(text(SQL_DELETE_WP_OUTING_LOGS_LINKS))
 
 
 # climbing sites that need a fake route: climbing sites that associated to an

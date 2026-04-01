@@ -1,6 +1,8 @@
 import transaction
 import zope
 
+from sqlalchemy import text
+
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
 
@@ -12,11 +14,11 @@ class InitFeed(MigrateBase):
         self.start('feed')
 
         with transaction.manager:
-            self.session_target.execute(SQL_DOCUMENT_CREATE_CHANGE)
-            self.session_target.execute(SQL_AREAS_FOR_CHANGES)
-            self.session_target.execute(SQL_ACTIVITIES_FOR_CHANGES)
-            self.session_target.execute(SQL_CREATION_USER)
-            self.session_target.execute(SQL_OUTING_PARTICIPANTS)
+            self.session_target.execute(text(SQL_DOCUMENT_CREATE_CHANGE))
+            self.session_target.execute(text(SQL_AREAS_FOR_CHANGES))
+            self.session_target.execute(text(SQL_ACTIVITIES_FOR_CHANGES))
+            self.session_target.execute(text(SQL_CREATION_USER))
+            self.session_target.execute(text(SQL_OUTING_PARTICIPANTS))
             zope.sqlalchemy.mark_changed(self.session_target)
 
         self.stop()

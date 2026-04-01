@@ -128,8 +128,10 @@ class MigrateAssociations(MigrateBase):
         """
         print('Removing duplicate associations')
         with transaction.manager:
-            self.session_target.execute(SQL_DELETE_DUPLICATE_ASSOCIATONS_LOG)
-            self.session_target.execute(SQL_DELETE_DUPLICATE_ASSOCIATONS)
+            self.session_target.execute(
+                text(SQL_DELETE_DUPLICATE_ASSOCIATONS_LOG))
+            self.session_target.execute(
+                text(SQL_DELETE_DUPLICATE_ASSOCIATONS))
             zope.sqlalchemy.mark_changed(self.session_target)
         print('Done')
 
@@ -138,7 +140,7 @@ class MigrateAssociations(MigrateBase):
         """
         print('Set main waypoint for routes')
         with transaction.manager:
-            self.session_target.execute(SQL_SET_MAIN_WAYPOINT_ID)
+            self.session_target.execute(text(SQL_SET_MAIN_WAYPOINT_ID))
             zope.sqlalchemy.mark_changed(self.session_target)
         print('Done')
 

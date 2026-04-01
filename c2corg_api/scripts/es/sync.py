@@ -314,8 +314,10 @@ def add_routes_for_waypoints(session, docs_per_type):
     if not changed_waypoint_ids:
         return
 
-    linked_route_ids = session.query(Route.document_id). \
+    linked_route_ids = [
+        rid for (rid,) in session.query(Route.document_id).
         filter(Route.main_waypoint_id.in_(changed_waypoint_ids)).all()
+    ]
 
     route_ids = docs_per_type.setdefault(ROUTE_TYPE, set())
     route_ids.update(linked_route_ids)

@@ -14,7 +14,7 @@ class _StopareaMixin(object):
     stoparea_name = Column(String, nullable=False)
     line = Column(String, nullable=False)
     operator = Column(String, nullable=False)
-    geom = Column(Geometry('POINT', srid=4326, management=True))
+    geom = Column(Geometry('POINT', srid=4326))
 
 
 attributes = ['navitia_id', 'stoparea_name', 'line', 'operator', 'geom']

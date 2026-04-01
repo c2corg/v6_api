@@ -15,6 +15,7 @@ down_revision = "b59d3efaf2a1"
 branch_labels = None
 depends_on = None
 
+
 def upgrade():
     # stopareas
     op.create_table('stopareas',
@@ -23,7 +24,7 @@ def upgrade():
         sa.Column('stoparea_name', sa.String(), nullable=False),
         sa.Column('line', sa.String(), nullable=False),
         sa.Column('operator', sa.String(), nullable=False),
-        sa.Column('geom', geoalchemy2.types.Geometry(geometry_type='POINT', srid=3857, management=True), nullable=True),
+        sa.Column('geom', geoalchemy2.types.Geometry(geometry_type='POINT', srid=3857, spatial_index=False), nullable=True),
         schema='guidebook'
     )
 
@@ -39,7 +40,6 @@ def upgrade():
         sa.UniqueConstraint('stoparea_id', 'waypoint_id', name='uq_waypoints_stopareas'),
         schema='guidebook'
     )
-
 
 
 def downgrade():

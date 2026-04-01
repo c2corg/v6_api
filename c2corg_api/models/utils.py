@@ -1,6 +1,6 @@
 from geoalchemy2 import WKBElement, shape as ga_shape
-from geomet import wkb
-from shapely.geometry import LineString, MultiLineString, shape
+from shapely.geometry import LineString, MultiLineString
+from shapely.ops import transform
 from sqlalchemy.dialects import postgresql
 import sqlalchemy as sa
 from sqlalchemy.sql.expression import and_
@@ -81,34 +81,15 @@ def wkb_to_shape(wkb_element):
      are turned into 2D geometries.
     """
     assert (isinstance(wkb_element, WKBElement))
-    geometry = wkb.loads(bytes(wkb_element.data))
-    return shape(_force_2d(geometry))
+    geom = ga_shape.to_shape(wkb_element)
+    return _force_2d_shapely(geom)
 
 
-def _force_2d(geojson_track):
-    if geojson_track['type'].lower() == 'point':
-        coords = geojson_track['coordinates']
-        geojson_track['coordinates'] = [coords[0], coords[1]]
-    elif geojson_track['type'].lower() == 'linestring':
-        geojson_track['coordinates'] = \
-            _force_2d_coords(geojson_track['coordinates'])
-    elif geojson_track['type'].lower() in ('multilinestring', 'polygon'):
-        geojson_track['coordinates'] = [
-            _force_2d_coords(coords)
-            for coords in geojson_track['coordinates']
-        ]
-    elif geojson_track['type'].lower() == 'multipolygon':
-        geojson_track['coordinates'] = [
-            [_force_2d_coords(coords) for coords in polygon]
-            for polygon in geojson_track['coordinates']
-        ]
-    else:
-        raise Exception('Unexpected geometry type')
-    return geojson_track
-
-
-def _force_2d_coords(coords):
-    return [[coord[0], coord[1]] for coord in coords]
+def _force_2d_shapely(geom):
+    """Strip Z/M dimensions from a Shapely geometry."""
+    if geom.has_z:
+        return transform(lambda x, y, z=None: (x, y), geom)
+    return geom
 
 
 def windowed_query(q, column, windowsize):

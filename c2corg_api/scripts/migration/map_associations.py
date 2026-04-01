@@ -1,6 +1,8 @@
 import transaction
 import zope
 
+from sqlalchemy import text
+
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
 
@@ -12,7 +14,7 @@ class MigrateMapAssociations(MigrateBase):
         self.start('map associations')
 
         with transaction.manager:
-            self.session_target.execute(SQL_CREATE_MAP_ASSOCIATIONS)
+            self.session_target.execute(text(SQL_CREATE_MAP_ASSOCIATIONS))
             zope.sqlalchemy.mark_changed(self.session_target)
 
         self.stop()

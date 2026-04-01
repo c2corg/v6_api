@@ -10,7 +10,7 @@ from sqlalchemy import (
     SmallInteger,
     String
     )
-from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import declared_attr
 
 from colander import MappingSchema, SchemaNode, Sequence
 from colanderalchemy import SQLAlchemySchemaNode

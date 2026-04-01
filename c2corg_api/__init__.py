@@ -12,7 +12,7 @@ from sqlalchemy import text
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route
 
-from c2corg_api.models import DBSession, Base
+from c2corg_api.models import DBSession
 from c2corg_api.search import configure_es_from_config, get_queue_config
 
 from pyramid.authorization import ACLAuthorizationPolicy
@@ -31,7 +31,6 @@ def main(global_config, **settings):
     # Configure SQLAlchemy
     engine = engine_from_config(settings, "sqlalchemy.")
     DBSession.configure(bind=engine)
-    Base.metadata.bind = engine
 
     # Configure ElasticSearch
     configure_es_from_config(settings)

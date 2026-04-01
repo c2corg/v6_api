@@ -38,7 +38,7 @@ class MigrateMailinglists(MigrateBase):
         conn = engine.connect()
         old_lvl = conn.connection.isolation_level
         conn.connection.set_isolation_level(0)
-        conn.execute('analyze ' + sympa_schema + '.subscriber_table;')
+        conn.execute(text('analyze ' + sympa_schema + '.subscriber_table;'))
         conn.connection.set_isolation_level(old_lvl)
         conn.close()
 

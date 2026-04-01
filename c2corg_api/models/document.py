@@ -21,7 +21,7 @@ from sqlalchemy import (
     func
     )
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship, column_property
 from sqlalchemy.sql.schema import UniqueConstraint
@@ -251,6 +251,12 @@ class DocumentLocale(Base, _DocumentLocaleMixin):
         'summary'
     ]
 
+    # Attributes to copy during update (excludes document_id to avoid
+    # temporarily setting it to None before autoflush in SA 1.4+).
+    _ATTRIBUTES_UPDATE = [
+        'version', 'lang', 'title', 'description', 'summary'
+    ]
+
     topic_id = association_proxy('document_topic', 'topic_id')
 
     def to_archive(self):
@@ -263,7 +269,7 @@ class DocumentLocale(Base, _DocumentLocaleMixin):
         return locale
 
     def update(self, other):
-        copy_attributes(other, self, DocumentLocale._ATTRIBUTES)
+        copy_attributes(other, self, DocumentLocale._ATTRIBUTES_UPDATE)
 
 
 class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
@@ -283,10 +289,6 @@ class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
     )
 
 
-# `geomet` does not support EWKB, so load geometries as WKB
-Geometry.as_binary = 'ST_AsBinary'
-
-
 class _DocumentGeometryMixin(object):
     version = Column(Integer, nullable=False)
 
@@ -295,7 +297,6 @@ class _DocumentGeometryMixin(object):
         return Column(
             Geometry(
                 geometry_type='POINT', srid=3857, dimension=2,
-                management=True,
                 spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
             info={
                 'colanderalchemy': {
@@ -309,7 +310,6 @@ class _DocumentGeometryMixin(object):
         return Column(
             Geometry(
                 geometry_type='GEOMETRY', srid=3857,
-                management=True,
                 use_typmod=False,
                 spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
             info={
@@ -337,13 +337,16 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
     _ATTRIBUTES = \
         ['document_id', 'version', 'geom', 'geom_detail']
 
+    _ATTRIBUTES_UPDATE = \
+        ['version', 'geom', 'geom_detail']
+
     def to_archive(self):
         geometry = ArchiveDocumentGeometry()
         copy_attributes(self, geometry, DocumentGeometry._ATTRIBUTES)
         return geometry
 
     def update(self, other):
-        copy_attributes(other, self, DocumentGeometry._ATTRIBUTES)
+        copy_attributes(other, self, DocumentGeometry._ATTRIBUTES_UPDATE)
 
     def almost_equals(self, other):
         return self._almost_equals(self.geom, other.geom) and \

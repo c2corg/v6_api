@@ -34,7 +34,7 @@ from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.image import delete_all_files_for_image
 from c2corg_api.views.validation import validate_id, validate_lang
 from cornice.resource import resource
-from sqlalchemy.sql.expression import or_, and_, exists, over
+from sqlalchemy.sql.expression import or_, and_, exists, over, select
 from sqlalchemy.sql.functions import func
 
 
@@ -256,7 +256,7 @@ class DeleteBase(ACLDefault):
     def _remove_merged_documents(self, document_id, document_type):
         merged_document_ids = DBSession.query(ArchiveDocument.document_id). \
             filter(ArchiveDocument.redirects_to == document_id).all()
-        for merged_document_id in merged_document_ids:
+        for (merged_document_id,) in merged_document_ids:
             self._delete_document(merged_document_id, document_type, True)
 
 
@@ -367,16 +367,19 @@ def remove_from_cache(document_id):
 
 
 def _remove_versions(document_id):
-    history_metadata_ids = DBSession. \
-        query(DocumentVersion.history_metadata_id). \
-        filter(DocumentVersion.document_id == document_id). \
+    history_metadata_ids = [
+        mid for (mid,) in DBSession.
+        query(DocumentVersion.history_metadata_id).
+        filter(DocumentVersion.document_id == document_id).
         all()
+    ]
     DBSession.query(DocumentVersion). \
         filter(DocumentVersion.document_id == document_id). \
         delete()
-    DBSession.execute(HistoryMetaData.__table__.delete().where(
-        HistoryMetaData.id.in_(history_metadata_ids)
-    ))
+    if history_metadata_ids:
+        DBSession.execute(HistoryMetaData.__table__.delete().where(
+            HistoryMetaData.id.in_(history_metadata_ids)
+        ))
 
 
 def _remove_locale_versions(document_id, lang):
@@ -393,8 +396,10 @@ def _remove_locale_versions(document_id, lang):
         subquery('t')
     # Gets the list of history_metadata_id associated only
     # to the current locale:
-    history_metadata_ids = DBSession.query(t.c.history_metadata_id). \
+    history_metadata_ids = [
+        mid for (mid,) in DBSession.query(t.c.history_metadata_id).
         filter(t.c.lang == lang).filter(t.c.cnt == 1).all()
+    ]
 
     DBSession.query(DocumentVersion). \
         filter(DocumentVersion.document_id == document_id). \
@@ -412,10 +417,18 @@ def _remove_archive_locale(archive_clazz_locale, document_id, lang=None):
             filter(ArchiveDocumentLocale.document_id == document_id)
         if lang:
             query = query.filter(ArchiveDocumentLocale.lang == lang)
-        archive_document_locale_ids = query.subquery()
         DBSession.execute(archive_clazz_locale.__table__.delete().where(
             getattr(archive_clazz_locale, 'id').in_(
-                archive_document_locale_ids)
+                select(ArchiveDocumentLocale.id).where(
+                    ArchiveDocumentLocale.document_id == document_id
+                ) if not lang else
+                select(ArchiveDocumentLocale.id).where(
+                    and_(
+                        ArchiveDocumentLocale.document_id == document_id,
+                        ArchiveDocumentLocale.lang == lang
+                    )
+                )
+            )
         ))
 
     query = DBSession.query(ArchiveDocumentLocale). \
