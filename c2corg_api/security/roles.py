@@ -2,6 +2,7 @@ from pyramid.httpexceptions import HTTPForbidden
 from pyramid.security import Authenticated
 from pyramid.interfaces import IAuthenticationPolicy
 
+import jwt as pyjwt
 from c2corg_api.models import DBSession
 from c2corg_api.models.user import User
 from c2corg_api.models.token import Token
@@ -70,7 +71,7 @@ def remove_token(token):
 
 def create_claims(user, exp):
     return {
-        'sub': user.id,
+        'sub': str(user.id),
         'username': user.username,
         'exp': int((exp - datetime.datetime(1970, 1, 1)).total_seconds())
     }
@@ -96,7 +97,8 @@ def log_validated_user_i_know_what_i_do(user, request):
     now = datetime.datetime.utcnow()
     exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
     claims = create_claims(user, exp)
-    token = policy.encode_jwt(request, claims=claims).decode('utf-8')
+    token = pyjwt.encode(
+        claims, key=policy.private_key, algorithm=policy.algorithm)
     return add_or_retrieve_token(token, exp, user.id)
 
 
@@ -108,7 +110,8 @@ def renew_token(user, request):
         now = datetime.datetime.utcnow()
         exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
         claims = create_claims(user, exp)
-        token_value = policy.encode_jwt(request, claims=claims).decode('utf-8')
+        token_value = pyjwt.encode(
+            claims, key=policy.private_key, algorithm=policy.algorithm)
         return add_or_retrieve_token(token_value, exp, user.id)
 
     return None

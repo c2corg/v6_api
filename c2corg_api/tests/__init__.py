@@ -164,15 +164,14 @@ def _add_global_test_data(session):
 
     session.flush()
 
-    key = settings['jwtauth.master_secret']
+    key = settings['jwt.private_key']
     algorithm = 'HS256'
     now = datetime.datetime.utcnow()
     exp = now + datetime.timedelta(weeks=10)
 
     for user in users:
         claims = create_claims(user, exp)
-        token = jwt.encode(claims, key=key, algorithm=algorithm). \
-            decode('utf-8')
+        token = jwt.encode(claims, key=key, algorithm=algorithm)
         add_or_retrieve_token(token, exp, user.id)
         global_userids[user.username] = user.id
         global_tokens[user.username] = token

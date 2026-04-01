@@ -60,10 +60,8 @@ feed.admin_user_account = {feed_admin_user_account}
 
 logging.level = {logging_level}
 
-jwtauth.find_groups = c2corg_api.security.roles:groupfinder
-
 # FIXME: do not save the secret key on github
-jwtauth.master_secret = The master key
+jwt.private_key = The master key
 
 # FIXME: do not save the forum key on github
 discourse.url = {discourse_url}

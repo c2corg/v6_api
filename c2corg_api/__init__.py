@@ -51,7 +51,21 @@ def main(global_config, **settings):
         bypass_auth = asbool(settings["noauthorization"])
 
     if not bypass_auth:
-        config.include("pyramid_jwtauth")
+        from c2corg_api.security.roles import groupfinder
+        from c2corg_api.security.jwt_policy import \
+            IntegerSubJWTAuthenticationPolicy
+        policy = IntegerSubJWTAuthenticationPolicy(
+            private_key=settings['jwt.private_key'],
+            algorithm='HS256',
+            auth_type='JWT',
+            callback=groupfinder,
+        )
+        config.set_authentication_policy(policy)
+        config.add_request_method(
+            lambda request: policy, 'authentication_policy', reify=True)
+        config.add_request_method(
+            lambda request: policy.get_claims(request),
+            'jwt_claims', reify=True)
         # Intercept request handling to validate token against the database
         config.add_tween(
             "c2corg_api.tweens.jwt_database_validation."
