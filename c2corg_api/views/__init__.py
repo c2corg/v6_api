@@ -1,6 +1,7 @@
 import logging
 
 import collections
+import collections.abc
 import datetime
 
 from c2corg_api.ext.colander_ext import geojson_from_wkbelement
@@ -156,7 +157,7 @@ def serialize(data):
     """
     if isinstance(data, str):
         return str(data)
-    if isinstance(data, collections.Mapping):
+    if isinstance(data, collections.abc.Mapping):
         return dict(list(map(serialize, iter(data.items()))))
     if isinstance(data, collections.abc.Iterable):
         return type(data)(list(map(serialize, data)))
