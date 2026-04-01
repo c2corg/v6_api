@@ -128,6 +128,9 @@ class Document(Base, _DocumentMixin):
 
         if other.geometry:
             if self.geometry:
+                # Skip geometry update if the change is less than ~1m.
+                # Avoids unnecessary versioning from rounding during
+                # GeoJSON/WKB round-trips.
                 if not self.geometry.almost_equals(other.geometry):
                     self.geometry.update(other.geometry)
             else:
@@ -375,25 +378,19 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
         g1, proj1 = self.get_shape(geom)
         g2, proj2 = self.get_shape(other_geom)
 
-        # https://github.com/Toblerity/Shapely/blob/
-        # 8df2b1b718c89e7d644b246ab07ad3670d25aa6a/shapely/geometry/base.py#L673
-        decimals = None
         if proj1 != proj2:
             # Should never occur
             raise HTTPInternalServerError('Incompatible projections')
         elif proj1 == 3857:
-            decimals = -0.2  # +- 0.8m = 0.5 * 10^0.2
+            # EPSG:3857 unit is meters, ~0.8m tolerance
+            tolerance = 0.8
         elif proj1 == 4326:
-            decimals = 7  # +- 1m
-            # 5178564 740093 | gdaltransform -s_srs EPSG:3857 -t_srs EPSG:4326
-            # 46.5198319099112 6.63349924965325 0
-            # 5178565 740093 | gdaltransform -s_srs EPSG:3857 -t_srs EPSG:4326
-            # 46.5198408930641 6.63349924965325 0
-            # 46.5198408930641 - 46.5198319099112 = 0.0000089 -> 7 digits
+            # EPSG:4326 unit is degrees, ~1m ≈ 9e-6° (at the equator)
+            tolerance = 9e-6
         else:
             raise HTTPInternalServerError('Bad projection')
 
-        return g1.almost_equals(g2, decimals)
+        return g1.equals_exact(g2, tolerance)
 
     def distance(self, geom, other_geom):
         if geom is None or other_geom is None:

@@ -413,22 +413,14 @@ def _remove_locale_versions(document_id, lang):
 
 def _remove_archive_locale(archive_clazz_locale, document_id, lang=None):
     if archive_clazz_locale:
-        query = DBSession.query(ArchiveDocumentLocale.id). \
-            filter(ArchiveDocumentLocale.document_id == document_id)
+        locale_filter = ArchiveDocumentLocale.document_id == document_id
         if lang:
-            query = query.filter(ArchiveDocumentLocale.lang == lang)
+            locale_filter = and_(locale_filter,
+                                 ArchiveDocumentLocale.lang == lang)
+        archive_locale_ids = select(ArchiveDocumentLocale.id).where(
+            locale_filter)
         DBSession.execute(archive_clazz_locale.__table__.delete().where(
-            getattr(archive_clazz_locale, 'id').in_(
-                select(ArchiveDocumentLocale.id).where(
-                    ArchiveDocumentLocale.document_id == document_id
-                ) if not lang else
-                select(ArchiveDocumentLocale.id).where(
-                    and_(
-                        ArchiveDocumentLocale.document_id == document_id,
-                        ArchiveDocumentLocale.lang == lang
-                    )
-                )
-            )
+            getattr(archive_clazz_locale, 'id').in_(archive_locale_ids)
         ))
 
     query = DBSession.query(ArchiveDocumentLocale). \
@@ -439,11 +431,10 @@ def _remove_archive_locale(archive_clazz_locale, document_id, lang=None):
 
 
 def _remove_locale(clazz_locale, document_id, lang=None):
-    query = DBSession.query(DocumentLocale.id). \
-        filter(DocumentLocale.document_id == document_id)
+    locale_filter = DocumentLocale.document_id == document_id
     if lang:
-        query = query.filter(DocumentLocale.lang == lang)
-    document_locale_ids = query.subquery()
+        locale_filter = and_(locale_filter, DocumentLocale.lang == lang)
+    document_locale_ids = select(DocumentLocale.id).where(locale_filter)
     # Remove links to comments (comments themselves are not removed)
     DBSession.execute(DocumentTopic.__table__.delete().where(
         DocumentTopic.document_locale_id.in_(document_locale_ids)
@@ -474,9 +465,8 @@ def _remove_geometry(document_id):
 
 
 def _remove_archive(archive_clazz, document_id):
-    archive_document_ids = DBSession.query(ArchiveDocument.id). \
-        filter(ArchiveDocument.document_id == document_id). \
-        subquery()
+    archive_document_ids = select(ArchiveDocument.id).where(
+        ArchiveDocument.document_id == document_id)
     DBSession.execute(archive_clazz.__table__.delete().where(
         getattr(archive_clazz, 'id').in_(archive_document_ids)
     ))

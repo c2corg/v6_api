@@ -474,11 +474,11 @@ def update_langs_of_changes(document_id):
             ArrayOfEnum(enums.lang))). \
         filter(DocumentLocale.document_id == document_id). \
         group_by(DocumentLocale.document_id). \
-        subquery('langs')
+        scalar_subquery()
     DBSession.execute(
         DocumentChange.__table__.update().
         where(DocumentChange.document_id == document_id).
-        values(langs=langs.select()))
+        values(langs=langs))
 
 
 def get_linked_document(images_in):
