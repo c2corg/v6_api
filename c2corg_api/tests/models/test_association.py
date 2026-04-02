@@ -220,7 +220,8 @@ class TestAssociation(BaseTestCase):
             self._get_association(self.waypoint1, self.route1))
 
     def _get_association(self, main_doc, child_doc):
-        return self.session.get(Association, 
+        return self.session.get(
+            Association,
             (main_doc.document_id, child_doc.document_id))
 
 
