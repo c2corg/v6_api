@@ -17,7 +17,7 @@ pyjwt==2.12.1
 pymdown-extensions==10.21.2
 pyproj==3.6.1
 pyramid_jwt==1.6.1
-pyramid==1.10.8
+pyramid==2.1
 pyramid_debugtoolbar==4.12.1
 pyramid_mailer==0.15.1
 pyramid_tm==2.3
