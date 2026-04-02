@@ -35,7 +35,7 @@ class UserPreferredLanguageRest(ACLDefault):
     def post(self):
         request = self.request
         userid = request.authenticated_userid
-        user = DBSession.query(User).get(userid)
+        user = DBSession.get(User, userid)
         user.lang = request.validated['lang']
         return {}
 
@@ -86,7 +86,7 @@ class UserAccountRest(ACLDefault):
 
     def get_user(self):
         userid = self.request.authenticated_userid
-        return DBSession.query(User).get(userid)
+        return DBSession.get(User, userid)
 
     @restricted_view(renderer='json', http_cache=0)
     def get(self):

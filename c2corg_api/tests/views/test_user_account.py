@@ -18,7 +18,8 @@ class TestUserAccountRest(BaseUserTestRest):
         self.assertBodyEqual(body, 'is_profile_public', False)
 
     def test_read_account_info_blocked_account(self):
-        contributor = self.session.query(User).get(
+        contributor = self.session.get(
+            User,
             self.global_userids['contributor'])
         contributor.blocked = True
         self.session.flush()
@@ -58,7 +59,7 @@ class TestUserAccountRest(BaseUserTestRest):
         self._update_account_field_discourse_up('email', new_email)
 
         user_id = self.global_userids['contributor']
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         self.assertEqual(user.email_to_validate, new_email)
         self.assertNotEqual(user.email, new_email)
 
@@ -70,7 +71,7 @@ class TestUserAccountRest(BaseUserTestRest):
         self.app_post_json(url_api_validation, {}, status=200)
 
         self.session.expunge(user)
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         self.assertEqual(user.email, new_email)
         self.assertIsNone(user.validation_nonce)
 
@@ -82,7 +83,7 @@ class TestUserAccountRest(BaseUserTestRest):
         self._update_account_field_discourse_up('name', 'changed')
 
         user_id = self.global_userids['contributor']
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         self.assertEqual(user.name, 'changed')
 
         # check that the search index is updated with the new name
@@ -141,7 +142,7 @@ class TestUserAccountRest(BaseUserTestRest):
         self._update_account_field_discourse_up('forum_username', 'changed')
 
         user_id = self.global_userids['contributor']
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         self.assertEqual(user.forum_username, 'changed')
 
     def test_update_account_forum_username_discourse_down(self):
@@ -155,12 +156,12 @@ class TestUserAccountRest(BaseUserTestRest):
         self.post_json_with_contributor('/users/account', data, status=200)
 
         user_id = self.global_userids['contributor']
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         self.assertEqual(user.is_profile_public, True)
 
     def test_update_preferred_lang(self):
         user_id = self.global_userids['contributor']
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         self.assertEqual(user.lang, 'fr')
 
         request_body = {
@@ -170,5 +171,5 @@ class TestUserAccountRest(BaseUserTestRest):
         self.post_json_with_contributor(url, request_body, status=200)
 
         self.session.expunge(user)
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         self.assertEqual(user.lang, 'en')

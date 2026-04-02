@@ -116,7 +116,7 @@ class TestUserRest(BaseUserTestRest):
         # First succeed in creating a new user
         body = self.app_post_json(url, request_body, status=200).json
         user_id = body.get('id')
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         self.assertFalse(user.email_validated)
         self.assertIsNotNone(user.tos_validated)
         _send_email.check_call_once()
@@ -133,7 +133,7 @@ class TestUserRest(BaseUserTestRest):
 
         body = self.app_post_json(url, request_body, status=200).json
         user_id = body.get('id')
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         self.assertEqual(user.lang, 'fr')
         _send_email.check_call_once()
 
@@ -150,7 +150,7 @@ class TestUserRest(BaseUserTestRest):
 
         body = self.app_post_json(url, request_body, status=200).json
         user_id = body.get('id')
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         self.assertEqual(user.lang, 'en')
         _send_email.check_call_once()
 
@@ -224,7 +224,7 @@ class TestUserRest(BaseUserTestRest):
         body = self.app_post_json(url, request_body, status=200).json
         self.assertBodyEqual(body, 'username', 'username with spaces')
         user_id = body.get('id')
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         self.assertIsNotNone(user)
         self.assertEqual(user.username, 'username with spaces')
 
@@ -289,10 +289,10 @@ class TestUserRest(BaseUserTestRest):
         self.assertNotIn('password', body)
         self.assertIn('id', body)
         user_id = body.get('id')
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         self.assertIsNotNone(user)
         self.assertFalse(user.email_validated)
-        profile = self.session.query(UserProfile).get(user_id)
+        profile = self.session.get(UserProfile, user_id)
         self.assertIsNotNone(profile)
         self.assertEqual(len(profile.versions), 1)
         _send_email.check_call_once()
@@ -307,9 +307,9 @@ class TestUserRest(BaseUserTestRest):
         # version (the one from the view) is actually picked up.
         self.session.expunge(profile)
         self.session.expunge(user)
-        profile = self.session.query(UserProfile).get(user_id)
+        profile = self.session.get(UserProfile, user_id)
         self.assertEqual(len(profile.versions), 1)
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         self.assertTrue(user.email_validated)
 
         # Now reject non unique attributes
@@ -398,7 +398,7 @@ class TestUserRest(BaseUserTestRest):
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_forgot_password_discourse_up(self, _send_email):
         user_id = self.global_userids['contributor']
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         initial_encoded_password = user.password
 
         url = '/users/request_password_change'
@@ -416,7 +416,7 @@ class TestUserRest(BaseUserTestRest):
             }, status=200)
 
         self.session.expunge(user)
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         self.assertIsNone(user.validation_nonce)
         modified_encoded_password = user.password
 
@@ -426,7 +426,7 @@ class TestUserRest(BaseUserTestRest):
     def test_forgot_password_discourse_down(self, _send_email):
         self.set_discourse_down()
         user_id = self.global_userids['contributor']
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
 
         url = '/users/request_password_change'
         self.app_post_json(url, {
@@ -445,7 +445,7 @@ class TestUserRest(BaseUserTestRest):
 
     def test_forgot_password_blocked_account(self):
         user_id = self.global_userids['contributor']
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         user.blocked = True
         self.session.flush()
 
@@ -549,7 +549,8 @@ class TestUserRest(BaseUserTestRest):
         self.assertTrue('token' in body)
 
     def test_login_blocked_account(self):
-        contributor = self.session.query(User).get(
+        contributor = self.session.get(
+            User,
             self.global_userids['contributor'])
         contributor.blocked = True
         self.session.flush()

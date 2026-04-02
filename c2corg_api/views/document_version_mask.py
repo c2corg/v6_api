@@ -56,7 +56,7 @@ def _get_version(request):
     lang = request.validated['lang']
     version_id = request.validated['version_id']
 
-    version = DBSession.query(DocumentVersion).get(version_id)
+    version = DBSession.get(DocumentVersion, version_id)
 
     if not version:
         raise HTTPBadRequest('Unknown version_id {}'.format(version_id))

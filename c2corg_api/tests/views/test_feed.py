@@ -231,7 +231,7 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         """ Get personal feed with an activity filter.
         """
         # set an activity filter for the user
-        user = self.session.query(User).get(self.global_userids['contributor'])
+        user = self.session.get(User, self.global_userids['contributor'])
         user.feed_filter_activities = ['hiking']
         self.session.flush()
 
@@ -249,7 +249,7 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         """ Get personal feed with a language filter.
         """
         # set a langs filter for the user
-        user = self.session.query(User).get(self.global_userids['contributor'])
+        user = self.session.get(User, self.global_userids['contributor'])
         user.feed_filter_langs = ['en', 'it']
         self.session.flush()
 
@@ -309,7 +309,7 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         """ Get personal feed with an area and activity filter.
         """
         # set an activity and are filter for the user
-        user = self.session.query(User).get(self.global_userids['contributor'])
+        user = self.session.get(User, self.global_userids['contributor'])
         user.feed_filter_activities = ['hiking']
         self.session.add(FilterArea(
             area_id=self.area1.document_id,
@@ -347,7 +347,7 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         """ Get personal feed with a followed user and `feed_followed_only`.
         """
         # enable `feed_followed_only`
-        user = self.session.query(User).get(self.global_userids['contributor'])
+        user = self.session.get(User, self.global_userids['contributor'])
         user.feed_followed_only = True
 
         # follow a user
@@ -372,7 +372,7 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         """ Get personal feed with a followed user and an activity filter.
         """
         # set activity filter
-        user = self.session.query(User).get(self.global_userids['contributor'])
+        user = self.session.get(User, self.global_userids['contributor'])
         user.feed_filter_activities = ['hiking']
 
         # follow a user
@@ -495,7 +495,7 @@ class TestProfileFeedRest(BaseFeedTestRest):
         """ Get the public profile feed for 'contributor2'.
         """
         user_id = self.global_userids['contributor2']
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         user.is_profile_public = True
         self.session.flush()
 

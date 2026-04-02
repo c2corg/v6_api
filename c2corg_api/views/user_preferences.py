@@ -1,6 +1,7 @@
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api import DBSession
 from c2corg_api.models.area import schema_listing_area, Area
+from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.schema_utils import SchemaAssociationDoc
 from c2corg_api.models.user import User
 from c2corg_api.views import cors_policy, restricted_json_view, \
@@ -42,13 +43,17 @@ class UserFilterPreferencesRest(ACLDefault):
 
         if with_area_locales:
             area_joinedload = area_joinedload. \
-                joinedload('locales'). \
-                load_only('lang', 'title', 'version')
+                joinedload(Area.locales). \
+                load_only(
+                    DocumentLocale.lang,
+                    DocumentLocale.title,
+                    DocumentLocale.version)
 
         return DBSession. \
             query(User). \
             options(area_joinedload). \
-            get(user_id)
+            filter(User.id == user_id). \
+            first()
 
     @restricted_view(validators=[validate_preferred_lang_param])
     def get(self):

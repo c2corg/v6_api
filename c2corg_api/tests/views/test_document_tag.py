@@ -14,9 +14,11 @@ class BaseDocumentTagTest(BaseTestRest):
     def setUp(self):  # noqa
         super().setUp()
 
-        self.contributor = self.session.query(User).get(
+        self.contributor = self.session.get(
+            User,
             self.global_userids['contributor'])
-        self.contributor2 = self.session.query(User).get(
+        self.contributor2 = self.session.get(
+            User,
             self.global_userids['contributor2'])
 
         self.route1 = Route(activities=['skitouring'], locales=[

@@ -22,7 +22,7 @@ class BlockSchema(MappingSchema):
 
 
 def _get_user(user_id):
-    user = DBSession.query(User).get(user_id)
+    user = DBSession.get(User, user_id)
 
     if not user:
         raise HTTPBadRequest('Unknown user {}'.format(user_id))

@@ -188,7 +188,8 @@ class BaseTestImage(BaseDocumentTestRest):
 
         if check_wp:
             # check that a link to the linked wp is created
-            association_wp = self.session.query(Association).get(
+            association_wp = self.session.get(
+                Association,
                 (self.waypoint.document_id, doc.document_id))
             self.assertIsNotNone(association_wp)
 
@@ -403,7 +404,8 @@ class TestImageRest(BaseTestImage):
     @patch('c2corg_api.views.image.requests.post',
            return_value=Mock(status_code=200))
     def test_post_success(self, post_mock):
-        waypoint_cache_key = self.session.query(CacheVersion).get(
+        waypoint_cache_key = self.session.get(
+            CacheVersion,
             self.waypoint.document_id).version
         body, doc = self.post_success(self._post_success_document())
         self._validate_post_success(body, doc)
@@ -614,7 +616,8 @@ class TestImageRest(BaseTestImage):
         self.assertEqual(archive_locale.title, 'Mont Blanc du ciel')
 
         # check that a link to the linked wp is created
-        association_wp = self.session.query(Association).get(
+        association_wp = self.session.get(
+            Association,
             (self.waypoint.document_id, image.document_id))
         self.assertIsNotNone(association_wp)
 
@@ -962,7 +965,8 @@ class TestImageListRest(BaseTestImage):
         self._validate_post_success(body, doc, check_wp=False)
 
         # check that a link to the linked image is created
-        association_img = self.session.query(Association).get(
+        association_img = self.session.get(
+            Association,
             (self.outing1.document_id, doc.document_id))
         self.assertIsNotNone(association_img)
 

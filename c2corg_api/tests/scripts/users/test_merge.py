@@ -170,9 +170,11 @@ class MergeUsersTest(BaseTestCase):
         ).scalar()
 
     def _add_test_data(self):
-        self.contributor = self.session.query(User).get(
+        self.contributor = self.session.get(
+            User,
             self.global_userids['contributor'])
-        self.contributor2 = self.session.query(User).get(
+        self.contributor2 = self.session.get(
+            User,
             self.global_userids['contributor2'])
 
         DocumentRest.create_new_version(self.contributor.profile,

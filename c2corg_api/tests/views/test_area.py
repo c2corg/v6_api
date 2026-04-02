@@ -181,7 +181,8 @@ class TestAreaRest(BaseDocumentTestRest):
         self.check_cache_version(self.route.document_id, 2)
 
         # check that a link to the provided image is created
-        association_image = self.session.query(Association).get(
+        association_image = self.session.get(
+            Association,
             (doc.document_id, self.image.document_id))
         self.assertIsNotNone(association_image)
 
@@ -357,7 +358,8 @@ class TestAreaRest(BaseDocumentTestRest):
         self.check_cache_version(self.waypoint2.document_id, 2)
 
         # check that existing link to the image is removed
-        association_image = self.session.query(Association).get(
+        association_image = self.session.get(
+            Association,
             (area.document_id, self.image.document_id))
         self.assertIsNone(association_image)
 

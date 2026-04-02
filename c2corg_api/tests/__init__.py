@@ -44,7 +44,7 @@ if settings['noauthorization']:
 
 
 def get_engine():
-    return engine_from_config(settings, 'sqlalchemy.')
+    return engine_from_config(settings, 'sqlalchemy.', future=True)
 
 
 def _get_alembic_config():

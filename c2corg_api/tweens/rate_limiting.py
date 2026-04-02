@@ -28,7 +28,7 @@ def rate_limiting_tween_factory(handler, registry):
             # See comment of similar block in jwt_database_validation tween
             return handler(request)
 
-        user = DBSession.query(User).get(request.authenticated_userid)
+        user = DBSession.get(User, request.authenticated_userid)
         if user is None:
             return http_error_handler(
                 HTTPBadRequest('Unknown user'), request)

@@ -19,7 +19,7 @@ class ProtectSchema(MappingSchema):
 
 
 def _get_document(document_id):
-    document = DBSession.query(Document).get(document_id)
+    document = DBSession.get(Document, document_id)
 
     if not document:
         raise HTTPBadRequest('Unknown document {}'.format(document_id))

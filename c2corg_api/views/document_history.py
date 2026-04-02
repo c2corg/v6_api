@@ -2,7 +2,7 @@ from c2corg_api.caching import cache_document_history
 from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document import DocumentLocale, DOCUMENT_TYPE
-from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.views import cors_policy, etag_cache
 from c2corg_api.views.document_version import serialize_version
 from c2corg_api.views.validation import validate_lang, validate_id
@@ -62,7 +62,9 @@ class HistoryDocumentRest(object):
             raise HTTPNotFound('no locale document for "{0}"'.format(lang))
 
         versions = DBSession.query(DocumentVersion) \
-            .options(joinedload('history_metadata').joinedload('user')) \
+            .options(
+                joinedload(DocumentVersion.history_metadata)
+                .joinedload(HistoryMetaData.user)) \
             .filter(DocumentVersion.document_id == document_id) \
             .filter(DocumentVersion.lang == lang) \
             .order_by(DocumentVersion.id) \

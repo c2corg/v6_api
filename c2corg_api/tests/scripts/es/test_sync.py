@@ -56,7 +56,7 @@ class SyncTest(BaseTestCase):
 
     def test_get_changed_users(self):
         user_id = self.global_userids['contributor']
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         user.name = 'changed'
         self.session.flush()
 
@@ -112,7 +112,7 @@ class SyncTest(BaseTestCase):
         batch_mock = self._create_mock_match(search_documents)(None, 1000)
 
         document_id = global_userids['contributor']
-        user_profile = self.session.query(UserProfile).get(document_id)
+        user_profile = self.session.get(UserProfile, document_id)
 
         create_search_documents('u', [user_profile], batch_mock)
         doc = search_documents[0]
@@ -133,7 +133,7 @@ class SyncTest(BaseTestCase):
 
         # test that unconfirmed users are ignored
         user_id = self.global_userids['contributor2']
-        user = self.session.query(User).get(user_id)
+        user = self.session.get(User, user_id)
         user.email_validated = False
         self.session.flush()
 
@@ -295,7 +295,8 @@ class SyncTest(BaseTestCase):
         association_wr = Association.create(self.waypoint1, self.route1)
         association_ww = Association.create(self.waypoint2, self.waypoint1)
         association_ro = Association.create(self.route1, self.outing1)
-        user = self.session.query(UserProfile).get(
+        user = self.session.get(
+            UserProfile,
             self.global_userids['contributor'])
         association_uo = Association.create(user, self.outing1)
         self.session.add_all([

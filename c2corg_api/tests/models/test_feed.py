@@ -12,9 +12,11 @@ class TestDocumentChange(BaseTestCase):
 
     def setUp(self):  # noqa
         BaseTestCase.setUp(self)
-        self.user1 = self.session.query(User).get(
+        self.user1 = self.session.get(
+            User,
             self.global_userids['contributor'])
-        self.user2 = self.session.query(User).get(
+        self.user2 = self.session.get(
+            User,
             self.global_userids['contributor2'])
         self.waypoint = Waypoint(waypoint_type='summit')
         self.session.add(self.waypoint)

@@ -626,7 +626,8 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(archive_geometry.version, doc.geometry.version)
         self.assertIsNotNone(archive_geometry.geom_detail)
 
-        association_route = self.session.query(Association).get(
+        association_route = self.session.get(
+            Association,
             (self.route.document_id, doc.document_id))
         self.assertIsNotNone(association_route)
 
@@ -638,11 +639,13 @@ class TestOutingRest(BaseDocumentTestRest):
             first()
         self.assertIsNotNone(association_route_log)
 
-        association_user = self.session.query(Association).get(
+        association_user = self.session.get(
+            Association,
             (self.global_userids['contributor'], doc.document_id))
         self.assertIsNotNone(association_user)
 
-        association_user2 = self.session.query(Association).get(
+        association_user2 = self.session.get(
+            Association,
             (self.global_userids['contributor2'], doc.document_id))
         self.assertIsNotNone(association_user2)
 
@@ -932,10 +935,12 @@ class TestOutingRest(BaseDocumentTestRest):
         self.assertEqual(archive_locale.weather, 'grand beau')
 
         # test that there are now 2 associated users
-        association_user = self.session.query(Association).get(
+        association_user = self.session.get(
+            Association,
             (self.global_userids['contributor'], outing.document_id))
         self.assertIsNotNone(association_user)
-        association_user2 = self.session.query(Association).get(
+        association_user2 = self.session.get(
+            Association,
             (self.global_userids['contributor2'], outing.document_id))
         self.assertIsNotNone(association_user2)
 
@@ -1138,7 +1143,7 @@ class TestOutingRest(BaseDocumentTestRest):
 
         # check that the document was updated correctly
         self.session.expire_all()
-        document = self.session.query(self._model).get(document_id)
+        document = self.session.get(self._model, document_id)
         self.assertEqual(len(document.locales), 2)
 
         # check that no new archive_document was created

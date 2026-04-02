@@ -75,7 +75,7 @@ def main(argv=sys.argv):
 
     # configure connections for Postgres, ElasticSearch and Redis
     settings = get_appsettings(config_uri, options=options)
-    engine = engine_from_config(settings, 'sqlalchemy.')
+    engine = engine_from_config(settings, 'sqlalchemy.', future=True)
     Session = sessionmaker()  # noqa
     Session.configure(bind=engine)
     configure_es_from_config(settings)

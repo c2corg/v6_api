@@ -192,7 +192,7 @@ class DocumentRevertRest(ACLDefault):
             join(locales_type). \
             filter(getattr(clazz, 'document_id') == document_id). \
             filter(DocumentLocale.lang == lang). \
-            options(joinedload('geometry')). \
+            options(joinedload(clazz.geometry)). \
             options(contains_eager(locales_type_eager, alias=locales_type))
         return document_query.first()
 

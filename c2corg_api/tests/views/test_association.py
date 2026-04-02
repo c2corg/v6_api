@@ -35,7 +35,8 @@ class TestAssociationRest(BaseTestRest):
             TestAssociationRest.prefix, request_body, headers=headers,
             status=200)
 
-        association = self.session.query(Association).get(
+        association = self.session.get(
+            Association,
             (self.waypoint1.document_id, self.waypoint2.document_id))
         self.assertIsNotNone(association)
 
@@ -63,7 +64,8 @@ class TestAssociationRest(BaseTestRest):
             TestAssociationRest.prefix, request_body, headers=headers,
             status=200)
 
-        association = self.session.query(Association).get(
+        association = self.session.get(
+            Association,
             (self.waypoint1.document_id, self.article1.document_id))
         self.assertIsNotNone(association)
 
@@ -90,7 +92,8 @@ class TestAssociationRest(BaseTestRest):
             TestAssociationRest.prefix, request_body, headers=headers,
             status=200)
 
-        association = self.session.query(Association).get(
+        association = self.session.get(
+            Association,
             (contributor2, self.outing.document_id))
         self.assertIsNotNone(association)
 
@@ -440,7 +443,8 @@ class TestAssociationRest(BaseTestRest):
             TestAssociationRest.prefix, request_body, headers=headers,
             status=200)
 
-        association = self.session.query(Association).get(
+        association = self.session.get(
+            Association,
             (self.waypoint1.document_id, self.waypoint2.document_id))
         self.assertIsNone(association)
 
@@ -510,7 +514,8 @@ class TestAssociationRest(BaseTestRest):
             TestAssociationRest.prefix, request_body, headers=headers,
             status=200)
 
-        association = self.session.query(Association).get(
+        association = self.session.get(
+            Association,
             (self.waypoint1.document_id, self.waypoint2.document_id))
         self.assertIsNone(association)
 

@@ -228,7 +228,8 @@ class TestDocumentMergeRest(BaseTestRest):
         self.assertEqual(0, association_count)
         self.assertEqual(0, association_log_count)
 
-        association_route = self.session.query(Association).get(
+        association_route = self.session.get(
+            Association,
             (self.waypoint2.document_id, self.route1.document_id))
         self.assertIsNotNone(association_route)
 

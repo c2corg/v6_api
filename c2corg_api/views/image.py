@@ -202,7 +202,7 @@ class ImageRest(DocumentRest):
     def put(self):
         if not self.request.has_permission('moderator'):
             image_id = self.request.validated['id']
-            image = DBSession.query(Image).get(image_id)
+            image = DBSession.get(Image, image_id)
             if image is None:
                 raise HTTPNotFound('No image found for id {}'.format(image_id))
             new_image_type = self.request.validated['document']['image_type']

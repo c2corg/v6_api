@@ -114,7 +114,7 @@ class TestWaypoint(BaseTestCase):
         self.assertIsNotNone(version1)
 
         # change the waypoint
-        waypoint2 = self.session.query(Waypoint).get(waypoint1.document_id)
+        waypoint2 = self.session.get(Waypoint, waypoint1.document_id)
         waypoint2.elevation = 1234
         self.session.merge(waypoint2)
         self.session.flush()

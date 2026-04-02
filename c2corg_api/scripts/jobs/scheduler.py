@@ -29,7 +29,7 @@ def main(argv=sys.argv):
     setup_logging(config_uri)
 
     settings = get_appsettings(config_uri, options=options)
-    engine = engine_from_config(settings, 'sqlalchemy.')
+    engine = engine_from_config(settings, 'sqlalchemy.', future=True)
     DBSession.configure(bind=engine)
 
     configure_scheduler_from_config(settings)

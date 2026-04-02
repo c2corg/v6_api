@@ -39,7 +39,7 @@ def main(argv=sys.argv):
     setup_logging(config_uri)
     logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
     settings = get_appsettings(config_uri, options=options)
-    engine = engine_from_config(settings, 'sqlalchemy.')
+    engine = engine_from_config(settings, 'sqlalchemy.', future=True)
     Session = sessionmaker()  # noqa
     register(Session)
     session = Session(bind=engine)

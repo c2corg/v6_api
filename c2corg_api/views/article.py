@@ -68,7 +68,7 @@ class ArticleRest(DocumentRest):
     def put(self):
         if not self.request.has_permission('moderator'):
             article_id = self.request.validated['id']
-            article = DBSession.query(Article).get(article_id)
+            article = DBSession.get(Article, article_id)
             if article is None:
                 raise HTTPNotFound(
                     'No article found for id {}'.format(article_id))

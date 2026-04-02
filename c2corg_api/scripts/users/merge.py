@@ -64,7 +64,7 @@ def main(argv=sys.argv):
         os.path.dirname(os.path.abspath(__file__)), '../../../production.ini')
     settings = get_appsettings(settings_file)
 
-    engine = engine_from_config(settings, 'sqlalchemy.')
+    engine = engine_from_config(settings, 'sqlalchemy.', future=True)
     DBSession.configure(bind=engine)
 
     queue_config = get_queue_config(settings)
@@ -72,12 +72,12 @@ def main(argv=sys.argv):
     logging.basicConfig()
     logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
-    source_user = DBSession.query(User).get(source_user_id)
+    source_user = DBSession.get(User, source_user_id)
     if not source_user:
         exit('ERROR: source user account (id {}) does not exist'.format(
             source_user_id))
 
-    target_user = DBSession.query(User).get(target_user_id)
+    target_user = DBSession.get(User, target_user_id)
     if not target_user:
         exit('ERROR: target user account (id {}) does not exist'.format(
             target_user_id))

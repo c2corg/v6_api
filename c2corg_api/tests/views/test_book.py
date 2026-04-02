@@ -233,7 +233,8 @@ class TestBookRest(BaseDocumentTestRest):
         self.assertIsNone(doc.geometry)
 
         # check that a link to the associated waypoint is created
-        association_wp = self.session.query(Association).get(
+        association_wp = self.session.get(
+            Association,
             (doc.document_id, self.waypoint2.document_id))
         self.assertIsNotNone(association_wp)
 
@@ -246,7 +247,8 @@ class TestBookRest(BaseDocumentTestRest):
         self.assertIsNotNone(association_wp_log)
 
         # check that a link to the associated article is created
-        association_art = self.session.query(Association).get(
+        association_art = self.session.get(
+            Association,
             (doc.document_id, self.article2.document_id))
         self.assertIsNotNone(association_art)
 
@@ -382,7 +384,8 @@ class TestBookRest(BaseDocumentTestRest):
         self.assertIsNone(book1.geometry)
 
         # check that a link to the associated image is created
-        association_img = self.session.query(Association).get(
+        association_img = self.session.get(
+            Association,
             (book1.document_id, self.image2.document_id))
         self.assertIsNotNone(association_img)
 
@@ -395,7 +398,8 @@ class TestBookRest(BaseDocumentTestRest):
         self.assertIsNotNone(association_img_log)
 
         # check that a link to the associated route is created
-        association_rou = self.session.query(Association).get(
+        association_rou = self.session.get(
+            Association,
             (book1.document_id, self.route2.document_id))
         self.assertIsNotNone(association_rou)
 

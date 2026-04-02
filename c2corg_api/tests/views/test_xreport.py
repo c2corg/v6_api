@@ -367,7 +367,8 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertIsNotNone(doc.geometry)
 
         # check that a link to the associated waypoint is created
-        association_img = self.session.query(Association).get(
+        association_img = self.session.get(
+            Association,
             (doc.document_id, self.image2.document_id))
         self.assertIsNotNone(association_img)
 
@@ -380,7 +381,8 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertIsNotNone(association_img_log)
 
         # check that a link to the associated xreport is created
-        association_art = self.session.query(Association).get(
+        association_art = self.session.get(
+            Association,
             (doc.document_id, self.article2.document_id))
         self.assertIsNotNone(association_art)
 
@@ -581,7 +583,8 @@ class TestXreportRest(BaseDocumentTestRest):
         # check if geometry is stored in database afterwards
         self.assertIsNotNone(xreport1.geometry)
         # check that a link to the associated image is created
-        association_img = self.session.query(Association).get(
+        association_img = self.session.get(
+            Association,
             (xreport1.document_id, self.image2.document_id))
         self.assertIsNotNone(association_img)
 
@@ -594,7 +597,8 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertIsNotNone(association_img_log)
 
         # check that a link to the associated article is created
-        association_main_art = self.session.query(Association).get(
+        association_main_art = self.session.get(
+            Association,
             (xreport1.document_id, self.article2.document_id))
         self.assertIsNotNone(association_main_art)
 

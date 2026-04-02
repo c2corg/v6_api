@@ -28,7 +28,8 @@ class TestUserFilterPreferencesRest(BaseTestRest):
         self.session.add_all([self.area1, self.area2])
         self.session.flush()
 
-        self.contributor = self.session.query(User).get(
+        self.contributor = self.session.get(
+            User,
             self.global_userids['contributor'])
         self.contributor.feed_filter_areas.append(self.area1)
         self.contributor.feed_filter_activities = ['hiking']

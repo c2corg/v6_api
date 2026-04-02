@@ -111,7 +111,7 @@ class BaseTestRest(BaseTestCase):
             None)
 
     def check_cache_version(self, document_id, version):
-        cache_version = self.session.query(CacheVersion).get(document_id)
+        cache_version = self.session.get(CacheVersion, document_id)
         self.assertIsNotNone(cache_version)
         self.assertEqual(cache_version.version, version)
 
@@ -558,7 +558,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         body = response.json
         document_id = body.get('document_id')
-        document = self.session.query(self._model).get(document_id)
+        document = self.session.get(self._model, document_id)
         # the value for `protected` was ignored
         self.assertFalse(document.protected)
         return (body, document)
@@ -588,7 +588,7 @@ class BaseDocumentTestRest(BaseTestRest):
             document_id = body.get('document_id')
             response = self.app.get(
                 self._prefix + '/' + str(document_id), status=200)
-            doc = self.session.query(self._model).get(document_id)
+            doc = self.session.get(self._model, document_id)
             return response.json, doc
         else:
             return self._validate_document(body, headers, validate_with_auth)
@@ -610,7 +610,7 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(body.get('protected'), False)
 
         # check that the version was created correctly
-        doc = self.session.query(self._model).get(document_id)
+        doc = self.session.get(self._model, document_id)
         self.assertEqual(1, doc.version)
         versions = doc.versions
         self.assertEqual(len(versions), 1)
@@ -651,7 +651,7 @@ class BaseDocumentTestRest(BaseTestRest):
         else:
             self.assertEqual(search_doc['title_en'], waypoint_locale_en.title)
 
-        cache_version = self.session.query(CacheVersion).get(document_id)
+        cache_version = self.session.get(CacheVersion, document_id)
         self.assertIsNotNone(cache_version)
         self.assertEqual(cache_version.version, 1)
 
@@ -759,7 +759,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         # check that the document was updated correctly
         self.session.expire_all()
-        document = self.session.query(self._model).get(document_id)
+        document = self.session.get(self._model, document_id)
         self.assertEqual(len(document.locales), 2)
         locale_en = document.get_locale('en')
 
@@ -862,7 +862,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         # check that the document was updated correctly
         self.session.expire_all()
-        document = self.session.query(self._model).get(document_id)
+        document = self.session.get(self._model, document_id)
         self.assertEqual(len(document.locales), 2)
 
         # check that a new archive_document was created
@@ -958,7 +958,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         # check that the document was updated correctly
         self.session.expire_all()
-        document = self.session.query(self._model).get(document_id)
+        document = self.session.get(self._model, document_id)
         self.assertEqual(len(document.locales), 2)
 
         # check that no new archive_document was created
@@ -1051,7 +1051,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         # check that the document was updated correctly
         self.session.expire_all()
-        document = self.session.query(self._model).get(document_id)
+        document = self.session.get(self._model, document_id)
         self.assertEqual(len(document.locales), 3)
 
         # check that no new archive_document was created

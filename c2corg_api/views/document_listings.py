@@ -1,10 +1,11 @@
 from c2corg_api.caching import cache_document_listing
 from c2corg_api.models import DBSession
-from c2corg_api.models.area import schema_listing_area
+from c2corg_api.models.area import Area, schema_listing_area
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import get_document_id, \
     get_cache_keys
 from c2corg_api.models.document import (
+    DocumentLocale,
     set_available_langs)
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import Outing
@@ -102,13 +103,17 @@ def _get_documents_from_ids(
     if documents_config.include_areas:
         base_query = base_query. \
             options(
-                joinedload(getattr(documents_config.clazz, '_areas')).
-                load_only(
-                    'document_id', 'area_type', 'version', 'protected',
-                    'type').
-                joinedload('locales').
-                load_only(
-                    'lang', 'title', 'version')
+                joinedload(
+                    getattr(documents_config.clazz, '_areas'))
+                .load_only(
+                    Area.document_id, Area.area_type,
+                    Area.version, Area.protected,
+                    Area.type)
+                .joinedload(Area.locales)
+                .load_only(
+                    DocumentLocale.lang,
+                    DocumentLocale.title,
+                    DocumentLocale.version)
             )
 
     documents = _load_documents(
@@ -161,7 +166,7 @@ def add_load_for_profiles(document_query, clazz):
     if clazz == UserProfile:
         # for profiles load names together from the associated user
         document_query = add_profile_filter(document_query, clazz). \
-            options(contains_eager('user').load_only(
+            options(contains_eager(UserProfile.user).load_only(
                 User.id, User.name, User.forum_username))
     return document_query
 
