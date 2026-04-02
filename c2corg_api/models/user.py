@@ -70,7 +70,7 @@ class User(Base):
         primary_key=True)
     profile = relationship(
         UserProfile, primaryjoin=id == UserProfile.document_id, uselist=False,
-        backref=backref('user', uselist=False))
+        backref=backref('user', uselist=False, cascade_backrefs=False))
 
     username = Column(String(200), nullable=False, unique=True)
     name = Column(String(200), nullable=False)

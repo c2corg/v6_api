@@ -30,6 +30,7 @@ from c2corg_api.models.common.fields_image import fields_image
 from c2corg_api.models.common.fields_topo_map import fields_topo_map
 from c2corg_api.models.common.fields_user_profile import fields_user_profile
 from c2corg_api.models.common.fields_coverage import fields_coverage
+from c2corg_api.models.document import DocumentLocale, DocumentGeometry
 from functools import lru_cache
 
 
@@ -78,22 +79,26 @@ class GetDocumentsConfig:
         return listing_fields
 
     def get_load_only_fields(self):
-        """ Return the fields for a document type that are needed to query
-        documents for the listing views.
+        """ Return SQLAlchemy class-bound attributes for document fields that
+        are needed to query documents for the listing views. These attributes
+        can be used directly with SQLAlchemy's load_only() option.
         """
-        return self.fields_document
+        return [getattr(self.clazz, f) for f in self.fields_document]
 
     def get_load_only_fields_locales(self):
-        """ Return the locales fields for a document type that are needed to
-        query documents for the listing views.
+        """ Return SQLAlchemy class-bound attributes for locale fields that
+        are needed to query documents for the listing views. These attributes
+        can be used directly with SQLAlchemy's load_only() option.
         """
-        return self.fields_locales
+        locale_clazz = self.clazz_locale or DocumentLocale
+        return [getattr(locale_clazz, f) for f in self.fields_locales]
 
     def get_load_only_fields_geometry(self):
-        """ Return the geometry fields for a document type that are needed to
-        query documents for the listing views.
+        """ Return SQLAlchemy class-bound attributes for geometry fields
+        that are needed to query documents for the listing views. These
+        attributes can be used directly with SQLAlchemy's load_only() option.
         """
-        return self.fields_geometry
+        return [getattr(DocumentGeometry, f) for f in self.fields_geometry]
 
 
 def make_schema_adaptor(adapt_schema_for_type, type_field, field_list_type):

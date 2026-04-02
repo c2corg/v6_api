@@ -266,7 +266,7 @@ def set_recent_outings(waypoint, lang):
     with_query_waypoints = _get_select_children(waypoint)
 
     recent_outing_ids = get_first_column(
-        DBSession.query(Outing.document_id).
+        DBSession.query(Outing.document_id, Outing.date_end).
         filter(Outing.redirects_to.is_(None)).
         join(
             t_outing_route,

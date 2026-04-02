@@ -302,4 +302,4 @@ def get_linked_xreports(document, lang):
 
 
 def get_first_column(rows):
-    return [r for (r, ) in rows]
+    return [r[0] for r in rows]
