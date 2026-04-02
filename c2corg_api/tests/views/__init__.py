@@ -715,6 +715,28 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(
             body['errors'][0]['description'], 'Required')
 
+    def pydantic_put_put_no_document(self, id, user='contributor'):
+        """Like ``put_put_no_document`` but expects the pydantic error
+        message ``'Field required'`` instead of colander's ``'Required'``.
+        Use this for endpoints whose body validation has been migrated
+        to pydantic.
+        """
+        request_body = {
+            'message': '...'
+        }
+        self.app_put_json(
+            self._prefix + '/' + str(id), request_body, status=403)
+
+        headers = self.add_authorization_header(username=user)
+        response = self.app_put_json(
+            self._prefix + '/' + str(id), request_body, headers=headers,
+            status=400)
+
+        body = response.json
+        self.assertEqual(body['status'], 'error')
+        self.assertEqual(
+            body['errors'][0]['description'], 'Field required')
+
     def put_missing_field(
             self, request_body, document, field, user='contributor'):
         response = self.app_put_json(

@@ -231,7 +231,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             body, self.profile1.document_id, user='moderator')
 
     def test_put_no_document(self):
-        self.put_put_no_document(
+        self.pydantic_put_put_no_document(
             self.profile1.document_id, user='moderator')
 
     def test_put_success_all(self):

@@ -1,8 +1,8 @@
 from c2corg_api.models import schema, Base, enums
 from c2corg_api.models.document import (
     ArchiveDocument, Document, schema_document_locale, schema_attributes)
-from c2corg_api.models.schema_utils import get_update_schema, \
-    restrict_schema, get_create_schema
+from c2corg_api.models.schema_utils import \
+    restrict_schema
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from sqlalchemy.dialects.postgresql.array import ARRAY
 from c2corg_api.models.common.fields_book import fields_book
@@ -94,7 +94,56 @@ schema_book = SQLAlchemySchemaNode(
         },
     })
 
-schema_create_book = get_create_schema(schema_book)
-schema_update_book = get_update_schema(schema_book)
 schema_listing_book = restrict_schema(
     schema_book, fields_book.get('listing'))
+
+
+# ===================================================================
+# Pydantic schemas (generated from the SQLAlchemy model)
+# ===================================================================
+from c2corg_api.models.pydantic import (  # noqa: E402
+    schema_from_sa_model,
+    get_update_schema as pydantic_update_schema,
+    get_create_schema as pydantic_create_schema,
+    DocumentLocaleSchema,
+    AssociationsSchema,
+    _DuplicateLocalesMixin,
+)
+from c2corg_api.models.document import schema_attributes  # noqa: E402
+from typing import List, Optional  # noqa: E402
+
+# Books don't have geometry – exclude it from the schema_attributes
+_book_schema_attrs = [
+    a for a in schema_attributes + attributes
+    if a not in ('locales', 'geometry')
+]
+
+_BookDocBase = schema_from_sa_model(
+    Book,
+    name='_BookDocBase',
+    includes=_book_schema_attrs,
+    overrides={
+        'document_id': {'default': None},
+        'version': {'default': None},
+    },
+)
+
+
+class BookDocumentSchema(
+    _DuplicateLocalesMixin, _BookDocBase,
+):
+    """Full book document for create/update requests."""
+    locales: Optional[List[DocumentLocaleSchema]] = None
+    associations: Optional[AssociationsSchema] = None
+    model_config = {"extra": "ignore"}
+
+
+CreateBookSchema = pydantic_create_schema(
+    BookDocumentSchema,
+    name='CreateBookSchema',
+)
+
+UpdateBookSchema = pydantic_update_schema(
+    BookDocumentSchema,
+    name='UpdateBookSchema',
+)
