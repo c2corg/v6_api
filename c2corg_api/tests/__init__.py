@@ -282,7 +282,8 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
         # (including calls to commit()) is rolled back.
         testing.tearDown()
         if not keep:
-            self.trans.rollback()
+            if self.trans.is_active:
+                self.trans.rollback()
         else:
             self.trans.commit()
         DBSession.remove()

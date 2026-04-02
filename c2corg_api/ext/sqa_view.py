@@ -16,7 +16,7 @@ def view(name, schema, metadata, selectable):
     # created
     t = Table(name, MetaData(), schema=schema)
 
-    for c in selectable.c:
+    for c in selectable.subquery().c:
         t.append_column(Column(c.name, c.type, primary_key=c.primary_key))
 
     return t

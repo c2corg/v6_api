@@ -132,11 +132,12 @@ def column_windows(session, column, windowsize):
         else:
             return column >= start_id
 
-    q = session.query(
+    subq = session.query(
         column,
         func.row_number().over(order_by=column).label('rownum')
-    ). \
-        from_self(column)
+    ).subquery()
+
+    q = session.query(subq.c[column.key]).select_from(subq)
     if windowsize > 1:
         q = q.filter(sa.text("rownum %% %d=1" % windowsize))
 

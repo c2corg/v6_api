@@ -535,9 +535,12 @@ def update_linked_routes_public_transportation_rating(waypoint, update_types):
         .filter(Association.parent_document_id == waypoint.document_id) \
         .subquery()
     # Merge all routes
+    merged = union(
+        parent_routes.select(), children_routes.select()
+    ).subquery()
     routes = DBSession \
         .query(Route) \
-        .select_from(union(parent_routes.select(), children_routes.select())) \
+        .select_from(merged) \
         .join(Route, Route.document_id == column('route_id')) \
         .all()
 

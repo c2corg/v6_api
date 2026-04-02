@@ -321,7 +321,12 @@ def _get_load_associations_query(document, doc_types_to_load):
 
     return DBSession \
         .query(column('id'), column('t'), column('p')) \
-        .select_from(union(query_parents.select(), query_children.select()))
+        .select_from(
+            union(
+                query_parents.select(),
+                query_children.select()
+            ).subquery()
+        )
 
 
 def _diff_associations(new_associations, current_associations):

@@ -138,7 +138,8 @@ def get_neighbour_version_ids(version_id, document_id, lang):
     query = DBSession \
         .query(column('id'), column('t')) \
         .select_from(union(
-            next_version.select(), previous_version.select()))
+            next_version.select(), previous_version.select()
+        ).subquery())
 
     previous_version_id = None
     next_version_id = None
