@@ -30,7 +30,7 @@ Shapely==2.0.7
 SQLAlchemy==1.4.54
 transaction==5.1
 waitress==3.0.2
-zope.sqlalchemy==3.1
+zope.sqlalchemy==4.1
 gunicorn==23.0.0
 python-dotenv==1.2.2
 pytz==2025.2
