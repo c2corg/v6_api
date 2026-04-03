@@ -378,3 +378,80 @@ schema_association_waypoint_route = restrict_schema(schema_route, [
     'locales.title', 'locales.title_prefix', 'elevation_min', 'elevation_max',
     'activities', 'geometry.geom_detail'
 ])
+
+
+# ===================================================================
+# Pydantic schemas (generated from the SQLAlchemy model)
+# ===================================================================
+from c2corg_api.models.pydantic import (  # noqa: E402
+    schema_from_sa_model,
+    get_update_schema as pydantic_update_schema,
+    get_create_schema as pydantic_create_schema,
+    DocumentGeometrySchema,
+    AssociationsSchema,
+    LangType,
+    _DuplicateLocalesMixin,
+)
+from typing import List, Optional  # noqa: E402
+
+# -- route locale schema (extends DocumentLocaleSchema with route fields) ---
+
+_RouteLocaleBase = schema_from_sa_model(
+    RouteLocale,
+    name='_RouteLocaleBase',
+    includes=schema_locale_attributes + attributes_locales + ['title_prefix'],
+    overrides={
+        'version': {'default': None},
+        'lang': {'type': LangType},
+    },
+)
+
+
+class RouteLocaleSchema(_RouteLocaleBase):
+    """Locale for route create/update requests."""
+    model_config = {"extra": "ignore"}
+
+
+# -- route document schema --------------------------------------------------
+
+_route_schema_attrs = [
+    a for a in schema_attributes + attributes
+    if a not in ('locales', 'geometry')
+]
+
+_RouteDocBase = schema_from_sa_model(
+    Route,
+    name='_RouteDocBase',
+    includes=_route_schema_attrs,
+    overrides={
+        'document_id': {'default': None},
+        'version': {'default': None},
+        # Accept any string for activities; downstream validators
+        # (validate_document_for_type) check valid values, matching
+        # the old colander behaviour.
+        'activities': {'type': List[str]},
+    },
+)
+
+
+class RouteDocumentSchema(
+    _DuplicateLocalesMixin, _RouteDocBase,
+):
+    """Full route document for create/update requests."""
+    locales: Optional[List[RouteLocaleSchema]] = None
+    geometry: Optional[DocumentGeometrySchema] = None
+    associations: Optional[AssociationsSchema] = None
+    model_config = {"extra": "ignore"}
+
+
+# -- create / update envelopes -----------------------------------------------
+
+CreateRouteSchema = pydantic_create_schema(
+    RouteDocumentSchema,
+    name='CreateRouteSchema',
+)
+
+UpdateRouteSchema = pydantic_update_schema(
+    RouteDocumentSchema,
+    name='UpdateRouteSchema',
+)

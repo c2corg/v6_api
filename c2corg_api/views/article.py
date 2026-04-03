@@ -4,9 +4,9 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.article import (
     Article,
     schema_article,
-    schema_create_article,
-    schema_update_article,
-    ARTICLE_TYPE, ArchiveArticle)
+    ARTICLE_TYPE, ArchiveArticle,
+    CreateArticleSchema,
+    UpdateArticleSchema)
 from c2corg_api.models.document import ArchiveDocumentLocale
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.views.document_info import DocumentInfoRest
@@ -15,7 +15,7 @@ from pyramid.httpexceptions import HTTPNotFound, HTTPBadRequest, HTTPForbidden
 
 from c2corg_api.models.common.fields_article import fields_article
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
+
 from c2corg_api.views import set_creator as set_creator_on_documents
 
 from c2corg_api.views.document_schemas import article_documents_config
@@ -26,6 +26,7 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
     validate_associations, validate_lang, validate_version_id, \
     validate_cook_param
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 
 validate_article_create = make_validator_create(fields_article.get('required'))
 validate_article_update = make_validator_update(fields_article.get('required'))
@@ -50,18 +51,16 @@ class ArticleRest(DocumentRest):
             set_custom_fields=set_author)
 
     @restricted_json_view(
-            schema=schema_create_article,
             validators=[
-                colander_body_validator,
+                make_pydantic_validator(CreateArticleSchema),
                 validate_article_create,
                 validate_associations_create])
     def collection_post(self):
         return self._collection_post(schema_article)
 
     @restricted_json_view(
-            schema=schema_update_article,
             validators=[
-                colander_body_validator,
+                make_pydantic_validator(UpdateArticleSchema),
                 validate_id,
                 validate_article_update,
                 validate_associations_update])

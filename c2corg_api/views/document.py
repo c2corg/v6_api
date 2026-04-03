@@ -405,10 +405,11 @@ class DocumentRest(ACLDefault):
         (update_types, changed_langs) = document.get_update_type(old_versions)
 
         if update_types:
-            # A new version needs to be created and persisted
-            DocumentRest.update_version(
-                document, user_id, request.validated['message'],
-                update_types, changed_langs)
+            if document.type != COVERAGE_TYPE:
+                # A new version needs to be created and persisted
+                DocumentRest.update_version(
+                    document, user_id, request.validated['message'],
+                    update_types, changed_langs)
 
             if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
                 update_areas_for_document(document, reset=True)
@@ -600,8 +601,13 @@ def validate_document_for_type(document, request, fields, type_field,
     document_type = document.get(type_field)
 
     if not document_type:
-        # can't do the validation without the type (an error was already added
-        # when validating the Colander schema)
+        # can't do the validation without the type – add an explicit
+        # error (previously this was surfaced by the Colander schema).
+        if type_field in document and document[type_field] == []:
+            request.errors.add(
+                'body', type_field, 'Shorter than minimum length 1')
+        else:
+            request.errors.add('body', type_field, 'Required')
         return
 
     if type_field == 'activities':
@@ -634,16 +640,18 @@ def make_validator_create(
     """
     if type_field is None or valid_type_values is None:
         def f(request, **kwargs):
+            if request.errors:
+                return
             document = request.validated
-            if document:
-                validate_document(document, request, fields, updating=False)
+            validate_document(document, request, fields, updating=False)
     else:
         def f(request, **kwargs):
+            if request.errors:
+                return
             document = request.validated
-            if document:
-                validate_document_for_type(
-                    document, request, fields, type_field, valid_type_values,
-                    updating=False)
+            validate_document_for_type(
+                document, request, fields, type_field, valid_type_values,
+                updating=False)
     return f
 
 
@@ -652,11 +660,15 @@ def make_validator_update(fields, type_field=None, valid_type_values=None):
     """
     if type_field is None or valid_type_values is None:
         def f(request, **kwargs):
+            if request.errors:
+                return
             document = request.validated.get('document')
             if document:
                 validate_document(document, request, fields, updating=True)
     else:
         def f(request, **kwargs):
+            if request.errors:
+                return
             document = request.validated.get('document')
             if document:
                 validate_document_for_type(

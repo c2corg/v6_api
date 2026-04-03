@@ -15,17 +15,17 @@ from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.image import delete_all_files_for_image
 from c2corg_api.views.waypoint import update_linked_route_titles
-from colander import MappingSchema, required, SchemaNode, Integer
+from pydantic import BaseModel
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 from sqlalchemy.sql.elements import not_
 from sqlalchemy.sql.expression import and_, or_
 from sqlalchemy.sql.functions import func
 
 
-class MergeSchema(MappingSchema):
-    source_document_id = SchemaNode(Integer(), missing=required)
-    target_document_id = SchemaNode(Integer(), missing=required)
+class MergeSchema(BaseModel):
+    source_document_id: int
+    target_document_id: int
 
 
 def validate_documents(request, **kwargs):
@@ -99,8 +99,7 @@ class MergeDocumentRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',
-        schema=MergeSchema(),
-        validators=[colander_body_validator, validate_documents])
+        validators=[make_pydantic_validator(MergeSchema), validate_documents])
     def post(self):
         """ Merges a document into another document.
 

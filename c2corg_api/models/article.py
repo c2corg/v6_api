@@ -97,3 +97,53 @@ def is_personal(article_id):
         filter(Article.document_id == article_id). \
         scalar()
     return article_type == 'personal'
+
+
+# ===================================================================
+# Pydantic schemas (generated from the SQLAlchemy model)
+# ===================================================================
+from c2corg_api.models.pydantic import (  # noqa: E402
+    schema_from_sa_model,
+    get_update_schema as pydantic_update_schema,
+    get_create_schema as pydantic_create_schema,
+    DocumentLocaleSchema,
+    AssociationsSchema,
+    _DuplicateLocalesMixin,
+)
+from typing import List, Optional  # noqa: E402
+
+# Articles don't have geometry – exclude it from the schema_attributes
+_article_schema_attrs = [
+    a for a in schema_attributes + attributes
+    if a not in ('locales', 'geometry')
+]
+
+_ArticleDocBase = schema_from_sa_model(
+    Article,
+    name='_ArticleDocBase',
+    includes=_article_schema_attrs,
+    overrides={
+        'document_id': {'default': None},
+        'version': {'default': None},
+    },
+)
+
+
+class ArticleDocumentSchema(
+    _DuplicateLocalesMixin, _ArticleDocBase,
+):
+    """Full article document for create/update requests."""
+    locales: Optional[List[DocumentLocaleSchema]] = None
+    associations: Optional[AssociationsSchema] = None
+    model_config = {"extra": "ignore"}
+
+
+CreateArticleSchema = pydantic_create_schema(
+    ArticleDocumentSchema,
+    name='CreateArticleSchema',
+)
+
+UpdateArticleSchema = pydantic_update_schema(
+    ArticleDocumentSchema,
+    name='UpdateArticleSchema',
+)

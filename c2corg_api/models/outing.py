@@ -264,3 +264,78 @@ schema_update_outing = get_update_schema(schema_outing)
 schema_association_outing = restrict_schema(schema_outing, [
     'locales.title', 'activities', 'date_start', 'date_end'
 ])
+
+
+# ===================================================================
+# Pydantic schemas (generated from the SQLAlchemy model)
+# ===================================================================
+from c2corg_api.models.pydantic import (  # noqa: E402, F811
+    schema_from_sa_model,
+    get_update_schema as pydantic_update_schema,
+    get_create_schema as pydantic_create_schema,
+    DocumentGeometrySchema,
+    AssociationsSchema,
+    LangType,
+    _DuplicateLocalesMixin,
+)
+from typing import List, Optional  # noqa: E402
+
+# -- outing locale schema ----------------------------------------------------
+
+_OutingLocaleBase = schema_from_sa_model(
+    OutingLocale,
+    name='_OutingLocaleBase',
+    includes=schema_locale_attributes + attributes_locales,
+    overrides={
+        'version': {'default': None},
+        'lang': {'type': LangType},
+    },
+)
+
+
+class OutingLocaleSchema(_OutingLocaleBase):
+    """Locale for outing create/update requests."""
+    model_config = {"extra": "ignore"}
+
+
+# -- outing document schema --------------------------------------------------
+
+_outing_schema_attrs = [
+    a for a in schema_attributes + attributes
+    if a not in ('locales', 'geometry')
+]
+
+_OutingDocBase = schema_from_sa_model(
+    Outing,
+    name='_OutingDocBase',
+    includes=_outing_schema_attrs,
+    overrides={
+        'document_id': {'default': None},
+        'version': {'default': None},
+        # Accept any string for activities; downstream validators
+        # (validate_document_for_type) check valid values, matching
+        # the old colander behaviour.
+        'activities': {'type': List[str]},
+    },
+)
+
+
+class OutingDocumentSchema(
+    _DuplicateLocalesMixin, _OutingDocBase,
+):
+    """Full outing document for create/update requests."""
+    locales: Optional[List[OutingLocaleSchema]] = None
+    geometry: Optional[DocumentGeometrySchema] = None
+    associations: Optional[AssociationsSchema] = None
+    model_config = {"extra": "ignore"}
+
+
+CreateOutingSchema = pydantic_create_schema(
+    OutingDocumentSchema,
+    name='CreateOutingSchema',
+)
+
+UpdateOutingSchema = pydantic_update_schema(
+    OutingDocumentSchema,
+    name='UpdateOutingSchema',
+)

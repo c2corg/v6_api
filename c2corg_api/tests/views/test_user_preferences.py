@@ -90,13 +90,10 @@ class TestUserFilterPreferencesRest(BaseTestRest):
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
 
-        self.assertIsNotNone(self.get_error(errors, 'activities.1'))
-        self.assertIsNotNone(self.get_error(errors, 'langs.1'))
-        self.assertCorniceRequired(
-            self.get_error(errors, 'areas.0.document_id'),
-            'areas.0.document_id')
-        self.assertCorniceRequired(
-            self.get_error(errors, 'followed_only'), 'followed_only')
+        self.assertIsNotNone(self.get_error(errors, 'activities'))
+        self.assertIsNotNone(self.get_error(errors, 'langs'))
+        self.assertIsNotNone(self.get_error(errors, 'areas.0.document_id'))
+        self.assertIsNotNone(self.get_error(errors, 'followed_only'))
 
     def test_post_preferences(self):
         request_body = {

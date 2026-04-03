@@ -235,7 +235,7 @@ class TestXreportRest(BaseDocumentTestRest):
         body = self.post_error({}, user='moderator')
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertCorniceRequired(errors[0], 'event_activity')
+        self.assertError(errors, 'event_activity', 'Field required')
 
     def test_post_missing_title(self):
         body_post = {
@@ -311,7 +311,11 @@ class TestXreportRest(BaseDocumentTestRest):
             body = self.post_error(body, user='moderator')
             errors = body.get('errors')
             self.assertEqual(len(errors), 1)
-            self.assertCorniceNotInEnum(errors[0], key)
+            self.assertEqual(errors[0].get('name'), key)
+            desc = errors[0].get('description')
+            self.assertTrue(
+                'is not one of' in desc or 'Input should be' in desc,
+                'Unexpected enum error description: %s' % desc)
 
     def test_post_success(self):
         body = {
@@ -520,7 +524,8 @@ class TestXreportRest(BaseDocumentTestRest):
         self.put_wrong_ids(body, self.xreport1.document_id, user='moderator')
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.xreport1.document_id, user='moderator')
+        self.pydantic_put_put_no_document(
+            self.xreport1.document_id, user='moderator')
 
     def test_put_success_all(self):
         body = {

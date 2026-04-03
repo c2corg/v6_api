@@ -6,8 +6,9 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.document import ArchiveDocumentLocale
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.feed import update_feed_images_upload
-from c2corg_api.models.image import Image, schema_image, schema_update_image, \
-    IMAGE_TYPE, schema_create_image, schema_create_image_list, ArchiveImage
+from c2corg_api.models.image import Image, schema_image, \
+    IMAGE_TYPE, ArchiveImage, \
+    CreateImageSchema, UpdateImageSchema, CreateImageListSchema
 from c2corg_api.search.notify_sync import run_on_successful_transaction
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.document_info import DocumentInfoRest
@@ -16,7 +17,8 @@ from c2corg_api.views.document_version import DocumentVersionRest
 
 from c2corg_api.models.common.fields_image import fields_image
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
+from c2corg_api.views.pydantic_validator import make_pydantic_validator, \
+    _convert_geojson_to_wkb
 
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, validate_document
@@ -84,7 +86,13 @@ def validate_list_image_create(request, **kwargs):
     if not request.validated.get('images'):
         return
 
-    for image in request.validated['images']:
+    for i, image in enumerate(request.validated['images']):
+        # Convert GeoJSON to WKB for each image in the list, since the
+        # top-level pydantic validator only converts at the root level.
+        _convert_geojson_to_wkb(
+            image, request=request,
+            allowed_geometry_types=['POINT'],
+            field_prefix='images.{}'.format(i))
         validate_document(image, request, fields_image.get('required'),
                           updating=False)
         check_filename_unique(image, request, updating=False)
@@ -182,9 +190,10 @@ class ImageRest(DocumentRest):
             set_custom_fields=set_creator)
 
     @restricted_json_view(
-            schema=schema_create_image,
             validators=[
-                colander_body_validator,
+                make_pydantic_validator(
+                    CreateImageSchema,
+                    allowed_geometry_types=['POINT']),
                 validate_image_create,
                 validate_associations_create])
     def collection_post(self):
@@ -193,9 +202,10 @@ class ImageRest(DocumentRest):
         return {'document_id': document.document_id}
 
     @restricted_json_view(
-            schema=schema_update_image,
             validators=[
-                colander_body_validator,
+                make_pydantic_validator(
+                    UpdateImageSchema,
+                    allowed_geometry_types=['POINT']),
                 validate_id,
                 validate_image_update,
                 validate_associations_update])
@@ -234,9 +244,8 @@ class ImageRest(DocumentRest):
 class ImageListRest(DocumentRest):
 
     @restricted_json_view(
-            schema=schema_create_image_list,
             validators=[
-                colander_body_validator,
+                make_pydantic_validator(CreateImageListSchema),
                 validate_list_image_create,
                 validate_list_associations_create])
     def collection_post(self):

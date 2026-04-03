@@ -243,7 +243,7 @@ class TestAreaRest(BaseDocumentTestRest):
         self.put_wrong_ids(body, self.area1.document_id)
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.area1.document_id)
+        self.pydantic_put_put_no_document(self.area1.document_id)
 
     def test_put_update_geometry_fail(self):
         body = {

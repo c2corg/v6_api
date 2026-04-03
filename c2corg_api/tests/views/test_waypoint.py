@@ -454,7 +454,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 {'lang': 'en', 'title': 'Mont Pourri', 'access': 'y'}
             ]
         }
-        self.post_same_locale_twice(body)
+        self.pydantic_post_same_locale_twice(body)
 
     def test_post_missing_elevation(self):
         body = {
@@ -499,8 +499,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         body = self.post_error(body_post)
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertTrue(errors[0].get('description').startswith(
-            '"swimming-pool" is not one of'))
+        self.assertIn("Input should be", errors[0].get('description'))
         self.assertEqual(errors[0].get('name'), 'waypoint_type')
 
     def test_post_empty_assoc_in_new_w_document(self):
@@ -776,7 +775,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.put_wrong_ids(body, self.waypoint.document_id)
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.waypoint.document_id)
+        self.pydantic_put_put_no_document(self.waypoint.document_id)
 
     def test_put_missing_elevation(self):
         body = {

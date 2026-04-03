@@ -12,12 +12,12 @@ from c2corg_api.views.validation import validate_association_permission, \
     check_permission_for_association_removal
 from c2corg_api.models.common.associations import valid_associations
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 from pyramid.httpexceptions import HTTPBadRequest
 
 from c2corg_api.views import cors_policy, restricted_json_view
-from c2corg_api.models.association import schema_association, \
-    Association, exists_already
+from c2corg_api.models.association import \
+    Association, exists_already, SchemaAssociation
 from sqlalchemy.sql.expression import exists
 
 
@@ -68,10 +68,12 @@ def validate_association(request, **kwargs):
 class AssociationRest(ACLDefault):
 
     @restricted_json_view(
-        schema=schema_association,
-        validators=[colander_body_validator, validate_association])
+        validators=[make_pydantic_validator(SchemaAssociation),
+                    validate_association])
     def collection_post(self):
-        association = schema_association.objectify(self.request.validated)
+        association = Association(
+            parent_document_id=self.request.validated['parent_document_id'],
+            child_document_id=self.request.validated['child_document_id'])
         association.parent_document_type = \
             self.request.validated['parent_document_type']
         association.child_document_type = \
@@ -100,9 +102,11 @@ class AssociationRest(ACLDefault):
         return {}
 
     @restricted_json_view(
-        schema=schema_association, validators=[colander_body_validator])
+        validators=[make_pydantic_validator(SchemaAssociation)])
     def collection_delete(self):
-        association_in = schema_association.objectify(self.request.validated)
+        association_in = Association(
+            parent_document_id=self.request.validated['parent_document_id'],
+            child_document_id=self.request.validated['child_document_id'])
 
         association = self._load(association_in)
         if association is None:

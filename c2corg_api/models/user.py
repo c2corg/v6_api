@@ -188,3 +188,46 @@ schema_create_user = SQLAlchemySchemaNode(
             'validator': colander.OneOf(default_langs)
         }
     })
+
+
+# ===================================================================
+# Pydantic schemas (for body validation in views)
+# ===================================================================
+from pydantic import BaseModel, field_validator  # noqa: E402
+from typing import Optional  # noqa: E402
+
+
+class CreateUserSchema(BaseModel):
+    """Pydantic replacement for ``schema_create_user``."""
+    username: str
+    forum_username: str
+    name: str
+    email: str
+    lang: Optional[str] = 'fr'
+
+    model_config = {"extra": "ignore"}
+
+    @field_validator('email')
+    @classmethod
+    def _validate_email(cls, v):
+        # Minimal email check matching colander.Email
+        if '@' not in v or '.' not in v.split('@')[-1]:
+            raise ValueError('Invalid email address')
+        return v
+
+    @field_validator('lang')
+    @classmethod
+    def _validate_lang(cls, v):
+        if v not in default_langs:
+            raise ValueError(
+                '"%s" is not one of %s' % (v, ', '.join(default_langs)))
+        return v
+
+
+class LoginSchema(BaseModel):
+    """Pydantic replacement for the colander ``LoginSchema``."""
+    username: str
+    password: str
+    accept_tos: Optional[bool] = False
+
+    model_config = {"extra": "ignore"}

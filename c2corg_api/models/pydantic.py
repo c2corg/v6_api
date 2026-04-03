@@ -21,9 +21,12 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Literal, Optional, Sequence, Type
 
+import datetime
+
 from pydantic import BaseModel, create_model, model_validator
 from sqlalchemy import (
     inspect as sa_inspect, Integer, String, Boolean, Enum,
+    Date, DateTime, Float, SmallInteger,
 )
 from sqlalchemy.dialects.postgresql import ARRAY
 
@@ -50,8 +53,12 @@ def _literal_from_sa_enum(sa_enum: Enum):
 
 _SA_TYPE_MAP = {
     Integer: int,
+    SmallInteger: int,
+    Float: float,
     String: str,
     Boolean: bool,
+    Date: datetime.date,
+    DateTime: datetime.datetime,
 }
 
 
@@ -150,6 +157,11 @@ def schema_from_sa_model(
         has_default = 'default' in ov
         if has_default:
             default = ov['default']
+        elif col.default is not None and col.default.is_scalar:
+            # Use the column's Python-side default (e.g. 'no' for
+            # glacier_gear) so that objectify receives the right value
+            # when the user omits the field.
+            default = col.default.arg
         elif nullable or not col.nullable:
             default = None
         else:

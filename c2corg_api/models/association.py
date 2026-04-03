@@ -9,6 +9,7 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from colanderalchemy.schema import SQLAlchemySchemaNode
+from pydantic import BaseModel
 from sqlalchemy import (
     Boolean,
     Column,
@@ -119,6 +120,11 @@ schema_association = SQLAlchemySchemaNode(
     # whitelisted attributes
     includes=['parent_document_id', 'child_document_id'],
     overrides={})
+
+
+class SchemaAssociation(BaseModel):
+    parent_document_id: int
+    child_document_id: int
 
 
 def exists_already(link):

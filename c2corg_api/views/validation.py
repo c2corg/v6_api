@@ -132,7 +132,7 @@ def check_required_fields(document, fields, request, updating):
             # fields like 'geometry.geom'
             field_parts = field.split('.')
             attr = document.get(field_parts[0])
-            if attr:
+            if attr is not None:
                 if isinstance(attr, list):
                     # e.g. 'locales.title' – check each entry
                     for i, item in enumerate(attr):

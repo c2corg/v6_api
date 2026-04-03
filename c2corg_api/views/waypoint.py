@@ -16,14 +16,14 @@ from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.route import set_route_title_prefix, \
     update_pt_rating
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 
 from c2corg_api.search.advanced_search import get_all_filtered_docs
 
 from c2corg_api.models.waypoint import (
-    Waypoint, schema_waypoint, schema_update_waypoint,
+    Waypoint, schema_waypoint,
     ArchiveWaypoint, ArchiveWaypointLocale, WAYPOINT_TYPE,
-    schema_create_waypoint)
+    CreateWaypointSchema, UpdateWaypointSchema)
 
 from c2corg_api.views.document import (
     DocumentRest, make_validator_create, make_validator_update,
@@ -160,11 +160,13 @@ class WaypointRest(DocumentRest):
             adapt_schema=waypoint_schema_adaptor, include_maps=True,
             set_custom_associations=set_custom_associations)
 
-    @restricted_json_view(schema=schema_create_waypoint,
-                          validators=[
-                              colander_body_validator,
-                              validate_waypoint_create,
-                              validate_associations_create])
+    @restricted_json_view(
+        validators=[
+            make_pydantic_validator(
+                CreateWaypointSchema,
+                allowed_geometry_types=['POINT']),
+            validate_waypoint_create,
+            validate_associations_create])
     def collection_post(self):
         """
         Create a new document.
@@ -197,12 +199,14 @@ class WaypointRest(DocumentRest):
         """
         return self._collection_post(schema_waypoint)
 
-    @restricted_json_view(schema=schema_update_waypoint,
-                          validators=[
-                              colander_body_validator,
-                              validate_id,
-                              validate_waypoint_update,
-                              validate_associations_update])
+    @restricted_json_view(
+        validators=[
+            make_pydantic_validator(
+                UpdateWaypointSchema,
+                allowed_geometry_types=['POINT']),
+            validate_id,
+            validate_waypoint_update,
+            validate_associations_update])
     def put(self):
         """
         Update a document.

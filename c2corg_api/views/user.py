@@ -8,7 +8,8 @@ from c2corg_api.emails.email_service import get_email_service
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.user import (
-        User, schema_user, schema_create_user, Purpose)
+        User, schema_user, schema_create_user, Purpose,
+        CreateUserSchema, LoginSchema as LoginPydanticSchema)
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.discourse_client import get_discourse_client
@@ -21,8 +22,8 @@ from c2corg_api.views import (
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.validation import validate_required_json_string
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from functools import partial
 from pyramid.httpexceptions import HTTPInternalServerError, HTTPForbidden
 from pyramid.settings import asbool
@@ -198,9 +199,8 @@ def validate_captcha(request, **kwargs):
 class UserRegistrationRest(ACLDefault):
 
     @json_view(
-        schema=schema_create_user,
         validators=[
-            colander_body_validator,
+            make_pydantic_validator(CreateUserSchema, strip_defaults=False),
             validate_json_password,
             partial(validate_unique_attribute, "email"),
             partial(validate_unique_attribute,
@@ -444,13 +444,13 @@ class UserChangeEmailNonceValidationRest(ACLDefault):
         # no login since user is supposed to be already logged in
 
 
-class LoginSchema(colander.MappingSchema):
+class _LegacyLoginSchema(colander.MappingSchema):
     username = colander.SchemaNode(colander.String())
     password = colander.SchemaNode(colander.String())
     accept_tos = colander.SchemaNode(colander.Boolean(), missing=False)
 
 
-login_schema = LoginSchema()
+login_schema = _LegacyLoginSchema()
 
 
 def token_to_response(user, token, request):
@@ -473,8 +473,9 @@ def token_to_response(user, token, request):
 class UserLoginRest(ACLDefault):
 
     @json_view(
-        schema=login_schema,
-        validators=[colander_body_validator, validate_json_password])
+        validators=[
+            make_pydantic_validator(LoginPydanticSchema, strip_defaults=False),
+            validate_json_password])
     def post(self):
         request = self.request
         username = request.validated['username']

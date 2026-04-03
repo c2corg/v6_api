@@ -9,16 +9,16 @@ from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import user_profile_documents_config
 from c2corg_api.views.validation import validate_id, \
     validate_body_user_id
-from colander import MappingSchema, SchemaNode, Integer, required
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
+from pydantic import BaseModel
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError
 
 log = logging.getLogger(__name__)
 
 
-class BlockSchema(MappingSchema):
-    user_id = SchemaNode(Integer(), missing=required)
+class BlockSchema(BaseModel):
+    user_id: int
 
 
 def _get_user(user_id):
@@ -35,8 +35,8 @@ class UserBlockRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',
-        schema=BlockSchema(),
-        validators=[colander_body_validator, validate_body_user_id])
+        validators=[make_pydantic_validator(BlockSchema),
+                    validate_body_user_id])
     def post(self):
         """ Block the given user.
 
@@ -71,8 +71,8 @@ class UserUnblockRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',
-        schema=BlockSchema(),
-        validators=[colander_body_validator, validate_body_user_id])
+        validators=[make_pydantic_validator(BlockSchema),
+                    validate_body_user_id])
     def post(self):
         """ Unblock the given user.
 

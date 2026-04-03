@@ -330,7 +330,7 @@ class TestImageRest(BaseTestImage):
         body = self.post_error({})
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertCorniceRequired(errors[0], 'filename')
+        self.assertError(errors, 'filename', 'Field required')
 
     def test_get_caching(self):
         self.get_caching(self.image)
@@ -382,7 +382,7 @@ class TestImageRest(BaseTestImage):
         del body_post['filename']
         body = self.post_error(body_post)
         errors = body.get('errors')
-        self.assertCorniceRequired(errors[0], 'filename')
+        self.assertError(errors, 'filename', 'Field required')
 
     def test_post_duplicated_filename(self):
         body_post = self._post_success_document()
@@ -510,7 +510,7 @@ class TestImageRest(BaseTestImage):
         self.put_wrong_ids(body, self.image.document_id, user='moderator')
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.image.document_id)
+        self.pydantic_put_put_no_document(self.image.document_id)
 
     def test_put_wrong_user(self):
         """Test that a non-moderator user who is not the creator of

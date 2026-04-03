@@ -529,6 +529,28 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(errors[0].get('name'), 'locales')
         return body
 
+    def pydantic_post_same_locale_twice(self, request_body):
+        """Like ``post_same_locale_twice`` but expects the pydantic error
+        message ``'Value error, lang "en" is given twice'`` instead of
+        colander's ``'lang "en" is given twice'``.
+        """
+        response = self.app_post_json(self._prefix, request_body,
+                                      expect_errors=True, status=403)
+
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app_post_json(
+            self._prefix, request_body, headers=headers,
+            expect_errors=True, status=400)
+
+        body = response.json
+        self.assertEqual(body.get('status'), 'error')
+        errors = body.get('errors')
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(
+            errors[0].get('description'),
+            'Value error, lang "en" is given twice')
+        return body
+
     def post_missing_field(self, request_body, field):
         response = self.app_post_json(self._prefix, request_body,
                                       expect_errors=True, status=403)

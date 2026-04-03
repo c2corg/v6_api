@@ -284,3 +284,74 @@ schema_listing_xreport = restrict_schema(
     schema_xreport,
     fields_xreport.get('listing')
 )
+
+
+# ===================================================================
+# Pydantic schemas (generated from the SQLAlchemy model)
+# ===================================================================
+from c2corg_api.models.pydantic import (  # noqa: E402
+    schema_from_sa_model,
+    get_update_schema as pydantic_update_schema,
+    get_create_schema as pydantic_create_schema,
+    DocumentLocaleSchema,
+    DocumentGeometrySchema,
+    AssociationsSchema,
+    _DuplicateLocalesMixin,
+)
+from typing import List, Optional  # noqa: E402
+
+_xreport_locale_attrs = [
+    a for a in schema_locale_attributes + attributes_locales
+]
+
+_XreportLocaleBase = schema_from_sa_model(
+    XreportLocale,
+    name='_XreportLocaleBase',
+    includes=_xreport_locale_attrs,
+    overrides={
+        'version': {'default': None},
+    },
+)
+
+
+class XreportLocaleSchema(DocumentLocaleSchema, _XreportLocaleBase):
+    """Xreport locale with extra fields (place, conditions, etc.)."""
+    pass
+
+
+_xreport_schema_attrs = [
+    a for a in schema_attributes + attributes
+    if a not in ('locales', 'geometry')
+]
+
+_XreportDocBase = schema_from_sa_model(
+    Xreport,
+    name='_XreportDocBase',
+    includes=_xreport_schema_attrs,
+    overrides={
+        'document_id': {'default': None},
+        'version': {'default': None},
+        'event_activity': {'default': ...},
+    },
+)
+
+
+class XreportDocumentSchema(
+    _DuplicateLocalesMixin, _XreportDocBase,
+):
+    """Full xreport document for create/update requests."""
+    locales: Optional[List[XreportLocaleSchema]] = None
+    geometry: Optional[DocumentGeometrySchema] = None
+    associations: Optional[AssociationsSchema] = None
+    model_config = {"extra": "ignore"}
+
+
+CreateXreportSchema = pydantic_create_schema(
+    XreportDocumentSchema,
+    name='CreateXreportSchema',
+)
+
+UpdateXreportSchema = pydantic_update_schema(
+    XreportDocumentSchema,
+    name='UpdateXreportSchema',
+)

@@ -3,7 +3,7 @@ from c2corg_api.views.validation import validate_associations, \
     validate_pagination, validate_preferred_lang_param
 from c2corg_api.views import cors_policy, restricted_json_view
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 from shapely.geometry import Point, shape
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update
@@ -17,7 +17,7 @@ import logging
 from c2corg_api.models import DBSession
 from c2corg_api.models.common.fields_coverage import fields_coverage
 from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage, \
-    schema_coverage, schema_create_coverage, schema_update_coverage
+    schema_coverage, CreateCoverageSchema, UpdateCoverageSchema
 
 
 log = logging.getLogger(__name__)
@@ -49,18 +49,20 @@ class CoverageRest(DocumentRest):
             coverage_documents_config, schema_coverage, include_areas=False)
 
     @restricted_json_view(
-        schema=schema_create_coverage,
         validators=[
-            colander_body_validator,
+            make_pydantic_validator(
+                CreateCoverageSchema,
+                allowed_geometry_types=['POLYGON']),
             validate_coverage_create,
             validate_associations_create])
     def collection_post(self):
         return self._collection_post(schema_coverage, allow_anonymous=False)
 
     @restricted_json_view(
-        schema=schema_update_coverage,
         validators=[
-            colander_body_validator,
+            make_pydantic_validator(
+                UpdateCoverageSchema,
+                allowed_geometry_types=['POLYGON']),
             validate_id,
             validate_coverage_update,
             validate_associations_update])

@@ -2,8 +2,9 @@ from datetime import datetime, timedelta, timezone
 import functools
 
 from c2corg_api.models.outing import schema_outing, Outing, \
-    schema_create_outing, schema_update_outing, ArchiveOuting, \
-    ArchiveOutingLocale, OUTING_TYPE
+    ArchiveOuting, \
+    ArchiveOutingLocale, OUTING_TYPE, \
+    CreateOutingSchema, UpdateOutingSchema
 from c2corg_api.models.utils import get_mid_point
 from c2corg_api.views import cors_policy, restricted_json_view, \
     set_default_geom_from_associations
@@ -20,7 +21,7 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
 from c2corg_api.models.common.attributes import activities
 from c2corg_api.models.common.fields_outing import fields_outing
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 from pyramid.httpexceptions import HTTPForbidden
 
 validate_outing_create = make_validator_create(
@@ -140,9 +141,10 @@ class OutingRest(DocumentRest):
             adapt_schema=outing_schema_adaptor)
 
     @restricted_json_view(
-        schema=schema_create_outing,
         validators=[
-            colander_body_validator,
+            make_pydantic_validator(
+                CreateOutingSchema,
+                allowed_geometry_types=['LINESTRING', 'MULTILINESTRING']),
             validate_outing_create,
             validate_associations_create,
             validate_required_associations,
@@ -156,9 +158,10 @@ class OutingRest(DocumentRest):
             schema_outing, before_add=set_default_geom)
 
     @restricted_json_view(
-        schema=schema_update_outing,
         validators=[
-            colander_body_validator,
+            make_pydantic_validator(
+                UpdateOutingSchema,
+                allowed_geometry_types=['LINESTRING', 'MULTILINESTRING']),
             validate_id,
             validate_outing_update,
             validate_associations_update,

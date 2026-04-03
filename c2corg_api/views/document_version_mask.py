@@ -6,21 +6,26 @@ from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.views import cors_policy, restricted_json_view
-from colander import (
-    MappingSchema, SchemaNode, Integer, String, required, OneOf)
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
+from pydantic import BaseModel, field_validator
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.sql.expression import exists, and_
 
 log = logging.getLogger(__name__)
 
 
-class MaskSchema(MappingSchema):
-    document_id = SchemaNode(Integer(), missing=required)
-    lang = SchemaNode(String(), missing=required,
-                      validator=OneOf(default_langs))
-    version_id = SchemaNode(Integer(), missing=required)
+class MaskSchema(BaseModel):
+    document_id: int
+    lang: str
+    version_id: int
+
+    @field_validator('lang')
+    @classmethod
+    def lang_must_be_valid(cls, v):
+        if v not in default_langs:
+            raise ValueError('must be one of {}'.format(default_langs))
+        return v
 
 
 def validate_version(request, **kwargs):
@@ -73,8 +78,7 @@ class VersionMaskRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',
-        schema=MaskSchema(),
-        validators=[colander_body_validator, validate_version])
+        validators=[make_pydantic_validator(MaskSchema), validate_version])
     def post(self):
         """ Mask the given document version.
 
@@ -102,8 +106,7 @@ class VersionUnmaskRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',
-        schema=MaskSchema(),
-        validators=[colander_body_validator, validate_version])
+        validators=[make_pydantic_validator(MaskSchema), validate_version])
     def post(self):
         """ Unmask the given version.
 

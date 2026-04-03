@@ -18,11 +18,9 @@ from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.models.utils import get_mid_point
 from c2corg_api.search.advanced_search import get_all_filtered_docs
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
-
-from c2corg_api.models.route import Route, schema_route, schema_update_route, \
+from c2corg_api.models.route import Route, schema_route, \
     ArchiveRoute, ArchiveRouteLocale, RouteLocale, ROUTE_TYPE, \
-    schema_create_route
+    CreateRouteSchema, UpdateRouteSchema
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update, NUM_RECENT_OUTINGS
 from c2corg_api.views import cors_policy, restricted_json_view, \
@@ -30,6 +28,7 @@ from c2corg_api.views import cors_policy, restricted_json_view, \
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang, validate_version_id, validate_lang_param, \
     validate_preferred_lang_param, validate_associations, validate_cook_param
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 from c2corg_api.models.common.fields_route import fields_route
 from c2corg_api.models.common.attributes import activities, \
     public_transportation_ratings
@@ -112,9 +111,10 @@ class RouteRest(DocumentRest):
             set_custom_associations=RouteRest.set_recent_outings)
 
     @restricted_json_view(
-        schema=schema_create_route,
         validators=[
-            colander_body_validator,
+            make_pydantic_validator(
+                CreateRouteSchema,
+                allowed_geometry_types=['LINESTRING', 'MULTILINESTRING']),
             validate_route_create,
             validate_associations_create,
             validate_required_associations,
@@ -129,9 +129,10 @@ class RouteRest(DocumentRest):
             after_add=init_linked_attributes)
 
     @restricted_json_view(
-        schema=schema_update_route,
         validators=[
-            colander_body_validator,
+            make_pydantic_validator(
+                UpdateRouteSchema,
+                allowed_geometry_types=['LINESTRING', 'MULTILINESTRING']),
             validate_id,
             validate_route_update,
             validate_associations_update,

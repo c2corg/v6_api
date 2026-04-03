@@ -89,3 +89,54 @@ schema_create_coverage = get_create_schema(schema_coverage)
 schema_update_coverage = get_update_schema(schema_coverage)
 schema_listing_coverage = restrict_schema(
     schema_coverage, fields_coverage.get('listing'))
+
+
+# ===================================================================
+# Pydantic schemas (generated from the SQLAlchemy model)
+# ===================================================================
+from c2corg_api.models.pydantic import (  # noqa: E402
+    schema_from_sa_model,
+    get_update_schema as pydantic_update_schema,
+    get_create_schema as pydantic_create_schema,
+    DocumentLocaleSchema,
+    DocumentGeometrySchema,
+    AssociationsSchema,
+    _DuplicateLocalesMixin,
+)
+from typing import List, Optional  # noqa: E402
+
+_coverage_schema_attrs = [
+    a for a in schema_coverage_attributes + attributes
+    if a not in ('locales', 'geometry')
+]
+
+_CoverageDocBase = schema_from_sa_model(
+    Coverage,
+    name='_CoverageDocBase',
+    includes=_coverage_schema_attrs,
+    overrides={
+        'document_id': {'default': None},
+        'version': {'default': None},
+    },
+)
+
+
+class CoverageDocumentSchema(
+    _DuplicateLocalesMixin, _CoverageDocBase,
+):
+    """Full coverage document for create/update requests."""
+    locales: Optional[List[DocumentLocaleSchema]] = None
+    geometry: Optional[DocumentGeometrySchema] = None
+    associations: Optional[AssociationsSchema] = None
+    model_config = {"extra": "ignore"}
+
+
+CreateCoverageSchema = pydantic_create_schema(
+    CoverageDocumentSchema,
+    name='CreateCoverageSchema',
+)
+
+UpdateCoverageSchema = pydantic_update_schema(
+    CoverageDocumentSchema,
+    name='UpdateCoverageSchema',
+)

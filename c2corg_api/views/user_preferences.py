@@ -2,31 +2,45 @@ from c2corg_api.security.acl import ACLDefault
 from c2corg_api import DBSession
 from c2corg_api.models.area import schema_listing_area, Area
 from c2corg_api.models.document import DocumentLocale
-from c2corg_api.models.schema_utils import SchemaAssociationDoc
 from c2corg_api.models.user import User
 from c2corg_api.views import cors_policy, restricted_json_view, \
     restricted_view, to_json_dict, set_best_locale
 from c2corg_api.views.validation import validate_preferred_lang_param
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 from c2corg_api.models.common.attributes import activities, default_langs
+from pydantic import BaseModel, field_validator
+from typing import List
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from colander import MappingSchema, SchemaNode, String, Boolean, Sequence, \
-    OneOf, required
 from sqlalchemy.orm import joinedload, load_only
 
 
-class FilterPreferencesSchema(MappingSchema):
-    activities = SchemaNode(
-        Sequence(),
-        SchemaNode(String(), validator=OneOf(activities)),
-        missing=required)
-    langs = SchemaNode(
-        Sequence(),
-        SchemaNode(String(), validator=OneOf(default_langs)),
-        missing=required)
-    areas = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=required)
-    followed_only = SchemaNode(Boolean(), missing=required)
+class AreaRef(BaseModel):
+    document_id: int
+
+
+class FilterPreferencesSchema(BaseModel):
+    activities: List[str]
+    langs: List[str]
+    areas: List[AreaRef]
+    followed_only: bool
+
+    @field_validator('activities', mode='before')
+    @classmethod
+    def validate_activities(cls, v):
+        for item in v:
+            if item not in activities:
+                raise ValueError(
+                    '{} is not one of {}'.format(item, activities))
+        return v
+
+    @field_validator('langs', mode='before')
+    @classmethod
+    def validate_langs(cls, v):
+        for item in v:
+            if item not in default_langs:
+                raise ValueError(
+                    '{} is not one of {}'.format(item, default_langs))
+        return v
 
 
 @resource(path='/users/preferences', cors_policy=cors_policy)
@@ -88,7 +102,7 @@ class UserFilterPreferencesRest(ACLDefault):
         }
 
     @restricted_json_view(
-        schema=FilterPreferencesSchema(), validators=[colander_body_validator])
+        validators=[make_pydantic_validator(FilterPreferencesSchema)])
     def post(self):
         user = self.get_user(with_area_locales=False)
 

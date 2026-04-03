@@ -167,3 +167,74 @@ def is_personal(image_id):
         filter(Image.document_id == image_id). \
         scalar()
     return image_type == 'personal'
+
+
+# ===================================================================
+# Pydantic schemas (generated from the SQLAlchemy model)
+# ===================================================================
+from c2corg_api.models.pydantic import (  # noqa: E402
+    schema_from_sa_model,
+    get_update_schema as pydantic_update_schema,
+    get_create_schema as pydantic_create_schema,
+    DocumentLocaleSchema,
+    DocumentGeometrySchema,
+    AssociationsSchema,
+    _DuplicateLocalesMixin,
+)
+from typing import List, Optional  # noqa: E402
+from pydantic import BaseModel as _BaseModel, field_validator  # noqa: E402
+
+_image_schema_attrs = [
+    a for a in schema_attributes + attributes
+    if a not in ('locales', 'geometry')
+]
+
+_ImageDocBase = schema_from_sa_model(
+    Image,
+    name='_ImageDocBase',
+    includes=_image_schema_attrs,
+    overrides={
+        'document_id': {'default': None},
+        'version': {'default': None},
+        'filename': {'default': ...},
+    },
+)
+
+
+class ImageLocaleSchema(DocumentLocaleSchema):
+    """Image locales: images can be created without a title."""
+    title: Optional[str] = ''
+
+    @field_validator('title', mode='before')
+    @classmethod
+    def _coerce_none_title(cls, v):
+        """Colander used ``missing=''`` so that ``None`` / absent title
+        became the empty string.  Reproduce that here."""
+        if v is None:
+            return ''
+        return v
+
+
+class ImageDocumentSchema(
+    _DuplicateLocalesMixin, _ImageDocBase,
+):
+    """Full image document for create/update requests."""
+    locales: Optional[List[ImageLocaleSchema]] = None
+    geometry: Optional[DocumentGeometrySchema] = None
+    associations: Optional[AssociationsSchema] = None
+    model_config = {"extra": "ignore"}
+
+
+CreateImageSchema = pydantic_create_schema(
+    ImageDocumentSchema,
+    name='CreateImageSchema',
+)
+
+UpdateImageSchema = pydantic_update_schema(
+    ImageDocumentSchema,
+    name='UpdateImageSchema',
+)
+
+
+class CreateImageListSchema(_BaseModel):
+    images: Optional[List[ImageDocumentSchema]] = None

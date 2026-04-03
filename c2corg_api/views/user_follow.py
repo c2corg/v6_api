@@ -8,15 +8,15 @@ from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import user_profile_documents_config
 from c2corg_api.views.validation import validate_id, \
     validate_preferred_lang_param, validate_body_user_id
-from colander import MappingSchema, SchemaNode, Integer, required
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
+from pydantic import BaseModel
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 
 log = logging.getLogger(__name__)
 
 
-class FollowSchema(MappingSchema):
-    user_id = SchemaNode(Integer(), missing=required)
+class FollowSchema(BaseModel):
+    user_id: int
 
 
 def get_follower_relation(followed_user_id, follower_user_id):
@@ -31,8 +31,8 @@ def get_follower_relation(followed_user_id, follower_user_id):
 class UserFollowRest(ACLDefault):
 
     @restricted_json_view(
-        schema=FollowSchema(),
-        validators=[colander_body_validator, validate_body_user_id])
+        validators=[make_pydantic_validator(FollowSchema),
+                    validate_body_user_id])
     def post(self):
         """ Follow the given user.
         Creates a follower relation, so that the authenticated user is
@@ -63,8 +63,8 @@ class UserFollowRest(ACLDefault):
 class UserUnfollowRest(ACLDefault):
 
     @restricted_json_view(
-        schema=FollowSchema(),
-        validators=[colander_body_validator, validate_body_user_id])
+        validators=[make_pydantic_validator(FollowSchema),
+                    validate_body_user_id])
     def post(self):
         """ Unfollow the given user.
 
