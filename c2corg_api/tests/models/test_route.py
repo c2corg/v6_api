@@ -1,6 +1,6 @@
 import json
 
-from c2corg_api.ext.colander_ext import wkbelement_from_geojson, \
+from c2corg_api.ext.geometry import wkbelement_from_geojson, \
     geojson_from_wkbelement
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route, RouteLocale

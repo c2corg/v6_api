@@ -281,7 +281,7 @@ class TestOutingRest(BaseDocumentTestRest):
         errors = body.get('errors')
         # With pydantic, the validate_dates_on_creation validator bails
         # out when prior errors exist, so date_start/date_end Required
-        # errors are not emitted (colander emitted all 5 at once).
+        # errors are not emitted (pydantic reports fewer errors at once).
         self.assertEqual(len(errors), 3)
         self.assertCorniceRequired(
             self.get_error(errors, 'activities'), 'activities')
@@ -303,7 +303,7 @@ class TestOutingRest(BaseDocumentTestRest):
         errors = body.get('errors')
         # With pydantic, the empty-activities error is the only one
         # reported (validate_document_for_type returns early before
-        # checking locales).  Colander used to emit 3 errors at once.
+        # checking locales).  The old schema used to emit 3 errors at once.
         self.assertGreaterEqual(len(errors), 1)
         error = self.get_error(errors, 'activities')
         self.assertEqual(
@@ -362,7 +362,7 @@ class TestOutingRest(BaseDocumentTestRest):
         }
         body = self.post_missing_title(body_post)
         errors = body.get('errors')
-        # With pydantic only the missing title is reported (colander
+        # With pydantic only the missing title is reported (the old schema
         # used to emit 3 errors).
         self.assertGreaterEqual(len(errors), 1)
 

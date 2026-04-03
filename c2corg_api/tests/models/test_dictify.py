@@ -2,122 +2,82 @@
 import json
 import unittest
 
-from c2corg_api.models.dictify import dictify, fields_from_schema, \
-    _serialize_value
+from c2corg_api.models.dictify import dictify, _serialize_value
+from c2corg_api.models.field_spec import FieldSpec
 
-from c2corg_api.ext.colander_ext import wkbelement_from_geojson
-
-
-class _FakeChild:
-    """Minimal stand-in for a colander SchemaNode child."""
-    def __init__(self, name):
-        self.name = name
-        self.children = []
-
-    def __iter__(self):
-        return iter(self.children)
+from c2corg_api.ext.geometry import wkbelement_from_geojson
 
 
-class _FakeInspector:
-    """Minimal stand-in for the mapper-like inspector on a schema."""
-    class _Rels:
-        locales = True
-        geometry = True
+class TestFieldSpec(unittest.TestCase):
 
-    class _NoAttr:
-        pass
+    def test_to_dict(self):
+        spec = FieldSpec(
+            sa_model=None,
+            columns=['id', 'username'],
+            locale_fields=['lang', 'title'],
+            geometry_fields=['version', 'geom'],
+        )
+        d = spec.to_dict()
+        self.assertEqual(d['columns'], ['id', 'username'])
+        self.assertEqual(d['locales'], ['lang', 'title'])
+        self.assertEqual(d['geometry'], ['version', 'geom'])
 
-    def __init__(self, rel_names):
-        self._rel_names = rel_names
+    def test_to_dict_no_locales_or_geometry(self):
+        spec = FieldSpec(sa_model=None, columns=['id'])
+        d = spec.to_dict()
+        self.assertEqual(d['columns'], ['id'])
+        self.assertIsNone(d['locales'])
+        self.assertIsNone(d['geometry'])
 
-    @property
-    def relationships(self):
-        return type('R', (), {
-            '__getattr__': lambda self_, name:
-                True if name in self._rel_names
-                else (_ for _ in ()).throw(AttributeError(name))
-        })()
-
-    @property
-    def column_attrs(self):
-        return self._NoAttr()
-
-
-class _FakeSchema:
-    """Minimal stand-in for a SQLAlchemySchemaNode."""
-    def __init__(self, children, rel_names=None):
-        self._children = children
-        self.inspector = _FakeInspector(rel_names or set())
-
-    def __iter__(self):
-        return iter(self._children)
-
-
-class TestFieldsFromSchema(unittest.TestCase):
-
-    def test_columns_only(self):
-        children = [
-            _FakeChild('id'),
-            _FakeChild('username'),
-            _FakeChild('email')
-        ]
-        schema = _FakeSchema(children)
-        spec = fields_from_schema(schema)
-        self.assertEqual(spec['columns'], ['id', 'username', 'email'])
-        self.assertIsNone(spec['locales'])
-        self.assertIsNone(spec['geometry'])
-
-    def test_with_locales_and_geometry(self):
-        locales_child = _FakeChild('locales')
-        locale_inner = _FakeChild('')
-        locale_inner.children = [_FakeChild('lang'), _FakeChild('title')]
-        locales_child.children = [locale_inner]
-
-        geom_child = _FakeChild('geometry')
-        geom_child.children = [_FakeChild('version'), _FakeChild('geom')]
-
-        children = [
-            _FakeChild('document_id'),
-            locales_child,
-            geom_child,
-            _FakeChild('quality'),
-        ]
-        schema = _FakeSchema(children, rel_names={'locales', 'geometry'})
-        spec = fields_from_schema(schema)
-        self.assertEqual(spec['columns'], ['document_id', 'quality'])
-        self.assertEqual(spec['locales'], ['lang', 'title'])
-        self.assertEqual(spec['geometry'], ['version', 'geom'])
-
-    def test_real_schema(self):
-        """Ensure extraction works with actual ColanderAlchemy schemas."""
+    def test_real_route_schema(self):
+        """Ensure FieldSpec works with actual model schemas."""
         from c2corg_api.models.route import schema_route
-        spec = fields_from_schema(schema_route)
-        self.assertIn('document_id', spec['columns'])
-        self.assertIn('activities', spec['columns'])
-        self.assertIsNotNone(spec['locales'])
-        self.assertIn('lang', spec['locales'])
-        self.assertIn('title', spec['locales'])
-        self.assertIsNotNone(spec['geometry'])
-        self.assertIn('geom', spec['geometry'])
+        self.assertIn('document_id', schema_route.columns)
+        self.assertIn('activities', schema_route.columns)
+        self.assertIsNotNone(schema_route.locale_fields)
+        self.assertIn('lang', schema_route.locale_fields)
+        self.assertIn('title', schema_route.locale_fields)
+        self.assertIsNotNone(schema_route.geometry_fields)
+        self.assertIn('geom', schema_route.geometry_fields)
 
     def test_real_listing_schema(self):
         """Listing schemas expose fewer columns."""
         from c2corg_api.models.area import schema_listing_area
-        spec = fields_from_schema(schema_listing_area)
-        self.assertIn('document_id', spec['columns'])
-        self.assertIn('area_type', spec['columns'])
-        # Listing area has locales but no geometry
-        self.assertIsNotNone(spec['locales'])
-        self.assertIsNone(spec['geometry'])
+        self.assertIn('document_id', schema_listing_area.columns)
+        self.assertIn('area_type', schema_listing_area.columns)
+        self.assertIsNotNone(schema_listing_area.locale_fields)
+        self.assertIsNone(schema_listing_area.geometry_fields)
 
     def test_real_user_schema(self):
         """User schema: no locales, no geometry."""
         from c2corg_api.models.user import schema_user
-        spec = fields_from_schema(schema_user)
-        self.assertIn('id', spec['columns'])
-        self.assertIn('username', spec['columns'])
-        self.assertIsNone(spec['locales'])
-        self.assertIsNone(spec['geometry'])
+        self.assertIn('id', schema_user.columns)
+        self.assertIn('username', schema_user.columns)
+        self.assertIsNone(schema_user.locale_fields)
+        self.assertIsNone(schema_user.geometry_fields)
+
+    def test_restrict(self):
+        spec = FieldSpec(
+            sa_model=None,
+            columns=['document_id', 'version', 'quality', 'area_type'],
+            locale_fields=['version', 'lang', 'title', 'description'],
+            geometry_fields=['version', 'geom', 'geom_detail'],
+        )
+        restricted = spec.restrict([
+            'area_type', 'locales.title', 'geometry.geom',
+        ])
+        self.assertIn('document_id', restricted.columns)  # default
+        self.assertIn('version', restricted.columns)       # default
+        self.assertIn('area_type', restricted.columns)
+        self.assertNotIn('quality', restricted.columns)
+
+        self.assertIn('lang', restricted.locale_fields)    # default
+        self.assertIn('title', restricted.locale_fields)
+        self.assertNotIn('description', restricted.locale_fields)
+
+        self.assertIn('version', restricted.geometry_fields)  # default
+        self.assertIn('geom', restricted.geometry_fields)
+        self.assertNotIn('geom_detail', restricted.geometry_fields)
 
 
 class _FakeObj:

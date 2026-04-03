@@ -1,12 +1,9 @@
 """
-Standalone replacement for ColanderAlchemy's ``objectify()`` method.
+Standalone ``objectify()`` implementation.
 
 Converts a validated dict (from pydantic or similar) into a SQLAlchemy
 model instance, recursing into relationships for ``locales`` and
 ``geometry``.
-
-This module eliminates the runtime dependency on ColanderAlchemy for the
-create/update code paths.
 """
 import logging
 
@@ -42,8 +39,7 @@ def objectify(sa_model, data):
     - other dict-valued relationships are recursed generically
 
     Keys in *data* that do not correspond to a mapped property (e.g.
-    ``associations``, ``message``) are silently ignored, matching the
-    behaviour of ColanderAlchemy's ``objectify``.
+    ``associations``, ``message``) are silently ignored.
     """
     mapper = sa_inspect(sa_model)
     instance = sa_model()
@@ -54,7 +50,7 @@ def objectify(sa_model, data):
 
     for key, value in data.items():
         if value is None:
-            # Match ColanderAlchemy: skip None so we don't overwrite
+            # Skip None so we don't overwrite
             # defaults on the model (nullable columns stay None anyway).
             if key in col_keys:
                 setattr(instance, key, None)

@@ -4,9 +4,6 @@ set -e
 echo "==> Installing Python dependencies..."
 pip install -e ".[dev]"
 
-echo "==> Installing ColanderAlchemy (--no-deps to bypass stale sqlalchemy~=1.3.24 constraint)..."
-pip install --no-deps 'ColanderAlchemy @ git+https://github.com/c2corg/ColanderAlchemy.git@v0.3.4+c2corg.1'
-
 echo "==> Copying env.local.sample to env.local (if not present)..."
 if [ ! -f config/env.local ]; then
   cp config/env.local.sample config/env.local

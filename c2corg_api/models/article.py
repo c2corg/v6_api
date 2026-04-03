@@ -1,12 +1,11 @@
 from c2corg_api.models import schema, Base, enums, DBSession
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, schema_document_locale, schema_attributes)
+    ArchiveDocument, Document,
+    schema_attributes, schema_locale_attributes)
 from c2corg_api.models.enums import article_category, activity_type
-from c2corg_api.models.schema_utils import get_update_schema, \
-    restrict_schema, get_create_schema
+from c2corg_api.models.field_spec import build_field_spec
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.common.fields_article import fields_article
-from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Column,
     Integer,
@@ -65,30 +64,17 @@ class ArchiveArticle(_ArticleMixin, ArchiveDocument):
     __table_args__ = Base.__table_args__
 
 
-schema_article_locale = schema_document_locale
 schema_article_attributes = list(schema_attributes)
 schema_article_attributes.remove('geometry')
 
-schema_article = SQLAlchemySchemaNode(
+schema_article = build_field_spec(
     Article,
-    # whitelisted attributes
     includes=schema_article_attributes + attributes,
-    overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_article_locale]
-        },
-    })
+    locale_fields=schema_locale_attributes,
+)
 
-schema_create_article = get_create_schema(schema_article)
-schema_update_article = get_update_schema(schema_article)
-schema_listing_article = restrict_schema(
-    schema_article, fields_article.get('listing'))
+schema_listing_article = schema_article.restrict(
+    fields_article.get('listing'))
 
 
 def is_personal(article_id):

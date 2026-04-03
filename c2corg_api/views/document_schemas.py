@@ -10,7 +10,6 @@ from c2corg_api.models.xreport import XREPORT_TYPE, Xreport, \
     schema_listing_xreport, XreportLocale
 from c2corg_api.models.route import schema_route, ROUTE_TYPE, Route, \
     RouteLocale
-from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.topo_map import MAP_TYPE, TopoMap, \
     schema_listing_topo_map
 from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile, \
@@ -172,7 +171,7 @@ def adapt_outing_schema_for_activities(activities, field_list_type):
         activities = attributes.activities
 
     fields = get_all_fields(fields_outing, activities, field_list_type)
-    return restrict_schema(schema_outing, fields)
+    return schema_outing.restrict(fields)
 
 
 outing_schema_adaptor = make_schema_adaptor(
@@ -209,7 +208,7 @@ def adapt_route_schema_for_activities(activities, field_list_type):
         activities = [a for a in attributes.activities if a != 'paragliding']
 
     fields = get_all_fields(fields_route, activities, field_list_type)
-    return restrict_schema(schema_route, fields)
+    return schema_route.restrict(fields)
 
 
 route_schema_adaptor = make_schema_adaptor(
@@ -247,7 +246,7 @@ def adapt_waypoint_schema_for_type(waypoint_type, field_list_type):
     """
     fields = fields_waypoint.get(waypoint_type, {}).get(field_list_type, [])
 
-    schema = restrict_schema(schema_waypoint, fields)
+    schema = schema_waypoint.restrict(fields)
 
     return schema
 

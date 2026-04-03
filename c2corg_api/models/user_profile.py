@@ -1,12 +1,11 @@
 from c2corg_api.models import schema, Base
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, get_geometry_schema_overrides,
-    schema_document_locale, schema_attributes, DocumentLocale)
+    ArchiveDocument, Document,
+    schema_attributes, schema_locale_attributes, geometry_attributes)
 from c2corg_api.models.enums import user_category, activity_type
-from c2corg_api.models.schema_utils import restrict_schema
+from c2corg_api.models.field_spec import build_field_spec
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.common.fields_user_profile import fields_user_profile
-from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Column,
     Integer,
@@ -73,56 +72,28 @@ class ArchiveUserProfile(_UserProfileMixin, ArchiveDocument):
     __table_args__ = Base.__table_args__
 
 
-# user profiles use a special schema for the locales which ignores the 'title'
+# user profiles use a special locale which ignores the 'title'
 # attribute (user profiles do not have a title).
-schema_user_profile_locale = SQLAlchemySchemaNode(
-    DocumentLocale,
-    # whitelisted attributes (without 'title')
-    includes=['version', 'lang', 'description', 'summary'],
-    overrides={
-        'version': {
-            'missing': None
-        }
-    })
+_user_profile_locale_fields = [
+    'version', 'lang', 'description', 'summary'
+]
 
-
-schema_user_profile = SQLAlchemySchemaNode(
+schema_user_profile = build_field_spec(
     UserProfile,
-    # whitelisted attributes
     includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_user_profile_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POINT'])
-    })
+    locale_fields=_user_profile_locale_fields,
+    geometry_fields=geometry_attributes,
+)
 
-
-schema_internal_user_profile = SQLAlchemySchemaNode(
+schema_internal_user_profile = build_field_spec(
     UserProfile,
-    # whitelisted attributes
     includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_document_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POINT'])
-    })
+    locale_fields=schema_locale_attributes,
+    geometry_fields=geometry_attributes,
+)
 
-schema_listing_user_profile = restrict_schema(
-    schema_user_profile, fields_user_profile.get('listing'))
+schema_listing_user_profile = schema_user_profile.restrict(
+    fields_user_profile.get('listing'))
 
 
 # ===================================================================

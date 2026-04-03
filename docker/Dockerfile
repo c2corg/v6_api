@@ -33,8 +33,7 @@ WORKDIR /var/www/
 
 ADD project.tar .
 RUN chown -R root:root /var/www \
- && pip install . \
- && pip install --no-deps 'ColanderAlchemy @ git+https://github.com/c2corg/ColanderAlchemy.git@v0.3.4+c2corg.1'
+ && pip install .
 
 EXPOSE 8080
 ENTRYPOINT ["./docker/scripts/entrypoint.sh"]

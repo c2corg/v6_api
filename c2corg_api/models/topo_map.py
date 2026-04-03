@@ -1,5 +1,5 @@
 from c2corg_api.models.enums import map_editor, map_scale
-from c2corg_api.models.schema_utils import restrict_schema, get_update_schema
+from c2corg_api.models.field_spec import build_field_spec
 from c2corg_api.models.common.fields_topo_map import fields_topo_map
 from sqlalchemy import (
     Column,
@@ -8,13 +8,11 @@ from sqlalchemy import (
     String
     )
 
-from colanderalchemy import SQLAlchemySchemaNode
-
 from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, get_geometry_schema_overrides,
-    schema_document_locale, schema_attributes)
+    ArchiveDocument, Document,
+    schema_attributes, schema_locale_attributes, geometry_attributes)
 from c2corg_api.models.common import document_types
 
 MAP_TYPE = document_types.MAP_TYPE
@@ -74,26 +72,15 @@ class ArchiveTopoMap(_MapMixin, ArchiveDocument):
     __table_args__ = Base.__table_args__
 
 
-schema_topo_map = SQLAlchemySchemaNode(
+schema_topo_map = build_field_spec(
     TopoMap,
-    # whitelisted attributes
     includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_document_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POLYGON', 'MULTIPOLYGON'])
-    })
+    locale_fields=schema_locale_attributes,
+    geometry_fields=geometry_attributes,
+)
 
-schema_update_topo_map = get_update_schema(schema_topo_map)
-schema_listing_topo_map = restrict_schema(
-    schema_topo_map, fields_topo_map.get('listing'))
+schema_listing_topo_map = schema_topo_map.restrict(
+    fields_topo_map.get('listing'))
 
 
 # ===================================================================

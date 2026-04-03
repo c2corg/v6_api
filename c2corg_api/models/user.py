@@ -2,6 +2,7 @@ import bcrypt
 from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.models.field_spec import FieldSpec
 from sqlalchemy import (
     Boolean,
     Column,
@@ -10,11 +11,8 @@ from sqlalchemy import (
     String
 )
 
-from colanderalchemy import SQLAlchemySchemaNode
-
 from c2corg_api.models import Base, users_schema, schema, enums
 
-import colander
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import ForeignKey, Index
@@ -163,31 +161,13 @@ Index('ix_users_user_lower_forum_username',
       unique=True)
 
 
-schema_user = SQLAlchemySchemaNode(
-    User,
-    # whitelisted attributes
-    includes=[
-        'id', 'username', 'forum_username', 'name', 'email', 'email_validated',
-        'moderator'],
-    overrides={
-        'id': {
-            'missing': None
-        }
-    })
-
-
-schema_create_user = SQLAlchemySchemaNode(
-    User,
-    # whitelisted attributes
-    includes=['username', 'forum_username', 'name', 'email', 'lang'],
-    overrides={
-        'email': {
-            'validator': colander.Email()
-        },
-        'lang': {
-            'validator': colander.OneOf(default_langs)
-        }
-    })
+schema_user = FieldSpec(
+    sa_model=User,
+    columns=[
+        'id', 'username', 'forum_username', 'name',
+        'email', 'email_validated', 'moderator',
+    ],
+)
 
 
 # ===================================================================
@@ -217,7 +197,7 @@ class CreateUserSchema(BaseModel):
 
 
 class LoginSchema(BaseModel):
-    """Pydantic replacement for the colander ``LoginSchema``."""
+    """Pydantic ``LoginSchema``."""
     username: str
     password: str
     accept_tos: Optional[bool] = False

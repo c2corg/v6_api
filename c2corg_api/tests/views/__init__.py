@@ -531,8 +531,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def pydantic_post_same_locale_twice(self, request_body):
         """Like ``post_same_locale_twice`` but expects the pydantic error
-        message ``'Value error, lang "en" is given twice'`` instead of
-        colander's ``'lang "en" is given twice'``.
+        message ``'Value error, lang "en" is given twice'``.
         """
         response = self.app_post_json(self._prefix, request_body,
                                       expect_errors=True, status=403)
@@ -739,7 +738,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def pydantic_put_put_no_document(self, id, user='contributor'):
         """Like ``put_put_no_document`` but expects the pydantic error
-        message ``'Field required'`` instead of colander's ``'Required'``.
+        message ``'Field required'``.
         Use this for endpoints whose body validation has been migrated
         to pydantic.
         """

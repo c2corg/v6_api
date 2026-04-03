@@ -1,5 +1,5 @@
-# Inspired from the c2cgeoform colander extension
-# https://github.com/camptocamp/c2cgeoform/blob/master/c2cgeoform/ext/
+# Geometry serialisation utilities (WKB ↔ GeoJSON).
+# Originally inspired from the c2cgeoform geometry extension.
 
 from geoalchemy2 import WKBElement
 from geomet import wkb

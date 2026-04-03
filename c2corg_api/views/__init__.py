@@ -1,8 +1,7 @@
 import logging
 
 from c2corg_api.models import DBSession
-from c2corg_api.models.dictify import dictify as sa_dictify, \
-    fields_from_schema
+from c2corg_api.models.dictify import dictify as sa_dictify
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.document_history import get_creators
 from c2corg_api.models.user import AccountNotValidated
@@ -106,11 +105,9 @@ def restricted_view(**kw):
 def to_json_dict(obj, schema, with_special_locales_attrs=False,
                  with_special_geometry_attrs=False,
                  cook_locale=False):
-    field_spec = fields_from_schema(schema)
-    obj_dict = sa_dictify(obj, field_spec)
-    # manually copy certain attributes that were set on the object (it would be
-    # cleaner to add the field to the schema, but ColanderAlchemy doesn't like
-    # it because it's not a real column)
+    obj_dict = sa_dictify(obj, schema)
+    # manually copy certain attributes that were set on the object
+    # (these are not real SA columns, so they are not in the field spec)
     special_attributes = [
         'available_langs', 'associations', 'maps', 'areas', 'author',
         'protected', 'type', 'name', 'forum_username', 'creator', 'img_count'

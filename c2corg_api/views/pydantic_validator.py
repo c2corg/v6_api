@@ -1,8 +1,8 @@
 """
 Pydantic-based body validator for cornice views.
 
-This module provides a drop-in replacement for cornice's
-`colander_body_validator`, using pydantic models instead of colander schemas.
+This module provides a drop-in replacement for cornice's built-in body
+validator, using pydantic models for request validation.
 
 Usage:
     from c2corg_api.views.pydantic_validator import make_pydantic_validator
@@ -20,7 +20,7 @@ import geojson as geojson_lib
 from geoalchemy2 import WKBElement
 from pydantic import BaseModel, ValidationError
 
-from c2corg_api.ext.colander_ext import wkbelement_from_geojson
+from c2corg_api.ext.geometry import wkbelement_from_geojson
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def _convert_geojson_to_wkb(data, srid=_DEFAULT_SRID, request=None,
                             field_prefix=None):
     """Walk *data* (a nested dict) and convert any geometry GeoJSON strings
     found under ``geometry.geom`` / ``geometry.geom_detail`` into
-    :class:`WKBElement` instances, matching what colander's ``deserialize``
+    :class:`WKBElement` instances, matching what the old schema ``deserialize``
     used to do.
 
     If *request* is given, invalid geometries are reported via
@@ -123,7 +123,7 @@ def _is_collection_field(model, field_name):
     BaseModel type (i.e. a relationship / nested object).
 
     These are the fields whose ``None`` values must be stripped before
-    the dict reaches ColanderAlchemy's ``objectify``, which would try
+    the dict reaches ``objectify``, which would try
     to iterate over them.
     """
     field_info = model.model_fields.get(field_name)
@@ -170,7 +170,7 @@ def _strip_defaults_and_collections(data, fields_set, model):
     """Remove unneeded ``None`` values from *data*.
 
     - Collection fields (list, dict, nested BaseModel) whose value is
-      ``None`` are always stripped so that ColanderAlchemy's ``objectify``
+      ``None`` are always stripped so that ``objectify``
       does not try to iterate over them.
 
     - Scalar fields whose value is ``None`` **and** that were not
@@ -240,8 +240,8 @@ def make_pydantic_validator(pydantic_model, allowed_geometry_types=None,
 
     *strip_defaults* controls whether unset ``None`` scalar fields are
     removed from the validated dict.  Defaults to ``True`` which is
-    required for document schemas that go through ColanderAlchemy's
-    ``objectify``.  Set to ``False`` for simple hand-written schemas
+    required for document schemas that go through ``objectify``.
+    Set to ``False`` for simple hand-written schemas
     where downstream code expects all fields to be present.
     """
 
@@ -274,7 +274,7 @@ def make_pydantic_validator(pydantic_model, allowed_geometry_types=None,
         #
         # However, None values for list/dict fields (locales,
         # associations, geometry …) must be stripped because
-        # ColanderAlchemy's ``objectify`` tries to iterate over them.
+        # ``objectify`` tries to iterate over them.
         #
         # Additionally, None values for scalar fields that the user
         # did NOT explicitly send must be stripped so that
@@ -288,7 +288,7 @@ def make_pydantic_validator(pydantic_model, allowed_geometry_types=None,
             dumped = validated.model_dump()
 
         # Convert GeoJSON geometry strings -> WKBElement, replicating
-        # what the colander schema ``deserialize`` used to do.
+        # what the old schema ``deserialize`` used to do.
         _convert_geojson_to_wkb(
             dumped, request=request,
             allowed_geometry_types=allowed_geometry_types)

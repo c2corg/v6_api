@@ -1,13 +1,11 @@
 from c2corg_api.models import schema, Base
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, get_geometry_schema_overrides,
-    schema_document_locale, schema_attributes)
+    ArchiveDocument, Document,
+    schema_attributes, schema_locale_attributes, geometry_attributes)
 from c2corg_api.models.enums import area_type
-from c2corg_api.models.schema_utils import restrict_schema, \
-    get_update_schema, get_create_schema
+from c2corg_api.models.field_spec import build_field_spec
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.common.fields_area import fields_area
-from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Column,
     Integer,
@@ -68,27 +66,15 @@ class ArchiveArea(_AreaMixin, ArchiveDocument):
     __table_args__ = Base.__table_args__
 
 
-schema_area = SQLAlchemySchemaNode(
+schema_area = build_field_spec(
     Area,
-    # whitelisted attributes
     includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_document_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POLYGON', 'MULTIPOLYGON'])
-    })
+    locale_fields=schema_locale_attributes,
+    geometry_fields=geometry_attributes,
+)
 
-schema_create_area = get_create_schema(schema_area)
-schema_update_area = get_update_schema(schema_area)
-schema_listing_area = restrict_schema(
-    schema_area, fields_area.get('listing'))
+schema_listing_area = schema_area.restrict(
+    fields_area.get('listing'))
 
 
 # ===================================================================

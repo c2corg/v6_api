@@ -24,7 +24,7 @@ forum_username_tests = {
     # min length
     'a': 'Shorter than minimum length 3',
     'a'*3: False,
-    # max length (colander schema validation)
+    # max length (pydantic schema validation)
     'a'*26: 'Longer than maximum length 25',
     'a'*25: False,
     # valid characters

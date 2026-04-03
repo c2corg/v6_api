@@ -106,7 +106,6 @@ source venv/bin/activate
 
 ```shell
 pip install -e ".[dev]"
-pip install --no-deps 'ColanderAlchemy @ git+https://github.com/c2corg/ColanderAlchemy.git@v0.3.4+c2corg.1'
 ```
 
 - Start the necessary tools (postgres database, redis, and elasticsearch) in docker containers:

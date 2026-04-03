@@ -33,7 +33,6 @@ COPY alembic_migration alembic_migration
 COPY c2corg_api c2corg_api
 COPY es_migration es_migration
 COPY requirements.txt dev-requirements.txt MANIFEST.in *.ini setup.py README.md .
-RUN pip install . \
- && pip install --no-deps 'ColanderAlchemy @ git+https://github.com/c2corg/ColanderAlchemy.git@v0.3.4+c2corg.1'
+RUN pip install .
 
 CMD ["pserve", "development.ini"]

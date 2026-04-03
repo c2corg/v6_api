@@ -14,7 +14,7 @@ from c2corg_api.models.article import Article
 from c2corg_api.models.area import Area
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.ext.colander_ext import wkbelement_from_geojson
+from c2corg_api.ext.geometry import wkbelement_from_geojson
 
 from geoalchemy2 import WKBElement
 

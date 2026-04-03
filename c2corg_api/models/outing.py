@@ -1,6 +1,4 @@
-import colander
-from c2corg_api.models.schema_utils import restrict_schema, \
-    get_update_schema, get_create_schema
+from c2corg_api.models.field_spec import build_field_spec
 from sqlalchemy import (
     Column,
     Integer,
@@ -11,15 +9,13 @@ from sqlalchemy import (
     ForeignKey
     )
 
-from colanderalchemy import SQLAlchemySchemaNode
-
 from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
     schema_locale_attributes,
-    schema_attributes, get_geometry_schema_overrides)
+    schema_attributes, geometry_attributes)
 from c2corg_api.models import enums
 from c2corg_api.models.common import document_types
 
@@ -228,42 +224,12 @@ class ArchiveOutingLocale(_OutingLocaleMixin, ArchiveDocumentLocale):
     __table_args__ = Base.__table_args__
 
 
-schema_outing_locale = SQLAlchemySchemaNode(
-    OutingLocale,
-    # whitelisted attributes
-    includes=schema_locale_attributes + attributes_locales,
-    overrides={
-        'version': {
-            'missing': None
-        }
-    })
-
-schema_outing = SQLAlchemySchemaNode(
+schema_outing = build_field_spec(
     Outing,
-    # whitelisted attributes
     includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_outing_locale]
-        },
-        'activities': {
-            'validator': colander.Length(min=1)
-        },
-        'geometry': get_geometry_schema_overrides(
-            ['LINESTRING', 'MULTILINESTRING'])
-    })
-
-schema_create_outing = get_create_schema(schema_outing)
-schema_update_outing = get_update_schema(schema_outing)
-schema_association_outing = restrict_schema(schema_outing, [
-    'locales.title', 'activities', 'date_start', 'date_end'
-])
+    locale_fields=schema_locale_attributes + attributes_locales,
+    geometry_fields=geometry_attributes,
+)
 
 
 # ===================================================================
@@ -313,8 +279,7 @@ _OutingDocBase = schema_from_sa_model(
         'document_id': {'default': None},
         'version': {'default': None},
         # Accept any string for activities; downstream validators
-        # (validate_document_for_type) check valid values, matching
-        # the old colander behaviour.
+        # (validate_document_for_type) check valid values.
         'activities': {'type': List[str]},
     },
 )

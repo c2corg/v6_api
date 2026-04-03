@@ -2,12 +2,10 @@ import enum
 
 import abc
 
-from c2corg_api.ext import colander_ext
 from c2corg_api.models import Base, schema, DBSession, enums
 from c2corg_api.models.utils import copy_attributes, extend_dict, wkb_to_shape
 from c2corg_api.models.common import document_types
 from c2corg_api.models.common.attributes import quality_types
-from colanderalchemy.schema import SQLAlchemySchemaNode
 from geoalchemy2 import Geometry, WKBElement
 from pyramid.httpexceptions import HTTPInternalServerError
 from shapely import wkt
@@ -300,11 +298,6 @@ class _DocumentGeometryMixin(object):
             Geometry(
                 geometry_type='POINT', srid=3857, dimension=2,
                 spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
-            info={
-                'colanderalchemy': {
-                    'typ': colander_ext.Geometry(['POINT'], srid=3857)
-                }
-            }
         )
 
     @declared_attr
@@ -314,20 +307,11 @@ class _DocumentGeometryMixin(object):
                 geometry_type='GEOMETRY', srid=3857,
                 use_typmod=False,
                 spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
-            info={
-                'colanderalchemy': {
-                    'typ': colander_ext.Geometry(['GEOMETRY'], srid=3857)
-                }
-            }
         )
 
 
 class DocumentGeometry(Base, _DocumentGeometryMixin):
     __tablename__ = 'documents_geometries'
-
-    __colanderalchemy_config__ = {
-        'missing': None
-    }
 
     __mapper_args__ = {
         'version_id_col': _DocumentGeometryMixin.version
@@ -433,40 +417,9 @@ schema_locale_attributes = [
     'version', 'lang', 'title', 'description', 'summary'
 ]
 
-schema_document_locale = SQLAlchemySchemaNode(
-    DocumentLocale,
-    # whitelisted attributes
-    includes=schema_locale_attributes,
-    overrides={
-        'version': {
-            'missing': None
-        }
-    })
-
-geometry_schema_overrides = {
-    # whitelisted attributes
-    'includes': ['version', 'geom', 'geom_detail', 'has_geom_detail'],
-    'overrides': {
-        'version': {
-            'missing': None
-        }
-    }
-}
-
-
-def get_geometry_schema_overrides(geometry_types):
-    return {
-        # whitelisted attributes
-        'includes': ['version', 'geom', 'geom_detail', 'has_geom_detail'],
-        'overrides': {
-            'version': {
-                'missing': None
-            },
-            'geom_detail': {
-                'typ': colander_ext.Geometry(geometry_types, srid=3857)
-            }
-        }
-    }
+geometry_attributes = [
+    'version', 'geom', 'geom_detail', 'has_geom_detail'
+]
 
 
 def get_available_langs(document_id):

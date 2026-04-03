@@ -1,5 +1,4 @@
-from c2corg_api.models.schema_utils import restrict_schema, \
-    get_update_schema, get_create_schema
+from c2corg_api.models.field_spec import build_field_spec
 from sqlalchemy import (
     Boolean,
     Column,
@@ -10,14 +9,11 @@ from sqlalchemy import (
     )
 
 
-from colanderalchemy import SQLAlchemySchemaNode
-
 from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
-    schema_attributes, schema_locale_attributes,
-    get_geometry_schema_overrides)
+    schema_attributes, schema_locale_attributes, geometry_attributes)
 from c2corg_api.models import enums
 from c2corg_api.models.common import document_types
 
@@ -308,40 +304,12 @@ class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
     __table_args__ = Base.__table_args__
 
 
-schema_waypoint_locale = SQLAlchemySchemaNode(
-    WaypointLocale,
-    # whitelisted attributes
-    includes=schema_locale_attributes + attributes_locales,
-    overrides={
-        'version': {
-            'missing': None
-        }
-    })
-
-
-schema_waypoint = SQLAlchemySchemaNode(
+schema_waypoint = build_field_spec(
     Waypoint,
-    # whitelisted attributes
     includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_waypoint_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POINT'])
-    })
-
-schema_create_waypoint = get_create_schema(schema_waypoint)
-schema_update_waypoint = get_update_schema(schema_waypoint)
-schema_association_waypoint = restrict_schema(schema_waypoint, [
-    'elevation', 'locales.title', 'locales.access_period', 'geometry.geom',
-    'public_transportation_rating'
-])
+    locale_fields=schema_locale_attributes + attributes_locales,
+    geometry_fields=geometry_attributes,
+)
 
 
 # ===================================================================

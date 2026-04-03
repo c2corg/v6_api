@@ -1,13 +1,12 @@
 """
 Pydantic schema generation from SQLAlchemy models.
 
-This module is the pydantic counterpart of ColanderAlchemy: it introspects
-SQLAlchemy mapped classes and produces pydantic ``BaseModel`` subclasses
-whose fields mirror the mapped columns.
+This module introspects SQLAlchemy mapped classes and produces pydantic
+``BaseModel`` subclasses whose fields mirror the mapped columns.
 
 It also provides reusable base schemas for locales, geometry and
-associations that parallel the colander equivalents defined in
-``models.document`` and ``models.schema_utils``.
+associations that parallel the field specifications defined in
+``models.document`` and ``models.field_spec``.
 
 Usage::
 
@@ -197,7 +196,7 @@ def schema_from_sa_model(
 
 
 # ---------------------------------------------------------------------------
-# Reusable base schemas (parallel to colander equivalents)
+# Reusable base schemas
 # ---------------------------------------------------------------------------
 
 
@@ -217,7 +216,7 @@ class DocumentLocaleSchema(BaseModel):
 
 
 class DocumentGeometrySchema(BaseModel):
-    """Pydantic equivalent of the colander geometry schema."""
+    """Pydantic geometry schema."""
     version: Optional[int] = None
     geom: Optional[str] = None
     geom_detail: Optional[str] = None
@@ -271,7 +270,7 @@ def get_update_schema(
     """Wrap a document pydantic schema into an update envelope
     with ``message`` and ``document`` keys.
 
-    Mirrors ``schema_utils.get_update_schema`` for colander.
+    Mirrors ``schema_utils.get_update_schema``.
     """
     schema_name = name or f'Update{document_schema.__name__}'
     return create_model(
@@ -289,7 +288,7 @@ def get_create_schema(
     """Return *document_schema* unchanged (associations are already
     part of the document schema).
 
-    Mirrors ``schema_utils.get_create_schema`` for colander, which
+    Mirrors ``schema_utils.get_create_schema``, which
     simply adds an ``associations`` field — our pydantic document
     schemas already include it.
     """

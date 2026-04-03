@@ -238,7 +238,7 @@ class DocumentRest(ACLDefault):
         else:
             user_id = self.request.authenticated_userid
 
-        document = sa_objectify(schema.inspector.class_, document_in)
+        document = sa_objectify(schema.sa_model, document_in)
         document.document_id = None
 
         if before_add:
@@ -280,7 +280,7 @@ class DocumentRest(ACLDefault):
             after_update=None):
         id = self.request.validated['id']
         document_in = \
-            sa_objectify(schema.inspector.class_,
+            sa_objectify(schema.sa_model,
                          self.request.validated['document'])
         self._check_document_id(id, document_in.document_id)
 
@@ -604,7 +604,7 @@ def validate_document_for_type(document, request, fields, type_field,
 
     if not document_type:
         # can't do the validation without the type – add an explicit
-        # error (previously this was surfaced by the Colander schema).
+        # error (the type field is required for polymorphic dispatch).
         if type_field in document and document[type_field] == []:
             request.errors.add(
                 'body', type_field, 'Shorter than minimum length 1')
