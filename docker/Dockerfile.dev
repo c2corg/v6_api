@@ -1,4 +1,4 @@
-FROM docker.io/python:3.10-slim-trixie
+FROM docker.io/python:3.11-slim-trixie
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL=en_US.UTF-8
