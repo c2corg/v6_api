@@ -190,4 +190,4 @@ class RateLimitingTest(BaseTestRest):
     def _set_user(self, username):
         self.username = username
         user_id = self.global_userids[username]
-        self.user = self.session.query(User).get(user_id)
+        self.user = self.session.get(User, user_id)

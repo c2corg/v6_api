@@ -1,6 +1,8 @@
 import transaction
 import zope
 
+from sqlalchemy import text
+
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
 
@@ -13,12 +15,12 @@ class SetDefaultGeometries(MigrateBase):
         self.start('default geometries')
 
         with transaction.manager:
-            self.session_target.execute(SQL_ROUTE_OUTING_LINESTRING)
-            self.session_target.execute(SQL_ROUTE_OUTING_MULTILINESTRING)
-            self.session_target.execute(SQL_ROUTE_NO_GEOM)
-            self.session_target.execute(SQL_OUTING_NO_GEOM)
-            self.session_target.execute(SQL_OUTING_NO_ROUTE)
-            self.session_target.execute(SQL_ROUTE_OUTING_UPDATE_ARCHIVES)
+            self.session_target.execute(text(SQL_ROUTE_OUTING_LINESTRING))
+            self.session_target.execute(text(SQL_ROUTE_OUTING_MULTILINESTRING))
+            self.session_target.execute(text(SQL_ROUTE_NO_GEOM))
+            self.session_target.execute(text(SQL_OUTING_NO_GEOM))
+            self.session_target.execute(text(SQL_OUTING_NO_ROUTE))
+            self.session_target.execute(text(SQL_ROUTE_OUTING_UPDATE_ARCHIVES))
             zope.sqlalchemy.mark_changed(self.session_target)
 
         # run vacuum on the table (must be outside a transaction)
@@ -26,8 +28,12 @@ class SetDefaultGeometries(MigrateBase):
         conn = engine.connect()
         old_lvl = conn.connection.isolation_level
         conn.connection.set_isolation_level(0)
-        conn.execute('vacuum analyze guidebook.documents_geometries;')
-        conn.execute('vacuum analyze guidebook.documents_geometries_archives;')
+        conn.execute(
+            text('vacuum analyze guidebook.documents_geometries;')
+        )
+        conn.execute(
+            text('vacuum analyze guidebook.documents_geometries_archives;')
+        )
         conn.connection.set_isolation_level(old_lvl)
         conn.close()
 

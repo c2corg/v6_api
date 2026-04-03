@@ -64,8 +64,10 @@ def main(argv=sys.argv):
         os.path.dirname(os.path.abspath(__file__)), 'migration.ini')
     settings = get_appsettings(settings_file)
 
-    engine_target = engine_from_config(settings, 'sqlalchemy_target.')
-    engine_source = engine_from_config(settings, 'sqlalchemy_source.')
+    engine_target = engine_from_config(
+        settings, 'sqlalchemy_target.')
+    engine_source = engine_from_config(
+        settings, 'sqlalchemy_source.')
 
     logging.basicConfig()
     logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)

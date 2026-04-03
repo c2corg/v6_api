@@ -114,7 +114,7 @@ class TestWaypoint(BaseTestCase):
         self.assertIsNotNone(version1)
 
         # change the waypoint
-        waypoint2 = self.session.query(Waypoint).get(waypoint1.document_id)
+        waypoint2 = self.session.get(Waypoint, waypoint1.document_id)
         waypoint2.elevation = 1234
         self.session.merge(waypoint2)
         self.session.flush()
@@ -138,18 +138,20 @@ class TestWaypoint(BaseTestCase):
             )
         )
 
+        # ~0.5m shift: should be within tolerance (~1m), no update
         waypoint_in = Waypoint(
             document_id=1, waypoint_type='summit', elevation=1234,
             geometry=DocumentGeometry(
-                geom='SRID=4326;POINT(' + str(lat + 10**(-8)) + ' 6.0)')
+                geom='SRID=4326;POINT(' + str(lat + 5e-6) + ' 6.0)')
         )
         waypoint_db.update(waypoint_in)
         self.assertEqual(waypoint_db.geometry.geom, geom1)
 
+        # ~2m shift: should exceed tolerance (~1m), triggers update
         waypoint_in = Waypoint(
             document_id=1, waypoint_type='summit', elevation=1234,
             geometry=DocumentGeometry(
-                geom='SRID=4326;POINT(' + str(lat + 10**(-7)) + ' 6.0)')
+                geom='SRID=4326;POINT(' + str(lat + 2e-5) + ' 6.0)')
         )
         waypoint_db.update(waypoint_in)
         self.assertNotEqual(waypoint_db.geometry.geom, geom1)

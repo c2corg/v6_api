@@ -2,6 +2,7 @@ import bcrypt
 from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.models.field_spec import FieldSpec
 from sqlalchemy import (
     Boolean,
     Column,
@@ -10,14 +11,10 @@ from sqlalchemy import (
     String
 )
 
-from colanderalchemy import SQLAlchemySchemaNode
-
 from c2corg_api.models import Base, users_schema, schema, enums
 
-import colander
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import ForeignKey, Index
+from sqlalchemy import func, ForeignKey, Index
 
 from enum import Enum
 
@@ -70,7 +67,7 @@ class User(Base):
         primary_key=True)
     profile = relationship(
         UserProfile, primaryjoin=id == UserProfile.document_id, uselist=False,
-        backref=backref('user', uselist=False))
+        backref=backref('user', uselist=False, cascade_backrefs=False))
 
     username = Column(String(200), nullable=False, unique=True)
     name = Column(String(200), nullable=False)
@@ -163,28 +160,45 @@ Index('ix_users_user_lower_forum_username',
       unique=True)
 
 
-schema_user = SQLAlchemySchemaNode(
-    User,
-    # whitelisted attributes
-    includes=[
-        'id', 'username', 'forum_username', 'name', 'email', 'email_validated',
-        'moderator'],
-    overrides={
-        'id': {
-            'missing': None
-        }
-    })
+schema_user = FieldSpec(
+    sa_model=User,
+    columns=[
+        'id', 'username', 'forum_username', 'name',
+        'email', 'email_validated', 'moderator',
+    ],
+)
 
 
-schema_create_user = SQLAlchemySchemaNode(
-    User,
-    # whitelisted attributes
-    includes=['username', 'forum_username', 'name', 'email', 'lang'],
-    overrides={
-        'email': {
-            'validator': colander.Email()
-        },
-        'lang': {
-            'validator': colander.OneOf(default_langs)
-        }
-    })
+# ===================================================================
+# Pydantic schemas (for body validation in views)
+# ===================================================================
+from pydantic import BaseModel, EmailStr, field_validator  # noqa: E402
+from typing import Optional  # noqa: E402
+
+
+class CreateUserSchema(BaseModel):
+    """Pydantic replacement for ``schema_create_user``."""
+    username: str
+    forum_username: str
+    name: str
+    email: EmailStr
+    lang: Optional[str] = 'fr'
+
+    model_config = {"extra": "ignore"}
+
+    @field_validator('lang')
+    @classmethod
+    def _validate_lang(cls, v):
+        if v not in default_langs:
+            raise ValueError(
+                '"%s" is not one of %s' % (v, ', '.join(default_langs)))
+        return v
+
+
+class LoginSchema(BaseModel):
+    """Pydantic ``LoginSchema``."""
+    username: str
+    password: str
+    accept_tos: Optional[bool] = False
+
+    model_config = {"extra": "ignore"}

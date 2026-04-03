@@ -28,7 +28,8 @@ class TestCacheVersion(BaseTestCase):
         self.session.add(waypoint)
         self.session.flush()
 
-        cache_version = self.session.query(CacheVersion).get(
+        cache_version = self.session.get(
+            CacheVersion,
             waypoint.document_id)
         self.assertIsNotNone(cache_version)
         self.assertIsNotNone(cache_version.version)
@@ -40,7 +41,8 @@ class TestCacheVersion(BaseTestCase):
         self.session.add_all([waypoint, waypoint_unrelated])
         self.session.flush()
 
-        cache_version = self.session.query(CacheVersion).get(
+        cache_version = self.session.get(
+            CacheVersion,
             waypoint.document_id)
         cache_version.last_updated = datetime.datetime(2016, 1, 1, 12, 1, 0)
         self.session.flush()
@@ -52,7 +54,8 @@ class TestCacheVersion(BaseTestCase):
         self.assertEqual(cache_version.version, current_version + 1)
         self.assertNotEqual(cache_version.last_updated, current_last_updated)
 
-        cache_version_untouched = self.session.query(CacheVersion).get(
+        cache_version_untouched = self.session.get(
+            CacheVersion,
             waypoint_unrelated.document_id)
         self.assertEqual(cache_version_untouched.version, 1)
 
@@ -70,13 +73,17 @@ class TestCacheVersion(BaseTestCase):
         self.session.flush()
 
         update_cache_version(waypoint1)
-        cache_version1 = self.session.query(CacheVersion).get(
+        cache_version1 = self.session.get(
+            CacheVersion,
             waypoint1.document_id)
-        cache_version2 = self.session.query(CacheVersion).get(
+        cache_version2 = self.session.get(
+            CacheVersion,
             waypoint1.document_id)
-        cache_version3 = self.session.query(CacheVersion).get(
+        cache_version3 = self.session.get(
+            CacheVersion,
             waypoint1.document_id)
-        cache_version_untouched = self.session.query(CacheVersion).get(
+        cache_version_untouched = self.session.get(
+            CacheVersion,
             waypoint_unrelated.document_id)
 
         self.assertEqual(cache_version1.version, 2)
@@ -100,15 +107,20 @@ class TestCacheVersion(BaseTestCase):
         self.session.flush()
 
         update_cache_version(waypoint1)
-        cache_version_wp1 = self.session.query(CacheVersion).get(
+        cache_version_wp1 = self.session.get(
+            CacheVersion,
             waypoint1.document_id)
-        cache_version_wp2 = self.session.query(CacheVersion).get(
+        cache_version_wp2 = self.session.get(
+            CacheVersion,
             waypoint2.document_id)
-        cache_version_wp3 = self.session.query(CacheVersion).get(
+        cache_version_wp3 = self.session.get(
+            CacheVersion,
             waypoint3.document_id)
-        cache_version_route = self.session.query(CacheVersion).get(
+        cache_version_route = self.session.get(
+            CacheVersion,
             route.document_id)
-        cache_version_untouched = self.session.query(CacheVersion).get(
+        cache_version_untouched = self.session.get(
+            CacheVersion,
             waypoint_unrelated.document_id)
 
         self.assertEqual(cache_version_wp1.version, 3)
@@ -133,15 +145,20 @@ class TestCacheVersion(BaseTestCase):
         self.session.flush()
 
         update_cache_version(route1)
-        cache_version_route1 = self.session.query(CacheVersion).get(
+        cache_version_route1 = self.session.get(
+            CacheVersion,
             route1.document_id)
-        cache_version_route2 = self.session.query(CacheVersion).get(
+        cache_version_route2 = self.session.get(
+            CacheVersion,
             route2.document_id)
-        cache_version_wp1 = self.session.query(CacheVersion).get(
+        cache_version_wp1 = self.session.get(
+            CacheVersion,
             waypoint1.document_id)
-        cache_version_wp2 = self.session.query(CacheVersion).get(
+        cache_version_wp2 = self.session.get(
+            CacheVersion,
             waypoint2.document_id)
-        cache_version_untouched = self.session.query(CacheVersion).get(
+        cache_version_untouched = self.session.get(
+            CacheVersion,
             waypoint_unrelated.document_id)
 
         self.assertEqual(cache_version_route1.version, 2)
@@ -171,17 +188,23 @@ class TestCacheVersion(BaseTestCase):
         self.session.flush()
 
         update_cache_version(outing)
-        cache_version_outing = self.session.query(CacheVersion).get(
+        cache_version_outing = self.session.get(
+            CacheVersion,
             outing.document_id)
-        cache_version_route1 = self.session.query(CacheVersion).get(
+        cache_version_route1 = self.session.get(
+            CacheVersion,
             route1.document_id)
-        cache_version_route2 = self.session.query(CacheVersion).get(
+        cache_version_route2 = self.session.get(
+            CacheVersion,
             route2.document_id)
-        cache_version_wp1 = self.session.query(CacheVersion).get(
+        cache_version_wp1 = self.session.get(
+            CacheVersion,
             waypoint1.document_id)
-        cache_version_wp2 = self.session.query(CacheVersion).get(
+        cache_version_wp2 = self.session.get(
+            CacheVersion,
             waypoint2.document_id)
-        cache_version_untouched = self.session.query(CacheVersion).get(
+        cache_version_untouched = self.session.get(
+            CacheVersion,
             waypoint_unrelated.document_id)
 
         self.assertEqual(cache_version_outing.version, 2)
@@ -206,9 +229,11 @@ class TestCacheVersion(BaseTestCase):
         self.session.flush()
 
         update_cache_version(user_profile)
-        cache_version_user_profile = self.session.query(CacheVersion).get(
+        cache_version_user_profile = self.session.get(
+            CacheVersion,
             user_profile.document_id)
-        cache_version_outing = self.session.query(CacheVersion).get(
+        cache_version_outing = self.session.get(
+            CacheVersion,
             outing.document_id)
 
         self.assertEqual(cache_version_outing.version, 2)
@@ -234,9 +259,11 @@ class TestCacheVersion(BaseTestCase):
         DocumentRest.create_new_version(waypoint, user.id)
 
         update_cache_version(user_profile)
-        cache_version_user_profile = self.session.query(CacheVersion).get(
+        cache_version_user_profile = self.session.get(
+            CacheVersion,
             user_profile.document_id)
-        cache_version_waypoint = self.session.query(CacheVersion).get(
+        cache_version_waypoint = self.session.get(
+            CacheVersion,
             waypoint.document_id)
 
         self.assertEqual(cache_version_waypoint.version, 2)
@@ -258,13 +285,17 @@ class TestCacheVersion(BaseTestCase):
              'child_id': waypoint1.document_id, 'child_type': WAYPOINT_TYPE}
         ])
 
-        cache_version1 = self.session.query(CacheVersion).get(
+        cache_version1 = self.session.get(
+            CacheVersion,
             waypoint1.document_id)
-        cache_version2 = self.session.query(CacheVersion).get(
+        cache_version2 = self.session.get(
+            CacheVersion,
             waypoint2.document_id)
-        cache_version3 = self.session.query(CacheVersion).get(
+        cache_version3 = self.session.get(
+            CacheVersion,
             waypoint3.document_id)
-        cache_version_untouched = self.session.query(CacheVersion).get(
+        cache_version_untouched = self.session.get(
+            CacheVersion,
             waypoint_unrelated.document_id)
 
         self.assertEqual(cache_version1.version, 2)
@@ -291,15 +322,20 @@ class TestCacheVersion(BaseTestCase):
              'child_id': route.document_id, 'child_type': ROUTE_TYPE}
         ])
 
-        cache_version1 = self.session.query(CacheVersion).get(
+        cache_version1 = self.session.get(
+            CacheVersion,
             waypoint1.document_id)
-        cache_version2 = self.session.query(CacheVersion).get(
+        cache_version2 = self.session.get(
+            CacheVersion,
             waypoint2.document_id)
-        cache_version3 = self.session.query(CacheVersion).get(
+        cache_version3 = self.session.get(
+            CacheVersion,
             waypoint3.document_id)
-        cache_version_route = self.session.query(CacheVersion).get(
+        cache_version_route = self.session.get(
+            CacheVersion,
             route.document_id)
-        cache_version_untouched = self.session.query(CacheVersion).get(
+        cache_version_untouched = self.session.get(
+            CacheVersion,
             waypoint_unrelated.document_id)
 
         self.assertEqual(cache_version1.version, 2)
@@ -333,17 +369,23 @@ class TestCacheVersion(BaseTestCase):
              'child_id': outing.document_id, 'child_type': OUTING_TYPE}
         ])
 
-        cache_version1 = self.session.query(CacheVersion).get(
+        cache_version1 = self.session.get(
+            CacheVersion,
             waypoint1.document_id)
-        cache_version2 = self.session.query(CacheVersion).get(
+        cache_version2 = self.session.get(
+            CacheVersion,
             waypoint2.document_id)
-        cache_version3 = self.session.query(CacheVersion).get(
+        cache_version3 = self.session.get(
+            CacheVersion,
             waypoint3.document_id)
-        cache_version_route = self.session.query(CacheVersion).get(
+        cache_version_route = self.session.get(
+            CacheVersion,
             route.document_id)
-        cache_version_outing = self.session.query(CacheVersion).get(
+        cache_version_outing = self.session.get(
+            CacheVersion,
             outing.document_id)
-        cache_version_untouched = self.session.query(CacheVersion).get(
+        cache_version_untouched = self.session.get(
+            CacheVersion,
             waypoint_unrelated.document_id)
 
         self.assertEqual(cache_version1.version, 2)
@@ -366,11 +408,14 @@ class TestCacheVersion(BaseTestCase):
 
         update_cache_version_for_area(area)
 
-        cache_version_waypoint = self.session.query(CacheVersion).get(
+        cache_version_waypoint = self.session.get(
+            CacheVersion,
             waypoint.document_id)
-        cache_version_untouched = self.session.query(CacheVersion).get(
+        cache_version_untouched = self.session.get(
+            CacheVersion,
             waypoint_unrelated.document_id)
-        cache_version_area = self.session.query(CacheVersion).get(
+        cache_version_area = self.session.get(
+            CacheVersion,
             area.document_id)
 
         self.assertEqual(cache_version_waypoint.version, 2)
@@ -392,11 +437,14 @@ class TestCacheVersion(BaseTestCase):
 
         update_cache_version_for_map(topo_map)
 
-        cache_version_waypoint = self.session.query(CacheVersion).get(
+        cache_version_waypoint = self.session.get(
+            CacheVersion,
             waypoint.document_id)
-        cache_version_untouched = self.session.query(CacheVersion).get(
+        cache_version_untouched = self.session.get(
+            CacheVersion,
             waypoint_unrelated.document_id)
-        cache_version_map = self.session.query(CacheVersion).get(
+        cache_version_map = self.session.get(
+            CacheVersion,
             topo_map.document_id)
 
         self.assertEqual(cache_version_waypoint.version, 2)

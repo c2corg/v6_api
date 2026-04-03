@@ -12,8 +12,9 @@ from c2corg_api.models.association import create_associations, \
 from c2corg_api.models.cache_version import update_cache_version, \
     update_cache_version_associations, get_cache_key
 from c2corg_api.models.document import (
-    UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
-    ArchiveDocumentGeometry, set_available_langs, get_available_langs)
+    Document, UpdateType, DocumentLocale, ArchiveDocumentLocale,
+    ArchiveDocument, ArchiveDocumentGeometry, set_available_langs,
+    get_available_langs)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.feed import update_feed_document_create, \
     update_feed_document_update
@@ -22,6 +23,7 @@ from c2corg_api.models.topo_map import schema_listing_topo_map, \
     MAP_TYPE
 from c2corg_api.models.topo_map_association import update_maps_for_document, \
     get_maps
+from c2corg_api.models.objectify import objectify as sa_objectify
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import etag_cache, set_best_locale
@@ -40,7 +42,7 @@ from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
     HTTPBadRequest, HTTPForbidden
 from sqlalchemy.orm import joinedload, contains_eager, load_only
 from sqlalchemy.orm.exc import StaleDataError
-from sqlalchemy.orm.util import with_polymorphic
+from sqlalchemy.orm import with_polymorphic
 
 
 log = logging.getLogger(__name__)
@@ -95,7 +97,10 @@ class DocumentRest(ACLDefault):
         offset = meta_params['offset']
         limit = meta_params['limit']
         documents = base_query. \
-            options(load_only('document_id', 'type', 'version')). \
+            options(load_only(
+                Document.document_id,
+                Document.type,
+                Document.version)). \
             slice(offset, offset + limit). \
             limit(limit). \
             all()
@@ -233,7 +238,7 @@ class DocumentRest(ACLDefault):
         else:
             user_id = self.request.authenticated_userid
 
-        document = schema.objectify(document_in)
+        document = sa_objectify(schema.sa_model, document_in)
         document.document_id = None
 
         if before_add:
@@ -275,7 +280,8 @@ class DocumentRest(ACLDefault):
             after_update=None):
         id = self.request.validated['id']
         document_in = \
-            schema.objectify(self.request.validated['document'])
+            sa_objectify(schema.sa_model,
+                         self.request.validated['document'])
         self._check_document_id(id, document_in.document_id)
 
         # get the current version of the document
@@ -303,7 +309,7 @@ class DocumentRest(ACLDefault):
             document_query = DBSession. \
                 query(clazz). \
                 filter(getattr(clazz, 'document_id') == id). \
-                options(joinedload('geometry'))
+                options(joinedload(getattr(clazz, 'geometry')))
             document_query = add_load_for_locales(
                 document_query, clazz, clazz_locale)
             document_query = add_load_for_profiles(document_query, clazz)
@@ -320,7 +326,7 @@ class DocumentRest(ACLDefault):
                 join(locales_type). \
                 filter(getattr(clazz, 'document_id') == id). \
                 filter(DocumentLocale.lang == lang). \
-                options(joinedload('geometry')).\
+                options(joinedload(getattr(clazz, 'geometry'))).\
                 options(contains_eager(locales_type_eager, alias=locales_type))
             document_query = add_load_for_profiles(document_query, clazz)
             document = document_query.first()
@@ -331,7 +337,7 @@ class DocumentRest(ACLDefault):
                 document_query = DBSession. \
                     query(clazz). \
                     filter(getattr(clazz, 'document_id') == id). \
-                    options(joinedload('geometry'))
+                    options(joinedload(getattr(clazz, 'geometry')))
                 document_query = add_load_for_profiles(document_query, clazz)
                 document = document_query.first()
 
@@ -358,7 +364,7 @@ class DocumentRest(ACLDefault):
         document_query = DBSession. \
             query(clazz). \
             filter(getattr(clazz, 'document_id') == document_id). \
-            options(joinedload('geometry'))
+            options(joinedload(getattr(clazz, 'geometry')))
         document_query = add_load_for_locales(
             document_query, clazz, clazz_locale)
         document_query = add_load_for_profiles(document_query, clazz)
@@ -401,10 +407,11 @@ class DocumentRest(ACLDefault):
         (update_types, changed_langs) = document.get_update_type(old_versions)
 
         if update_types:
-            # A new version needs to be created and persisted
-            DocumentRest.update_version(
-                document, user_id, request.validated['message'],
-                update_types, changed_langs)
+            if document.type != COVERAGE_TYPE:
+                # A new version needs to be created and persisted
+                DocumentRest.update_version(
+                    document, user_id, request.validated['message'],
+                    update_types, changed_langs)
 
             if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
                 update_areas_for_document(document, reset=True)
@@ -596,8 +603,13 @@ def validate_document_for_type(document, request, fields, type_field,
     document_type = document.get(type_field)
 
     if not document_type:
-        # can't do the validation without the type (an error was already added
-        # when validating the Colander schema)
+        # can't do the validation without the type – add an explicit
+        # error (the type field is required for polymorphic dispatch).
+        if type_field in document and document[type_field] == []:
+            request.errors.add(
+                'body', type_field, 'Shorter than minimum length 1')
+        else:
+            request.errors.add('body', type_field, 'Required')
         return
 
     if type_field == 'activities':
@@ -630,16 +642,18 @@ def make_validator_create(
     """
     if type_field is None or valid_type_values is None:
         def f(request, **kwargs):
+            if request.errors:
+                return
             document = request.validated
-            if document:
-                validate_document(document, request, fields, updating=False)
+            validate_document(document, request, fields, updating=False)
     else:
         def f(request, **kwargs):
+            if request.errors:
+                return
             document = request.validated
-            if document:
-                validate_document_for_type(
-                    document, request, fields, type_field, valid_type_values,
-                    updating=False)
+            validate_document_for_type(
+                document, request, fields, type_field, valid_type_values,
+                updating=False)
     return f
 
 
@@ -648,11 +662,15 @@ def make_validator_update(fields, type_field=None, valid_type_values=None):
     """
     if type_field is None or valid_type_values is None:
         def f(request, **kwargs):
+            if request.errors:
+                return
             document = request.validated.get('document')
             if document:
                 validate_document(document, request, fields, updating=True)
     else:
         def f(request, **kwargs):
+            if request.errors:
+                return
             document = request.validated.get('document')
             if document:
                 validate_document_for_type(

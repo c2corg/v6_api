@@ -231,7 +231,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             body, self.profile1.document_id, user='moderator')
 
     def test_put_no_document(self):
-        self.put_put_no_document(
+        self.pydantic_put_put_no_document(
             self.profile1.document_id, user='moderator')
 
     def test_put_success_all(self):
@@ -381,7 +381,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
 
     def _add_test_data(self):
         user_id = self.global_userids['contributor']
-        self.profile1 = self.session.query(UserProfile).get(user_id)
+        self.profile1 = self.session.get(UserProfile, user_id)
         self.locale_en = self.profile1.get_locale('en')
         self.locale_fr = self.profile1.get_locale('fr')
         DocumentRest.create_new_version(self.profile1, user_id)

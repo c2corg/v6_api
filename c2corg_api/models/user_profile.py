@@ -1,12 +1,11 @@
 from c2corg_api.models import schema, Base
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, get_geometry_schema_overrides,
-    schema_document_locale, schema_attributes, DocumentLocale)
+    ArchiveDocument, Document,
+    schema_attributes, schema_locale_attributes, geometry_attributes)
 from c2corg_api.models.enums import user_category, activity_type
-from c2corg_api.models.schema_utils import restrict_schema, get_update_schema
+from c2corg_api.models.field_spec import build_field_spec
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.common.fields_user_profile import fields_user_profile
-from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Column,
     Integer,
@@ -73,54 +72,95 @@ class ArchiveUserProfile(_UserProfileMixin, ArchiveDocument):
     __table_args__ = Base.__table_args__
 
 
-# user profiles use a special schema for the locales which ignores the 'title'
+# user profiles use a special locale which ignores the 'title'
 # attribute (user profiles do not have a title).
-schema_user_profile_locale = SQLAlchemySchemaNode(
+_user_profile_locale_fields = [
+    'version', 'lang', 'description', 'summary'
+]
+
+schema_user_profile = build_field_spec(
+    UserProfile,
+    includes=schema_attributes + attributes,
+    locale_fields=_user_profile_locale_fields,
+    geometry_fields=geometry_attributes,
+)
+
+schema_internal_user_profile = build_field_spec(
+    UserProfile,
+    includes=schema_attributes + attributes,
+    locale_fields=schema_locale_attributes,
+    geometry_fields=geometry_attributes,
+)
+
+schema_listing_user_profile = schema_user_profile.restrict(
+    fields_user_profile.get('listing'))
+
+
+# ===================================================================
+# Pydantic schemas (generated from the SQLAlchemy model)
+# ===================================================================
+from c2corg_api.models.pydantic import (  # noqa: E402
+    schema_from_sa_model,
+    get_update_schema as pydantic_update_schema,
+    DocumentGeometrySchema,
+    AssociationsSchema,
+    LangType,
+    _DuplicateLocalesMixin,
+)
+from c2corg_api.models.document import (  # noqa: E402
+    DocumentLocale, schema_attributes,
+)
+from pydantic import BaseModel  # noqa: E402, F401
+from typing import List, Optional  # noqa: E402
+
+# -- locale schema (no title, mirrors schema_user_profile_locale) ---
+
+_UserProfileLocaleBase = schema_from_sa_model(
     DocumentLocale,
-    # whitelisted attributes (without 'title')
+    name='_UserProfileLocaleBase',
     includes=['version', 'lang', 'description', 'summary'],
     overrides={
-        'version': {
-            'missing': None
-        }
-    })
+        'version': {'default': None},
+        'lang': {'type': LangType},
+    },
+)
 
 
-schema_user_profile = SQLAlchemySchemaNode(
+class UserProfileLocaleSchema(_UserProfileLocaleBase):
+    """Locale for user-profile updates (title accepted but ignored)."""
+    title: Optional[str] = None
+    model_config = {"extra": "ignore"}
+
+
+# -- document schema (inner "document" key of the PUT body) ---------
+
+_UserProfileDocBase = schema_from_sa_model(
     UserProfile,
-    # whitelisted attributes
-    includes=schema_attributes + attributes,
+    name='_UserProfileDocBase',
+    includes=[
+        a for a in schema_attributes + attributes
+        if a not in ('locales', 'geometry')
+    ],
     overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_user_profile_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POINT'])
-    })
+        'document_id': {'default': None},
+        'version': {'default': None},
+    },
+)
 
 
-schema_internal_user_profile = SQLAlchemySchemaNode(
-    UserProfile,
-    # whitelisted attributes
-    includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_document_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POINT'])
-    })
+class UserProfileDocumentSchema(
+    _DuplicateLocalesMixin, _UserProfileDocBase,
+):
+    """Full user-profile document for create/update requests."""
+    locales: Optional[List[UserProfileLocaleSchema]] = None
+    geometry: Optional[DocumentGeometrySchema] = None
+    associations: Optional[AssociationsSchema] = None
+    model_config = {"extra": "ignore"}
 
-schema_update_user_profile = get_update_schema(schema_user_profile)
-schema_listing_user_profile = restrict_schema(
-    schema_user_profile, fields_user_profile.get('listing'))
+
+# -- top-level PUT envelope -----------------------------------------
+
+UpdateUserProfileSchema = pydantic_update_schema(
+    UserProfileDocumentSchema,
+    name='UpdateUserProfileSchema',
+)

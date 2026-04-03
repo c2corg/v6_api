@@ -23,24 +23,29 @@ from c2corg_api.views.area import update_associations
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.waypoint import update_linked_route_titles
 from c2corg_api.views.route import update_linked_attributes
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 from c2corg_api.models.common.attributes import default_langs
-from colander import (
-    MappingSchema, SchemaNode, Integer, String, required, OneOf)
+from pydantic import BaseModel, field_validator
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.orm import joinedload, contains_eager
-from sqlalchemy.orm.util import with_polymorphic
-from sqlalchemy.sql.expression import exists, and_
+from sqlalchemy.orm import with_polymorphic
+from sqlalchemy import exists, and_
 
 log = logging.getLogger(__name__)
 
 
-class RevertSchema(MappingSchema):
-    document_id = SchemaNode(Integer(), missing=required)
-    lang = SchemaNode(String(), missing=required,
-                      validator=OneOf(default_langs))
-    version_id = SchemaNode(Integer(), missing=required)
+class RevertSchema(BaseModel):
+    document_id: int
+    lang: str
+    version_id: int
+
+    @field_validator('lang')
+    @classmethod
+    def lang_must_be_valid(cls, v):
+        if v not in default_langs:
+            raise ValueError('must be one of {}'.format(default_langs))
+        return v
 
 
 def validate_version(request, **kwargs):
@@ -76,8 +81,7 @@ class DocumentRevertRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',
-        schema=RevertSchema(),
-        validators=[colander_body_validator, validate_version])
+        validators=[make_pydantic_validator(RevertSchema), validate_version])
     def post(self):
         """ Create a new version of the document based upon an old one.
 
@@ -192,7 +196,7 @@ class DocumentRevertRest(ACLDefault):
             join(locales_type). \
             filter(getattr(clazz, 'document_id') == document_id). \
             filter(DocumentLocale.lang == lang). \
-            options(joinedload('geometry')). \
+            options(joinedload(clazz.geometry)). \
             options(contains_eager(locales_type_eager, alias=locales_type))
         return document_query.first()
 

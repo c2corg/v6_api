@@ -1,12 +1,11 @@
 from c2corg_api.models import schema, Base, enums
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, schema_document_locale, schema_attributes)
-from c2corg_api.models.schema_utils import get_update_schema, \
-    restrict_schema, get_create_schema
+    ArchiveDocument, Document,
+    schema_attributes, schema_locale_attributes)
+from c2corg_api.models.field_spec import build_field_spec
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from sqlalchemy.dialects.postgresql.array import ARRAY
 from c2corg_api.models.common.fields_book import fields_book
-from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Column,
     Integer,
@@ -74,27 +73,65 @@ class ArchiveBook(_BookMixin, ArchiveDocument):
     __table_args__ = Base.__table_args__
 
 
-schema_book_locale = schema_document_locale
 schema_book_attributes = list(schema_attributes)
 schema_book_attributes.remove('geometry')
 
-schema_book = SQLAlchemySchemaNode(
+schema_book = build_field_spec(
     Book,
-    # whitelisted attributes
     includes=schema_book_attributes + attributes,
-    overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_book_locale]
-        },
-    })
+    locale_fields=schema_locale_attributes,
+)
 
-schema_create_book = get_create_schema(schema_book)
-schema_update_book = get_update_schema(schema_book)
-schema_listing_book = restrict_schema(
-    schema_book, fields_book.get('listing'))
+schema_listing_book = schema_book.restrict(
+    fields_book.get('listing'))
+
+
+# ===================================================================
+# Pydantic schemas (generated from the SQLAlchemy model)
+# ===================================================================
+from c2corg_api.models.pydantic import (  # noqa: E402
+    schema_from_sa_model,
+    get_update_schema as pydantic_update_schema,
+    get_create_schema as pydantic_create_schema,
+    DocumentLocaleSchema,
+    AssociationsSchema,
+    _DuplicateLocalesMixin,
+)
+from c2corg_api.models.document import schema_attributes  # noqa: E402
+from typing import List, Optional  # noqa: E402
+
+# Books don't have geometry – exclude it from the schema_attributes
+_book_schema_attrs = [
+    a for a in schema_attributes + attributes
+    if a not in ('locales', 'geometry')
+]
+
+_BookDocBase = schema_from_sa_model(
+    Book,
+    name='_BookDocBase',
+    includes=_book_schema_attrs,
+    overrides={
+        'document_id': {'default': None},
+        'version': {'default': None},
+    },
+)
+
+
+class BookDocumentSchema(
+    _DuplicateLocalesMixin, _BookDocBase,
+):
+    """Full book document for create/update requests."""
+    locales: Optional[List[DocumentLocaleSchema]] = None
+    associations: Optional[AssociationsSchema] = None
+    model_config = {"extra": "ignore"}
+
+
+CreateBookSchema = pydantic_create_schema(
+    BookDocumentSchema,
+    name='CreateBookSchema',
+)
+
+UpdateBookSchema = pydantic_update_schema(
+    BookDocumentSchema,
+    name='UpdateBookSchema',
+)

@@ -1,7 +1,7 @@
 from c2corg_api.models.document import ArchiveDocument, ArchiveDocumentLocale
 from c2corg_api.scripts.migration.documents.user_profiles import \
     MigrateUserProfiles
-from sqlalchemy.sql import text
+from sqlalchemy import text
 import transaction
 import zope
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion

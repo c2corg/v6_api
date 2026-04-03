@@ -1,6 +1,8 @@
 import transaction
 import zope
 
+from sqlalchemy import text
+
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
 
@@ -17,9 +19,11 @@ class SetRouteTitlePrefix(MigrateBase):
 
         with transaction.manager:
             print('Set title prefix for route locales (same lang)')
-            self.session_target.execute(SQL_SET_TITLE_PREFIX_SAME_CULTURE)
+            self.session_target.execute(
+                text(SQL_SET_TITLE_PREFIX_SAME_CULTURE))
             print('Set title prefix for route locales (other lang)')
-            self.session_target.execute(SQL_SET_TITLE_PREFIX_OTHER_CULTURE)
+            self.session_target.execute(
+                text(SQL_SET_TITLE_PREFIX_OTHER_CULTURE))
             zope.sqlalchemy.mark_changed(self.session_target)
 
         self.stop()

@@ -24,7 +24,7 @@ from c2corg_api.scripts.users.merge import merge_user_accounts
 from c2corg_api.tests import BaseTestCase
 from c2corg_api.views.document import DocumentRest
 
-from sqlalchemy.sql.expression import or_, any_, exists
+from sqlalchemy import or_, any_, exists
 
 
 class MergeUsersTest(BaseTestCase):
@@ -170,9 +170,11 @@ class MergeUsersTest(BaseTestCase):
         ).scalar()
 
     def _add_test_data(self):
-        self.contributor = self.session.query(User).get(
+        self.contributor = self.session.get(
+            User,
             self.global_userids['contributor'])
-        self.contributor2 = self.session.query(User).get(
+        self.contributor2 = self.session.get(
+            User,
             self.global_userids['contributor2'])
 
         DocumentRest.create_new_version(self.contributor.profile,

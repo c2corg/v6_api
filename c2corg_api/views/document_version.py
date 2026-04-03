@@ -2,15 +2,13 @@ from c2corg_api.security.acl import ACLDefault
 from c2corg_api.caching import cache_document_version
 from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import get_cache_key
-from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user import User
 from c2corg_api.views import to_json_dict, etag_cache
 from c2corg_api.caching import get_or_create
 from pyramid.httpexceptions import HTTPNotFound
-from sqlalchemy import column
+from sqlalchemy import column, literal_column, union
 from sqlalchemy.orm import joinedload
-from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import union
 
 
 class DocumentVersionRest(ACLDefault):
@@ -52,8 +50,10 @@ class DocumentVersionRest(ACLDefault):
             self, document_id, lang, version_id, clazz, locale_clazz, schema,
             adapt_schema):
         version = DBSession.query(DocumentVersion) \
-            .options(joinedload('history_metadata').joinedload('user').
-                     load_only(User.id, User.name)) \
+            .options(
+                joinedload(DocumentVersion.history_metadata)
+                .joinedload(HistoryMetaData.user)
+                .load_only(User.id, User.name)) \
             .options(joinedload(
                 DocumentVersion.document_archive.of_type(clazz))) \
             .options(joinedload(
@@ -136,7 +136,8 @@ def get_neighbour_version_ids(version_id, document_id, lang):
     query = DBSession \
         .query(column('id'), column('t')) \
         .select_from(union(
-            next_version.select(), previous_version.select()))
+            next_version.select(), previous_version.select()
+        ).subquery())
 
     previous_version_id = None
     next_version_id = None

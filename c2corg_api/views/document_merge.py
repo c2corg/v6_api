@@ -15,17 +15,18 @@ from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.image import delete_all_files_for_image
 from c2corg_api.views.waypoint import update_linked_route_titles
-from colander import MappingSchema, required, SchemaNode, Integer
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
+
+from pydantic import BaseModel
+
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from sqlalchemy.sql.elements import not_
-from sqlalchemy.sql.expression import and_, or_
-from sqlalchemy.sql.functions import func
+
+from sqlalchemy import not_, and_, or_, func
 
 
-class MergeSchema(MappingSchema):
-    source_document_id = SchemaNode(Integer(), missing=required)
-    target_document_id = SchemaNode(Integer(), missing=required)
+class MergeSchema(BaseModel):
+    source_document_id: int
+    target_document_id: int
 
 
 def validate_documents(request, **kwargs):
@@ -99,8 +100,7 @@ class MergeDocumentRest(ACLDefault):
 
     @restricted_json_view(
         permission='moderator',
-        schema=MergeSchema(),
-        validators=[colander_body_validator, validate_documents])
+        validators=[make_pydantic_validator(MergeSchema), validate_documents])
     def post(self):
         """ Merges a document into another document.
 
@@ -129,7 +129,7 @@ class MergeDocumentRest(ACLDefault):
         """
         source_document_id = self.request.validated['source_document_id']
         target_document_id = self.request.validated['target_document_id']
-        source_doc = DBSession.query(Document).get(source_document_id)
+        source_doc = DBSession.get(Document, source_document_id)
 
         # transfer associations from source to target
         transfer_associations(source_document_id, target_document_id)
@@ -290,7 +290,7 @@ def _and_in(condition1, field2, in_ids):
 
 
 def _transfer_main_waypoint(source_document_id, target_document_id):
-    target_waypoint = DBSession.query(Waypoint).get(target_document_id)
+    target_waypoint = DBSession.get(Waypoint, target_document_id)
 
     DBSession.execute(
         Route.__table__.update().

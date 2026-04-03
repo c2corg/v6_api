@@ -1,15 +1,11 @@
 import logging
 
-import collections
-import datetime
-
-from c2corg_api.ext.colander_ext import geojson_from_wkbelement
 from c2corg_api.models import DBSession
+from c2corg_api.models.dictify import dictify as sa_dictify
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.document_history import get_creators
 from c2corg_api.models.user import AccountNotValidated
 from c2corg_api.models.common.attributes import langs_priority
-from colander import null
 from pyramid.httpexceptions import HTTPError, HTTPNotFound, HTTPForbidden, \
     HTTPNotModified
 from pyramid.view import view_config
@@ -17,9 +13,8 @@ from pyramid.interfaces import IRendererFactory
 from cornice import Errors
 from cornice.renderer import JSONError
 from cornice.resource import view
-from geoalchemy2 import WKBElement
 from sqlalchemy.inspection import inspect
-from sqlalchemy.sql.functions import func
+from sqlalchemy import func
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 
@@ -110,10 +105,9 @@ def restricted_view(**kw):
 def to_json_dict(obj, schema, with_special_locales_attrs=False,
                  with_special_geometry_attrs=False,
                  cook_locale=False):
-    obj_dict = serialize(schema.dictify(obj))
-    # manually copy certain attributes that were set on the object (it would be
-    # cleaner to add the field to the schema, but ColanderAlchemy doesn't like
-    # it because it's not a real column)
+    obj_dict = sa_dictify(obj, schema)
+    # manually copy certain attributes that were set on the object
+    # (these are not real SA columns, so they are not in the field spec)
     special_attributes = [
         'available_langs', 'associations', 'maps', 'areas', 'author',
         'protected', 'type', 'name', 'forum_username', 'creator', 'img_count'
@@ -144,30 +138,6 @@ def to_json_dict(obj, schema, with_special_locales_attrs=False,
             if hasattr(geometry, attr):
                 geometry_dict[attr] = getattr(geometry, attr)
     return obj_dict
-
-
-def serialize(data):
-    """
-    Colanders `serialize` method is not intended for JSON serialization (it
-    turns everything into a string and keeps colander.null).
-    https://github.com/tisdall/cornice/blob/c18b873/cornice/schemas.py
-    Returns the most agnostic version of specified data.
-    (remove colander notions, datetimes in ISO, ...)
-    """
-    if isinstance(data, str):
-        return str(data)
-    if isinstance(data, collections.Mapping):
-        return dict(list(map(serialize, iter(data.items()))))
-    if isinstance(data, collections.abc.Iterable):
-        return type(data)(list(map(serialize, data)))
-    if isinstance(data, (datetime.date, datetime.datetime)):
-        return data.isoformat()
-    if isinstance(data, WKBElement):
-        return geojson_from_wkbelement(data)
-    if data is null:
-        return None
-
-    return data
 
 
 def set_best_locale(documents, preferred_lang, expunge=True):

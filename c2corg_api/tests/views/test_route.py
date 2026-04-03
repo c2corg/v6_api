@@ -29,7 +29,7 @@ from shapely.geometry.point import Point
 
 class TestRouteRest(BaseDocumentTestRest):
 
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             "/routes", ROUTE_TYPE, Route, ArchiveRoute, ArchiveRouteLocale)
         BaseDocumentTestRest.setUp(self)
@@ -434,7 +434,8 @@ class TestRouteRest(BaseDocumentTestRest):
         self.assertEqual(links[0].area_id, self.area1.document_id)
 
         # check that a link to the main waypoint is created
-        association_main_wp = self.session.query(Association).get(
+        association_main_wp = self.session.get(
+            Association,
             (self.waypoint.document_id, doc.document_id))
         self.assertIsNotNone(association_main_wp)
 
@@ -829,7 +830,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.put_wrong_ids(body, self.route.document_id)
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.route.document_id)
+        self.pydantic_put_put_no_document(self.route.document_id)
 
     def test_put_success_all(self):
         body = {
@@ -1005,7 +1006,8 @@ class TestRouteRest(BaseDocumentTestRest):
             locale_en.title_prefix, self.waypoint2.get_locale('en').title)
 
         # check that a link to the new main waypoint is created
-        association_main_wp = self.session.query(Association).get(
+        association_main_wp = self.session.get(
+            Association,
             (self.waypoint2.document_id, route.document_id))
         self.assertIsNotNone(association_main_wp)
 
@@ -1142,7 +1144,7 @@ class TestRouteRest(BaseDocumentTestRest):
         check_title_prefix(self.route, create=False)
         self.session.expire_all()
 
-        route = self.session.query(Route).get(self.route.document_id)
+        route = self.session.get(Route, self.route.document_id)
         locale_en = route.get_locale('en')
         self.assertEqual(locale_en.version, 1)
         self.assertEqual(

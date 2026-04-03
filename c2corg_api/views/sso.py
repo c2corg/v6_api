@@ -3,11 +3,11 @@ from datetime import datetime, timedelta
 from os import urandom
 from pytz import utc
 from urllib.parse import urlencode
+from pydantic import BaseModel, field_validator
+from typing import Optional
 import logging
 
-import colander
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 from pydiscourse.exceptions import DiscourseClientError
 from pyramid.httpexceptions import (
     HTTPInternalServerError,
@@ -30,6 +30,7 @@ from c2corg_api.views import (
     json_view,
 )
 from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 from c2corg_api.views.user import (
     token_to_response,
     validate_unique_attribute,
@@ -41,30 +42,27 @@ CONST_EXPIRE_AFTER_MINUTES = 10
 log = logging.getLogger(__name__)
 
 
-class SsoSyncSchema(colander.MappingSchema):
-    sso_key = colander.SchemaNode(colander.String())
-    external_id = colander.SchemaNode(colander.String())
-    email = colander.SchemaNode(colander.String(),
-                                missing=None)
-    username = colander.SchemaNode(colander.String(),
-                                   missing=None)
-    name = colander.SchemaNode(colander.String(),
-                               missing=None)
-    forum_username = colander.SchemaNode(colander.String(),
-                                         missing=None)
-    lang = colander.SchemaNode(colander.String(),
-                               validator=colander.OneOf(default_langs),
-                               missing=None)
-    groups = colander.SchemaNode(colander.String(),
-                                 missing=None)
+class SsoSyncSchema(BaseModel):
+    sso_key: str
+    external_id: str
+    email: Optional[str] = None
+    username: Optional[str] = None
+    name: Optional[str] = None
+    forum_username: Optional[str] = None
+    lang: Optional[str] = None
+    groups: Optional[str] = None
 
-
-sso_sync_schema = SsoSyncSchema()
+    @field_validator('lang')
+    @classmethod
+    def lang_must_be_valid(cls, v):
+        if v is not None and v not in default_langs:
+            raise ValueError('must be one of {}'.format(default_langs))
+        return v
 
 
 def sso_sync_validator(request, **kwargs):
     if 'sso_key' not in request.validated:
-        return  # validated by colander schema
+        return  # validated by pydantic schema
     sso_key = DBSession.query(SsoKey). \
         filter(SsoKey.key == request.validated['sso_key']). \
         one_or_none()
@@ -79,7 +77,7 @@ def sso_sync_validator(request, **kwargs):
 
     # search user by external_id
     if 'external_id' not in request.validated:
-        return  # validated by colander schema
+        return  # validated by pydantic schema
     sso_external_id = DBSession.query(SsoExternalId). \
         filter(SsoExternalId.domain == sso_key.domain). \
         filter(SsoExternalId.external_id ==
@@ -121,9 +119,8 @@ def sso_sync_validator(request, **kwargs):
 class SsoSyncRest(ACLDefault):
 
     @json_view(
-        schema=sso_sync_schema,
         validators=[
-            colander_body_validator,
+            make_pydantic_validator(SsoSyncSchema, strip_defaults=False),
             sso_sync_validator,
         ])
     def post(self):
@@ -239,16 +236,13 @@ def sso_expire_from_now():
     return (localized_now() + timedelta(minutes=CONST_EXPIRE_AFTER_MINUTES))
 
 
-class SsoLoginSchema(colander.MappingSchema):
-    token = colander.SchemaNode(colander.String())
-
-
-sso_login_schema = SsoLoginSchema()
+class SsoLoginSchema(BaseModel):
+    token: str
 
 
 def validate_token(request, **kwargs):
     if 'token' not in request.validated:
-        return  # validated by colander schema
+        return  # validated by pydantic schema
 
     sso_external_id = DBSession.query(SsoExternalId). \
         filter(SsoExternalId.token == request.validated['token']). \
@@ -267,8 +261,7 @@ def validate_token(request, **kwargs):
 class SsoLoginRest(ACLDefault):
 
     @view(
-        schema=sso_login_schema,
-        validators=[colander_body_validator, validate_token])
+        validators=[make_pydantic_validator(SsoLoginSchema), validate_token])
     def post(self):
         user = self.request.validated['sso_user']
         token = log_validated_user_i_know_what_i_do(user, self.request)

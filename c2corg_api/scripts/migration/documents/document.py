@@ -1,5 +1,5 @@
 from sqlalchemy.orm.base import class_mapper
-from sqlalchemy.sql import text
+from sqlalchemy import text
 import transaction
 import zope
 import abc

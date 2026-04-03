@@ -235,7 +235,7 @@ class TestXreportRest(BaseDocumentTestRest):
         body = self.post_error({}, user='moderator')
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertCorniceRequired(errors[0], 'event_activity')
+        self.assertError(errors, 'event_activity', 'Field required')
 
     def test_post_missing_title(self):
         body_post = {
@@ -311,7 +311,11 @@ class TestXreportRest(BaseDocumentTestRest):
             body = self.post_error(body, user='moderator')
             errors = body.get('errors')
             self.assertEqual(len(errors), 1)
-            self.assertCorniceNotInEnum(errors[0], key)
+            self.assertEqual(errors[0].get('name'), key)
+            desc = errors[0].get('description')
+            self.assertTrue(
+                'is not one of' in desc or 'Input should be' in desc,
+                'Unexpected enum error description: %s' % desc)
 
     def test_post_success(self):
         body = {
@@ -367,7 +371,8 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertIsNotNone(doc.geometry)
 
         # check that a link to the associated waypoint is created
-        association_img = self.session.query(Association).get(
+        association_img = self.session.get(
+            Association,
             (doc.document_id, self.image2.document_id))
         self.assertIsNotNone(association_img)
 
@@ -380,7 +385,8 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertIsNotNone(association_img_log)
 
         # check that a link to the associated xreport is created
-        association_art = self.session.query(Association).get(
+        association_art = self.session.get(
+            Association,
             (doc.document_id, self.article2.document_id))
         self.assertIsNotNone(association_art)
 
@@ -518,7 +524,8 @@ class TestXreportRest(BaseDocumentTestRest):
         self.put_wrong_ids(body, self.xreport1.document_id, user='moderator')
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.xreport1.document_id, user='moderator')
+        self.pydantic_put_put_no_document(
+            self.xreport1.document_id, user='moderator')
 
     def test_put_success_all(self):
         body = {
@@ -581,7 +588,8 @@ class TestXreportRest(BaseDocumentTestRest):
         # check if geometry is stored in database afterwards
         self.assertIsNotNone(xreport1.geometry)
         # check that a link to the associated image is created
-        association_img = self.session.query(Association).get(
+        association_img = self.session.get(
+            Association,
             (xreport1.document_id, self.image2.document_id))
         self.assertIsNotNone(association_img)
 
@@ -594,7 +602,8 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertIsNotNone(association_img_log)
 
         # check that a link to the associated article is created
-        association_main_art = self.session.query(Association).get(
+        association_main_art = self.session.get(
+            Association,
             (xreport1.document_id, self.article2.document_id))
         self.assertIsNotNone(association_main_art)
 

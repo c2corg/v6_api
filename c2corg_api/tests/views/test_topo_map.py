@@ -235,7 +235,8 @@ class TestTopoMapRest(BaseDocumentTestRest):
         self.put_wrong_ids(body, self.map1.document_id, user='moderator')
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.map1.document_id, user='moderator')
+        self.pydantic_put_put_no_document(
+            self.map1.document_id, user='moderator')
 
     def test_put_success_all(self):
         body = {

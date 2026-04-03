@@ -454,7 +454,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 {'lang': 'en', 'title': 'Mont Pourri', 'access': 'y'}
             ]
         }
-        self.post_same_locale_twice(body)
+        self.pydantic_post_same_locale_twice(body)
 
     def test_post_missing_elevation(self):
         body = {
@@ -499,8 +499,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         body = self.post_error(body_post)
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertTrue(errors[0].get('description').startswith(
-            '"swimming-pool" is not one of'))
+        self.assertIn("Input should be", errors[0].get('description'))
         self.assertEqual(errors[0].get('name'), 'waypoint_type')
 
     def test_post_empty_assoc_in_new_w_document(self):
@@ -616,7 +615,8 @@ class TestWaypointRest(BaseDocumentTestRest):
                 ]
             }
         }
-        waypoint2_cache_key = self.session.query(CacheVersion).get(
+        waypoint2_cache_key = self.session.get(
+            CacheVersion,
             self.waypoint2.document_id).version
 
         body, doc = self.post_success(body)
@@ -664,7 +664,8 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(links[0].topo_map_id, self.topo_map1.document_id)
 
         # check that a link to the child waypoint is created
-        association_wp = self.session.query(Association).get(
+        association_wp = self.session.get(
+            Association,
             (doc.document_id, self.waypoint2.document_id))
         self.assertIsNotNone(association_wp)
 
@@ -774,7 +775,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.put_wrong_ids(body, self.waypoint.document_id)
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.waypoint.document_id)
+        self.pydantic_put_put_no_document(self.waypoint.document_id)
 
     def test_put_missing_elevation(self):
         body = {
@@ -848,7 +849,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         # check that the title_prefix of an associated route (that the wp
         # it the main wp of) was updated
-        route = self.session.query(Route).get(self.route1.document_id)
+        route = self.session.get(Route, self.route1.document_id)
         route_locale_en = route.get_locale('en')
         self.assertEqual(route_locale_en.title_prefix, 'Mont Granier!')
 
@@ -876,12 +877,14 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(links[0].topo_map_id, self.topo_map1.document_id)
 
         # check that a link to the child waypoint is created
-        association_wp = self.session.query(Association).get(
+        association_wp = self.session.get(
+            Association,
             (waypoint.document_id, self.waypoint2.document_id))
         self.assertIsNotNone(association_wp)
 
         # check that a link to the child article is created
-        association_a = self.session.query(Association).get(
+        association_a = self.session.get(
+            Association,
             (waypoint.document_id, self.article1.document_id))
         self.assertIsNotNone(association_a)
 
@@ -1120,7 +1123,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         # check that no new archive_document was created
         self.session.expire_all()
-        document = self.session.query(self._model).get(document_id)
+        document = self.session.get(self._model, document_id)
 
         # check that a new archive_document was created
         archive_count = self.session.query(self._model_archive). \
@@ -1316,7 +1319,8 @@ class TestWaypointRest(BaseDocumentTestRest):
             self._prefix + '/' + str(self.waypoint.document_id), body,
             headers=headers, status=200)
 
-        association = self.session.query(Association).get(
+        association = self.session.get(
+            Association,
             (self.waypoint.document_id, self.waypoint2.document_id))
         self.assertIsNotNone(association)
 

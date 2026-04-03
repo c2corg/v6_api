@@ -9,9 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 
 from alembic_migration.extensions import drop_enum
-from sqlalchemy.sql.expression import and_, any_, cast
-from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import Table, MetaData
+from sqlalchemy import and_, any_, cast, func, Table, MetaData
 
 from c2corg_api.models.utils import ArrayOfEnum
 

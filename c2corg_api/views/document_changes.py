@@ -9,7 +9,7 @@ from c2corg_api.views.feed import get_params
 from c2corg_api.views.validation import validate_simple_token_pagination, \
   validate_user_id_not_required
 
-from sqlalchemy.sql.expression import desc
+from sqlalchemy import desc
 
 from cornice.resource import resource, view
 from sqlalchemy.orm import joinedload, load_only
@@ -79,23 +79,31 @@ def load_feed(doc_ids, limit, user_id=None):
         doc_changes = []
     else:
         doc_changes = DBSession.query(DocumentVersion) \
-            .options(load_only('lang'),
-                     joinedload('history_metadata').load_only(
-                        HistoryMetaData.id,
-                        HistoryMetaData.user_id,
-                        HistoryMetaData.comment,
-                        HistoryMetaData.written_at).
-                     joinedload('user').load_only(
-                        User.id,
-                        User.name,
-                        User.username,
-                        User.lang)) \
-            .options(joinedload('document').load_only(
+            .options(
+                load_only(DocumentVersion.lang),
+                joinedload(DocumentVersion.history_metadata)
+                .load_only(
+                    HistoryMetaData.id,
+                    HistoryMetaData.user_id,
+                    HistoryMetaData.comment,
+                    HistoryMetaData.written_at)
+                .joinedload(HistoryMetaData.user)
+                .load_only(
+                    User.id,
+                    User.name,
+                    User.username,
+                    User.lang)) \
+            .options(
+                joinedload(DocumentVersion.document)
+                .load_only(
                     Document.version,
                     Document.document_id,
                     Document.type,
                     Document.quality)) \
-            .options(joinedload('document_locales_archive').load_only(
+            .options(
+                joinedload(
+                    DocumentVersion.document_locales_archive)
+                .load_only(
                     ArchiveDocumentLocale.title)) \
             .order_by(desc(DocumentVersion.id)) \
             .filter(DocumentVersion.history_metadata_id.in_(doc_ids)) \

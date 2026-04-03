@@ -9,11 +9,14 @@ class BaseFollowTest(BaseTestRest):
     def setUp(self):  # noqa
         super(BaseFollowTest, self).setUp()
 
-        self.contributor = self.session.query(User).get(
+        self.contributor = self.session.get(
+            User,
             self.global_userids['contributor'])
-        self.contributor2 = self.session.query(User).get(
+        self.contributor2 = self.session.get(
+            User,
             self.global_userids['contributor2'])
-        self.moderator = self.session.query(User).get(
+        self.moderator = self.session.get(
+            User,
             self.global_userids['moderator'])
 
         self.session.add(FollowedUser(

@@ -257,7 +257,8 @@ class TestArticleRest(BaseDocumentTestRest):
         self.assertIsNone(doc.geometry)
 
         # check that a link to the associated waypoint is created
-        association_wp = self.session.query(Association).get(
+        association_wp = self.session.get(
+            Association,
             (self.waypoint2.document_id, doc.document_id))
         self.assertIsNotNone(association_wp)
 
@@ -270,7 +271,8 @@ class TestArticleRest(BaseDocumentTestRest):
         self.assertIsNotNone(association_wp_log)
 
         # check that a link to the associated article is created
-        association_main_art = self.session.query(Association).get(
+        association_main_art = self.session.get(
+            Association,
             (doc.document_id, self.article2.document_id))
         self.assertIsNotNone(association_main_art)
 
@@ -349,7 +351,8 @@ class TestArticleRest(BaseDocumentTestRest):
         self.put_wrong_ids(body, self.article1.document_id, user='moderator')
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.article1.document_id, user='moderator')
+        self.pydantic_put_put_no_document(
+            self.article1.document_id, user='moderator')
 
     def test_put_success_all(self):
         body = {
@@ -406,7 +409,8 @@ class TestArticleRest(BaseDocumentTestRest):
         # check if geometry is not stored in database afterwards
         self.assertIsNone(article1.geometry)
         # check that a link to the associated waypoint is created
-        association_wp = self.session.query(Association).get(
+        association_wp = self.session.get(
+            Association,
             (self.waypoint2.document_id, article1.document_id))
         self.assertIsNotNone(association_wp)
 
@@ -419,7 +423,8 @@ class TestArticleRest(BaseDocumentTestRest):
         self.assertIsNotNone(association_wp_log)
 
         # check that a link to the associated article is created
-        association_main_art = self.session.query(Association).get(
+        association_main_art = self.session.get(
+            Association,
             (article1.document_id, self.article2.document_id))
         self.assertIsNotNone(association_main_art)
 

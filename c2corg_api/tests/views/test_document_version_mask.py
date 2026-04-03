@@ -4,7 +4,7 @@ from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.document import DocumentRest
-from sqlalchemy.sql.expression import and_
+from sqlalchemy import and_
 
 
 class BaseMaskTest(BaseTestRest):
@@ -12,10 +12,12 @@ class BaseMaskTest(BaseTestRest):
     def setUp(self):  # noqa
         super(BaseMaskTest, self).setUp()
 
-        self.contributor = self.session.query(User).get(
+        self.contributor = self.session.get(
+            User,
             self.global_userids['contributor'])
         contributor_id = self.global_userids['contributor']
-        self.moderator = self.session.query(User).get(
+        self.moderator = self.session.get(
+            User,
             self.global_userids['moderator'])
 
         self.route = Route(activities=['skitouring'], locales=[
@@ -36,14 +38,14 @@ class BaseMaskTest(BaseTestRest):
         self.session.flush()
 
     def mask(self, version_id):
-        version = self.session.query(DocumentVersion).get(version_id)
+        version = self.session.get(DocumentVersion, version_id)
         version.masked = True
         self.session.flush()
 
         self.assertTrue(self.is_masked(version_id))
 
     def is_masked(self, version_id):
-        version = self.session.query(DocumentVersion).get(version_id)
+        version = self.session.get(DocumentVersion, version_id)
         self.session.refresh(version)
         return version.masked
 

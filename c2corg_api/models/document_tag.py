@@ -10,7 +10,7 @@ from sqlalchemy import (
     String,
     )
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql.functions import func
+from sqlalchemy import func
 
 from c2corg_api.models import Base, schema, users_schema
 from c2corg_api.models.document import Document

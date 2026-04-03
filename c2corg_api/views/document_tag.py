@@ -8,16 +8,16 @@ from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import create_int_validator
-from colander import MappingSchema, SchemaNode, Integer, required
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
+from pydantic import BaseModel
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest
 
 log = logging.getLogger(__name__)
 
 
-class DocumentTagSchema(MappingSchema):
-    document_id = SchemaNode(Integer(), missing=required)
+class DocumentTagSchema(BaseModel):
+    document_id: int
 
 
 def get_tag_relation(user_id, document_id):
@@ -53,8 +53,8 @@ def validate_document(request, **kwargs):
 class DocumentTagRest(ACLDefault):
 
     @restricted_json_view(
-        schema=DocumentTagSchema(),
-        validators=[colander_body_validator, validate_document])
+        validators=[make_pydantic_validator(DocumentTagSchema),
+                    validate_document])
     def post(self):
         """ Tag the given document as todo.
         Creates a tag relation, so that the authenticated user is
@@ -91,8 +91,8 @@ class DocumentTagRest(ACLDefault):
 class DocumentUntagRest(ACLDefault):
 
     @restricted_json_view(
-        schema=DocumentTagSchema(),
-        validators=[colander_body_validator, validate_document])
+        validators=[make_pydantic_validator(DocumentTagSchema),
+                    validate_document])
     def post(self):
         """ Untag the given document.
 

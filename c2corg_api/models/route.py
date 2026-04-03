@@ -1,5 +1,4 @@
-from c2corg_api.models.schema_utils import restrict_schema, \
-    get_update_schema, get_create_schema
+from c2corg_api.models.field_spec import build_field_spec
 from sqlalchemy import (
     Column,
     Integer,
@@ -10,15 +9,12 @@ from sqlalchemy import (
     ForeignKey
 )
 
-from colanderalchemy import SQLAlchemySchemaNode
-import colander
-
 from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
-    get_geometry_schema_overrides, schema_locale_attributes, schema_attributes)
+    schema_locale_attributes, schema_attributes, geometry_attributes)
 from c2corg_api.models import enums
 from sqlalchemy.orm import relationship
 from c2corg_api.models.common import document_types
@@ -337,44 +333,87 @@ class ArchiveRouteLocale(_RouteLocaleMixin, ArchiveDocumentLocale):
     __table_args__ = Base.__table_args__
 
 
-schema_route_locale = SQLAlchemySchemaNode(
+schema_route = build_field_spec(
+    Route,
+    includes=schema_attributes + attributes,
+    locale_fields=(
+        schema_locale_attributes + attributes_locales + ['title_prefix']
+    ),
+    geometry_fields=geometry_attributes,
+)
+
+
+# ===================================================================
+# Pydantic schemas (generated from the SQLAlchemy model)
+# ===================================================================
+from c2corg_api.models.pydantic import (  # noqa: E402
+    schema_from_sa_model,
+    get_update_schema as pydantic_update_schema,
+    get_create_schema as pydantic_create_schema,
+    DocumentGeometrySchema,
+    AssociationsSchema,
+    LangType,
+    _DuplicateLocalesMixin,
+)
+from typing import List, Optional  # noqa: E402
+
+# -- route locale schema (extends DocumentLocaleSchema with route fields) ---
+
+_RouteLocaleBase = schema_from_sa_model(
     RouteLocale,
-    # whitelisted attributes
+    name='_RouteLocaleBase',
     includes=schema_locale_attributes + attributes_locales + ['title_prefix'],
     overrides={
-        'version': {
-            'missing': None
-        }
-    })
+        'version': {'default': None},
+        'lang': {'type': LangType},
+    },
+)
 
-schema_route = SQLAlchemySchemaNode(
+
+class RouteLocaleSchema(_RouteLocaleBase):
+    """Locale for route create/update requests."""
+    model_config = {"extra": "ignore"}
+
+
+# -- route document schema --------------------------------------------------
+
+_route_schema_attrs = [
+    a for a in schema_attributes + attributes
+    if a not in ('locales', 'geometry')
+]
+
+_RouteDocBase = schema_from_sa_model(
     Route,
-    # whitelisted attributes
-    includes=schema_attributes + attributes,
+    name='_RouteDocBase',
+    includes=_route_schema_attrs,
     overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_route_locale]
-        },
-        'activities': {
-            'validator': colander.Length(min=1)
-        },
-        'geometry': get_geometry_schema_overrides(
-            ['LINESTRING', 'MULTILINESTRING'])
-    })
+        'document_id': {'default': None},
+        'version': {'default': None},
+        # Accept any string for activities; downstream validators
+        # (validate_document_for_type) check valid values.
+        'activities': {'type': List[str]},
+    },
+)
 
-schema_create_route = get_create_schema(schema_route)
-schema_update_route = get_update_schema(schema_route)
-schema_association_route = restrict_schema(schema_route, [
-    'locales.title', 'locales.title_prefix', 'elevation_min', 'elevation_max',
-    'activities'
-])
-schema_association_waypoint_route = restrict_schema(schema_route, [
-    'locales.title', 'locales.title_prefix', 'elevation_min', 'elevation_max',
-    'activities', 'geometry.geom_detail'
-])
+
+class RouteDocumentSchema(
+    _DuplicateLocalesMixin, _RouteDocBase,
+):
+    """Full route document for create/update requests."""
+    locales: Optional[List[RouteLocaleSchema]] = None
+    geometry: Optional[DocumentGeometrySchema] = None
+    associations: Optional[AssociationsSchema] = None
+    model_config = {"extra": "ignore"}
+
+
+# -- create / update envelopes -----------------------------------------------
+
+CreateRouteSchema = pydantic_create_schema(
+    RouteDocumentSchema,
+    name='CreateRouteSchema',
+)
+
+UpdateRouteSchema = pydantic_update_schema(
+    RouteDocumentSchema,
+    name='UpdateRouteSchema',
+)

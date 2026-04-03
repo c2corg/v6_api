@@ -1,12 +1,12 @@
 from c2corg_api.models import DBSession
 from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import waypoint_documents_config
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy import func, exists
 
 
-from c2corg_api.models.waypoint_stoparea import (
-    WaypointStoparea, schema_waypoint_stoparea)
+from c2corg_api.models.waypoint_stoparea import WaypointStoparea
 
 from c2corg_api.views.document import (
     make_validator_create, make_validator_update)
@@ -28,7 +28,7 @@ class WaypointStopareaInfoRest(DocumentInfoRest):
 
     @view(validators=[validate_id, validate_lang])
     def get(self):
-        return self._get_document_info(schema_waypoint_stoparea),
+        return self._get_document_info(waypoint_documents_config),
 
 
 def validate_waypoint_id(request, *args, **kwargs):

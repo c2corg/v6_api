@@ -16,7 +16,7 @@ Modified for C2C : remove title emphasis, toc HTML class. Add c2c:role
 
 from markdown.util import code_escape
 from markdown.extensions.toc import (TocExtension, TocTreeprocessor,
-                                     stashedHTML2text, unescape,
+                                     run_postprocessors, strip_tags, unescape,
                                      unique, nest_toc_tokens,
                                      AtomicString, html)
 
@@ -75,16 +75,17 @@ class C2CTocTreeprocessor(TocTreeprocessor):
 
                 # Do not override pre-existing ids
                 if "id" not in el.attrib:
-                    innertext = unescape(stashedHTML2text(text, self.md))
+                    innertext = strip_tags(run_postprocessors(unescape(text), self.md))  # noqa: E501
                     el.attrib["id"] = unique(self.slugify(innertext, self.sep), used_ids)  # noqa: E501
 
                 if int(el.tag[-1]) >= self.toc_top and int(el.tag[-1]) <= self.toc_bottom:  # noqa: E501
                     toc_tokens.append({
                         'level': int(el.tag[-1]),
                         'id': el.attrib["id"],
-                        'name': unescape(stashedHTML2text(
-                            code_escape(el.attrib.get('data-toc-label', text)),
-                            self.md, strip_entities=False
+                        'name': strip_tags(run_postprocessors(
+                            unescape(code_escape(
+                                el.attrib.get('data-toc-label', text))),
+                            self.md
                         ))
                     })
 

@@ -47,7 +47,7 @@ class TestSsoSyncRest(BaseTestRest):
         body = self.app_post_json(self._url, request_body, status=400).json
         errors = body.get('errors')
         self.assertEqual('sso_key', errors[0].get('name'))
-        self.assertEqual('Required', errors[0].get('description'))
+        self.assertEqual('Field required', errors[0].get('description'))
 
     def test_bad_sso_key(self):
         request_body = {
@@ -67,7 +67,7 @@ class TestSsoSyncRest(BaseTestRest):
         body = self.app_post_json(self._url, request_body, status=400).json
         errors = body.get('errors')
         self.assertEqual('external_id', errors[0].get('name'))
-        self.assertEqual('Required', errors[0].get('description'))
+        self.assertEqual('Field required', errors[0].get('description'))
 
     def test_new_user_no_email(self):
         request_body = {
@@ -360,7 +360,7 @@ class TestSsoLoginRest(BaseTestRest):
         body = self.app_post_json(self._url, status=400).json
         errors = body.get('errors')
         self.assertEqual('token', errors[0].get('name'))
-        self.assertEqual('Required', errors[0].get('description'))
+        self.assertEqual('Field required', errors[0].get('description'))
 
     def test_invalid_token(self):
         body = self.app_post_json(self._url,

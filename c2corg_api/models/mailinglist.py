@@ -1,6 +1,5 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql.functions import func
 
 from c2corg_api.models import Base, sympa_schema, users_schema
 from c2corg_api.models.user import User

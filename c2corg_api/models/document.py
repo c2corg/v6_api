@@ -2,13 +2,10 @@ import enum
 
 import abc
 
-from c2corg_api.ext import colander_ext
 from c2corg_api.models import Base, schema, DBSession, enums
 from c2corg_api.models.utils import copy_attributes, extend_dict, wkb_to_shape
 from c2corg_api.models.common import document_types
 from c2corg_api.models.common.attributes import quality_types
-from colander import null
-from colanderalchemy.schema import SQLAlchemySchemaNode
 from geoalchemy2 import Geometry, WKBElement
 from pyramid.httpexceptions import HTTPInternalServerError
 from shapely import wkt
@@ -21,10 +18,10 @@ from sqlalchemy import (
     func
     )
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship, column_property
-from sqlalchemy.sql.schema import UniqueConstraint
+from sqlalchemy import UniqueConstraint
 
 UpdateType = enum.Enum(
     'UpdateType', 'FIGURES LANG GEOM')
@@ -128,6 +125,9 @@ class Document(Base, _DocumentMixin):
 
         if other.geometry:
             if self.geometry:
+                # Skip geometry update if the change is less than ~1m.
+                # Avoids unnecessary versioning from rounding during
+                # GeoJSON/WKB round-trips.
                 if not self.geometry.almost_equals(other.geometry):
                     self.geometry.update(other.geometry)
             else:
@@ -251,6 +251,12 @@ class DocumentLocale(Base, _DocumentLocaleMixin):
         'summary'
     ]
 
+    # Attributes to copy during update (excludes document_id to avoid
+    # temporarily setting it to None before autoflush in SA 1.4+).
+    _ATTRIBUTES_UPDATE = [
+        'version', 'lang', 'title', 'description', 'summary'
+    ]
+
     topic_id = association_proxy('document_topic', 'topic_id')
 
     def to_archive(self):
@@ -263,7 +269,7 @@ class DocumentLocale(Base, _DocumentLocaleMixin):
         return locale
 
     def update(self, other):
-        copy_attributes(other, self, DocumentLocale._ATTRIBUTES)
+        copy_attributes(other, self, DocumentLocale._ATTRIBUTES_UPDATE)
 
 
 class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
@@ -283,10 +289,6 @@ class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
     )
 
 
-# `geomet` does not support EWKB, so load geometries as WKB
-Geometry.as_binary = 'ST_AsBinary'
-
-
 class _DocumentGeometryMixin(object):
     version = Column(Integer, nullable=False)
 
@@ -295,13 +297,7 @@ class _DocumentGeometryMixin(object):
         return Column(
             Geometry(
                 geometry_type='POINT', srid=3857, dimension=2,
-                management=True,
                 spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
-            info={
-                'colanderalchemy': {
-                    'typ': colander_ext.Geometry(['POINT'], srid=3857)
-                }
-            }
         )
 
     @declared_attr
@@ -309,23 +305,13 @@ class _DocumentGeometryMixin(object):
         return Column(
             Geometry(
                 geometry_type='GEOMETRY', srid=3857,
-                management=True,
                 use_typmod=False,
                 spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
-            info={
-                'colanderalchemy': {
-                    'typ': colander_ext.Geometry(['GEOMETRY'], srid=3857)
-                }
-            }
         )
 
 
 class DocumentGeometry(Base, _DocumentGeometryMixin):
     __tablename__ = 'documents_geometries'
-
-    __colanderalchemy_config__ = {
-        'missing': null
-    }
 
     __mapper_args__ = {
         'version_id_col': _DocumentGeometryMixin.version
@@ -337,13 +323,16 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
     _ATTRIBUTES = \
         ['document_id', 'version', 'geom', 'geom_detail']
 
+    _ATTRIBUTES_UPDATE = \
+        ['version', 'geom', 'geom_detail']
+
     def to_archive(self):
         geometry = ArchiveDocumentGeometry()
         copy_attributes(self, geometry, DocumentGeometry._ATTRIBUTES)
         return geometry
 
     def update(self, other):
-        copy_attributes(other, self, DocumentGeometry._ATTRIBUTES)
+        copy_attributes(other, self, DocumentGeometry._ATTRIBUTES_UPDATE)
 
     def almost_equals(self, other):
         return self._almost_equals(self.geom, other.geom) and \
@@ -372,25 +361,19 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
         g1, proj1 = self.get_shape(geom)
         g2, proj2 = self.get_shape(other_geom)
 
-        # https://github.com/Toblerity/Shapely/blob/
-        # 8df2b1b718c89e7d644b246ab07ad3670d25aa6a/shapely/geometry/base.py#L673
-        decimals = None
         if proj1 != proj2:
             # Should never occur
             raise HTTPInternalServerError('Incompatible projections')
         elif proj1 == 3857:
-            decimals = -0.2  # +- 0.8m = 0.5 * 10^0.2
+            # EPSG:3857 unit is meters, ~0.8m tolerance
+            tolerance = 0.8
         elif proj1 == 4326:
-            decimals = 7  # +- 1m
-            # 5178564 740093 | gdaltransform -s_srs EPSG:3857 -t_srs EPSG:4326
-            # 46.5198319099112 6.63349924965325 0
-            # 5178565 740093 | gdaltransform -s_srs EPSG:3857 -t_srs EPSG:4326
-            # 46.5198408930641 6.63349924965325 0
-            # 46.5198408930641 - 46.5198319099112 = 0.0000089 -> 7 digits
+            # EPSG:4326 unit is degrees, ~1m ≈ 9e-6° (at the equator)
+            tolerance = 9e-6
         else:
             raise HTTPInternalServerError('Bad projection')
 
-        return g1.almost_equals(g2, decimals)
+        return g1.equals_exact(g2, tolerance)
 
     def distance(self, geom, other_geom):
         if geom is None or other_geom is None:
@@ -434,40 +417,9 @@ schema_locale_attributes = [
     'version', 'lang', 'title', 'description', 'summary'
 ]
 
-schema_document_locale = SQLAlchemySchemaNode(
-    DocumentLocale,
-    # whitelisted attributes
-    includes=schema_locale_attributes,
-    overrides={
-        'version': {
-            'missing': None
-        }
-    })
-
-geometry_schema_overrides = {
-    # whitelisted attributes
-    'includes': ['version', 'geom', 'geom_detail', 'has_geom_detail'],
-    'overrides': {
-        'version': {
-            'missing': None
-        }
-    }
-}
-
-
-def get_geometry_schema_overrides(geometry_types):
-    return {
-        # whitelisted attributes
-        'includes': ['version', 'geom', 'geom_detail', 'has_geom_detail'],
-        'overrides': {
-            'version': {
-                'missing': None
-            },
-            'geom_detail': {
-                'typ': colander_ext.Geometry(geometry_types, srid=3857)
-            }
-        }
-    }
+geometry_attributes = [
+    'version', 'geom', 'geom_detail', 'has_geom_detail'
+]
 
 
 def get_available_langs(document_id):

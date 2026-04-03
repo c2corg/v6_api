@@ -8,9 +8,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql.expression import and_, union, select, text, join
-from sqlalchemy.sql.functions import func
-from sqlalchemy import Integer
+from sqlalchemy import and_, union, select, text, join, func, Integer
 
 # This file contains definitions for database views that are used when filling
 # the search index.
@@ -30,10 +28,10 @@ def _get_select_waypoints_for_routes():
     route_type = text('\'' + ROUTE_TYPE + '\'')
 
     select_linked_waypoints = \
-        select([
+        select(
             Association.child_document_id.label('route_id'),
             Association.parent_document_id.label('waypoint_id')
-        ]). \
+        ). \
         where(
             and_(
                 Association.parent_document_type == waypoint_type,
@@ -41,10 +39,10 @@ def _get_select_waypoints_for_routes():
         cte('linked_waypoints')
 
     select_waypoint_parents = \
-        select([
+        select(
             select_linked_waypoints.c.route_id,
             Association.parent_document_id.label('waypoint_id')
-        ]). \
+        ). \
         select_from(join(
             select_linked_waypoints,
             Association,
@@ -56,10 +54,10 @@ def _get_select_waypoints_for_routes():
         cte('waypoint_parents')
 
     select_waypoint_grandparents = \
-        select([
+        select(
             select_waypoint_parents.c.route_id,
             Association.parent_document_id.label('waypoint_id')
-        ]). \
+        ). \
         select_from(join(
             select_waypoint_parents,
             Association,
@@ -89,12 +87,12 @@ def _get_select_waypoints_for_routes_aggregated():
     """
     all_waypoints = _get_select_waypoints_for_routes()
     return \
-        select([
+        select(
             all_waypoints.c.route_id.label('route_id'),
             func.array_agg(
                 all_waypoints.c.waypoint_id,
                 type_=postgresql.ARRAY(Integer)).label('waypoint_ids')
-        ]). \
+        ). \
         select_from(all_waypoints). \
         group_by(all_waypoints.c.route_id)
 
@@ -135,10 +133,10 @@ def _get_select_waypoints_for_outings_aggregated():
     route_type = text('\'' + ROUTE_TYPE + '\'')
     all_waypoints_for_routes = _get_select_waypoints_for_routes()
     waypoints_for_outings = \
-        select([
+        select(
             Association.child_document_id.label('outing_id'),
             all_waypoints_for_routes.c.waypoint_id
-        ]). \
+        ). \
         select_from(join(
             Association,
             all_waypoints_for_routes,
@@ -150,12 +148,12 @@ def _get_select_waypoints_for_outings_aggregated():
             ))). \
         cte('waypoints_for_outings')
     return \
-        select([
+        select(
             waypoints_for_outings.c.outing_id.label('outing_id'),
             func.array_agg(
                 waypoints_for_outings.c.waypoint_id,
                 type_=postgresql.ARRAY(Integer)).label('waypoint_ids')
-        ]). \
+        ). \
         select_from(waypoints_for_outings). \
         group_by(waypoints_for_outings.c.outing_id)
 
@@ -189,12 +187,12 @@ def _get_select_users_for_outings_aggregated():
     outing_type = text('\'' + OUTING_TYPE + '\'')
     user_type = text('\'' + USERPROFILE_TYPE + '\'')
     return \
-        select([
+        select(
             Association.child_document_id.label('outing_id'),
             func.array_agg(
                 Association.parent_document_id,
                 type_=postgresql.ARRAY(Integer)).label('user_ids')
-        ]). \
+        ). \
         select_from(Association). \
         where(and_(
             Association.parent_document_type == user_type,
@@ -232,12 +230,12 @@ def _get_select_routes_for_outings_aggregated():
     outing_type = text('\'' + OUTING_TYPE + '\'')
     route_type = text('\'' + ROUTE_TYPE + '\'')
     return \
-        select([
+        select(
             Association.child_document_id.label('outing_id'),
             func.array_agg(
                 Association.parent_document_id,
                 type_=postgresql.ARRAY(Integer)).label('route_ids')
-        ]). \
+        ). \
         select_from(Association). \
         where(and_(
             Association.parent_document_type == route_type,
@@ -273,12 +271,12 @@ def _get_select_users_for_routes_aggregated():
     associated users.
     """
     return \
-        select([
+        select(
             DocumentTag.document_id.label('route_id'),
             func.array_agg(
                 DocumentTag.user_id,
                 type_=postgresql.ARRAY(Integer)).label('user_ids')
-        ]). \
+        ). \
         select_from(DocumentTag). \
         group_by(DocumentTag.document_id)
 

@@ -48,7 +48,7 @@ def upgrade():
     # if there is some value in the table. If yes, it's not a test DB and we have to complete them.
 
     conn = op.get_bind()
-    res = conn.execute("SELECT count(1) FROM guidebook.langs").fetchall()
+    res = conn.execute(sa.text("SELECT count(1) FROM guidebook.langs")).fetchall()
 
     if res[0][0] != 0:
         op.execute("INSERT INTO guidebook.langs VALUES ('zh');")

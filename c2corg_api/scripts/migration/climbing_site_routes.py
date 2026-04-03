@@ -9,7 +9,7 @@ from c2corg_api.models.route import Route, RouteLocale, ArchiveRoute, \
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.migration.batch import SimpleBatch
 from c2corg_api.scripts.migration.documents.batch_document import DocumentBatch
-from sqlalchemy.sql import text
+from sqlalchemy import text
 import zope
 
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
@@ -212,8 +212,8 @@ class CreateClimbingSiteRoutes(MigrateBase):
                     association_log_batch.add(link_outing_route_log)
 
     def _remove_waypoint_outing_links(self):
-        self.session_target.execute(SQL_DELETE_WP_OUTING_LINKS)
-        self.session_target.execute(SQL_DELETE_WP_OUTING_LOGS_LINKS)
+        self.session_target.execute(text(SQL_DELETE_WP_OUTING_LINKS))
+        self.session_target.execute(text(SQL_DELETE_WP_OUTING_LOGS_LINKS))
 
 
 # climbing sites that need a fake route: climbing sites that associated to an

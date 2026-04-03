@@ -1,5 +1,4 @@
-from c2corg_api.models.schema_utils import restrict_schema, \
-    get_update_schema, get_create_schema
+from c2corg_api.models.field_spec import build_field_spec
 from sqlalchemy import (
     Boolean,
     Column,
@@ -10,14 +9,11 @@ from sqlalchemy import (
     )
 
 
-from colanderalchemy import SQLAlchemySchemaNode
-
 from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.document import (
     ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
-    schema_attributes, schema_locale_attributes,
-    get_geometry_schema_overrides)
+    schema_attributes, schema_locale_attributes, geometry_attributes)
 from c2corg_api.models import enums
 from c2corg_api.models.common import document_types
 
@@ -308,37 +304,80 @@ class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
     __table_args__ = Base.__table_args__
 
 
-schema_waypoint_locale = SQLAlchemySchemaNode(
+schema_waypoint = build_field_spec(
+    Waypoint,
+    includes=schema_attributes + attributes,
+    locale_fields=schema_locale_attributes + attributes_locales,
+    geometry_fields=geometry_attributes,
+)
+
+
+# ===================================================================
+# Pydantic schemas (generated from the SQLAlchemy model)
+# ===================================================================
+from c2corg_api.models.pydantic import (  # noqa: E402, F811
+    schema_from_sa_model,
+    get_update_schema as pydantic_update_schema,
+    get_create_schema as pydantic_create_schema,
+    DocumentGeometrySchema,
+    AssociationsSchema,
+    LangType,
+    _DuplicateLocalesMixin,
+)
+from typing import List, Optional  # noqa: E402
+
+# -- waypoint locale schema --------------------------------------------------
+
+_WaypointLocaleBase = schema_from_sa_model(
     WaypointLocale,
-    # whitelisted attributes
+    name='_WaypointLocaleBase',
     includes=schema_locale_attributes + attributes_locales,
     overrides={
-        'version': {
-            'missing': None
-        }
-    })
+        'version': {'default': None},
+        'lang': {'type': LangType},
+    },
+)
 
 
-schema_waypoint = SQLAlchemySchemaNode(
+class WaypointLocaleSchema(_WaypointLocaleBase):
+    """Locale for waypoint create/update requests."""
+    model_config = {"extra": "ignore"}
+
+
+# -- waypoint document schema ------------------------------------------------
+
+_waypoint_schema_attrs = [
+    a for a in schema_attributes + attributes
+    if a not in ('locales', 'geometry')
+]
+
+_WaypointDocBase = schema_from_sa_model(
     Waypoint,
-    # whitelisted attributes
-    includes=schema_attributes + attributes,
+    name='_WaypointDocBase',
+    includes=_waypoint_schema_attrs,
     overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_waypoint_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POINT'])
-    })
+        'document_id': {'default': None},
+        'version': {'default': None},
+    },
+)
 
-schema_create_waypoint = get_create_schema(schema_waypoint)
-schema_update_waypoint = get_update_schema(schema_waypoint)
-schema_association_waypoint = restrict_schema(schema_waypoint, [
-    'elevation', 'locales.title', 'locales.access_period', 'geometry.geom',
-    'public_transportation_rating'
-])
+
+class WaypointDocumentSchema(
+    _DuplicateLocalesMixin, _WaypointDocBase,
+):
+    """Full waypoint document for create/update requests."""
+    locales: Optional[List[WaypointLocaleSchema]] = None
+    geometry: Optional[DocumentGeometrySchema] = None
+    associations: Optional[AssociationsSchema] = None
+    model_config = {"extra": "ignore"}
+
+
+CreateWaypointSchema = pydantic_create_schema(
+    WaypointDocumentSchema,
+    name='CreateWaypointSchema',
+)
+
+UpdateWaypointSchema = pydantic_update_schema(
+    WaypointDocumentSchema,
+    name='UpdateWaypointSchema',
+)

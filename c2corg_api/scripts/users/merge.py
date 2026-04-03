@@ -5,9 +5,7 @@ import logging
 import transaction
 
 from pyramid.paster import get_appsettings
-from sqlalchemy import engine_from_config
-from sqlalchemy.sql.expression import and_, or_, any_
-from sqlalchemy.sql.functions import func
+from sqlalchemy import engine_from_config, and_, or_, any_, func
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.area_association import AreaAssociation
@@ -72,12 +70,12 @@ def main(argv=sys.argv):
     logging.basicConfig()
     logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
-    source_user = DBSession.query(User).get(source_user_id)
+    source_user = DBSession.get(User, source_user_id)
     if not source_user:
         exit('ERROR: source user account (id {}) does not exist'.format(
             source_user_id))
 
-    target_user = DBSession.query(User).get(target_user_id)
+    target_user = DBSession.get(User, target_user_id)
     if not target_user:
         exit('ERROR: target user account (id {}) does not exist'.format(
             target_user_id))
@@ -200,7 +198,7 @@ def _update_feed_entries(source_user_id, target_user_id):
         intersect(
             DBSession.query(DocumentChange.document_id).
             filter(DocumentChange.user_id == source_user_id)
-        ).subquery()
+        ).scalar_subquery()
     DBSession.execute(
         DocumentChange.__table__.update().where(and_(
             DocumentChange.user_id == source_user_id,
@@ -254,7 +252,7 @@ def _update_history_metadata(source_user_id, target_user_id):
 
 def _unregister_from_mailinglists(user_id):
     email = DBSession.query(User.email). \
-        filter(User.id == user_id).subquery()
+        filter(User.id == user_id).scalar_subquery()
     DBSession.execute(
         Mailinglist.__table__.delete().where(Mailinglist.email == email)
     )

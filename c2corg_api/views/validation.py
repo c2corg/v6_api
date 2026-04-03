@@ -20,10 +20,9 @@ from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.models.common.associations import valid_associations
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.common import document_types
-from colander import null
 from cornice.errors import Errors
 from pyramid.httpexceptions import HTTPBadRequest
-from sqlalchemy.sql.expression import exists, and_
+from sqlalchemy import exists, and_
 from webob.descriptors import parse_int_safe
 from dateutil import parser as datetime_parser
 import urllib
@@ -114,7 +113,7 @@ def validate_preferred_lang_param(request, **kwargs):
 
 
 def is_missing(val):
-    return val is None or val == '' or val == [] or val is null
+    return val is None or val == '' or val == []
 
 
 def check_required_fields(document, fields, request, updating):
@@ -130,16 +129,23 @@ def check_required_fields(document, fields, request, updating):
                 request.errors.add('body', field, 'Required')
         else:
             # fields like 'geometry.geom'
-            if field in ['locales.title']:
-                # this is a required field for all documents, which is already
-                # checked when validating against the Colander schema
-                pass
-            else:
-                field_parts = field.split('.')
-                attr = document.get(field_parts[0])
-                if attr:
+            field_parts = field.split('.')
+            attr = document.get(field_parts[0])
+            if attr is not None:
+                if isinstance(attr, list):
+                    # e.g. 'locales.title' – check each entry
+                    for i, item in enumerate(attr):
+                        if is_missing(item.get(field_parts[1])):
+                            request.errors.add(
+                                'body',
+                                '{}.{}.{}'.format(
+                                    field_parts[0], i,
+                                    field_parts[1]),
+                                'Required')
+                else:
                     if is_missing(attr.get(field_parts[1])):
-                        request.errors.add('body', field, 'Required')
+                        request.errors.add(
+                            'body', field, 'Required')
 
 
 def check_duplicate_locales(document, request):

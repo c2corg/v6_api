@@ -1,5 +1,4 @@
-from c2corg_api.models.schema_utils import restrict_schema, \
-    get_update_schema, get_create_schema
+from c2corg_api.models.field_spec import build_field_spec
 from c2corg_api.models.common.fields_image import fields_image
 from sqlalchemy import (
     Column,
@@ -10,17 +9,13 @@ from sqlalchemy import (
     SmallInteger,
     String
     )
-from sqlalchemy.ext.declarative import declared_attr
-
-from colander import MappingSchema, SchemaNode, Sequence
-from colanderalchemy import SQLAlchemySchemaNode
+from sqlalchemy.orm import declared_attr
 
 from c2corg_api.models import schema, enums, Base, DBSession
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, get_geometry_schema_overrides,
-    schema_attributes, DocumentLocale,
-    schema_locale_attributes)
+    ArchiveDocument, Document,
+    schema_attributes, schema_locale_attributes, geometry_attributes)
 from c2corg_api.models.common import document_types
 
 IMAGE_TYPE = document_types.IMAGE_TYPE
@@ -113,52 +108,15 @@ class ArchiveImage(_ImageMixin, ArchiveDocument):
     __table_args__ = Base.__table_args__
 
 
-# special schema for image locales: images can be created without title
-schema_image_locale = SQLAlchemySchemaNode(
-    DocumentLocale,
-    # whitelisted attributes
-    includes=schema_locale_attributes,
-    overrides={
-        'version': {
-            'missing': None
-        },
-        'title': {
-            'missing': ''
-        }
-    })
-
-schema_image = SQLAlchemySchemaNode(
+schema_image = build_field_spec(
     Image,
-    # whitelisted attributes
     includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_image_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POINT'])
-    })
+    locale_fields=schema_locale_attributes,
+    geometry_fields=geometry_attributes,
+)
 
-schema_create_image = get_create_schema(schema_image)
-schema_update_image = get_update_schema(schema_image)
-schema_listing_image = restrict_schema(
-    schema_image, fields_image.get('listing'))
-schema_association_image = restrict_schema(schema_image, [
-    'filename', 'locales.title', 'geometry.geom'
-])
-
-
-class SchemaImageList(MappingSchema):
-    images = SchemaNode(
-        Sequence(), schema_create_image, missing=None)
-
-
-schema_create_image_list = SchemaImageList()
+schema_listing_image = schema_image.restrict(
+    fields_image.get('listing'))
 
 
 def is_personal(image_id):
@@ -167,3 +125,74 @@ def is_personal(image_id):
         filter(Image.document_id == image_id). \
         scalar()
     return image_type == 'personal'
+
+
+# ===================================================================
+# Pydantic schemas (generated from the SQLAlchemy model)
+# ===================================================================
+from c2corg_api.models.pydantic import (  # noqa: E402
+    schema_from_sa_model,
+    get_update_schema as pydantic_update_schema,
+    get_create_schema as pydantic_create_schema,
+    DocumentLocaleSchema,
+    DocumentGeometrySchema,
+    AssociationsSchema,
+    _DuplicateLocalesMixin,
+)
+from typing import List, Optional  # noqa: E402
+from pydantic import BaseModel as _BaseModel, field_validator  # noqa: E402
+
+_image_schema_attrs = [
+    a for a in schema_attributes + attributes
+    if a not in ('locales', 'geometry')
+]
+
+_ImageDocBase = schema_from_sa_model(
+    Image,
+    name='_ImageDocBase',
+    includes=_image_schema_attrs,
+    overrides={
+        'document_id': {'default': None},
+        'version': {'default': None},
+        'filename': {'default': ...},
+    },
+)
+
+
+class ImageLocaleSchema(DocumentLocaleSchema):
+    """Image locales: images can be created without a title."""
+    title: Optional[str] = ''
+
+    @field_validator('title', mode='before')
+    @classmethod
+    def _coerce_none_title(cls, v):
+        """The schema used ``missing=''`` so that ``None`` / absent title
+        became the empty string.  Reproduce that here."""
+        if v is None:
+            return ''
+        return v
+
+
+class ImageDocumentSchema(
+    _DuplicateLocalesMixin, _ImageDocBase,
+):
+    """Full image document for create/update requests."""
+    locales: Optional[List[ImageLocaleSchema]] = None
+    geometry: Optional[DocumentGeometrySchema] = None
+    associations: Optional[AssociationsSchema] = None
+    model_config = {"extra": "ignore"}
+
+
+CreateImageSchema = pydantic_create_schema(
+    ImageDocumentSchema,
+    name='CreateImageSchema',
+)
+
+UpdateImageSchema = pydantic_update_schema(
+    ImageDocumentSchema,
+    name='UpdateImageSchema',
+)
+
+
+class CreateImageListSchema(_BaseModel):
+    images: Optional[List[ImageDocumentSchema]] = None

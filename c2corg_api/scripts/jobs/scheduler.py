@@ -8,7 +8,7 @@ from pyramid.paster import get_appsettings, setup_logging
 
 from sqlalchemy import engine_from_config
 
-from c2corg_api.models import Base, DBSession
+from c2corg_api.models import DBSession
 from c2corg_api.jobs import configure_scheduler_from_config
 
 log = logging.getLogger('c2corg_api_background_jobs')
@@ -31,7 +31,6 @@ def main(argv=sys.argv):
     settings = get_appsettings(config_uri, options=options)
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
-    Base.metadata.bind = engine
 
     configure_scheduler_from_config(settings)
 

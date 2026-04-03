@@ -4,15 +4,14 @@ from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.xreport import (
   Xreport,
   schema_xreport,
-  schema_create_xreport,
-  schema_update_xreport,
   XREPORT_TYPE, ArchiveXreport, ArchiveXreportLocale, XreportLocale,
-  schema_xreport_without_personal)
+  schema_xreport_without_personal,
+  CreateXreportSchema, UpdateXreportSchema)
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.models.common.fields_xreport import fields_xreport
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 from c2corg_api.views import set_creator as set_creator_on_documents
 
 from c2corg_api.views.document_schemas import xreport_documents_config
@@ -60,16 +59,18 @@ class XreportRest(DocumentRest):
                          set_custom_fields=set_author)
 
     @restricted_json_view(
-            schema=schema_create_xreport,
-            validators=[colander_body_validator,
+            validators=[make_pydantic_validator(
+                            CreateXreportSchema,
+                            allowed_geometry_types=['POINT']),
                         validate_xreport_create,
                         validate_associations_create])
     def collection_post(self):
         return self._collection_post(schema_xreport, allow_anonymous=True)
 
     @restricted_json_view(
-            schema=schema_update_xreport,
-            validators=[colander_body_validator,
+            validators=[make_pydantic_validator(
+                            UpdateXreportSchema,
+                            allowed_geometry_types=['POINT']),
                         validate_id,
                         validate_xreport_update,
                         validate_associations_update])

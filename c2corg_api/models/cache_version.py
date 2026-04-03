@@ -7,10 +7,7 @@ from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import Column, ForeignKey
-from sqlalchemy.sql.sqltypes import Integer, DateTime
-from sqlalchemy import text
+from sqlalchemy import func, Column, ForeignKey, Integer, DateTime, text
 
 log = logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
-from colanderalchemy.schema import SQLAlchemySchemaNode
+from pydantic import BaseModel
 from sqlalchemy import (
     Boolean,
     Column,
@@ -23,9 +23,7 @@ from sqlalchemy.orm import relationship
 
 from c2corg_api.models import Base, schema, users_schema, DBSession
 from c2corg_api.models.document import Document
-from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import or_, and_, union
-from sqlalchemy.sql.functions import func
+from sqlalchemy import literal_column, or_, and_, union, func
 
 
 class Association(Base):
@@ -114,11 +112,9 @@ class AssociationLog(Base):
         index=True)
 
 
-schema_association = SQLAlchemySchemaNode(
-    Association,
-    # whitelisted attributes
-    includes=['parent_document_id', 'child_document_id'],
-    overrides={})
+class SchemaAssociation(BaseModel):
+    parent_document_id: int
+    child_document_id: int
 
 
 def exists_already(link):
@@ -321,7 +317,12 @@ def _get_load_associations_query(document, doc_types_to_load):
 
     return DBSession \
         .query(column('id'), column('t'), column('p')) \
-        .select_from(union(query_parents.select(), query_children.select()))
+        .select_from(
+            union(
+                query_parents.select(),
+                query_children.select()
+            ).subquery()
+        )
 
 
 def _diff_associations(new_associations, current_associations):

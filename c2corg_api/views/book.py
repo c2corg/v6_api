@@ -3,15 +3,14 @@ import functools
 from c2corg_api.models.book import (
     Book,
     schema_book,
-    schema_create_book,
-    schema_update_book,
-    BOOK_TYPE, ArchiveBook)
+    BOOK_TYPE, ArchiveBook,
+    CreateBookSchema,
+    UpdateBookSchema)
 from c2corg_api.models.document import ArchiveDocumentLocale
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.models.common.fields_book import fields_book
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 
 from c2corg_api.views.document_schemas import book_documents_config
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
@@ -21,6 +20,7 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, \
     validate_associations, validate_lang, validate_version_id, \
     validate_cook_param
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 
 validate_book_create = make_validator_create(fields_book.get('required'))
 validate_book_update = make_validator_update(fields_book.get('required'))
@@ -46,16 +46,14 @@ class BookRest(DocumentRest):
             include_areas=False)
 
     @restricted_json_view(
-            schema=schema_create_book,
-            validators=[colander_body_validator,
+            validators=[make_pydantic_validator(CreateBookSchema),
                         validate_book_create,
                         validate_associations_create])
     def collection_post(self):
         return self._collection_post(schema_book)
 
     @restricted_json_view(
-            schema=schema_update_book,
-            validators=[colander_body_validator,
+            validators=[make_pydantic_validator(UpdateBookSchema),
                         validate_id,
                         validate_book_update,
                         validate_associations_update])

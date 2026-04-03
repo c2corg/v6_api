@@ -28,7 +28,8 @@ class TestUserFilterPreferencesRest(BaseTestRest):
         self.session.add_all([self.area1, self.area2])
         self.session.flush()
 
-        self.contributor = self.session.query(User).get(
+        self.contributor = self.session.get(
+            User,
             self.global_userids['contributor'])
         self.contributor.feed_filter_areas.append(self.area1)
         self.contributor.feed_filter_activities = ['hiking']
@@ -89,13 +90,10 @@ class TestUserFilterPreferencesRest(BaseTestRest):
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
 
-        self.assertIsNotNone(self.get_error(errors, 'activities.1'))
-        self.assertIsNotNone(self.get_error(errors, 'langs.1'))
-        self.assertCorniceRequired(
-            self.get_error(errors, 'areas.0.document_id'),
-            'areas.0.document_id')
-        self.assertCorniceRequired(
-            self.get_error(errors, 'followed_only'), 'followed_only')
+        self.assertIsNotNone(self.get_error(errors, 'activities'))
+        self.assertIsNotNone(self.get_error(errors, 'langs'))
+        self.assertIsNotNone(self.get_error(errors, 'areas.0.document_id'))
+        self.assertIsNotNone(self.get_error(errors, 'followed_only'))
 
     def test_post_preferences(self):
         request_body = {

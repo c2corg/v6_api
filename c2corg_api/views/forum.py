@@ -1,4 +1,4 @@
-import colander
+from pydantic import BaseModel
 
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.models.common import document_types
@@ -13,9 +13,9 @@ from c2corg_api.models.user import User
 from c2corg_api.security.discourse_client import get_discourse_client
 
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 
 from c2corg_api.views import cors_policy, restricted_view
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 
 from pyramid.httpexceptions import HTTPInternalServerError
 
@@ -42,12 +42,9 @@ class PrivateMessageRest(ACLDefault):
         return {link: link, count: count}
 
 
-class SchemaTopicCreate(colander.MappingSchema):
-    document_id = colander.SchemaNode(colander.Int())
-    lang = colander.SchemaNode(colander.String())
-
-
-schema_topic_create = SchemaTopicCreate()
+class SchemaTopicCreate(BaseModel):
+    document_id: int
+    lang: str
 
 
 def validate_topic_create(request, **kwargs):
@@ -89,8 +86,8 @@ def validate_topic_create(request, **kwargs):
 class ForumTopicRest(ACLDefault):
 
     @restricted_view(
-        schema=schema_topic_create,
-        validators=[colander_body_validator, validate_topic_create])
+        validators=[make_pydantic_validator(SchemaTopicCreate),
+                    validate_topic_create])
     def collection_post(self):
         settings = self.request.registry.settings
 

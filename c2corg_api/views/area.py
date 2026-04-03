@@ -1,7 +1,8 @@
 import functools
 
-from c2corg_api.models.area import schema_area, Area, schema_update_area, \
-    AREA_TYPE, schema_create_area, ArchiveArea
+from c2corg_api.models.area import schema_area, Area, \
+    AREA_TYPE, ArchiveArea, \
+    CreateAreaSchema, UpdateAreaSchema
 from c2corg_api.models.area_association import update_area
 from c2corg_api.models.cache_version import update_cache_version_for_area
 from c2corg_api.models.document import UpdateType, ArchiveDocumentLocale
@@ -11,7 +12,6 @@ from c2corg_api.views.document_version import DocumentVersionRest
 
 from c2corg_api.models.common.fields_area import fields_area
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 
 from c2corg_api.views.document import DocumentRest, make_validator_create, \
     make_validator_update
@@ -19,6 +19,7 @@ from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_lang_param, validate_preferred_lang_param, validate_lang, \
     validate_associations, validate_version_id, validate_cook_param
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 from pyramid.httpexceptions import HTTPBadRequest
 
 validate_area_create = make_validator_create(fields_area.get('required'))
@@ -45,9 +46,10 @@ class AreaRest(DocumentRest):
             include_areas=False)
 
     @restricted_json_view(
-            schema=schema_create_area,
             validators=[
-                colander_body_validator,
+                make_pydantic_validator(
+                    CreateAreaSchema,
+                    allowed_geometry_types=['POLYGON', 'MULTIPOLYGON']),
                 validate_area_create,
                 validate_associations_create],
             permission='moderator')
@@ -56,17 +58,18 @@ class AreaRest(DocumentRest):
             schema_area, after_add=insert_associations)
 
     @restricted_json_view(
-            schema=schema_update_area,
             validators=[
-                colander_body_validator,
+                make_pydantic_validator(
+                    UpdateAreaSchema,
+                    allowed_geometry_types=['POLYGON', 'MULTIPOLYGON']),
                 validate_id,
                 validate_area_update,
                 validate_associations_update])
     def put(self):
         if not self.request.has_permission('moderator'):
             # the geometry of areas should not be modifiable for non-moderators
-            if self.request.validated['document'] and \
-                    self.request.validated['document']['geometry']:
+            document = self.request.validated.get('document')
+            if document and document.get('geometry'):
                 raise HTTPBadRequest('No permission to change the geometry')
 
         return self._put(Area, schema_area, after_update=update_associations)

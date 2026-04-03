@@ -128,7 +128,8 @@ class TestForumTopicRest(BaseTestRest):
         self.assertEqual(version, self.locale_en.version)
         self.assertEqual(10, json.get('topic_id'))
 
-        cache_version = self.session.query(CacheVersion).get(
+        cache_version = self.session.get(
+            CacheVersion,
             self.waypoint.document_id)
         self.assertEqual(cache_version.version, 2)
 

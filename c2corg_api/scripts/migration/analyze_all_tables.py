@@ -1,4 +1,4 @@
-from sqlalchemy.sql import text
+from sqlalchemy import text
 
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 
@@ -18,7 +18,7 @@ class AnalyzeAllTables(MigrateBase):
 
         all_tables = conn.execute(text(SQL_ALL_TABLES))
         for schema, table in all_tables:
-            conn.execute('analyze {}.{};'.format(schema, table))
+            conn.execute(text('analyze {}.{};'.format(schema, table)))
 
         conn.connection.set_isolation_level(old_lvl)
         conn.close()

@@ -4,9 +4,9 @@ from sqlalchemy import case
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
-from c2corg_api.models.document import UpdateType
+from c2corg_api.models.document import UpdateType, DocumentLocale
 from c2corg_api.models.outing import Outing
-from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
+from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_listings import get_documents_for_ids
@@ -16,14 +16,14 @@ from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.route import set_route_title_prefix, \
     update_pt_rating
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 
 from c2corg_api.search.advanced_search import get_all_filtered_docs
 
 from c2corg_api.models.waypoint import (
-    Waypoint, schema_waypoint, schema_update_waypoint,
+    Waypoint, schema_waypoint,
     ArchiveWaypoint, ArchiveWaypointLocale, WAYPOINT_TYPE,
-    schema_create_waypoint)
+    CreateWaypointSchema, UpdateWaypointSchema)
 
 from c2corg_api.views.document import (
     DocumentRest, make_validator_create, make_validator_update,
@@ -34,10 +34,8 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_preferred_lang_param, validate_associations, validate_cook_param
 from c2corg_api.models.common.fields_waypoint import fields_waypoint
 from c2corg_api.models.common.attributes import waypoint_types
-from sqlalchemy.orm import joinedload, load_only
-from sqlalchemy.orm.util import aliased
-from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import and_, text, union, column
+from sqlalchemy.orm import joinedload, load_only, aliased
+from sqlalchemy import literal_column, and_, text, union, column
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.views import to_json_dict
@@ -160,11 +158,13 @@ class WaypointRest(DocumentRest):
             adapt_schema=waypoint_schema_adaptor, include_maps=True,
             set_custom_associations=set_custom_associations)
 
-    @restricted_json_view(schema=schema_create_waypoint,
-                          validators=[
-                              colander_body_validator,
-                              validate_waypoint_create,
-                              validate_associations_create])
+    @restricted_json_view(
+        validators=[
+            make_pydantic_validator(
+                CreateWaypointSchema,
+                allowed_geometry_types=['POINT']),
+            validate_waypoint_create,
+            validate_associations_create])
     def collection_post(self):
         """
         Create a new document.
@@ -197,12 +197,14 @@ class WaypointRest(DocumentRest):
         """
         return self._collection_post(schema_waypoint)
 
-    @restricted_json_view(schema=schema_update_waypoint,
-                          validators=[
-                              colander_body_validator,
-                              validate_id,
-                              validate_waypoint_update,
-                              validate_associations_update])
+    @restricted_json_view(
+        validators=[
+            make_pydantic_validator(
+                UpdateWaypointSchema,
+                allowed_geometry_types=['POINT']),
+            validate_id,
+            validate_waypoint_update,
+            validate_associations_update])
     def put(self):
         """
         Update a document.
@@ -266,7 +268,7 @@ def set_recent_outings(waypoint, lang):
     with_query_waypoints = _get_select_children(waypoint)
 
     recent_outing_ids = get_first_column(
-        DBSession.query(Outing.document_id).
+        DBSession.query(Outing.document_id, Outing.date_end).
         filter(Outing.redirects_to.is_(None)).
         join(
             t_outing_route,
@@ -495,7 +497,7 @@ def update_linked_route_titles(waypoint, update_types, user_id):
     linked_routes = DBSession.query(Route). \
         filter(Route.main_waypoint_id == waypoint.document_id). \
         options(joinedload(Route.locales).load_only(
-            RouteLocale.lang, RouteLocale.id)). \
+            DocumentLocale.lang, DocumentLocale.id)). \
         options(load_only(Route.document_id)). \
         all()
 
@@ -535,9 +537,12 @@ def update_linked_routes_public_transportation_rating(waypoint, update_types):
         .filter(Association.parent_document_id == waypoint.document_id) \
         .subquery()
     # Merge all routes
+    merged = union(
+        parent_routes.select(), children_routes.select()
+    ).subquery()
     routes = DBSession \
         .query(Route) \
-        .select_from(union(parent_routes.select(), children_routes.select())) \
+        .select_from(merged) \
         .join(Route, Route.document_id == column('route_id')) \
         .all()
 

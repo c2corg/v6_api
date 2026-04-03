@@ -14,7 +14,7 @@ from alembic_migration import extensions
 from alembic_migration.extensions import drop_enum
 import geoalchemy2
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.sql.sqltypes import Enum
+from sqlalchemy import Enum
 
 # revision identifiers, used by Alembic.
 revision = '38df9393c9a9'
@@ -446,7 +446,7 @@ language plpgsql;
 # https://github.com/discourse/discourse/blob/master/app/models/username_validator.rb
 function_check_forum_username = extensions.ReplaceableObject(
     'users.check_forum_username(name TEXT)',
-    """
+    r"""
 RETURNS boolean AS $$
 BEGIN
   IF name = NULL THEN
@@ -702,8 +702,8 @@ def upgrade():
     op.create_table('documents_geometries',
     sa.Column('version', sa.Integer(), nullable=False),
     sa.Column('document_id', sa.Integer(), nullable=False),
-    sa.Column('geom', geoalchemy2.types.Geometry(geometry_type='POINT', srid=3857, management=True), nullable=True),
-    sa.Column('geom_detail', geoalchemy2.types.Geometry(srid=3857, management=True, use_typmod=False), nullable=True),
+    sa.Column('geom', geoalchemy2.types.Geometry(geometry_type='POINT', srid=3857, spatial_index=False), nullable=True),
+    sa.Column('geom_detail', geoalchemy2.types.Geometry(srid=3857, spatial_index=False, use_typmod=False), nullable=True),
     sa.ForeignKeyConstraint(['document_id'], ['guidebook.documents.document_id'], ),
     sa.PrimaryKeyConstraint('document_id'),
     schema='guidebook'
@@ -712,8 +712,8 @@ def upgrade():
     sa.Column('version', sa.Integer(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('document_id', sa.Integer(), nullable=False),
-    sa.Column('geom', geoalchemy2.types.Geometry(geometry_type='POINT', srid=3857, spatial_index=False, management=True), nullable=True),
-    sa.Column('geom_detail', geoalchemy2.types.Geometry(srid=3857, spatial_index=False, management=True, use_typmod=False), nullable=True),
+    sa.Column('geom', geoalchemy2.types.Geometry(geometry_type='POINT', srid=3857, spatial_index=False), nullable=True),
+    sa.Column('geom_detail', geoalchemy2.types.Geometry(srid=3857, spatial_index=False, use_typmod=False), nullable=True),
     sa.ForeignKeyConstraint(['document_id'], ['guidebook.documents.document_id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('version', 'document_id', name='uq_documents_geometries_archives_document_id_version_lang'),

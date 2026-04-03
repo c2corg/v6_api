@@ -1,4 +1,4 @@
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 
 from sqlalchemy.orm import (
     scoped_session,
@@ -22,7 +22,7 @@ class BaseMixin(object):
 Base = declarative_base(cls=BaseMixin)
 
 
-# all models, for which tables should be created, must be listed here:
+# all models, for which tables should be created, *must* be listed here:
 from c2corg_api.models import document  # noqa
 from c2corg_api.models import coverage  # noqa
 from c2corg_api.models import waypoint  # noqa

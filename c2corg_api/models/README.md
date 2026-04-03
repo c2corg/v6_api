@@ -62,7 +62,7 @@ duplicated for no reason, it makes a difference if only figures (in `Document`/
 `Waypoint`) are changed, if only translation fields are changed or if only
 the geometry has changed.. The process is as follows (see `views.document.DocumentRest._put`):
 
- - Using Colander a `Document` instance `document_in` is created from the JSON
+ - Using ``objectify`` a `Document` instance `document_in` is created from the JSON
    input data.
  - The current version of the document is loaded from the database.
  - The version numbers of the current document, its locales and geometry are stored

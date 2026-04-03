@@ -1,7 +1,5 @@
 from sqlalchemy import Column, Integer, String
 from geoalchemy2.types import Geometry
-from colanderalchemy import SQLAlchemySchemaNode
-import colander
 from geoalchemy2 import shape
 
 
@@ -14,7 +12,7 @@ class _StopareaMixin(object):
     stoparea_name = Column(String, nullable=False)
     line = Column(String, nullable=False)
     operator = Column(String, nullable=False)
-    geom = Column(Geometry('POINT', srid=4326, management=True))
+    geom = Column(Geometry('POINT', srid=4326))
 
 
 attributes = ['navitia_id', 'stoparea_name', 'line', 'operator', 'geom']
@@ -47,13 +45,3 @@ class Stoparea(Base, _StopareaMixin):
                 "y": shape.to_shape(self.geom).y
             } if self.geom is not None else None
         }
-
-
-schema_stoparea = SQLAlchemySchemaNode(
-    Stoparea,
-    includes=attributes,
-    overrides={
-        'stoparea_id': {'missing': None},
-        'geom': {'typ': colander.String()}
-    }
-)

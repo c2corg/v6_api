@@ -1,4 +1,4 @@
-FROM docker.io/python:3.9-slim-bullseye
+FROM docker.io/python:3.11-slim-trixie
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL=en_US.UTF-8
@@ -15,7 +15,7 @@ RUN set -x \
 RUN set -x \
     && apt-get -y --no-install-recommends install \
     git \
-    libffi7 \
+    libffi8 \
     libgeos-c1v5 \
     libpq5
 RUN set -x \
