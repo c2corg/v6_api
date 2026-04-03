@@ -20,7 +20,6 @@ from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.models.common.associations import valid_associations
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.common import document_types
-from colander import null
 from cornice.errors import Errors
 from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.sql.expression import exists, and_
@@ -114,7 +113,7 @@ def validate_preferred_lang_param(request, **kwargs):
 
 
 def is_missing(val):
-    return val is None or val == '' or val == [] or val is null
+    return val is None or val == '' or val == []
 
 
 def check_required_fields(document, fields, request, updating):

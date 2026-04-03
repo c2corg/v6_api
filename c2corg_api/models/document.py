@@ -7,7 +7,6 @@ from c2corg_api.models import Base, schema, DBSession, enums
 from c2corg_api.models.utils import copy_attributes, extend_dict, wkb_to_shape
 from c2corg_api.models.common import document_types
 from c2corg_api.models.common.attributes import quality_types
-from colander import null
 from colanderalchemy.schema import SQLAlchemySchemaNode
 from geoalchemy2 import Geometry, WKBElement
 from pyramid.httpexceptions import HTTPInternalServerError
@@ -327,7 +326,7 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
     __tablename__ = 'documents_geometries'
 
     __colanderalchemy_config__ = {
-        'missing': null
+        'missing': None
     }
 
     __mapper_args__ = {

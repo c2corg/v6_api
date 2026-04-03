@@ -23,6 +23,7 @@ from c2corg_api.models.topo_map import schema_listing_topo_map, \
     MAP_TYPE
 from c2corg_api.models.topo_map_association import update_maps_for_document, \
     get_maps
+from c2corg_api.models.objectify import objectify as sa_objectify
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import etag_cache, set_best_locale
@@ -237,7 +238,7 @@ class DocumentRest(ACLDefault):
         else:
             user_id = self.request.authenticated_userid
 
-        document = schema.objectify(document_in)
+        document = sa_objectify(schema.inspector.class_, document_in)
         document.document_id = None
 
         if before_add:
@@ -279,7 +280,8 @@ class DocumentRest(ACLDefault):
             after_update=None):
         id = self.request.validated['id']
         document_in = \
-            schema.objectify(self.request.validated['document'])
+            sa_objectify(schema.inspector.class_,
+                         self.request.validated['document'])
         self._check_document_id(id, document_in.document_id)
 
         # get the current version of the document

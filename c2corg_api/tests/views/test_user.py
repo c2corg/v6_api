@@ -266,8 +266,8 @@ class TestUserRest(BaseUserTestRest):
         }
         url = self._prefix + '/register'
         json = self.app_post_json(url, request_body, status=400).json
-        self.assertEqual(json['errors'][0]['description'],
-                         'Value error, Invalid email address')
+        self.assertIn('not a valid email address',
+                      json['errors'][0]['description'].lower())
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_register_discourse_up(self, _send_email):

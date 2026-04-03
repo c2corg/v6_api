@@ -2,13 +2,14 @@ import datetime
 import logging
 import re
 
-import colander
 import requests
+from email_validator import validate_email, EmailNotValidError
 from c2corg_api.emails.email_service import get_email_service
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models.objectify import objectify as sa_objectify
 from c2corg_api.models.user import (
-        User, schema_user, schema_create_user, Purpose,
+        User, schema_user, Purpose,
         CreateUserSchema, LoginSchema as LoginPydanticSchema)
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.search.notify_sync import notify_es_syncer
@@ -37,10 +38,10 @@ MINIMUM_PASSWORD_LENGTH = 3
 
 
 def is_valid_email(email):
-    """Checks if a string is a valid email."""
+    """Checks if a string is a valid email using email-validator."""
     try:
-        colander.Email()(None, email)
-    except colander.Invalid:
+        validate_email(email, check_deliverability=False)
+    except EmailNotValidError:
         return False
     return True
 
@@ -210,7 +211,7 @@ class UserRegistrationRest(ACLDefault):
             validate_forum_username,
             validate_captcha])
     def post(self):
-        user = schema_create_user.objectify(self.request.validated)
+        user = sa_objectify(User, self.request.validated)
         user.password = self.request.validated['password']
         user.update_validation_nonce(
                 Purpose.registration,
@@ -442,15 +443,6 @@ class UserChangeEmailNonceValidationRest(ACLDefault):
             raise HTTPInternalServerError('Error persisting user')
 
         # no login since user is supposed to be already logged in
-
-
-class _LegacyLoginSchema(colander.MappingSchema):
-    username = colander.SchemaNode(colander.String())
-    password = colander.SchemaNode(colander.String())
-    accept_tos = colander.SchemaNode(colander.Boolean(), missing=False)
-
-
-login_schema = _LegacyLoginSchema()
 
 
 def token_to_response(user, token, request):

@@ -193,7 +193,7 @@ schema_create_user = SQLAlchemySchemaNode(
 # ===================================================================
 # Pydantic schemas (for body validation in views)
 # ===================================================================
-from pydantic import BaseModel, field_validator  # noqa: E402
+from pydantic import BaseModel, EmailStr, field_validator  # noqa: E402
 from typing import Optional  # noqa: E402
 
 
@@ -202,18 +202,10 @@ class CreateUserSchema(BaseModel):
     username: str
     forum_username: str
     name: str
-    email: str
+    email: EmailStr
     lang: Optional[str] = 'fr'
 
     model_config = {"extra": "ignore"}
-
-    @field_validator('email')
-    @classmethod
-    def _validate_email(cls, v):
-        # Minimal email check matching colander.Email
-        if '@' not in v or '.' not in v.split('@')[-1]:
-            raise ValueError('Invalid email address')
-        return v
 
     @field_validator('lang')
     @classmethod

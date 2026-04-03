@@ -62,7 +62,7 @@ class SsoSyncSchema(BaseModel):
 
 def sso_sync_validator(request, **kwargs):
     if 'sso_key' not in request.validated:
-        return  # validated by colander schema
+        return  # validated by pydantic schema
     sso_key = DBSession.query(SsoKey). \
         filter(SsoKey.key == request.validated['sso_key']). \
         one_or_none()
@@ -77,7 +77,7 @@ def sso_sync_validator(request, **kwargs):
 
     # search user by external_id
     if 'external_id' not in request.validated:
-        return  # validated by colander schema
+        return  # validated by pydantic schema
     sso_external_id = DBSession.query(SsoExternalId). \
         filter(SsoExternalId.domain == sso_key.domain). \
         filter(SsoExternalId.external_id ==
@@ -242,7 +242,7 @@ class SsoLoginSchema(BaseModel):
 
 def validate_token(request, **kwargs):
     if 'token' not in request.validated:
-        return  # validated by colander schema
+        return  # validated by pydantic schema
 
     sso_external_id = DBSession.query(SsoExternalId). \
         filter(SsoExternalId.token == request.validated['token']). \
