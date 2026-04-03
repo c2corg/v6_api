@@ -14,7 +14,7 @@ from cornice import Errors
 from cornice.renderer import JSONError
 from cornice.resource import view
 from sqlalchemy.inspection import inspect
-from sqlalchemy.sql.functions import func
+from sqlalchemy import func
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 

@@ -14,8 +14,7 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.views import to_json_dict, set_best_locale
 from c2corg_api.caching import get_or_create_multi
 from sqlalchemy.orm import joinedload, contains_eager, subqueryload, load_only
-from sqlalchemy.sql.expression import and_
-from sqlalchemy.sql.functions import func
+from sqlalchemy import and_, func
 
 
 def get_documents_for_ids(document_ids, lang, documents_config, total=None):

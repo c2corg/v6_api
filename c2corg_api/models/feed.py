@@ -18,12 +18,9 @@ from c2corg_api.views.validation import association_keys
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql.array import ARRAY
 from sqlalchemy.orm import relationship, column_property
-from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import select, text, cast
-from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import Column, ForeignKey, PrimaryKeyConstraint, \
-    CheckConstraint, Index
-from sqlalchemy.sql.sqltypes import Integer, String, DateTime, Boolean
+from sqlalchemy import literal_column, select, text, cast, func, \
+    Column, ForeignKey, PrimaryKeyConstraint, CheckConstraint, Index, \
+    Integer, String, DateTime, Boolean
 
 log = logging.getLogger(__name__)
 

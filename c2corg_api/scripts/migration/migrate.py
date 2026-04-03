@@ -65,9 +65,9 @@ def main(argv=sys.argv):
     settings = get_appsettings(settings_file)
 
     engine_target = engine_from_config(
-        settings, 'sqlalchemy_target.', future=True)
+        settings, 'sqlalchemy_target.')
     engine_source = engine_from_config(
-        settings, 'sqlalchemy_source.', future=True)
+        settings, 'sqlalchemy_source.')
 
     logging.basicConfig()
     logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)

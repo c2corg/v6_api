@@ -8,7 +8,7 @@ Create Date: 2017-04-10 17:54:17.175098
 from alembic import op
 import sqlalchemy as sa
 from alembic_migration.extensions import drop_enum
-from sqlalchemy.sql.schema import Table, MetaData
+from sqlalchemy import Table, MetaData
 
 
 # revision identifiers, used by Alembic.

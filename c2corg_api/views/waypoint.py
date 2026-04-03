@@ -4,9 +4,9 @@ from sqlalchemy import case
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
-from c2corg_api.models.document import UpdateType
+from c2corg_api.models.document import UpdateType, DocumentLocale
 from c2corg_api.models.outing import Outing
-from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
+from c2corg_api.models.route import Route, ROUTE_TYPE
 from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_listings import get_documents_for_ids
@@ -34,10 +34,8 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
     validate_preferred_lang_param, validate_associations, validate_cook_param
 from c2corg_api.models.common.fields_waypoint import fields_waypoint
 from c2corg_api.models.common.attributes import waypoint_types
-from sqlalchemy.orm import joinedload, load_only
-from sqlalchemy.orm.util import aliased
-from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import and_, text, union, column
+from sqlalchemy.orm import joinedload, load_only, aliased
+from sqlalchemy import literal_column, and_, text, union, column
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.views import to_json_dict
@@ -499,7 +497,7 @@ def update_linked_route_titles(waypoint, update_types, user_id):
     linked_routes = DBSession.query(Route). \
         filter(Route.main_waypoint_id == waypoint.document_id). \
         options(joinedload(Route.locales).load_only(
-            RouteLocale.lang, RouteLocale.id)). \
+            DocumentLocale.lang, DocumentLocale.id)). \
         options(load_only(Route.document_id)). \
         all()
 

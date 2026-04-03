@@ -22,7 +22,7 @@ from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.common import document_types
 from cornice.errors import Errors
 from pyramid.httpexceptions import HTTPBadRequest
-from sqlalchemy.sql.expression import exists, and_
+from sqlalchemy import exists, and_
 from webob.descriptors import parse_int_safe
 from dateutil import parser as datetime_parser
 import urllib

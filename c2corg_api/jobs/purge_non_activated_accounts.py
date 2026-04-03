@@ -3,7 +3,7 @@ from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user_profile import UserProfile
 from datetime import datetime
-from sqlalchemy.sql.expression import and_
+from sqlalchemy import and_
 from sqlalchemy.orm import sessionmaker
 
 import logging

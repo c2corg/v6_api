@@ -14,7 +14,7 @@ from alembic_migration import extensions
 from alembic_migration.extensions import drop_enum
 import geoalchemy2
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.sql.sqltypes import Enum
+from sqlalchemy import Enum
 
 # revision identifiers, used by Alembic.
 revision = '38df9393c9a9'
@@ -446,7 +446,7 @@ language plpgsql;
 # https://github.com/discourse/discourse/blob/master/app/models/username_validator.rb
 function_check_forum_username = extensions.ReplaceableObject(
     'users.check_forum_username(name TEXT)',
-    """
+    r"""
 RETURNS boolean AS $$
 BEGIN
   IF name = NULL THEN

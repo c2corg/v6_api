@@ -8,9 +8,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql.expression import and_, union, select, text, join
-from sqlalchemy.sql.functions import func
-from sqlalchemy import Integer
+from sqlalchemy import and_, union, select, text, join, func, Integer
 
 # This file contains definitions for database views that are used when filling
 # the search index.

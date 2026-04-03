@@ -7,10 +7,8 @@ from c2corg_api.models.user import User
 from c2corg_api.views import to_json_dict, etag_cache
 from c2corg_api.caching import get_or_create
 from pyramid.httpexceptions import HTTPNotFound
-from sqlalchemy import column
+from sqlalchemy import column, literal_column, union
 from sqlalchemy.orm import joinedload
-from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import union
 
 
 class DocumentVersionRest(ACLDefault):

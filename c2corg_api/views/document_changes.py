@@ -9,7 +9,7 @@ from c2corg_api.views.feed import get_params
 from c2corg_api.views.validation import validate_simple_token_pagination, \
   validate_user_id_not_required
 
-from sqlalchemy.sql.expression import desc
+from sqlalchemy import desc
 
 from cornice.resource import resource, view
 from sqlalchemy.orm import joinedload, load_only

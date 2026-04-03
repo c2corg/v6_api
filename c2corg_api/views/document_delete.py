@@ -34,8 +34,7 @@ from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.image import delete_all_files_for_image
 from c2corg_api.views.validation import validate_id, validate_lang
 from cornice.resource import resource
-from sqlalchemy.sql.expression import or_, and_, exists, over, select
-from sqlalchemy.sql.functions import func
+from sqlalchemy import or_, and_, exists, over, select, func
 
 
 def validate_document_type(request, **kwargs):

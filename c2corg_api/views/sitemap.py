@@ -14,7 +14,7 @@ from c2corg_api.views.validation import create_int_validator, \
 from c2corg_api.caching import get_or_create
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPNotFound
-from sqlalchemy.sql.functions import func
+from sqlalchemy import func
 from math import ceil
 from datetime import date
 

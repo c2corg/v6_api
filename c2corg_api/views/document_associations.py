@@ -15,7 +15,7 @@ from c2corg_api.views.document_schemas import waypoint_documents_config, \
     route_documents_config, user_profile_documents_config, \
     image_documents_config, article_documents_config, area_documents_config, \
     outing_documents_config, book_documents_config, xreport_documents_config
-from sqlalchemy.sql.expression import or_, and_, asc
+from sqlalchemy import or_, and_, asc
 
 associations_to_include = {
     WAYPOINT_TYPE: {

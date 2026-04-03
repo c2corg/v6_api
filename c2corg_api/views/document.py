@@ -42,7 +42,7 @@ from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
     HTTPBadRequest, HTTPForbidden
 from sqlalchemy.orm import joinedload, contains_eager, load_only
 from sqlalchemy.orm.exc import StaleDataError
-from sqlalchemy.orm.util import with_polymorphic
+from sqlalchemy.orm import with_polymorphic
 
 
 log = logging.getLogger(__name__)

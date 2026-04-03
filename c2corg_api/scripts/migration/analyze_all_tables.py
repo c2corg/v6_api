@@ -1,4 +1,4 @@
-from sqlalchemy.sql import text
+from sqlalchemy import text
 
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 

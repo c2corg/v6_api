@@ -9,7 +9,7 @@ from os.path import join, dirname
 import codecs
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.sql import text
+from sqlalchemy import text
 
 
 # revision identifiers, used by Alembic.

@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 from c2corg_api.models import utils
 from alembic_migration.extensions import drop_enum
-from sqlalchemy.sql.sqltypes import Enum
+from sqlalchemy import Enum
 
 # revision identifiers, used by Alembic.
 revision = 'bacd59c5806a'

@@ -19,8 +19,7 @@ from c2corg_api.views.document_listings import add_load_for_profiles
 from sqlalchemy.orm import joinedload
 import logging
 
-from sqlalchemy.sql.elements import literal
-from sqlalchemy.sql.expression import or_, and_, union
+from sqlalchemy import literal, or_, and_, union
 
 log = logging.getLogger(__name__)
 

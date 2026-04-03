@@ -33,7 +33,7 @@ from c2corg_api.models.common.fields_route import fields_route
 from c2corg_api.models.common.attributes import activities, \
     public_transportation_ratings
 from sqlalchemy.orm import load_only
-from sqlalchemy.sql.expression import text, or_, column, union
+from sqlalchemy import text, or_, column, union
 
 from operator import and_
 from c2corg_api.models.area import Area

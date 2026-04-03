@@ -7,7 +7,7 @@ from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
-from sqlalchemy.sql import text
+from sqlalchemy import text
 import transaction
 import zope
 

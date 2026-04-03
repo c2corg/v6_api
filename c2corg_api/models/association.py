@@ -23,9 +23,7 @@ from sqlalchemy.orm import relationship
 
 from c2corg_api.models import Base, schema, users_schema, DBSession
 from c2corg_api.models.document import Document
-from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import or_, and_, union
-from sqlalchemy.sql.functions import func
+from sqlalchemy import literal_column, or_, and_, union, func
 
 
 class Association(Base):

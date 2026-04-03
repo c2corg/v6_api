@@ -11,8 +11,7 @@ from sqlalchemy import (
     )
 from sqlalchemy.orm import relationship, load_only, joinedload
 from sqlalchemy.schema import PrimaryKeyConstraint
-from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import and_, or_, select
+from sqlalchemy import literal_column, and_, or_, select
 
 
 class TopoMapAssociation(Base):

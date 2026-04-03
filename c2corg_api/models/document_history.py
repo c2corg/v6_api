@@ -9,8 +9,7 @@ from sqlalchemy import (
     ForeignKey
     )
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.sql.expression import over, and_, asc
-from sqlalchemy.sql.functions import func
+from sqlalchemy import over, and_, asc, func
 
 from c2corg_api.models import Base, DBSession, schema, users_schema
 from c2corg_api.models.document import (

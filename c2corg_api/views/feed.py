@@ -14,8 +14,7 @@ from cornice.resource import resource, view
 from c2corg_api.views import cors_policy, restricted_view
 from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden
 from sqlalchemy.orm import undefer, load_only
-from sqlalchemy.sql.expression import or_, and_
-from sqlalchemy.sql.functions import func
+from sqlalchemy import or_, and_, func
 from urllib import parse as urllib_parse
 
 DEFAULT_PAGE_LIMIT = 10

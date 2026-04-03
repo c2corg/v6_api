@@ -17,7 +17,7 @@ from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPNotFound
 from pyramid.interfaces import IRendererFactory
 from pyramid.renderers import string_renderer_factory
-from sqlalchemy.sql.functions import func
+from sqlalchemy import func
 from math import ceil
 from datetime import date, datetime, timezone
 from slugify import slugify

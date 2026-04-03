@@ -18,7 +18,7 @@ from pyramid.httpexceptions import HTTPBadRequest
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.models.association import \
     Association, exists_already, SchemaAssociation
-from sqlalchemy.sql.expression import exists
+from sqlalchemy import exists
 
 
 def validate_association(request, **kwargs):

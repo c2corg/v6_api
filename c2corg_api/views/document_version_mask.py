@@ -10,7 +10,7 @@ from c2corg_api.views.pydantic_validator import make_pydantic_validator
 from pydantic import BaseModel, field_validator
 from cornice.resource import resource
 from pyramid.httpexceptions import HTTPBadRequest
-from sqlalchemy.sql.expression import exists, and_
+from sqlalchemy import exists, and_
 
 log = logging.getLogger(__name__)
 

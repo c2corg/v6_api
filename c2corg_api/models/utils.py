@@ -3,8 +3,7 @@ from shapely.geometry import LineString, MultiLineString
 from shapely.ops import transform
 from sqlalchemy.dialects import postgresql
 import sqlalchemy as sa
-from sqlalchemy.sql.expression import and_
-from sqlalchemy.sql.functions import func
+from sqlalchemy import and_, func
 import re
 
 

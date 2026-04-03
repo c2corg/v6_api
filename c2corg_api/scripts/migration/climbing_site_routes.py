@@ -9,7 +9,7 @@ from c2corg_api.models.route import Route, RouteLocale, ArchiveRoute, \
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.migration.batch import SimpleBatch
 from c2corg_api.scripts.migration.documents.batch_document import DocumentBatch
-from sqlalchemy.sql import text
+from sqlalchemy import text
 import zope
 
 from c2corg_api.scripts.migration.migrate_base import MigrateBase

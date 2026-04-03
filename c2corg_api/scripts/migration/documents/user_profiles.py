@@ -4,7 +4,7 @@ from c2corg_api.models.user_profile import UserProfile, ArchiveUserProfile, \
     USERPROFILE_TYPE
 from c2corg_api.scripts.migration.documents.document import MigrateDocuments
 from c2corg_api.scripts.migration.documents.routes import MigrateRoutes
-from sqlalchemy.sql.expression import text
+from sqlalchemy import text
 import transaction
 
 

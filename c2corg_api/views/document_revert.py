@@ -29,8 +29,8 @@ from pydantic import BaseModel, field_validator
 from cornice.resource import resource
 from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.orm import joinedload, contains_eager
-from sqlalchemy.orm.util import with_polymorphic
-from sqlalchemy.sql.expression import exists, and_
+from sqlalchemy.orm import with_polymorphic
+from sqlalchemy import exists, and_
 
 log = logging.getLogger(__name__)
 

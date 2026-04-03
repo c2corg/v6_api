@@ -14,8 +14,7 @@ from sqlalchemy import (
 from c2corg_api.models import Base, users_schema, schema, enums
 
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import ForeignKey, Index
+from sqlalchemy import func, ForeignKey, Index
 
 from enum import Enum
 

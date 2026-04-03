@@ -9,7 +9,7 @@ from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.document import DocumentRest
-from sqlalchemy.sql.expression import or_
+from sqlalchemy import or_
 from httmock import all_requests, HTTMock
 
 

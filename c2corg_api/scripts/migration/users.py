@@ -1,7 +1,7 @@
 from c2corg_api.models.area import Area
 from c2corg_api.models.feed import FilterArea
 from c2corg_api.scripts.migration.documents.routes import MigrateRoutes
-from sqlalchemy.sql import text
+from sqlalchemy import text
 import transaction
 import zope
 from urllib import parse

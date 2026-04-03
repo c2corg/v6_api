@@ -11,7 +11,7 @@ schema = 'guidebook'
 users_schema = 'users'
 sympa_schema = 'sympa'
 
-DBSession = scoped_session(sessionmaker(future=True))
+DBSession = scoped_session(sessionmaker())
 register(DBSession)
 
 

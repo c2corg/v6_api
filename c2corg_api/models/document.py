@@ -21,7 +21,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship, column_property
-from sqlalchemy.sql.schema import UniqueConstraint
+from sqlalchemy import UniqueConstraint
 
 UpdateType = enum.Enum(
     'UpdateType', 'FIGURES LANG GEOM')

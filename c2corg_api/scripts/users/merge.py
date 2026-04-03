@@ -5,9 +5,7 @@ import logging
 import transaction
 
 from pyramid.paster import get_appsettings
-from sqlalchemy import engine_from_config
-from sqlalchemy.sql.expression import and_, or_, any_
-from sqlalchemy.sql.functions import func
+from sqlalchemy import engine_from_config, and_, or_, any_, func
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.area_association import AreaAssociation
@@ -64,7 +62,7 @@ def main(argv=sys.argv):
         os.path.dirname(os.path.abspath(__file__)), '../../../production.ini')
     settings = get_appsettings(settings_file)
 
-    engine = engine_from_config(settings, 'sqlalchemy.', future=True)
+    engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
 
     queue_config = get_queue_config(settings)

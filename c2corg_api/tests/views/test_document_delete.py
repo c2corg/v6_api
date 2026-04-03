@@ -27,7 +27,7 @@ from c2corg_api.models.xreport import (
     Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale)
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.tests.views import BaseTestRest
-from sqlalchemy.sql.expression import or_
+from sqlalchemy import or_
 from httmock import all_requests, HTTMock
 
 
@@ -724,7 +724,7 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # Moderators can:
         headers = self.add_authorization_header(username='moderator')
-        return self.app.delete_json(
+        self.app.delete_json(
             self._prefix + str(self.waypoint4.document_id), {},
             headers=headers, status=200)
 
@@ -737,21 +737,21 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # Except by moderators:
         headers = self.add_authorization_header(username='moderator')
-        return self.app.delete_json(
+        self.app.delete_json(
             self._prefix + str(self.article1.document_id), {},
             headers=headers, status=200)
 
     def test_delete_personal_doc_author_less_24h(self):
         # article1 has just been created by 'contributor'
         headers = self.add_authorization_header(username='contributor')
-        return self.app.delete_json(
+        self.app.delete_json(
             self._prefix + str(self.article1.document_id), {},
             headers=headers, status=200)
 
     def test_delete_personal_doc_author_more_24h(self):
         # article2 is older than 24h
         headers = self.add_authorization_header(username='contributor')
-        return self.app.delete_json(
+        self.app.delete_json(
             self._prefix + str(self.article2.document_id), {},
             headers=headers, status=400)
 
@@ -761,7 +761,7 @@ class TestDocumentDeleteRest(BaseTestRest):
             {}, status=403)
 
         headers = self.add_authorization_header(username='contributor')
-        return self.app.delete_json(
+        self.app.delete_json(
             self._prefix + str(self.waypoint1.document_id) + '/fr',
             {}, headers=headers, status=403)
 

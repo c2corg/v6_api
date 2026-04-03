@@ -1,7 +1,7 @@
 import transaction
 import zope
 
-from sqlalchemy.sql import text
+from sqlalchemy import text
 
 from c2corg_api.scripts.migration.migrate_base import MigrateBase
 from c2corg_api.scripts.migration.batch import SimpleBatch

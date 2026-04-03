@@ -28,7 +28,7 @@ from cornice.resource import resource
 from functools import partial
 from pyramid.httpexceptions import HTTPInternalServerError, HTTPForbidden
 from pyramid.settings import asbool
-from sqlalchemy.sql.expression import and_, func
+from sqlalchemy import and_, func
 
 log = logging.getLogger(__name__)
 

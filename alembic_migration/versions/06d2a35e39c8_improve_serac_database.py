@@ -7,7 +7,7 @@ Create Date: 2019-12-09 13:24:15.936753
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.sql.schema import Table, MetaData
+from sqlalchemy import Table, MetaData
 from alembic_migration.extensions import drop_enum
 import csv
 from c2corg_api.models.utils import ArrayOfEnum
