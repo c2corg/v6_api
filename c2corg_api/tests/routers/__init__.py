@@ -15,14 +15,7 @@ def get_real_app() -> FastAPI:
     ``setup_package()`` already prepared.
 
     The app is cached after the first call so that expensive
-    startup work (Pyramid init, DB engine, etc.) is done only
-    once per test run.
-
-    ``skip_pyramid=True`` avoids calling ``main()`` a second time
-    (``BaseTestCase.setUpClass`` already initialised the Pyramid app
-    and bound ``DBSession``).  Re-entering ``main()`` would call
-    ``DBSession.configure(bind=engine)`` on an already-active scoped
-    session and emit an ``SAWarning``.
+    startup work (DB engine, etc.) is done only once per test run.
 
     We pass the engine that ``setup_package()`` already bound to
     ``DBSession`` so that ``create_app()`` does not create a
@@ -39,7 +32,7 @@ def get_real_app() -> FastAPI:
 
         from c2corg_api.app import create_app
 
-        get_real_app._app = create_app(engine=engine, skip_pyramid=True)
+        get_real_app._app = create_app(engine=engine)
     return get_real_app._app
 
 

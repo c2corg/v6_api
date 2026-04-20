@@ -23,7 +23,6 @@ from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document import ArchiveDocumentLocale
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user import User
-from c2corg_api.routers.helpers._db_compat import resolve_db
 from c2corg_api.routers.helpers.etag import etag_cache
 from c2corg_api.routers.helpers.markdown import cook as cook_locale_md
 
@@ -208,8 +207,7 @@ def serialize_version(version):
     }
 
 
-def get_neighbour_version_ids(version_id, document_id, lang, db: Session | None = None):
-    db = resolve_db(db)
+def get_neighbour_version_ids(version_id, document_id, lang, db: Session):
     """
     Get the previous and next version for a version of a document with a
     specific language.

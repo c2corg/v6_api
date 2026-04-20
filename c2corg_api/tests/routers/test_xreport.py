@@ -25,7 +25,7 @@ from c2corg_api.models.xreport import XREPORT_TYPE, Xreport, XreportLocale
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_tokens, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class TestXreportFastAPIRouter(BaseTestCase):
@@ -84,7 +84,7 @@ class TestXreportFastAPIRouter(BaseTestCase):
         self.session.flush()
 
         user_id = global_userids['contributor']
-        DocumentRest.create_new_version(self.xreport1, user_id)
+        create_new_version(self.xreport1, user_id, db=self.session)
         self.xreport1_version = (
             self.session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.xreport1.document_id)

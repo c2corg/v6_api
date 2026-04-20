@@ -37,7 +37,6 @@ from c2corg_api.models.feed import (
     update_feed_document_update,
 )
 from c2corg_api.models.topo_map_association import update_maps_for_document
-from c2corg_api.routers.helpers._db_compat import resolve_db
 from c2corg_api.routers.helpers.validation import (
     association_permission_checker,
     association_permission_removal_checker,
@@ -591,9 +590,8 @@ def _apply_updates(
 # ── Versioning helpers ───────────────────────────────────────────────
 
 
-def create_new_version(document, user_id, written_at=None, db: Session | None = None):
+def create_new_version(document, user_id, written_at=None, *, db: Session):
     """Create the first archive version for a newly created document."""
-    db = resolve_db(db)
     assert user_id
     archive = document.to_archive()
     archive_locales = document.get_archive_locales()
@@ -622,10 +620,9 @@ def create_new_version(document, user_id, written_at=None, db: Session | None = 
 
 
 def update_version(
-    document, user_id, comment, update_types, changed_langs, db: Session | None = None
+    document, user_id, comment, update_types, changed_langs, db: Session
 ):
     """Create a new archive version after an update."""
-    db = resolve_db(db)
     assert user_id
     assert update_types
 
@@ -655,7 +652,7 @@ def update_version(
     db.flush()
 
 
-def _get_document_archive(document, update_types, db: Session | None = None):
+def _get_document_archive(document, update_types, db: Session):
 
     if UpdateType.FIGURES in update_types:
         archive = document.to_archive()
@@ -671,7 +668,7 @@ def _get_document_archive(document, update_types, db: Session | None = None):
     return archive
 
 
-def _get_geometry_archive(document, update_types, db: Session | None = None):
+def _get_geometry_archive(document, update_types, db: Session):
 
     if not document.geometry:
         return None
@@ -696,7 +693,7 @@ def _get_langs_to_update(document, update_types, changed_langs):
         return [locale.lang for locale in document.locales]
 
 
-def _get_locale_archive(locale, changed_langs, db: Session | None = None):
+def _get_locale_archive(locale, changed_langs, db: Session):
 
     if locale.lang in changed_langs:
         locale_archive = locale.to_archive()
@@ -725,7 +722,7 @@ def revert_update_document(
     before_update=None,
     after_update=None,
     manage_versions=None,
-    db: Session | None = None,
+    db: Session,
 ):
     """Apply an update to a document (used by the revert endpoint).
 
@@ -751,7 +748,6 @@ def revert_update_document(
     from c2corg_api.models.topo_map_association import update_maps_for_document
     from c2corg_api.search.notify_sync import notify_es_syncer
 
-    db = resolve_db(db)
     old_versions = document.get_versions()
 
     if before_update:
@@ -771,18 +767,20 @@ def revert_update_document(
 
     if update_types:
         if document.type != COVERAGE_TYPE:
-            update_version(document, user_id, message, update_types, changed_langs)
+            update_version(
+                document, user_id, message, update_types, changed_langs, db=db
+            )
 
         if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
-            update_areas_for_document(document, reset=True)
+            update_areas_for_document(document, reset=True, db=db)
 
         if document.type != MAP_TYPE and UpdateType.GEOM in update_types:
-            update_maps_for_document(document, reset=True)
+            update_maps_for_document(document, reset=True, db=db)
 
         if after_update:
             after_update(document, update_types, user_id=user_id)
 
-        update_cache_version(document)
+        update_cache_version(document, db=db)
 
     if associations:
         check_association_add = association_permission_checker(user_id, is_moderator)
@@ -796,14 +794,17 @@ def revert_update_document(
             user_id,
             check_association_add=check_association_add,
             check_association_remove=check_association_remove,
+            db=db,
         )
 
     if update_types or associations:
         if queue_config is not None:
             notify_es_syncer(queue_config)
-        update_feed_document_update(document, user_id, update_types)
+        update_feed_document_update(document, user_id, update_types, db=db)
     if associations and (removed_associations or added_associations):
-        update_cache_version_associations(added_associations, removed_associations)
+        update_cache_version_associations(
+            added_associations, removed_associations, db=db
+        )
 
     return update_types
 
@@ -816,7 +817,6 @@ def set_default_geom_from_associations(doc, linked_docs, update_always=False, db
 
     Used by outing creation/update to set a geometry when none is provided.
     """
-    db = resolve_db(db)
 
     if update_always or doc.geometry is None or doc.geometry.geom is None:
         default_geom = _get_default_geom(linked_docs, db=db)

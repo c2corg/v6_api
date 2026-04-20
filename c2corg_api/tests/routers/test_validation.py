@@ -18,9 +18,8 @@ from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
-from c2corg_api.routers.helpers.validation import validate_associations
+from c2corg_api.routers.helpers.validation import parse_datetime, validate_associations
 from c2corg_api.tests import BaseTestCase
-from c2corg_api.views.validation import parse_datetime
 
 
 class TestValidationRouter(BaseTestCase):

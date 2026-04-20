@@ -13,7 +13,7 @@ from c2corg_api.models import Base, DBSession, schema
 from c2corg_api.models.cache_version import update_cache_version_for_map
 from c2corg_api.models.document import Document, DocumentGeometry, DocumentLocale
 from c2corg_api.models.topo_map import MAP_TYPE, TopoMap
-from c2corg_api.views import set_best_locale
+from c2corg_api.routers.helpers.document_helpers import set_best_locale
 
 
 class TopoMapAssociation(Base):
@@ -47,13 +47,12 @@ Document._maps = relationship(
 )
 
 
-def update_map(topo_map, reset=False, db: Session | None = None):
+def update_map(topo_map, reset=False, *, db: Session):
     """Create associations for the given map with all intersecting documents.
 
     If `reset` is True, all possible existing associations to this map are
     dropped before creating new associations.
     """
-    db = db or DBSession
     if reset:
         db.execute(
             TopoMapAssociation.__table__.delete().where(
@@ -100,13 +99,12 @@ def update_map(topo_map, reset=False, db: Session | None = None):
     update_cache_version_for_map(topo_map, db=db)
 
 
-def update_maps_for_document(document, reset=False, db: Session | None = None):
+def update_maps_for_document(document, reset=False, *, db: Session):
     """Create associations for the given documents with all intersecting maps.
 
     If `reset` is True, all possible existing associations to this document are
     dropped before creating new associations.
     """
-    db = db or DBSession
     if reset:
         db.execute(
             TopoMapAssociation.__table__.delete().where(
@@ -149,9 +147,8 @@ def update_maps_for_document(document, reset=False, db: Session | None = None):
     )
 
 
-def get_maps(document, lang, db: Session | None = None):
+def get_maps(document, lang, db: Session):
     """Load and return areas linked with the given document."""
-    db = db or DBSession
     maps = (
         db.query(TopoMap)
         .filter(TopoMap.redirects_to.is_(None))

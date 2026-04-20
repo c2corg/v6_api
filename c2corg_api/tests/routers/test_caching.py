@@ -40,7 +40,7 @@ from c2corg_api.models.xreport import XREPORT_TYPE, Xreport, XreportLocale
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 # =====================================================================
 # Mixin — parameterised ETag + dogpile sub-tests
@@ -96,7 +96,7 @@ class CachingTestMixin:
 
     def test_version_populates_cache(self):
         cache_key = '{}-{}'.format(
-            get_cache_key(self._doc.document_id, 'en', self._doc_type), self._version.id
+            get_cache_key(self._doc.document_id, 'en', self._doc_type, db=self.session), self._version.id
         )
         assert cache_document_version.get(cache_key) == NO_VALUE
         resp = self.client.get(self._version_url())
@@ -105,7 +105,7 @@ class CachingTestMixin:
 
     def test_version_serves_from_cache(self):
         cache_key = '{}-{}'.format(
-            get_cache_key(self._doc.document_id, 'en', self._doc_type), self._version.id
+            get_cache_key(self._doc.document_id, 'en', self._doc_type, db=self.session), self._version.id
         )
         resp = self.client.get(self._version_url())
         assert resp.status_code == 200
@@ -134,14 +134,14 @@ class CachingTestMixin:
     # ── info dogpile cache ───────────────────────────────────
 
     def test_info_populates_cache(self):
-        cache_key = get_cache_key(self._doc.document_id, 'en', self._doc_type)
+        cache_key = get_cache_key(self._doc.document_id, 'en', self._doc_type, db=self.session)
         assert cache_document_info.get(cache_key) == NO_VALUE
         resp = self.client.get(self._info_url())
         assert resp.status_code == 200
         assert cache_document_info.get(cache_key) != NO_VALUE
 
     def test_info_serves_from_cache(self):
-        cache_key = get_cache_key(self._doc.document_id, 'en', self._doc_type)
+        cache_key = get_cache_key(self._doc.document_id, 'en', self._doc_type, db=self.session)
         resp = self.client.get(self._info_url())
         assert resp.status_code == 200
 
@@ -168,14 +168,14 @@ class CachingTestMixin:
     # ── detail dogpile cache ─────────────────────────────────
 
     def test_detail_populates_cache(self):
-        cache_key = get_cache_key(self._doc.document_id, None, self._doc_type)
+        cache_key = get_cache_key(self._doc.document_id, None, self._doc_type, db=self.session)
         assert cache_document_detail.get(cache_key) == NO_VALUE
         resp = self.client.get(self._detail_url())
         assert resp.status_code == 200
         assert cache_document_detail.get(cache_key) != NO_VALUE
 
     def test_detail_serves_from_cache(self):
-        cache_key = get_cache_key(self._doc.document_id, None, self._doc_type)
+        cache_key = get_cache_key(self._doc.document_id, None, self._doc_type, db=self.session)
         assert cache_document_detail.get(cache_key) == NO_VALUE
 
         resp1 = self.client.get(self._detail_url())
@@ -192,7 +192,7 @@ class CachingTestMixin:
     # ── editing view bypasses cache ──────────────────────────
 
     def test_detail_editing_view_bypasses_cache(self):
-        cache_key = get_cache_key(self._doc.document_id, None, self._doc_type)
+        cache_key = get_cache_key(self._doc.document_id, None, self._doc_type, db=self.session)
         fake = {'document': 'should-not-be-returned'}
         cache_document_detail.set(cache_key, fake)
 
@@ -238,7 +238,7 @@ class _CachingTestBase(BaseTestCase):
 
     def _create_version(self, doc):
         user_id = global_userids['contributor']
-        DocumentRest.create_new_version(doc, user_id)
+        create_new_version(doc, user_id, db=self.session)
         self.session.expire_all()
         return (
             self.session.query(DocumentVersion)

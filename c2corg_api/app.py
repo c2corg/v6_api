@@ -1,10 +1,6 @@
 """
 FastAPI application entry-point.
 
-Creates a FastAPI app and mounts the legacy Pyramid WSGI app underneath
-it via ``WSGIMiddleware``.  This allows both stacks to run side-by-side
-during the incremental migration.
-
 Usage (development)
 -------------------
 ::
@@ -12,9 +8,6 @@ Usage (development)
     uvicorn c2corg_api.app:get_app --factory --host 0.0.0.0 --port 6543 --reload
 
 Or set ``C2CORG_INI`` to point at a different ``.ini`` file.
-
-The Pyramid app is initialized from the same ``.ini`` settings so that
-the database engine, ElasticSearch, Redis, and caching are shared.
 """
 
 import logging
@@ -25,7 +18,6 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.responses import JSONResponse
 
 log = logging.getLogger(__name__)
@@ -51,18 +43,7 @@ def _load_settings(ini_file: str) -> dict[str, str]:
     return settings
 
 
-def _create_pyramid_app(settings: dict):
-    """Build the Pyramid WSGI application.
-
-    Delegates to ``c2corg_api.main()`` which configures SQLAlchemy,
-    ElasticSearch, Cornice routes, JWT auth, etc.
-    """
-    from c2corg_api import main as pyramid_main
-
-    return pyramid_main({}, **settings)
-
-
-def create_app(*, engine=None, skip_pyramid: bool = False) -> FastAPI:
+def create_app(*, engine=None) -> FastAPI:
     """Application factory called once at startup.
 
     Parameters
@@ -71,12 +52,6 @@ def create_app(*, engine=None, skip_pyramid: bool = False) -> FastAPI:
         Pre-existing SQLAlchemy engine to reuse (e.g. from the test
         harness).  When *None* a new engine is created from the
         ``.ini`` settings.
-    skip_pyramid : bool
-        When *True* the legacy Pyramid WSGI app is **not** mounted.
-        Useful in tests where the Pyramid app (and ``DBSession``) are
-        already initialised by ``BaseTestCase.setUpClass()`` — calling
-        ``main()`` again would emit an ``SAWarning`` about
-        reconfiguring an already-active scoped session.
     """
 
     # --- resolve the .ini file -------------------------------------------
@@ -151,31 +126,7 @@ def create_app(*, engine=None, skip_pyramid: bool = False) -> FastAPI:
         intercepts 500 responses before ``CORSMiddleware`` can
         decorate them.
 
-        Pyramid ``HTTPException`` subclasses (raised by legacy
-        validation helpers such as ``check_permission_for_association_removal``
-        and ``validate_personal_association``) are caught here and
-        converted to the matching HTTP status code.
         """
-        # ── Pyramid HTTP exceptions ──────────────────────────────
-        from pyramid.httpexceptions import HTTPException as PyramidHTTPException
-
-        if isinstance(exc, PyramidHTTPException):
-            status_code = exc.status_int  # e.g. 400, 403
-            detail_text = exc.detail or str(exc)
-            return JSONResponse(
-                status_code=status_code,
-                content={
-                    'status': 'error',
-                    'errors': [
-                        {
-                            'location': 'body',
-                            'name': exc.title or 'Bad Request',
-                            'description': detail_text,
-                        }
-                    ],
-                },
-            )
-
         log.error(
             'Unhandled exception on %s %s: %s',
             request.method,
@@ -251,11 +202,6 @@ def create_app(*, engine=None, skip_pyramid: bool = False) -> FastAPI:
     configure_db(engine)
 
     # --- dogpile.cache (Redis) -------------------------------------------
-    # When skip_pyramid is False the Pyramid app also calls
-    # configure_caches(), but the function is idempotent
-    # (``replace_existing_backend=True``).  When skip_pyramid is True
-    # (e.g. in tests) this is the *only* place it gets called, so
-    # FastAPI routes that use dogpile won't hit unconfigured regions.
     from c2corg_api.caching import configure_caches
 
     configure_caches(settings)
@@ -435,17 +381,13 @@ def create_app(*, engine=None, skip_pyramid: bool = False) -> FastAPI:
     fastapi_app.include_router(waypoint_stoparea_router)
 
     # --- routers queue config ---------------------------------
-    # The queue_config is only available when Pyramid is initialised.
-    # When skip_pyramid is True (tests), the queue_config is set by the
-    # test harness.
-    if not skip_pyramid:
-        from c2corg_api.search import get_queue_config
+    from c2corg_api.search import get_queue_config
 
-        queue_config = get_queue_config(settings)
-        configure_association_router(queue_config)
-        configure_tag_router(queue_config)
-        configure_merge_router(queue_config)
-        configure_delete_router(queue_config)
+    queue_config = get_queue_config(settings)
+    configure_association_router(queue_config)
+    configure_tag_router(queue_config)
+    configure_merge_router(queue_config)
+    configure_delete_router(queue_config)
 
     configure_feed_router(settings)
     configure_forum_router(settings)
@@ -454,12 +396,7 @@ def create_app(*, engine=None, skip_pyramid: bool = False) -> FastAPI:
     configure_user_account_router(settings)
     configure_user_block_router(settings)
 
-    # --- legacy Pyramid WSGI app -----------------------------------------
-    if not skip_pyramid:
-        pyramid_app = _create_pyramid_app(settings)
-        fastapi_app.mount('/', WSGIMiddleware(pyramid_app))
-
-    log.info('FastAPI + Pyramid hybrid app ready')
+    log.info('FastAPI app ready')
     return fastapi_app
 
 

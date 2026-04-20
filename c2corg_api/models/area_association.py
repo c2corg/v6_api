@@ -13,7 +13,7 @@ from c2corg_api.models import Base, DBSession, schema
 from c2corg_api.models.area import AREA_TYPE, Area
 from c2corg_api.models.cache_version import update_cache_version_for_area
 from c2corg_api.models.document import Document, DocumentGeometry, DocumentLocale
-from c2corg_api.views import set_best_locale
+from c2corg_api.routers.helpers.document_helpers import set_best_locale
 
 
 class AreaAssociation(Base):
@@ -44,13 +44,12 @@ Document._areas = relationship(
 )
 
 
-def update_area(area, reset=False, db: Session | None = None):
+def update_area(area, reset=False, *, db: Session):
     """Create associations for the given area with all intersecting documents.
 
     If `reset` is True, all possible existing associations to this area are
     dropped before creating new associations.
     """
-    db = db or DBSession
     if reset:
         db.execute(
             AreaAssociation.__table__.delete().where(
@@ -97,13 +96,12 @@ def update_area(area, reset=False, db: Session | None = None):
     update_cache_version_for_area(area, db=db)
 
 
-def update_areas_for_document(document, reset=False, db: Session | None = None):
+def update_areas_for_document(document, reset=False, *, db: Session):
     """Create associations for the given documents with all intersecting areas.
 
     If `reset` is True, all possible existing associations to this document are
     dropped before creating new associations.
     """
-    db = db or DBSession
     if reset:
         db.execute(
             AreaAssociation.__table__.delete().where(
@@ -145,9 +143,8 @@ def update_areas_for_document(document, reset=False, db: Session | None = None):
     )
 
 
-def get_areas(document, lang, db: Session | None = None):
+def get_areas(document, lang, db: Session):
     """Load and return areas linked with the given document."""
-    db = db or DBSession
     areas = (
         db.query(Area)
         .filter(Area.redirects_to.is_(None))

@@ -6,11 +6,11 @@ Extracted from ``c2corg_api.views.user``.
 
 import re
 
+from c2corg_api.models import DBSession
 from email_validator import EmailNotValidError, validate_email
 from sqlalchemy import func
 
 from c2corg_api.models.user import User
-from c2corg_api.routers.helpers._db_compat import resolve_db
 
 ENCODING = 'UTF-8'
 VALIDATION_EXPIRE_DAYS = 3
@@ -26,7 +26,6 @@ def is_valid_email(email):
 
 
 def is_unused_user_attribute(attrname, value, lowercase=False, db=None):
-    db = resolve_db(db)
     attr = getattr(User, attrname)
     query = db.query(User)
     if lowercase:

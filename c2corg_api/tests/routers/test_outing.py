@@ -36,7 +36,7 @@ from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_tokens, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class TestOutingFastAPIRouter(BaseTestCase):
@@ -109,7 +109,7 @@ class TestOutingFastAPIRouter(BaseTestCase):
         self.session.add(self.outing)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.outing, user_id)
+        create_new_version(self.outing, user_id, db=self.session)
         self.outing_version = (
             self.session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.outing.document_id)
@@ -138,7 +138,7 @@ class TestOutingFastAPIRouter(BaseTestCase):
         )
         self.session.add(self.outing2)
         self.session.flush()
-        DocumentRest.create_new_version(self.outing2, user_id)
+        create_new_version(self.outing2, user_id, db=self.session)
 
         self.outing3 = Outing(
             activities=['skitouring'],

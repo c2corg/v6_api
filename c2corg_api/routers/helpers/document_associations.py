@@ -32,7 +32,6 @@ from c2corg_api.routers.helpers.document_schemas import (
     waypoint_documents_config,
     xreport_documents_config,
 )
-from c2corg_api.routers.helpers._db_compat import resolve_db
 from c2corg_api.routers.helpers.validation import get_first_column
 
 associations_to_include = {
@@ -75,7 +74,7 @@ associations_to_include = {
 }
 
 
-def get_associations(document, lang, editing_view, db: Session | None = None):
+def get_associations(document, lang, editing_view, db: Session):
     """Load and return associated documents."""
     types_to_include = associations_to_include.get(document.type, set())
 
@@ -114,8 +113,7 @@ def get_associations(document, lang, editing_view, db: Session | None = None):
     return associations
 
 
-def get_linked_waypoint_parents(document, lang, db: Session | None = None):
-    db = resolve_db(db)
+def get_linked_waypoint_parents(document, lang, db: Session):
     waypoint_ids = get_first_column(
         db.query(Waypoint.document_id)
         .filter(Waypoint.redirects_to.is_(None))
@@ -129,8 +127,7 @@ def get_linked_waypoint_parents(document, lang, db: Session | None = None):
     ).get('documents')
 
 
-def get_linked_waypoint_children(document, lang, db: Session | None = None):
-    db = resolve_db(db)
+def get_linked_waypoint_children(document, lang, db: Session):
     waypoint_ids = get_first_column(
         db.query(Waypoint.document_id)
         .filter(Waypoint.redirects_to.is_(None))
@@ -144,8 +141,7 @@ def get_linked_waypoint_children(document, lang, db: Session | None = None):
     ).get('documents')
 
 
-def get_linked_waypoints(document, lang, db: Session | None = None):
-    db = resolve_db(db)
+def get_linked_waypoints(document, lang, db: Session):
     waypoint_ids = get_first_column(
         db.query(Waypoint.document_id)
         .filter(Waypoint.redirects_to.is_(None))
@@ -170,8 +166,7 @@ def get_linked_waypoints(document, lang, db: Session | None = None):
     ).get('documents')
 
 
-def get_linked_routes(document, lang, db: Session | None = None):
-    db = resolve_db(db)
+def get_linked_routes(document, lang, db: Session):
     condition_as_child = and_(
         Association.child_document_id == Route.document_id,
         Association.parent_document_id == document.document_id,
@@ -200,8 +195,7 @@ def get_linked_routes(document, lang, db: Session | None = None):
     )
 
 
-def get_linked_users(document, lang, db: Session | None = None):
-    db = resolve_db(db)
+def get_linked_users(document, lang, db: Session):
     user_ids = get_first_column(
         db.query(User.id)
         .join(Association, Association.parent_document_id == User.id)
@@ -214,8 +208,7 @@ def get_linked_users(document, lang, db: Session | None = None):
     ).get('documents')
 
 
-def get_linked_images(document, lang, db: Session | None = None):
-    db = resolve_db(db)
+def get_linked_images(document, lang, db: Session):
     image_ids = get_first_column(
         db.query(Image.document_id)
         .filter(Image.redirects_to.is_(None))
@@ -235,8 +228,7 @@ def get_linked_images(document, lang, db: Session | None = None):
     )
 
 
-def get_linked_areas(document, lang, db: Session | None = None):
-    db = resolve_db(db)
+def get_linked_areas(document, lang, db: Session):
     area_ids = get_first_column(
         db.query(Area.document_id)
         .filter(Area.redirects_to.is_(None))
@@ -255,8 +247,7 @@ def get_linked_areas(document, lang, db: Session | None = None):
     )
 
 
-def get_linked_outings(document, lang, db: Session | None = None):
-    db = resolve_db(db)
+def get_linked_outings(document, lang, db: Session):
     outing_ids = get_first_column(
         db.query(Outing.document_id)
         .filter(Outing.redirects_to.is_(None))
@@ -275,8 +266,7 @@ def get_linked_outings(document, lang, db: Session | None = None):
     )
 
 
-def get_linked_articles(document, lang, db: Session | None = None):
-    db = resolve_db(db)
+def get_linked_articles(document, lang, db: Session):
     condition_as_child = and_(
         Association.child_document_id == Article.document_id,
         Association.parent_document_id == document.document_id,
@@ -312,8 +302,7 @@ def get_linked_articles(document, lang, db: Session | None = None):
     ).get('documents')
 
 
-def get_linked_books(document, lang, db: Session | None = None):
-    db = resolve_db(db)
+def get_linked_books(document, lang, db: Session):
     book_ids = get_first_column(
         db.query(Book.document_id)
         .filter(Book.redirects_to.is_(None))
@@ -332,8 +321,7 @@ def get_linked_books(document, lang, db: Session | None = None):
     )
 
 
-def get_linked_xreports(document, lang, db: Session | None = None):
-    db = resolve_db(db)
+def get_linked_xreports(document, lang, db: Session):
     condition_as_child = and_(
         Association.child_document_id == Xreport.document_id,
         Association.parent_document_id == document.document_id,

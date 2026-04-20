@@ -8,13 +8,13 @@ locale of a document.
 
 import logging
 
+from c2corg_api.models import DBSession
 from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy import and_, exists, func, or_, over, select
 from sqlalchemy.orm import Session
 
 from c2corg_api.database import get_db
 from c2corg_api.models import article, image
-from c2corg_api.routers.helpers._db_compat import resolve_db
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import ARTICLE_TYPE, ArchiveArticle, Article
 from c2corg_api.models.association import Association, AssociationLog
@@ -105,7 +105,7 @@ _DELETABLE_TYPES = frozenset(
 
 def _get_document_type(document_id):
     doc = (
-        resolve_db(None)
+        DBSession
         .query(Document.type)
         .filter(Document.document_id == document_id)
         .first()
@@ -117,7 +117,7 @@ def _get_document_type(document_id):
 
 def _is_main_waypoint_of_route(document_id):
     return (
-        resolve_db(None)
+        DBSession
         .query(exists().where(Route.main_waypoint_id == document_id))
         .scalar()
     )
@@ -125,7 +125,7 @@ def _is_main_waypoint_of_route(document_id):
 
 def _is_only_waypoint_of_route(document_id):
     routes = (
-        resolve_db(None)
+        DBSession
         .query(Association.child_document_id)
         .filter(
             and_(
@@ -136,7 +136,7 @@ def _is_only_waypoint_of_route(document_id):
         .subquery()
     )
     only_waypoint = (
-        resolve_db(None)
+        DBSession
         .query(Association)
         .filter(
             and_(
@@ -148,12 +148,12 @@ def _is_only_waypoint_of_route(document_id):
         .having(func.count('*') == 1)
         .exists()
     )
-    return resolve_db(None).query(only_waypoint).scalar()
+    return DBSession.query(only_waypoint).scalar()
 
 
 def _is_only_route_of_outing(document_id):
     outings = (
-        resolve_db(None)
+        DBSession
         .query(Association.child_document_id)
         .filter(
             and_(
@@ -164,7 +164,7 @@ def _is_only_route_of_outing(document_id):
         .subquery()
     )
     only_route = (
-        resolve_db(None)
+        DBSession
         .query(Association)
         .filter(
             and_(
@@ -176,7 +176,7 @@ def _is_only_route_of_outing(document_id):
         .having(func.count('*') == 1)
         .exists()
     )
-    return resolve_db(None).query(only_route).scalar()
+    return DBSession.query(only_route).scalar()
 
 
 def _validate_delete(document_id, document_type, user, lang=None):
@@ -363,7 +363,7 @@ def _delete_image_files_immediate(document_id, settings):
     import requests as http_requests
 
     filenames_result = (
-        resolve_db(None)
+        DBSession
         .query(ArchiveImage.filename)
         .filter(ArchiveImage.document_id == document_id)
         .group_by(ArchiveImage.filename)
@@ -395,7 +395,7 @@ def _delete_document(document_id, document_type, redirecting=False):
     """Recursive delete — mirrors DeleteBase._delete_document."""
     # Handle merged docs first
     merged_ids = (
-        resolve_db(None)
+        DBSession
         .query(ArchiveDocument.document_id)
         .filter(ArchiveDocument.redirects_to == document_id)
         .all()
@@ -404,7 +404,7 @@ def _delete_document(document_id, document_type, redirecting=False):
         _delete_document(mid, document_type, True)
 
     # Remove from cache
-    resolve_db(None).query(CacheVersion).filter(
+    DBSession.query(CacheVersion).filter(
         CacheVersion.document_id == document_id
     ).delete()
 
@@ -436,7 +436,7 @@ def _do_delete(document_id, document_type, settings):
 
     _delete_document(document_id, document_type)
 
-    resolve_db(None).add(ESDeletedDocument(document_id=document_id, type=document_type))
+    DBSession.add(ESDeletedDocument(document_id=document_id, type=document_type))
 
     if _queue_config:
         notify_es_syncer_immediate(_queue_config)
@@ -542,7 +542,7 @@ def delete_document_locale(
 
     update_cache_version_full(id, document_type)
 
-    resolve_db(None).add(ESDeletedLocale(document_id=id, type=document_type, lang=lang))
+    DBSession.add(ESDeletedLocale(document_id=id, type=document_type, lang=lang))
 
     if _queue_config:
         notify_es_syncer_immediate(_queue_config)
@@ -572,16 +572,16 @@ def _remove_whole_document(
 def _remove_versions(document_id):
     history_metadata_ids = [
         mid
-        for (mid,) in resolve_db(None)
+        for (mid,) in DBSession
         .query(DocumentVersion.history_metadata_id)
         .filter(DocumentVersion.document_id == document_id)
         .all()
     ]
-    resolve_db(None).query(DocumentVersion).filter(
+    DBSession.query(DocumentVersion).filter(
         DocumentVersion.document_id == document_id
     ).delete()
     if history_metadata_ids:
-        resolve_db(None).execute(
+        DBSession.execute(
             HistoryMetaData.__table__.delete().where(
                 HistoryMetaData.id.in_(history_metadata_ids)
             )
@@ -590,7 +590,7 @@ def _remove_versions(document_id):
 
 def _remove_locale_versions(document_id, lang):
     t = (
-        resolve_db(None)
+        DBSession
         .query(
             DocumentVersion.history_metadata_id,
             DocumentVersion.lang,
@@ -604,19 +604,19 @@ def _remove_locale_versions(document_id, lang):
 
     history_metadata_ids = [
         mid
-        for (mid,) in resolve_db(None)
+        for (mid,) in DBSession
         .query(t.c.history_metadata_id)
         .filter(t.c.lang == lang)
         .filter(t.c.cnt == 1)
         .all()
     ]
 
-    resolve_db(None).query(DocumentVersion).filter(
+    DBSession.query(DocumentVersion).filter(
         DocumentVersion.document_id == document_id
     ).filter(DocumentVersion.lang == lang).delete()
 
     if history_metadata_ids:
-        resolve_db(None).execute(
+        DBSession.execute(
             HistoryMetaData.__table__.delete().where(
                 HistoryMetaData.id.in_(history_metadata_ids)
             )
@@ -629,14 +629,14 @@ def _remove_archive_locale(archive_clazz_locale, document_id, lang=None):
         if lang:
             locale_filter = and_(locale_filter, ArchiveDocumentLocale.lang == lang)
         archive_locale_ids = select(ArchiveDocumentLocale.id).where(locale_filter)
-        resolve_db(None).execute(
+        DBSession.execute(
             archive_clazz_locale.__table__.delete().where(
                 getattr(archive_clazz_locale, 'id').in_(archive_locale_ids)
             )
         )
 
     query = (
-        resolve_db(None)
+        DBSession
         .query(ArchiveDocumentLocale)
         .filter(ArchiveDocumentLocale.document_id == document_id)
     )
@@ -651,21 +651,21 @@ def _remove_locale(clazz_locale, document_id, lang=None):
         locale_filter = and_(locale_filter, DocumentLocale.lang == lang)
     document_locale_ids = select(DocumentLocale.id).where(locale_filter)
 
-    resolve_db(None).execute(
+    DBSession.execute(
         DocumentTopic.__table__.delete().where(
             DocumentTopic.document_locale_id.in_(document_locale_ids)
         )
     )
 
     if clazz_locale:
-        resolve_db(None).execute(
+        DBSession.execute(
             clazz_locale.__table__.delete().where(
                 getattr(clazz_locale, 'id').in_(document_locale_ids)
             )
         )
 
     query = (
-        resolve_db(None)
+        DBSession
         .query(DocumentLocale)
         .filter(DocumentLocale.document_id == document_id)
     )
@@ -675,13 +675,13 @@ def _remove_locale(clazz_locale, document_id, lang=None):
 
 
 def _remove_archive_geometry(document_id):
-    resolve_db(None).query(ArchiveDocumentGeometry).filter(
+    DBSession.query(ArchiveDocumentGeometry).filter(
         ArchiveDocumentGeometry.document_id == document_id
     ).delete()
 
 
 def _remove_geometry(document_id):
-    resolve_db(None).query(DocumentGeometry).filter(
+    DBSession.query(DocumentGeometry).filter(
         DocumentGeometry.document_id == document_id
     ).delete()
 
@@ -690,37 +690,37 @@ def _remove_archive(archive_clazz, document_id):
     archive_document_ids = select(ArchiveDocument.id).where(
         ArchiveDocument.document_id == document_id
     )
-    resolve_db(None).execute(
+    DBSession.execute(
         archive_clazz.__table__.delete().where(
             getattr(archive_clazz, 'id').in_(archive_document_ids)
         )
     )
-    resolve_db(None).query(ArchiveDocument).filter(
+    DBSession.query(ArchiveDocument).filter(
         ArchiveDocument.document_id == document_id
     ).delete()
 
 
 def _remove_figures(clazz, document_id):
-    resolve_db(None).query(clazz).filter(
+    DBSession.query(clazz).filter(
         getattr(clazz, 'document_id') == document_id
     ).delete()
 
 
 def _remove_document(document_id):
-    resolve_db(None).query(Document).filter(
+    DBSession.query(Document).filter(
         Document.document_id == document_id
     ).delete()
 
 
 def _remove_from_feed(document_id):
-    resolve_db(None).query(DocumentChange).filter(
+    DBSession.query(DocumentChange).filter(
         DocumentChange.document_id == document_id
     ).delete()
 
 
 def _remove_image_from_feed(document_id):
     items = (
-        resolve_db(None)
+        DBSession
         .query(DocumentChange)
         .filter(
             or_(
@@ -737,7 +737,7 @@ def _remove_image_from_feed(document_id):
             and item.image1_id == document_id
             and not item.image2_id
         ):
-            resolve_db(None).delete(item)
+            DBSession.delete(item)
         else:
             if item.image1_id == document_id:
                 item.image1_id = item.image2_id
@@ -749,36 +749,52 @@ def _remove_image_from_feed(document_id):
 
 
 def _remove_wp_from_routes_archives(document_id):
-    resolve_db(None).query(ArchiveRoute).filter(
+    DBSession.query(ArchiveRoute).filter(
         ArchiveRoute.main_waypoint_id == document_id
     ).update({ArchiveRoute.main_waypoint_id: None})
 
 
 def _remove_associations(document_id):
-    resolve_db(None).query(Association).filter(
+    DBSession.query(Association).filter(
         or_(
             Association.parent_document_id == document_id,
             Association.child_document_id == document_id,
         )
     ).delete()
-    resolve_db(None).query(AssociationLog).filter(
+    DBSession.query(AssociationLog).filter(
         or_(
             AssociationLog.parent_document_id == document_id,
             AssociationLog.child_document_id == document_id,
         )
     ).delete()
-    resolve_db(None).query(TopoMapAssociation).filter(
+    DBSession.query(TopoMapAssociation).filter(
         TopoMapAssociation.document_id == document_id
     ).delete()
-    resolve_db(None).query(AreaAssociation).filter(
+    DBSession.query(AreaAssociation).filter(
         AreaAssociation.document_id == document_id
     ).delete()
 
 
 def _remove_tags(document_id):
-    resolve_db(None).query(DocumentTag).filter(
+    DBSession.query(DocumentTag).filter(
         DocumentTag.document_id == document_id
     ).delete()
-    resolve_db(None).query(DocumentTagLog).filter(
+    DBSession.query(DocumentTagLog).filter(
         DocumentTagLog.document_id == document_id
     ).delete()
+
+
+# Public aliases for use by scripts (e.g. scripts/users/merge.py)
+remove_whole_document = _remove_whole_document
+
+
+def remove_from_cache(document_id):
+    DBSession.query(CacheVersion).filter(
+        CacheVersion.document_id == document_id
+    ).delete()
+
+
+def update_deleted_documents_list(document_id, document_type):
+    DBSession.add(
+        ESDeletedDocument(document_id=document_id, type=document_type)
+    )

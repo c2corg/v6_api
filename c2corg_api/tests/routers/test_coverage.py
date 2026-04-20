@@ -433,7 +433,8 @@ class TestCoverageFastAPIRouter(BaseTestCase):
     def test_get_caching(self):
         """GET /v2/coverages/{id} populates the dogpile cache."""
         cache_key = get_cache_key(
-            self.coverage1.document_id, None, document_type=COVERAGE_TYPE
+            self.coverage1.document_id, None, document_type=COVERAGE_TYPE,
+            db=self.session,
         )
         assert cache_document_detail.get(cache_key) == NO_VALUE
 

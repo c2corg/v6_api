@@ -32,7 +32,7 @@ from c2corg_api.models.user_profile import (
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.users.merge import merge_user_accounts
 from c2corg_api.tests import BaseTestCase, global_userids
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class MergeUsersTest(BaseTestCase):
@@ -232,7 +232,7 @@ class MergeUsersTest(BaseTestCase):
         self.contributor = self.session.get(User, global_userids['contributor'])
         self.contributor2 = self.session.get(User, global_userids['contributor2'])
 
-        DocumentRest.create_new_version(self.contributor.profile, self.contributor.id)
+        create_new_version(self.contributor.profile, self.contributor.id)
 
         ml = Mailinglist(
             listname='avalanche',
@@ -276,7 +276,7 @@ class MergeUsersTest(BaseTestCase):
         )
         self.session.add(self.waypoint1)
         self.session.flush()
-        DocumentRest.create_new_version(self.waypoint1, self.contributor.id)
+        create_new_version(self.waypoint1, self.contributor.id)
         update_feed_document_create(self.waypoint1, self.contributor.id)
 
         route1_geometry = DocumentGeometry(
@@ -295,7 +295,7 @@ class MergeUsersTest(BaseTestCase):
         )
         self.session.add(self.route1)
         self.session.flush()
-        DocumentRest.create_new_version(self.route1, self.contributor.id)
+        create_new_version(self.route1, self.contributor.id)
         update_feed_document_create(self.route1, self.contributor.id)
         self.session.add(
             Association.create(
@@ -315,7 +315,7 @@ class MergeUsersTest(BaseTestCase):
         )
         self.session.add(self.outing1)
         self.session.flush()
-        DocumentRest.create_new_version(self.outing1, self.contributor.id)
+        create_new_version(self.outing1, self.contributor.id)
         update_feed_document_create(self.outing1, self.contributor.id)
 
         self.outing2 = Outing(
@@ -330,7 +330,7 @@ class MergeUsersTest(BaseTestCase):
         )
         self.session.add(self.outing2)
         self.session.flush()
-        DocumentRest.create_new_version(self.outing2, self.contributor.id)
+        create_new_version(self.outing2, self.contributor.id)
         update_feed_document_create(self.outing2, self.contributor.id)
 
         self.session.add(

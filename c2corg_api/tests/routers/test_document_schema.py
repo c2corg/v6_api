@@ -6,11 +6,11 @@ The routers still rely on ``document_schemas`` for collection queries
 (``load_only`` field lists), so these tests remain relevant.
 """
 
-from c2corg_api.tests import BaseTestCase
-from c2corg_api.views.document_schemas import (
+from c2corg_api.routers.helpers.document_schemas import (
     route_documents_config,
     topo_map_documents_config,
 )
+from c2corg_api.tests import BaseTestCase
 
 
 class TestGetDocumentsConfig(BaseTestCase):

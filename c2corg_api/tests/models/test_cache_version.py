@@ -18,7 +18,7 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint, WaypointLocale
 from c2corg_api.tests import BaseTestCase
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class TestCacheVersion(BaseTestCase):
@@ -47,7 +47,7 @@ class TestCacheVersion(BaseTestCase):
         current_version = cache_version.version
         current_last_updated = cache_version.last_updated
 
-        update_cache_version(waypoint)
+        update_cache_version(waypoint, self.session)
         self.session.refresh(cache_version)
         assert cache_version.version == current_version + 1
         assert cache_version.last_updated != current_last_updated
@@ -69,7 +69,7 @@ class TestCacheVersion(BaseTestCase):
         self.session.add(Association.create(waypoint3, waypoint1))
         self.session.flush()
 
-        update_cache_version(waypoint1)
+        update_cache_version(waypoint1, self.session)
         cache_version1 = self.session.get(CacheVersion, waypoint1.document_id)
         cache_version2 = self.session.get(CacheVersion, waypoint1.document_id)
         cache_version3 = self.session.get(CacheVersion, waypoint1.document_id)
@@ -98,7 +98,7 @@ class TestCacheVersion(BaseTestCase):
         self.session.add(Association.create(waypoint3, waypoint2))
         self.session.flush()
 
-        update_cache_version(waypoint1)
+        update_cache_version(waypoint1, self.session)
         cache_version_wp1 = self.session.get(CacheVersion, waypoint1.document_id)
         cache_version_wp2 = self.session.get(CacheVersion, waypoint2.document_id)
         cache_version_wp3 = self.session.get(CacheVersion, waypoint3.document_id)
@@ -127,7 +127,7 @@ class TestCacheVersion(BaseTestCase):
         self.session.add(Association.create(waypoint2, waypoint1))
         self.session.flush()
 
-        update_cache_version(route1)
+        update_cache_version(route1, self.session)
         cache_version_route1 = self.session.get(CacheVersion, route1.document_id)
         cache_version_route2 = self.session.get(CacheVersion, route2.document_id)
         cache_version_wp1 = self.session.get(CacheVersion, waypoint1.document_id)
@@ -164,7 +164,7 @@ class TestCacheVersion(BaseTestCase):
         self.session.add(Association.create(waypoint2, waypoint1))
         self.session.flush()
 
-        update_cache_version(outing)
+        update_cache_version(outing, self.session)
         cache_version_outing = self.session.get(CacheVersion, outing.document_id)
         cache_version_route1 = self.session.get(CacheVersion, route1.document_id)
         cache_version_route2 = self.session.get(CacheVersion, route2.document_id)
@@ -195,7 +195,7 @@ class TestCacheVersion(BaseTestCase):
         self.session.add(Association.create(user_profile, outing))
         self.session.flush()
 
-        update_cache_version(user_profile)
+        update_cache_version(user_profile, self.session)
         cache_version_user_profile = self.session.get(
             CacheVersion, user_profile.document_id
         )
@@ -227,9 +227,9 @@ class TestCacheVersion(BaseTestCase):
         self.session.add_all([waypoint, user_profile, user])
         self.session.flush()
 
-        DocumentRest.create_new_version(waypoint, user.id)
+        create_new_version(waypoint, user.id, db=self.session)
 
-        update_cache_version(user_profile)
+        update_cache_version(user_profile, self.session)
         cache_version_user_profile = self.session.get(
             CacheVersion, user_profile.document_id
         )
@@ -262,6 +262,7 @@ class TestCacheVersion(BaseTestCase):
                     'child_type': WAYPOINT_TYPE,
                 },
             ],
+            db=self.session,
         )
 
         cache_version1 = self.session.get(CacheVersion, waypoint1.document_id)
@@ -301,6 +302,7 @@ class TestCacheVersion(BaseTestCase):
                     'child_type': ROUTE_TYPE,
                 }
             ],
+            db=self.session,
         )
 
         cache_version1 = self.session.get(CacheVersion, waypoint1.document_id)
@@ -348,6 +350,7 @@ class TestCacheVersion(BaseTestCase):
                     'child_type': OUTING_TYPE,
                 }
             ],
+            db=self.session,
         )
 
         cache_version1 = self.session.get(CacheVersion, waypoint1.document_id)
@@ -378,7 +381,7 @@ class TestCacheVersion(BaseTestCase):
         )
         self.session.flush()
 
-        update_cache_version_for_area(area)
+        update_cache_version_for_area(area, self.session)
 
         cache_version_waypoint = self.session.get(CacheVersion, waypoint.document_id)
         cache_version_untouched = self.session.get(
@@ -405,7 +408,7 @@ class TestCacheVersion(BaseTestCase):
         )
         self.session.flush()
 
-        update_cache_version_for_map(topo_map)
+        update_cache_version_for_map(topo_map, self.session)
 
         cache_version_waypoint = self.session.get(CacheVersion, waypoint.document_id)
         cache_version_untouched = self.session.get(

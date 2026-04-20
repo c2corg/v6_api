@@ -59,7 +59,7 @@ from c2corg_api.models.xreport import (
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_tokens, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class TestDocumentDeleteRouter(BaseTestCase):
@@ -206,13 +206,13 @@ class TestDocumentDeleteRouter(BaseTestCase):
         self.session.add(self.waypoint4)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.waypoint1, user_id)
+        create_new_version(self.waypoint1, user_id, db=self.session)
         update_feed_document_create(self.waypoint1, user_id)
-        DocumentRest.create_new_version(self.waypoint2, user_id)
+        create_new_version(self.waypoint2, user_id, db=self.session)
         update_feed_document_create(self.waypoint2, user_id)
-        DocumentRest.create_new_version(self.waypoint3, user_id)
+        create_new_version(self.waypoint3, user_id, db=self.session)
         update_feed_document_create(self.waypoint3, user_id)
-        DocumentRest.create_new_version(self.waypoint4, user_id)
+        create_new_version(self.waypoint4, user_id, db=self.session)
         update_feed_document_create(self.waypoint4, user_id)
         self.session.flush()
 
@@ -297,11 +297,11 @@ class TestDocumentDeleteRouter(BaseTestCase):
         self.session.add(self.route3)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.route1, user_id)
+        create_new_version(self.route1, user_id, db=self.session)
         update_feed_document_create(self.route1, user_id)
-        DocumentRest.create_new_version(self.route2, user_id)
+        create_new_version(self.route2, user_id, db=self.session)
         update_feed_document_create(self.route2, user_id)
-        DocumentRest.create_new_version(self.route3, user_id)
+        create_new_version(self.route3, user_id, db=self.session)
         update_feed_document_create(self.route3, user_id)
 
         self._add_association(self.waypoint1, self.route3)
@@ -332,7 +332,7 @@ class TestDocumentDeleteRouter(BaseTestCase):
         self.session.add(self.outing1)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.outing1, user_id)
+        create_new_version(self.outing1, user_id, db=self.session)
         update_feed_document_create(self.outing1, user_id)
         self._add_association(self.route1, self.outing1)
         self.session.flush()
@@ -353,7 +353,7 @@ class TestDocumentDeleteRouter(BaseTestCase):
         )
         self.session.add(self.outing1b)
         self.session.flush()
-        DocumentRest.create_new_version(self.outing1b, user_id)
+        create_new_version(self.outing1b, user_id, db=self.session)
         self.session.flush()
 
         outing2_geometry = DocumentGeometry(
@@ -378,7 +378,7 @@ class TestDocumentDeleteRouter(BaseTestCase):
         self.session.add(self.outing2)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.outing2, user_id)
+        create_new_version(self.outing2, user_id, db=self.session)
         update_feed_document_create(self.outing2, user_id)
         self._add_association(self.route2, self.outing2)
         self._add_association(self.route3, self.outing2)
@@ -400,14 +400,14 @@ class TestDocumentDeleteRouter(BaseTestCase):
         self.session.add(self.article1)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.article1, user_id)
+        create_new_version(self.article1, user_id, db=self.session)
         update_feed_document_create(self.article1, user_id)
         self.session.flush()
 
         self.article1.locales[0].title = 'Some other article title'
         article1_lang = self.article1.locales[0].lang
         self.session.flush()
-        DocumentRest.update_version(
+        update_version(
             self.article1, user_id, 'new title', [UpdateType.LANG], [article1_lang]
         )
         self.session.flush()
@@ -430,7 +430,7 @@ class TestDocumentDeleteRouter(BaseTestCase):
         self.session.flush()
 
         written_at = datetime(2016, 1, 1, 0, 0, 0)
-        DocumentRest.create_new_version(self.article2, user_id, written_at)
+        create_new_version(self.article2, user_id, written_at, db=self.session)
         update_feed_document_create(self.article2, user_id)
         self.session.flush()
 
@@ -449,7 +449,7 @@ class TestDocumentDeleteRouter(BaseTestCase):
         self.session.add(self.book1)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.book1, user_id)
+        create_new_version(self.book1, user_id, db=self.session)
         update_feed_document_create(self.book1, user_id)
         self._add_association(self.book1, self.route2)
         self._add_association(self.book1, self.route3)
@@ -476,7 +476,7 @@ class TestDocumentDeleteRouter(BaseTestCase):
         self.session.add(self.xreport1)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.xreport1, user_id)
+        create_new_version(self.xreport1, user_id, db=self.session)
         update_feed_document_create(self.xreport1, user_id)
         self._add_association(self.outing2, self.xreport1)
         self._add_association(self.route3, self.xreport1)
@@ -499,7 +499,7 @@ class TestDocumentDeleteRouter(BaseTestCase):
         self.session.add(self.image1)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.image1, user_id)
+        create_new_version(self.image1, user_id, db=self.session)
         self._add_association(self.outing1, self.image1)
         self._add_association(self.route3, self.image1)
         self._add_association(self.waypoint3, self.image1)
@@ -526,7 +526,7 @@ class TestDocumentDeleteRouter(BaseTestCase):
 
         self.image1.filename = 'image1.1.jpg'
         self.session.flush()
-        DocumentRest.update_version(
+        update_version(
             self.image1, user_id, 'changed filename', [UpdateType.FIGURES], []
         )
         self.session.flush()
@@ -895,7 +895,7 @@ class TestDocumentDeleteRouter(BaseTestCase):
         # Make waypoint3 the main wp of route3…
         self.route3.main_waypoint_id = self.waypoint3.document_id
         self.session.flush()
-        DocumentRest.update_version(
+        update_version(
             self.route3,
             global_userids['contributor'],
             'Update',
@@ -906,7 +906,7 @@ class TestDocumentDeleteRouter(BaseTestCase):
         # …then change it back to waypoint1
         self.route3.main_waypoint_id = self.waypoint1.document_id
         self.session.flush()
-        DocumentRest.update_version(
+        update_version(
             self.route3,
             global_userids['contributor'],
             'Update',

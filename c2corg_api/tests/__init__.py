@@ -11,13 +11,10 @@ import transaction
 from alembic.command import downgrade
 from alembic.config import Config
 from dotenv import load_dotenv
-from pyramid import testing
-from pyramid.paster import get_appsettings
 from sqlalchemy import engine_from_config
-from webtest import TestApp
 
 from c2corg_api import caching as caching_common
-from c2corg_api import main
+from c2corg_api.app import _load_settings
 from c2corg_api.emails.email_service import EmailService
 from c2corg_api.models import DBSession, sessionmaker
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
@@ -26,7 +23,7 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.scripts import initializedb, initializees
 from c2corg_api.scripts.es.fill_index import fill_index
-from c2corg_api.search import configure_es_from_config
+from c2corg_api.search import configure_es_from_config, get_queue_config
 from c2corg_api.security.roles import add_or_retrieve_token, create_claims
 
 load_dotenv()
@@ -35,7 +32,7 @@ log = logging.getLogger(__name__)
 
 curdir = os.path.dirname(os.path.abspath(__file__))
 configfile = os.path.realpath(os.path.join(curdir, '../../test.ini'))
-settings = get_appsettings(configfile)
+settings = _load_settings(configfile)
 
 alembic_scripts_folder = os.path.realpath(
     os.path.join(curdir, '../../alembic_migration')
@@ -261,24 +258,20 @@ class BaseTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):  # noqa
-        cls.app = main({}, **settings)
         cls.engine = get_engine()
         cls.Session = sessionmaker()
+        cls._queue_config = get_queue_config(settings)
 
     def setUp(self):  # noqa
-        self.app = TestApp(self.app)
-        registry = self.app.app.registry
         self.email_service = EmailService(settings)
         EmailService.instance = None
-
-        self.config = testing.setUp()
 
         self.connection = self.engine.connect()
 
         # begin a non-ORM transaction
         self.trans = self.connection.begin()
 
-        # DBSession is the scoped session manager used in the views,
+        # DBSession is the scoped session manager,
         # reconfigure it to use this test's connection
         DBSession.configure(bind=self.connection)
 
@@ -286,15 +279,13 @@ class BaseTestCase(unittest.TestCase):
         # used in the test code
         self.session = self.Session(bind=self.connection)
 
-        self.queue_config = registry.queue_config
+        self.queue_config = self._queue_config
         reset_queue(self.queue_config)
         reset_cache_key()
-        registry.feed_admin_user_account_id = None
 
     def tearDown(self):  # noqa
         # rollback - everything that happened with the Session above
         # (including calls to commit()) is rolled back.
-        testing.tearDown()
         if not keep:
             if self.trans.is_active:
                 self.trans.rollback()
@@ -303,26 +294,6 @@ class BaseTestCase(unittest.TestCase):
         DBSession.remove()
         self.session.close()
         self.connection.close()
-
-    def app_post_json(self, *args, **kwargs):
-        return self.app_send_json('post', *args, **kwargs)
-
-    def app_put_json(self, *args, **kwargs):
-        return self.app_send_json('put', *args, **kwargs)
-
-    def app_send_json(self, action, *args, **kwargs):
-        kwargs = dict(kwargs)
-        status = 200
-        if 'status' in kwargs:
-            status = kwargs['status']
-            del kwargs['status']
-        kwargs['expect_errors'] = True
-
-        res = getattr(self.app, action + '_json')(*args, **kwargs)
-        if status != '*' and res.status_code != status:
-            errors = res.body if res.status_code == 400 else ''
-            pytest.fail('Bad response: %s (not %d) : %s' % (res.status, status, errors))
-        return res
 
 
 def reset_queue(queue_config):

@@ -367,3 +367,10 @@ def _transfer_main_waypoint(db, source_id, target_id):
 
 def _remove_feed_entry(db, source_id):
     db.query(DocumentChange).filter(DocumentChange.document_id == source_id).delete()
+
+
+# Public alias for scripts (e.g. scripts/users/merge.py) that don't pass db
+def transfer_associations(source_id, target_id):
+    from c2corg_api.models import DBSession
+
+    _transfer_associations(DBSession, source_id, target_id)

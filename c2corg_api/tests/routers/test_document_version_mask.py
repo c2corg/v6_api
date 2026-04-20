@@ -13,7 +13,7 @@ from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_tokens, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class BaseMaskTest(BaseTestCase):
@@ -52,13 +52,13 @@ class BaseMaskTest(BaseTestCase):
         self.session.add(self.route)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.route, contributor_id)
+        create_new_version(self.route, contributor_id, db=self.session)
         self.session.flush()
 
         self.route.activities = ['skitouring', 'hiking']
         self.session.flush()
 
-        DocumentRest.update_version(
+        update_version(
             self.route, contributor_id, 'new version', [UpdateType.FIGURES], []
         )
         self.session.flush()

@@ -19,7 +19,7 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_tokens, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class TestUserProfileFastAPIRouter(BaseTestCase):
@@ -65,7 +65,7 @@ class TestUserProfileFastAPIRouter(BaseTestCase):
         self.profile1 = self.session.get(UserProfile, user_id)
         self.locale_en = self.profile1.get_locale('en')
         self.locale_fr = self.profile1.get_locale('fr')
-        DocumentRest.create_new_version(self.profile1, user_id)
+        create_new_version(self.profile1, user_id, db=self.session)
 
         self.profile2 = UserProfile(categories=['amateur'])
         self.session.add(self.profile2)

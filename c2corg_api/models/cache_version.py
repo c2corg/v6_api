@@ -5,7 +5,7 @@ from sqlalchemy import DateTime, ForeignKey, Integer, func, text
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from c2corg_api import caching
-from c2corg_api.models import Base, DBSession, schema
+from c2corg_api.models import Base, schema
 from c2corg_api.models.document import Document
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
@@ -39,50 +39,46 @@ class CacheVersion(Base):
     )
 
 
-def update_cache_version(document, db: Session | None = None):
+def update_cache_version(document, db: Session):
     update_cache_version_full(document.document_id, document.type, db=db)
 
 
-def update_cache_version_full(document_id, type, db: Session | None = None):
+def update_cache_version_full(document_id, type, db: Session):
     """Update the cache version of the given document + associated documents."""
-    db = db or DBSession
     db.execute(
         text('SELECT guidebook.update_cache_version(:document_id, :type)'),
         {'document_id': document_id, 'type': type},
     )
 
 
-def update_cache_version_direct(document_id, db: Session | None = None):
+def update_cache_version_direct(document_id, db: Session):
     """Update the cache version for the document with the given id
     without updating any dependencies.
     """
-    db = db or DBSession
     db.execute(
         text('SELECT guidebook.increment_cache_version(:document_id)'),
         {'document_id': document_id},
     )
 
 
-def update_cache_version_for_area(area, db: Session | None = None):
+def update_cache_version_for_area(area, db: Session):
     """Invalidate the cache keys of all documents that are currently
     associated to the given area.
     Note that the cache key of the area itself is not changed when calling this
     function.
     """
-    db = db or DBSession
     db.execute(
         text('SELECT guidebook.update_cache_version_for_area(:document_id)'),
         {'document_id': area.document_id},
     )
 
 
-def update_cache_version_for_map(topo_map, db: Session | None = None):
+def update_cache_version_for_map(topo_map, db: Session):
     """Invalidate the cache keys of all documents that are currently
     associated to the given map.
     Note that the cache key of the map itself is not changed when calling this
     function.
     """
-    db = db or DBSession
     db.execute(
         text('SELECT guidebook.update_cache_version_for_map(:document_id)'),
         {'document_id': topo_map.document_id},
@@ -90,13 +86,12 @@ def update_cache_version_for_map(topo_map, db: Session | None = None):
 
 
 def update_cache_version_associations(
-    added_associations, removed_associations, ignore_document_id=None, db=None
+    added_associations, removed_associations, ignore_document_id=None, *, db: Session
 ):
     changed_associations = added_associations + removed_associations
     if not changed_associations:
         return
 
-    db = db or DBSession
     documents_to_update = set()
     waypoints_to_update = set()
     routes_to_update = set()
@@ -173,13 +168,12 @@ def _format_cache_key(document_id, lang, version, doc_type=None, custom_cache_ke
 
 
 def get_cache_key(
-    document_id, lang, document_type, custom_cache_key=None, db: Session | None = None
+    document_id, lang, document_type, custom_cache_key=None, *, db: Session
 ):
     """Returns an identifier which reflects the version of a document and
     all its associated documents. This identifier is used as cache key
     and as ETag value.
     """
-    db = db or DBSession
     version = (
         db.query(CacheVersion.version)
         .filter(CacheVersion.document_id == document_id)
@@ -195,12 +189,11 @@ def get_cache_key(
     )
 
 
-def get_cache_keys(document_ids, lang, document_type, db: Session | None = None):
+def get_cache_keys(document_ids, lang, document_type, db: Session):
     """Get a cache key for all given document ids."""
     if not document_ids:
         return []
 
-    db = db or DBSession
     versions = (
         db.query(CacheVersion)
         .filter(CacheVersion.document_id.in_(document_ids))

@@ -4,6 +4,7 @@ Sitemap (JSON) helpers.
 Extracted from ``c2corg_api.views.sitemap``.
 """
 
+from c2corg_api.models import DBSession
 from datetime import date
 from math import ceil
 
@@ -11,7 +12,6 @@ from fastapi import HTTPException
 from sqlalchemy import func
 
 from c2corg_api import caching
-from c2corg_api.routers.helpers._db_compat import resolve_db
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.route import ROUTE_TYPE, RouteLocale
@@ -31,7 +31,7 @@ def get_cache_key(doc_type=None, i=None):
 
 def get_sitemap_index():
     document_locales_per_type = (
-        resolve_db(None)
+        DBSession
         .query(Document.type, func.count().label('count'))
         .join(DocumentLocale, Document.document_id == DocumentLocale.document_id)
         .filter(Document.type != USERPROFILE_TYPE)
@@ -63,7 +63,7 @@ def get_sitemap(doc_type, i):
         fields.append(RouteLocale.title_prefix)
 
     base_query = (
-        resolve_db(None)
+        DBSession
         .query(*fields)
         .select_from(Document)
         .join(DocumentLocale, Document.document_id == DocumentLocale.document_id)

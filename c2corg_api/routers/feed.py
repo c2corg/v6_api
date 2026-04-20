@@ -10,6 +10,7 @@ Mirrors ``c2corg_api.views.feed``.
 """
 
 import logging
+from c2corg_api.models import DBSession
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -17,7 +18,6 @@ from sqlalchemy.orm import Session
 
 from c2corg_api.database import get_db
 from c2corg_api.models.user import User
-from c2corg_api.routers.helpers._db_compat import resolve_db
 from c2corg_api.routers.helpers.feed import (
     DEFAULT_PAGE_LIMIT,
     MAX_PAGE_LIMIT,
@@ -200,7 +200,7 @@ def get_profile_feed(
 
     # Load the requested user
     requested_user = (
-        resolve_db(None)
+        DBSession
         .query(User)
         .filter(User.id == user_id)
         .filter(User.email_validated)

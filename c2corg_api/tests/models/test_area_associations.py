@@ -64,7 +64,7 @@ class TestAreaAssociation(BaseTestCase):
         self.session.add(self.waypoint5)
 
     def test_update_area(self):
-        update_area(self.area1)
+        update_area(self.area1, db=self.session)
 
         added_links = (
             self.session.query(AreaAssociation)
@@ -83,7 +83,7 @@ class TestAreaAssociation(BaseTestCase):
         )
         self.session.flush()
 
-        update_area(self.area1, reset=True)
+        update_area(self.area1, reset=True, db=self.session)
 
         updated_links = (
             self.session.query(AreaAssociation)
@@ -103,7 +103,7 @@ class TestAreaAssociation(BaseTestCase):
         )
         self.session.flush()
 
-        update_area(self.area2, reset=True)
+        update_area(self.area2, reset=True, db=self.session)
 
         updated_links = (
             self.session.query(AreaAssociation)
@@ -114,33 +114,33 @@ class TestAreaAssociation(BaseTestCase):
 
     def test_update_document(self):
         # waypoint inside the area
-        update_areas_for_document(self.waypoint1)
+        update_areas_for_document(self.waypoint1, db=self.session)
 
         added_links = self._get_links_for_document(self.waypoint1)
         assert len(added_links) == 1
         assert added_links[0].area_id == self.area1.document_id
 
         # wp outside the area
-        update_areas_for_document(self.waypoint2)
+        update_areas_for_document(self.waypoint2, db=self.session)
 
         added_links = self._get_links_for_document(self.waypoint2)
         assert len(added_links) == 0
 
         # wp without geometry
-        update_areas_for_document(self.waypoint3)
+        update_areas_for_document(self.waypoint3, db=self.session)
 
         added_links = self._get_links_for_document(self.waypoint3)
         assert len(added_links) == 0
 
         # wp with empty geometry
-        update_areas_for_document(self.waypoint4)
+        update_areas_for_document(self.waypoint4, db=self.session)
 
         added_links = self._get_links_for_document(self.waypoint4)
         assert len(added_links) == 0
 
     def test_update_document_forwarded(self):
         # waypoint inside the area but forwarded (should be ignored)
-        update_areas_for_document(self.waypoint5)
+        update_areas_for_document(self.waypoint5, db=self.session)
 
         added_links = self._get_links_for_document(self.waypoint1)
         assert len(added_links) == 0
@@ -154,14 +154,14 @@ class TestAreaAssociation(BaseTestCase):
         )
         self.session.flush()
 
-        update_areas_for_document(self.waypoint2, reset=True)
+        update_areas_for_document(self.waypoint2, reset=True, db=self.session)
 
         updated_links = self._get_links_for_document(self.waypoint2)
         assert len(updated_links) == 0
 
     def test_get_areas(self):
-        update_area(self.area1)
-        areas = get_areas(self.waypoint1, 'en')
+        update_area(self.area1, db=self.session)
+        areas = get_areas(self.waypoint1, 'en', self.session)
 
         assert len(areas) == 1
         assert areas[0].document_id == self.area1.document_id
@@ -175,7 +175,7 @@ class TestAreaAssociation(BaseTestCase):
             )
         )
         self.session.flush()
-        areas = get_areas(self.waypoint1, 'en')
+        areas = get_areas(self.waypoint1, 'en', self.session)
 
         assert len(areas) == 0
 

@@ -94,9 +94,8 @@ class DocumentVersion(Base):
     )
 
 
-def get_creators(document_ids, db: Session | None = None):
+def get_creators(document_ids, db: Session):
     """Get the creator for the list of given document ids."""
-    db = db or DBSession
     t = (
         db.query(
             ArchiveDocument.document_id.label('document_id'),
@@ -131,22 +130,20 @@ def get_creators(document_ids, db: Session | None = None):
     }
 
 
-def has_been_created_by(document_id, user_id, db: Session | None = None):
+def has_been_created_by(document_id, user_id, db: Session):
     """Check if passed user_id is the id of the user that has created
     the initial version of this document, whatever the language.
     """
-    db = db or DBSession
     creators = get_creators([document_id], db=db)
     creator_info = creators.get(document_id)
 
     return creator_info and creator_info['user_id'] == user_id
 
 
-def is_less_than_24h_old(document_id, db: Session | None = None):
+def is_less_than_24h_old(document_id, db: Session):
     """Check that the first version of this document was created less than
     24h ago.
     """
-    db = db or DBSession
     written_at = (
         db.query(HistoryMetaData.written_at.label('written_at'))
         .select_from(HistoryMetaData)

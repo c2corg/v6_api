@@ -423,11 +423,10 @@ schema_locale_attributes = ['version', 'lang', 'title', 'description', 'summary'
 geometry_attributes = ['version', 'geom', 'geom_detail', 'has_geom_detail']
 
 
-def get_available_langs(document_id, db: Session | None = None):
+def get_available_langs(document_id, db: Session):
     """Return the available languages (e.g. ['en', 'fr']) for a single
     document.
     """
-    db = db or DBSession
     return (
         db.query(func.array_agg(DocumentLocale.lang, type_=postgresql.ARRAY(String)))
         .filter(DocumentLocale.document_id == document_id)
@@ -436,7 +435,7 @@ def get_available_langs(document_id, db: Session | None = None):
     )
 
 
-def set_available_langs(documents, loaded=False, db: Session | None = None):
+def set_available_langs(documents, loaded=False, *, db: Session):
     """Load and set the available langs for the given documents."""
     if len(documents) == 0:
         return
@@ -446,7 +445,6 @@ def set_available_langs(documents, loaded=False, db: Session | None = None):
         for document in documents:
             document.available_langs = [locale.lang for locale in document.locales]
     else:
-        db = db or DBSession
         document_ids = [doc.document_id for doc in documents]
         documents_for_id = {doc.document_id: doc for doc in documents}
 

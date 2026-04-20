@@ -15,7 +15,6 @@ from c2corg_api.models.dictify import dictify as sa_dictify
 from c2corg_api.models.document_history import get_creators
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
-from c2corg_api.routers.helpers._db_compat import resolve_db
 from c2corg_api.routers.helpers.markdown import cook
 
 log = logging.getLogger(__name__)
@@ -75,8 +74,7 @@ def to_json_dict(
     return obj_dict
 
 
-def set_best_locale(documents, preferred_lang, expunge=True, db: Session | None = None):
-    db = resolve_db(db)
+def set_best_locale(documents, preferred_lang, expunge=True, *, db: Session):
     """Sets the "best" locale on the given documents. The "best" locale is
     the locale in the given "preferred language" if available. Otherwise
     it is the "most relevant" translation according to `langs_priority`.

@@ -17,7 +17,7 @@ from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 def get_document_ids(body):
@@ -65,7 +65,7 @@ class TestDocumentChangesRouter(BaseTestCase):
         )
         self.session.add(self.waypoint1)
         self.session.flush()
-        DocumentRest.create_new_version(self.waypoint1, contributor_id)
+        create_new_version(self.waypoint1, contributor_id, db=self.session)
         self.session.flush()
 
         self.waypoint2 = Waypoint(
@@ -83,7 +83,7 @@ class TestDocumentChangesRouter(BaseTestCase):
         )
         self.session.add(self.waypoint2)
         self.session.flush()
-        DocumentRest.create_new_version(self.waypoint2, contributor_id)
+        create_new_version(self.waypoint2, contributor_id, db=self.session)
         self.session.flush()
 
         self.waypoint3 = Waypoint(
@@ -101,7 +101,7 @@ class TestDocumentChangesRouter(BaseTestCase):
         )
         self.session.add(self.waypoint3)
         self.session.flush()
-        DocumentRest.create_new_version(self.waypoint3, contributor_id)
+        create_new_version(self.waypoint3, contributor_id, db=self.session)
         self.session.flush()
 
         self.route1 = Route(
@@ -120,7 +120,7 @@ class TestDocumentChangesRouter(BaseTestCase):
         )
         self.session.add(self.route1)
         self.session.flush()
-        DocumentRest.create_new_version(self.route1, contributor_id)
+        create_new_version(self.route1, contributor_id, db=self.session)
         self.session.flush()
 
         self.outing = Outing(
@@ -134,7 +134,7 @@ class TestDocumentChangesRouter(BaseTestCase):
         )
         self.session.add(self.outing)
         self.session.flush()
-        DocumentRest.create_new_version(self.outing, contributor_id)
+        create_new_version(self.outing, contributor_id, db=self.session)
         self.session.flush()
 
         self.profile2 = UserProfile(categories=['amateur'])

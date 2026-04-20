@@ -76,7 +76,7 @@ def get_all_filtered_docs(params, meta_params, ids, doc_type):
 
 
 def chunk_ids(ids_set):
-    from c2corg_api.views.document import ES_MAX_RESULT_WINDOW
+    from c2corg_api.routers.helpers.document_collection import ES_MAX_RESULT_WINDOW
 
     """
     Yield successive chunks of IDs from a set/list.

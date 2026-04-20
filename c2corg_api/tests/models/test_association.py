@@ -56,7 +56,9 @@ class TestAssociation(BaseTestCase):
             'waypoints': [{'document_id': 2, 'is_parent': True}],
         }
 
-        current_associations = _get_current_associations(self.route1, new_associations)
+        current_associations = _get_current_associations(
+            self.route1, new_associations, self.session
+        )
 
         expected_current_associations = {
             'routes': [{'document_id': self.route2.document_id, 'is_parent': False}],
@@ -76,7 +78,9 @@ class TestAssociation(BaseTestCase):
 
         new_associations = {'routes': [{'document_id': 1, 'is_parent': True}]}
 
-        current_associations = _get_current_associations(self.route1, new_associations)
+        current_associations = _get_current_associations(
+            self.route1, new_associations, self.session
+        )
 
         expected_current_associations = {
             'routes': [{'document_id': self.route2.document_id, 'is_parent': False}]
@@ -116,7 +120,7 @@ class TestAssociation(BaseTestCase):
         }
 
         current_associations = _get_current_associations(
-            self.waypoint1, new_associations
+            self.waypoint1, new_associations, self.session
         )
 
         expected_current_associations = {
@@ -139,7 +143,7 @@ class TestAssociation(BaseTestCase):
 
         new_associations = {}
         current_associations = _get_current_associations(
-            self.waypoint1, new_associations
+            self.waypoint1, new_associations, self.session
         )
 
         expected_current_associations = {}
@@ -202,7 +206,8 @@ class TestAssociation(BaseTestCase):
             ],
         }
         synchronize_associations(
-            self.route1, new_associations, global_userids['contributor']
+            self.route1, new_associations, global_userids['contributor'],
+            db=self.session,
         )
 
         assert self._get_association(self.route1, self.route2) is not None

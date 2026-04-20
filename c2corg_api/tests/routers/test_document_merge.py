@@ -21,7 +21,7 @@ from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_tokens, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class TestDocumentMergeRouter(BaseTestCase):
@@ -153,13 +153,13 @@ class TestDocumentMergeRouter(BaseTestCase):
         self.session.add(self.route2)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.waypoint1, contributor_id)
+        create_new_version(self.waypoint1, contributor_id, db=self.session)
         update_feed_document_create(self.waypoint1, contributor_id)
 
-        DocumentRest.create_new_version(self.route1, contributor_id)
+        create_new_version(self.route1, contributor_id, db=self.session)
         update_feed_document_create(self.route1, contributor_id)
 
-        DocumentRest.create_new_version(self.route2, contributor_id)
+        create_new_version(self.route2, contributor_id, db=self.session)
         update_feed_document_create(self.route2, contributor_id)
 
         association = Association.create(
@@ -214,13 +214,13 @@ class TestDocumentMergeRouter(BaseTestCase):
         self.session.add(self.image2)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.image1, contributor_id)
+        create_new_version(self.image1, contributor_id, db=self.session)
         self.session.flush()
 
         # Create a second version of image1 with a different filename
         self.image1.filename = 'image1.1.jpg'
         self.session.flush()
-        DocumentRest.update_version(
+        update_version(
             self.image1, contributor_id, 'changed filename', [UpdateType.FIGURES], []
         )
         self.session.flush()

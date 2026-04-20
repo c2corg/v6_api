@@ -27,7 +27,7 @@ from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_tokens, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class TestAreaFastAPIRouter(BaseTestCase):
@@ -86,7 +86,7 @@ class TestAreaFastAPIRouter(BaseTestCase):
         self.session.add(self.area1)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.area1, user_id)
+        create_new_version(self.area1, user_id, db=self.session)
 
         self.area1_version = (
             self.session.query(DocumentVersion)
@@ -656,7 +656,7 @@ class TestAreaFastAPIRouter(BaseTestCase):
     def test_get_caching(self):
         """GET /v2/areas/{id} populates the dogpile cache and serves
         from it on subsequent requests."""
-        cache_key = get_cache_key(self.area1.document_id, None, document_type=AREA_TYPE)
+        cache_key = get_cache_key(self.area1.document_id, None, document_type=AREA_TYPE, db=self.session)
         assert cache_key is not None
 
         # Initially empty

@@ -5,6 +5,7 @@ Extracted from ``c2corg_api.views.feed`` so that the FastAPI router
 has no dependency on ``views/``.
 """
 
+from c2corg_api.models import DBSession
 from collections import defaultdict
 from urllib import parse as urllib_parse
 
@@ -12,7 +13,6 @@ from fastapi import HTTPException
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import undefer
 
-from c2corg_api.routers.helpers._db_compat import resolve_db
 from c2corg_api.models.feed import DocumentChange, FilterArea, FollowedUser
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.user import User
@@ -26,7 +26,7 @@ MAX_PAGE_LIMIT = 50
 
 def get_changes_of_feed(token_id, token_time, limit, extra_filter=None):
     query = (
-        resolve_db(None)
+        DBSession
         .query(DocumentChange)
         .order_by(DocumentChange.time.desc(), DocumentChange.change_id)
     )
@@ -52,7 +52,7 @@ def get_changes_of_personal_feed(
     user_id, token_id, token_time, limit, ignore_admin_changes_filter
 ):
     user = (
-        resolve_db(None)
+        DBSession
         .query(User)
         .filter(User.id == user_id)
         .options(undefer(User.has_area_filter))
@@ -70,8 +70,8 @@ def get_changes_of_personal_feed(
 
 
 def get_changes_of_profile_feed(user_id, token_id, token_time, limit):
-    user_exists_query = resolve_db(None).query(User).filter(User.id == user_id).exists()
-    user_exists = resolve_db(None).query(user_exists_query).scalar()
+    user_exists_query = DBSession.query(User).filter(User.id == user_id).exists()
+    user_exists = DBSession.query(user_exists_query).scalar()
 
     if not user_exists:
         raise HTTPException(status_code=404, detail='user not found')
@@ -192,7 +192,7 @@ def _create_followed_users_filter(user):
     if not user.is_following_users:
         return None
     followed_users = (
-        resolve_db(None)
+        DBSession
         .query(func.array_agg(FollowedUser.followed_user_id))
         .filter(FollowedUser.follower_user_id == user.id)
         .group_by(FollowedUser.follower_user_id)
@@ -205,7 +205,7 @@ def _create_area_filter(user):
     if not user.has_area_filter:
         return None
     filtered_area_ids = (
-        resolve_db(None)
+        DBSession
         .query(func.array_agg(FilterArea.area_id))
         .filter(FilterArea.user_id == user.id)
         .group_by(FilterArea.user_id)

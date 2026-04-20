@@ -31,7 +31,7 @@ from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 # ── helpers ──────────────────────────────────────────────────────
 
@@ -98,7 +98,7 @@ class TestWaypointCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.waypoint1)
         self.session.flush()
-        DocumentRest.create_new_version(self.waypoint1, user_id)
+        create_new_version(self.waypoint1, user_id, db=self.session)
 
         self.waypoint2 = Waypoint(
             waypoint_type='climbing_outdoor',
@@ -127,7 +127,7 @@ class TestWaypointCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.waypoint4)
         self.session.flush()
-        DocumentRest.create_new_version(self.waypoint4, user_id)
+        create_new_version(self.waypoint4, user_id, db=self.session)
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
@@ -180,7 +180,7 @@ class TestAreaCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.area1)
         self.session.flush()
-        DocumentRest.create_new_version(self.area1, user_id)
+        create_new_version(self.area1, user_id, db=self.session)
 
         self.area2 = Area(area_type='range')
         self.session.add(self.area2)
@@ -191,7 +191,7 @@ class TestAreaCollectionSearch(_CollectionSearchBase):
         self.area4.locales.append(DocumentLocale(lang='fr', title='Isère'))
         self.session.add(self.area4)
         self.session.flush()
-        DocumentRest.create_new_version(self.area4, user_id)
+        create_new_version(self.area4, user_id, db=self.session)
 
     def test_get_collection_search_lang(self):
         reset_search_index(self.session)
@@ -232,7 +232,7 @@ class TestArticleCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.article1)
         self.session.flush()
-        DocumentRest.create_new_version(self.article1, user_id)
+        create_new_version(self.article1, user_id, db=self.session)
 
         self.article2 = Article(
             categories=['association'], activities=['hiking'], article_type='collab'
@@ -253,7 +253,7 @@ class TestArticleCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.article4)
         self.session.flush()
-        DocumentRest.create_new_version(self.article4, user_id)
+        create_new_version(self.article4, user_id, db=self.session)
 
     def test_get_collection_search_lang(self):
         reset_search_index(self.session)
@@ -289,7 +289,7 @@ class TestBookCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.book1)
         self.session.flush()
-        DocumentRest.create_new_version(self.book1, user_id)
+        create_new_version(self.book1, user_id, db=self.session)
 
         self.book2 = Book(activities=['hiking'], book_types=['biography'])
         self.session.add(self.book2)
@@ -304,7 +304,7 @@ class TestBookCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.book4)
         self.session.flush()
-        DocumentRest.create_new_version(self.book4, user_id)
+        create_new_version(self.book4, user_id, db=self.session)
 
     def test_get_collection_search_lang(self):
         reset_search_index(self.session)
@@ -347,7 +347,7 @@ class TestTopoMapCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.map1)
         self.session.flush()
-        DocumentRest.create_new_version(self.map1, user_id)
+        create_new_version(self.map1, user_id, db=self.session)
 
         self.map2 = TopoMap()
         self.session.add(self.map2)
@@ -362,7 +362,7 @@ class TestTopoMapCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.map4)
         self.session.flush()
-        DocumentRest.create_new_version(self.map4, user_id)
+        create_new_version(self.map4, user_id, db=self.session)
 
     def test_get_collection_search_lang(self):
         reset_search_index(self.session)
@@ -400,7 +400,7 @@ class TestOutingCollectionSearch(_CollectionSearchBase):
         self.route.locales.append(RouteLocale(lang='fr', title='Route 1 FR'))
         self.session.add(self.route)
         self.session.flush()
-        DocumentRest.create_new_version(self.route, user_id)
+        create_new_version(self.route, user_id, db=self.session)
 
         self.outing1 = Outing(
             activities=['skitouring'],
@@ -420,7 +420,7 @@ class TestOutingCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.outing1)
         self.session.flush()
-        DocumentRest.create_new_version(self.outing1, user_id)
+        create_new_version(self.outing1, user_id, db=self.session)
 
         self.outing2 = Outing(
             activities=['skitouring'],
@@ -433,7 +433,7 @@ class TestOutingCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.outing2)
         self.session.flush()
-        DocumentRest.create_new_version(self.outing2, user_id)
+        create_new_version(self.outing2, user_id, db=self.session)
 
         self.outing3 = Outing(
             activities=['skitouring'],
@@ -446,7 +446,7 @@ class TestOutingCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.outing3)
         self.session.flush()
-        DocumentRest.create_new_version(self.outing3, user_id)
+        create_new_version(self.outing3, user_id, db=self.session)
 
         self.outing4 = Outing(
             activities=['skitouring'],
@@ -459,7 +459,7 @@ class TestOutingCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.outing4)
         self.session.flush()
-        DocumentRest.create_new_version(self.outing4, user_id)
+        create_new_version(self.outing4, user_id, db=self.session)
 
         # Create associations so the filter tests work
         self.session.add(Association.create(self.route, self.outing1))
@@ -618,7 +618,7 @@ class TestRouteCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.route1)
         self.session.flush()
-        DocumentRest.create_new_version(self.route1, user_id)
+        create_new_version(self.route1, user_id, db=self.session)
 
         self.route2 = Route(
             activities=['skitouring'],
@@ -626,7 +626,7 @@ class TestRouteCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.route2)
         self.session.flush()
-        DocumentRest.create_new_version(self.route2, user_id)
+        create_new_version(self.route2, user_id, db=self.session)
 
         self.route3 = Route(
             activities=['hiking'],
@@ -634,7 +634,7 @@ class TestRouteCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.route3)
         self.session.flush()
-        DocumentRest.create_new_version(self.route3, user_id)
+        create_new_version(self.route3, user_id, db=self.session)
 
         self.session.add(Association.create(self.waypoint, self.route1))
 
@@ -687,7 +687,7 @@ class TestImageCollectionSearch(_CollectionSearchBase):
         self.image1.geometry = DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)')
         self.session.add(self.image1)
         self.session.flush()
-        DocumentRest.create_new_version(self.image1, user_id)
+        create_new_version(self.image1, user_id, db=self.session)
 
         self.image2 = Image(filename='image2.jpg', activities=['hiking'], height=500)
         self.session.add(self.image2)
@@ -704,7 +704,7 @@ class TestImageCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.image4)
         self.session.flush()
-        DocumentRest.create_new_version(self.image4, user_id)
+        create_new_version(self.image4, user_id, db=self.session)
 
     def test_get_collection_search_lang(self):
         reset_search_index(self.session)
@@ -739,7 +739,7 @@ class TestXreportCollectionSearch(_CollectionSearchBase):
         )
         self.session.add(self.xreport1)
         self.session.flush()
-        DocumentRest.create_new_version(self.xreport1, user_id)
+        create_new_version(self.xreport1, user_id, db=self.session)
 
         self.xreport2 = Xreport(
             event_activity='skitouring', event_type='stone_ice_fall', nb_participants=3

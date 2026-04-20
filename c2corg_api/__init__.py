@@ -2,84 +2,13 @@ import logging
 import os
 
 import requests
-from pyramid.authorization import ACLAuthorizationPolicy
-from pyramid.config import Configurator
-from pyramid.settings import asbool
 from sqlalchemy import engine_from_config, event, exc, text
 from sqlalchemy.pool import Pool
 
-from c2corg_api.caching import configure_caches
-from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route
-from c2corg_api.search import configure_es_from_config, get_queue_config
-from c2corg_api.security.acl import ACLDefault
 
 log = logging.getLogger(__name__)
-
-
-class RootFactory(ACLDefault):
-    __name__ = 'RootFactory'
-
-
-def main(global_config, **settings):
-    """This function returns a Pyramid WSGI application."""
-
-    # Configure SQLAlchemy
-    engine = engine_from_config(settings, 'sqlalchemy.')
-    DBSession.configure(bind=engine)
-
-    # Configure ElasticSearch
-    configure_es_from_config(settings)
-
-    config = Configurator(settings=settings)
-    config.include('cornice')
-    config.registry.queue_config = get_queue_config(settings)
-
-    # FIXME? Make sure this tween is run after the JWT validation
-    # Using an explicit ordering in config files might be needed.
-    config.add_tween(
-        'c2corg_api.tweens.rate_limiting.' + 'rate_limiting_tween_factory',
-        under='pyramid_tm.tm_tween_factory',
-    )
-
-    bypass_auth = False
-    if 'noauthorization' in settings:
-        bypass_auth = asbool(settings['noauthorization'])
-
-    if not bypass_auth:
-        from c2corg_api.security.pyramid_jwt_policy import (
-            IntegerSubJWTAuthenticationPolicy,
-        )
-        from c2corg_api.security.roles import groupfinder
-
-        policy = IntegerSubJWTAuthenticationPolicy(
-            private_key=settings['jwt.private_key'],
-            algorithm='HS256',
-            auth_type='JWT',
-            callback=groupfinder,
-        )
-        config.set_authentication_policy(policy)
-        config.set_authorization_policy(ACLAuthorizationPolicy())
-        config.add_request_method(policy.get_claims, 'jwt_claims', reify=True)
-        # Intercept request handling to validate token against the database
-        config.add_tween(
-            'c2corg_api.tweens.jwt_database_validation.'
-            + 'jwt_database_validation_tween_factory'
-        )
-        # Inject ACLs
-        config.set_root_factory(RootFactory)
-    else:
-        log.warning('Bypassing authorization')
-
-    configure_caches(settings)
-    configure_feed(settings, config)
-    configure_anonymous(settings, config)
-
-    # Scan MUST be the last call otherwise ACLs will not be set
-    # and the permissions would be bypassed
-    config.scan(ignore='c2corg_api.tests')
-    return config.make_wsgi_app()
 
 
 # validate db connection before using it
@@ -93,22 +22,6 @@ def ping_connection(dbapi_connection, connection_record, connection_proxy):
         # connecting again up to three times before raising.
         raise exc.DisconnectionError()
     cursor.close()
-
-
-def configure_feed(settings, config):
-    account_id = None
-
-    if settings.get('feed.admin_user_account'):
-        account_id = int(settings.get('feed.admin_user_account'))
-    config.registry.feed_admin_user_account_id = account_id
-
-
-def configure_anonymous(settings, config):
-    account_id = None
-
-    if settings.get('guidebook.anonymous_user_account'):
-        account_id = int(settings.get('guidebook.anonymous_user_account'))
-    config.registry.anonymous_user_id = account_id
 
 
 def delete_waypoint_stopareas(connection, waypoint_id):

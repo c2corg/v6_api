@@ -25,7 +25,7 @@ from c2corg_api.models import Base, DBSession, enums, schema, users_schema
 from c2corg_api.models.area import AREA_TYPE, Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import ARTICLE_TYPE
-from c2corg_api.models.association import Association
+from c2corg_api.models.association import Association, association_keys
 from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.document import Document, DocumentLocale, UpdateType
 from c2corg_api.models.enums import feed_change_type
@@ -35,7 +35,6 @@ from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.utils import ArrayOfEnum
-from c2corg_api.views.validation import association_keys
 
 log = logging.getLogger(__name__)
 
@@ -213,12 +212,11 @@ class DocumentChange(Base):
         return copy
 
 
-def update_feed_document_create(document, user_id, db: Session | None = None):
+def update_feed_document_create(document, user_id, db: Session):
     """Creates a new entry in the feed table when creating a new document."""
     if document.redirects_to or document.type in NO_FEED_DOCUMENT_TYPES:
         return
 
-    db = db or DBSession
     # make sure all updates are written to the database, so that areas and
     # users can be queried
     db.flush()
@@ -253,7 +251,7 @@ def update_feed_document_create(document, user_id, db: Session | None = None):
 
 
 def update_feed_document_update(
-    document, user_id, update_types, db: Session | None = None
+    document, user_id, update_types, db: Session
 ):
     """Update the feed entry for a document:
 
@@ -273,7 +271,6 @@ def update_feed_document_update(
     if document.type in [IMAGE_TYPE, USERPROFILE_TYPE, AREA_TYPE]:
         return
 
-    db = db or DBSession
     db.flush()
 
     # update areas
@@ -296,8 +293,7 @@ def update_feed_document_update(
     update_participants_of_outing(document.document_id, user_id, db=db)
 
 
-def update_participants_of_outing(outing_id, user_id, db: Session | None = None):
-    db = db or DBSession
+def update_participants_of_outing(outing_id, user_id, db: Session):
     existing_change = get_existing_change(outing_id, db=db)
 
     if not existing_change:
@@ -338,8 +334,7 @@ def update_participants_of_outing(outing_id, user_id, db: Session | None = None)
     )
 
 
-def get_existing_change(document_id, db: Session | None = None):
-    db = db or DBSession
+def get_existing_change(document_id, db: Session):
     return (
         db.query(DocumentChange)
         .filter(DocumentChange.document_id == document_id)
@@ -348,8 +343,7 @@ def get_existing_change(document_id, db: Session | None = None):
     )
 
 
-def get_existing_change_for_user(document_id, user_id, db: Session | None = None):
-    db = db or DBSession
+def get_existing_change_for_user(document_id, user_id, db: Session):
     return (
         db.query(DocumentChange)
         .filter(DocumentChange.document_id == document_id)
@@ -445,8 +439,7 @@ def _update_images(change, image1_id, image2_id, image3_id, more_images):
     change.more_images = more_images or change.more_images or len(existing_images) > 0
 
 
-def _get_participants_of_outing(outing_id, db: Session | None = None):
-    db = db or DBSession
+def _get_participants_of_outing(outing_id, db: Session):
     participant_ids = (
         db.query(Association.parent_document_id)
         .filter(Association.child_document_id == outing_id)
@@ -456,8 +449,7 @@ def _get_participants_of_outing(outing_id, db: Session | None = None):
     return [user_id for (user_id,) in participant_ids]
 
 
-def _get_area_ids(document, db: Session | None = None):
-    db = db or DBSession
+def _get_area_ids(document, db: Session):
     area_ids = (
         db.query(AreaAssociation.area_id)
         .filter(AreaAssociation.document_id == document.document_id)
@@ -466,9 +458,8 @@ def _get_area_ids(document, db: Session | None = None):
     return [area_id for (area_id,) in area_ids]
 
 
-def update_areas_of_changes(document, db: Session | None = None):
+def update_areas_of_changes(document, db: Session):
     """Update the area ids of all feed entries of the given document."""
-    db = db or DBSession
     areas_select = select(
         # concatenate with empty array to avoid null values
         # select ARRAY[]::integer[] || array_agg(area_id)
@@ -484,9 +475,8 @@ def update_areas_of_changes(document, db: Session | None = None):
     )
 
 
-def update_activities_of_changes(document, db: Session | None = None):
+def update_activities_of_changes(document, db: Session):
     """Update the activities of all feed entries of the given document."""
-    db = db or DBSession
     db.execute(
         DocumentChange.__table__.update()
         .where(DocumentChange.document_id == document.document_id)
@@ -494,9 +484,8 @@ def update_activities_of_changes(document, db: Session | None = None):
     )
 
 
-def update_langs_of_changes(document_id, db: Session | None = None):
+def update_langs_of_changes(document_id, db: Session):
     """Update the langs of all feed entries of the given document."""
-    db = db or DBSession
     langs = (
         db.query(cast(func.array_agg(DocumentLocale.lang), ArrayOfEnum(enums.lang)))
         .filter(DocumentLocale.document_id == document_id)

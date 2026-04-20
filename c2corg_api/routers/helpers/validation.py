@@ -38,8 +38,18 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.models.xreport import XREPORT_TYPE
-from c2corg_api.routers.helpers._db_compat import resolve_db as _resolve_db
 from c2corg_api.routers.helpers.document_collection import LIMIT_DEFAULT, LIMIT_MAX
+
+
+# ── Utility functions ────────────────────────────────────────────
+
+def parse_datetime(value):
+    """Parse a datetime string, handling URL-encoded values."""
+    if value is None:
+        return None
+    from urllib.parse import unquote
+    from dateutil import parser as datetime_parser
+    return datetime_parser.parse(unquote(value))
 
 
 # ── Path parameters ──────────────────────────────────────────────
@@ -218,7 +228,7 @@ def raise_on_errors(errors: list[dict]):
 
 
 def validate_associations_in(
-    associations_in, document_type, errors, db: Session | None = None
+    associations_in, document_type, errors, db: Session
 ):
     """Validate the provided associations:
 
@@ -252,7 +262,6 @@ def validate_associations_in(
 
     new_errors = _Errors()
     associations = {}
-    db = _resolve_db(db)
 
     _add_associations(
         associations,
@@ -453,13 +462,12 @@ def check_permission_for_association_removal(user_id, is_moderator, association)
 
 
 def has_permission_for_outing(
-    user_id, is_moderator, outing_id, db: Session | None = None
+    user_id, is_moderator, outing_id, db: Session
 ):
     """Check if *user_id* has permission to change an outing.
 
     Only users currently assigned to the outing (or moderators) may modify it.
     """
-    db = _resolve_db(db)
     if is_moderator:
         return True
 
@@ -476,8 +484,7 @@ def has_permission_for_outing(
 # ── xreport helpers ──────────────────────────────────────────────
 
 
-def get_associated_user_ids(xreport_id, db: Session | None = None):
-    db = _resolve_db(db)
+def get_associated_user_ids(xreport_id, db: Session):
     associated_user_ids = get_first_column(
         db.query(User.id)
         .join(Association, Association.parent_document_id == User.id)
@@ -488,7 +495,7 @@ def get_associated_user_ids(xreport_id, db: Session | None = None):
     return associated_user_ids
 
 
-def is_associated_user(xreport_id, user_id, db: Session | None = None):
+def is_associated_user(xreport_id, user_id, db: Session):
     """Required to check if an associated user is able to edit Xreport."""
     associated_user_ids = get_associated_user_ids(xreport_id, db=db)
     if user_id in associated_user_ids:
@@ -639,11 +646,10 @@ def _check_permission_association_doc(user_id, doc_type, document_id, db=None):
     return False
 
 
-def _check_for_valid_documents_ids(associations, errors, db: Session | None = None):
+def _check_for_valid_documents_ids(associations, errors, db: Session):
     """Check that the given documents do exist and that they are of the
     correct type.
     """
-    db = _resolve_db(db)
     linked_documents_id = _get_linked_document_ids(associations)
 
     if linked_documents_id:
@@ -688,8 +694,7 @@ def _get_linked_document_ids(associations):
     )
 
 
-def _is_any_climbing_indoor_waypoint(associations_in, db: Session | None = None):
-    db = _resolve_db(db)
+def _is_any_climbing_indoor_waypoint(associations_in, db: Session):
     waypoints_id = [doc['document_id'] for doc in associations_in['waypoints']]
 
     if waypoints_id:

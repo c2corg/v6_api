@@ -6,6 +6,7 @@ and ``c2corg_api.views.area`` so that routers have no dependency on
 ``views/``.
 """
 
+from c2corg_api.models import DBSession
 from itertools import combinations
 
 from sqlalchemy import and_, case, column, func, literal_column, or_, text, union
@@ -22,7 +23,6 @@ from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.utils import get_mid_point
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
-from c2corg_api.routers.helpers._db_compat import resolve_db
 from c2corg_api.routers.helpers.document_helpers import get_best_locale
 from c2corg_api.routers.helpers.document_listings import get_documents_for_ids
 from c2corg_api.routers.helpers.document_schemas import outing_documents_config
@@ -54,7 +54,7 @@ def _set_title_prefix(route, title):
 
 
 def _set_title_prefix_for_ids(ids, title):
-    resolve_db(None).query(RouteLocale).filter(RouteLocale.id.in_(ids)).update(
+    DBSession.query(RouteLocale).filter(RouteLocale.id.in_(ids)).update(
         {RouteLocale.title_prefix: title}, synchronize_session=False
     )
 
@@ -65,7 +65,7 @@ def check_title_prefix(route, create=False):
         _set_title_prefix(route, '')
     else:
         waypoint_locales = (
-            resolve_db(None)
+            DBSession
             .query(DocumentLocale)
             .filter(DocumentLocale.document_id == route.main_waypoint_id)
             .options(load_only(DocumentLocale.lang, DocumentLocale.title))
@@ -92,7 +92,7 @@ def update_pt_rating(route, waypoint_extrapolation=True):
         starting_waypoints, ending_waypoints, route.route_types
     )
 
-    resolve_db(None).query(Route).filter(Route.document_id == route.document_id).update(
+    DBSession.query(Route).filter(Route.document_id == route.document_id).update(
         {Route.public_transportation_rating: public_transportation_rating},
         synchronize_session=False,
     )
@@ -101,7 +101,7 @@ def update_pt_rating(route, waypoint_extrapolation=True):
 def _get_linked_waypoints_pt_ratings(route):
     waypoint_type = text("'" + WAYPOINT_TYPE + "'")
     return (
-        resolve_db(None)
+        DBSession
         .query(Waypoint)
         .select_from(Association)
         .filter(
@@ -228,7 +228,7 @@ def set_default_geometry(linked_waypoints, route, user_id):
         route.geometry.geom = get_mid_point(route.geometry.geom_detail)
     elif route.main_waypoint_id:
         main_wp_point = (
-            resolve_db(None)
+            DBSession
             .query(DocumentGeometry.geom)
             .filter(DocumentGeometry.document_id == route.main_waypoint_id)
             .scalar()
@@ -245,7 +245,7 @@ def update_all_pt_rating(waypoint_extrapolation=True):
     waypoint_type = text("'" + WAYPOINT_TYPE + "'")
 
     parent_routes = (
-        resolve_db(None)
+        DBSession
         .query(Association.parent_document_id.label('route_id'))
         .filter(Association.parent_document_type == route_type)
         .filter(Association.child_document_type == waypoint_type)
@@ -254,7 +254,7 @@ def update_all_pt_rating(waypoint_extrapolation=True):
         .subquery()
     )
     children_routes = (
-        resolve_db(None)
+        DBSession
         .query(Association.child_document_id.label('route_id'))
         .filter(Association.child_document_type == route_type)
         .filter(Association.parent_document_type == waypoint_type)
@@ -264,7 +264,7 @@ def update_all_pt_rating(waypoint_extrapolation=True):
     )
     merged = union(parent_routes.select(), children_routes.select()).subquery()
     routes = (
-        resolve_db(None)
+        DBSession
         .query(Route)
         .select_from(merged)
         .join(Route, Route.document_id == column('route_id'))
@@ -280,7 +280,7 @@ def update_all_pt_rating(waypoint_extrapolation=True):
 def set_recent_outings(route, lang):
     """Set last 10 outings on the given route."""
     recent_outing_ids = get_first_column(
-        resolve_db(None)
+        DBSession
         .query(Outing.document_id, Outing.date_end)
         .filter(Outing.redirects_to.is_(None))
         .join(Association, Outing.document_id == Association.child_document_id)
@@ -292,7 +292,7 @@ def set_recent_outings(route, lang):
     )
 
     total = (
-        resolve_db(None)
+        DBSession
         .query(Outing.document_id)
         .filter(Outing.redirects_to.is_(None))
         .join(Association, Outing.document_id == Association.child_document_id)
@@ -302,7 +302,7 @@ def set_recent_outings(route, lang):
     )
 
     route.associations['recent_outings'] = get_documents_for_ids(
-        recent_outing_ids, lang, outing_documents_config, total, db=resolve_db(None)
+        recent_outing_ids, lang, outing_documents_config, total, db=DBSession
     )
 
 
@@ -321,7 +321,7 @@ def update_linked_route_titles(waypoint, update_types, user_id):
         return
 
     linked_routes = (
-        resolve_db(None)
+        DBSession
         .query(Route)
         .filter(Route.main_waypoint_id == waypoint.document_id)
         .options(
@@ -349,14 +349,14 @@ def _update_linked_routes_public_transportation_rating(waypoint, update_types):
     route_type = text("'" + ROUTE_TYPE + "'")
 
     parent_routes = (
-        resolve_db(None)
+        DBSession
         .query(Association.parent_document_id.label('route_id'))
         .filter(Association.parent_document_type == route_type)
         .filter(Association.child_document_id == waypoint.document_id)
         .subquery()
     )
     children_routes = (
-        resolve_db(None)
+        DBSession
         .query(Association.child_document_id.label('route_id'))
         .filter(Association.child_document_type == route_type)
         .filter(Association.parent_document_id == waypoint.document_id)
@@ -364,7 +364,7 @@ def _update_linked_routes_public_transportation_rating(waypoint, update_types):
     )
     merged = union(parent_routes.select(), children_routes.select()).subquery()
     routes = (
-        resolve_db(None)
+        DBSession
         .query(Route)
         .select_from(merged)
         .join(Route, Route.document_id == column('route_id'))
@@ -393,7 +393,7 @@ def update_area_associations(area, update_types, user_id):
 def get_waypoints_reachable_ids():
     """Get all waypoint IDs that have a stop-area link."""
     all_wp = (
-        resolve_db(None)
+        DBSession
         .query(Waypoint)
         .join(WaypointStoparea, WaypointStoparea.waypoint_id == Waypoint.document_id)
         .distinct()
@@ -417,7 +417,7 @@ def build_reachable_waypoints_query(params, meta_params):
     )
 
     query = (
-        resolve_db(None)
+        DBSession
         .query(
             Waypoint,
             func.jsonb_agg(
@@ -441,7 +441,7 @@ def build_reachable_waypoints_query(params, meta_params):
 def get_routes_reachable_ids():
     """Get all route IDs reachable via access waypoints with stop-areas."""
     all_routes = (
-        resolve_db(None)
+        DBSession
         .query(Route)
         .join(
             Association,
@@ -482,7 +482,7 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
     )
 
     query = (
-        resolve_db(None)
+        DBSession
         .query(
             Route,
             func.jsonb_agg(

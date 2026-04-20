@@ -140,12 +140,11 @@ class SchemaAssociation(BaseModel):
     child_document_id: int
 
 
-def exists_already(link, db: Session | None = None):
+def exists_already(link, db: Session):
     """Checks if the given association exists already. For example, for
     two given documents D1 and D2, it checks if there is no association
     D1 -> D2 or D2 -> D1.
     """
-    db = db or DBSession
     associations_exists = (
         db.query(Association)
         .filter(
@@ -173,12 +172,12 @@ def add_association(
     user_id,
     check_first=False,
     check_association=None,
-    db: Session | None = None,
+    *,
+    db: Session,
 ):
     """Create an association between the two documents and create a log entry
     in the association history table with the given user id.
     """
-    db = db or DBSession
     association = Association(
         parent_document_id=parent_document_id,
         parent_document_type=parent_document_type,
@@ -204,12 +203,12 @@ def remove_association(
     user_id,
     check_first=False,
     check_association=None,
-    db: Session | None = None,
+    *,
+    db: Session,
 ):
     """Remove an association between the two documents and create a log entry
     in the association history table with the given user id.
     """
-    db = db or DBSession
     association = Association(
         parent_document_id=parent_document_id,
         parent_document_type=parent_document_type,
@@ -235,7 +234,6 @@ def create_associations(
     """Create associations for a document that were provided when creating
     a document.
     """
-    db = db or DBSession
     added_associations = []
     main_id = document.document_id
     main_doc_type = document.type
@@ -276,10 +274,10 @@ def synchronize_associations(
     user_id,
     check_association_add=None,
     check_association_remove=None,
-    db: Session | None = None,
+    *,
+    db: Session,
 ):
     """Synchronize the associations when updating a document."""
-    db = db or DBSession
     current_associations = _get_current_associations(document, new_associations, db=db)
     to_add, to_remove = _diff_associations(new_associations, current_associations)
 
@@ -299,9 +297,8 @@ def synchronize_associations(
 
 
 def _apply_operation(
-    docs, add_or_remove, document, user_id, check_association, db: Session | None = None
+    docs, add_or_remove, document, user_id, check_association, db: Session
 ):
-    db = db or DBSession
     associations = []
     main_doc_type = document.type
     for doc in docs:
@@ -333,11 +330,10 @@ def _apply_operation(
     return associations
 
 
-def _get_current_associations(document, new_associations, db: Session | None = None):
+def _get_current_associations(document, new_associations, db: Session):
     """Load the current associations of a document (only those association
     types are loaded that are also given in `new_association`).
     """
-    db = db or DBSession
     updatable_types = updatable_associations.get(document.type, set())
     types_to_load = updatable_types.intersection(new_associations.keys())
     doc_types_to_load = {association_keys[t] for t in types_to_load}
@@ -363,9 +359,8 @@ def _get_current_associations(document, new_associations, db: Session | None = N
 
 
 def _get_load_associations_query(
-    document, doc_types_to_load, db: Session | None = None
+    document, doc_types_to_load, db: Session
 ):
-    db = db or DBSession
     query_parents = (
         db.query(
             Association.parent_document_id.label('id'),

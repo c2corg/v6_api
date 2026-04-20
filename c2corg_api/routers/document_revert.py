@@ -7,13 +7,13 @@ version.
 
 import logging
 
+from c2corg_api.models import DBSession
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import and_, exists
 from sqlalchemy.orm import Session, contains_eager, joinedload, with_polymorphic
 
 from c2corg_api.database import get_db
-from c2corg_api.routers.helpers._db_compat import resolve_db
 from c2corg_api.models.area import AREA_TYPE, ArchiveArea, Area
 from c2corg_api.models.article import ARTICLE_TYPE, ArchiveArticle, Article
 from c2corg_api.models.book import BOOK_TYPE, ArchiveBook, Book
@@ -73,7 +73,7 @@ class RevertSchema(BaseModel):
 
 def _get_models(document_id):
     (document_type,) = (
-        resolve_db(None)
+        DBSession
         .query(Document.type)
         .filter(Document.document_id == document_id)
         .first()
@@ -114,7 +114,7 @@ def _get_archive_document(
     document_id, lang, version_id, archive_clazz, archive_locale_clazz
 ):
     version = (
-        resolve_db(None)
+        DBSession
         .query(DocumentVersion)
         .options(joinedload(DocumentVersion.document_archive.of_type(archive_clazz)))
         .options(
@@ -147,7 +147,7 @@ def _get_current_document(document_id, lang, clazz, clazz_locale):
     )
 
     document_query = (
-        resolve_db(None)
+        DBSession
         .query(clazz)
         .join(locales_type)
         .filter(getattr(clazz, 'document_id') == document_id)
@@ -181,7 +181,7 @@ def revert_document(
 
     # Validate version exists
     version_exists = (
-        resolve_db(None)
+        DBSession
         .query(
             exists().where(
                 and_(
@@ -201,7 +201,7 @@ def revert_document(
 
     # Check not the latest
     (last_version_id,) = (
-        resolve_db(None)
+        DBSession
         .query(DocumentVersion.id)
         .filter(
             and_(

@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from c2corg_api.database import get_db
 from c2corg_api.models.sso import SsoExternalId, SsoKey
 from c2corg_api.models.user import User
+from c2corg_api.routers.helpers.sso import localized_now, sso_expire_from_now
 from c2corg_api.routers.sso import configure_sso_router
 from c2corg_api.security.discourse_client import (
     DiscourseClientError,
@@ -20,7 +21,6 @@ from c2corg_api.security.discourse_client import (
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.sso import localized_now, sso_expire_from_now
 
 sso_domain = 'external.domain.net'
 sso_key = 'sso_test_key'

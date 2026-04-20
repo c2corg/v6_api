@@ -24,7 +24,7 @@ from c2corg_api.routers.association import configure_association_router
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_tokens, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class TestAssociationFastAPIRouter(BaseTestCase):
@@ -756,7 +756,7 @@ class TestAssociationFastAPIRouter(BaseTestCase):
         )
         self.session.add(self.image1)
         self.session.flush()
-        DocumentRest.create_new_version(self.image1, user_id)
+        create_new_version(self.image1, user_id, db=self.session)
 
         self.article1 = Article(
             categories=['site_info'],
@@ -766,7 +766,7 @@ class TestAssociationFastAPIRouter(BaseTestCase):
         )
         self.session.add(self.article1)
         self.session.flush()
-        DocumentRest.create_new_version(self.article1, user_id)
+        create_new_version(self.article1, user_id, db=self.session)
 
         self.article2 = Article(
             categories=['site_info'],
@@ -776,7 +776,7 @@ class TestAssociationFastAPIRouter(BaseTestCase):
         )
         self.session.add(self.article2)
         self.session.flush()
-        DocumentRest.create_new_version(self.article2, user_id)
+        create_new_version(self.article2, user_id, db=self.session)
 
         self.report1 = Xreport(
             event_activity='alpine_climbing',
@@ -784,7 +784,7 @@ class TestAssociationFastAPIRouter(BaseTestCase):
         )
         self.session.add(self.report1)
         self.session.flush()
-        DocumentRest.create_new_version(self.report1, user_id)
+        create_new_version(self.report1, user_id, db=self.session)
 
         self.outing = Outing(
             activities=['skitouring'],

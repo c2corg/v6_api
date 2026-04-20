@@ -11,7 +11,7 @@ from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_tokens, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class BaseProtectTest(BaseTestCase):
@@ -52,7 +52,7 @@ class BaseProtectTest(BaseTestCase):
         )
         self.session.add(self.waypoint)
         self.session.flush()
-        DocumentRest.create_new_version(self.waypoint, contributor_id)
+        create_new_version(self.waypoint, contributor_id, db=self.session)
 
         self.waypoint2 = Waypoint(
             protected=True, waypoint_type='summit', elevation=2203
@@ -66,7 +66,7 @@ class BaseProtectTest(BaseTestCase):
         )
         self.session.add(self.waypoint2)
         self.session.flush()
-        DocumentRest.create_new_version(self.waypoint2, contributor_id)
+        create_new_version(self.waypoint2, contributor_id, db=self.session)
         self.session.flush()
 
     def is_protected(self, document_id):

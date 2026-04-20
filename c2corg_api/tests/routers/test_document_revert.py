@@ -15,7 +15,7 @@ from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_tokens, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class TestDocumentRevertRouter(BaseTestCase):
@@ -113,9 +113,9 @@ class TestDocumentRevertRouter(BaseTestCase):
         self.session.add(self.route1)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.waypoint1, contributor_id)
-        DocumentRest.create_new_version(self.waypoint2, contributor_id)
-        DocumentRest.create_new_version(self.route1, contributor_id)
+        create_new_version(self.waypoint1, contributor_id, db=self.session)
+        create_new_version(self.waypoint2, contributor_id, db=self.session)
+        create_new_version(self.route1, contributor_id, db=self.session)
         update_feed_document_create(self.waypoint1, contributor_id)
         update_feed_document_create(self.waypoint2, contributor_id)
         update_feed_document_create(self.route1, contributor_id)
@@ -151,14 +151,14 @@ class TestDocumentRevertRouter(BaseTestCase):
         self.route1.geometry.geom = 'SRID=3857;POINT(0 0)'
         self.session.flush()
 
-        DocumentRest.update_version(
+        update_version(
             self.waypoint2,
             contributor_id,
             'new version',
             [UpdateType.FIGURES, UpdateType.GEOM, UpdateType.LANG],
             ['en'],
         )
-        DocumentRest.update_version(
+        update_version(
             self.route1,
             contributor_id,
             'new version',

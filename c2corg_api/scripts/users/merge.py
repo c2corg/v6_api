@@ -27,14 +27,14 @@ from c2corg_api.models.user_profile import (
     ArchiveUserProfile,
     UserProfile,
 )
-from c2corg_api.search import get_queue_config
-from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.views.document_delete import (
+from c2corg_api.routers.document_delete import (
     remove_from_cache,
     remove_whole_document,
     update_deleted_documents_list,
 )
-from c2corg_api.views.document_merge import _and_in, transfer_associations
+from c2corg_api.routers.document_merge import _and_in, transfer_associations
+from c2corg_api.search import get_queue_config
+from c2corg_api.search.notify_sync import notify_es_syncer
 
 
 def usage(argv):

@@ -34,7 +34,7 @@ from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_tokens, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class TestRouteFastAPIRouter(BaseTestCase):
@@ -110,7 +110,7 @@ class TestRouteFastAPIRouter(BaseTestCase):
         self.session.add(self.route)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.route, user_id)
+        create_new_version(self.route, user_id, db=self.session)
         self.route_version = (
             self.session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.route.document_id)
@@ -162,7 +162,7 @@ class TestRouteFastAPIRouter(BaseTestCase):
         )
         self.session.add(self.route2)
         self.session.flush()
-        DocumentRest.create_new_version(self.route2, user_id)
+        create_new_version(self.route2, user_id, db=self.session)
 
         self.route3 = Route(
             activities=['skitouring'],
@@ -189,7 +189,7 @@ class TestRouteFastAPIRouter(BaseTestCase):
         self.route3.geometry = DocumentGeometry(geom='SRID=3857;POINT(0 0)')
         self.session.add(self.route3)
         self.session.flush()
-        DocumentRest.create_new_version(self.route3, user_id)
+        create_new_version(self.route3, user_id, db=self.session)
 
         self.route4 = Route(
             activities=['rock_climbing'],
@@ -1275,7 +1275,7 @@ class TestRouteFastAPIRouter(BaseTestCase):
     def test_update_prefix_title(self):
         """check_title_prefix() sets title_prefix from the main waypoint."""
         from c2corg_api.models.route import Route as RouteModel
-        from c2corg_api.views.route import check_title_prefix
+        from c2corg_api.routers.helpers.linked_attributes import check_title_prefix
 
         self.route.main_waypoint_id = self.waypoint.document_id
         self.session.flush()

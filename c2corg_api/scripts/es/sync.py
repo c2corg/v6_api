@@ -20,9 +20,9 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.utils import windowed_query
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
+from c2corg_api.routers.helpers.document_listings import add_load_for_profiles
 from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import elasticsearch_config, search_documents
-from c2corg_api.views.document_listings import add_load_for_profiles
 
 log = logging.getLogger(__name__)
 

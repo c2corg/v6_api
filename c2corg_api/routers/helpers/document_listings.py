@@ -18,7 +18,6 @@ from c2corg_api.models.outing import Outing
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.routers.helpers.document_helpers import set_best_locale
-from c2corg_api.routers.helpers._db_compat import resolve_db
 from c2corg_api.schemas.listing import LISTING_SCHEMA_MAP, AreaListingSchema
 
 
@@ -30,9 +29,8 @@ def get_documents_for_ids(document_ids, lang, documents_config, total=None, db=N
 
 
 def get_documents(
-    documents_config, meta_params, search_documents, db: Session | None = None
+    documents_config, meta_params, search_documents, db: Session
 ):
-    db = resolve_db(db)
     lang = meta_params['lang']
     base_query = db.query(documents_config.clazz).filter(
         getattr(documents_config.clazz, 'redirects_to').is_(None)
@@ -78,7 +76,7 @@ def get_documents(
 
 
 def _get_documents_from_ids(
-    document_ids, base_query, documents_config, lang, db: Session | None = None
+    document_ids, base_query, documents_config, lang, db: Session
 ):
     base_query = base_query.options(load_only(*documents_config.get_load_only_fields()))
     base_query = add_load_for_locales(
@@ -174,7 +172,7 @@ def add_load_for_locales(base_query, clazz, clazz_locale, load_only_fields=None)
     return base_query.options(locales_load)
 
 
-def _set_areas_for_documents(documents, lang, db: Session | None = None):
+def _set_areas_for_documents(documents, lang, db: Session):
     for document in documents:
         set_best_locale(document._areas, lang, expunge=False, db=db)
         document.areas = [
@@ -183,7 +181,7 @@ def _set_areas_for_documents(documents, lang, db: Session | None = None):
         ]
 
 
-def _set_img_count_for_documents(documents, document_ids, db: Session | None = None):
+def _set_img_count_for_documents(documents, document_ids, db: Session):
     res = (
         db.query(Association.parent_document_id, func.count('*'))
         .filter(

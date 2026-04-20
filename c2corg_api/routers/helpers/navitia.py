@@ -14,11 +14,11 @@ import uuid
 
 import redis
 import requests
+from c2corg_api.models import DBSession
 from fastapi import HTTPException
 from pyproj import Transformer
 from shapely.geometry import Point, shape
 
-from c2corg_api.routers.helpers._db_compat import resolve_db
 from c2corg_api.models.area import Area
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.routers.helpers.coverage import get_coverage
@@ -160,7 +160,7 @@ def collect_areas_from_results(results, area_index):
                 area_ids.add(doc_id)
 
     area_objects = (
-        resolve_db(None).query(Area).filter(Area.document_id.in_(area_ids)).all()
+        DBSession.query(Area).filter(Area.document_id.in_(area_ids)).all()
     )
     return {a.document_id: a for a in area_objects}
 
@@ -177,7 +177,7 @@ def collect_waypoints_from_results(results):
                 wp_ids.add(doc_id)
 
     return set(
-        resolve_db(None).query(Waypoint).filter(Waypoint.document_id.in_(wp_ids)).all()
+        DBSession.query(Waypoint).filter(Waypoint.document_id.in_(wp_ids)).all()
     )
 
 

@@ -31,7 +31,7 @@ from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_tokens, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class TestWaypointFastAPIRouter(BaseTestCase):
@@ -95,7 +95,7 @@ class TestWaypointFastAPIRouter(BaseTestCase):
         self.session.add(self.waypoint)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.waypoint, user_id)
+        create_new_version(self.waypoint, user_id, db=self.session)
         self.waypoint_version = (
             self.session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.waypoint.document_id)
@@ -177,9 +177,9 @@ class TestWaypointFastAPIRouter(BaseTestCase):
 
         self.session.flush()
 
-        DocumentRest.create_new_version(self.waypoint4, user_id)
-        DocumentRest.create_new_version(self.waypoint5, user_id)
-        DocumentRest.create_new_version(self.waypoint6, user_id)
+        create_new_version(self.waypoint4, user_id, db=self.session)
+        create_new_version(self.waypoint5, user_id, db=self.session)
+        create_new_version(self.waypoint6, user_id, db=self.session)
 
         # Associations
         route1_geometry = DocumentGeometry(
@@ -274,7 +274,7 @@ class TestWaypointFastAPIRouter(BaseTestCase):
         )
         self.session.add(self.article2)
         self.session.flush()
-        DocumentRest.create_new_version(self.article2, user_id)
+        create_new_version(self.article2, user_id, db=self.session)
 
         # outings
         self.outing1 = Outing(
@@ -1394,7 +1394,7 @@ class TestWaypointFastAPIRouter(BaseTestCase):
         self.session.add(waypoint)
         self.session.flush()
         user_id = global_userids['contributor']
-        DocumentRest.create_new_version(waypoint, user_id)
+        create_new_version(waypoint, user_id, db=self.session)
 
         # Then add a geometry
         body = {

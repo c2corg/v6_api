@@ -10,7 +10,7 @@ from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.tests import BaseTestCase, global_userids
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class SyncWorkerTest(BaseTestCase):
@@ -36,7 +36,7 @@ class SyncWorkerTest(BaseTestCase):
         self.session.add(waypoint)
         self.session.flush()
         user_id = global_userids['contributor']
-        DocumentRest.create_new_version(waypoint, user_id)
+        create_new_version(waypoint, user_id)
         self.session.flush()
 
         t = transaction.begin()

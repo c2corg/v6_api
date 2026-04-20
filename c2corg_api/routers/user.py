@@ -311,7 +311,7 @@ def register(body: RegisterBody, db: Session = Depends(get_db)):
         log.warning('Error persisting user', exc_info=True)
         raise HTTPException(status_code=500, detail='Error persisting user')
 
-    create_new_version(user.profile, user.id)
+    create_new_version(user.profile, user.id, db=db)
 
     svc = get_email_service_from_settings(_settings)
     nonce = user.validation_nonce

@@ -30,7 +30,7 @@ from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.security.fastapi_security import configure_security
 from c2corg_api.tests import BaseTestCase, global_tokens, global_userids, settings
 from c2corg_api.tests.routers import get_real_app
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.routers.helpers.document_crud import create_new_version, update_version
 
 
 class TestArticleFastAPIRouter(BaseTestCase):
@@ -85,7 +85,7 @@ class TestArticleFastAPIRouter(BaseTestCase):
         self.session.flush()
 
         user_id = global_userids['contributor']
-        DocumentRest.create_new_version(self.article1, user_id)
+        create_new_version(self.article1, user_id, db=self.session)
         self.article1_version = (
             self.session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.article1.document_id)
@@ -109,7 +109,7 @@ class TestArticleFastAPIRouter(BaseTestCase):
         self.session.add(self.article4)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.article4, user_id)
+        create_new_version(self.article4, user_id, db=self.session)
         self.article4_version = (
             self.session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.article4.document_id)
@@ -894,7 +894,8 @@ class TestArticleFastAPIRouter(BaseTestCase):
     def test_get_caching(self):
         """GET /v2/articles/{id} populates the dogpile cache."""
         cache_key = get_cache_key(
-            self.article1.document_id, None, document_type=ARTICLE_TYPE
+            self.article1.document_id, None, document_type=ARTICLE_TYPE,
+            db=self.session,
         )
         assert cache_document_detail.get(cache_key) == NO_VALUE
 
@@ -932,7 +933,7 @@ class TestArticleFastAPIRouter(BaseTestCase):
             self.article1.document_id, 'en', self.article1_version.id
         )
         cache_key = '{}-{}'.format(
-            get_cache_key(self.article1.document_id, 'en', ARTICLE_TYPE),
+            get_cache_key(self.article1.document_id, 'en', ARTICLE_TYPE, db=self.session),
             self.article1_version.id,
         )
 

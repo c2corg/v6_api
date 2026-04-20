@@ -65,7 +65,7 @@ class TestTopoMapAssociation(BaseTestCase):
         self.session.add(self.waypoint5)
 
     def test_update_map(self):
-        update_map(self.map1)
+        update_map(self.map1, db=self.session)
 
         added_links = (
             self.session.query(TopoMapAssociation)
@@ -85,7 +85,7 @@ class TestTopoMapAssociation(BaseTestCase):
         )
         self.session.flush()
 
-        update_map(self.map1, reset=True)
+        update_map(self.map1, reset=True, db=self.session)
 
         updated_links = (
             self.session.query(TopoMapAssociation)
@@ -106,7 +106,7 @@ class TestTopoMapAssociation(BaseTestCase):
         )
         self.session.flush()
 
-        update_map(self.map2, reset=True)
+        update_map(self.map2, reset=True, db=self.session)
 
         updated_links = (
             self.session.query(TopoMapAssociation)
@@ -117,33 +117,33 @@ class TestTopoMapAssociation(BaseTestCase):
 
     def test_update_document(self):
         # waypoint inside the area
-        update_maps_for_document(self.waypoint1)
+        update_maps_for_document(self.waypoint1, db=self.session)
 
         added_links = self._get_links_for_document(self.waypoint1)
         assert len(added_links) == 1
         assert added_links[0].topo_map_id == self.map1.document_id
 
         # wp outside the area of the map
-        update_maps_for_document(self.waypoint2)
+        update_maps_for_document(self.waypoint2, db=self.session)
 
         added_links = self._get_links_for_document(self.waypoint2)
         assert len(added_links) == 0
 
         # wp without geometry
-        update_maps_for_document(self.waypoint3)
+        update_maps_for_document(self.waypoint3, db=self.session)
 
         added_links = self._get_links_for_document(self.waypoint3)
         assert len(added_links) == 0
 
         # wp with empty geometry
-        update_maps_for_document(self.waypoint4)
+        update_maps_for_document(self.waypoint4, db=self.session)
 
         added_links = self._get_links_for_document(self.waypoint4)
         assert len(added_links) == 0
 
     def test_update_document_forwarded(self):
         # waypoint inside the area of the map but forwarded (should be ignored)
-        update_maps_for_document(self.waypoint5)
+        update_maps_for_document(self.waypoint5, db=self.session)
 
         added_links = self._get_links_for_document(self.waypoint1)
         assert len(added_links) == 0
@@ -158,14 +158,14 @@ class TestTopoMapAssociation(BaseTestCase):
         )
         self.session.flush()
 
-        update_maps_for_document(self.waypoint2, reset=True)
+        update_maps_for_document(self.waypoint2, reset=True, db=self.session)
 
         updated_links = self._get_links_for_document(self.waypoint2)
         assert len(updated_links) == 0
 
     def test_get_maps(self):
-        update_map(self.map1)
-        maps = get_maps(self.waypoint1, 'en')
+        update_map(self.map1, db=self.session)
+        maps = get_maps(self.waypoint1, 'en', self.session)
 
         assert len(maps) == 1
         assert maps[0].document_id == self.map1.document_id
@@ -180,7 +180,7 @@ class TestTopoMapAssociation(BaseTestCase):
             )
         )
         self.session.flush()
-        areas = get_maps(self.waypoint1, 'en')
+        areas = get_maps(self.waypoint1, 'en', self.session)
 
         assert len(areas) == 0
 

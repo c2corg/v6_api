@@ -1,11 +1,11 @@
 from elasticsearch_dsl.search import MultiSearch
 
+from c2corg_api.routers.helpers.document_listings import get_documents
 from c2corg_api.search import (
     create_search,
     elasticsearch_config,
     get_text_query_on_title,
 )
-from c2corg_api.views.document_listings import get_documents
 
 
 def search_for_types(search_types, search_term, limit, lang):
