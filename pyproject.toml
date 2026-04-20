@@ -1,0 +1,123 @@
+[build-system]
+requires = ["setuptools>=78.1.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "c2corg_api"
+version = "0.0"
+description = "c2corg_api"
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["web", "wsgi", "bfg", "pylons", "pyramid"]
+classifiers = [
+    "Programming Language :: Python",
+    "Framework :: Pyramid",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+]
+dependencies = [
+    "alembic==1.18.4",
+    "apscheduler==3.11.2",
+    "bcrypt==4.3.0",
+    "bleach[css]==6.3.0",
+    "cornice==6.1.0",
+    "dogpile.cache==1.3.4",
+    "elasticsearch==2.4.1",
+    "elasticsearch_dsl==2.2.0",
+    "email-validator==2.3.0",
+    "fastapi==0.135.3",
+    "geoalchemy2==0.18.4",
+    "geojson==3.2.0",
+    "geomet==1.1.0",
+    "kombu==5.6.2",
+    "Markdown==3.7",
+    "phpserialize==1.3",
+    "psycopg2==2.9.11",
+    "pydantic==2.12.5",
+    "pyjwt==2.12.1",
+    "pymdown-extensions==10.21.2",
+    "pyproj==3.6.1",
+    "pyramid_jwt==1.6.1",
+    "pyramid==1.10.8",
+    "pyramid_debugtoolbar==4.12.1",
+    "pyramid_tm==2.3",
+    "python-dotenv==1.2.2",
+    "python-json-logger==3.3.0",
+    "python-slugify==8.0.4",
+    "redis==7.4.0",
+    "requests==2.33.1",
+    "setuptools>=78.1.1",
+    "Shapely==2.0.7",
+    "SQLAlchemy==2.0.41",
+    "transaction==5.1",
+    "uvicorn[standard]==0.44.0",
+    "waitress==3.0.2",
+    "zope.sqlalchemy==4.1",
+    "gunicorn==23.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "WebTest==3.0.4",
+    "ipdb==0.13.13",
+    "httmock==1.4.0",
+    "pytest==9.0.3",
+    "pytest-cov==7.1.0",
+    "ruff==0.15.10",
+    "httpx==0.28.1",
+]
+
+[project.entry-points."paste.app_factory"]
+main = "c2corg_api:main"
+
+[project.scripts]
+initialize_c2corg_api_db = "c2corg_api.scripts.initializedb:main"
+initialize_c2corg_api_es = "c2corg_api.scripts.initializees:main"
+fill_es_index = "c2corg_api.scripts.es.fill_index:main"
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+include = ["c2corg_api*"]
+
+[tool.pytest.ini_options]
+addopts = "--cov=c2corg_api"
+filterwarnings = [
+    "default",
+    "ignore::DeprecationWarning:pkg_resources",
+    "ignore:pkg_resources is deprecated:DeprecationWarning",
+    "ignore:Deprecated call to `pkg_resources.declare_namespace:DeprecationWarning",
+    "ignore:HTTPResponse.getheaders:DeprecationWarning:elasticsearch",
+]
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+
+target-version = "py311"  # Python 3.11
+
+extend-exclude = [
+    "**/site-packages/**",
+    ".venv",
+    "venv",
+]
+
+[tool.ruff.lint]
+select = [
+  "E",  # pycodestyle errors
+  "W",  # pycodestyle warnings
+  "F",  # pyflakes
+  "N",  # pep8-naming
+  "I",  # import sorting
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
+
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "single"
+skip-magic-trailing-comma = true
+line-ending = "auto"

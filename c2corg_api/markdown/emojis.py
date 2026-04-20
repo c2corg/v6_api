@@ -3,12 +3,13 @@ Inspired from
 https://facelessuser.github.io/pymdown-extensions/extensions/emoji/
 """
 
+import copy
+from xml.etree import ElementTree  # nosec
+
 from markdown import Extension
 from markdown.inlinepatterns import Pattern
-from xml.etree import ElementTree  # nosec
-import copy
-
 from pymdownx import emoji1_db
+
 from c2corg_api.markdown.emoji_databases import c2c_activities, c2c_waypoints
 
 emoji1_db.SVG_CDN = 'https://cdn.jsdelivr.net/emojione/assets/svg/'
@@ -20,15 +21,15 @@ class Emoji(object):
     def __init__(self, db_name, code, **kwargs):
         self.db_name = db_name
         self.code = code
-        self.name = kwargs.pop("name")
-        self.category = kwargs.pop("category")
-        self.SVG_CDN = kwargs.pop("SVG_CDN")
-        self.unicode = kwargs.pop("unicode", None)
-        self.svg_name = kwargs.pop("svg_name", self.unicode)
-        self.unicode_alt = kwargs.pop("unicode_alt", self.unicode)
-        self.classes = kwargs.pop("classes", "emoji")
+        self.name = kwargs.pop('name')
+        self.category = kwargs.pop('category')
+        self.SVG_CDN = kwargs.pop('SVG_CDN')
+        self.unicode = kwargs.pop('unicode', None)
+        self.svg_name = kwargs.pop('svg_name', self.unicode)
+        self.unicode_alt = kwargs.pop('unicode_alt', self.unicode)
+        self.classes = kwargs.pop('classes', 'emoji')
 
-        assert self.svg_name, "Please precise a SVG name"
+        assert self.svg_name, 'Please precise a SVG name'
 
     def get_alt(self, user_code):
         """Get alt form."""
@@ -36,20 +37,22 @@ class Emoji(object):
         if self.unicode_alt is None:
             alt = user_code
         else:
-            alt = ''.join(
-                [chr(int(c, 16)) for c in self.unicode_alt.split('-')])
+            alt = ''.join([chr(int(c, 16)) for c in self.unicode_alt.split('-')])
 
         return alt
 
     def to_svg(self, user_code):
         """Return svg element."""
-        return ElementTree.Element("img", {
-            "c2c:role": "emoji",
-            "c2c:emoji-db": self.db_name,
-            "c2c:svg-name": self.svg_name,
-            "alt": self.get_alt(user_code),
-            "title": user_code,
-        })
+        return ElementTree.Element(
+            'img',
+            {
+                'c2c:role': 'emoji',
+                'c2c:emoji-db': self.db_name,
+                'c2c:svg-name': self.svg_name,
+                'alt': self.get_alt(user_code),
+                'title': user_code,
+            },
+        )
 
 
 class EmojiPattern(Pattern):
@@ -68,13 +71,9 @@ class EmojiPattern(Pattern):
 
         for code in db.emoji:
             kwargs = db.emoji[code]
-            kwargs["SVG_CDN"] = kwargs.get("SVG_CDN", db.SVG_CDN)
+            kwargs['SVG_CDN'] = kwargs.get('SVG_CDN', db.SVG_CDN)
 
-            self.emoji_index[code] = Emoji(
-                db_name=db.name,
-                code=code,
-                **kwargs
-            )
+            self.emoji_index[code] = Emoji(db_name=db.name, code=code, **kwargs)
 
         for code in db.aliases:
             self.emoji_index[code] = self.emoji_index[db.aliases[code]]
@@ -98,7 +97,7 @@ class C2CEmojiExtension(Extension):
         md.ESCAPED_CHARS = escaped
 
         emj = EmojiPattern(RE_EMOJI, md)
-        md.inlinePatterns.register(emj, "c2c_emoji", 72)
+        md.inlinePatterns.register(emj, 'c2c_emoji', 72)
 
 
 def makeExtension(*args, **kwargs):  # noqa: N802

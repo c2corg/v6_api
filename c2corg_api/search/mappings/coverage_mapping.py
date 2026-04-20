@@ -1,6 +1,6 @@
 from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
-from c2corg_api.search.mapping import SearchDocument, BaseMeta
-from c2corg_api.search.mapping_types import QueryableMixin, QEnum
+from c2corg_api.search.mapping import BaseMeta, SearchDocument
+from c2corg_api.search.mapping_types import QEnum, QueryableMixin
 
 
 class SearchCoverage(SearchDocument):
@@ -14,16 +14,15 @@ class SearchCoverage(SearchDocument):
     @staticmethod
     def to_search_document(document, index, include_areas=False):
         search_document = SearchDocument.to_search_document(
-            document, index, include_areas)
+            document, index, include_areas
+        )
 
         if document.redirects_to:
             return search_document
 
-        SearchDocument.copy_fields(
-            search_document, document, SearchCoverage.FIELDS)
+        SearchDocument.copy_fields(search_document, document, SearchCoverage.FIELDS)
 
         return search_document
 
 
-SearchCoverage.queryable_fields = \
-    QueryableMixin.get_queryable_fields(SearchCoverage)
+SearchCoverage.queryable_fields = QueryableMixin.get_queryable_fields(SearchCoverage)

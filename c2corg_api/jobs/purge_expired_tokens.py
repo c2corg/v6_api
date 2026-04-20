@@ -1,18 +1,23 @@
-from c2corg_api.models.token import Token
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
+
 from sqlalchemy.orm import sessionmaker
 
-import logging
+from c2corg_api.models.token import Token
+
 log = logging.getLogger(__name__)
 
 
 def purge_token(test_session=None):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     session = sessionmaker()() if not test_session else test_session
 
     try:
-        count = session.query(Token).filter(
-                Token.expire <= now).delete(synchronize_session=False)
+        count = (
+            session.query(Token)
+            .filter(Token.expire <= now)
+            .delete(synchronize_session=False)
+        )
 
         log.info('Deleting %d expired token', count)
         if count > 0:

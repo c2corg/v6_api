@@ -1,20 +1,20 @@
+import os
 import sys
 
-import os
+from elasticsearch_dsl import Index
+from pyramid.paster import get_appsettings, setup_logging
+from pyramid.scripts.common import parse_vars
+
 from c2corg_api.search import configure_es_from_config, elasticsearch_config
 from c2corg_api.search.mappings.route_mapping import SearchRoute
-from elasticsearch_dsl import Index
-from pyramid.paster import (
-    get_appsettings,
-    setup_logging,
-    )
-from pyramid.scripts.common import parse_vars
 
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print('usage: %s <config_uri> [var=value]\n'
-          '(example: "%s development.ini")' % (cmd, cmd))
+    print(
+        'usage: %s <config_uri> [var=value]\n'
+        '(example: "%s development.ini")' % (cmd, cmd)
+    )
     sys.exit(1)
 
 
@@ -30,8 +30,7 @@ def main(argv=sys.argv):
 
 
 def migrate():
-    """ Add the field "slackline_type" to the route mapping.
-    """
+    """Add the field "slackline_type" to the route mapping."""
     client = elasticsearch_config['client']
     index_name = elasticsearch_config['index']
     mapping_name = SearchRoute._doc_type.name
@@ -46,10 +45,8 @@ def migrate():
 
     index = Index(index_name)
     field_mapping = index.connection.indices.get_field_mapping(
-        index=index_name,
-        doc_type=mapping_name,
-        fields=field_name
-        )
+        index=index_name, doc_type=mapping_name, fields=field_name
+    )
 
     if field_mapping:
         print('Field "{0}" already exists'.format(field_name))
@@ -61,14 +58,12 @@ def migrate():
         index=index_name,
         doc_type=mapping_name,
         body={
-            'properties': {
-                field_name: SearchRoute.queryable_fields['sltyp'].to_dict()
-            }
-        }
+            'properties': {field_name: SearchRoute.queryable_fields['sltyp'].to_dict()}
+        },
     )
 
     print('Field "{0}" created'.format(field_name))
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

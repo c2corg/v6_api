@@ -1,0 +1,12 @@
+[run]
+source =
+    c2corg_api
+branch = True
+
+[report]
+omit =
+    c2corg_api/tests/*
+    c2corg_api/scripts/migration/*
+    */venv/*
+    */.venv/*
+    */site-packages/*

@@ -1,15 +1,16 @@
 import logging
 
-from pyramid.httpexceptions import HTTPUnauthorized, HTTPError
-from c2corg_api.security.roles import is_valid_token, extract_token
-from c2corg_api.views import http_error_handler, catch_all_error_handler
+from pyramid.httpexceptions import HTTPError, HTTPForbidden, HTTPUnauthorized
+
+from c2corg_api.models import DBSession
+from c2corg_api.security.roles import AccountBlockedError, extract_token, is_valid_token
+from c2corg_api.views import catch_all_error_handler, http_error_handler
 
 log = logging.getLogger(__name__)
 
 
 def jwt_database_validation_tween_factory(handler, registry):
-    """ Check validity of the JWT token.
-    """
+    """Check validity of the JWT token."""
 
     def tween(request):
 
@@ -25,7 +26,9 @@ def jwt_database_validation_tween_factory(handler, registry):
         # Finally, check database validation
         try:
             token = extract_token(request)
-            valid = token and is_valid_token(token)
+            valid = token and is_valid_token(token, session=DBSession)
+        except AccountBlockedError:
+            return http_error_handler(HTTPForbidden('account blocked'), request)
         except Exception as exc:
             if isinstance(exc, HTTPError):
                 return http_error_handler(exc, request)
@@ -35,7 +38,6 @@ def jwt_database_validation_tween_factory(handler, registry):
         if valid:
             return handler(request)
         else:
-            return http_error_handler(
-                HTTPUnauthorized('Invalid token'), request)
+            return http_error_handler(HTTPUnauthorized('Invalid token'), request)
 
     return tween

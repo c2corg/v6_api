@@ -1,12 +1,11 @@
 import json
 
+from elasticsearch_dsl import DocType, GeoPoint, Long, MetaField, String
+
+from c2corg_api.models.common.attributes import DefaultLangs
+from c2corg_api.models.common.sortable_search_attributes import sortable_quality_types
 from c2corg_api.models.document import Document
-from c2corg_api.search.mapping_types import Enum, QEnumArray, QLong, \
-    QEnumRange
-from c2corg_api.models.common.attributes import default_langs
-from c2corg_api.models.common.sortable_search_attributes import \
-    sortable_quality_types
-from elasticsearch_dsl import DocType, String, MetaField, Long, GeoPoint
+from c2corg_api.search.mapping_types import Enum, QEnumArray, QEnumRange, QLong
 
 
 class BaseMeta:
@@ -24,10 +23,10 @@ def default_title_field():
         index='not_analyzed',
         similarity='c2corgsimilarity',
         fields={
-            'ngram': String(
-                analyzer='index_ngram', search_analyzer='search_ngram'),
-            'raw': String(
-                analyzer='index_raw', search_analyzer='search_raw')})
+            'ngram': String(analyzer='index_ngram', search_analyzer='search_ngram'),
+            'raw': String(analyzer='index_raw', search_analyzer='search_raw'),
+        },
+    )
 
 
 class SearchDocument(DocType):
@@ -45,14 +44,16 @@ class SearchDocument(DocType):
     See also:
     https://www.elastic.co/guide/en/elasticsearch/guide/current/_index_time_search_as_you_type.html
     """
+
     class Meta(BaseMeta):
         pass
 
     id = Long()
     doc_type = Enum()
     quality = QEnumRange(
-        'qa', model_field=Document.quality, enum_mapper=sortable_quality_types)
-    available_locales = QEnumArray('l', enum=default_langs)
+        'qa', model_field=Document.quality, enum_mapper=sortable_quality_types
+    )
+    available_locales = QEnumArray('l', enum=DefaultLangs)
     geom = GeoPoint()
 
     # array of area ids
@@ -60,52 +61,38 @@ class SearchDocument(DocType):
 
     # fr
     title_fr = default_title_field()
-    summary_fr = String(
-        analyzer='index_french', search_analyzer='search_french')
-    description_fr = String(
-        analyzer='index_french', search_analyzer='search_french')
+    summary_fr = String(analyzer='index_french', search_analyzer='search_french')
+    description_fr = String(analyzer='index_french', search_analyzer='search_french')
 
     # it
     title_it = default_title_field()
-    summary_it = String(
-        analyzer='index_italian', search_analyzer='search_italian')
-    description_it = String(
-        analyzer='index_italian', search_analyzer='search_italian')
+    summary_it = String(analyzer='index_italian', search_analyzer='search_italian')
+    description_it = String(analyzer='index_italian', search_analyzer='search_italian')
 
     # de
     title_de = default_title_field()
-    summary_de = String(
-        analyzer='index_german', search_analyzer='search_german')
-    description_de = String(
-        analyzer='index_german', search_analyzer='search_german')
+    summary_de = String(analyzer='index_german', search_analyzer='search_german')
+    description_de = String(analyzer='index_german', search_analyzer='search_german')
 
     # en
     title_en = default_title_field()
-    summary_en = String(
-        analyzer='index_english', search_analyzer='search_english')
-    description_en = String(
-        analyzer='index_english', search_analyzer='search_english')
+    summary_en = String(analyzer='index_english', search_analyzer='search_english')
+    description_en = String(analyzer='index_english', search_analyzer='search_english')
 
     # es
     title_es = default_title_field()
-    summary_es = String(
-        analyzer='index_spanish', search_analyzer='search_spanish')
-    description_es = String(
-        analyzer='index_spanish', search_analyzer='search_spanish')
+    summary_es = String(analyzer='index_spanish', search_analyzer='search_spanish')
+    description_es = String(analyzer='index_spanish', search_analyzer='search_spanish')
 
     # ca
     title_ca = default_title_field()
-    summary_ca = String(
-        analyzer='index_catalan', search_analyzer='search_catalan')
-    description_ca = String(
-        analyzer='index_catalan', search_analyzer='search_catalan')
+    summary_ca = String(analyzer='index_catalan', search_analyzer='search_catalan')
+    description_ca = String(analyzer='index_catalan', search_analyzer='search_catalan')
 
     # eu
     title_eu = default_title_field()
-    summary_eu = String(
-        analyzer='index_basque', search_analyzer='search_basque')
-    description_eu = String(
-        analyzer='index_basque', search_analyzer='search_basque')
+    summary_eu = String(analyzer='index_basque', search_analyzer='search_basque')
+    description_eu = String(analyzer='index_basque', search_analyzer='search_basque')
 
     @staticmethod
     def to_search_document(document, index, include_areas=True):
@@ -113,7 +100,7 @@ class SearchDocument(DocType):
             '_index': index,
             '_id': document.document_id,
             '_type': document.type,
-            'id': document.document_id
+            'id': document.document_id,
         }
 
         if document.redirects_to:
@@ -136,12 +123,10 @@ class SearchDocument(DocType):
             search_document['available_locales'] = available_locales
 
             if document.quality:
-                search_document['quality'] = \
-                    sortable_quality_types[document.quality]
+                search_document['quality'] = sortable_quality_types[document.quality]
 
             if document.geometry:
-                search_document['geom'] = SearchDocument.get_geometry(
-                    document.geometry)
+                search_document['geom'] = SearchDocument.get_geometry(document.geometry)
 
             areas = []
             if include_areas:
@@ -165,8 +150,7 @@ class SearchDocument(DocType):
             search_document[field] = getattr(document, field)
 
     @staticmethod
-    def copy_enum_range_fields(
-            search_document, document, fields, search_model):
+    def copy_enum_range_fields(search_document, document, fields, search_model):
         search_fields = search_model._doc_type.mapping
         for field in fields:
             search_field = search_fields[field]
@@ -187,272 +171,239 @@ The original definitions of the analyzers are taken from here:
 https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-lang-analyzer.html
 """
 analysis_settings = {
-    "filter": {
-        "autocomplete_filter": {
-            "type": "edge_ngram",
-            "min_gram": 2,
-            "max_gram": 20
-        },
+    'filter': {
+        'autocomplete_filter': {'type': 'edge_ngram', 'min_gram': 2, 'max_gram': 20},
         # filters for the english analyzers
-        "english_stop": {
-            "type": "stop",
-            "stopwords": "_english_"
-        },
-        "english_stemmer": {
-            "type": "stemmer",
-            "language": "english"
-        },
-        "english_possessive_stemmer": {
-            "type": "stemmer",
-            "language": "possessive_english"
+        'english_stop': {'type': 'stop', 'stopwords': '_english_'},
+        'english_stemmer': {'type': 'stemmer', 'language': 'english'},
+        'english_possessive_stemmer': {
+            'type': 'stemmer',
+            'language': 'possessive_english',
         },
         # filters for the french analyzers
-        "french_elision": {
-            "type": "elision",
-            "articles_case": True,
-            "articles": [
-                "l", "m", "t", "qu", "n", "s",
-                "j", "d", "c", "jusqu", "quoiqu",
-                "lorsqu", "puisqu"
-            ]
+        'french_elision': {
+            'type': 'elision',
+            'articles_case': True,
+            'articles': [
+                'l',
+                'm',
+                't',
+                'qu',
+                'n',
+                's',
+                'j',
+                'd',
+                'c',
+                'jusqu',
+                'quoiqu',
+                'lorsqu',
+                'puisqu',
+            ],
         },
-        "french_stop": {
-            "type": "stop",
-            "stopwords": "_french_"
-        },
-        "french_stemmer": {
-            "type": "stemmer",
-            "language": "light_french"
-        },
+        'french_stop': {'type': 'stop', 'stopwords': '_french_'},
+        'french_stemmer': {'type': 'stemmer', 'language': 'light_french'},
         # filters for the german analyzers
-        "german_stop": {
-            "type": "stop",
-            "stopwords": "_german_"
-        },
-        "german_stemmer": {
-            "type": "stemmer",
-            "language": "light_german"
-        },
+        'german_stop': {'type': 'stop', 'stopwords': '_german_'},
+        'german_stemmer': {'type': 'stemmer', 'language': 'light_german'},
         # filters for the italian analyzers
-        "italian_elision": {
-            "type": "elision",
-            "articles_case": True,
-            "articles": [
-                "c", "l", "all", "dall", "dell",
-                "nell", "sull", "coll", "pell",
-                "gl", "agl", "dagl", "degl", "negl",
-                "sugl", "un", "m", "t", "s", "v", "d"
-            ]
+        'italian_elision': {
+            'type': 'elision',
+            'articles_case': True,
+            'articles': [
+                'c',
+                'l',
+                'all',
+                'dall',
+                'dell',
+                'nell',
+                'sull',
+                'coll',
+                'pell',
+                'gl',
+                'agl',
+                'dagl',
+                'degl',
+                'negl',
+                'sugl',
+                'un',
+                'm',
+                't',
+                's',
+                'v',
+                'd',
+            ],
         },
-        "italian_stop": {
-            "type": "stop",
-            "stopwords": "_italian_"
-        },
-        "italian_stemmer": {
-            "type": "stemmer",
-            "language": "light_italian"
-        },
+        'italian_stop': {'type': 'stop', 'stopwords': '_italian_'},
+        'italian_stemmer': {'type': 'stemmer', 'language': 'light_italian'},
         # filters for the spanish analyzers
-        "spanish_stop": {
-            "type": "stop",
-            "stopwords": "_spanish_"
-        },
-        "spanish_stemmer": {
-            "type": "stemmer",
-            "language": "light_spanish"
-        },
+        'spanish_stop': {'type': 'stop', 'stopwords': '_spanish_'},
+        'spanish_stemmer': {'type': 'stemmer', 'language': 'light_spanish'},
         # filters for the catalan analyzers
-        "catalan_elision": {
-            "type": "elision",
-            "articles_case": True,
-            "articles": ["d", "l", "m", "n", "s", "t"]
+        'catalan_elision': {
+            'type': 'elision',
+            'articles_case': True,
+            'articles': ['d', 'l', 'm', 'n', 's', 't'],
         },
-        "catalan_stop": {
-            "type": "stop",
-            "stopwords": "_catalan_"
-        },
-        "catalan_stemmer": {
-            "type": "stemmer",
-            "language": "catalan"
-        },
+        'catalan_stop': {'type': 'stop', 'stopwords': '_catalan_'},
+        'catalan_stemmer': {'type': 'stemmer', 'language': 'catalan'},
         # filters for the basque analyzers
-        "basque_stop": {
-            "type": "stop",
-            "stopwords": "_basque_"
-        },
-        "basque_stemmer": {
-            "type": "stemmer",
-            "language": "basque"
-        }
+        'basque_stop': {'type': 'stop', 'stopwords': '_basque_'},
+        'basque_stemmer': {'type': 'stemmer', 'language': 'basque'},
     },
-    "similarity": {
-        "c2corgsimilarity": {
-            "type": "BM25"
-        }
+    'similarity': {'c2corgsimilarity': {'type': 'BM25'}},
+    'char_filter': {
+        'punctuationgreedy': {'type': 'pattern_replace', 'pattern': '[\\.,]'}
     },
-    "char_filter": {
-        "punctuationgreedy": {
-            "type": "pattern_replace",
-            "pattern": "[\\.,]"
-        }
+    'analyzer': {
+        'index_ngram': {
+            'char_filter': ['punctuationgreedy'],
+            'filter': [
+                'word_delimiter',
+                'lowercase',
+                'asciifolding',
+                'unique',
+                'autocomplete_filter',
+            ],
+            'tokenizer': 'standard',
+        },
+        'search_ngram': {
+            'char_filter': ['punctuationgreedy'],
+            'filter': ['word_delimiter', 'lowercase', 'asciifolding', 'unique'],
+            'tokenizer': 'standard',
+        },
+        'index_raw': {
+            'char_filter': ['punctuationgreedy'],
+            'filter': ['word_delimiter', 'lowercase', 'asciifolding', 'unique'],
+            'tokenizer': 'standard',
+        },
+        'search_raw': {
+            'char_filter': ['punctuationgreedy'],
+            'filter': ['word_delimiter', 'lowercase', 'asciifolding', 'unique'],
+            'tokenizer': 'standard',
+        },
+        'index_english': {
+            'type': 'custom',
+            'tokenizer': 'standard',
+            'filter': [
+                'english_possessive_stemmer',
+                'lowercase',
+                'english_stop',
+                'english_stemmer',
+                'autocomplete_filter',
+            ],
+        },
+        'search_english': {
+            'type': 'custom',
+            'tokenizer': 'standard',
+            'filter': [
+                'english_possessive_stemmer',
+                'lowercase',
+                'english_stop',
+                'english_stemmer',
+            ],
+        },
+        'index_french': {
+            'tokenizer': 'standard',
+            'filter': [
+                'french_elision',
+                'lowercase',
+                'french_stop',
+                'french_stemmer',
+                'autocomplete_filter',
+            ],
+        },
+        'search_french': {
+            'tokenizer': 'standard',
+            'filter': [
+                'french_elision',
+                'lowercase',
+                'french_stop',
+                'french_stemmer',
+                'autocomplete_filter',
+            ],
+        },
+        'index_german': {
+            'tokenizer': 'standard',
+            'filter': [
+                'lowercase',
+                'german_stop',
+                'german_normalization',
+                'german_stemmer',
+                'autocomplete_filter',
+            ],
+        },
+        'search_german': {
+            'tokenizer': 'standard',
+            'filter': [
+                'lowercase',
+                'german_stop',
+                'german_normalization',
+                'german_stemmer',
+            ],
+        },
+        'index_italian': {
+            'tokenizer': 'standard',
+            'filter': [
+                'italian_elision',
+                'lowercase',
+                'italian_stop',
+                'italian_stemmer',
+                'autocomplete_filter',
+            ],
+        },
+        'search_italian': {
+            'tokenizer': 'standard',
+            'filter': [
+                'italian_elision',
+                'lowercase',
+                'italian_stop',
+                'italian_stemmer',
+            ],
+        },
+        'index_spanish': {
+            'tokenizer': 'standard',
+            'filter': [
+                'lowercase',
+                'spanish_stop',
+                'spanish_stemmer',
+                'autocomplete_filter',
+            ],
+        },
+        'search_spanish': {
+            'tokenizer': 'standard',
+            'filter': ['lowercase', 'spanish_stop', 'spanish_stemmer'],
+        },
+        'index_catalan': {
+            'tokenizer': 'standard',
+            'filter': [
+                'catalan_elision',
+                'lowercase',
+                'catalan_stop',
+                'catalan_stemmer',
+                'autocomplete_filter',
+            ],
+        },
+        'search_catalan': {
+            'tokenizer': 'standard',
+            'filter': [
+                'catalan_elision',
+                'lowercase',
+                'catalan_stop',
+                'catalan_stemmer',
+            ],
+        },
+        'index_basque': {
+            'tokenizer': 'standard',
+            'filter': [
+                'lowercase',
+                'basque_stop',
+                'basque_stemmer',
+                'autocomplete_filter',
+            ],
+        },
+        'search_basque': {
+            'tokenizer': 'standard',
+            'filter': ['lowercase', 'basque_stop', 'basque_stemmer'],
+        },
     },
-    "analyzer": {
-        "index_ngram": {
-            "char_filter": ["punctuationgreedy"],
-            "filter": [
-                "word_delimiter", "lowercase", "asciifolding", "unique",
-                "autocomplete_filter"],
-            "tokenizer": "standard"
-        },
-        "search_ngram": {
-            "char_filter": ["punctuationgreedy"],
-            "filter": [
-                "word_delimiter", "lowercase", "asciifolding", "unique"],
-            "tokenizer": "standard"
-        },
-        "index_raw": {
-            "char_filter": ["punctuationgreedy"],
-            "filter": [
-                "word_delimiter", "lowercase", "asciifolding", "unique"],
-            "tokenizer": "standard"
-        },
-        "search_raw": {
-            "char_filter": ["punctuationgreedy"],
-            "filter": [
-                "word_delimiter", "lowercase", "asciifolding", "unique"],
-            "tokenizer": "standard"
-        },
-        "index_english": {
-            "type": "custom",
-            "tokenizer": "standard",
-            "filter": [
-                "english_possessive_stemmer",
-                "lowercase",
-                "english_stop",
-                "english_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "search_english": {
-            "type": "custom",
-            "tokenizer": "standard",
-            "filter": [
-                "english_possessive_stemmer",
-                "lowercase",
-                "english_stop",
-                "english_stemmer"
-            ]
-        },
-        "index_french": {
-            "tokenizer": "standard",
-            "filter": [
-                "french_elision",
-                "lowercase",
-                "french_stop",
-                "french_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "search_french": {
-            "tokenizer": "standard",
-            "filter": [
-                "french_elision",
-                "lowercase",
-                "french_stop",
-                "french_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "index_german": {
-            "tokenizer": "standard",
-            "filter": [
-                "lowercase",
-                "german_stop",
-                "german_normalization",
-                "german_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "search_german": {
-            "tokenizer": "standard",
-            "filter": [
-                "lowercase",
-                "german_stop",
-                "german_normalization",
-                "german_stemmer"
-            ]
-        },
-        "index_italian": {
-            "tokenizer": "standard",
-            "filter": [
-                "italian_elision",
-                "lowercase",
-                "italian_stop",
-                "italian_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "search_italian": {
-            "tokenizer": "standard",
-            "filter": [
-                "italian_elision",
-                "lowercase",
-                "italian_stop",
-                "italian_stemmer"
-            ]
-        },
-        "index_spanish": {
-            "tokenizer": "standard",
-            "filter": [
-                "lowercase",
-                "spanish_stop",
-                "spanish_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "search_spanish": {
-            "tokenizer": "standard",
-            "filter": [
-                "lowercase",
-                "spanish_stop",
-                "spanish_stemmer"
-            ]
-        },
-        "index_catalan": {
-            "tokenizer": "standard",
-            "filter": [
-                "catalan_elision",
-                "lowercase",
-                "catalan_stop",
-                "catalan_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "search_catalan": {
-            "tokenizer": "standard",
-            "filter": [
-                "catalan_elision",
-                "lowercase",
-                "catalan_stop",
-                "catalan_stemmer"
-            ]
-        },
-        "index_basque": {
-            "tokenizer": "standard",
-            "filter": [
-                "lowercase",
-                "basque_stop",
-                "basque_stemmer",
-                "autocomplete_filter"
-            ]
-        },
-        "search_basque": {
-            "tokenizer": "standard",
-            "filter": [
-                "lowercase",
-                "basque_stop",
-                "basque_stemmer"
-            ]
-        }
-    }
 }

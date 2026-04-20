@@ -1,21 +1,17 @@
-import sys
 import logging
-import transaction
-
-from sqlalchemy import engine_from_config
-
 import os
-from sqlalchemy.orm import sessionmaker
+import sys
 
+import transaction
 from pyramid.paster import get_appsettings
-
+from sqlalchemy import engine_from_config
+from sqlalchemy.orm import sessionmaker
 from zope.sqlalchemy import register
 
-from c2corg_api.models.document import DocumentLocale, DocumentGeometry
-from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
+from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
-
 
 NB_USERS_TO_CREATE = 1000
 BASE_USERNAME = 'testuserc2c'
@@ -23,12 +19,14 @@ BASE_USERNAME = 'testuserc2c'
 
 # no-op function referenced from `loadtests.ini` (required for
 # `get_appsettings` to work)
-def no_op(global_config, **settings): pass
+def no_op(global_config, **settings):
+    pass
 
 
 def main(argv=sys.argv):
     settings_file = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), 'loadtests.ini')
+        os.path.dirname(os.path.abspath(__file__)), 'loadtests.ini'
+    )
     settings = get_appsettings(settings_file)
 
     engine = engine_from_config(settings, 'sqlalchemy.')
@@ -49,9 +47,8 @@ def main(argv=sys.argv):
 
             profile = UserProfile(
                 categories=['amateur'],
-                geometry=DocumentGeometry(
-                    version=1, geom=None, geom_detail=None),
-                locales=[DocumentLocale(lang=lang, title='')]
+                geometry=DocumentGeometry(version=1, geom=None, geom_detail=None),
+                locales=[DocumentLocale(lang=lang, title='')],
             )
             user = User(
                 username=username,
@@ -60,7 +57,7 @@ def main(argv=sys.argv):
                 email=email,
                 lang=lang,
                 password=password,
-                profile=profile
+                profile=profile,
             )
             # make sure user account is directly validated
             user.clear_validation_nonce()
@@ -83,7 +80,7 @@ def main(argv=sys.argv):
                     document_archive=archive,
                     document_locales_archive=locale,
                     document_geometry_archive=archive_geometry,
-                    history_metadata=meta_data
+                    history_metadata=meta_data,
                 )
                 versions.append(version)
             session.add(archive)
@@ -92,9 +89,10 @@ def main(argv=sys.argv):
             session.add_all(versions)
             session.flush()
 
-    print('Created %d users with base username `%s`' % (
-        NB_USERS_TO_CREATE, BASE_USERNAME))
+    print(
+        'Created %d users with base username `%s`' % (NB_USERS_TO_CREATE, BASE_USERNAME)
+    )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

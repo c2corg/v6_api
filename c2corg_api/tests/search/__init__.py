@@ -4,8 +4,7 @@ from c2corg_api.search import elasticsearch_config
 
 
 def reset_search_index(session):
-    """Recreate index and fill index.
-    """
+    """Recreate index and fill index."""
     initializees.drop_index()
     initializees.setup_es()
     fill_index(session)
@@ -13,7 +12,5 @@ def reset_search_index(session):
 
 
 def force_search_index():
-    """Force that the search index is updated.
-    """
-    elasticsearch_config['client'].indices.refresh(
-        elasticsearch_config['index'])
+    """Force that the search index is updated."""
+    elasticsearch_config['client'].indices.refresh(elasticsearch_config['index'])

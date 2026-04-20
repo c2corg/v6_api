@@ -1,71 +1,74 @@
-from c2corg_api.models import DBSession
-from c2corg_api.models.user import User
-from c2corg_api.models.user_profile import schema_update_user_profile, \
-    UserProfile, schema_user_profile, schema_internal_user_profile, \
-    USERPROFILE_TYPE
-from c2corg_api.views.document_info import DocumentInfoRest
-from c2corg_api.views.document_schemas import user_profile_documents_config
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
-
-from c2corg_api.views.document import DocumentRest
-from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
-from c2corg_api.views.validation import validate_id, validate_pagination, \
-    validate_lang_param, validate_preferred_lang_param, validate_lang, \
-    validate_cook_param
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
 from sqlalchemy.orm import load_only
 
+from c2corg_api.models import DBSession
+from c2corg_api.models.user import User
+from c2corg_api.models.user_profile import (
+    USERPROFILE_TYPE,
+    UserProfile,
+    schema_internal_user_profile,
+    schema_user_profile,
+)
+from c2corg_api.schemas.user_profile import UpdateUserProfileSchema
+from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
+from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import user_profile_documents_config
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
+from c2corg_api.views.validation import (
+    validate_cook_param,
+    validate_id,
+    validate_lang,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+)
 
-@resource(collection_path='/profiles', path='/profiles/{id}',
-          cors_policy=cors_policy)
+
+@resource(collection_path='/profiles', path='/profiles/{id}', cors_policy=cors_policy)
 class UserProfileRest(DocumentRest):
-
-    @restricted_view(
-        validators=[validate_pagination, validate_preferred_lang_param])
+    @restricted_view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        return self._collection_get(
-            USERPROFILE_TYPE, user_profile_documents_config)
+        return self._collection_get(USERPROFILE_TYPE, user_profile_documents_config)
 
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         # load the requested user
         requested_user_id = self.request.validated['id']
-        requested_user = DBSession.query(User). \
-            filter(User.id == requested_user_id). \
-            filter(User.email_validated). \
-            options(load_only(
-                User.id, User.is_profile_public, User.name)). \
-            first()
+        requested_user = (
+            DBSession.query(User)
+            .filter(User.id == requested_user_id)
+            .filter(User.email_validated)
+            .options(load_only(User.id, User.is_profile_public, User.name))
+            .first()
+        )
 
         if not requested_user:
             raise HTTPNotFound('user not found')
-        elif requested_user.is_profile_public or \
-                self.request.has_permission('authenticated'):
+        elif requested_user.is_profile_public or self.request.has_permission(
+            'authenticated'
+        ):
             # only show the full profile if authenticated or if the user marked
             # the profile as public
-            return self._get(
-                user_profile_documents_config,
-                schema_user_profile)
+            return self._get(user_profile_documents_config, schema_user_profile)
         else:
             # otherwise only return the user name
             return {
                 'not_authorized': True,
                 'document_id': requested_user.id,
-                'name': requested_user.name
+                'name': requested_user.name,
             }
 
     @restricted_json_view(
-            schema=schema_update_user_profile,
-            validators=[colander_body_validator, validate_id])
+        validators=[make_pydantic_validator(UpdateUserProfileSchema), validate_id]
+    )
     def put(self):
         if not self.request.has_permission('moderator'):
             # moderators can change the profile of every user
-            if self.request.authenticated_userid != \
-                    self.request.validated['id']:
+            if self.request.authenticated_userid != self.request.validated['id']:
                 # but a normal user can only change its own profile
-                raise HTTPForbidden(
-                    'No permission to change this user profile')
+                raise HTTPForbidden('No permission to change this user profile')
 
         self._reset_title()
 
@@ -84,7 +87,6 @@ class UserProfileRest(DocumentRest):
 
 @resource(path='/profiles/{id}/{lang}/info', cors_policy=cors_policy)
 class UserProfileInfoRest(DocumentInfoRest):
-
     @view(validators=[validate_id, validate_lang])
     def get(self):
         return self._get_document_info(user_profile_documents_config)

@@ -1,36 +1,57 @@
-from datetime import datetime, timedelta, timezone
 import functools
+from datetime import datetime, timedelta, timezone
 
-from c2corg_api.models.outing import schema_outing, Outing, \
-    schema_create_outing, schema_update_outing, ArchiveOuting, \
-    ArchiveOutingLocale, OUTING_TYPE
-from c2corg_api.models.utils import get_mid_point
-from c2corg_api.views import cors_policy, restricted_json_view, \
-    set_default_geom_from_associations
-from c2corg_api.views.document import DocumentRest, make_validator_create, \
-    make_validator_update
-from c2corg_api.views.document_info import DocumentInfoRest
-from c2corg_api.views.document_schemas import outing_documents_config, \
-    outing_schema_adaptor
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.validation import validate_id, validate_pagination, \
-    validate_lang, validate_version_id, validate_lang_param, \
-    validate_preferred_lang_param, validate_associations, \
-    has_permission_for_outing, validate_cook_param
-from c2corg_api.models.common.attributes import activities
-from c2corg_api.models.common.fields_outing import fields_outing
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPForbidden
 
-validate_outing_create = make_validator_create(
-    fields_outing, 'activities', activities)
-validate_outing_update = make_validator_update(
-    fields_outing, 'activities', activities)
+from c2corg_api.models.common.attributes import Activities
+from c2corg_api.models.common.fields_outing import fields_outing
+from c2corg_api.models.outing import (
+    OUTING_TYPE,
+    ArchiveOuting,
+    ArchiveOutingLocale,
+    Outing,
+    schema_outing,
+)
+from c2corg_api.models.utils import get_mid_point
+from c2corg_api.schemas.outing import CreateOutingSchema, UpdateOutingSchema
+from c2corg_api.views import (
+    cors_policy,
+    restricted_json_view,
+    set_default_geom_from_associations,
+)
+from c2corg_api.views.document import (
+    DocumentRest,
+    make_validator_create,
+    make_validator_update,
+)
+from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import (
+    outing_documents_config,
+    outing_schema_adaptor,
+)
+from c2corg_api.views.document_version import DocumentVersionRest
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
+from c2corg_api.views.validation import (
+    has_permission_for_outing,
+    validate_associations,
+    validate_cook_param,
+    validate_id,
+    validate_lang,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+    validate_version_id,
+)
+
+validate_outing_create = make_validator_create(fields_outing, 'activities', Activities)
+validate_outing_update = make_validator_update(fields_outing, 'activities', Activities)
 validate_associations_create = functools.partial(
-    validate_associations, OUTING_TYPE, True)
+    validate_associations, OUTING_TYPE, True
+)
 validate_associations_update = functools.partial(
-    validate_associations, OUTING_TYPE, False)
+    validate_associations, OUTING_TYPE, False
+)
 
 
 def _validate_dates(request, date_start, date_end):
@@ -42,14 +63,11 @@ def _validate_dates(request, date_start, date_end):
             date_start = datetime.strptime(date_start, '%Y-%m-%d').date()
         except ValueError:
             request.errors.add(
-                'body', 'date_start',
-                'invalid format, expecting YEAR-MONTH-DAY'
+                'body', 'date_start', 'invalid format, expecting YEAR-MONTH-DAY'
             )
 
     if date_start > utc_now_plus_12h:
-        request.errors.add(
-            'body', 'date_start', 'can not be sometime in the future'
-        )
+        request.errors.add('body', 'date_start', 'can not be sometime in the future')
         return
 
     if isinstance(date_end, str):
@@ -57,19 +75,14 @@ def _validate_dates(request, date_start, date_end):
             date_end = datetime.strptime(date_end, '%Y-%m-%d').date()
         except ValueError:
             request.errors.add(
-                'body', 'date_end',
-                'invalid format, expecting YEAR-MONTH-DAY'
+                'body', 'date_end', 'invalid format, expecting YEAR-MONTH-DAY'
             )
 
     if date_end > utc_now_plus_12h:
-        request.errors.add(
-            'body', 'date_end', 'can not be sometime in the future'
-        )
+        request.errors.add('body', 'date_end', 'can not be sometime in the future')
 
     if not request.errors and date_end < date_start:
-        request.errors.add(
-            'body', 'date_end', 'can not be prior the starting date'
-        )
+        request.errors.add('body', 'date_end', 'can not be prior the starting date')
 
 
 def validate_dates_on_creation(request, **kwargs):
@@ -115,68 +128,65 @@ def validate_required_associations(request, **kwargs):
             missing_user = True
 
     if missing_user:
-        request.errors.add(
-            'body', 'associations.users', 'at least one user required')
+        request.errors.add('body', 'associations.users', 'at least one user required')
 
     if missing_route:
-        request.errors.add(
-            'body', 'associations.routes', 'at least one route required')
+        request.errors.add('body', 'associations.routes', 'at least one route required')
 
 
-@resource(collection_path='/outings', path='/outings/{id}',
-          cors_policy=cors_policy)
+@resource(collection_path='/outings', path='/outings/{id}', cors_policy=cors_policy)
 class OutingRest(DocumentRest):
-
-    @view(validators=[
-        validate_pagination, validate_preferred_lang_param])
+    @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
         return self._collection_get(OUTING_TYPE, outing_documents_config)
 
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(
-            outing_documents_config,
-            schema_outing,
-            adapt_schema=outing_schema_adaptor)
+            outing_documents_config, schema_outing, adapt_schema=outing_schema_adaptor
+        )
 
     @restricted_json_view(
-        schema=schema_create_outing,
         validators=[
-            colander_body_validator,
+            make_pydantic_validator(
+                CreateOutingSchema,
+                allowed_geometry_types=['LINESTRING', 'MULTILINESTRING'],
+            ),
             validate_outing_create,
             validate_associations_create,
             validate_required_associations,
-            validate_dates_on_creation])
+            validate_dates_on_creation,
+        ]
+    )
     def collection_post(self):
         set_default_geom = functools.partial(
-            set_default_geometry,
-            self.request.validated['associations']['routes']
+            set_default_geometry, self.request.validated['associations']['routes']
         )
-        return self._collection_post(
-            schema_outing, before_add=set_default_geom)
+        return self._collection_post(schema_outing, before_add=set_default_geom)
 
     @restricted_json_view(
-        schema=schema_update_outing,
         validators=[
-            colander_body_validator,
+            make_pydantic_validator(
+                UpdateOutingSchema,
+                allowed_geometry_types=['LINESTRING', 'MULTILINESTRING'],
+            ),
             validate_id,
             validate_outing_update,
             validate_associations_update,
             validate_required_associations,
-            validate_dates_on_update])
+            validate_dates_on_update,
+        ]
+    )
     def put(self):
-        if not has_permission_for_outing(
-                self.request, self.request.validated['id']):
+        if not has_permission_for_outing(self.request, self.request.validated['id']):
             # moderators can change every outing, but a normal user can only
             # change an outing that they are associated to
             raise HTTPForbidden('No permission to change this outing')
-        return self._put(
-            Outing, schema_outing, before_update=update_default_geometry)
+        return self._put(Outing, schema_outing, before_update=update_default_geometry)
 
 
 @resource(path='/outings/{id}/{lang}/info', cors_policy=cors_policy)
 class OutingInfoRest(DocumentInfoRest):
-
     @view(validators=[validate_id, validate_lang])
     def get(self):
         return self._get_document_info(outing_documents_config)
@@ -201,7 +211,7 @@ def set_default_geometry(linked_routes, outing, user_id):
 
 def update_default_geometry(outing, outing_in):
     """When updating an outing, set the default geometry to the middle point
-    of a new track if proovided
+    of a new track if provided
     """
 
     geometry_in = outing_in.geometry
@@ -209,13 +219,21 @@ def update_default_geometry(outing, outing_in):
     if geometry_in is not None and geometry_in.geom_detail is not None:
         # update the default geom with the new track
         geometry_in.geom = get_mid_point(geometry_in.geom_detail)
+        # Mark 'geom' as explicitly provided so that copy_attributes
+        # transfers it during the update.
+        provided = getattr(geometry_in, '_objectify_fields', None)
+        if provided is not None:
+            provided.add('geom')
 
 
 @resource(path='/outings/{id}/{lang}/{version_id}', cors_policy=cors_policy)
 class OutingVersionRest(DocumentVersionRest):
-
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveOuting, OUTING_TYPE, ArchiveOutingLocale, schema_outing,
-            outing_schema_adaptor)
+            ArchiveOuting,
+            OUTING_TYPE,
+            ArchiveOutingLocale,
+            schema_outing,
+            outing_schema_adaptor,
+        )

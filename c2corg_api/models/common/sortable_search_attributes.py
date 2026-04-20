@@ -5,13 +5,7 @@
 # mappers listed below, and stored as number in ElasticSearch. This allows
 # to do range queries.
 
-sortable_quality_types = {
-    'empty': 0,
-    'draft': 1,
-    'medium': 2,
-    'fine': 3,
-    'great': 4
-}
+sortable_quality_types = {'empty': 0, 'draft': 1, 'medium': 2, 'fine': 3, 'great': 4}
 
 sortable_access_times = {
     '1min': 0,
@@ -26,7 +20,7 @@ sortable_access_times = {
     '2h': 9,
     '2h30': 10,
     '3h': 11,
-    '3h+': 12
+    '3h+': 12,
 }
 
 sortable_climbing_ratings = {
@@ -66,23 +60,12 @@ sortable_climbing_ratings = {
     '9b': 33,
     '9b+': 34,
     '9c': 35,
-    '9c+': 36
+    '9c+': 36,
 }
 
-sortable_paragliding_ratings = {
-    '1': 0,
-    '2': 1,
-    '3': 2,
-    '4': 3,
-    '5': 4
-}
+sortable_paragliding_ratings = {'1': 0, '2': 1, '3': 2, '4': 3, '5': 4}
 
-sortable_exposition_ratings = {
-    'E1': 0,
-    'E2': 1,
-    'E3': 2,
-    'E4': 3
-}
+sortable_exposition_ratings = {'E1': 0, 'E2': 1, 'E3': 2, 'E4': 3}
 
 sortable_equipment_ratings = {
     'P1': 0,
@@ -92,7 +75,7 @@ sortable_equipment_ratings = {
     'P3': 4,
     'P3+': 5,
     'P4': 6,
-    'P4+': 7
+    'P4+': 7,
 }
 
 sortable_route_duration_types = {
@@ -106,7 +89,7 @@ sortable_route_duration_types = {
     '8': 7,
     '9': 8,
     '10': 9,
-    '10+': 10
+    '10+': 10,
 }
 
 sortable_ski_ratings = {
@@ -127,7 +110,7 @@ sortable_ski_ratings = {
     '5.3': 14,
     '5.4': 15,
     '5.5': 16,
-    '5.6': 17
+    '5.6': 17,
 }
 
 sortable_labande_ski_ratings = {
@@ -137,7 +120,7 @@ sortable_labande_ski_ratings = {
     'S4': 3,
     'S5': 4,
     'S6': 5,
-    'S7': 6
+    'S7': 6,
 }
 
 sortable_global_ratings = {
@@ -161,25 +144,12 @@ sortable_global_ratings = {
     'ED4': 17,
     'ED5': 18,
     'ED6': 19,
-    'ED7': 20
+    'ED7': 20,
 }
 
-sortable_engagement_ratings = {
-    'I': 0,
-    'II': 1,
-    'III': 2,
-    'IV': 3,
-    'V': 4,
-    'VI': 5
-}
+sortable_engagement_ratings = {'I': 0, 'II': 1, 'III': 2, 'IV': 3, 'V': 4, 'VI': 5}
 
-sortable_risk_ratings = {
-    'X1': 0,
-    'X2': 1,
-    'X3': 2,
-    'X4': 3,
-    'X5': 4
-}
+sortable_risk_ratings = {'X1': 0, 'X2': 1, 'X3': 2, 'X4': 3, 'X5': 4}
 
 sortable_ice_ratings = {
     '1': 0,
@@ -193,7 +163,7 @@ sortable_ice_ratings = {
     '6': 8,
     '6+': 9,
     '7': 10,
-    '7+': 11
+    '7+': 11,
 }
 
 sortable_mixed_ratings = {
@@ -218,7 +188,7 @@ sortable_mixed_ratings = {
     'M11': 18,
     'M11+': 19,
     'M12': 20,
-    'M12+': 21
+    'M12+': 21,
 }
 
 sortable_exposition_rock_ratings = {
@@ -227,7 +197,7 @@ sortable_exposition_rock_ratings = {
     'E3': 2,
     'E4': 3,
     'E5': 4,
-    'E6': 5
+    'E6': 5,
 }
 
 sortable_aid_ratings = {
@@ -242,63 +212,27 @@ sortable_aid_ratings = {
     'A4': 8,
     'A4+': 9,
     'A5': 10,
-    'A5+': 11
+    'A5+': 11,
 }
 
-sortable_via_ferrata_ratings = {
-    'K1': 0,
-    'K2': 1,
-    'K3': 2,
-    'K4': 3,
-    'K5': 4,
-    'K6': 5
-}
+sortable_via_ferrata_ratings = {'K1': 0, 'K2': 1, 'K3': 2, 'K4': 3, 'K5': 4, 'K6': 5}
 
-sortable_hiking_ratings = {
-    'T1': 0,
-    'T2': 1,
-    'T3': 2,
-    'T4': 3,
-    'T5': 4
-}
+sortable_hiking_ratings = {'T1': 0, 'T2': 1, 'T3': 2, 'T4': 3, 'T5': 4}
 
-sortable_snowshoe_ratings = {
-    'R1': 0,
-    'R2': 1,
-    'R3': 2,
-    'R4': 3,
-    'R5': 4
-}
+sortable_snowshoe_ratings = {'R1': 0, 'R2': 1, 'R3': 2, 'R4': 3, 'R5': 4}
 
-sortable_mtb_up_ratings = {
-    'M1': 0,
-    'M2': 1,
-    'M3': 2,
-    'M4': 3,
-    'M5': 4
-}
+sortable_mtb_up_ratings = {'M1': 0, 'M2': 1, 'M3': 2, 'M4': 3, 'M5': 4}
 
-sortable_mtb_down_ratings = {
-    'V1': 0,
-    'V2': 1,
-    'V3': 2,
-    'V4': 3,
-    'V5': 4
-}
+sortable_mtb_down_ratings = {'V1': 0, 'V2': 1, 'V3': 2, 'V4': 3, 'V5': 4}
 
-sortable_frequentation_types = {
-    'quiet': 0,
-    'some': 1,
-    'crowded': 2,
-    'overcrowded': 3
-}
+sortable_frequentation_types = {'quiet': 0, 'some': 1, 'crowded': 2, 'overcrowded': 3}
 
 sortable_condition_ratings = {
     'excellent': 0,
     'good': 1,
     'average': 2,
     'poor': 3,
-    'awful': 4
+    'awful': 4,
 }
 
 sortable_snow_quality_ratings = {
@@ -306,7 +240,7 @@ sortable_snow_quality_ratings = {
     'good': 1,
     'average': 2,
     'poor': 3,
-    'awful': 4
+    'awful': 4,
 }
 
 sortable_snow_quantity_ratings = {
@@ -314,15 +248,10 @@ sortable_snow_quantity_ratings = {
     'good': 1,
     'average': 2,
     'poor': 3,
-    'awful': 4
+    'awful': 4,
 }
 
-sortable_glacier_ratings = {
-    'easy': 0,
-    'possible': 1,
-    'difficult': 2,
-    'impossible': 3
-}
+sortable_glacier_ratings = {'easy': 0, 'possible': 1, 'difficult': 2, 'impossible': 3}
 
 sortable_severities = {
     'severity_no': 0,
@@ -338,7 +267,7 @@ sortable_avalanche_levels = {
     'level_2': 2,
     'level_3': 3,
     'level_4': 4,
-    'level_5': 5
+    'level_5': 5,
 }
 
 sortable_avalanche_slopes = {
@@ -346,5 +275,5 @@ sortable_avalanche_slopes = {
     'slope_30_35': 1,
     'slope_35_40': 2,
     'slope_40_45': 3,
-    'slope_gt_45': 4
+    'slope_gt_45': 4,
 }

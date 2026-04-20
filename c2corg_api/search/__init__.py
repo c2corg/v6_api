@@ -1,7 +1,15 @@
+from elasticsearch import Elasticsearch
+from elasticsearch_dsl import Search
+from elasticsearch_dsl.connections import connections
+from elasticsearch_dsl.query import MultiMatch
+from kombu import Exchange, Queue, pools
+from kombu.connection import Connection
+
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.book import BOOK_TYPE
-from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.models.common.attributes import DefaultLangs
+from c2corg_api.models.coverage import COVERAGE_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
@@ -9,10 +17,10 @@ from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.models.xreport import XREPORT_TYPE
-from c2corg_api.models.coverage import COVERAGE_TYPE
 from c2corg_api.search.mappings.area_mapping import SearchArea
 from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.book_mapping import SearchBook
+from c2corg_api.search.mappings.coverage_mapping import SearchCoverage
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
@@ -20,13 +28,6 @@ from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.search.mappings.xreport_mapping import SearchXreport
-from c2corg_api.search.mappings.coverage_mapping import SearchCoverage
-from elasticsearch import Elasticsearch
-from elasticsearch_dsl import Search
-from elasticsearch_dsl.connections import connections
-from elasticsearch_dsl.query import MultiMatch
-from kombu import Exchange, Queue, pools
-from kombu.connection import Connection
 
 # the maximum number of documents that can be returned for each document type
 SEARCH_LIMIT_MAX = 50
@@ -36,18 +37,23 @@ SEARCH_LIMIT_MAX = 50
 SEARCH_LIMIT_DEFAULT = 10
 
 elasticsearch_config = {
-    'client': None,
+    'client': Elasticsearch | None,
     'index': None,
     'host': None,
-    'port': None
+    'port': None,
 }
 
 
 def client_from_config(settings):
-    return Elasticsearch([{
-        'host': settings['elasticsearch.host'],
-        'port': int(settings['elasticsearch.port'])
-    }], maxsize=int(settings['elasticsearch.pool']))
+    return Elasticsearch(
+        [
+            {
+                'host': settings['elasticsearch.host'],
+                'port': int(settings['elasticsearch.port']),
+            }
+        ],
+        maxsize=int(settings['elasticsearch.pool']),
+    )
 
 
 def configure_es_from_config(settings):
@@ -66,8 +72,7 @@ def get_queue_config(settings):
     class QueueConfiguration(object):
         def __init__(self, settings):
             self.connection = Connection(
-                settings['redis.url'],
-                virtual_host=settings['redis.db_queue']
+                settings['redis.url'], virtual_host=settings['redis.db_queue']
             )
             self.exchange = Exchange(settings['redis.exchange'], type='direct')
             self.queue = Queue(settings['redis.queue_es_sync'], self.exchange)
@@ -79,7 +84,8 @@ def create_search(document_type):
     return Search(
         using=elasticsearch_config['client'],
         index=elasticsearch_config['index'],
-        doc_type=search_documents[document_type])
+        doc_type=search_documents[document_type],
+    )
 
 
 def get_text_query_on_title(search_term, search_lang=None):
@@ -90,7 +96,7 @@ def get_text_query_on_title(search_term, search_lang=None):
         fields.append('title_*.raw^2')
     else:
         # if a language is given, boost the fields for the language
-        for lang in default_langs:
+        for lang in DefaultLangs:
             if lang == search_lang:
                 fields.append('title_{0}.ngram^2'.format(lang))
                 fields.append('title_{0}.raw^3'.format(lang))
@@ -99,10 +105,7 @@ def get_text_query_on_title(search_term, search_lang=None):
                 fields.append('title_{0}.raw^2'.format(lang))
 
     return MultiMatch(
-        query=search_term,
-        fuzziness='auto',
-        operator='and',
-        fields=fields
+        query=search_term, fuzziness='auto', operator='and', fields=fields
     )
 
 

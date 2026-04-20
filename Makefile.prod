@@ -10,7 +10,6 @@ export site_packages = $(SITE_PACKAGES)
 
 PYTHON = python
 PYTEST = pytest
-FLAKE = flake8
 
 .PHONY: help
 help:
@@ -35,7 +34,7 @@ run-background-jobs: install production.ini
 	$(PYTHON) c2corg_api/scripts/jobs/scheduler.py production.ini
 
 flush-redis: install production.ini
-	$(PYTHON) c2corg_api/scripts/redis-flushdb.py production.ini
+	$(PYTHON) c2corg_api/scripts/redis_flushdb.py production.ini
 
 load-env: $(TEMPLATE_FILES)
 

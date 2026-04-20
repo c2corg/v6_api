@@ -17,23 +17,15 @@ DEFAULT_FIELDS = [
     'focal_length',
     'fnumber',
     'iso_speed',
-    'quality'
+    'quality',
 ]
 
-DEFAULT_REQUIRED = [
-    'locales',
-    'image_type'
-]
+DEFAULT_REQUIRED = ['locales', 'image_type']
 
-LISTING_FIELDS = [
-    'locales.title',
-    'geometry.geom',
-    'filename',
-    'author'
-]
+LISTING_FIELDS = ['locales.title', 'geometry.geom', 'filename', 'author']
 
 fields_image = {
     'fields': DEFAULT_FIELDS,
     'required': DEFAULT_REQUIRED,
-    'listing': LISTING_FIELDS
+    'listing': LISTING_FIELDS,
 }

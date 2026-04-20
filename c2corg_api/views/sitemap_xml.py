@@ -1,26 +1,25 @@
 import functools
 import logging
+from datetime import date, datetime, timezone
+from math import ceil
 
-from c2corg_api import DBSession, caching
-from c2corg_api.caching import cache_sitemap_xml
-from c2corg_api.models.cache_version import CacheVersion
-from c2corg_api.models.document import Document, DocumentLocale
-from c2corg_api.models.route import ROUTE_TYPE, RouteLocale
-from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.views import cors_policy, etag_cache
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views.validation import create_int_validator, \
-    validate_document_type
-from c2corg_api.caching import get_or_create
 from cornice.renderer import JSONError
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPNotFound
 from pyramid.interfaces import IRendererFactory
 from pyramid.renderers import string_renderer_factory
-from sqlalchemy.sql.functions import func
-from math import ceil
-from datetime import date, datetime, timezone
 from slugify import slugify
+from sqlalchemy import func
+
+from c2corg_api import DBSession, caching
+from c2corg_api.caching import cache_sitemap_xml, get_or_create
+from c2corg_api.models.cache_version import CacheVersion
+from c2corg_api.models.document import Document, DocumentLocale
+from c2corg_api.models.route import ROUTE_TYPE, RouteLocale
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
+from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import cors_policy, etag_cache
+from c2corg_api.views.validation import create_int_validator, validate_document_type
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +39,7 @@ UI_ENTRY_POINTS = {
     'o': 'outings',
     'r': 'routes',
     'w': 'waypoints',
-    'x': 'xreports'
+    'x': 'xreports',
 }
 
 validate_page = create_int_validator('i')
@@ -53,14 +52,9 @@ def render_errors(request):
     a ``render_errors`` callable
     expected by :meth:`cornice.service.Service.default_error_handler`.
     """
-    cornicejson = request.registry.queryUtility(
-        IRendererFactory,
-        name='cornicejson',
-    )
+    cornicejson = request.registry.queryUtility(IRendererFactory, name='cornicejson')
     return JSONError(
-        cornicejson.serializer,
-        cornicejson.kw,
-        request.errors + [dict(request.headers)]
+        cornicejson.serializer, cornicejson.kw, request.errors + [dict(request.headers)]
     )
 
 
@@ -68,13 +62,15 @@ string_renderer_factory.render_errors = render_errors
 
 
 @resource(
-    collection_path='/sitemaps.xml', path='/sitemaps.xml/{doc_type}/{i}.xml',
-    cors_policy=cors_policy, renderer='string')
+    collection_path='/sitemaps.xml',
+    path='/sitemaps.xml/{doc_type}/{i}.xml',
+    cors_policy=cors_policy,
+    renderer='string',
+)
 class SitemapXml(ACLDefault):
-
     @view()
     def collection_get(self):
-        """ Returns a sitemap index file.
+        """Returns a sitemap index file.
         See: http://www.sitemaps.org/protocol.html
 
         The response consists of a list of URLs of sitemaps.
@@ -102,55 +98,49 @@ class SitemapXml(ACLDefault):
         cache_key = _get_cache_key()
         etag_cache(self.request, cache_key)
 
-        self.request.response.content_type = "text/xml"
+        self.request.response.content_type = 'text/xml'
 
-        return get_or_create(
-            cache_sitemap_xml,
-            cache_key,
-            _get_sitemap_index
-        )
+        return get_or_create(cache_sitemap_xml, cache_key, _get_sitemap_index)
 
     @view(validators=[validate_page, validate_document_type])
     def get(self):
-        """ Returns a sitemap file for a given
+        """Returns a sitemap file for a given
         type and sitemap page number.
         """
         doc_type = self.request.validated['doc_type']
         i = self.request.validated['i']
 
-        self.request.response.content_type = "text/xml"
+        self.request.response.content_type = 'text/xml'
 
         cache_key = _get_cache_key(doc_type, i)
         etag_cache(self.request, cache_key)
 
         return get_or_create(
-            cache_sitemap_xml,
-            cache_key,
-            functools.partial(_get_sitemap, doc_type, i))
+            cache_sitemap_xml, cache_key, functools.partial(_get_sitemap, doc_type, i)
+        )
 
 
 def _get_cache_key(doc_type=None, i=None):
     if doc_type:
         return '{}-{}-{}-{}'.format(
-            doc_type, i, date.today().isoformat(), caching.CACHE_VERSION)
+            doc_type, i, date.today().isoformat(), caching.CACHE_VERSION
+        )
     else:
-        return '{}-{}'.format(
-            date.today().isoformat(), caching.CACHE_VERSION)
+        return '{}-{}'.format(date.today().isoformat(), caching.CACHE_VERSION)
 
 
 def _get_sitemap_index():
-    document_locales_per_type = DBSession. \
-        query(Document.type, func.count().label('count')). \
-        join(
-            DocumentLocale,
-            Document.document_id == DocumentLocale.document_id). \
-        filter(Document.type != USERPROFILE_TYPE). \
-        group_by(Document.type). \
-        all()
+    document_locales_per_type = (
+        DBSession.query(Document.type, func.count().label('count'))
+        .join(DocumentLocale, Document.document_id == DocumentLocale.document_id)
+        .filter(Document.type != USERPROFILE_TYPE)
+        .group_by(Document.type)
+        .all()
+    )
 
     sitemaps = []
 
-    now = datetime.utcnow().replace(tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
     lastmod = now.isoformat()
 
     template = """<sitemap>
@@ -161,25 +151,23 @@ def _get_sitemap_index():
     for doc_type, count in document_locales_per_type:
         num_sitemaps = ceil(count / PAGES_PER_SITEMAP)
         sitemaps_for_type = [
-            template.format(
-                doc_type=doc_type,
-                i=i,
-                lastmod=lastmod
-            )
+            template.format(doc_type=doc_type, i=i, lastmod=lastmod)
             for i in range(0, num_sitemaps)
-            ]
+        ]
         sitemaps.extend(sitemaps_for_type)
 
     return """<?xml version="1.0" encoding="UTF-8"?>
     <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     {}
-    </sitemapindex>""".format("\n".join(sitemaps))
+    </sitemapindex>""".format('\n'.join(sitemaps))
 
 
 def _get_sitemap(doc_type, i):
     fields = [
-        Document.document_id, DocumentLocale.lang, DocumentLocale.title,
-        CacheVersion.last_updated
+        Document.document_id,
+        DocumentLocale.lang,
+        DocumentLocale.title,
+        CacheVersion.last_updated,
     ]
 
     # include `title_prefix` for routes
@@ -187,27 +175,27 @@ def _get_sitemap(doc_type, i):
     if is_route:
         fields.append(RouteLocale.title_prefix)
 
-    base_query = DBSession. \
-        query(*fields). \
-        select_from(Document). \
-        join(DocumentLocale,
-             Document.document_id == DocumentLocale.document_id)
+    base_query = (
+        DBSession.query(*fields)
+        .select_from(Document)
+        .join(DocumentLocale, Document.document_id == DocumentLocale.document_id)
+    )
 
     if is_route:
         # joining on `RouteLocale.__table_` instead of `RouteLocale` to
         # avoid that SQLAlchemy create an additional join on DocumentLocale
-        base_query = base_query. \
-            join(RouteLocale.__table__,
-                 DocumentLocale.id == RouteLocale.id)
+        base_query = base_query.join(
+            RouteLocale.__table__, DocumentLocale.id == RouteLocale.id
+        )
 
-    base_query = base_query. \
-        join(CacheVersion,
-             Document.document_id == CacheVersion.document_id). \
-        filter(Document.redirects_to.is_(None)). \
-        filter(Document.type == doc_type). \
-        order_by(Document.document_id, DocumentLocale.lang). \
-        limit(PAGES_PER_SITEMAP). \
-        offset(PAGES_PER_SITEMAP * i)
+    base_query = (
+        base_query.join(CacheVersion, Document.document_id == CacheVersion.document_id)
+        .filter(Document.redirects_to.is_(None))
+        .filter(Document.type == doc_type)
+        .order_by(Document.document_id, DocumentLocale.lang)
+        .limit(PAGES_PER_SITEMAP)
+        .offset(PAGES_PER_SITEMAP * i)
+    )
 
     document_locales = base_query.all()
 
@@ -219,24 +207,24 @@ def _get_sitemap(doc_type, i):
     return """<?xml version="1.0" encoding="UTF-8"?>
     <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     {}
-    </urlset>""".format("\n".join([
-        _format_page(ui_entry_point, *locale)
-        for locale in document_locales
-    ]))
+    </urlset>""".format(
+        '\n'.join(
+            [_format_page(ui_entry_point, *locale) for locale in document_locales]
+        )
+    )
 
 
-def _format_page(
-        ui_entry_point, doc_id, lang, title, last_updated, title_prefix=None):
+def _format_page(ui_entry_point, doc_id, lang, title, last_updated, title_prefix=None):
 
     page = {
         'document_id': doc_id,
         'lang': lang,
         'lastmod': last_updated.isoformat(),
-        'ui_entry_point': ui_entry_point
+        'ui_entry_point': ui_entry_point,
     }
 
     if title_prefix:
-        page['title'] = slugify("{} {}".format(title_prefix, title))
+        page['title'] = slugify('{} {}'.format(title_prefix, title))
     else:
         page['title'] = slugify(title)
 

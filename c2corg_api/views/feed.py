@@ -1,22 +1,25 @@
 from collections import defaultdict
+from urllib import parse as urllib_parse
 
-from c2corg_api.security.acl import ACLDefault
+from cornice.resource import resource, view
+from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
+from sqlalchemy import and_, func, or_
+from sqlalchemy.orm import load_only, undefer
+
 from c2corg_api.models import DBSession
-from c2corg_api.models.feed import DocumentChange, FollowedUser, FilterArea
+from c2corg_api.models.feed import DocumentChange, FilterArea, FollowedUser
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
+from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import cors_policy, restricted_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import document_configs
-from c2corg_api.views.validation import validate_preferred_lang_param, \
-    validate_token_pagination, validate_user_id
-from cornice.resource import resource, view
-from c2corg_api.views import cors_policy, restricted_view
-from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden
-from sqlalchemy.orm import undefer, load_only
-from sqlalchemy.sql.expression import or_, and_
-from sqlalchemy.sql.functions import func
-from urllib import parse as urllib_parse
+from c2corg_api.views.validation import (
+    validate_preferred_lang_param,
+    validate_token_pagination,
+    validate_user_id,
+)
 
 DEFAULT_PAGE_LIMIT = 10
 MAX_PAGE_LIMIT = 50
@@ -24,9 +27,7 @@ MAX_PAGE_LIMIT = 50
 
 @resource(path='/feed', cors_policy=cors_policy)
 class FeedRest(ACLDefault):
-
-    @view(validators=[
-        validate_preferred_lang_param, validate_token_pagination])
+    @view(validators=[validate_preferred_lang_param, validate_token_pagination])
     def get(self):
         """Get the public homepage feed.
 
@@ -53,18 +54,18 @@ class FeedRest(ACLDefault):
 
         """
         lang, token_id, token_time, limit = get_params(self.request)
-        ignore_admin_changes_filter = get_ignore_admin_entries_filter(
-            self.request)
+        ignore_admin_changes_filter = get_ignore_admin_entries_filter(self.request)
         changes = get_changes_of_feed(
-            token_id, token_time, limit, ignore_admin_changes_filter)
+            token_id, token_time, limit, ignore_admin_changes_filter
+        )
         return load_feed(changes, lang)
 
 
 @resource(path='/personal-feed', cors_policy=cors_policy)
 class PersonalFeedRest(ACLDefault):
-
-    @restricted_view(validators=[
-        validate_preferred_lang_param, validate_token_pagination])
+    @restricted_view(
+        validators=[validate_preferred_lang_param, validate_token_pagination]
+    )
     def get(self):
         """Get the personal homepage feed for the authenticated user.
 
@@ -76,19 +77,22 @@ class PersonalFeedRest(ACLDefault):
         """
         user_id = self.request.authenticated_userid
         lang, token_id, token_time, limit = get_params(self.request)
-        ignore_admin_changes_filter = get_ignore_admin_entries_filter(
-            self.request)
+        ignore_admin_changes_filter = get_ignore_admin_entries_filter(self.request)
         changes = get_changes_of_personal_feed(
-            user_id, token_id, token_time, limit, ignore_admin_changes_filter)
+            user_id, token_id, token_time, limit, ignore_admin_changes_filter
+        )
         return load_feed(changes, lang)
 
 
 @resource(path='/profile-feed', cors_policy=cors_policy)
 class ProfileFeedRest(ACLDefault):
-
-    @view(validators=[
-        validate_preferred_lang_param, validate_token_pagination,
-        validate_user_id])
+    @view(
+        validators=[
+            validate_preferred_lang_param,
+            validate_token_pagination,
+            validate_user_id,
+        ]
+    )
     def get(self):
         """Get the user profile feed for a user.
 
@@ -107,20 +111,24 @@ class ProfileFeedRest(ACLDefault):
 
         # load the requested user
         requested_user_id = self.request.validated['u']
-        requested_user = DBSession.query(User). \
-            filter(User.id == requested_user_id). \
-            filter(User.email_validated). \
-            options(load_only(User.id, User.is_profile_public)). \
-            first()
+        requested_user = (
+            DBSession.query(User)
+            .filter(User.id == requested_user_id)
+            .filter(User.email_validated)
+            .options(load_only(User.id, User.is_profile_public))
+            .first()
+        )
 
         if not requested_user:
             raise HTTPNotFound('user not found')
-        elif requested_user.is_profile_public or \
-                self.request.has_permission('authenticated'):
+        elif requested_user.is_profile_public or self.request.has_permission(
+            'authenticated'
+        ):
             # only return the feed if authenticated or if the user marked
             # the profile as public
             changes = get_changes_of_profile_feed(
-                requested_user_id, token_id, token_time, limit)
+                requested_user_id, token_id, token_time, limit
+            )
             return load_feed(changes, lang)
         else:
             raise HTTPForbidden('no permission to see the feed')
@@ -131,17 +139,15 @@ def get_params(request, default_page_limit=DEFAULT_PAGE_LIMIT):
     token_id = request.validated.get('token_id')
     token_time = request.validated.get('token_time')
     limit = request.validated.get('limit')
-    limit = min(
-        default_page_limit if limit is None else limit,
-        MAX_PAGE_LIMIT)
+    limit = min(default_page_limit if limit is None else limit, MAX_PAGE_LIMIT)
 
     return lang, token_id, token_time, limit
 
 
 def get_changes_of_feed(token_id, token_time, limit, extra_filter=None):
-    query = DBSession. \
-        query(DocumentChange). \
-        order_by(DocumentChange.time.desc(), DocumentChange.change_id)
+    query = DBSession.query(DocumentChange).order_by(
+        DocumentChange.time.desc(), DocumentChange.change_id
+    )
 
     # pagination filter
     if token_id is not None and token_time:
@@ -150,7 +156,10 @@ def get_changes_of_feed(token_id, token_time, limit, extra_filter=None):
                 DocumentChange.time < token_time,
                 and_(
                     DocumentChange.time == token_time,
-                    DocumentChange.change_id > token_id)))
+                    DocumentChange.change_id > token_id,
+                ),
+            )
+        )
 
     if extra_filter is not None:
         query = query.filter(extra_filter)
@@ -159,18 +168,22 @@ def get_changes_of_feed(token_id, token_time, limit, extra_filter=None):
 
 
 def get_changes_of_personal_feed(
-        user_id, token_id, token_time, limit, ignore_admin_changes_filter):
-    user = DBSession.query(User). \
-        filter(User.id == user_id). \
-        options(undefer('has_area_filter')). \
-        options(undefer('is_following_users')). \
-        first()
+    user_id, token_id, token_time, limit, ignore_admin_changes_filter
+):
+    user = (
+        DBSession.query(User)
+        .filter(User.id == user_id)
+        .options(undefer(User.has_area_filter))
+        .options(undefer(User.is_following_users))
+        .first()
+    )
 
     if has_no_custom_filter(user):
         # if no custom filter is set (no area/activity filter and no followed
         # users), return the full/standard feed
         return get_changes_of_feed(
-            token_id, token_time, limit, ignore_admin_changes_filter)
+            token_id, token_time, limit, ignore_admin_changes_filter
+        )
 
     personal_filter = create_personal_filter(user, ignore_admin_changes_filter)
 
@@ -178,7 +191,7 @@ def get_changes_of_personal_feed(
 
 
 def create_personal_filter(user, ignore_admin_changes_filter):
-    """ Create a filter condition for the query to get the changes taking
+    """Create a filter condition for the query to get the changes taking
     the filter preferences of the user into account.
     """
     if user.feed_followed_only:
@@ -187,8 +200,7 @@ def create_personal_filter(user, ignore_admin_changes_filter):
 
     # filter on area, activity and langs (`and` connected)
     feed_filter = None
-    if user.feed_filter_activities or user.has_area_filter or \
-       user.feed_filter_langs:
+    if user.feed_filter_activities or user.has_area_filter or user.feed_filter_langs:
         area_filter = create_area_filter(user)
         activity_filter = create_activity_filter(user)
         lang_filter = create_lang_filter(user)
@@ -220,11 +232,17 @@ def create_personal_filter(user, ignore_admin_changes_filter):
     # `or` connect the filter on followed users with the area/activity filter
     if feed_filter is not None and followed_users_filter is not None:
         filter = or_(feed_filter, followed_users_filter)
-        return and_(filter, ignore_admin_changes_filter) \
-            if ignore_admin_changes_filter else filter
+        return (
+            and_(filter, ignore_admin_changes_filter)
+            if ignore_admin_changes_filter
+            else filter
+        )
     elif feed_filter is not None:
-        return and_(feed_filter, ignore_admin_changes_filter) \
-            if ignore_admin_changes_filter else feed_filter
+        return (
+            and_(feed_filter, ignore_admin_changes_filter)
+            if ignore_admin_changes_filter
+            else feed_filter
+        )
     elif followed_users_filter is not None:
         return followed_users_filter
     else:
@@ -233,11 +251,12 @@ def create_personal_filter(user, ignore_admin_changes_filter):
 
 def has_no_custom_filter(user):
     has_custom_filter = (
-        user.feed_filter_activities or
-        user.feed_filter_langs or
-        user.has_area_filter or
-        user.is_following_users or
-        user.feed_followed_only)
+        user.feed_filter_activities
+        or user.feed_filter_langs
+        or user.has_area_filter
+        or user.is_following_users
+        or user.feed_followed_only
+    )
     return not has_custom_filter
 
 
@@ -245,11 +264,12 @@ def create_followed_users_filter(user):
     if not user.is_following_users:
         return None
 
-    followed_users = DBSession. \
-        query(func.array_agg(FollowedUser.followed_user_id)). \
-        filter(FollowedUser.follower_user_id == user.id). \
-        group_by(FollowedUser.follower_user_id). \
-        subquery('followed_users')
+    followed_users = (
+        DBSession.query(func.array_agg(FollowedUser.followed_user_id))
+        .filter(FollowedUser.follower_user_id == user.id)
+        .group_by(FollowedUser.follower_user_id)
+        .scalar_subquery()
+    )
     return DocumentChange.user_ids.op('&&')(followed_users)
 
 
@@ -257,11 +277,12 @@ def create_area_filter(user):
     if not user.has_area_filter:
         return None
 
-    filtered_area_ids = DBSession. \
-        query(func.array_agg(FilterArea.area_id)). \
-        filter(FilterArea.user_id == user.id). \
-        group_by(FilterArea.user_id). \
-        subquery('filtered_area_ids')
+    filtered_area_ids = (
+        DBSession.query(func.array_agg(FilterArea.area_id))
+        .filter(FilterArea.user_id == user.id)
+        .group_by(FilterArea.user_id)
+        .scalar_subquery()
+    )
     return DocumentChange.area_ids.op('&&')(filtered_area_ids)
 
 
@@ -280,9 +301,7 @@ def create_lang_filter(user):
 
 
 def get_changes_of_profile_feed(user_id, token_id, token_time, limit):
-    user_exists_query = DBSession.query(User). \
-        filter(User.id == user_id). \
-        exists()
+    user_exists_query = DBSession.query(User).filter(User.id == user_id).exists()
     user_exists = DBSession.query(user_exists_query).scalar()
 
     if not user_exists:
@@ -294,8 +313,7 @@ def get_changes_of_profile_feed(user_id, token_id, token_time, limit):
 
 
 def load_feed(changes, lang):
-    """ Load the documents referenced in the given changes and build the feed.
-    """
+    """Load the documents referenced in the given changes and build the feed."""
     if not changes:
         return {'feed': []}
 
@@ -304,8 +322,7 @@ def load_feed(changes, lang):
 
     # only return changes for which the document/user could be loaded
     changes = [
-        c for c in changes
-        if documents.get(c.user_id) and documents.get(c.document_id)
+        c for c in changes if documents.get(c.user_id) and documents.get(c.document_id)
     ]
 
     if not changes:
@@ -313,8 +330,8 @@ def load_feed(changes, lang):
 
     last_change = changes[-1]
     pagination_token = '{},{}'.format(
-        last_change.change_id,
-        urllib_parse.quote_plus(last_change.time.isoformat()))
+        last_change.change_id, urllib_parse.quote_plus(last_change.time.isoformat())
+    )
 
     return {
         'feed': [
@@ -329,25 +346,25 @@ def load_feed(changes, lang):
                 ],
                 'change_type': c.change_type,
                 'document': documents[c.document_id],
-                'image1':
-                    documents[c.image1_id]
-                    if c.image1_id and documents.get(c.image1_id) else None,
-                'image2':
-                    documents[c.image2_id]
-                    if c.image2_id and documents.get(c.image2_id) else None,
-                'image3':
-                    documents[c.image3_id]
-                    if c.image3_id and documents.get(c.image3_id) else None,
-                'more_images': c.more_images
+                'image1': documents[c.image1_id]
+                if c.image1_id and documents.get(c.image1_id)
+                else None,
+                'image2': documents[c.image2_id]
+                if c.image2_id and documents.get(c.image2_id)
+                else None,
+                'image3': documents[c.image3_id]
+                if c.image3_id and documents.get(c.image3_id)
+                else None,
+                'more_images': c.more_images,
             }
             for c in changes
         ],
-        'pagination_token': pagination_token
+        'pagination_token': pagination_token,
     }
 
 
 def get_documents_to_load(changes):
-    """ Return a dict containing the document ids (grouped by document type)
+    """Return a dict containing the document ids (grouped by document type)
     that are needed for the given changes.
 
     For example given the changes:
@@ -387,8 +404,9 @@ def load_documents(documents_to_load, lang):
 
     for document_type, document_ids in documents_to_load.items():
         document_config = document_configs[document_type]
-        docs = get_documents_for_ids(
-            document_ids, lang, document_config).get('documents')
+        docs = get_documents_for_ids(document_ids, lang, document_config).get(
+            'documents'
+        )
 
         for doc in docs:
             documents[doc['document_id']] = doc

@@ -27,7 +27,7 @@ help:
 	@echo "- run-background-jobs"	Run the background jobs
 	@echo
 	@echo "- test					Run the unit tests"
-	@echo "- lint					Run flake8 checker on the Python code"
+	@echo "- lint					Run ruff checker on the Python code"
 	@echo
 	@echo "Secondary targets:"
 	@echo
@@ -62,7 +62,7 @@ serve:
 		pserve development.ini --reload
 
 lint: 
-		flake8 $(SRC_DIRS)
+		ruff check $(SRC_DIRS)
 		@echo "Wonderful, python style is Ok!"
 
 test:
@@ -88,7 +88,7 @@ run-background-jobs:
 		python c2corg_api/scripts/jobs/scheduler.py development.ini
 
 flush-redis: 
-		python c2corg_api/scripts/redis-flushdb.py development.ini
+		python c2corg_api/scripts/redis_flushdb.py development.ini
 
 load-env: $(TEMPLATE_FILES)
 

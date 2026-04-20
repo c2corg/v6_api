@@ -1,54 +1,57 @@
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api import DBSession
-from c2corg_api.models.area import schema_listing_area, Area
-from c2corg_api.models.schema_utils import SchemaAssociationDoc
-from c2corg_api.models.user import User
-from c2corg_api.views import cors_policy, restricted_json_view, \
-    restricted_view, to_json_dict, set_best_locale
-from c2corg_api.views.validation import validate_preferred_lang_param
-from c2corg_api.models.common.attributes import activities, default_langs
+from typing import List
+
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from colander import MappingSchema, SchemaNode, String, Boolean, Sequence, \
-    OneOf, required
+from pydantic import BaseModel
 from sqlalchemy.orm import joinedload, load_only
 
+from c2corg_api import DBSession
+from c2corg_api.models.area import Area, schema_listing_area
+from c2corg_api.models.common.attributes import Activities, DefaultLangs
+from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models.user import User
+from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import (
+    cors_policy,
+    restricted_json_view,
+    restricted_view,
+    set_best_locale,
+    to_json_dict,
+)
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
+from c2corg_api.views.validation import validate_preferred_lang_param
 
-class FilterPreferencesSchema(MappingSchema):
-    activities = SchemaNode(
-        Sequence(),
-        SchemaNode(String(), validator=OneOf(activities)),
-        missing=required)
-    langs = SchemaNode(
-        Sequence(),
-        SchemaNode(String(), validator=OneOf(default_langs)),
-        missing=required)
-    areas = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=required)
-    followed_only = SchemaNode(Boolean(), missing=required)
+
+class AreaRef(BaseModel):
+    document_id: int
+
+
+class FilterPreferencesSchema(BaseModel):
+    activities: List[Activities]
+    langs: List[DefaultLangs]
+    areas: List[AreaRef]
+    followed_only: bool
 
 
 @resource(path='/users/preferences', cors_policy=cors_policy)
 class UserFilterPreferencesRest(ACLDefault):
-
     def get_user(self, with_area_locales=True):
         user_id = self.request.authenticated_userid
 
-        area_joinedload = \
-            joinedload(User.feed_filter_areas). \
-            load_only(
-                Area.document_id, Area.area_type, Area.version,
-                Area.protected, Area.type)
+        area_joinedload = joinedload(User.feed_filter_areas).load_only(
+            Area.document_id, Area.area_type, Area.version, Area.protected, Area.type
+        )
 
         if with_area_locales:
-            area_joinedload = area_joinedload. \
-                joinedload('locales'). \
-                load_only('lang', 'title', 'version')
+            area_joinedload = area_joinedload.joinedload(Area.locales).load_only(
+                DocumentLocale.lang, DocumentLocale.title, DocumentLocale.version
+            )
 
-        return DBSession. \
-            query(User). \
-            options(area_joinedload). \
-            get(user_id)
+        return (
+            DBSession.query(User)
+            .options(area_joinedload)
+            .filter(User.id == user_id)
+            .first()
+        )
 
     @restricted_view(validators=[validate_preferred_lang_param])
     def get(self):
@@ -77,13 +80,10 @@ class UserFilterPreferencesRest(ACLDefault):
             'followed_only': user.feed_followed_only,
             'activities': user.feed_filter_activities,
             'langs': user.feed_filter_langs,
-            'areas': [
-                to_json_dict(a, schema_listing_area) for a in areas
-            ]
+            'areas': [to_json_dict(a, schema_listing_area) for a in areas],
         }
 
-    @restricted_json_view(
-        schema=FilterPreferencesSchema(), validators=[colander_body_validator])
+    @restricted_json_view(validators=[make_pydantic_validator(FilterPreferencesSchema)])
     def post(self):
         user = self.get_user(with_area_locales=False)
 
@@ -94,17 +94,15 @@ class UserFilterPreferencesRest(ACLDefault):
 
         # update filter areas: get all areas given in the request and
         # then set on `user.feed_filter_areas`
-        area_ids = [
-            a['document_id'] for a in validated['areas']
-        ]
+        area_ids = [a['document_id'] for a in validated['areas']]
         areas = []
         if area_ids:
-            areas = DBSession. \
-                query(Area). \
-                filter(Area.document_id.in_(area_ids)). \
-                options(
-                    load_only(Area.document_id, Area.version, Area.type)). \
-                all()
+            areas = (
+                DBSession.query(Area)
+                .filter(Area.document_id.in_(area_ids))
+                .options(load_only(Area.document_id, Area.version, Area.type))
+                .all()
+            )
 
         user.feed_filter_areas = areas
 

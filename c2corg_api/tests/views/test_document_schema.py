@@ -1,51 +1,64 @@
 from c2corg_api.tests.views import BaseTestRest
-from c2corg_api.views.document_schemas import route_documents_config, \
-    topo_map_documents_config
+from c2corg_api.views.document_schemas import (
+    route_documents_config,
+    topo_map_documents_config,
+)
 
 
 class TestGetDocumentsConfig(BaseTestRest):
+    @staticmethod
+    def _field_names(fields):
+        return [f.key for f in fields]
 
     def test_get_load_only_fields_routes(self):
-        fields = route_documents_config.get_load_only_fields()
-        self.assertIn('elevation_max', fields)
-        self.assertIn('ski_rating', fields)
-        self.assertIn('rock_free_rating', fields)
-        self.assertNotIn('height_diff_access', fields)
-        self.assertNotIn('lift_access', fields)
+        fields = self._field_names(route_documents_config.get_load_only_fields())
+        assert 'elevation_max' in fields
+        assert 'ski_rating' in fields
+        assert 'rock_free_rating' in fields
+        assert 'height_diff_access' not in fields
+        assert 'lift_access' not in fields
 
-        self.assertNotIn('geometry.geom', fields)
-        self.assertNotIn('geom', fields)
+        assert 'geometry.geom' not in fields
+        assert 'geom' not in fields
 
-        self.assertNotIn('locales.title', fields)
-        self.assertNotIn('title', fields)
+        assert 'locales.title' not in fields
+        assert 'title' not in fields
 
     def test_get_load_only_fields_locales_routes(self):
-        fields = route_documents_config.get_load_only_fields_locales()
-        self.assertIn('title', fields)
-        self.assertIn('title_prefix', fields)
-        self.assertIn('summary', fields)
-        self.assertNotIn('description', fields)
-        self.assertNotIn('gear', fields)
+        fields = self._field_names(
+            route_documents_config.get_load_only_fields_locales()
+        )
+        assert 'title' in fields
+        assert 'title_prefix' in fields
+        assert 'summary' in fields
+        assert 'description' not in fields
+        assert 'gear' not in fields
 
     def test_get_load_only_fields_geometry_routes(self):
-        fields = route_documents_config.get_load_only_fields_geometry()
-        self.assertIn('geom', fields)
-        self.assertNotIn('geom_detail', fields)
+        fields = self._field_names(
+            route_documents_config.get_load_only_fields_geometry()
+        )
+        assert 'geom' in fields
+        assert 'geom_detail' not in fields
 
     def test_get_load_only_fields_topo_map(self):
-        fields = topo_map_documents_config.get_load_only_fields()
-        self.assertIn('code', fields)
-        self.assertIn('editor', fields)
-        self.assertNotIn('scale', fields)
-        self.assertNotIn('lift_access', fields)
+        fields = self._field_names(topo_map_documents_config.get_load_only_fields())
+        assert 'code' in fields
+        assert 'editor' in fields
+        assert 'scale' not in fields
+        assert 'lift_access' not in fields
 
     def test_get_load_only_fields_locales_topo_map(self):
-        fields = topo_map_documents_config.get_load_only_fields_locales()
-        self.assertIn('title', fields)
-        self.assertNotIn('summary', fields)
-        self.assertNotIn('description', fields)
+        fields = self._field_names(
+            topo_map_documents_config.get_load_only_fields_locales()
+        )
+        assert 'title' in fields
+        assert 'summary' not in fields
+        assert 'description' not in fields
 
     def test_get_load_only_fields_geometry_topo_map(self):
-        fields = topo_map_documents_config.get_load_only_fields_geometry()
-        self.assertNotIn('geom', fields)
-        self.assertNotIn('geom_detail', fields)
+        fields = self._field_names(
+            topo_map_documents_config.get_load_only_fields_geometry()
+        )
+        assert 'geom' not in fields
+        assert 'geom_detail' not in fields

@@ -6,6 +6,7 @@ def get_search_documents(url_params, meta_params, doc_type):
     """Returns a function that when called with a base-query returns all
     document ids that match the search filters given in the URL parameters.
     """
+
     def search_documents(_, __):
         document_ids, total = search(url_params, meta_params, doc_type)
         return document_ids, total
@@ -37,16 +38,16 @@ def search_with_ids(url_params, meta_params, doc_type, id_chunk=None):
     # Inject a terms filter for the chunk of IDs if provided
     if id_chunk:
         id_chunk_str = [str(document_id) for document_id in id_chunk]
-        terms_filter = {"terms": {"_id": id_chunk_str}}
-        if "bool" not in search_dict.get("query", {}):
-            search_dict["query"] = {"bool": {"filter": []}}
-        elif "filter" not in search_dict["query"]["bool"]:
-            search_dict["query"]["bool"]["filter"] = []
+        terms_filter = {'terms': {'_id': id_chunk_str}}
+        if 'bool' not in search_dict.get('query', {}):
+            search_dict['query'] = {'bool': {'filter': []}}
+        elif 'filter' not in search_dict['query']['bool']:
+            search_dict['query']['bool']['filter'] = []
 
-        search_dict["query"]["bool"]["filter"].append(terms_filter)
+        search_dict['query']['bool']['filter'].append(terms_filter)
 
-        search_dict["from"] = 0
-        search_dict["size"] = len(id_chunk)
+        search_dict['from'] = 0
+        search_dict['size'] = len(id_chunk)
 
     query.update_from_dict(search_dict)
 
@@ -57,26 +58,16 @@ def search_with_ids(url_params, meta_params, doc_type, id_chunk=None):
     return document_ids, total
 
 
-def get_all_filtered_docs(
-    params,
-    meta_params,
-    ids,
-    doc_type
-):
+def get_all_filtered_docs(params, meta_params, ids, doc_type):
     """get all docs ids, taking into account ES filter in params"""
     filtered_doc_ids = []
     total_hits = 0
 
     # use elastic search to apply filters
     # to documents of type ids
-    for _, id_chunk in enumerate(chunk_ids(
-        ids,
-    ), start=1):
+    for _, id_chunk in enumerate(chunk_ids(ids), start=1):
         doc_ids, hits = search_with_ids(
-            params,
-            meta_params,
-            doc_type=doc_type,
-            id_chunk=id_chunk
+            params, meta_params, doc_type=doc_type, id_chunk=id_chunk
         )
         filtered_doc_ids.extend(doc_ids)
         total_hits += hits
@@ -86,13 +77,14 @@ def get_all_filtered_docs(
 
 def chunk_ids(ids_set):
     from c2corg_api.views.document import ES_MAX_RESULT_WINDOW
+
     """
     Yield successive chunks of IDs from a set/list.
     chunk size is ES_MAX_RESULT_WINDOW
     """
     ids_list = list(ids_set)
     for i in range(0, len(ids_list), ES_MAX_RESULT_WINDOW):
-        yield ids_list[i:i + ES_MAX_RESULT_WINDOW]
+        yield ids_list[i : i + ES_MAX_RESULT_WINDOW]
 
 
 def contains_search_params(url_params):

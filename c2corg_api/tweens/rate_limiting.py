@@ -1,20 +1,19 @@
 import logging
-import datetime
-import pytz
+from datetime import datetime, timedelta, timezone
+from smtplib import SMTPAuthenticationError
 
 from pyramid.httpexceptions import HTTPBadRequest, HTTPTooManyRequests
+
 from c2corg_api.emails.email_service import get_email_service
-from c2corg_api.views import http_error_handler
 from c2corg_api.models import DBSession
 from c2corg_api.models.user import User
-from smtplib import SMTPAuthenticationError
+from c2corg_api.views import http_error_handler
 
 log = logging.getLogger(__name__)
 
 
 def rate_limiting_tween_factory(handler, registry):
-    """ Add a rate limiting protection on write requests.
-    """
+    """Add a rate limiting protection on write requests."""
 
     def tween(request):
 
@@ -28,30 +27,36 @@ def rate_limiting_tween_factory(handler, registry):
             # See comment of similar block in jwt_database_validation tween
             return handler(request)
 
-        user = DBSession.query(User).get(request.authenticated_userid)
+        user = DBSession.get(User, request.authenticated_userid)
         if user is None:
-            return http_error_handler(
-                HTTPBadRequest('Unknown user'), request)
+            return http_error_handler(HTTPBadRequest('Unknown user'), request)
 
-        now = datetime.datetime.now(pytz.utc)
+        now = datetime.now(timezone.utc)
         if user.ratelimit_reset is None or user.ratelimit_reset < now:
             # No window exists or it is expired: create a new one.
             span = int(registry.settings.get('rate_limiting.window_span'))
-            limit = int(registry.settings.get(
-                'rate_limiting.limit_robot' if user.robot else
-                'rate_limiting.limit_moderator' if user.moderator else
-                'rate_limiting.limit'))
-            user.ratelimit_reset = now + datetime.timedelta(seconds=span)
+            limit = int(
+                registry.settings.get(
+                    'rate_limiting.limit_robot'
+                    if user.robot
+                    else 'rate_limiting.limit_moderator'
+                    if user.moderator
+                    else 'rate_limiting.limit'
+                )
+            )
+            user.ratelimit_reset = now + timedelta(seconds=span)
             user.ratelimit_remaining = limit - 1
-            log.debug('RATE LIMITING, CREATE WINDOW SPAN : {}'.format(
-                user.ratelimit_reset
-            ))
+            log.debug(
+                'RATE LIMITING, CREATE WINDOW SPAN : {}'.format(user.ratelimit_reset)
+            )
 
         elif user.ratelimit_remaining:
             user.ratelimit_remaining -= 1
-            log.info('RATE LIMITING, REQUESTS REMAINING FOR {} : {}'.format(
-                user.id, user.ratelimit_remaining
-            ))
+            log.info(
+                'RATE LIMITING, REQUESTS REMAINING FOR {} : {}'.format(
+                    user.id, user.ratelimit_remaining
+                )
+            )
 
         else:
             # User is rate limited
@@ -64,8 +69,7 @@ def rate_limiting_tween_factory(handler, registry):
                 user.ratelimit_last_blocked_window = current_window
                 user.ratelimit_times += 1
 
-                max_times = int(
-                    registry.settings.get('rate_limiting.max_times'))
+                max_times = int(registry.settings.get('rate_limiting.max_times'))
                 if user.ratelimit_times > max_times:
                     log.warning('RATE LIMIT BLOCK USER {}'.format(user.id))
                     user.blocked = True
@@ -78,7 +82,8 @@ def rate_limiting_tween_factory(handler, registry):
                     log.error('RATE LIMIT ALERT MAIL : AUTHENTICATION ERROR')
 
             return http_error_handler(
-                HTTPTooManyRequests('Rate limit reached'), request)
+                HTTPTooManyRequests('Rate limit reached'), request
+            )
 
         return handler(request)
 

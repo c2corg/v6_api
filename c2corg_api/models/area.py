@@ -1,42 +1,44 @@
-from c2corg_api.models import schema, Base
-from c2corg_api.models.document import (
-    ArchiveDocument, Document, get_geometry_schema_overrides,
-    schema_document_locale, schema_attributes)
-from c2corg_api.models.enums import area_type
-from c2corg_api.models.schema_utils import restrict_schema, \
-    get_update_schema, get_create_schema
-from c2corg_api.models.utils import copy_attributes
-from c2corg_api.models.common.fields_area import fields_area
-from colanderalchemy import SQLAlchemySchemaNode
-from sqlalchemy import (
-    Column,
-    Integer,
-    ForeignKey
-    )
+from typing import Any, Optional
+
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import Mapped, mapped_column
+
+from c2corg_api.models import Base, schema
 from c2corg_api.models.common import document_types
+from c2corg_api.models.common.fields_area import fields_area
+from c2corg_api.models.document import (
+    ArchiveDocument,
+    Document,
+    geometry_attributes,
+    schema_attributes,
+    schema_locale_attributes,
+)
+from c2corg_api.models.enums import area_type
+from c2corg_api.models.field_spec import build_field_spec
+from c2corg_api.models.utils import copy_attributes
 
 AREA_TYPE = document_types.AREA_TYPE
 
 
-class _AreaMixin(object):
-    area_type = Column(area_type)
+class _AreaMixin:
+    area_type: Mapped[Optional[Any]] = mapped_column(area_type)
 
 
 attributes = ['area_type']
 
 
 class Area(_AreaMixin, Document):
-    """
-    """
+    """ """
+
     __tablename__ = 'areas'
 
-    document_id = Column(
-        Integer,
-        ForeignKey(schema + '.documents.document_id'), primary_key=True)
+    document_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey(schema + '.documents.document_id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': AREA_TYPE,
-        'inherit_condition': Document.document_id == document_id
+        'inherit_condition': Document.document_id == document_id,
     }
 
     def to_archive(self):
@@ -52,40 +54,27 @@ class Area(_AreaMixin, Document):
 
 
 class ArchiveArea(_AreaMixin, ArchiveDocument):
-    """
-    """
+    """ """
+
     __tablename__ = 'areas_archives'
 
-    id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_archives.id'), primary_key=True)
+    id: Mapped[int] = mapped_column(
+        Integer, ForeignKey(schema + '.documents_archives.id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': AREA_TYPE,
-        'inherit_condition': ArchiveDocument.id == id
+        'inherit_condition': ArchiveDocument.id == id,
     }
 
     __table_args__ = Base.__table_args__
 
 
-schema_area = SQLAlchemySchemaNode(
+schema_area = build_field_spec(
     Area,
-    # whitelisted attributes
     includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_document_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POLYGON', 'MULTIPOLYGON'])
-    })
+    locale_fields=schema_locale_attributes,
+    geometry_fields=geometry_attributes,
+)
 
-schema_create_area = get_create_schema(schema_area)
-schema_update_area = get_update_schema(schema_area)
-schema_listing_area = restrict_schema(
-    schema_area, fields_area.get('listing'))
+schema_listing_area = schema_area.restrict(fields_area.get('listing'))

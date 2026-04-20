@@ -1,21 +1,18 @@
-from c2corg_api.caching import cache_document_info
+from pyramid.httpexceptions import HTTPNotFound
+from sqlalchemy.orm import contains_eager, joinedload, load_only, with_polymorphic
+
+from c2corg_api.caching import cache_document_info, get_or_create
 from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import get_cache_key
-from c2corg_api.models.document import DocumentLocale, Document, \
-    get_available_langs
+from c2corg_api.models.document import Document, DocumentLocale, get_available_langs
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.views import etag_cache, \
-    set_best_locale
+from c2corg_api.views import etag_cache, set_best_locale
 from c2corg_api.views.document_listings import add_load_for_profiles
-from c2corg_api.caching import get_or_create
-from pyramid.httpexceptions import HTTPNotFound
-from sqlalchemy.orm import contains_eager, load_only, joinedload
-from sqlalchemy.orm.util import with_polymorphic
 
 
 class DocumentInfoRest(object):
-    """ Base class for all views that return a basic/info version for a
+    """Base class for all views that return a basic/info version for a
     document, that only contains the document_id and title/title_prefix
     of the requested locale.
     This view is used by the UI to generate URL slugs.
@@ -34,61 +31,76 @@ class DocumentInfoRest(object):
         lang = self.request.validated['lang']
 
         def create_response():
-            return self._load_document_info(
-                document_id,
-                lang,
-                document_config.clazz)
+            return self._load_document_info(document_id, lang, document_config.clazz)
 
         cache_key = get_cache_key(
-            document_id,
-            lang,
-            document_type=document_config.document_type)
+            document_id, lang, document_type=document_config.document_type
+        )
 
         if not cache_key:
-            raise HTTPNotFound(
-                'no version for document {0}'.format(document_id))
+            raise HTTPNotFound('no version for document {0}'.format(document_id))
         else:
             etag_cache(self.request, cache_key)
 
-            return get_or_create(
-                cache_document_info, cache_key, create_response)
+            return get_or_create(cache_document_info, cache_key, create_response)
 
     def _load_document_info(self, document_id, lang, clazz):
         is_route = clazz == Route
-        locales_type = with_polymorphic(DocumentLocale, RouteLocale) \
-            if is_route else DocumentLocale
+        locales_type = (
+            with_polymorphic(DocumentLocale, RouteLocale)
+            if is_route
+            else DocumentLocale
+        )
         locales_attr = getattr(clazz, 'locales')
-        locales_type_eager = locales_attr.of_type(RouteLocale) \
-            if is_route else locales_attr
+        locales_type_eager = (
+            locales_attr.of_type(RouteLocale) if is_route else locales_attr
+        )
         locales_load_only = [
-            DocumentLocale.lang, DocumentLocale.title, DocumentLocale.version]
+            DocumentLocale.lang,
+            DocumentLocale.title,
+            DocumentLocale.version,
+        ]
         if is_route:
             locales_load_only.append(RouteLocale.title_prefix)
 
-        document_query = DBSession. \
-            query(clazz). \
-            options(load_only(
-                Document.document_id, Document.version,
-                Document.redirects_to, Document.protected)). \
-            join(locales_type). \
-            filter(getattr(clazz, 'document_id') == document_id). \
-            filter(DocumentLocale.lang == lang). \
-            options(contains_eager(locales_type_eager, alias=locales_type).
-                    load_only(*locales_load_only))
+        document_query = (
+            DBSession.query(clazz)
+            .options(
+                load_only(
+                    Document.document_id,
+                    Document.version,
+                    Document.redirects_to,
+                    Document.protected,
+                )
+            )
+            .join(locales_type)
+            .filter(getattr(clazz, 'document_id') == document_id)
+            .filter(DocumentLocale.lang == lang)
+            .options(
+                contains_eager(locales_type_eager, alias=locales_type).load_only(
+                    *locales_load_only
+                )
+            )
+        )
         document_query = add_load_for_profiles(document_query, clazz)
         document = document_query.first()
 
         if not document:
             # the requested locale might not be available, try to get the
             # document with all locales and set the "best"
-            document_query = DBSession. \
-                query(clazz). \
-                options(load_only(
-                    Document.document_id, Document.version,
-                    Document.redirects_to, Document.protected)). \
-                filter(getattr(clazz, 'document_id') == document_id). \
-                options(joinedload(locales_type_eager).
-                        load_only(*locales_load_only))
+            document_query = (
+                DBSession.query(clazz)
+                .options(
+                    load_only(
+                        Document.document_id,
+                        Document.version,
+                        Document.redirects_to,
+                        Document.protected,
+                    )
+                )
+                .filter(getattr(clazz, 'document_id') == document_id)
+                .options(joinedload(locales_type_eager).load_only(*locales_load_only))
+            )
             document_query = add_load_for_profiles(document_query, clazz)
             document = document_query.first()
 
@@ -100,8 +112,7 @@ class DocumentInfoRest(object):
         if document.redirects_to:
             return {
                 'redirects_to': document.redirects_to,
-                'available_langs': get_available_langs(
-                    document.redirects_to)
+                'available_langs': get_available_langs(document.redirects_to),
             }
 
         assert len(document.locales) == 1
@@ -109,11 +120,11 @@ class DocumentInfoRest(object):
 
         return {
             'document_id': document.document_id,
-            'locales': [{
-                'lang': locale.lang,
-                'title':
-                    locale.title
-                    if clazz != UserProfile else document.name,
-                'title_prefix': locale.title_prefix if is_route else None
-            }]
+            'locales': [
+                {
+                    'lang': locale.lang,
+                    'title': locale.title if clazz != UserProfile else document.name,
+                    'title_prefix': locale.title_prefix if is_route else None,
+                }
+            ],
         }

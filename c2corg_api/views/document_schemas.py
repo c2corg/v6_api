@@ -1,44 +1,60 @@
+from functools import lru_cache
+
 from c2corg_api.models.area import AREA_TYPE, Area, schema_listing_area
-from c2corg_api.models.article import ARTICLE_TYPE, Article, \
-    schema_listing_article
+from c2corg_api.models.article import ARTICLE_TYPE, Article, schema_listing_article
 from c2corg_api.models.book import BOOK_TYPE, Book, schema_listing_book
-from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage, \
-    schema_listing_coverage
-from c2corg_api.models.image import IMAGE_TYPE, Image, schema_listing_image
-from c2corg_api.models.outing import OUTING_TYPE, Outing, schema_outing
-from c2corg_api.models.xreport import XREPORT_TYPE, Xreport, \
-    schema_listing_xreport, XreportLocale
-from c2corg_api.models.route import schema_route, ROUTE_TYPE, Route, \
-    RouteLocale
-from c2corg_api.models.schema_utils import restrict_schema
-from c2corg_api.models.topo_map import MAP_TYPE, TopoMap, \
-    schema_listing_topo_map
-from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile, \
-    schema_listing_user_profile
-from c2corg_api.models.waypoint import WAYPOINT_TYPE, schema_waypoint, \
-    Waypoint, WaypointLocale
-from c2corg_api.views import set_author
 from c2corg_api.models.common import attributes
-from c2corg_api.models.common.fields_outing import fields_outing
-from c2corg_api.models.common.fields_xreport import fields_xreport
-from c2corg_api.models.common.fields_route import fields_route
-from c2corg_api.models.common.fields_waypoint import fields_waypoint
 from c2corg_api.models.common.fields_area import fields_area
 from c2corg_api.models.common.fields_article import fields_article
 from c2corg_api.models.common.fields_book import fields_book
+from c2corg_api.models.common.fields_coverage import fields_coverage
 from c2corg_api.models.common.fields_image import fields_image
+from c2corg_api.models.common.fields_outing import fields_outing
+from c2corg_api.models.common.fields_route import fields_route
 from c2corg_api.models.common.fields_topo_map import fields_topo_map
 from c2corg_api.models.common.fields_user_profile import fields_user_profile
-from c2corg_api.models.common.fields_coverage import fields_coverage
-from functools import lru_cache
+from c2corg_api.models.common.fields_waypoint import fields_waypoint
+from c2corg_api.models.common.fields_xreport import fields_xreport
+from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage, schema_listing_coverage
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
+from c2corg_api.models.image import IMAGE_TYPE, Image, schema_listing_image
+from c2corg_api.models.outing import OUTING_TYPE, Outing, schema_outing
+from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale, schema_route
+from c2corg_api.models.topo_map import MAP_TYPE, TopoMap, schema_listing_topo_map
+from c2corg_api.models.user_profile import (
+    USERPROFILE_TYPE,
+    UserProfile,
+    schema_listing_user_profile,
+)
+from c2corg_api.models.waypoint import (
+    WAYPOINT_TYPE,
+    Waypoint,
+    WaypointLocale,
+    schema_waypoint,
+)
+from c2corg_api.models.xreport import (
+    XREPORT_TYPE,
+    Xreport,
+    XreportLocale,
+    schema_listing_xreport,
+)
+from c2corg_api.views import set_author
 
 
 class GetDocumentsConfig:
-
     def __init__(
-            self, document_type, clazz, schema, clazz_locale=None, fields=None,
-            listing_fields=None, adapt_schema=None, include_areas=True,
-            include_img_count=False, set_custom_fields=None):
+        self,
+        document_type,
+        clazz,
+        schema,
+        clazz_locale=None,
+        fields=None,
+        listing_fields=None,
+        adapt_schema=None,
+        include_areas=True,
+        include_img_count=False,
+        set_custom_fields=None,
+    ):
         self.document_type = document_type
         self.clazz = clazz
         self.schema = schema
@@ -78,22 +94,26 @@ class GetDocumentsConfig:
         return listing_fields
 
     def get_load_only_fields(self):
-        """ Return the fields for a document type that are needed to query
-        documents for the listing views.
+        """Return SQLAlchemy class-bound attributes for document fields that
+        are needed to query documents for the listing views. These attributes
+        can be used directly with SQLAlchemy's load_only() option.
         """
-        return self.fields_document
+        return [getattr(self.clazz, f) for f in self.fields_document]
 
     def get_load_only_fields_locales(self):
-        """ Return the locales fields for a document type that are needed to
-        query documents for the listing views.
+        """Return SQLAlchemy class-bound attributes for locale fields that
+        are needed to query documents for the listing views. These attributes
+        can be used directly with SQLAlchemy's load_only() option.
         """
-        return self.fields_locales
+        locale_clazz = self.clazz_locale or DocumentLocale
+        return [getattr(locale_clazz, f) for f in self.fields_locales]
 
     def get_load_only_fields_geometry(self):
-        """ Return the geometry fields for a document type that are needed to
-        query documents for the listing views.
+        """Return SQLAlchemy class-bound attributes for geometry fields
+        that are needed to query documents for the listing views. These
+        attributes can be used directly with SQLAlchemy's load_only() option.
         """
-        return self.fields_geometry
+        return [getattr(DocumentGeometry, f) for f in self.fields_geometry]
 
 
 def make_schema_adaptor(adapt_schema_for_type, type_field, field_list_type):
@@ -102,17 +122,18 @@ def make_schema_adaptor(adapt_schema_for_type, type_field, field_list_type):
     into a schema which contains only the fields for the waypoint type
     "summit".
     """
+
     def adapt_schema(_base_schema, document):
-        return adapt_schema_for_type(
-            getattr(document, type_field), field_list_type)
+        return adapt_schema_for_type(getattr(document, type_field), field_list_type)
+
     return adapt_schema
 
 
 def get_all_fields(fields, activities, field_list_type):
-    """Returns all fields needed for the given list of activities.
-    """
+    """Returns all fields needed for the given list of activities."""
     fields_list = [
-        fields.get(activity).get(field_list_type) for activity in activities
+        fields.get(activity).get(field_list_type)
+        for activity in activities
         if fields.get(activity)
     ]
 
@@ -125,32 +146,44 @@ def get_all_fields(fields, activities, field_list_type):
 
 
 area_documents_config = GetDocumentsConfig(
-    AREA_TYPE, Area, schema_listing_area,
-    listing_fields=fields_area['listing'], include_areas=False)
+    AREA_TYPE,
+    Area,
+    schema_listing_area,
+    listing_fields=fields_area['listing'],
+    include_areas=False,
+)
 
 
 # articles
 
 
 article_documents_config = GetDocumentsConfig(
-    ARTICLE_TYPE, Article, schema_listing_article,
-    listing_fields=fields_article['listing'], include_areas=False)
+    ARTICLE_TYPE,
+    Article,
+    schema_listing_article,
+    listing_fields=fields_article['listing'],
+    include_areas=False,
+)
 
 
 # books
 
 
 book_documents_config = GetDocumentsConfig(
-    BOOK_TYPE, Book, schema_listing_book,
-    listing_fields=fields_book['listing'], include_areas=False)
+    BOOK_TYPE,
+    Book,
+    schema_listing_book,
+    listing_fields=fields_book['listing'],
+    include_areas=False,
+)
 
 
 # images
 
 
 image_documents_config = GetDocumentsConfig(
-    IMAGE_TYPE, Image, schema_listing_image,
-    listing_fields=fields_image['listing'])
+    IMAGE_TYPE, Image, schema_listing_image, listing_fields=fields_image['listing']
+)
 
 
 # outings
@@ -164,30 +197,40 @@ def adapt_outing_schema_for_activities(activities, field_list_type):
         # `activities` is a required field, so it should not be empty.
         # but old versions might have no activities, so we include the fields
         # for all activities in that case.
-        activities = attributes.activities
+        activities = attributes.Activities
 
     fields = get_all_fields(fields_outing, activities, field_list_type)
-    return restrict_schema(schema_outing, fields)
+    return schema_outing.restrict(fields)
 
 
 outing_schema_adaptor = make_schema_adaptor(
-    adapt_outing_schema_for_activities, 'activities', 'fields')
+    adapt_outing_schema_for_activities, 'activities', 'fields'
+)
 outing_listing_schema_adaptor = make_schema_adaptor(
-    adapt_outing_schema_for_activities, 'activities', 'listing')
+    adapt_outing_schema_for_activities, 'activities', 'listing'
+)
 
 outing_documents_config = GetDocumentsConfig(
-    OUTING_TYPE, Outing, schema_outing, fields=fields_outing,
-    adapt_schema=outing_listing_schema_adaptor, set_custom_fields=set_author,
-    include_img_count=True)
+    OUTING_TYPE,
+    Outing,
+    schema_outing,
+    fields=fields_outing,
+    adapt_schema=outing_listing_schema_adaptor,
+    set_custom_fields=set_author,
+    include_img_count=True,
+)
 
 
 # xreports
 
 
 xreport_documents_config = GetDocumentsConfig(
-    XREPORT_TYPE, Xreport,
-    schema_listing_xreport, clazz_locale=XreportLocale,
-    listing_fields=fields_xreport['listing'])
+    XREPORT_TYPE,
+    Xreport,
+    schema_listing_xreport,
+    clazz_locale=XreportLocale,
+    listing_fields=fields_xreport['listing'],
+)
 
 
 # route
@@ -201,39 +244,53 @@ def adapt_route_schema_for_activities(activities, field_list_type):
         # `activities` is a required field, so it should not be empty.
         # but old versions might have no activities, so we include the fields
         # for all activities in that case.
-        activities = [a for a in attributes.activities if a != 'paragliding']
+        activities = [a for a in attributes.Activities if a != 'paragliding']
 
     fields = get_all_fields(fields_route, activities, field_list_type)
-    return restrict_schema(schema_route, fields)
+    return schema_route.restrict(fields)
 
 
 route_schema_adaptor = make_schema_adaptor(
-    adapt_route_schema_for_activities, 'activities', 'fields')
+    adapt_route_schema_for_activities, 'activities', 'fields'
+)
 route_listing_schema_adaptor = make_schema_adaptor(
-    adapt_route_schema_for_activities, 'activities', 'listing')
+    adapt_route_schema_for_activities, 'activities', 'listing'
+)
 
 route_documents_config = GetDocumentsConfig(
-    ROUTE_TYPE, Route, schema_route, clazz_locale=RouteLocale,
-    fields=fields_route, adapt_schema=route_listing_schema_adaptor)
+    ROUTE_TYPE,
+    Route,
+    schema_route,
+    clazz_locale=RouteLocale,
+    fields=fields_route,
+    adapt_schema=route_listing_schema_adaptor,
+)
 
 
 # topo map
 
 
 topo_map_documents_config = GetDocumentsConfig(
-    MAP_TYPE, TopoMap, schema_listing_topo_map,
-    listing_fields=fields_topo_map['listing'])
+    MAP_TYPE,
+    TopoMap,
+    schema_listing_topo_map,
+    listing_fields=fields_topo_map['listing'],
+)
 
 
 # user profile
 
 
 user_profile_documents_config = GetDocumentsConfig(
-    USERPROFILE_TYPE, UserProfile, schema_listing_user_profile,
-    listing_fields=fields_user_profile['listing'])
+    USERPROFILE_TYPE,
+    UserProfile,
+    schema_listing_user_profile,
+    listing_fields=fields_user_profile['listing'],
+)
 
 
 # waypoint
+
 
 @lru_cache(maxsize=None)
 def adapt_waypoint_schema_for_type(waypoint_type, field_list_type):
@@ -242,24 +299,34 @@ def adapt_waypoint_schema_for_type(waypoint_type, field_list_type):
     """
     fields = fields_waypoint.get(waypoint_type, {}).get(field_list_type, [])
 
-    schema = restrict_schema(schema_waypoint, fields)
+    schema = schema_waypoint.restrict(fields)
 
     return schema
 
 
 waypoint_schema_adaptor = make_schema_adaptor(
-    adapt_waypoint_schema_for_type, 'waypoint_type', 'fields')
+    adapt_waypoint_schema_for_type, 'waypoint_type', 'fields'
+)
 waypoint_listing_schema_adaptor = make_schema_adaptor(
-    adapt_waypoint_schema_for_type, 'waypoint_type', 'listing')
+    adapt_waypoint_schema_for_type, 'waypoint_type', 'listing'
+)
 
 waypoint_documents_config = GetDocumentsConfig(
-    WAYPOINT_TYPE, Waypoint, schema_waypoint, clazz_locale=WaypointLocale,
-    fields=fields_waypoint, adapt_schema=waypoint_listing_schema_adaptor)
+    WAYPOINT_TYPE,
+    Waypoint,
+    schema_waypoint,
+    clazz_locale=WaypointLocale,
+    fields=fields_waypoint,
+    adapt_schema=waypoint_listing_schema_adaptor,
+)
 
 # coverages
 coverage_documents_config = GetDocumentsConfig(
-    COVERAGE_TYPE, Coverage, schema_listing_coverage,
-    listing_fields=fields_coverage['listing'])
+    COVERAGE_TYPE,
+    Coverage,
+    schema_listing_coverage,
+    listing_fields=fields_coverage['listing'],
+)
 
 document_configs = {
     WAYPOINT_TYPE: waypoint_documents_config,
@@ -272,5 +339,5 @@ document_configs = {
     MAP_TYPE: topo_map_documents_config,
     ARTICLE_TYPE: article_documents_config,
     USERPROFILE_TYPE: user_profile_documents_config,
-    COVERAGE_TYPE: coverage_documents_config
+    COVERAGE_TYPE: coverage_documents_config,
 }

@@ -1,17 +1,17 @@
-'''
+"""
 c2corg img Extension for Python-Markdown
 ==============================================
 
 Converts tags like
 [img=<id>(<options>)(/)?](<caption>)?([/img])?
 to advanced HTML img tags.
-'''
-
-from markdown.extensions import Extension
-from markdown.blockprocessors import BlockProcessor
-from xml.etree import ElementTree  # nosec
+"""
 
 import re
+from xml.etree import ElementTree  # nosec
+
+from markdown.blockprocessors import BlockProcessor
+from markdown.extensions import Extension
 
 # \w\W pattern is a trick for capturing all, including new spaces
 IMG_RE = r'(?:^|\n)\[img=(\d+)([a-z_ ]*)(/\]|\]([\w\W]*?)\[/img\])'
@@ -21,10 +21,8 @@ class C2CImageExtension(Extension):
     def extendMarkdown(self, md):  # noqa: N802
         self.md = md
         md.parser.blockprocessors.register(
-                                      C2CImageBlock(md.parser,
-                                                    self.getConfigs()),
-                                      'c2c_imgblock',
-                                      15)
+            C2CImageBlock(md.parser, self.getConfigs()), 'c2c_imgblock', 15
+        )
 
 
 class C2CImageBlock(BlockProcessor):
@@ -41,12 +39,12 @@ class C2CImageBlock(BlockProcessor):
         block = blocks.pop(0)
         m = self.RE.search(block)
 
-        before = block[:m.start()]
+        before = block[: m.start()]
         self.parser.parseBlocks(parent, [before])
 
         parent.append(self.build_element(m))
 
-        after = block[m.end():]
+        after = block[m.end() :]
         self.parser.parseBlocks(parent, [after])
 
     def build_element(self, m):
@@ -70,12 +68,12 @@ class C2CImageBlock(BlockProcessor):
 
         img = ElementTree.Element('img')
 
-        img_url = '/images/proxy/%s' % (img_id, )
+        img_url = '/images/proxy/%s' % (img_id,)
 
         if img_size:
             img_url += '?size=' + img_size
 
-        img.set('alt', (caption or img_id).replace("\n", " "))
+        img.set('alt', (caption or img_id).replace('\n', ' '))
         img.set('c2c:url-proxy', img_url)
         img.set('c2c:role', 'embedded-image')
         img.set('c2c:document-id', img_id)

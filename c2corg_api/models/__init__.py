@@ -1,10 +1,4 @@
-from sqlalchemy.ext.declarative import declarative_base
-
-from sqlalchemy.orm import (
-    scoped_session,
-    sessionmaker,
-    )
-
+from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
 from zope.sqlalchemy import register
 
 schema = 'guidebook'
@@ -22,32 +16,32 @@ class BaseMixin(object):
 Base = declarative_base(cls=BaseMixin)
 
 
-# all models, for which tables should be created, must be listed here:
-from c2corg_api.models import document  # noqa
-from c2corg_api.models import coverage  # noqa
-from c2corg_api.models import waypoint  # noqa
-from c2corg_api.models import route  # noqa
-from c2corg_api.models import document_history  # noqa
-from c2corg_api.models import document_topic  # noqa
-from c2corg_api.models import document_tag  # noqa
-from c2corg_api.models import image  # noqa
-from c2corg_api.models import user  # noqa
-from c2corg_api.models import association  # noqa
-from c2corg_api.models import topo_map  # noqa
+# all models, for which tables should be created, *must* be listed here:
 from c2corg_api.models import area  # noqa
 from c2corg_api.models import area_association  # noqa
-from c2corg_api.models import topo_map_association  # noqa
-from c2corg_api.models import user_profile  # noqa
-from c2corg_api.models import outing  # noqa
-from c2corg_api.models import es_sync  # noqa
-from c2corg_api.models import association_views  # noqa
-from c2corg_api.models import cache_version  # noqa
-from c2corg_api.models import xreport  # noqa
 from c2corg_api.models import article  # noqa
+from c2corg_api.models import association  # noqa
+from c2corg_api.models import association_views  # noqa
 from c2corg_api.models import book  # noqa
+from c2corg_api.models import cache_version  # noqa
+from c2corg_api.models import coverage  # noqa
+from c2corg_api.models import document  # noqa
+from c2corg_api.models import document_history  # noqa
+from c2corg_api.models import document_tag  # noqa
+from c2corg_api.models import document_topic  # noqa
+from c2corg_api.models import es_sync  # noqa
 from c2corg_api.models import feed  # noqa
+from c2corg_api.models import image  # noqa
 from c2corg_api.models import mailinglist  # noqa
+from c2corg_api.models import outing  # noqa
+from c2corg_api.models import route  # noqa
 from c2corg_api.models import sso  # noqa
+from c2corg_api.models import topo_map  # noqa
+from c2corg_api.models import topo_map_association  # noqa
+from c2corg_api.models import user  # noqa
+from c2corg_api.models import user_profile  # noqa
+from c2corg_api.models import waypoint  # noqa
+from c2corg_api.models import xreport  # noqa
 
 document_types = {
     xreport.XREPORT_TYPE: xreport.Xreport,

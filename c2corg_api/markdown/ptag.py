@@ -1,24 +1,22 @@
-'''
+"""
 c2corg p Extension for Python-Markdown
 ==============================================
 
 Converts tags [p] to div with clear:both
-'''
+"""
 
-from markdown.extensions import Extension
-from markdown.blockprocessors import BlockProcessor
-from xml.etree import ElementTree  # nosec
 import re
+from xml.etree import ElementTree  # nosec
+
+from markdown.blockprocessors import BlockProcessor
+from markdown.extensions import Extension
 
 P_RE = r'(?:\n|^)\[p\](?:\n|$)'
 
 
 class C2CPTagExtension(Extension):
     def extendMarkdown(self, md):  # noqa: N802
-        md.parser.blockprocessors.register(
-                                      C2CPTag(md.parser),
-                                      'c2c_ptag',
-                                      10.25)
+        md.parser.blockprocessors.register(C2CPTag(md.parser), 'c2c_ptag', 10.25)
 
 
 class C2CPTag(BlockProcessor):
@@ -31,12 +29,12 @@ class C2CPTag(BlockProcessor):
         block = blocks.pop(0)
         m = self.RE.search(block)
 
-        before = block[:m.start()]
+        before = block[: m.start()]
         self.parser.parseBlocks(parent, [before])
 
-        parent.append(ElementTree.Element('div', {"style": "clear:both"}))
+        parent.append(ElementTree.Element('div', {'style': 'clear:both'}))
 
-        after = block[m.end():]
+        after = block[m.end() :]
         self.parser.parseBlocks(parent, [after])
 
 

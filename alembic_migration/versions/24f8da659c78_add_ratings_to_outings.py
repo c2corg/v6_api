@@ -9,7 +9,7 @@ from os.path import join, dirname
 import codecs
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.sql import text
+from sqlalchemy import text
 
 
 # revision identifiers, used by Alembic.
@@ -201,8 +201,8 @@ def upgrade():
     # using the best route rating for each activity associated with the outing
     connection = op.get_bind()
     raw_file = join(dirname(__file__), '24f8da659c78_outings.sql')
-    f = codecs.open(raw_file, encoding='utf-8')
-    content = f.read()
+    with codecs.open(raw_file, encoding='utf-8') as f:
+        content = f.read()
     connection.execute(text(content))
 
     # we loop over every existing outing

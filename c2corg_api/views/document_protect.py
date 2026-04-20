@@ -1,25 +1,26 @@
 import logging
 
-from c2corg_api.security.acl import ACLDefault
+from cornice.resource import resource
+from pydantic import BaseModel
+from pyramid.httpexceptions import HTTPBadRequest
+
 from c2corg_api import DBSession
 from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.document import Document, UpdateType
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import DocumentRest
-from colander import MappingSchema, SchemaNode, Integer, required
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from pyramid.httpexceptions import HTTPBadRequest
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
 
 log = logging.getLogger(__name__)
 
 
-class ProtectSchema(MappingSchema):
-    document_id = SchemaNode(Integer(), missing=required)
+class ProtectSchema(BaseModel):
+    document_id: int
 
 
 def _get_document(document_id):
-    document = DBSession.query(Document).get(document_id)
+    document = DBSession.get(Document, document_id)
 
     if not document:
         raise HTTPBadRequest('Unknown document {}'.format(document_id))
@@ -30,11 +31,10 @@ def _get_document(document_id):
 @resource(path='/documents/protect', cors_policy=cors_policy)
 class DocumentProtectRest(ACLDefault):
     @restricted_json_view(
-        permission='moderator',
-        schema=ProtectSchema(),
-        validators=[colander_body_validator])
+        permission='moderator', validators=[make_pydantic_validator(ProtectSchema)]
+    )
     def post(self):
-        """ Mark the given document as not editable.
+        """Mark the given document as not editable.
 
         Request:
             `POST` `/documents/protect`
@@ -54,8 +54,8 @@ class DocumentProtectRest(ACLDefault):
 
         user_id = self.request.authenticated_userid
         DocumentRest.update_version(
-            document, user_id, 'Protected document',
-            [UpdateType.FIGURES], [])
+            document, user_id, 'Protected document', [UpdateType.FIGURES], []
+        )
 
         update_cache_version_direct(document_id)
 
@@ -64,13 +64,11 @@ class DocumentProtectRest(ACLDefault):
 
 @resource(path='/documents/unprotect', cors_policy=cors_policy)
 class DocumentUnprotectRest(ACLDefault):
-
     @restricted_json_view(
-        permission='moderator',
-        schema=ProtectSchema(),
-        validators=[colander_body_validator])
+        permission='moderator', validators=[make_pydantic_validator(ProtectSchema)]
+    )
     def post(self):
-        """ Mark the given document as editable.
+        """Mark the given document as editable.
 
         Request:
             `POST` `/documents/unprotect`
@@ -90,8 +88,8 @@ class DocumentUnprotectRest(ACLDefault):
 
         user_id = self.request.authenticated_userid
         DocumentRest.update_version(
-            document, user_id, 'Unprotected document',
-            [UpdateType.FIGURES], [])
+            document, user_id, 'Unprotected document', [UpdateType.FIGURES], []
+        )
 
         update_cache_version_direct(document_id)
 

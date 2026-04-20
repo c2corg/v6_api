@@ -5,7 +5,7 @@ Revises: bece9007ab83
 Create Date: 2021-06-23 19:36:29.664725
 
 """
-from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.models.common.attributes import DefaultLangs
 from alembic_migration.extensions import drop_enum
 from alembic import op
 import sqlalchemy as sa
@@ -48,7 +48,7 @@ def upgrade():
     # if there is some value in the table. If yes, it's not a test DB and we have to complete them.
 
     conn = op.get_bind()
-    res = conn.execute("SELECT count(1) FROM guidebook.langs").fetchall()
+    res = conn.execute(sa.text("SELECT count(1) FROM guidebook.langs")).fetchall()
 
     if res[0][0] != 0:
         op.execute("INSERT INTO guidebook.langs VALUES ('zh');")
@@ -62,7 +62,7 @@ def upgrade():
     op.execute("ALTER TYPE guidebook.lang RENAME TO lang_old;")
 
     # create the new type
-    lang_enum = sa.Enum(*default_langs, name='lang', schema='guidebook')
+    lang_enum = sa.Enum(*[e.value for e in DefaultLangs], name='lang', schema='guidebook')
     lang_enum.create(op.get_bind(), checkfirst=False)
 
     # update the columns to use the new type

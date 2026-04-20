@@ -1,22 +1,22 @@
 import logging
+from os.path import isfile
 
-from c2corg_api.security.acl import ACLDefault
+from cornice.resource import resource, view
+
 from c2corg_api.caching import cache_document_detail
 from c2corg_api.models import DBSession, es_sync
 from c2corg_api.search import elasticsearch_config
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy
-from cornice.resource import resource, view
-from os.path import isfile
 
 log = logging.getLogger(__name__)
 
 
 @resource(path='/health', cors_policy=cors_policy)
 class HealthRest(ACLDefault):
-
     @view()
     def get(self):
-        """ Returns information about the version of the API and the status
+        """Returns information about the version of the API and the status
         of its components:
 
             - Git revision
@@ -29,9 +29,7 @@ class HealthRest(ACLDefault):
             - Maintenance mode status
 
         """
-        status = {
-            'version': self.request.registry.settings.get('cache_version')
-        }
+        status = {'version': self.request.registry.settings.get('cache_version')}
 
         self._add_database_status(status)
         self._add_es_status(status)
@@ -52,8 +50,9 @@ class HealthRest(ACLDefault):
             self.request.response.status_code = 500
 
         status['pg'] = 'ok' if success else 'error'
-        status['last_es_syncer_run'] = last_es_syncer_run.isoformat() \
-            if last_es_syncer_run else ''
+        status['last_es_syncer_run'] = (
+            last_es_syncer_run.isoformat() if last_es_syncer_run else ''
+        )
 
     def _add_es_status(self, status):
         es_docs = None
@@ -93,8 +92,9 @@ class HealthRest(ACLDefault):
         if isfile(maintenance_file):
             maintenance_mode = True
             log.warning(
-              'service is in maintenance mode, remove %s to reenable.' %
-              maintenance_file)
+                'service is in maintenance mode, remove %s to reenable.'
+                % maintenance_file
+            )
             self.request.response.status_code = 404
 
         status['maintenance_mode'] = maintenance_mode

@@ -1,14 +1,15 @@
 import logging
-import sys
 import os
-from c2corg_api.scripts.es.sync import sync_es
-from c2corg_api.search import configure_es_from_config, get_queue_config
-from pyramid.scripts.common import parse_vars
-from pyramid.paster import get_appsettings, setup_logging
-from sqlalchemy import engine_from_config
+import sys
 
 from kombu.mixins import ConsumerMixin
+from pyramid.paster import get_appsettings, setup_logging
+from pyramid.scripts.common import parse_vars
+from sqlalchemy import engine_from_config
 from sqlalchemy.orm import sessionmaker
+
+from c2corg_api.scripts.es.sync import sync_es
+from c2corg_api.search import configure_es_from_config, get_queue_config
 
 log = logging.getLogger('c2corg_api_syncer')
 
@@ -22,8 +23,8 @@ class SyncWorker(ConsumerMixin):
     """
 
     def __init__(
-            self, connection, queue, batch_size, session=None,
-            session_factory=None):
+        self, connection, queue, batch_size, session=None, session_factory=None
+    ):
         self.connection = connection
         self.queue = queue
         self.batch_size = batch_size
@@ -32,8 +33,7 @@ class SyncWorker(ConsumerMixin):
         self.connect_max_retries = 3
 
     def get_consumers(self, consumer_factory, channel):
-        return [consumer_factory(
-            queues=[self.queue], callbacks=[self.process_task])]
+        return [consumer_factory(queues=[self.queue], callbacks=[self.process_task])]
 
     def process_task(self, body, message):
         log.info('Sync requested')
@@ -61,8 +61,10 @@ class SyncWorker(ConsumerMixin):
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print('usage: %s <config_uri> [var=value]\n'
-          '(example: "%s development.ini")' % (cmd, cmd))
+    print(
+        'usage: %s <config_uri> [var=value]\n'
+        '(example: "%s development.ini")' % (cmd, cmd)
+    )
     sys.exit(1)
 
 
@@ -75,7 +77,7 @@ def main(argv=sys.argv):
 
     # configure connections for Postgres, ElasticSearch and Redis
     settings = get_appsettings(config_uri, options=options)
-    engine = engine_from_config(settings, 'sqlalchemy.')
+    engine = engine_from_config(settings, 'sqlalchemy.', future=True)
     Session = sessionmaker()  # noqa
     Session.configure(bind=engine)
     configure_es_from_config(settings)
@@ -85,8 +87,11 @@ def main(argv=sys.argv):
     with queue_config.connection:
         try:
             worker = SyncWorker(
-                queue_config.connection, queue_config.queue, batch_size,
-                session_factory=Session)
+                queue_config.connection,
+                queue_config.queue,
+                batch_size,
+                session_factory=Session,
+            )
             log.info('Syncer started, running initial sync')
             worker.sync()
             log.info('Waiting on messages')
@@ -95,5 +100,5 @@ def main(argv=sys.argv):
             log.info('Syncer stopped')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

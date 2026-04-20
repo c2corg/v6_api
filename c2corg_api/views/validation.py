@@ -1,33 +1,35 @@
 import functools
+import urllib
+
+from cornice.errors import Errors
+from dateutil import parser as datetime_parser
+from pyramid.httpexceptions import HTTPBadRequest
+from sqlalchemy import and_, exists
+from sqlalchemy.orm import Session
+from webob.descriptors import parse_int_safe
 
 from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area import AREA_TYPE
-from c2corg_api.models.association import Association, \
-    updatable_associations, association_keys
-from c2corg_api.models.book import BOOK_TYPE
-from c2corg_api.models.document import Document
 from c2corg_api.models.article import ARTICLE_TYPE
+from c2corg_api.models.association import (
+    Association,
+    association_keys,
+    updatable_associations,
+)
+from c2corg_api.models.book import BOOK_TYPE
+from c2corg_api.models.common import document_types
+from c2corg_api.models.common.associations import valid_associations
+from c2corg_api.models.common.attributes import DefaultLangs
+from c2corg_api.models.document import Document
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.models.user import User
-from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
+from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
+from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.views.document_associations import get_first_column
-
-from c2corg_api.models.common.associations import valid_associations
-from c2corg_api.models.common.attributes import default_langs
-from c2corg_api.models.common import document_types
-from colander import null
-from cornice.errors import Errors
-from pyramid.httpexceptions import HTTPBadRequest
-from sqlalchemy.sql.expression import exists, and_
-from webob.descriptors import parse_int_safe
-from dateutil import parser as datetime_parser
-import urllib
-
 
 # Validation functions
 
@@ -50,20 +52,18 @@ validate_version_id = create_int_validator('version_id')
 
 
 def validate_lang_(lang, request):
-    """Checks if a given lang is one of the available langs.
-    """
+    """Checks if a given lang is one of the available langs."""
     if lang is not None:
-        if lang in default_langs:
+        if lang in DefaultLangs:
             request.validated['lang'] = lang
         else:
             request.errors.add('querystring', 'lang', 'invalid lang')
 
 
 def validate_cook_(cook, request):
-    """Checks if a given cooking lang is one of the available langs.
-    """
+    """Checks if a given cooking lang is one of the available langs."""
     if cook is not None:
-        if cook in default_langs:
+        if cook in DefaultLangs:
             request.validated['cook'] = cook
         else:
             request.errors.add('querystring', 'cook', 'invalid lang')
@@ -114,12 +114,11 @@ def validate_preferred_lang_param(request, **kwargs):
 
 
 def is_missing(val):
-    return val is None or val == '' or val == [] or val is null
+    return val is None or val == '' or val == []
 
 
 def check_required_fields(document, fields, request, updating):
-    """Checks that the given fields are set on the document.
-    """
+    """Checks that the given fields are set on the document."""
 
     for field in fields:
         if '.' not in field:
@@ -130,21 +129,25 @@ def check_required_fields(document, fields, request, updating):
                 request.errors.add('body', field, 'Required')
         else:
             # fields like 'geometry.geom'
-            if field in ['locales.title']:
-                # this is a required field for all documents, which is already
-                # checked when validating against the Colander schema
-                pass
-            else:
-                field_parts = field.split('.')
-                attr = document.get(field_parts[0])
-                if attr:
+            field_parts = field.split('.')
+            attr = document.get(field_parts[0])
+            if attr is not None:
+                if isinstance(attr, list):
+                    # e.g. 'locales.title' – check each entry
+                    for i, item in enumerate(attr):
+                        if is_missing(item.get(field_parts[1])):
+                            request.errors.add(
+                                'body',
+                                '{}.{}.{}'.format(field_parts[0], i, field_parts[1]),
+                                'Required',
+                            )
+                else:
                     if is_missing(attr.get(field_parts[1])):
                         request.errors.add('body', field, 'Required')
 
 
 def check_duplicate_locales(document, request):
-    """Check that there is only one entry for each lang.
-    """
+    """Check that there is only one entry for each lang."""
     locales = document.get('locales')
     if locales:
         langs = set()
@@ -152,15 +155,14 @@ def check_duplicate_locales(document, request):
             lang = locale.get('lang')
             if lang in langs:
                 request.errors.add(
-                    'body', 'locales',
-                    'lang "%s" is given twice' % (lang))
+                    'body', 'locales', 'lang "%s" is given twice' % (lang)
+                )
                 return
             langs.add(lang)
 
 
 def check_get_for_integer_property(request, key, required):
-    """Checks if the value associated to a given key is an integer.
-    """
+    """Checks if the value associated to a given key is an integer."""
     if not required and request.GET.get(key) is None:
         return
 
@@ -227,17 +229,13 @@ def parse_datetime(time_raw):
 
 
 def validate_body_user_id(request, **kwargs):
-    """ Check that the user exists.
-    """
+    """Check that the user exists."""
     user_id = request.validated['user_id']
-    user_exists_query = DBSession.query(User). \
-        filter(User.id == user_id). \
-        exists()
+    user_exists_query = DBSession.query(User).filter(User.id == user_id).exists()
     user_exists = DBSession.query(user_exists_query).scalar()
 
     if not user_exists:
-        request.errors.add(
-            'body', 'user_id', 'user {0} does not exist'.format(user_id))
+        request.errors.add('body', 'user_id', 'user {0} does not exist'.format(user_id))
 
 
 def validate_token(request, **kwargs):
@@ -273,8 +271,14 @@ def validate_simple_token(request, **kwargs):
 
 
 def validate_association_permission(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc=False, skip_outing_check=False):
+    request,
+    parent_document_id,
+    parent_document_type,
+    child_document_id,
+    child_document_type,
+    raise_exc=False,
+    skip_outing_check=False,
+):
     if request.has_permission('moderator'):
         # moderators can do everything
         return
@@ -282,40 +286,66 @@ def validate_association_permission(
     # check association with outing (creator or participant)
     # skip when creating an outing (the participant associations do not
     # exist yet at that point).
-    if not skip_outing_check and \
-            OUTING_TYPE in (parent_document_type, child_document_type):
+    if not skip_outing_check and OUTING_TYPE in (
+        parent_document_type,
+        child_document_type,
+    ):
         validate_outing_association(
-            request, parent_document_id, parent_document_type,
-            child_document_id, child_document_type, raise_exc)
+            request,
+            parent_document_id,
+            parent_document_type,
+            child_document_id,
+            child_document_type,
+            raise_exc,
+        )
 
     # check association with personal image (creator)
     if IMAGE_TYPE in (parent_document_type, child_document_type):
         validate_image_association(
-            request, parent_document_id, parent_document_type,
-            child_document_id, child_document_type, raise_exc)
+            request,
+            parent_document_id,
+            parent_document_type,
+            child_document_id,
+            child_document_type,
+            raise_exc,
+        )
 
     # check association with personal article (creator)
     if ARTICLE_TYPE in (parent_document_type, child_document_type):
         validate_article_association(
-            request, parent_document_id, parent_document_type,
-            child_document_id, child_document_type, raise_exc)
+            request,
+            parent_document_id,
+            parent_document_type,
+            child_document_id,
+            child_document_type,
+            raise_exc,
+        )
 
     # check association with report (creator)
     if XREPORT_TYPE in (parent_document_type, child_document_type):
         validate_xreport_association(
-            request, parent_document_id, parent_document_type,
-            child_document_id, child_document_type, raise_exc)
+            request,
+            parent_document_id,
+            parent_document_type,
+            child_document_id,
+            child_document_type,
+            raise_exc,
+        )
 
 
 def validate_outing_association(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc):
-    """ If the given association is an association with an outing, this
+    request,
+    parent_document_id,
+    parent_document_type,
+    child_document_id,
+    child_document_type,
+    raise_exc,
+):
+    """If the given association is an association with an outing, this
     function checks if the authenticated user is allowed to change the
     associations with the outing (either moderator or participant).
     """
-    if parent_document_type != OUTING_TYPE and \
-            child_document_type != OUTING_TYPE:
+    if parent_document_type != OUTING_TYPE and child_document_type != OUTING_TYPE:
         # no association with an outing, nothing to check
         return
 
@@ -325,8 +355,7 @@ def validate_outing_association(
         outing_id = child_document_id
 
     if not has_permission_for_outing(request, outing_id):
-        msg = 'no rights to modify associations with outing {}'.format(
-            outing_id)
+        msg = 'no rights to modify associations with outing {}'.format(outing_id)
         if raise_exc:
             raise HTTPBadRequest(msg)
         else:
@@ -334,34 +363,79 @@ def validate_outing_association(
 
 
 def validate_article_association(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc):
+    request,
+    parent_document_id,
+    parent_document_type,
+    child_document_id,
+    child_document_type,
+    raise_exc,
+):
     validate_personal_association(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc, ARTICLE_TYPE, article.is_personal,
-        'article')
+        request,
+        parent_document_id,
+        parent_document_type,
+        child_document_id,
+        child_document_type,
+        raise_exc,
+        ARTICLE_TYPE,
+        article.is_personal,
+        'article',
+    )
 
 
 def validate_image_association(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc):
+    request,
+    parent_document_id,
+    parent_document_type,
+    child_document_id,
+    child_document_type,
+    raise_exc,
+):
     validate_personal_association(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc, IMAGE_TYPE, image.is_personal, 'image')
+        request,
+        parent_document_id,
+        parent_document_type,
+        child_document_id,
+        child_document_type,
+        raise_exc,
+        IMAGE_TYPE,
+        image.is_personal,
+        'image',
+    )
 
 
 def validate_xreport_association(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc):
+    request,
+    parent_document_id,
+    parent_document_type,
+    child_document_id,
+    child_document_type,
+    raise_exc,
+):
     validate_personal_association(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc, XREPORT_TYPE, lambda _: True,
-        'xreport')
+        request,
+        parent_document_id,
+        parent_document_type,
+        child_document_id,
+        child_document_type,
+        raise_exc,
+        XREPORT_TYPE,
+        lambda _: True,
+        'xreport',
+    )
 
 
 def validate_personal_association(
-        request, parent_document_id, parent_document_type, child_document_id,
-        child_document_type, raise_exc, doc_type, is_personal, label):
+    request,
+    parent_document_id,
+    parent_document_type,
+    child_document_id,
+    child_document_type,
+    raise_exc,
+    doc_type,
+    is_personal,
+    label,
+):
     document_ids = set()
     if parent_document_type == doc_type:
         document_ids.add(parent_document_id)
@@ -369,19 +443,21 @@ def validate_personal_association(
         document_ids.add(child_document_id)
 
     for document_id in document_ids:
-        if is_personal(document_id) and not has_been_created_by(
-                document_id, request.authenticated_userid) and not \
-                is_associated_user(document_id, request.authenticated_userid):
+        if (
+            is_personal(document_id)
+            and not has_been_created_by(document_id, request.authenticated_userid)
+            and not is_associated_user(document_id, request.authenticated_userid)
+        ):
             msg = 'no rights to modify associations with {} {}'.format(
-                label, document_id)
+                label, document_id
+            )
             if raise_exc:
                 raise HTTPBadRequest(msg)
             else:
-                request.errors.add(
-                    'body', 'associations.{}s'.format(label), msg)
+                request.errors.add('body', 'associations.{}s'.format(label), msg)
 
 
-def has_permission_for_outing(request, outing_id):
+def has_permission_for_outing(request, outing_id, db: Session | None = None):
     """Check if the user with the given id has permission to change an
     outing. That is only users that are currently assigned to the outing
     can modify it.
@@ -390,27 +466,33 @@ def has_permission_for_outing(request, outing_id):
         # moderators can change everything
         return True
 
+    db = db or DBSession
     user_id = request.authenticated_userid
-    return DBSession.query(exists().where(
-        and_(
-            Association.parent_document_id == user_id,
-            Association.child_document_id == outing_id
-        ))).scalar()
+    return db.query(
+        exists().where(
+            and_(
+                Association.parent_document_id == user_id,
+                Association.child_document_id == outing_id,
+            )
+        )
+    ).scalar()
 
 
-def check_permission_for_association(
-        request, association, skip_outing_check=False):
+def check_permission_for_association(request, association, skip_outing_check=False):
     validate_association_permission(
-        request, association.parent_document_id,
-        association.parent_document_type, association.child_document_id,
-        association.child_document_type, raise_exc=True,
-        skip_outing_check=skip_outing_check)
+        request,
+        association.parent_document_id,
+        association.parent_document_type,
+        association.child_document_id,
+        association.child_document_type,
+        raise_exc=True,
+        skip_outing_check=skip_outing_check,
+    )
 
 
 def association_permission_checker(request, skip_outing_check=False):
     def check(association):
-        check_permission_for_association(
-            request, association, skip_outing_check)
+        check_permission_for_association(request, association, skip_outing_check)
 
     return check
 
@@ -425,11 +507,11 @@ def check_permission_for_association_removal(request, association):
         return
 
     valid_parent = _check_permission_association_doc(
-        request,
-        association.parent_document_type, association.parent_document_id)
+        request, association.parent_document_type, association.parent_document_id
+    )
     valid_child = _check_permission_association_doc(
-        request,
-        association.child_document_type, association.child_document_id)
+        request, association.child_document_type, association.child_document_id
+    )
 
     if not valid_parent and not valid_child:
         raise HTTPBadRequest(
@@ -438,7 +520,9 @@ def check_permission_for_association_removal(request, association):
                 association.parent_document_type,
                 association.parent_document_id,
                 association.child_document_type,
-                association.child_document_id))
+                association.child_document_id,
+            )
+        )
 
 
 def _check_permission_association_doc(request, doc_type, document_id):
@@ -447,23 +531,25 @@ def _check_permission_association_doc(request, doc_type, document_id):
             return True
     elif doc_type == IMAGE_TYPE:
         if image.is_personal(document_id) and has_been_created_by(
-                document_id, request.authenticated_userid):
+            document_id, request.authenticated_userid
+        ):
             return True
     elif doc_type == ARTICLE_TYPE:
         if article.is_personal(document_id) and has_been_created_by(
-                document_id, request.authenticated_userid):
+            document_id, request.authenticated_userid
+        ):
             return True
     elif doc_type == XREPORT_TYPE:
-        if (has_been_created_by(document_id, request.authenticated_userid) or
-                is_associated_user(document_id, request.authenticated_userid)):
+        if has_been_created_by(
+            document_id, request.authenticated_userid
+        ) or is_associated_user(document_id, request.authenticated_userid):
             return True
 
     return False
 
 
 def validate_required_json_string(key, request):
-    """Checks if a given key is present in the request.
-    """
+    """Checks if a given key is present in the request."""
 
     value = None
     if key in request.json:
@@ -482,17 +568,21 @@ def validate_associations(document_type, is_on_create, request, **kwargs):
     if is_on_create:
         associations_in = request.validated.get('associations', None)
     else:
-        associations_in = request.validated. \
-            get('document', {}).get('associations', None)
+        associations_in = request.validated.get('document', {}).get(
+            'associations', None
+        )
 
     if not associations_in:
         return
 
     request.validated['associations'] = validate_associations_in(
-        associations_in, document_type, request.errors)
+        associations_in, document_type, request.errors
+    )
 
 
-def validate_associations_in(associations_in, document_type, errors):
+def validate_associations_in(
+    associations_in, document_type, errors, db: Session | None = None
+):
     """Validate the provided associations:
 
         - Check that the linked documents exist.
@@ -502,35 +592,71 @@ def validate_associations_in(associations_in, document_type, errors):
 
     Returns the validated associations.
     """
+    db = db or DBSession
     new_errors = Errors()
     associations = {}
 
-    _add_associations(associations, associations_in, document_type,
-                      'users', USERPROFILE_TYPE, new_errors)
-    _add_associations(associations, associations_in, document_type,
-                      'routes', ROUTE_TYPE, new_errors)
-    _add_associations(associations, associations_in, document_type,
-                      'waypoints', WAYPOINT_TYPE, new_errors)
-    _add_associations(associations, associations_in, document_type,
-                      'images', IMAGE_TYPE, new_errors)
-    _add_associations(associations, associations_in, document_type,
-                      'articles', ARTICLE_TYPE, new_errors)
-    _add_associations(associations, associations_in, document_type,
-                      'waypoint_children', WAYPOINT_TYPE, new_errors)
-    _add_associations(associations, associations_in, document_type,
-                      'areas', AREA_TYPE, new_errors)
-    _add_associations(associations, associations_in, document_type,
-                      'outings', OUTING_TYPE, new_errors)
-    _add_associations(associations, associations_in, document_type,
-                      'books', BOOK_TYPE, new_errors)
-    _add_associations(associations, associations_in, document_type,
-                      'xreports', XREPORT_TYPE, new_errors)
+    _add_associations(
+        associations,
+        associations_in,
+        document_type,
+        'users',
+        USERPROFILE_TYPE,
+        new_errors,
+    )
+    _add_associations(
+        associations, associations_in, document_type, 'routes', ROUTE_TYPE, new_errors
+    )
+    _add_associations(
+        associations,
+        associations_in,
+        document_type,
+        'waypoints',
+        WAYPOINT_TYPE,
+        new_errors,
+    )
+    _add_associations(
+        associations, associations_in, document_type, 'images', IMAGE_TYPE, new_errors
+    )
+    _add_associations(
+        associations,
+        associations_in,
+        document_type,
+        'articles',
+        ARTICLE_TYPE,
+        new_errors,
+    )
+    _add_associations(
+        associations,
+        associations_in,
+        document_type,
+        'waypoint_children',
+        WAYPOINT_TYPE,
+        new_errors,
+    )
+    _add_associations(
+        associations, associations_in, document_type, 'areas', AREA_TYPE, new_errors
+    )
+    _add_associations(
+        associations, associations_in, document_type, 'outings', OUTING_TYPE, new_errors
+    )
+    _add_associations(
+        associations, associations_in, document_type, 'books', BOOK_TYPE, new_errors
+    )
+    _add_associations(
+        associations,
+        associations_in,
+        document_type,
+        'xreports',
+        XREPORT_TYPE,
+        new_errors,
+    )
 
     if new_errors:
         errors.extend(new_errors)
         return None
 
-    _check_for_valid_documents_ids(associations, new_errors)
+    _check_for_valid_documents_ids(associations, new_errors, db=db)
 
     if new_errors:
         errors.extend(new_errors)
@@ -539,41 +665,46 @@ def validate_associations_in(associations_in, document_type, errors):
         return associations
 
 
-def get_associated_user_ids(xreport_id):
+def get_associated_user_ids(xreport_id, db: Session | None = None):
+    db = db or DBSession
     associated_user_ids = get_first_column(
-        DBSession.query(User.id).
-        join(Association, Association.parent_document_id == User.id).
-        filter(Association.child_document_id == xreport_id).
-        group_by(User.id).
-        all())
+        db.query(User.id)
+        .join(Association, Association.parent_document_id == User.id)
+        .filter(Association.child_document_id == xreport_id)
+        .group_by(User.id)
+        .all()
+    )
     return associated_user_ids
 
 
-def is_associated_user(xreport_id, user_id):
-    """ Required to check if an associated user is able to edit Xreport.
-    """
-    associated_user_ids = get_associated_user_ids(xreport_id)
+def is_associated_user(xreport_id, user_id, db: Session | None = None):
+    """Required to check if an associated user is able to edit Xreport."""
+    db = db or DBSession
+    associated_user_ids = get_associated_user_ids(xreport_id, db=db)
     if user_id in associated_user_ids:
         return True
 
 
-def _check_for_valid_documents_ids(associations, errors):
-    """ Check that the given documents do exists and that they are of the
+def _check_for_valid_documents_ids(associations, errors, db: Session | None = None):
+    """Check that the given documents do exists and that they are of the
     correct type (e.g. a document listed as route association must really be
     a route).
     """
+    db = db or DBSession
     linked_documents_id = _get_linked_document_ids(associations)
 
     # load the type for each linked document
     if linked_documents_id:
-        query_documents_with_type = DBSession. \
-            query(Document.document_id, Document.type). \
-            filter(Document.document_id.in_(linked_documents_id)). \
-            filter(Document.redirects_to.is_(None))
+        db = db or DBSession
+        query_documents_with_type = (
+            db.query(Document.document_id, Document.type)
+            .filter(Document.document_id.in_(linked_documents_id))
+            .filter(Document.redirects_to.is_(None))
+        )
         type_for_document_id = {
             str(document_id): doc_type
             for document_id, doc_type in query_documents_with_type
-            }
+        }
     else:
         type_for_document_id = {}
 
@@ -583,37 +714,41 @@ def _check_for_valid_documents_ids(associations, errors):
             document_id = doc['document_id']
             if str(document_id) not in type_for_document_id:
                 errors.add(
-                    'body', 'associations.' + document_key,
+                    'body',
+                    'associations.' + document_key,
                     'document "{0:n}" does not exist or is redirected'.format(
-                        document_id))
+                        document_id
+                    ),
+                )
                 continue
             if doc_type != type_for_document_id[str(document_id)]:
                 errors.add(
-                    'body', 'associations.' + document_key,
+                    'body',
+                    'associations.' + document_key,
                     'document "{0:n}" is not of type "{1}"'.format(
-                        document_id, doc_type))
+                        document_id, doc_type
+                    ),
+                )
 
 
 def _get_linked_document_ids(associations):
-    """ Get a list of document ids of all linked documents.
-    """
-    return set().union(*[
-        [
-            doc['document_id'] for doc in docs
-            ] for docs in associations.values()
-        ])
+    """Get a list of document ids of all linked documents."""
+    return set().union(
+        *[[doc['document_id'] for doc in docs] for docs in associations.values()]
+    )
 
 
-def _is_any_climbing_indoor_waypoint(associations_in):
-    """ Check if there is any climbing indoor waypoints in the linked waypoints
-    """
+def _is_any_climbing_indoor_waypoint(associations_in, db: Session | None = None):
+    """Check if there is any climbing indoor waypoints in the linked waypoints"""
+    db = db or DBSession
     waypoints_id = [doc['document_id'] for doc in associations_in['waypoints']]
 
     # load the waypoint type for each linked waypoint
     if waypoints_id:
-        query_waypoints_with_type = DBSession. \
-            query(Waypoint.waypoint_type). \
-            filter(Waypoint.document_id.in_(waypoints_id))
+        db = db or DBSession
+        query_waypoints_with_type = db.query(Waypoint.waypoint_type).filter(
+            Waypoint.document_id.in_(waypoints_id)
+        )
         for waypoint in query_waypoints_with_type.all():
             if waypoint.waypoint_type == 'climbing_indoor':
                 return True
@@ -621,8 +756,13 @@ def _is_any_climbing_indoor_waypoint(associations_in):
 
 
 def _add_associations(
-        associations, associations_in, main_document_type,
-        document_key, other_document_type, errors):
+    associations,
+    associations_in,
+    main_document_type,
+    document_key,
+    other_document_type,
+    errors,
+):
     valid_types = updatable_associations.get(main_document_type, set())
 
     if document_key not in valid_types:
@@ -633,13 +773,12 @@ def _add_associations(
     # is given, create an entry (all existing associations of that type
     # should be removed).
     if associations_for_type is not None:
-        is_parent = _is_parent_of_association(
-            main_document_type, other_document_type)
+        is_parent = _is_parent_of_association(main_document_type, other_document_type)
 
         if is_parent is None:
             errors.add(
-                'body', 'associations.' + document_key,
-                'invalid association type')
+                'body', 'associations.' + document_key, 'invalid association type'
+            )
             return
 
         if document_key == 'waypoints' and main_document_type == ROUTE_TYPE:
@@ -647,7 +786,8 @@ def _add_associations(
                 errors.add(
                     'body',
                     'associations.climbing_indoor_waypoint',
-                    'climbing_indoor waypoint cannot be linked to a route')
+                    'climbing_indoor waypoint cannot be linked to a route',
+                )
                 return
         elif document_key == 'waypoints' and main_document_type != BOOK_TYPE:
             is_parent = True
@@ -655,11 +795,9 @@ def _add_associations(
             is_parent = False
 
         associations[document_key] = [
-            {
-                'document_id': doc['document_id'],
-                'is_parent': is_parent
-            } for doc in associations_in[document_key]
-            ]
+            {'document_id': doc['document_id'], 'is_parent': is_parent}
+            for doc in associations_in[document_key]
+        ]
 
 
 def _is_parent_of_association(main_document_type, other_document_type):

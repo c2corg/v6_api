@@ -5,14 +5,18 @@ Must be run before fill_index.py when building the index from scratch.
 
 Usage: python create_index.py <config>.ini
 """
-import sys
+
 import logging
+import sys
 
 from pyramid.paster import get_appsettings, setup_logging
 from pyramid.scripts.common import parse_vars
 
-from c2corg_api.search import configure_es_from_config, elasticsearch_config, \
-    search_documents
+from c2corg_api.search import (
+    configure_es_from_config,
+    elasticsearch_config,
+    search_documents,
+)
 from c2corg_api.search.mapping import analysis_settings
 
 
@@ -39,11 +43,9 @@ def main(argv=sys.argv):
 
     # Create index with analysis settings
     print('Creating index: {}'.format(index_name))
-    client.indices.create(index=index_name, body={
-        'settings': {
-            'analysis': analysis_settings
-        }
-    })
+    client.indices.create(
+        index=index_name, body={'settings': {'analysis': analysis_settings}}
+    )
 
     # Apply the correct mapping for every document type
     # (if we let ES infer types by directly running fill_index.py,

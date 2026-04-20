@@ -1,48 +1,46 @@
-from c2corg_api.models.enums import map_editor, map_scale
-from c2corg_api.models.schema_utils import restrict_schema, get_update_schema
-from c2corg_api.models.common.fields_topo_map import fields_topo_map
-from sqlalchemy import (
-    Column,
-    Integer,
-    ForeignKey,
-    String
-    )
+from typing import Any, Optional
 
-from colanderalchemy import SQLAlchemySchemaNode
+from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column
 
-from c2corg_api.models import schema, Base
-from c2corg_api.models.utils import copy_attributes
-from c2corg_api.models.document import (
-    ArchiveDocument, Document, get_geometry_schema_overrides,
-    schema_document_locale, schema_attributes)
+from c2corg_api.models import Base, schema
 from c2corg_api.models.common import document_types
+from c2corg_api.models.common.fields_topo_map import fields_topo_map
+from c2corg_api.models.document import (
+    ArchiveDocument,
+    Document,
+    geometry_attributes,
+    schema_attributes,
+    schema_locale_attributes,
+)
+from c2corg_api.models.enums import map_editor, map_scale
+from c2corg_api.models.field_spec import build_field_spec
+from c2corg_api.models.utils import copy_attributes
 
 MAP_TYPE = document_types.MAP_TYPE
 
 
-class _MapMixin(object):
-    editor = Column(map_editor)
-    scale = Column(map_scale)
-    code = Column(String)
+class _MapMixin:
+    editor: Mapped[Optional[Any]] = mapped_column(map_editor)
+    scale: Mapped[Optional[Any]] = mapped_column(map_scale)
+    code: Mapped[Optional[str]] = mapped_column(String)
 
 
-attributes = [
-    'editor', 'scale', 'code'
-]
+attributes = ['editor', 'scale', 'code']
 
 
 class TopoMap(_MapMixin, Document):
-    """
-    """
+    """ """
+
     __tablename__ = 'maps'
 
-    document_id = Column(
-        Integer,
-        ForeignKey(schema + '.documents.document_id'), primary_key=True)
+    document_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey(schema + '.documents.document_id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': MAP_TYPE,
-        'inherit_condition': Document.document_id == document_id
+        'inherit_condition': Document.document_id == document_id,
     }
 
     def to_archive(self):
@@ -58,39 +56,27 @@ class TopoMap(_MapMixin, Document):
 
 
 class ArchiveTopoMap(_MapMixin, ArchiveDocument):
-    """
-    """
+    """ """
+
     __tablename__ = 'maps_archives'
 
-    id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_archives.id'), primary_key=True)
+    id: Mapped[int] = mapped_column(
+        Integer, ForeignKey(schema + '.documents_archives.id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': MAP_TYPE,
-        'inherit_condition': ArchiveDocument.id == id
+        'inherit_condition': ArchiveDocument.id == id,
     }
 
     __table_args__ = Base.__table_args__
 
 
-schema_topo_map = SQLAlchemySchemaNode(
+schema_topo_map = build_field_spec(
     TopoMap,
-    # whitelisted attributes
     includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_document_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POLYGON', 'MULTIPOLYGON'])
-    })
+    locale_fields=schema_locale_attributes,
+    geometry_fields=geometry_attributes,
+)
 
-schema_update_topo_map = get_update_schema(schema_topo_map)
-schema_listing_topo_map = restrict_schema(
-    schema_topo_map, fields_topo_map.get('listing'))
+schema_listing_topo_map = schema_topo_map.restrict(fields_topo_map.get('listing'))

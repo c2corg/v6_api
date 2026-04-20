@@ -1,41 +1,46 @@
-
-from c2corg_api.views.validation import validate_associations, \
-    validate_pagination, validate_preferred_lang_param
-from c2corg_api.views import cors_policy, restricted_json_view
-from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
-from shapely.geometry import Point, shape
-from c2corg_api.views.document import DocumentRest, make_validator_create, \
-    make_validator_update
-from c2corg_api.views.validation import validate_cook_param, validate_id, \
-    validate_lang_param
-from c2corg_api.views.document_schemas import coverage_documents_config
-from c2corg_api.models.utils import wkb_to_shape
 import functools
 import json
 import logging
+
+from cornice.resource import resource, view
+from shapely.geometry import Point, shape
+
 from c2corg_api.models import DBSession
 from c2corg_api.models.common.fields_coverage import fields_coverage
-from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage, \
-    schema_coverage, schema_create_coverage, schema_update_coverage
-
+from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage, schema_coverage
+from c2corg_api.models.utils import wkb_to_shape
+from c2corg_api.schemas.coverage import CreateCoverageSchema, UpdateCoverageSchema
+from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views.document import (
+    DocumentRest,
+    make_validator_create,
+    make_validator_update,
+)
+from c2corg_api.views.document_schemas import coverage_documents_config
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
+from c2corg_api.views.validation import (
+    validate_associations,
+    validate_cook_param,
+    validate_id,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+)
 
 log = logging.getLogger(__name__)
 
-validate_coverage_create = make_validator_create(
-    fields_coverage.get('required'))
-validate_coverage_update = make_validator_update(
-    fields_coverage.get('required'))
+validate_coverage_create = make_validator_create(fields_coverage.get('required'))
+validate_coverage_update = make_validator_update(fields_coverage.get('required'))
 validate_associations_create = functools.partial(
-    validate_associations, COVERAGE_TYPE, True)
+    validate_associations, COVERAGE_TYPE, True
+)
 validate_associations_update = functools.partial(
-    validate_associations, COVERAGE_TYPE, False)
+    validate_associations, COVERAGE_TYPE, False
+)
 
 
-@resource(collection_path='/coverages', path='/coverages/{id}',
-          cors_policy=cors_policy)
+@resource(collection_path='/coverages', path='/coverages/{id}', cors_policy=cors_policy)
 class CoverageRest(DocumentRest):
-
     def __init__(self, request, context=None):
         self.request = request
 
@@ -46,31 +51,37 @@ class CoverageRest(DocumentRest):
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(
-            coverage_documents_config, schema_coverage, include_areas=False)
+            coverage_documents_config, schema_coverage, include_areas=False
+        )
 
     @restricted_json_view(
-        schema=schema_create_coverage,
         validators=[
-            colander_body_validator,
+            make_pydantic_validator(
+                CreateCoverageSchema, allowed_geometry_types=['POLYGON']
+            ),
             validate_coverage_create,
-            validate_associations_create])
+            validate_associations_create,
+        ]
+    )
     def collection_post(self):
         return self._collection_post(schema_coverage, allow_anonymous=False)
 
     @restricted_json_view(
-        schema=schema_update_coverage,
         validators=[
-            colander_body_validator,
+            make_pydantic_validator(
+                UpdateCoverageSchema, allowed_geometry_types=['POLYGON']
+            ),
             validate_id,
             validate_coverage_update,
-            validate_associations_update])
+            validate_associations_update,
+        ]
+    )
     def put(self):
         return self._put(Coverage, schema_coverage)
 
 
 @resource(path='/getcoverage', cors_policy=cors_policy)
 class WaypointCoverageRest(DocumentRest):
-
     def __init__(self, request, context=None):
         self.request = request
 
@@ -86,7 +97,6 @@ class WaypointCoverageRest(DocumentRest):
 
 @resource(path='/getpolygoncoverage', cors_policy=cors_policy)
 class PolygonCoverage(DocumentRest):
-
     def __init__(self, request, context=None):
         self.request = request
 
@@ -94,8 +104,7 @@ class PolygonCoverage(DocumentRest):
     def post(self):
         """Returns the coverages from a geom_detail type polygon
         (geom_detail has to be EPSG 4326 since isochrone is 4326)"""
-        geom_detail = json.loads(
-            (json.loads(self.request.body)['geom_detail']))
+        geom_detail = json.loads((json.loads(self.request.body)['geom_detail']))
         polygon = shape(geom_detail)
         return get_coverages(polygon)
 
@@ -118,7 +127,7 @@ def get_coverage(lon, lat):
             coverage_found = coverage
             break
 
-    if (coverage_found):
+    if coverage_found:
         return coverage_found.coverage_type
     else:
         return None

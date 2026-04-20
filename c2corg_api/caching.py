@@ -42,7 +42,7 @@ caches = [
     cache_document_version,
     cache_document_info,
     cache_sitemap,
-    cache_sitemap_xml
+    cache_sitemap_xml,
 ]
 
 
@@ -61,8 +61,7 @@ def configure_caches(settings):
 
     log.debug('Cache version {0}'.format(CACHE_VERSION))
 
-    redis_url = '{0}?db={1}'.format(
-        settings['redis.url'], settings['redis.db_cache'])
+    redis_url = '{0}?db={1}'.format(settings['redis.url'], settings['redis.db_cache'])
     log.debug('Cache Redis: {0}'.format(redis_url))
 
     redis_pool = BlockingConnectionPool.from_url(
@@ -70,7 +69,7 @@ def configure_caches(settings):
         max_connections=int(settings['redis.cache_pool']),
         socket_connect_timeout=float(settings['redis.socket_connect_timeout']),
         socket_timeout=float(settings['redis.socket_timeout']),
-        timeout=float(settings['redis.pool_timeout'])
+        timeout=float(settings['redis.pool_timeout']),
     )
 
     for cache in caches:
@@ -78,12 +77,12 @@ def configure_caches(settings):
             'dogpile.cache.redis',
             arguments={
                 'connection_pool': redis_pool,
-                "thread_local_lock": False,
+                'thread_local_lock': False,
                 'distributed_lock': True,
                 'lock_timeout': 15,  # 15 seconds (dogpile lock)
-                'redis_expiration_time': int(settings['redis.expiration_time'])
+                'redis_expiration_time': int(settings['redis.expiration_time']),
             },
-            replace_existing_backend=True
+            replace_existing_backend=True,
         )
 
     if settings.get('redis.cache_status_refresh_period'):
@@ -99,7 +98,7 @@ def initialize_cache_status(refresh_period):
 
 
 def get_or_create(cache, key, creator):
-    """ Try to get the value for the given key from the cache. In case of
+    """Try to get the value for the given key from the cache. In case of
     errors fallback to the creator function (e.g. load from the database).
     """
     if cache_status.is_down():
@@ -107,11 +106,10 @@ def get_or_create(cache, key, creator):
         return creator()
 
     try:
-        value = cache.get_or_create(
-            key, creator_wrapper(creator), expiration_time=-1)
+        value = cache.get_or_create(key, creator_wrapper(creator), expiration_time=-1)
         cache_status.request_success()
         return value
-    except CreatorException as creator_exception:
+    except CreatorError as creator_exception:
         raise creator_exception.exc
     except Exception:
         log.error('Getting value from cache failed', exc_info=True)
@@ -120,7 +118,7 @@ def get_or_create(cache, key, creator):
 
 
 def get_or_create_multi(cache, keys, creator, should_cache_fn=None):
-    """ Try to get the values for the given keys from the cache. In case of
+    """Try to get the values for the given keys from the cache. In case of
     errors fallback to the creator function (e.g. load from the database).
     """
     if cache_status.is_down():
@@ -129,11 +127,14 @@ def get_or_create_multi(cache, keys, creator, should_cache_fn=None):
 
     try:
         values = cache.get_or_create_multi(
-            keys, creator_wrapper(creator), expiration_time=-1,
-            should_cache_fn=should_cache_fn)
+            keys,
+            creator_wrapper(creator),
+            expiration_time=-1,
+            should_cache_fn=should_cache_fn,
+        )
         cache_status.request_success()
         return values
-    except CreatorException as creator_exception:
+    except CreatorError as creator_exception:
         raise creator_exception.exc
     except Exception:
         log.error('Getting values from cache failed', exc_info=True)
@@ -142,7 +143,7 @@ def get_or_create_multi(cache, keys, creator, should_cache_fn=None):
 
 
 def get(cache, key):
-    """ Try to get the value for the given key from the cache. In case of
+    """Try to get the value for the given key from the cache. In case of
     errors, return NO_VALUE.
     """
     if cache_status.is_down():
@@ -160,7 +161,7 @@ def get(cache, key):
 
 
 def set(cache, key, value):
-    """ Try to set the value with the given key in the cache. In case of
+    """Try to set the value with the given key in the cache. In case of
     errors, log the error and continue.
     """
     if cache_status.is_down():
@@ -175,29 +176,32 @@ def set(cache, key, value):
         cache_status.request_failure()
 
 
-class CreatorException(Exception):
-    """ An exception happening during the execution of a cache `creator`
+class CreatorError(Exception):
+    """An exception happening during the execution of a cache `creator`
     function.
     """
+
     def __init__(self, exc):
         self.exc = exc
 
 
 def creator_wrapper(creator):
-    """ A wrapper around `creator` functions. The purpose of this wrapper is
+    """A wrapper around `creator` functions. The purpose of this wrapper is
     to distinguish exceptions caused in creator functions from exceptions
     while trying to read a value from the cache.
     """
+
     def fn(*args, **kwargs):
         try:
             return creator(*args, **kwargs)
         except Exception as exc:
-            raise CreatorException(exc)
+            raise CreatorError(exc)
+
     return fn
 
 
 class CacheStatus(object):
-    """ To avoid that requests are made to the cache if it is down, the status
+    """To avoid that requests are made to the cache if it is down, the status
     of the last requests is stored. If a request in the 30 seconds failed,
     no new request will be made.
     """

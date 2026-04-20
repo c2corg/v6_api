@@ -14,7 +14,7 @@ DEFAULT_REQUIRED = [
     'locales.title',
     'geometry',
     'geometry.geom',
-    'elevation'
+    'elevation',
 ]
 DEFAULT_LISTING = [
     'locales.title',
@@ -22,22 +22,20 @@ DEFAULT_LISTING = [
     'geometry.geom',
     'elevation',
     'quality',
-    'waypoint_type'
+    'waypoint_type',
 ]
 DEFAULT_ATTRIBUTES_SETTINGS = {
     'fields': DEFAULT_FIELDS,
     'required': DEFAULT_REQUIRED,
-    'listing': DEFAULT_LISTING
+    'listing': DEFAULT_LISTING,
 }
 
 fields_waypoint = {
     'virtual': DEFAULT_ATTRIBUTES_SETTINGS,
     'summit': {
-        'fields': DEFAULT_FIELDS + [
-            'prominence'
-        ],
+        'fields': DEFAULT_FIELDS + ['prominence'],
         'required': DEFAULT_REQUIRED,
-        'listing': DEFAULT_LISTING
+        'listing': DEFAULT_LISTING,
     },
     'pass': DEFAULT_ATTRIBUTES_SETTINGS,
     'lake': DEFAULT_ATTRIBUTES_SETTINGS,
@@ -49,7 +47,8 @@ fields_waypoint = {
     'canyon': DEFAULT_ATTRIBUTES_SETTINGS,
     'misc': DEFAULT_ATTRIBUTES_SETTINGS,
     'climbing_outdoor': {
-        'fields': DEFAULT_FIELDS + [
+        'fields': DEFAULT_FIELDS
+        + [
             'locales.access',
             'locales.access_period',
             'height_max',
@@ -68,15 +67,14 @@ fields_waypoint = {
             'climbing_rating_max',
             'climbing_rating_min',
             'climbing_rating_median',
-            'equipment_ratings'
+            'equipment_ratings',
         ],
         'required': DEFAULT_REQUIRED,
-        'listing': DEFAULT_LISTING + [
-            'locales.access_period'
-        ]
+        'listing': DEFAULT_LISTING + ['locales.access_period'],
     },
     'climbing_indoor': {
-        'fields': DEFAULT_FIELDS + [
+        'fields': DEFAULT_FIELDS
+        + [
             'locales.title',
             'locales.summary',
             'locales.description',
@@ -92,54 +90,48 @@ fields_waypoint = {
             'climbing_styles',
             'climbing_rating_max',
             'climbing_rating_min',
-            'climbing_rating_median'
+            'climbing_rating_median',
         ],
-        'required': [
-            'locales',
-            'locales.title',
-            'geometry',
-            'geometry.geom'
-        ],
+        'required': ['locales', 'locales.title', 'geometry', 'geometry.geom'],
         'listing': [
             'locales.title',
             'locales.summary',
             'geometry.geom',
             'quality',
-            'waypoint_type'
-        ]
+            'waypoint_type',
+        ],
     },
     'gite': {
-        'fields': DEFAULT_FIELDS + [
+        'fields': DEFAULT_FIELDS
+        + [
             'locales.access_period',
             'capacity',
             'capacity_staffed',
             'url',
             'phone',
             'phone_custodian',
-            'custodianship'
+            'custodianship',
         ],
-        'required': DEFAULT_REQUIRED + [
-            'custodianship'
-        ],
-        'listing': DEFAULT_LISTING
+        'required': DEFAULT_REQUIRED + ['custodianship'],
+        'listing': DEFAULT_LISTING,
     },
     'camp_site': {
-        'fields': DEFAULT_FIELDS + [
+        'fields': DEFAULT_FIELDS
+        + [
             'locales.access_period',
             'capacity',
             'capacity_staffed',
             'url',
             'phone',
             'phone_custodian',
-            'custodianship'
+            'custodianship',
         ],
-        'required': DEFAULT_REQUIRED + [
-            'custodianship'
-        ],
-        'listing': DEFAULT_LISTING
+        'required': DEFAULT_REQUIRED + ['custodianship'],
+        'listing': DEFAULT_LISTING,
     },
     'hut': {
-        'fields': DEFAULT_FIELDS + [
+        'fields': DEFAULT_FIELDS
+        + [
             'locales.access',
             'locales.access_period',
             'capacity',
@@ -153,36 +145,34 @@ fields_waypoint = {
             'gas_unstaffed',
             'heating_unstaffed',
         ],
-        'required': DEFAULT_REQUIRED + [
-            'custodianship'
-        ],
-        'listing': DEFAULT_LISTING
+        'required': DEFAULT_REQUIRED + ['custodianship'],
+        'listing': DEFAULT_LISTING,
     },
     'shelter': {
-        'fields': DEFAULT_FIELDS + [
+        'fields': DEFAULT_FIELDS
+        + [
             'capacity',
             'matress_unstaffed',
             'blanket_unstaffed',
             'gas_unstaffed',
-            'heating_unstaffed'
+            'heating_unstaffed',
         ],
         'required': DEFAULT_REQUIRED,
-        'listing': DEFAULT_LISTING
+        'listing': DEFAULT_LISTING,
     },
     'bivouac': {
-        'fields': DEFAULT_FIELDS + [
-            'capacity',
-        ],
+        'fields': DEFAULT_FIELDS + ['capacity'],
         'required': DEFAULT_REQUIRED,
-        'listing': DEFAULT_LISTING
+        'listing': DEFAULT_LISTING,
     },
     'base_camp': {
         'fields': DEFAULT_FIELDS,
         'required': DEFAULT_REQUIRED,
-        'listing': DEFAULT_LISTING
+        'listing': DEFAULT_LISTING,
     },
     'access': {
-        'fields': DEFAULT_FIELDS + [
+        'fields': DEFAULT_FIELDS
+        + [
             'locales.access',
             'locales.access_period',
             'elevation_min',
@@ -190,71 +180,56 @@ fields_waypoint = {
             'public_transportation_rating',
             'snow_clearance_rating',
             'lift_access',
-            'parking_fee'
+            'parking_fee',
         ],
         'required': DEFAULT_REQUIRED,
-        'listing': DEFAULT_LISTING + [
-            'public_transportation_rating'
-        ]
+        'listing': DEFAULT_LISTING + ['public_transportation_rating'],
     },
     'local_product': {
-        'fields': DEFAULT_FIELDS + [
-            'locales.access',
-            'locales.access_period',
-            'product_types',
-            'url',
-            'phone'
-        ],
-        'required': DEFAULT_REQUIRED + [
-            'product_types'
-        ],
-        'listing': DEFAULT_LISTING
+        'fields': DEFAULT_FIELDS
+        + ['locales.access', 'locales.access_period', 'product_types', 'url', 'phone'],
+        'required': DEFAULT_REQUIRED + ['product_types'],
+        'listing': DEFAULT_LISTING,
     },
     'paragliding_takeoff': {
-        'fields': DEFAULT_FIELDS + [
+        'fields': DEFAULT_FIELDS
+        + [
             'length',
             'slope',
             'ground_types',
             'paragliding_rating',
             'exposition_rating',
-            'orientations'
+            'orientations',
         ],
         'required': DEFAULT_REQUIRED,
-        'listing': DEFAULT_LISTING
+        'listing': DEFAULT_LISTING,
     },
     'paragliding_landing': {
-        'fields': DEFAULT_FIELDS + [
+        'fields': DEFAULT_FIELDS
+        + [
             'length',
             'slope',
             'ground_types',
             'paragliding_rating',
             'exposition_rating',
-            'orientations'
+            'orientations',
         ],
         'required': DEFAULT_REQUIRED,
-        'listing': DEFAULT_LISTING
+        'listing': DEFAULT_LISTING,
     },
     'weather_station': {
-        'fields': DEFAULT_FIELDS + [
-            'weather_station_types',
-            'url'
-        ],
-        'required': DEFAULT_REQUIRED + [
-            'url'
-        ],
-        'listing': DEFAULT_LISTING
+        'fields': DEFAULT_FIELDS + ['weather_station_types', 'url'],
+        'required': DEFAULT_REQUIRED + ['url'],
+        'listing': DEFAULT_LISTING,
     },
     'webcam': {
-        'fields': DEFAULT_FIELDS + [
-            'url'
-        ],
-        'required': DEFAULT_REQUIRED + [
-            'url'
-        ],
-        'listing': DEFAULT_LISTING
+        'fields': DEFAULT_FIELDS + ['url'],
+        'required': DEFAULT_REQUIRED + ['url'],
+        'listing': DEFAULT_LISTING,
     },
     'slackline_spot': {
-        'fields': DEFAULT_FIELDS + [
+        'fields': DEFAULT_FIELDS
+        + [
             'slackline_types',
             'slackline_length_min',
             'slackline_length_max',
@@ -263,13 +238,8 @@ fields_waypoint = {
             'best_periods',
             'orientations',
         ],
-        'required': DEFAULT_REQUIRED + [
-            'slackline_types',
-        ],
-        'listing': DEFAULT_LISTING + [
-            'slackline_types',
-            'slackline_length_min',
-            'slackline_length_max',
-        ]
+        'required': DEFAULT_REQUIRED + ['slackline_types'],
+        'listing': DEFAULT_LISTING
+        + ['slackline_types', 'slackline_length_min', 'slackline_length_max'],
     },
 }

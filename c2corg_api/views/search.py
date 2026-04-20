@@ -1,34 +1,36 @@
+from cornice.resource import resource, view
+
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
-from c2corg_api.search import search, SEARCH_LIMIT_DEFAULT, SEARCH_LIMIT_MAX
-from c2corg_api.views import cors_policy
+from c2corg_api.models.xreport import XREPORT_TYPE
+from c2corg_api.search import SEARCH_LIMIT_DEFAULT, SEARCH_LIMIT_MAX, search
 from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import cors_policy
 from c2corg_api.views.area import area_documents_config
 from c2corg_api.views.article import article_documents_config
 from c2corg_api.views.book import book_documents_config
 from c2corg_api.views.image import image_documents_config
 from c2corg_api.views.outing import outing_documents_config
-from c2corg_api.views.xreport import xreport_documents_config
 from c2corg_api.views.route import route_documents_config
 from c2corg_api.views.topo_map import topo_map_documents_config
 from c2corg_api.views.user_profile import user_profile_documents_config
-from c2corg_api.views.validation import validate_pagination, \
-    validate_preferred_lang_param
+from c2corg_api.views.validation import (
+    validate_pagination,
+    validate_preferred_lang_param,
+)
 from c2corg_api.views.waypoint import waypoint_documents_config
-from cornice.resource import resource, view
+from c2corg_api.views.xreport import xreport_documents_config
 
 
 @resource(path='/search', cors_policy=cors_policy)
 class SearchRest(ACLDefault):
-
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def get(self):
         """Search for a query word (simple search).
@@ -56,11 +58,8 @@ class SearchRest(ACLDefault):
         search_term = self.request.params.get('q')
         lang = self.request.validated.get('lang')
         limit = self.request.validated.get('limit')
-        limit = min(
-            SEARCH_LIMIT_DEFAULT if limit is None else limit,
-            SEARCH_LIMIT_MAX)
-        types_to_include = self._parse_types_to_include(
-            self.request.params.get('t'))
+        limit = min(SEARCH_LIMIT_DEFAULT if limit is None else limit, SEARCH_LIMIT_MAX)
+        types_to_include = self._parse_types_to_include(self.request.params.get('t'))
 
         search_types = []
         if self._include_type(WAYPOINT_TYPE, types_to_include):
@@ -90,8 +89,9 @@ class SearchRest(ACLDefault):
         if self._include_type(IMAGE_TYPE, types_to_include):
             search_types.append(('images', image_documents_config))
 
-        if self._include_type(USERPROFILE_TYPE, types_to_include) and \
-                self.request.has_permission('authenticated'):
+        if self._include_type(
+            USERPROFILE_TYPE, types_to_include
+        ) and self.request.has_permission('authenticated'):
             search_types.append(('users', user_profile_documents_config))
 
         return search.search_for_types(search_types, search_term, limit, lang)

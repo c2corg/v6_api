@@ -1,28 +1,28 @@
 import logging
 
-from c2corg_api.security.acl import ACLDefault
+from cornice.resource import resource
+from pydantic import BaseModel
+from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError
+
 from c2corg_api import DBSession
 from c2corg_api.models.user import User
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import user_profile_documents_config
-from c2corg_api.views.validation import validate_id, \
-    validate_body_user_id
-from colander import MappingSchema, SchemaNode, Integer, required
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError
+from c2corg_api.views.pydantic_validator import make_pydantic_validator
+from c2corg_api.views.validation import validate_body_user_id, validate_id
 
 log = logging.getLogger(__name__)
 
 
-class BlockSchema(MappingSchema):
-    user_id = SchemaNode(Integer(), missing=required)
+class BlockSchema(BaseModel):
+    user_id: int
 
 
 def _get_user(user_id):
-    user = DBSession.query(User).get(user_id)
+    user = DBSession.get(User, user_id)
 
     if not user:
         raise HTTPBadRequest('Unknown user {}'.format(user_id))
@@ -32,13 +32,12 @@ def _get_user(user_id):
 
 @resource(path='/users/block', cors_policy=cors_policy)
 class UserBlockRest(ACLDefault):
-
     @restricted_json_view(
         permission='moderator',
-        schema=BlockSchema(),
-        validators=[colander_body_validator, validate_body_user_id])
+        validators=[make_pydantic_validator(BlockSchema), validate_body_user_id],
+    )
     def post(self):
-        """ Block the given user.
+        """Block the given user.
 
         Request:
             `POST` `/users/block`
@@ -54,27 +53,24 @@ class UserBlockRest(ACLDefault):
         try:
             client = get_discourse_client(self.request.registry.settings)
             block_duration = 99999  # 99999 days = 273 years
-            client.suspend(
-                user.id, block_duration, 'account blocked by moderator')
+            client.suspend(user.id, block_duration, 'account blocked by moderator')
         except Exception:
             log.error(
-                'Suspending account in Discourse failed: %d', user.id,
-                exc_info=True)
-            raise HTTPInternalServerError(
-                'Suspending account in Discourse failed')
+                'Suspending account in Discourse failed: %d', user.id, exc_info=True
+            )
+            raise HTTPInternalServerError('Suspending account in Discourse failed')
 
         return {}
 
 
 @resource(path='/users/unblock', cors_policy=cors_policy)
 class UserUnblockRest(ACLDefault):
-
     @restricted_json_view(
         permission='moderator',
-        schema=BlockSchema(),
-        validators=[colander_body_validator, validate_body_user_id])
+        validators=[make_pydantic_validator(BlockSchema), validate_body_user_id],
+    )
     def post(self):
-        """ Unblock the given user.
+        """Unblock the given user.
 
         Request:
             `POST` `/users/unblock`
@@ -95,20 +91,18 @@ class UserUnblockRest(ACLDefault):
             client.unsuspend(user.id)
         except Exception:
             log.error(
-                'Unsuspending account in Discourse failed: %d', user.id,
-                exc_info=True)
-            raise HTTPInternalServerError(
-                'Unsuspending account in Discourse failed')
+                'Unsuspending account in Discourse failed: %d', user.id, exc_info=True
+            )
+            raise HTTPInternalServerError('Unsuspending account in Discourse failed')
 
         return {}
 
 
 @resource(path='/users/blocked/{id}', cors_policy=cors_policy)
 class UserBlockedRest(ACLDefault):
-
     @restricted_json_view(permission='moderator', validators=[validate_id])
     def get(self):
-        """ Check if the given user is blocked.
+        """Check if the given user is blocked.
 
         Request:
             `GET` `users/blocked/{user_id}`
@@ -120,17 +114,14 @@ class UserBlockedRest(ACLDefault):
         """
         user = _get_user(self.request.validated['id'])
 
-        return {
-            'blocked': user.blocked
-        }
+        return {'blocked': user.blocked}
 
 
 @resource(path='/users/blocked', cors_policy=cors_policy)
 class UserBlockedAllRest(ACLDefault):
-
     @restricted_json_view(permission='moderator')
     def get(self):
-        """ Get the blocked users.
+        """Get the blocked users.
 
         Request:
             `GET` `/users/blocked`
@@ -146,16 +137,11 @@ class UserBlockedAllRest(ACLDefault):
                 ]
             }
         """
-        blocked_user_ids = DBSession. \
-            query(User.id). \
-            filter(User.blocked). \
-            all()
-        blocked_user_ids = [user_id for (user_id, ) in blocked_user_ids]
+        blocked_user_ids = DBSession.query(User.id).filter(User.blocked).all()
+        blocked_user_ids = [user_id for (user_id,) in blocked_user_ids]
 
         blocked_users = get_documents_for_ids(
-            blocked_user_ids, None, user_profile_documents_config). \
-            get('documents')
+            blocked_user_ids, None, user_profile_documents_config
+        ).get('documents')
 
-        return {
-            'blocked': blocked_users
-        }
+        return {'blocked': blocked_users}

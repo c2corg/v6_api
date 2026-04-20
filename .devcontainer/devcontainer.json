@@ -1,0 +1,62 @@
+{
+  "name": "c2corg v6_api",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+
+  // VS Code settings
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": ["c2corg_api/tests"],
+
+        "python.languageServer": "Pylance",
+        "python.analysis.typeCheckingMode": "basic",
+        "python.analysis.diagnosticMode": "openFilesOnly",
+
+        // ---- Formatting ----
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true
+        },
+        // ---- Disable legacy Python linters ----
+        "python.linting.enabled": false,
+        "python.linting.flake8Enabled": false,
+        "python.linting.pycodestyleEnabled": false,
+        "python.linting.pylintEnabled": false,
+        // ---- Ruff ----
+        "ruff.enable": true,
+        // ---- Fixes & imports on save ----
+        "editor.codeActionsOnSave": {
+          "source.fixAll.ruff": true,
+          "source.organizeImports.ruff": true
+        }
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff"
+      ]
+    }
+  },
+
+  // Forward ports for local access
+  "forwardPorts": [6543, 9200, 6379, 5432],
+  "portsAttributes": {
+    "6543": { "label": "API Server" },
+    "9200": { "label": "Elasticsearch" },
+    "6379": { "label": "Redis" },
+    "5432": { "label": "PostgreSQL" }
+  },
+
+  // Run after the container is created (one-time setup)
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+
+  // Run every time the container starts
+  "postStartCommand": "echo 'Dev container ready. Run: make test'"
+}

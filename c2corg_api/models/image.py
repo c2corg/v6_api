@@ -1,6 +1,6 @@
-from c2corg_api.models.schema_utils import restrict_schema, \
-    get_update_schema, get_create_schema
-from c2corg_api.models.common.fields_image import fields_image
+from datetime import datetime
+from typing import List, Optional
+
 from sqlalchemy import (
     Column,
     DateTime,
@@ -8,80 +8,95 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     SmallInteger,
-    String
-    )
-from sqlalchemy.ext.declarative import declared_attr
+    String,
+)
+from sqlalchemy.orm import Mapped, declared_attr, mapped_column
 
-from colander import MappingSchema, SchemaNode, Sequence
-from colanderalchemy import SQLAlchemySchemaNode
-
-from c2corg_api.models import schema, enums, Base, DBSession
-from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
-from c2corg_api.models.document import (
-    ArchiveDocument, Document, get_geometry_schema_overrides,
-    schema_attributes, DocumentLocale,
-    schema_locale_attributes)
+from c2corg_api.models import Base, DBSession, enums, schema
 from c2corg_api.models.common import document_types
+from c2corg_api.models.common.fields_image import fields_image
+from c2corg_api.models.document import (
+    ArchiveDocument,
+    Document,
+    geometry_attributes,
+    schema_attributes,
+    schema_locale_attributes,
+)
+from c2corg_api.models.field_spec import build_field_spec
+from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
 IMAGE_TYPE = document_types.IMAGE_TYPE
 
 
-class _ImageMixin(object):
+class _ImageMixin:
+    activities: Mapped[Optional[List[str]]] = mapped_column(
+        ArrayOfEnum(enums.activity_type)
+    )
 
-    activities = Column(ArrayOfEnum(enums.activity_type))
+    categories: Mapped[Optional[List[str]]] = mapped_column(
+        ArrayOfEnum(enums.image_category)
+    )
 
-    categories = Column(ArrayOfEnum(enums.image_category))
+    image_type: Mapped[Optional[str]] = mapped_column(enums.image_type)
 
-    image_type = Column(enums.image_type)
+    author: Mapped[Optional[str]] = mapped_column(String(100))
 
-    author = Column(String(100))
+    elevation: Mapped[Optional[int]] = mapped_column(SmallInteger)
 
-    elevation = Column(SmallInteger)
+    height: Mapped[Optional[int]] = mapped_column(SmallInteger)
 
-    height = Column(SmallInteger)
+    width: Mapped[Optional[int]] = mapped_column(SmallInteger)
 
-    width = Column(SmallInteger)
-
-    file_size = Column(Integer)
+    file_size: Mapped[Optional[int]] = mapped_column(Integer)
 
     @declared_attr
     def filename(self):
-        return Column(String(30),
-                      nullable=False,
-                      unique=(self.__name__ == 'Image'))
+        return Column(String(30), nullable=False, unique=(self.__name__ == 'Image'))
 
-    date_time = Column(DateTime(timezone=True))
+    date_time: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
-    camera_name = Column(String(100))
+    camera_name: Mapped[Optional[str]] = mapped_column(String(100))
 
-    exposure_time = Column(Float)
+    exposure_time: Mapped[Optional[float]] = mapped_column(Float)
 
-    focal_length = Column(Float)
+    focal_length: Mapped[Optional[float]] = mapped_column(Float)
 
-    fnumber = Column(Float)
+    fnumber: Mapped[Optional[float]] = mapped_column(Float)
 
-    iso_speed = Column(SmallInteger)
+    iso_speed: Mapped[Optional[int]] = mapped_column(SmallInteger)
 
 
 attributes = [
-    'activities', 'categories', 'image_type', 'author', 'elevation',
-    'height', 'width', 'file_size', 'filename', 'camera_name', 'exposure_time',
-    'focal_length', 'fnumber', 'iso_speed', 'date_time'
+    'activities',
+    'categories',
+    'image_type',
+    'author',
+    'elevation',
+    'height',
+    'width',
+    'file_size',
+    'filename',
+    'camera_name',
+    'exposure_time',
+    'focal_length',
+    'fnumber',
+    'iso_speed',
+    'date_time',
 ]
 
 
 class Image(_ImageMixin, Document):
-    """
-    """
+    """ """
+
     __tablename__ = 'images'
 
-    document_id = Column(
-        Integer,
-        ForeignKey(schema + '.documents.document_id'), primary_key=True)
+    document_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey(schema + '.documents.document_id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': IMAGE_TYPE,
-        'inherit_condition': Document.document_id == document_id
+        'inherit_condition': Document.document_id == document_id,
     }
 
     def to_archive(self):
@@ -97,73 +112,37 @@ class Image(_ImageMixin, Document):
 
 
 class ArchiveImage(_ImageMixin, ArchiveDocument):
-    """
-    """
+    """ """
+
     __tablename__ = 'images_archives'
 
-    id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_archives.id'), primary_key=True)
+    id: Mapped[int] = mapped_column(
+        Integer, ForeignKey(schema + '.documents_archives.id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': IMAGE_TYPE,
-        'inherit_condition': ArchiveDocument.id == id
+        'inherit_condition': ArchiveDocument.id == id,
     }
 
     __table_args__ = Base.__table_args__
 
 
-# special schema for image locales: images can be created without title
-schema_image_locale = SQLAlchemySchemaNode(
-    DocumentLocale,
-    # whitelisted attributes
-    includes=schema_locale_attributes,
-    overrides={
-        'version': {
-            'missing': None
-        },
-        'title': {
-            'missing': ''
-        }
-    })
-
-schema_image = SQLAlchemySchemaNode(
+schema_image = build_field_spec(
     Image,
-    # whitelisted attributes
     includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_image_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POINT'])
-    })
+    locale_fields=schema_locale_attributes,
+    geometry_fields=geometry_attributes,
+)
 
-schema_create_image = get_create_schema(schema_image)
-schema_update_image = get_update_schema(schema_image)
-schema_listing_image = restrict_schema(
-    schema_image, fields_image.get('listing'))
-schema_association_image = restrict_schema(schema_image, [
-    'filename', 'locales.title', 'geometry.geom'
-])
-
-
-class SchemaImageList(MappingSchema):
-    images = SchemaNode(
-        Sequence(), schema_create_image, missing=None)
-
-
-schema_create_image_list = SchemaImageList()
+schema_listing_image = schema_image.restrict(fields_image.get('listing'))
 
 
 def is_personal(image_id):
-    image_type = DBSession.query(Image.image_type). \
-        select_from(Image.__table__). \
-        filter(Image.document_id == image_id). \
-        scalar()
+    image_type = (
+        DBSession.query(Image.image_type)
+        .select_from(Image.__table__)
+        .filter(Image.document_id == image_id)
+        .scalar()
+    )
     return image_type == 'personal'

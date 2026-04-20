@@ -5,16 +5,15 @@ from c2corg_api.markdown import parse_code
 
 
 def read_file(path):
-    with open(path, 'r', encoding="utf-8") as f:
+    with open(path, 'r', encoding='utf-8') as f:
         return f.read()
 
 
-class TestFormat(unittest.TestCase):
-
+class TestFormat:
     def test_all(self):
         def do_test(test_id, text, expected):
             result = parse_code(text)
-            self.assertEqual(expected.rstrip(), result.rstrip(), test_id)
+            assert expected.rstrip() == result.rstrip(), test_id
 
         def process_folder(path):
             for item in os.listdir(path):
@@ -23,9 +22,9 @@ class TestFormat(unittest.TestCase):
                 if os.path.isdir(item_path):
                     process_folder(item_path)
                 else:
-                    if item_path.endswith(".md"):
+                    if item_path.endswith('.md'):
                         text = read_file(item_path)
-                        expected = read_file(item_path.replace(".md", ".html"))
+                        expected = read_file(item_path.replace('.md', '.html'))
                         do_test(item_path, text, expected)
 
         base_path = os.path.dirname(os.path.abspath(__file__))

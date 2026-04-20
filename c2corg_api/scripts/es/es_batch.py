@@ -1,8 +1,9 @@
-from elasticsearch import helpers
-
-from c2corg_api.scripts.migration.batch import Batch
-from elasticsearch.helpers import BulkIndexError
 import logging
+
+from elasticsearch import helpers
+from elasticsearch.helpers import BulkIndexError
+
+from c2corg_api.scripts.migration_v5.batch import Batch
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +44,5 @@ class ElasticBatch(Batch):
             except BulkIndexError:
                 # when trying to delete a document that does not exist, an
                 # error is raised, and other documents are not inserted
-                log.warning(
-                    'error sending bulk update to ElasticSearch',
-                    exc_info=True)
+                log.warning('error sending bulk update to ElasticSearch', exc_info=True)
             self.actions = []

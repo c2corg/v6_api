@@ -8,7 +8,7 @@ NOT_MARKDOWN_PROPERTY = {
     'slope',
     'conditions_levels',
     'topic_id',
-    'participants'
+    'participants',
 }
 
 

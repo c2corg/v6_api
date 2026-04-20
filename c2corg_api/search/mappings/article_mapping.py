@@ -1,18 +1,15 @@
 from c2corg_api.models.article import ARTICLE_TYPE, Article
-from c2corg_api.search.mapping import SearchDocument, BaseMeta
-from c2corg_api.search.mapping_types import QueryableMixin, QEnum, QEnumArray
+from c2corg_api.search.mapping import BaseMeta, SearchDocument
+from c2corg_api.search.mapping_types import QEnum, QEnumArray, QueryableMixin
 
 
 class SearchArticle(SearchDocument):
     class Meta(BaseMeta):
         doc_type = ARTICLE_TYPE
 
-    activities = QEnumArray(
-        'act', model_field=Article.activities)
-    article_categories = QEnumArray(
-        'acat', model_field=Article.categories)
-    article_type = QEnum(
-        'atyp', model_field=Article.article_type)
+    activities = QEnumArray('act', model_field=Article.activities)
+    article_categories = QEnumArray('acat', model_field=Article.categories)
+    article_type = QEnum('atyp', model_field=Article.article_type)
 
     FIELDS = ['activities', 'article_type']
 
@@ -25,11 +22,9 @@ class SearchArticle(SearchDocument):
 
         search_document['article_categories'] = document.categories
 
-        SearchDocument.copy_fields(
-            search_document, document, SearchArticle.FIELDS)
+        SearchDocument.copy_fields(search_document, document, SearchArticle.FIELDS)
 
         return search_document
 
 
-SearchArticle.queryable_fields = QueryableMixin.get_queryable_fields(
-    SearchArticle)
+SearchArticle.queryable_fields = QueryableMixin.get_queryable_fields(SearchArticle)

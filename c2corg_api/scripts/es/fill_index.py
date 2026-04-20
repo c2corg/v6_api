@@ -1,33 +1,32 @@
 import logging
-
 import os
 import sys
-
-import transaction
-from c2corg_api.scripts.es import sync
-from pyramid.paster import (
-    get_appsettings,
-    setup_logging,
-    )
-
-from pyramid.scripts.common import parse_vars
 from datetime import datetime, timedelta
 
+import transaction
+from pyramid.paster import get_appsettings, setup_logging
+from pyramid.scripts.common import parse_vars
 from sqlalchemy import engine_from_config
-
-from c2corg_api.models import es_sync, document_types
-from c2corg_api.models.document import Document
-from c2corg_api.scripts.es.es_batch import ElasticBatch
-from c2corg_api.search import configure_es_from_config, elasticsearch_config, \
-    search_documents
 from sqlalchemy.orm.session import sessionmaker
 from zope.sqlalchemy import register
+
+from c2corg_api.models import document_types, es_sync
+from c2corg_api.models.document import Document
+from c2corg_api.scripts.es import sync
+from c2corg_api.scripts.es.es_batch import ElasticBatch
+from c2corg_api.search import (
+    configure_es_from_config,
+    elasticsearch_config,
+    search_documents,
+)
 
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print('usage: %s <config_uri> [var=value]\n'
-          '(example: "%s development.ini")' % (cmd, cmd))
+    print(
+        'usage: %s <config_uri> [var=value]\n'
+        '(example: "%s development.ini")' % (cmd, cmd)
+    )
     sys.exit(1)
 
 
@@ -39,7 +38,7 @@ def main(argv=sys.argv):
     setup_logging(config_uri)
     logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
     settings = get_appsettings(config_uri, options=options)
-    engine = engine_from_config(settings, 'sqlalchemy.')
+    engine = engine_from_config(settings, 'sqlalchemy.', future=True)
     Session = sessionmaker()  # noqa
     register(Session)
     session = Session(bind=engine)
@@ -55,20 +54,17 @@ def fill_index(session, batch_size=1000):
     client = elasticsearch_config['client']
     index_name = elasticsearch_config['index']
 
-    status = {
-        'start_time': datetime.now(),
-        'last_progress_update': None
-    }
+    status = {'start_time': datetime.now(), 'last_progress_update': None}
 
     _, date_now = es_sync.get_status(session)
 
-    total = session.query(Document). \
-        filter(Document.redirects_to.is_(None)).count()
+    total = session.query(Document).filter(Document.redirects_to.is_(None)).count()
 
     def progress(count, total_count):
-        if status['last_progress_update'] is None or \
-                status['last_progress_update'] + timedelta(seconds=1) < \
-                datetime.now():
+        if (
+            status['last_progress_update'] is None
+            or status['last_progress_update'] + timedelta(seconds=1) < datetime.now()
+        ):
             print('{0} of {1}'.format(count, total_count))
             status['last_progress_update'] = datetime.now()
 
@@ -79,8 +75,9 @@ def fill_index(session, batch_size=1000):
             print('Importing document type {}'.format(doc_type))
             to_search_document = search_documents[doc_type].to_search_document
 
-            for doc in sync.get_documents(session, doc_type, batch_size,
-                                          ignore_redirects=True):
+            for doc in sync.get_documents(
+                session, doc_type, batch_size, ignore_redirects=True
+            ):
                 batch.add(to_search_document(doc, index_name))
 
                 count += 1
