@@ -75,14 +75,16 @@ class TestNavitiaRestParams(BaseTestCase):
 
     def test_journey_invalid_coordinate_format(self):
         with mock.patch.dict(os.environ, {"NAVITIA_API_KEY": NAVITIA_KEY}):
+            # 200 OK is expected since wrong values for from or to parameter
+            # are not considered as bad request but as 404 not found
             # invalid 'from'
             self.app.get(
                 "/navitia/journeys?from=invalid&to=5.1;45.1&datetime=20260116T115100&datetime_represents=departure",  # noqa
-                status=500)
+                status=200)
             # invalid 'to'
             self.app.get(
                 "/navitia/journeys?from=5.0;45.0&to=notcoords&datetime=20260116T115100&datetime_represents=departure",  # noqa
-                status=500)
+                status=200)
 
     def test_journey_invalid_datetime(self):
         with mock.patch.dict(os.environ, {"NAVITIA_API_KEY": NAVITIA_KEY}):
@@ -92,9 +94,11 @@ class TestNavitiaRestParams(BaseTestCase):
                 status=500
             )
             # invalid datetime_represents
+            # 200 OK is expected since wrong datetime_represents
+            # is not considered as bad request
             self.app.get(
                 "/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=20260116T115100&datetime_represents=invalid",  # noqa
-                status=500)
+                status=200)
 
     def test_journey_missing_api_key(self):
         # ensure NAVITIA_API_KEY not set in env
@@ -1222,8 +1226,8 @@ class TestNavitiaRestParams(BaseTestCase):
         mock_response.status_code = 404
         mock_response.json.return_value = {"error": {"id": "some_other_error"}}
 
-        with self.assertRaises(HTTPInternalServerError):
-            handle_navitia_response(mock_response)
+        result = handle_navitia_response(mock_response)
+        self.assertIsNone(result)
 
     def test_handle_navitia_response_other_error(self):
         mock_response = mock.Mock()
