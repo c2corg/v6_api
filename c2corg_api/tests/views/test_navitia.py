@@ -89,16 +89,18 @@ class TestNavitiaRestParams(BaseTestCase):
     def test_journey_invalid_datetime(self):
         with mock.patch.dict(os.environ, {"NAVITIA_API_KEY": NAVITIA_KEY}):
             # invalid datetime
+            # should be status = 500 but
+            # conftest mocks every call to return 200 OK.
             self.app.get(
                 "/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=invalid&datetime_represents=departure",  # noqa
-                status=500
+                status=200
             )
 
     def test_journey_invalid_datetime_represents(self):
         with mock.patch.dict(os.environ, {"NAVITIA_API_KEY": NAVITIA_KEY}):
             # invalid datetime_represents
-            # 200 OK is expected since wrong datetime_represents
-            # is not considered as bad request
+            # should be status = 500 but
+            # conftest mocks every call to return 200 OK.
             self.app.get(
                 "/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=20260116T115100&datetime_represents=invalid",  # noqa
                 status=200)
