@@ -8,7 +8,7 @@ from c2corg_api.scripts.es import sync
 from pyramid.paster import (
     get_appsettings,
     setup_logging,
-)
+    )
 
 from pyramid.scripts.common import parse_vars
 from datetime import datetime, timedelta
