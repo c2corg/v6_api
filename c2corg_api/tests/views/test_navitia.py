@@ -93,6 +93,9 @@ class TestNavitiaRestParams(BaseTestCase):
                 "/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=invalid&datetime_represents=departure",  # noqa
                 status=500
             )
+
+    def test_journey_invalid_datetime_represents(self):
+        with mock.patch.dict(os.environ, {"NAVITIA_API_KEY": NAVITIA_KEY}):
             # invalid datetime_represents
             # 200 OK is expected since wrong datetime_represents
             # is not considered as bad request
