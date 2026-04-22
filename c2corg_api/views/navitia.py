@@ -758,15 +758,9 @@ def handle_navitia_response(response):
         raise HTTPBadRequest("Invalid parameters for Navitia API")
 
     elif response.status_code == 404:
-        error_id = response.json().get("error", {}).get("id")
-
-        # Allowed "no journey found" cases
-        if error_id in ("no_destination", "no_origin"):
-            return None
-
-        # Raise with the payload as the detail
-        raise HTTPInternalServerError(
-            response.json().get("error", {}))
+        # 404: unable to find an object, no response
+        # This should not raise any exception error, just return None
+        return None
 
     elif not response.ok:
         raise HTTPInternalServerError(
