@@ -131,8 +131,7 @@ class TestNavitiaRestParams(BaseTestCase):
                 f"datetime_represents=departure&"
                 f"walking_speed=1.12&"
                 f"max_walking_duration_to_pt=4464&"
-                f"min_nb_journeys=3&"
-                f"max_nb_transfers=-1",
+                f"min_nb_journeys=3&",
                 status=200,
             )
 
