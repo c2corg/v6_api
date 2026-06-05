@@ -1,0 +1,39 @@
+{
+  "name": "c2corg v6_api",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+
+  // VS Code settings
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": ["c2corg_api/tests"],
+        "python.linting.flake8Enabled": true,
+        "editor.formatOnSave": true
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.flake8"
+      ]
+    }
+  },
+
+  // Forward ports for local access
+  "forwardPorts": [6543, 9200, 6379, 5432],
+  "portsAttributes": {
+    "6543": { "label": "API Server" },
+    "9200": { "label": "Elasticsearch" },
+    "6379": { "label": "Redis" },
+    "5432": { "label": "PostgreSQL" }
+  },
+
+  // Run after the container is created (one-time setup)
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+
+  // Run every time the container starts
+  "postStartCommand": "echo 'Dev container ready. Run: make test'"
+}
