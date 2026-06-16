@@ -27,6 +27,8 @@ def _get_ltag_pattern():
     Build the big ugly fat regexp for L# numbering. It's based on named
     patterns : (P?<pattern_name>pattern) and decomposed part by part.
 
+    C#/V# numbering is for crag routes (climb/voie)
+
     Please have a look on
     https://forum.camptocamp.org/t/question-l/207148/69
     """
@@ -53,7 +55,7 @@ def _get_ltag_pattern():
     text_in_the_middle = p("text_in_the_middle", "~")
     header = p("header", "=")
 
-    typ = p("type", "[LR]")
+    typ = p("type", "[LRVC]")
 
     text = "(" + header + "|" + text_in_the_middle + "|" + numbering + ")"
 
@@ -78,6 +80,7 @@ class LTagNumbering(object):
     FORMAT = ('<span class="pitch">'
               '<span translate>{type}</span>'
               '{text}</span>').format
+    FORMAT_CLIMB = ('<span class="pitch">{text}</span>').format
     FORMAT_UNMATCHED = '<code>{}</code>'.format
 
     def __init__(self, markdown):
@@ -85,7 +88,7 @@ class LTagNumbering(object):
         self.get_placeholder = markdown.htmlStash.store
 
         # Values for relative patterns
-        self.value = {"R": 0, "L": 0}
+        self.value = {"R": 0, "L": 0, "V": 0, "C": 0}
 
         # One way switch
         self.supported = True
@@ -178,7 +181,10 @@ class LTagNumbering(object):
 
         text = "".join((first_offset, label, "-", last_offset, label))
 
-        return self.FORMAT(type=typ, text=text)
+        if typ == "V" or typ == "C":
+            return self.FORMAT_CLIMB(text=text)
+        else:
+            return self.FORMAT(type=typ, text=text)
 
     def handle_monopitch(self, match, row_type, is_first_cell):
         """
@@ -200,7 +206,10 @@ class LTagNumbering(object):
             if is_first_cell:  # first cell impacts numbering
                 self.value[typ] = int(value)
 
-            return self.FORMAT(type=typ, text=value + label)
+            if typ == "V" or typ == "C":
+                return self.FORMAT_CLIMB(text=value + label)
+            else:
+                return self.FORMAT(type=typ, text=value + label)
 
         elif len(value) == 0:  # Simple use case : L#
             self.allow_labels = False
@@ -212,7 +221,10 @@ class LTagNumbering(object):
                 value += 1
                 self.value[typ] = value
 
-            return self.FORMAT(type=typ, text=str(value))
+            if typ == "V" or typ == "C":
+                return self.FORMAT_CLIMB(text=str(value))
+            else:
+                return self.FORMAT(type=typ, text=str(value))
 
         else:
             raise NotImplementedError("Should not happen")
@@ -225,7 +237,7 @@ class LTagProcessor(BlockProcessor):
     and will be handled by TreeProcessor
     """
 
-    RE_TESTER = re.compile(r"(?:^|\n) {0,3}([LR]#)")
+    RE_TESTER = re.compile(r"(?:^|\n) {0,3}([LRVC]#)")
     RE_PIPE_SAVER = re.compile(r'(\|)(?![^|]*\]\])')
     CELL_SEPARATOR = '__--|--__'
 
