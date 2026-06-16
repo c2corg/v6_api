@@ -249,6 +249,9 @@ schema_outing = SQLAlchemySchemaNode(
         'version': {
             'missing': None
         },
+        'version_date': {
+            'missing': None
+        },  
         'locales': {
             'children': [schema_outing_locale]
         },
