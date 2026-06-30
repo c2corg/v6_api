@@ -1,29 +1,51 @@
 #!/bin/bash
-
-# Configuration
-SERVICE_NAME="postgresql"
-DB_USER="postgres"  
-DB_NAME="c2corg"
-
-PROJECT_NAME=${PROJECT_NAME:-""}           
-CCOMPOSE=${CCOMPOSE:-"podman-compose"}
-STANDALONE=${PODMAN_ENV:-""}
+# Calculates and stores the estimated duration (in days) for all French routes in the database.
+# "bare metal" variant: uses psql directly (no container/compose).
+# Intended to run FROM WITHIN a container or on a machine with direct database access.
+#
+# WHAT IT DOES:
+#   1. Creates/replaces three PL/pgSQL functions in the guidebook schema:
+#        - calculate_duration_non_climbing  (hiking, snowshoeing, ski touring, mountain biking)
+#        - calculate_duration_climbing      (rock/ice/mountain climbing, via ferrata, etc.)
+#        - calculate_duration              (dispatcher: picks the right function per activity)
+#      The formulas are based on the DIN 33466 standard for non-climbing activities,
+#      and a custom approach (difficulty elevation + approach time) for climbing activities.
+#   2. Resets calculated_duration to NULL for all French routes (area_id = 14274).
+#   3. Re-computes and updates calculated_duration for every French route.
+#      Routes with incoherent data (duration < 30 min or > 18 h, inconsistent elevations)
+#      are left as NULL.
+#   4. Logs the number of updated vs. rejected routes.
+#
+# WHEN TO RUN:
+#   - After a bulk import of routes into the database (initial setup or data refresh).
+#   - When the duration calculation formula is updated.
+#   - NOT needed after individual route edits: a SQLAlchemy event in __init__.py
+#     automatically recalculates calculated_duration after each route insert/update.
+#
+# PREREQUISITE:
+#   Before running this script, temporarily raise LIMIT_MAX in
+#   c2corg_api/views/document.py to 100000 so the API returns all routes:
+#     LIMIT_MAX = 100000
+#   Restore it to 100 afterwards.
+#
+# Optional environment variables:
+#   PGUSER      PostgreSQL user (default: postgres)
+#   PGDATABASE  PostgreSQL database (default: c2corg)
+#   PGHOST      PostgreSQL host (default: localhost)
+#   PGPORT      PostgreSQL port (default: 5432)
+#   PGPASSWORD  PostgreSQL password (forwarded to psql natively)
+#   PGSSLCERT   PostgreSQL SSL certificate (forwarded to psql natively)
 
 OUTPUT_FILE="/tmp/routes_ids.txt"
 LOG_FILE="log-duration-update.txt"
 SQL_FILE="/tmp/duration_sql_commands.sql"
-
-if [[ -n "$STANDALONE" ]]; then
-    SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    cd "$SCRIPTPATH"/.. || exit
-fi
 
 echo "Start time :" > $LOG_FILE
 echo $(date +"%Y-%m-%d-%H-%M-%S") >> $LOG_FILE
 
 # Get routes from bdd (area_id=14274)
 echo "Fetching routes from database for France (area_id=14274)..." >> $LOG_FILE
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "
+psql -t -c "
     SELECT r.document_id 
     FROM guidebook.routes r 
     NATURAL JOIN guidebook.area_associations aa 
@@ -313,10 +335,10 @@ echo "SQL file prepared with corrected update commands for French routes." >> $L
 
 # Execute all SQL commands
 echo "Executing SQL commands..." >> $LOG_FILE
-$CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -q -U $DB_USER -d $DB_NAME < "$SQL_FILE"
+psql -q < "$SQL_FILE"
 
 # Check how many French routes were updated
-update_count=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "
+update_count=$(psql -t -c "
     SELECT COUNT(*) 
     FROM guidebook.routes r 
     NATURAL JOIN guidebook.area_associations aa 
@@ -324,7 +346,7 @@ update_count=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_
 ")
 
 # Check how many routes were rejected due to incoherent data
-rejected_count=$($CCOMPOSE -p "${PROJECT_NAME}" exec -T $SERVICE_NAME psql -U $DB_USER -d $DB_NAME -t -c "
+rejected_count=$(psql -t -c "
     SELECT COUNT(*) 
     FROM guidebook.routes r 
     NATURAL JOIN guidebook.area_associations aa 
