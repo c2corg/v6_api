@@ -27,7 +27,7 @@ from cornice.resource import resource, view
 
 @resource(path='/search', cors_policy=cors_policy)
 class SearchRest(object):
-    def __init__(self, request):
+    def __init__(self, request, context=None):
         self.request = request
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
