@@ -62,6 +62,9 @@ for var in NAVITIA_API_KEY MAX_DISTANCE_WAYPOINT_TO_STOPAREA WALKING_SPEED MAX_S
 done
 [[ "$missing_vars" -eq 1 ]] && exit 1
 log "All required environment variables are set."
+log "MAX_DISTANCE_WAYPOINT_TO_STOPAREA: $MAX_DISTANCE_WAYPOINT_TO_STOPAREA"
+log "WALKING_SPEED: $WALKING_SPEED"
+log "MAX_STOP_AREA_FOR_1_WAYPOINT: $MAX_STOP_AREA_FOR_1_WAYPOINT"
 
 # ============================================================
 # CONFIGURATION
@@ -80,7 +83,9 @@ psql_cmd() {
 
 API_PORT=${API_PORT:-6543}
 DURATION=$(echo "scale=0; $MAX_DISTANCE_WAYPOINT_TO_STOPAREA / $WALKING_SPEED" | bc)
-MAX_STOP_AREA_FETCHED=$((MAX_STOP_AREA_FOR_1_WAYPOINT * 3))
+MAX_DISTANCE_KM=$(awk "BEGIN {printf \"%.6f\", $MAX_DISTANCE_WAYPOINT_TO_STOPAREA / 1000}")
+# Augmenter le nombre d'arrêts récupérés pour avoir plus de choix
+MAX_STOP_AREA_FETCHED=$((MAX_STOP_AREA_FOR_1_WAYPOINT * 3)) # Récupérer 6 fois plus d'arrêts
 
 BASE_API_URL="http://localhost:${API_PORT}/waypoints?wtyp=access&a=${AREA_ID}&limit=100"
 OUTPUT_FILE="/tmp/waypoints_ids.txt"
@@ -186,6 +191,7 @@ declare -A INSERTED_STOP_AREAS
 # MAIN LOOP
 # ============================================================
 for ((k=1; k<=nb_waypoints; k++)); do
+    # Log progress every 10 waypoints
     if (( k % 10 == 0 )) || (( k == 1 )); then
         log "Progress: $k/$nb_waypoints — Navitia requests: $NAVITIA_REQUEST_COUNT — Errors: $ERROR_COUNT"
     fi
@@ -238,18 +244,22 @@ for ((k=1; k<=nb_waypoints; k++)); do
 
     stop_area_count=$(wc -l < /tmp/stop_ids.txt)
 
-    # --- Filter by transport diversity ---
-    > /tmp/selected_stops.txt
+    # --- Single-pass selection: transport diversity + walking validation + insert ---
     > /tmp/known_transports.txt
     selected_count=0
 
+    # Process stops in order (already sorted by straight-line distance by Navitia)
     for ((i=1; i<=stop_area_count && selected_count<MAX_STOP_AREA_FOR_1_WAYPOINT; i++)); do
+        stop_name=$(sed "${i}q;d" /tmp/stop_names.txt)
         stop_id=$(sed "${i}q;d" /tmp/stop_ids.txt)
+        lat_stop=$(sed "${i}q;d" /tmp/lat.txt)
+        lon_stop=$(sed "${i}q;d" /tmp/lon.txt)
 
+        # Fetch stop details once and reuse them later if inserted.
         stop_info=$(curl -s -H "Authorization: $NAVITIA_API_KEY" "https://api.navitia.io/v1/places/$stop_id")
         ((NAVITIA_REQUEST_COUNT++))
 
-        echo "$stop_info" | jq -r '.places[0].stop_area.lines[] | .commercial_mode.name + " " + .code' \
+        echo "$stop_info" | jq -r '.places[0].stop_area.lines[]? | .commercial_mode.name + " " + .code' \
             > /tmp/current_stop_transports.txt 2>/dev/null
 
         new_transport_found=false
@@ -259,30 +269,18 @@ for ((k=1; k<=nb_waypoints; k++)); do
             transport=$(sed "${t}q;d" /tmp/current_stop_transports.txt)
             if ! grep -Fxq "$transport" /tmp/known_transports.txt; then
                 new_transport_found=true
-                echo "$transport" >> /tmp/known_transports.txt
+                break
             fi
         done
 
-        if [ "$new_transport_found" = true ]; then
-            echo "$i" >> /tmp/selected_stops.txt
-            ((selected_count++))
+        # No new transport contribution: skip without extra Navitia calls.
+        if [ "$new_transport_found" != true ]; then
+            continue
         fi
-    done
-
-    log "Waypoint $WAYPOINT_ID: selected $selected_count/$stop_area_count stop areas."
-
-    # --- Process selected stops ---
-    selected_stops_count=$(wc -l < /tmp/selected_stops.txt)
-    for ((s=1; s<=selected_stops_count; s++)); do
-        stop_index=$(sed "${s}q;d" /tmp/selected_stops.txt)
-        stop_name=$(sed "${stop_index}q;d" /tmp/stop_names.txt)
-        stop_id=$(sed "${stop_index}q;d" /tmp/stop_ids.txt)
-        lat_stop=$(sed "${stop_index}q;d" /tmp/lat.txt)
-        lon_stop=$(sed "${stop_index}q;d" /tmp/lon.txt)
 
         # Get walking travel time
         journey_response=$(curl -s -H "Authorization: $NAVITIA_API_KEY" \
-            "https://api.navitia.io/v1/journeys?to=$lon%3B$lat&walking_speed=$WALKING_SPEED&max_walking_direct_path_duration=$DURATION&direct_path_mode%5B%5D=walking&from=$stop_id&direct_path=only_with_alternatives")
+            "https://api.navitia.io/v1/journeys?to=$lon%3B$lat&walking_speed=$WALKING_SPEED&max_duration_to_pt=$DURATION&direct_path_mode%5B%5D=walking&from=$stop_id&direct_path=only_with_alternatives")
         ((NAVITIA_REQUEST_COUNT++))
 
         has_error=$(echo "$journey_response" | jq -r 'has("error")' 2>/dev/null)
@@ -292,8 +290,20 @@ for ((k=1; k<=nb_waypoints; k++)); do
             continue
         fi
 
+        has_journey=$(echo "$journey_response" | jq -r '.journeys | length > 0' 2>/dev/null)
+        if [[ "$has_journey" != "true" ]]; then
+            log "Waypoint $WAYPOINT_ID / stop $stop_id: no walking journey found, skipping."
+            continue
+        fi
+
         walk_duration=$(echo "$journey_response" | jq -r '.journeys[0].duration // 0')
         distance_km=$(awk "BEGIN {printf \"%.2f\", ($walk_duration * $WALKING_SPEED) / 1000}")
+
+        over_distance_limit=$(awk "BEGIN {print (($distance_km > $MAX_DISTANCE_KM) ? 1 : 0)}")
+        if [[ "$over_distance_limit" -eq 1 ]]; then
+            log "Waypoint $WAYPOINT_ID / stop $stop_id: walking distance ${distance_km}km exceeds ${MAX_DISTANCE_KM}km, skipping."
+            continue
+        fi
 
         if [[ -n "${INSERTED_STOP_AREAS[$stop_id]+x}" ]]; then
             # Already inserted in this run: reference via navitia_id subquery
@@ -301,14 +311,11 @@ for ((k=1; k<=nb_waypoints; k++)); do
 SELECT stoparea_id, $WAYPOINT_ID, $distance_km
 FROM guidebook.stopareas WHERE navitia_id = '$stop_id';" >> "$SQL_FILE"
         else
-            # New stop area: fetch full details and emit insert block
-            stop_info=$(curl -s -H "Authorization: $NAVITIA_API_KEY" "https://api.navitia.io/v1/places/$stop_id")
-            ((NAVITIA_REQUEST_COUNT++))
-
-            echo "$stop_info" | jq -r '.places[0].stop_area.lines[].name'                  > /tmp/lines.txt
-            echo "$stop_info" | jq -r '.places[0].stop_area.lines[].code'                  > /tmp/code.txt
-            echo "$stop_info" | jq -r '.places[0].stop_area.lines[].network.name'          > /tmp/network.txt
-            echo "$stop_info" | jq -r '.places[0].stop_area.lines[].commercial_mode.name'  > /tmp/mode.txt
+            # New stop area: use cached stop details and emit insert block
+            echo "$stop_info" | jq -r '.places[0].stop_area.lines[]? | .name'                  > /tmp/lines.txt
+            echo "$stop_info" | jq -r '.places[0].stop_area.lines[]? | .code'                  > /tmp/code.txt
+            echo "$stop_info" | jq -r '.places[0].stop_area.lines[]? | .network.name'          > /tmp/network.txt
+            echo "$stop_info" | jq -r '.places[0].stop_area.lines[]? | .commercial_mode.name'  > /tmp/mode.txt
 
             stop_count=$(wc -l < /tmp/lines.txt)
 
@@ -340,10 +347,22 @@ FROM guidebook.stopareas WHERE navitia_id = '$stop_id';" >> "$SQL_FILE"
             INSERTED_STOP_AREAS[$stop_id]="inserted"
             rm -f /tmp/lines.txt /tmp/code.txt /tmp/network.txt /tmp/mode.txt
         fi
+
+        # Add transports only after the stop has been retained.
+        for ((t=1; t<=transport_count; t++)); do
+            transport=$(sed "${t}q;d" /tmp/current_stop_transports.txt)
+            if ! grep -Fxq "$transport" /tmp/known_transports.txt; then
+                echo "$transport" >> /tmp/known_transports.txt
+            fi
+        done
+
+        ((selected_count++))
     done
 
+    log "Waypoint $WAYPOINT_ID: selected $selected_count/$stop_area_count stop areas."
+
     rm -f /tmp/stop_names.txt /tmp/stop_ids.txt /tmp/lat.txt /tmp/lon.txt \
-          /tmp/selected_stops.txt /tmp/known_transports.txt /tmp/current_stop_transports.txt
+          /tmp/known_transports.txt /tmp/current_stop_transports.txt
 done
 
 echo "COMMIT;" >> "$SQL_FILE"
