@@ -14,7 +14,7 @@ from c2corg_api.views.coverage import get_coverage
 from c2corg_api.views.waypoint import build_reachable_waypoints_query
 from c2corg_api.views.route import build_reachable_route_query_with_waypoints
 from shapely.geometry import Point
-from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError
+from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound, HTTPUnauthorized
 from pyramid.response import Response
 from cornice.resource import resource, view
 from c2corg_api.views import cors_policy, to_json_dict
@@ -751,20 +751,21 @@ def handle_navitia_response(response):
     Raises HTTP* exceptions otherwise.
     """
 
-    if response.status_code == 401:
-        raise HTTPInternalServerError("Authentication error with Navitia API")
+    if response.status_code == 400:
+        raise HTTPBadRequest("invalid_param")
 
-    elif response.status_code == 400:
-        raise HTTPBadRequest("Invalid parameters for Navitia API")
+    elif response.status_code == 401:
+        raise HTTPUnauthorized("auth_error")
 
     elif response.status_code == 404:
-        # 404: unable to find an object, no response
-        # This should not raise any exception error, just return None
-        return None
+        raise HTTPNotFound(response.json()['error']['id'])
+
+    elif response.status_code == 500:
+        raise HTTPInternalServerError("navitia_internal_error")
 
     elif not response.ok:
         raise HTTPInternalServerError(
-            "Navitia API error: %d " % response.status_code
+            "unknown_error"
         )
 
     return response.json()
