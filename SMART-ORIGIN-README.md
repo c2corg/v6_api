@@ -21,27 +21,41 @@ docker-compose exec api .build/venv/bin/alembic upgrade head
 This section is used to search for public transport stops around 'access' waypoints.
 The public transport data comes from an external API called Navitia, which is stored in the CamptoCamp database.
 
-**IF YOU DON'T HAVE ANY RESULT ON THE "Public Transports Access" section** : this means that your imported database does not contain Navitia data. 
-To have visible results, you must launch a `get_public_transports_*.sh` in the backend (see backend documentation).
-There are different versions of these scripts:
-- whose name is ending with "_France.sh", "_Rhone.sh", or "_Isere.sh": Navitia fetching scripts for France, Rhone, and Isere regions (resp.) that should be launched *outside containers* (from the host);
-- whose name is ending with "_France.bm.sh", "_Rhone.bm.sh", or "_Isere.bm.sh": Same but those should be launched *within containers*;
-- whose name is ending with "_distinct.sh": Navitia fetching scripts (there is also an Isere variant) that fetch **distincts** transport stops. Those make more requests than non-distinct scripts, but they avoid duplicated stops. Those scripts should be launched *outside containers* (from the host);
-- whose name is ending with "_distinct.bm.sh": Same but those should be launched *within containers*;
+**IF YOU DON'T HAVE ANY RESULT ON THE "Public Transports Access" section** : this means that your imported database does not contain Navitia data.
+To populate it, run one of the two scripts in `scripts/`:
 
-On the production setup hosted by camptocamp, only scripts aimed at running within containers (ending with ".bm.sh") should be used.
-The result will always be fetched for the whole France area, and preferably using the distinct script.
+| Script | When to use |
+|--------|-------------|
+| `scripts/public_transport/get_public_transports.sh [region]` | Run **from the host** (outside containers) — uses `podman-compose`/`docker-compose` to reach the database |
+| `scripts/public_transport/get_public_transports.bm.sh [region]` | Run **from within a container** or any machine with direct database access — uses `psql` directly |
 
-Warning ⚠️ : it takes a while (~3h, see other option below)
-```
-(on api_v6/ )
-sh get_public_transports_from_France_distinct.bm.sh
+The `[region]` argument is optional (default: `france`). Valid values:
+
+| Value | Coverage | Approximate duration |
+|-------|----------|----------------------|
+| `france` | All of France | ~3h |
+| `isere` | Isère department only | ~18 min (useful for local dev) |
+| `rhone` | Rhône department only | ~15 min |
+
+**Required environment variables** (set before running the script):
+
+```sh
+NAVITIA_API_KEY=...                    # Navitia API key
+MAX_DISTANCE_WAYPOINT_TO_STOPAREA=5000 # Max distance in meters
+WALKING_SPEED=1.12                     # Walking speed in m/s
+MAX_STOP_AREA_FOR_1_WAYPOINT=5         # Max stop areas per waypoint
 ```
 
-If you just want to work with the Isère department for local dev, you can run this script instead (~18 minutes):
+**Examples:**
+
+Production (from within the container, full France):
+```sh
+sh scripts/public_transport/get_public_transports.bm.sh france
 ```
-(on api_v6/ )
-sh get_public_transports_from_Isere.sh
+
+Local dev (from the host, Isère only):
+```sh
+sh scripts/public_transport/get_public_transports.sh isere
 ```
 
 ### Files created / used for this section :
