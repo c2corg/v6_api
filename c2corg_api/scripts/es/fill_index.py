@@ -78,7 +78,8 @@ def fill_index(session, batch_size=1000):
         for doc_type in document_types:
             if doc_type not in search_documents:
                 # some document types (e.g. coverages) are not indexed
-                logging.warning('Document type {} is not indexed'.format(doc_type))
+                logging.warning(
+                    'Document type {} is not indexed'.format(doc_type))
                 continue
 
             logging.info('Importing document type {}'.format(doc_type))
