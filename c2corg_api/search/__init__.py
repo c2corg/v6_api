@@ -49,7 +49,6 @@ def client_from_config(settings):
 
 
 def configure_es_from_config(settings):
-    global elasticsearch_config
     client = client_from_config(settings)
     connections.add_connection('default', client)
     elasticsearch_config['client'] = client
