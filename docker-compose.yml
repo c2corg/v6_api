@@ -14,7 +14,10 @@ services:
     command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
 
   elasticsearch:
-    image: "docker.io/c2corg/c2corg_es:anon-2018-11-02"
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.elasticsearch
+    image: c2corg_es:analysis-icu
     ports:
       - 9200:9200
     command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon -Des.script.inline=true
