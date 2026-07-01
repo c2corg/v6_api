@@ -75,7 +75,7 @@ STANDALONE=${PODMAN_ENV:-""}
 
 if [[ -n "$STANDALONE" ]]; then
     SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    cd "$SCRIPTPATH"/.. || exit
+    cd "$SCRIPTPATH"/../../.. || exit
 fi
 
 DURATION=$(echo "scale=0; $MAX_DISTANCE_WAYPOINT_TO_STOPAREA / $WALKING_SPEED" | bc)

@@ -26,8 +26,8 @@ To populate it, run one of the two scripts in `scripts/`:
 
 | Script | When to use |
 |--------|-------------|
-| `scripts/get_public_transports.sh [region]` | Run **from the host** (outside containers) — uses `podman-compose`/`docker-compose` to reach the database |
-| `scripts/get_public_transports.bm.sh [region]` | Run **from within a container** or any machine with direct database access — uses `psql` directly |
+| `scripts/public_transport/get_public_transports.sh [region]` | Run **from the host** (outside containers) — uses `podman-compose`/`docker-compose` to reach the database |
+| `scripts/public_transport/get_public_transports.bm.sh [region]` | Run **from within a container** or any machine with direct database access — uses `psql` directly |
 
 The `[region]` argument is optional (default: `france`). Valid values:
 
@@ -50,12 +50,12 @@ MAX_STOP_AREA_FOR_1_WAYPOINT=5         # Max stop areas per waypoint
 
 Production (from within the container, full France):
 ```sh
-sh scripts/get_public_transports.bm.sh france
+sh scripts/public_transport/get_public_transports.bm.sh france
 ```
 
 Local dev (from the host, Isère only):
 ```sh
-sh scripts/get_public_transports.sh isere
+sh scripts/public_transport/get_public_transports.sh isere
 ```
 
 ### Files created / used for this section :
