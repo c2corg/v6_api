@@ -5,10 +5,13 @@ Mocks external HTTP calls to the Navitia API so that tests never depend on
 real network access or valid SSL certificates.  All other HTTP requests are
 left untouched.
 """
+import os
 from unittest.mock import patch, MagicMock
 
 import pytest
 import requests as _real_requests
+
+os.environ.setdefault("NAVITIA_API_KEY", "test-key")
 
 NAVITIA_HOST = "api.navitia.io"
 
