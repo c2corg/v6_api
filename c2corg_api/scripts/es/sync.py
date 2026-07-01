@@ -279,6 +279,10 @@ def sync_documents(session, changed_documents, batch_size):
         docs_per_type = get_documents_per_type(changed_documents)
         add_dependent_documents(session, docs_per_type)
         for doc_type, document_ids in docs_per_type.items():
+            if doc_type not in search_documents:
+                # some document types (e.g. coverages) are not indexed
+                logging.warning('Document type {} is not indexed'.format(doc_type))
+                continue
             if document_ids:
                 docs = get_documents(
                     session, doc_type, batch_size, document_ids)
