@@ -22,14 +22,12 @@ from c2corg_api.views.user_profile import user_profile_documents_config
 from c2corg_api.views.validation import validate_pagination, \
     validate_preferred_lang_param
 from c2corg_api.views.waypoint import waypoint_documents_config
+from c2corg_api.security.acl import ACLDefault
 from cornice.resource import resource, view
 
 
 @resource(path='/search', cors_policy=cors_policy)
-class SearchRest(object):
-    def __init__(self, request):
-        self.request = request
-
+class SearchRest(ACLDefault):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def get(self):
         """Search for a query word (simple search).
