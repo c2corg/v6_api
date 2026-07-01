@@ -9,7 +9,6 @@ from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.models.xreport import XREPORT_TYPE
-from c2corg_api.models.coverage import COVERAGE_TYPE
 from c2corg_api.search.mappings.area_mapping import SearchArea
 from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.book_mapping import SearchBook
@@ -20,7 +19,6 @@ from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.search.mappings.xreport_mapping import SearchXreport
-from c2corg_api.search.mappings.coverage_mapping import SearchCoverage
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
 from elasticsearch_dsl.connections import connections
@@ -51,6 +49,7 @@ def client_from_config(settings):
 
 
 def configure_es_from_config(settings):
+    global elasticsearch_config
     client = client_from_config(settings)
     connections.add_connection('default', client)
     elasticsearch_config['client'] = client
@@ -90,19 +89,15 @@ def get_text_query_on_title(search_term, search_lang=None):
     else:
         mots = True
 
-    if not search_lang:
+    # fall back to searching every language when none is given, using
+    # explicit field names rather than a `title_*` wildcard so the query
+    # does not depend on ES resolving the field pattern correctly.
+    langs = [search_lang] if search_lang else default_langs
+    for lang in langs:
         if not mots:
-            fields.append('title_*.ngram')
+            fields.append('title_{0}.ngram'.format(lang))
         else:
-            fields.append('title_*.contentheavy')
-
-    else:
-        for lang in default_langs:
-            if lang == search_lang:
-                if not mots:
-                    fields.append('title_{0}.ngram'.format(lang))
-                else:
-                    fields.append('title_{0}.contentheavy'.format(lang))
+            fields.append('title_{0}.contentheavy'.format(lang))
 
     if not mots:
         return MultiMatch(
@@ -136,6 +131,5 @@ search_documents = {
     ROUTE_TYPE: SearchRoute,
     MAP_TYPE: SearchTopoMap,
     USERPROFILE_TYPE: SearchUser,
-    WAYPOINT_TYPE: SearchWaypoint,
-    COVERAGE_TYPE: SearchCoverage,
+    WAYPOINT_TYPE: SearchWaypoint
 }
