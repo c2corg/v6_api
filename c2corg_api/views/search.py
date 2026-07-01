@@ -10,7 +10,6 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.search import search, SEARCH_LIMIT_DEFAULT, SEARCH_LIMIT_MAX
 from c2corg_api.views import cors_policy
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.area import area_documents_config
 from c2corg_api.views.article import article_documents_config
 from c2corg_api.views.book import book_documents_config
@@ -27,22 +26,25 @@ from cornice.resource import resource, view
 
 
 @resource(path='/search', cors_policy=cors_policy)
-class SearchRest(ACLDefault):
+class SearchRest(object):
+    def __init__(self, request):
+        self.request = request
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def get(self):
         """Search for a query word (simple search).
 
         Request:
-            `GET` `/search?q=...[&lang=...][&limit=...][&t=...]`
+            `GET` `/search?q=...[&pl=...][&limit=...][&t=...]`
 
         Parameters:
             `q=...`
             The search word.
 
-            `lang=...` (optional)
-            When set only the given locale will be included (if available).
-            Otherwise all locales will be returned.
+            `pl=...` (optional)
+            When set only the given locale will be included (if available),
+            and the search is restricted to that locale's title fields.
+            Otherwise all locales will be searched and returned.
 
             `limit=...` (optional)
             How many results should be returned per document type
