@@ -14,7 +14,8 @@ from c2corg_api.views.coverage import get_coverage
 from c2corg_api.views.waypoint import build_reachable_waypoints_query
 from c2corg_api.views.route import build_reachable_route_query_with_waypoints
 from shapely.geometry import Point
-from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound, HTTPUnauthorized
+from pyramid.httpexceptions import (HTTPBadRequest, HTTPInternalServerError,
+                                    HTTPNotFound, HTTPUnauthorized)
 from pyramid.response import Response
 from cornice.resource import resource, view
 from c2corg_api.views import cors_policy, to_json_dict

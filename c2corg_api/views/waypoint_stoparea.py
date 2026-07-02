@@ -5,8 +5,7 @@ from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy import func, exists
 
 
-from c2corg_api.models.waypoint_stoparea import (
-    WaypointStoparea, schema_waypoint_stoparea)
+from c2corg_api.models.waypoint_stoparea import WaypointStoparea
 
 from c2corg_api.views.document import (
     make_validator_create, make_validator_update)

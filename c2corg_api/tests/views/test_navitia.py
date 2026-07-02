@@ -2,7 +2,8 @@ from unittest import mock
 from shapely.geometry import Polygon
 import json
 import requests
-from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound, HTTPUnauthorized
+from pyramid.httpexceptions import (HTTPBadRequest, HTTPNotFound,
+                                    HTTPUnauthorized)
 from unittest.mock import call
 from c2corg_api.tests import BaseTestCase
 from c2corg_api.views import to_json_dict

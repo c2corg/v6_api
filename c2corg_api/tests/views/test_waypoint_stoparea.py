@@ -20,11 +20,11 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
             waypoint_type='summit',
             elevation=3779
         )
-        
+
         locale_en = WaypointLocale(
             lang='en', title='Mont Pourri', access='y')
         waypoint1.locales.append(locale_en)
-        
+
         self.session.add(waypoint1)
         self.session.flush()
         self.waypoint1 = waypoint1
@@ -33,11 +33,11 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
             waypoint_type='summit',
             elevation=3000
         )
-        
+
         locale_en2 = WaypointLocale(
             lang='en', title='Another Summit', access='y')
         waypoint2.locales.append(locale_en2)
-        
+
         self.session.add(waypoint2)
         self.session.flush()
         self.waypoint2 = waypoint2
@@ -50,7 +50,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
             line='line1',
             operator='operator1'
         )
-        
+
         self.session.add(stoparea1)
         self.session.flush()
         self.stoparea1 = stoparea1
@@ -62,7 +62,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
             line='line2',
             operator='operator2'
         )
-        
+
         self.session.add(stoparea2)
         self.session.flush()
         self.stoparea2 = stoparea2
@@ -74,7 +74,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
             stoparea_id=stoparea1.stoparea_id,
             distance=100.0
         )
-        
+
         self.session.add(waypoint_stoparea1)
         self.session.flush()
         self.waypoint_stoparea1 = waypoint_stoparea1
@@ -85,7 +85,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
             stoparea_id=stoparea2.stoparea_id,
             distance=200.0
         )
-        
+
         self.session.add(waypoint_stoparea2)
         self.session.flush()
         self.waypoint_stoparea2 = waypoint_stoparea2
@@ -95,10 +95,10 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
         response = self.app.get('/waypoints/{}/stopareas'.format(
             self.waypoint1.document_id), status=200)
         result = response.json
-        
+
         self.assertEqual(result['waypoint_id'], self.waypoint1.document_id)
         self.assertEqual(len(result['stopareas']), 2)
-        
+
         stoparea1 = result['stopareas'][0]
         self.assertEqual(stoparea1['id'], 1)
         self.assertEqual(stoparea1['navitia_id'], 'nav1')
@@ -120,7 +120,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
         # We'll test that it returns an empty array instead of 404
         response = self.app.get('/waypoints/999999/stopareas', status=200)
         result = response.json
-        
+
         self.assertEqual(result['waypoint_id'], 999999)
         self.assertEqual(result['stopareas'], [])
 
@@ -129,7 +129,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
         response = self.app.get('/waypoints/{}/isReachable'.format(
             self.waypoint1.document_id), status=200)
         result = response.json
-        
+
         self.assertTrue(result)
 
     def test_get_is_reachable_false(self):
@@ -137,7 +137,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
         response = self.app.get('/waypoints/{}/isReachable'.format(
             self.waypoint2.document_id), status=200)
         result = response.json
-        
+
         self.assertFalse(result)
 
     def test_get_info(self):
@@ -146,22 +146,38 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
         response = self.app.get(
             '/waypoints_stopareas/1/en/info', status=200)
         result = response.json
-        
-        self.assertEqual(result['waypoint_stoparea_id'], self.waypoint_stoparea1.waypoint_stoparea_id)
-        self.assertEqual(result['attributes']['distance'], 100.0)
-        self.assertEqual(result['attributes']['waypoint_id'], self.waypoint1.document_id)
+
+        self.assertEqual(
+            result['waypoint_stoparea_id'],
+            self.waypoint_stoparea1.waypoint_stoparea_id
+        )
+        self.assertEqual(
+            result['attributes']['distance'],
+            100.0
+        )
+        self.assertEqual(
+            result['attributes']['waypoint_id'],
+            self.waypoint1.document_id
+        )
         self.assertEqual(result['attributes']['stoparea_id'], 1)
 
     def test_get_info_not_found(self):
         """Test getting info for a waypoint-stoparea that doesn't exist"""
         response = self.app.get(
             '/waypoints_stopareas/999999/en/info', status=404)
-        self.assertEqual(response.json_body, {'error': 'Waypoint Stoparea not found'})
-        
+        self.assertEqual(
+            response.json_body,
+            {'error': 'Waypoint Stoparea not found'}
+        )
+
     def test_get_info_lang_not_found(self):
-        """Test getting info for a waypoint-stoparea that exist with an invalid lang"""
+        """Test getting info for a waypoint-stoparea
+        that exist with an invalid lang"""
         response = self.app.get(
             '/waypoints_stopareas/1/invalid/info', status=400)
-        
+
         # Updated to match actual JSON response format
-        self.assertEqual(response.json_body['errors'][0]['description'], "invalid lang")
+        self.assertEqual(
+            response.json_body['errors'][0]['description'],
+            "invalid lang"
+        )
