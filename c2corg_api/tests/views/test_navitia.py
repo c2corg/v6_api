@@ -2,7 +2,7 @@ from unittest import mock
 from shapely.geometry import Polygon
 import json
 import requests
-from pyramid.httpexceptions import HTTPBadRequest
+from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound, HTTPUnauthorized
 from unittest.mock import call
 from c2corg_api.tests import BaseTestCase
 from c2corg_api.views import to_json_dict
@@ -1207,7 +1207,7 @@ class TestNavitiaRestParams(BaseTestCase):
         mock_response = mock.Mock()
         mock_response.status_code = 401
 
-        with self.assertRaises(HTTPInternalServerError):
+        with self.assertRaises(HTTPUnauthorized):
             handle_navitia_response(mock_response)
 
     def test_handle_navitia_response_400(self):
@@ -1220,18 +1220,18 @@ class TestNavitiaRestParams(BaseTestCase):
     def test_handle_navitia_response_404_no_journey(self):
         mock_response = mock.Mock()
         mock_response.status_code = 404
-        mock_response.json.return_value = {"error": {"id": "no_origin"}}
+        mock_response.json.return_value = {"error": {"id": "no_solution"}}
 
-        result = handle_navitia_response(mock_response)
-        self.assertIsNone(result)
+        with self.assertRaises(HTTPNotFound):
+            handle_navitia_response(mock_response)
+
 
     def test_handle_navitia_response_404_other_error(self):
         mock_response = mock.Mock()
         mock_response.status_code = 404
-        mock_response.json.return_value = {"error": {"id": "some_other_error"}}
-
-        result = handle_navitia_response(mock_response)
-        self.assertIsNone(result)
+        mock_response.json.return_value = {"error": {"id": "unknown_object"}}
+        with self.assertRaises(HTTPNotFound):
+            handle_navitia_response(mock_response)
 
     def test_handle_navitia_response_other_error(self):
         mock_response = mock.Mock()
