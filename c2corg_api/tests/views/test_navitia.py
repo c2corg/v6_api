@@ -1226,7 +1226,6 @@ class TestNavitiaRestParams(BaseTestCase):
         with self.assertRaises(HTTPNotFound):
             handle_navitia_response(mock_response)
 
-
     def test_handle_navitia_response_404_other_error(self):
         mock_response = mock.Mock()
         mock_response.status_code = 404
