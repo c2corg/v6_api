@@ -578,24 +578,29 @@ def is_wp_journey_reachable(waypoint, journey_params):
     else:
         url = BASE_URL + "/journeys"
 
-    json_response = navitia_get(
-        url,
-        params=journey_params,
-        headers={"Authorization": api_key},
-    )
+    try:
+        json_response = navitia_get(
+            url,
+            params=journey_params,
+            headers={"Authorization": api_key},
+        )
+        # no_origin / no_destination
+        if json_response is None:
+            return False
 
-    # no_origin / no_destination
-    if json_response is None:
+        # Business logic only
+        for journey in json_response.get("journeys", []):
+            journey_day = int(journey["departure_date_time"][6:8])
+            param_day = int(journey_params["datetime"][6:8])
+            if journey_day == param_day:
+                return True
+
         return False
-
-    # Business logic only
-    for journey in json_response.get("journeys", []):
-        journey_day = int(journey["departure_date_time"][6:8])
-        param_day = int(journey_params["datetime"][6:8])
-        if journey_day == param_day:
-            return True
-
-    return False
+    except Exception as e:
+        if (str(e) == "no_solution"):
+            return False
+        else:
+            raise HTTPInternalServerError(e)
 
 
 def get_navitia_isochrone(isochrone_params):

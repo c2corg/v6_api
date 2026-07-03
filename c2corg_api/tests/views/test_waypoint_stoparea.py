@@ -91,7 +91,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
         self.waypoint_stoparea2 = waypoint_stoparea2
 
     def test_get_stopareas_by_waypoint(self):
-        """Test getting stopareas for a waypoint"""
+        """Test getting stopareas for a waypoint."""
         response = self.app.get('/waypoints/{}/stopareas'.format(
             self.waypoint1.document_id), status=200)
         result = response.json
@@ -116,7 +116,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
         self.assertEqual(stoparea2['distance'], 200.0)
 
     def test_get_stopareas_by_waypoint_not_found(self):
-        """Test getting stopareas for a waypoint that doesn't exist"""
+        """Test getting stopareas for a waypoint that doesn't exist."""
         # We'll test that it returns an empty array instead of 404
         response = self.app.get('/waypoints/999999/stopareas', status=200)
         result = response.json
@@ -125,7 +125,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
         self.assertEqual(result['stopareas'], [])
 
     def test_get_is_reachable_true(self):
-        """Test checking if a waypoint is reachable (has stopareas)"""
+        """Test checking if a waypoint is reachable (has stopareas)."""
         response = self.app.get('/waypoints/{}/isReachable'.format(
             self.waypoint1.document_id), status=200)
         result = response.json
@@ -133,7 +133,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
         self.assertTrue(result)
 
     def test_get_is_reachable_false(self):
-        """Test checking if a waypoint is not reachable (no stopareas)"""
+        """Test checking if a waypoint is not reachable (no stopareas)."""
         response = self.app.get('/waypoints/{}/isReachable'.format(
             self.waypoint2.document_id), status=200)
         result = response.json
@@ -141,7 +141,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
         self.assertFalse(result)
 
     def test_get_info(self):
-        """Test getting info for a waypoint-stoparea"""
+        """Test getting info for a waypoint-stoparea."""
 
         response = self.app.get(
             '/waypoints_stopareas/1/en/info', status=200)
@@ -162,7 +162,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
         self.assertEqual(result['attributes']['stoparea_id'], 1)
 
     def test_get_info_not_found(self):
-        """Test getting info for a waypoint-stoparea that doesn't exist"""
+        """Test getting info for a waypoint-stoparea that doesn't exist."""
         response = self.app.get(
             '/waypoints_stopareas/999999/en/info', status=404)
         self.assertEqual(
@@ -171,8 +171,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
         )
 
     def test_get_info_lang_not_found(self):
-        """Test getting info for a waypoint-stoparea
-        that exist with an invalid lang"""
+        """Test getting info with an invalid lang."""
         response = self.app.get(
             '/waypoints_stopareas/1/invalid/info', status=400)
 

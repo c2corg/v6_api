@@ -24,7 +24,7 @@ class TestStopareaRest(BaseDocumentTestRest):
         self.session.flush()
 
     def test_collection_get(self):
-        """Test getting list of stopareas"""
+        """Test getting list of stopareas."""
         response = self.app.get('/stopareas', status=200)
         result = response.json
 
@@ -32,14 +32,14 @@ class TestStopareaRest(BaseDocumentTestRest):
         assert isinstance(result['documents'], list)
 
     def test_get_stoparea_not_found(self):
-        """Test getting a stoparea that doesn't exist"""
+        """Test getting a stoparea that doesn't exist."""
         response = self.app.get('/stopareas/999999', status=404)
         result = response.json
 
         assert result['error'] == 'Stoparea not found'
 
     def test_get_stoparea_found(self):
-        """Test getting a stoparea that exists"""
+        """Test getting a stoparea that exists."""
         response = self.app.get('/stopareas/1', status=200)
         result = response.json
 
@@ -72,14 +72,14 @@ class TestStopareaInfoRest(BaseDocumentTestRest):
         self.session.flush()
 
     def test_get_info_stoparea_not_found(self):
-        """Test getting info for a stoparea that doesn't exist"""
+        """Test getting info for a stoparea that doesn't exist."""
         response = self.app.get('/stopareas/999999/fr/info', status=404)
         result = response.json
 
         assert result['error'] == 'Stoparea not found'
 
     def test_get_info_stoparea_found(self):
-        """Test getting info for a stoparea that exists"""
+        """Test getting info for a stoparea that exists."""
         response = self.app.get('/stopareas/1/fr/info', status=200)
         result = response.json
 
@@ -90,7 +90,7 @@ class TestStopareaInfoRest(BaseDocumentTestRest):
         assert result['attributes']['operator'] == 'operator1'
 
     def test_get_info_stoparea_lang_not_found(self):
-        """Test getting info for a stoparea that doesn't exist"""
+        """Test getting info for a stoparea that doesn't exist."""
         response = self.app.get('/stopareas/1/invalid/info', status=400)
         result = response.json
 
