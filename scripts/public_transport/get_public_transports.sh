@@ -294,6 +294,11 @@ for ((k=1; k<=nb_waypoints; k++)); do
         walk_duration=$(echo "$journey_response" | jq -r '.journeys[0].duration // 0')
         distance_km=$(awk "BEGIN {printf \"%.2f\", ($walk_duration * $WALKING_SPEED) / 1000}")
 
+        if (( $(echo "$walk_duration > $DURATION" | bc -l) )); then
+            log "Walk duration returned by the API journey suggestion ($walk_duration) was greater than $DURATION (= $MAX_DISTANCE_WAYPOINT_TO_STOPAREA / $WALKING_SPEED) for stop $stop_name, skipping."
+            continue
+        fi
+
         if [[ -n "${INSERTED_STOP_AREAS[$stop_id]+x}" ]]; then
             # Already inserted in this run: reference via navitia_id subquery
             echo "INSERT INTO guidebook.waypoints_stopareas (stoparea_id, waypoint_id, distance)

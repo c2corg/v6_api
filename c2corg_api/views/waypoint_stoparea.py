@@ -5,8 +5,7 @@ from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy import func, exists
 
 
-from c2corg_api.models.waypoint_stoparea import (
-    WaypointStoparea, schema_waypoint_stoparea)
+from c2corg_api.models.waypoint_stoparea import WaypointStoparea
 
 from c2corg_api.views.document import (
     make_validator_create, make_validator_update)
@@ -28,7 +27,22 @@ class WaypointStopareaInfoRest(DocumentInfoRest):
 
     @view(validators=[validate_id, validate_lang])
     def get(self):
-        return self._get_document_info(schema_waypoint_stoparea),
+        waypoint_stoparea_id = self.request.matchdict['id']
+        waypoint_stoparea = DBSession.query(WaypointStoparea).filter_by(
+            waypoint_stoparea_id=waypoint_stoparea_id).first()
+
+        if not waypoint_stoparea:
+            self.request.response.status = 404
+            return {'error': 'Waypoint Stoparea not found'}
+
+        return {
+            'waypoint_stoparea_id': waypoint_stoparea.waypoint_stoparea_id,
+            'attributes': {
+                'stoparea_id': waypoint_stoparea.stoparea_id,
+                'waypoint_id': waypoint_stoparea.waypoint_id,
+                'distance': waypoint_stoparea.distance,
+            }
+        }
 
 
 def validate_waypoint_id(request, *args, **kwargs):
