@@ -70,19 +70,21 @@ jobs:
           PGPORT: 5432
       - name: Create config from templates
         run: make CONFIG=config/env.test load-env
-      - name: Install java 8 for (old) elasticsearch
-        uses: actions/setup-java@v5
-        with:
-          distribution: "adopt"
-          java-version: 8
-      - name: Run (old) elasticsearch
+      - name: Install elasticsearch & plugin & 1st start
         run: |
           mkdir /tmp/elasticsearch
-          wget -O - https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.4.6/elasticsearch-2.4.6.tar.gz | tar xz --directory=/tmp/elasticsearch --strip-components=1
-          /tmp/elasticsearch/bin/plugin install analysis-icu
-          /tmp/elasticsearch/bin/elasticsearch --daemonize --path.data /tmp
+          wget -O - https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.19.18-linux-x86_64.tar.gz | tar xz --directory=/tmp/elasticsearch --strip-components=1
+          /tmp/elasticsearch/bin/elasticsearch-plugin install analysis-icu
+          /tmp/elasticsearch/bin/elasticsearch --daemonize
           sleep 30 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
-      - run: curl -v http://localhost:9200
+      - name: ElasticSearch settings update after auto configuration at 1st start & restart
+        run: |
+          sed -i 's/true/false/g' /tmp/elasticsearch/config/elasticsearch.yml
+          pgrep -f elasticsearch | xargs kill -9
+          /tmp/elasticsearch/bin/elasticsearch --daemonize
+          sleep 30 # Password change requires time
+      - name: Check elasticsearch
+        run: curl -v http://localhost:9200
       - name: Run tests (with secrets)
         # Accept running on pull requests except if from dependabot
         if: ${{ github.event_name != 'pull_request' || github.actor != 'dependabot[bot]' }}

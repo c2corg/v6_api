@@ -1,4 +1,5 @@
 import logging
+from pprint import pprint
 
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.caching import cache_document_detail, cache_document_cooked
@@ -69,7 +70,6 @@ class DocumentRest(ACLDefault):
             'limit': min(validated.get('limit', LIMIT_DEFAULT), LIMIT_MAX),
             'lang': validated.get('lang')
         }
-
         if meta_params['offset'] + meta_params['limit'] > ES_MAX_RESULT_WINDOW:
             # ES does not process requests where offset + limit is greater
             # than 10000, see:

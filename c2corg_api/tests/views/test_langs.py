@@ -1,5 +1,4 @@
 from datetime import date, datetime
-
 from c2corg_api.models.feed import DocumentChange
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.user import User

@@ -22,3 +22,4 @@ config/docker
 coverage.xml
 /config/env.local
 project.tar
+scripts/anonymize-database/*/
