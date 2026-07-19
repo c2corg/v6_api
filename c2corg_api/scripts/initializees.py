@@ -84,9 +84,16 @@ def drop_index(silent=True):
             raise exc
 
 
+def _configure_curl(c):
+    # avoid indefinite hangs if the ES connection stalls
+    c.setopt(c.CONNECTTIMEOUT, 10)
+    c.setopt(c.TIMEOUT, 30)
+
+
 def delete_indice(cible, indice_name):
     buffer = BytesIO()
     c = pycurl.Curl()
+    _configure_curl(c)
     header = ['Content-Type: application/json']
     c.setopt(c.HTTPHEADER, header)
     c.setopt(c.CUSTOMREQUEST, 'DELETE')
@@ -95,13 +102,12 @@ def delete_indice(cible, indice_name):
     c.setopt(c.USERPWD, authentification)
     c.perform()
     c.close()
-    # body = buffer.getvalue()
-    # print(body.decode('iso-8859-1'))
 
 
 def create_indice(cible, indice_name):
     buffer = BytesIO()
     c = pycurl.Curl()
+    _configure_curl(c)
     header = ['Content-Type: application/json']
     c.setopt(c.HTTPHEADER, header)
     c.setopt(c.CUSTOMREQUEST, 'PUT')
@@ -110,13 +116,12 @@ def create_indice(cible, indice_name):
     c.setopt(c.USERPWD, authentification)
     c.perform()
     c.close()
-    # body = buffer.getvalue()
-    # print(body.decode('iso-8859-1'))
 
 
 def indice_settings_update(cible, indice_name):
     buffer = BytesIO()
     c = pycurl.Curl()
+    _configure_curl(c)
     header = ['Content-Type: application/json']
     c.setopt(c.HTTPHEADER, header)
     c.setopt(c.CUSTOMREQUEST, 'POST')
@@ -124,8 +129,6 @@ def indice_settings_update(cible, indice_name):
     c.setopt(c.WRITEDATA, buffer)
     c.setopt(c.USERPWD, authentification)
     c.perform()
-    # body = buffer.getvalue()
-    # print(body.decode('iso-8859-1'))
 
     file = "./scripts/esjson6-7/settings.json"
     f = open(file)
@@ -136,11 +139,10 @@ def indice_settings_update(cible, indice_name):
     c.setopt(c.WRITEDATA, buffer)
     c.setopt(c.USERPWD, authentification)
     c.perform()
-    # body = buffer.getvalue()
-    # print(body.decode('iso-8859-1'))
     c.close()
 
     c = pycurl.Curl()
+    _configure_curl(c)
     header = ['Content-Type: application/json']
     c.setopt(c.HTTPHEADER, header)
     c.setopt(c.CUSTOMREQUEST, 'POST')
@@ -148,8 +150,6 @@ def indice_settings_update(cible, indice_name):
     c.setopt(c.WRITEDATA, buffer)
     c.setopt(c.USERPWD, authentification)
     c.perform()
-    # body = buffer.getvalue()
-    # print(body.decode('iso-8859-1'))
 
     c.close()
 
@@ -161,6 +161,7 @@ def indice_mapping_update(cible, indice_name, mapping_type):
 
     buffer = BytesIO()
     c = pycurl.Curl()
+    _configure_curl(c)
     c.setopt(c.URL, 'http://'+cible+'/'+indice_name+'/_mapping')
     header = ['Content-Type: application/json']
     c.setopt(c.HTTPHEADER, header)
@@ -170,6 +171,3 @@ def indice_mapping_update(cible, indice_name, mapping_type):
     c.setopt(c.USERPWD, authentification)
     c.perform()
     c.close()
-
-    # body = buffer.getvalue()
-    # print(body.decode('iso-8859-1'))
