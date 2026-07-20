@@ -2033,22 +2033,6 @@
 								"type": "text",
 								"analyzer": "index_raw",
 								"search_analyzer": "search_raw"
-							}
-						}
-					},
-					"title_ca": {
-						"type": "text",
-						"index": "not_analyzed",
-						"fields": {
-							"ngram": {
-								"type": "text",
-								"analyzer": "index_ngram",
-								"search_analyzer": "search_ngram"
-							},
-							"raw": {
-								"type": "text",
-								"analyzer": "index_raw",
-								"search_analyzer": "search_raw"
 							},
 							"contentheavy": {
 								"type": "text",

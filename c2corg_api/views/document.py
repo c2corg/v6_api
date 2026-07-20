@@ -1,5 +1,4 @@
 import logging
-from pprint import pprint
 
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.caching import cache_document_detail, cache_document_cooked

@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-from urllib.parse import urlencode
+# from urllib.parse import urlencode
 
 import pycurl
 from io import BytesIO

@@ -47,7 +47,7 @@ def get_documents(documents_config, meta_params, search_documents):
 
     document_ids, total = search_documents(base_query, base_total_query)
 
-    if total is not None and type(total) is not int:
+    if total is not None and not isinstance(total, int):
         total = int(total['value'])
 
     cache_keys = get_cache_keys(
