@@ -295,7 +295,6 @@ class _DocumentGeometryMixin(object):
         return Column(
             Geometry(
                 geometry_type='POINT', srid=3857, dimension=2,
-                management=True,
                 spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
             info={
                 'colanderalchemy': {
@@ -309,7 +308,6 @@ class _DocumentGeometryMixin(object):
         return Column(
             Geometry(
                 geometry_type='GEOMETRY', srid=3857,
-                management=True,
                 use_typmod=False,
                 spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
             info={
