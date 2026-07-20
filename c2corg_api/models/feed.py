@@ -475,7 +475,7 @@ def update_langs_of_changes(document_id):
     DBSession.execute(
         DocumentChange.__table__.update().
         where(DocumentChange.document_id == document_id).
-        values(langs=langs.select()))
+        values(langs=langs.select().scalar_subquery()))
 
 
 def get_linked_document(images_in):
