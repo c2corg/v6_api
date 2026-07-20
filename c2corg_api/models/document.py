@@ -118,13 +118,14 @@ class Document(Base, _DocumentMixin):
         """
         copy_attributes(other, self, Document._ATTRIBUTES_WHITELISTED)
 
-        for locale_in in other.locales:
-            locale = self.get_locale(locale_in.lang)
-            if locale:
-                locale.update(locale_in)
-                locale.document_id = self.document_id
-            else:
-                self.locales.append(locale_in)
+        with DBSession.no_autoflush:
+            for locale_in in other.locales:
+                locale = self.get_locale(locale_in.lang)
+                if locale:
+                    locale.update(locale_in)
+                    locale.document_id = self.document_id
+                else:
+                    self.locales.append(locale_in)
 
         if other.geometry:
             if self.geometry:

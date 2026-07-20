@@ -18,7 +18,7 @@ from c2corg_api.views.waypoint import update_linked_route_titles
 from colander import MappingSchema, required, SchemaNode, Integer
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
-from sqlalchemy.sql.elements import not_
+from sqlalchemy import not_
 from sqlalchemy.sql.expression import and_, or_
 from sqlalchemy.sql.functions import func
 
