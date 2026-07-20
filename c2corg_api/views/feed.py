@@ -162,8 +162,8 @@ def get_changes_of_personal_feed(
         user_id, token_id, token_time, limit, ignore_admin_changes_filter):
     user = DBSession.query(User). \
         filter(User.id == user_id). \
-        options(undefer('has_area_filter')). \
-        options(undefer('is_following_users')). \
+        options(undefer(User.has_area_filter)). \
+        options(undefer(User.is_following_users)). \
         first()
 
     if has_no_custom_filter(user):

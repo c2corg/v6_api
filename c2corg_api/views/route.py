@@ -148,7 +148,7 @@ class RouteRest(DocumentRest):
         """Set last 10 outings on the given route.
         """
         recent_outing_ids = get_first_column(
-            DBSession.query(Outing.document_id).
+            DBSession.query(Outing.document_id, Outing.date_end).
             filter(Outing.redirects_to.is_(None)).
             join(
                 Association,

@@ -1,6 +1,8 @@
 from c2corg_api.models import es_sync, document_types, document_locale_types
 from c2corg_api.models.area import Area
 from c2corg_api.models.association import AssociationLog, Association
+from c2corg_api.models.association_views import WaypointsForRoutesView, \
+    WaypointsForOutingsView
 from c2corg_api.models.document import Document, DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.document_tag import DocumentTagLog
@@ -319,8 +321,9 @@ def add_routes_for_waypoints(session, docs_per_type):
     if not changed_waypoint_ids:
         return
 
-    linked_route_ids = session.query(Route.document_id). \
-        filter(Route.main_waypoint_id.in_(changed_waypoint_ids)).all()
+    linked_route_ids = [
+        row[0] for row in session.query(Route.document_id).
+        filter(Route.main_waypoint_id.in_(changed_waypoint_ids)).all()]
 
     route_ids = docs_per_type.setdefault(ROUTE_TYPE, set())
     route_ids.update(linked_route_ids)
@@ -345,9 +348,9 @@ def get_documents(session, doc_type, batch_size, document_ids=None,
     if document_ids:
         base_query = base_query.filter(clazz.document_id.in_(document_ids))
 
-    locale_fields = ['title']
+    locale_fields = [locales_clazz.title]
     if clazz == Route:
-        locale_fields.append('title_prefix')
+        locale_fields.append(locales_clazz.title_prefix)
 
     base_query = base_query. \
         options(joinedload(clazz.locales.of_type(locales_clazz)).
@@ -356,19 +359,19 @@ def get_documents(session, doc_type, batch_size, document_ids=None,
 
     if clazz != Area:
         base_query = base_query. \
-            options(joinedload(clazz._areas).load_only('document_id'))
+            options(joinedload(clazz._areas).load_only(Area.document_id))
 
     if clazz == Route:
         base_query = base_query. \
             options(
                 joinedload(Route.associated_waypoints_ids).
-                load_only('waypoint_ids'))
+                load_only(WaypointsForRoutesView.waypoint_ids))
 
     if clazz == Outing:
         base_query = base_query. \
             options(
                 joinedload(Outing.associated_waypoints_ids).
-                load_only('waypoint_ids'))
+                load_only(WaypointsForOutingsView.waypoint_ids))
 
     base_query = add_load_for_profiles(base_query, clazz)
 

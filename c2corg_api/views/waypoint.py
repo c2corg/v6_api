@@ -35,7 +35,7 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
 from c2corg_api.models.common.fields_waypoint import fields_waypoint
 from c2corg_api.models.common.attributes import waypoint_types
 from sqlalchemy.orm import joinedload, load_only
-from sqlalchemy.orm.util import aliased
+from sqlalchemy.orm import aliased
 from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import and_, text, union, column
 from c2corg_api.models.area import Area
@@ -266,7 +266,7 @@ def set_recent_outings(waypoint, lang):
     with_query_waypoints = _get_select_children(waypoint)
 
     recent_outing_ids = get_first_column(
-        DBSession.query(Outing.document_id).
+        DBSession.query(Outing.document_id, Outing.date_end).
         filter(Outing.redirects_to.is_(None)).
         join(
             t_outing_route,
@@ -494,7 +494,7 @@ def update_linked_route_titles(waypoint, update_types, user_id):
 
     linked_routes = DBSession.query(Route). \
         filter(Route.main_waypoint_id == waypoint.document_id). \
-        options(joinedload(Route.locales).load_only(
+        options(joinedload(Route.locales.of_type(RouteLocale)).load_only(
             RouteLocale.lang, RouteLocale.id)). \
         options(load_only(Route.document_id)). \
         all()
