@@ -5,7 +5,10 @@ from c2corg_api.search.mapping_types import QueryableMixin, QEnum, QEnumArray
 
 class SearchArticle(SearchDocument):
     class Meta(BaseMeta):
-        doc_type = ARTICLE_TYPE
+        c2corg_doc_type = ARTICLE_TYPE
+
+    class Index:
+        name = 'c2corg_c'
 
     activities = QEnumArray(
         'act', model_field=Article.activities)

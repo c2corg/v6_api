@@ -89,12 +89,12 @@ class TestUserAccountRest(BaseUserTestRest):
         self.sync_es()
         search_doc = search_documents[USERPROFILE_TYPE].get(
             id=user_id,
-            index=elasticsearch_config['index'])
+            index=elasticsearch_config['index'][:-1]+'u')
 
         # and check that the cache version of the user profile was updated
         self.check_cache_version(user_id, 2)
 
-        self.assertIsNotNone(search_doc['doc_type'])
+        self.assertIsNotNone(search_doc['c2corg_doc_type'])
         self.assertEqual(
             search_doc['title_en'], 'changed contributor')
 

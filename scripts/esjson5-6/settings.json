@@ -1,0 +1,378 @@
+{
+    "analysis": {
+        "filter": {
+            "autocomplete_filter": {
+                "type": "edge_ngram",
+                "min_gram": "2",
+                "max_gram": "15",
+                "token_chars": [
+                    "letter",
+                    "digit"
+                ]
+            },
+            "english_stop": {
+                "type": "stop",
+                "stopwords": "_english_"
+            },
+            "english_stemmer": {
+                "type": "stemmer",
+                "language": "english"
+            },
+            "english_possessive_stemmer": {
+                "type": "stemmer",
+                "language": "possessive_english"
+            },
+            "french_elision": {
+                "type": "elision",
+                "articles_case": true,
+                "articles": [
+                    "l", "m", "t", "qu", "n", "s",
+                    "j", "d", "c", "jusqu", "quoiqu",
+                    "lorsqu", "puisqu"
+                ]
+            },
+            "french_stop": {
+                "type": "stop",
+                "stopwords": "_french_"
+            },
+            "french_stemmer": {
+                "type": "stemmer",
+                "language": "light_french"
+            },
+            "german_stop": {
+                "type": "stop",
+                "stopwords": "_german_"
+            },
+            "german_stemmer": {
+                "type": "stemmer",
+                "language": "light_german"
+            },
+            "italian_elision": {
+                "type": "elision",
+                "articles_case": true,
+                "articles": [
+                    "c", "l", "all", "dall", "dell",
+                    "nell", "sull", "coll", "pell",
+                    "gl", "agl", "dagl", "degl", "negl",
+                    "sugl", "un", "m", "t", "s", "v", "d"
+                ]
+            },
+            "italian_stop": {
+                "type": "stop",
+                "stopwords": "_italian_"
+            },
+            "italian_stemmer": {
+                "type": "stemmer",
+                "language": "light_italian"
+            },
+            "spanish_stop": {
+                "type": "stop",
+                "stopwords": "_spanish_"
+            },
+            "spanish_stemmer": {
+                "type": "stemmer",
+                "language": "light_spanish"
+            },
+            "catalan_elision": {
+                "type": "elision",
+                "articles_case": true,
+                "articles": ["d", "l", "m", "n", "s", "t"]
+            },
+            "catalan_stop": {
+                "type": "stop",
+                "stopwords": "_catalan_"
+            },
+            "catalan_stemmer": {
+                "type": "stemmer",
+                "language": "catalan"
+            },
+            "basque_stop": {
+                "type": "stop",
+                "stopwords": "_basque_"
+            },
+            "basque_stemmer": {
+                "type": "stemmer",
+                "language": "basque"
+            }
+        },
+        "similarity": {
+            "c2corgsimilarity": {
+                "type": "BM25"
+            }
+        },
+        "char_filter": {
+            "punctuationgreedy": {
+                "type": "pattern_replace",
+                "pattern": "[\\.,]"
+            }
+        },
+        "analyzer": {
+            "index_ngram": {
+                "char_filter": ["punctuationgreedy"],
+                "filter": [
+                    "word_delimiter", "lowercase", "icu_folding",
+                    "autocomplete_filter"],
+                "tokenizer": "icu_tokenizer"
+            },
+            "search_ngram": {
+                "char_filter": ["punctuationgreedy"],
+                "filter": [
+                    "word_delimiter", "lowercase", "asciifolding", "unique"],
+                "tokenizer": "standard"
+            },
+            "index_raw": {
+                "char_filter": ["punctuationgreedy"],
+                "filter": [
+                    "word_delimiter", "lowercase", "asciifolding", "unique"],
+                "tokenizer": "standard"
+            },
+            "search_raw": {
+                "char_filter": ["punctuationgreedy"],
+                "filter": [
+                    "word_delimiter", "lowercase", "asciifolding", "unique"],
+                "tokenizer": "standard"
+            },
+            "index_english": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "english_possessive_stemmer",
+                    "lowercase",
+                    "english_stop",
+                    "english_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "search_english": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "english_possessive_stemmer",
+                    "lowercase",
+                    "english_stop",
+                    "english_stemmer"
+                ]
+            },
+            "index_french": {
+                "tokenizer": "standard",
+                "filter": [
+                    "french_elision",
+                    "lowercase",
+                    "french_stop",
+                    "french_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "search_french": {
+                "tokenizer": "standard",
+                "filter": [
+                    "french_elision",
+                    "lowercase",
+                    "french_stop",
+                    "french_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "index_german": {
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase",
+                    "german_stop",
+                    "german_normalization",
+                    "german_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "search_german": {
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase",
+                    "german_stop",
+                    "german_normalization",
+                    "german_stemmer"
+                ]
+            },
+            "index_italian": {
+                "tokenizer": "standard",
+                "filter": [
+                    "italian_elision",
+                    "lowercase",
+                    "italian_stop",
+                    "italian_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "search_italian": {
+                "tokenizer": "standard",
+                "filter": [
+                    "italian_elision",
+                    "lowercase",
+                    "italian_stop",
+                    "italian_stemmer"
+                ]
+            },
+            "index_spanish": {
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase",
+                    "spanish_stop",
+                    "spanish_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "search_spanish": {
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase",
+                    "spanish_stop",
+                    "spanish_stemmer"
+                ]
+            },
+            "index_catalan": {
+                "tokenizer": "standard",
+                "filter": [
+                    "catalan_elision",
+                    "lowercase",
+                    "catalan_stop",
+                    "catalan_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "search_catalan": {
+                "tokenizer": "standard",
+                "filter": [
+                    "catalan_elision",
+                    "lowercase",
+                    "catalan_stop",
+                    "catalan_stemmer"
+                ]
+            },
+            "index_basque": {
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase",
+                    "basque_stop",
+                    "basque_stemmer",
+                    "autocomplete_filter"
+                ]
+            },
+            "search_basque": {
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase",
+                    "basque_stop",
+                    "basque_stemmer"
+                ]
+            },
+            "french_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "french_elision",
+                    "french_stop",
+                    "icu_folding",
+                    "lowercase",
+                    "french_stemmer"
+                ]
+            },
+            "german_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "german_stop",
+                    "german_stemmer",
+                    "lowercase",
+                    "icu_folding"
+                ]
+            },
+            "english_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "english_possessive_stemmer",
+                    "english_stop",
+                    "lowercase",
+                    "icu_folding"
+                ]
+            },
+            "italian_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "italian_elision",
+                    "italian_stop",
+                    "lowercase",
+                    "icu_folding",
+                    "italian_stemmer"
+                ]
+            },
+            "spanish_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "lowercase",
+                    "spanish_stop",
+                    "spanish_stemmer",
+                    "icu_folding"
+                ]
+            },
+            "catalan_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "catalan_elision",
+                    "lowercase",
+                    "catalan_stop",
+                    "catalan_stemmer",
+                    "icu_folding"
+                ]
+            },
+            "basque_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "lowercase",
+                    "basque_stop",
+                    "basque_stemmer",
+                    "icu_folding"
+                ]
+            },
+            "index_slovene": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "autocomplete_filter",
+                    "lowercase"
+                ]
+            },
+            "search_slovene": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase"
+                ]
+            },
+            "slovene_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "lowercase",
+                    "icu_folding"
+                ]
+            },
+            "index_chinois": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "autocomplete_filter"
+                ]
+            },
+            "search_chinois": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase"
+                ]
+            },
+            "chinois_heavy": {
+                "tokenizer": "icu_tokenizer",
+                "filter": [
+                    "lowercase",
+                    "icu_folding"
+                ]
+            }
+        }
+    }
+}

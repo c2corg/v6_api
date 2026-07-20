@@ -1,12 +1,12 @@
 import json
-
 from c2corg_api.models.document import Document
 from c2corg_api.search.mapping_types import Enum, QEnumArray, QLong, \
     QEnumRange
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.common.sortable_search_attributes import \
     sortable_quality_types
-from elasticsearch_dsl import DocType, String, MetaField, Long, GeoPoint
+from elasticsearch_dsl import MetaField, Long, GeoPoint, Text
+from elasticsearch_dsl import Document as esDocument
 
 
 class BaseMeta:
@@ -21,30 +21,28 @@ class BaseMeta:
 # https://github.com/komoot/photon/blob/master/es/index_settings.json
 def default_title_field(lang: None):
     if lang is None:
-        return String(
+        return Text(
             index='not_analyzed',
-            similarity='c2corgsimilarity',
             fields={
-                'ngram': String(
+                'ngram': Text(
                     analyzer='index_ngram', search_analyzer='search_ngram'),
-                'raw': String(
+                'raw': Text(
                     analyzer='index_raw', search_analyzer='search_raw')
             })
     else:
-        return String(
+        return Text(
             index='not_analyzed',
-            similarity='c2corgsimilarity',
             fields={
-                'ngram': String(
+                'ngram': Text(
                     analyzer='index_ngram', search_analyzer='search_ngram'),
-                'raw': String(
+                'raw': Text(
                     analyzer='index_raw', search_analyzer='search_raw'),
-                'contentheavy': String(
+                'contentheavy': Text(
                     analyzer='{0}_heavy'.format(lang))
             })
 
 
-class SearchDocument(DocType):
+class SearchDocument(esDocument):
     """The base ElasticSearch mapping for documents. Each document type has
     its own specific mapping.
 
@@ -63,9 +61,11 @@ class SearchDocument(DocType):
         pass
 
     id = Long()
-    doc_type = Enum()
+    c2corg_doc_type = Enum()
+
     quality = QEnumRange(
         'qa', model_field=Document.quality, enum_mapper=sortable_quality_types)
+
     available_locales = QEnumArray('l', enum=default_langs)
     geom = GeoPoint()
 
@@ -74,65 +74,65 @@ class SearchDocument(DocType):
 
     # fr
     title_fr = default_title_field("french")
-    summary_fr = String(
+    summary_fr = Text(
         analyzer='index_french', search_analyzer='search_french')
-    description_fr = String(
+    description_fr = Text(
         analyzer='index_french', search_analyzer='search_french')
 
     # it
     title_it = default_title_field("italian")
-    summary_it = String(
+    summary_it = Text(
         analyzer='index_italian', search_analyzer='search_italian')
-    description_it = String(
+    description_it = Text(
         analyzer='index_italian', search_analyzer='search_italian')
 
     # de
     title_de = default_title_field("german")
-    summary_de = String(
+    summary_de = Text(
         analyzer='index_german', search_analyzer='search_german')
-    description_de = String(
+    description_de = Text(
         analyzer='index_german', search_analyzer='search_german')
 
     # en
     title_en = default_title_field("english")
-    summary_en = String(
+    summary_en = Text(
         analyzer='index_english', search_analyzer='search_english')
-    description_en = String(
+    description_en = Text(
         analyzer='index_english', search_analyzer='search_english')
 
     # es
     title_es = default_title_field("spanish")
-    summary_es = String(
+    summary_es = Text(
         analyzer='index_spanish', search_analyzer='search_spanish')
-    description_es = String(
+    description_es = Text(
         analyzer='index_spanish', search_analyzer='search_spanish')
 
     # ca
     title_ca = default_title_field("catalan")
-    summary_ca = String(
+    summary_ca = Text(
         analyzer='index_catalan', search_analyzer='search_catalan')
-    description_ca = String(
+    description_ca = Text(
         analyzer='index_catalan', search_analyzer='search_catalan')
 
     # eu
     title_eu = default_title_field("basque")
-    summary_eu = String(
+    summary_eu = Text(
         analyzer='index_basque', search_analyzer='search_basque')
-    description_eu = String(
+    description_eu = Text(
         analyzer='index_basque', search_analyzer='search_basque')
 
     # sl
     title_sl = default_title_field("slovene")
-    summary_sl = String(
+    summary_sl = Text(
         analyzer='index_slovene', search_analyzer='search_slovene')
-    description_sl = String(
+    description_sl = Text(
         analyzer='index_slovene', search_analyzer='search_slovene')
 
     # zh
     title_zh = default_title_field("chinois")
-    summary_zh = String(
+    summary_zh = Text(
         analyzer='index_chinois', search_analyzer='search_chinois')
-    description_zh = String(
+    description_zh = Text(
         analyzer='index_chinois', search_analyzer='search_chinois')
 
     @staticmethod
@@ -140,7 +140,7 @@ class SearchDocument(DocType):
         search_document = {
             '_index': index,
             '_id': document.document_id,
-            '_type': document.type,
+            # '_type': "_doc",   # document.type,
             'id': document.document_id
         }
 
@@ -149,7 +149,7 @@ class SearchDocument(DocType):
             search_document['_op_type'] = 'delete'
         else:
             search_document['_op_type'] = 'index'
-            search_document['doc_type'] = document.type
+            search_document['c2corg_doc_type'] = document.type
 
             available_locales = []
             for locale in document.locales:

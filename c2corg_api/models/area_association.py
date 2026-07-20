@@ -66,7 +66,7 @@ def update_area(area, reset=False):
         # ignore forwarded areas
         return
 
-    area_geom = select([DocumentGeometry.geom_detail]). \
+    area_geom = select(DocumentGeometry.geom_detail). \
         where(DocumentGeometry.document_id == area.document_id)
     intersecting_documents = DBSession. \
         query(
@@ -111,9 +111,9 @@ def update_areas_for_document(document, reset=False):
         # ignore forwarded areas
         return
 
-    document_geom = select([DocumentGeometry.geom]). \
+    document_geom = select(DocumentGeometry.geom). \
         where(DocumentGeometry.document_id == document.document_id)
-    document_geom_detail = select([DocumentGeometry.geom_detail]). \
+    document_geom_detail = select(DocumentGeometry.geom_detail). \
         where(DocumentGeometry.document_id == document.document_id)
     intersecting_areas = DBSession. \
         query(

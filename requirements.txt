@@ -4,9 +4,9 @@ bcrypt==4.3.0
 bleach[css]==6.2.0
 colander==2.0
 dogpile.cache==1.3.4
-elasticsearch==2.4.1
-elasticsearch_dsl==2.2.0
-geoalchemy2==0.4.2
+elasticsearch==8.19.3
+elasticsearch-dsl==8.18.0
+geoalchemy2==0.20.0
 geojson==3.2.0
 geomet==1.1.0
 kombu==5.6.2
@@ -27,16 +27,21 @@ redis==5.2.1
 requests==2.32.3
 setuptools==78.1.1
 Shapely==2.0.7
-SQLAlchemy==1.3.24
+SQLAlchemy==2.0.51
 transaction==5.0
 waitress==3.0.2
 zope.sqlalchemy==3.1
 gunicorn==23.0.0
 python-dotenv==1.2.1
 pytz==2025.2
+pycurl==7.45.6
 
 # needs: https://github.com/stefanofontanelli/ColanderAlchemy/pull/90 + 91
-ColanderAlchemy @ git+https://github.com/c2corg/ColanderAlchemy.git@v0.3.4+c2corg.1
+# TEMPORARY: points at a local, unpublished patch (branch
+# sqlalchemy-2.0-support) that relaxes the SQLAlchemy pin to >=1.4 for
+# SQLAlchemy 2.0 support. Needs write access to c2corg/ColanderAlchemy
+# to publish properly; replace with the real git URL once pushed.
+ColanderAlchemy @ file:///d:/Yoann/workspace/c2c/ColanderAlchemy
 
 # needs: https://github.com/mozilla-services/cornice/pull/359
 cornice @ git+https://github.com/c2corg/cornice.git@6.1.0+c2corg
