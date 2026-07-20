@@ -5,7 +5,6 @@ from colander import (null, Invalid, SchemaType)
 
 from geoalchemy2 import WKBElement
 from geomet import wkb
-from geoalchemy2.compat import buffer, bytes
 import geojson
 from numbers import Number
 
@@ -87,7 +86,7 @@ def geojson_from_wkbelement(wkb_element):
 
 
 def from_wkb(wkb, srid=-1):
-    return WKBElement(buffer(wkb), srid=srid)
+    return WKBElement(memoryview(wkb), srid=srid)
 
 
 def is_valid_geometry(obj):
