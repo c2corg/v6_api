@@ -37,11 +37,8 @@ pytz==2025.2
 pycurl==7.45.6
 
 # needs: https://github.com/stefanofontanelli/ColanderAlchemy/pull/90 + 91
-# TEMPORARY: points at a local, unpublished patch (branch
-# sqlalchemy-2.0-support) that relaxes the SQLAlchemy pin to >=1.4 for
-# SQLAlchemy 2.0 support. Needs write access to c2corg/ColanderAlchemy
-# to publish properly; replace with the real git URL once pushed.
-ColanderAlchemy @ file:///d:/Yoann/workspace/c2c/ColanderAlchemy
+# SQLAlchemy 2.0 support, pushed to c2corg/ColanderAlchemy (branch sqlalchemy-2.0-support).
+ColanderAlchemy @ git+https://github.com/c2corg/ColanderAlchemy.git@d2cc04a041d111deac307666e20fc24e47cc62e6
 
 # needs: https://github.com/mozilla-services/cornice/pull/359
 cornice @ git+https://github.com/c2corg/cornice.git@6.1.0+c2corg
