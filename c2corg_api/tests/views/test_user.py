@@ -326,7 +326,7 @@ class TestUserRest(BaseUserTestRest):
         # Usage of utf8 password
         request_utf8 = {
             'username': 'utf8', 'name': 'utf8', 'forum_username': 'utf8f',
-            'password': 'élève 日本',
+            'password': 'élève 日本1234',
             'email': 'utf8@camptocamp.org'
         }
         body = self.app_post_json(url, request_utf8, status=200).json
@@ -412,7 +412,7 @@ class TestUserRest(BaseUserTestRest):
         url_api_validation = '/users/validate_new_password/%s' % nonce
 
         self.app_post_json(url_api_validation, {
-            'password': 'new pass'
+            'password': 'new password'
             }, status=200)
 
         self.session.expunge(user)
@@ -440,7 +440,7 @@ class TestUserRest(BaseUserTestRest):
 
         # Succeed anyway since only the password has changed
         self.app_post_json(url_api_validation, {
-            'password': 'new pass'
+            'password': 'new password'
             }, status=200)
 
     def test_forgot_password_blocked_account(self):
@@ -574,11 +574,12 @@ class TestUserRest(BaseUserTestRest):
         self.assertEqual(redirect1, redirect2)
 
     def test_login_failure(self):
-        body = self.login('moderator', password='invalid', status=401).json
+        body = self.login(
+            'moderator', password='invalid_password', status=401).json
         self.assertEqual(body['status'], 'error')
 
     def test_login_no_tos_failure(self):
-        body = self.login('contributornotos', password='some pass',
+        body = self.login('contributornotos', password='some password',
                           status=403).json
         self.assertErrorsContain(body, 'Forbidden',
                                  'Terms of Service need to be accepted')
@@ -586,7 +587,7 @@ class TestUserRest(BaseUserTestRest):
     def test_login_no_tos_success(self):
         # A user which did not previously accepted ToS can login
         # if he accepts them. It is stored in the db.
-        body = self.login('contributornotos', password='some pass',
+        body = self.login('contributornotos', password='some password',
                           accept_tos=True, status=200).json
         self.assertTrue('token' in body)
         user = self.session.query(User).filter(
