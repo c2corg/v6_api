@@ -72,6 +72,16 @@ discourse.category = {discourse_category}
 
 ui.url = {ui_url}
 
+# Space separated list of origins allowed to make cross-origin (CORS)
+# requests to this API, e.g. "https://www.camptocamp.org
+# https://demov6.camptocamp.org". This should normally just be the
+# frontend's own origin(s). Do NOT set this to "*": the API accepts the
+# `Authorization` header (JWT bearer tokens) on cross-origin requests, so a
+# wildcard would let any third-party website make authenticated calls on
+# behalf of a logged-in user. See c2corg_api/views/__init__.py
+# (configure_cors_policy).
+cors.allowed_origins = {cors_allowed_origins}
+
 mail.validate_register_url_template = {mail_validate_register_url_template}
 mail.request_password_change_url_template = {mail_request_password_change_url_template}
 mail.validate_change_email_url_template = {mail_validate_change_email_url_template}
