@@ -12,8 +12,9 @@ from c2corg_api.models.association import create_associations, \
 from c2corg_api.models.cache_version import update_cache_version, \
     update_cache_version_associations, get_cache_key
 from c2corg_api.models.document import (
-    UpdateType, DocumentLocale, ArchiveDocumentLocale, ArchiveDocument,
-    ArchiveDocumentGeometry, set_available_langs, get_available_langs)
+    Document, UpdateType, DocumentLocale, ArchiveDocumentLocale,
+    ArchiveDocument, ArchiveDocumentGeometry, set_available_langs,
+    get_available_langs)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
 from c2corg_api.models.feed import update_feed_document_create, \
     update_feed_document_update
@@ -40,7 +41,7 @@ from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
     HTTPBadRequest, HTTPForbidden
 from sqlalchemy.orm import joinedload, contains_eager, load_only
 from sqlalchemy.orm.exc import StaleDataError
-from sqlalchemy.orm.util import with_polymorphic
+from sqlalchemy.orm import with_polymorphic
 
 
 log = logging.getLogger(__name__)
@@ -69,7 +70,6 @@ class DocumentRest(ACLDefault):
             'limit': min(validated.get('limit', LIMIT_DEFAULT), LIMIT_MAX),
             'lang': validated.get('lang')
         }
-
         if meta_params['offset'] + meta_params['limit'] > ES_MAX_RESULT_WINDOW:
             # ES does not process requests where offset + limit is greater
             # than 10000, see:
@@ -95,7 +95,8 @@ class DocumentRest(ACLDefault):
         offset = meta_params['offset']
         limit = meta_params['limit']
         documents = base_query. \
-            options(load_only('document_id', 'type', 'version')). \
+            options(load_only(
+                Document.document_id, Document.type, Document.version)). \
             slice(offset, offset + limit). \
             limit(limit). \
             all()
@@ -303,7 +304,7 @@ class DocumentRest(ACLDefault):
             document_query = DBSession. \
                 query(clazz). \
                 filter(getattr(clazz, 'document_id') == id). \
-                options(joinedload('geometry'))
+                options(joinedload(getattr(clazz, 'geometry')))
             document_query = add_load_for_locales(
                 document_query, clazz, clazz_locale)
             document_query = add_load_for_profiles(document_query, clazz)
@@ -320,7 +321,7 @@ class DocumentRest(ACLDefault):
                 join(locales_type). \
                 filter(getattr(clazz, 'document_id') == id). \
                 filter(DocumentLocale.lang == lang). \
-                options(joinedload('geometry')).\
+                options(joinedload(getattr(clazz, 'geometry'))).\
                 options(contains_eager(locales_type_eager, alias=locales_type))
             document_query = add_load_for_profiles(document_query, clazz)
             document = document_query.first()
@@ -331,7 +332,7 @@ class DocumentRest(ACLDefault):
                 document_query = DBSession. \
                     query(clazz). \
                     filter(getattr(clazz, 'document_id') == id). \
-                    options(joinedload('geometry'))
+                    options(joinedload(getattr(clazz, 'geometry')))
                 document_query = add_load_for_profiles(document_query, clazz)
                 document = document_query.first()
 
@@ -358,7 +359,7 @@ class DocumentRest(ACLDefault):
         document_query = DBSession. \
             query(clazz). \
             filter(getattr(clazz, 'document_id') == document_id). \
-            options(joinedload('geometry'))
+            options(joinedload(getattr(clazz, 'geometry')))
         document_query = add_load_for_locales(
             document_query, clazz, clazz_locale)
         document_query = add_load_for_profiles(document_query, clazz)

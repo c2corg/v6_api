@@ -11,7 +11,7 @@ from c2corg_api.views.document_listings import add_load_for_profiles
 from c2corg_api.caching import get_or_create
 from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy.orm import contains_eager, load_only, joinedload
-from sqlalchemy.orm.util import with_polymorphic
+from sqlalchemy.orm import with_polymorphic
 
 
 class DocumentInfoRest(object):

@@ -13,18 +13,136 @@ services:
       - .:/v6_api
     command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
 
+#  elasticsearch26:
+#    platform: linux/amd64
+#    image: 'docker.io/c2corg/c2corg_es:anon-2018-11-02'
+#    container_name: elasticsearch26
+#    ports:
+#      - 9201:9200
+#    command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon -Des.script.inline=true
+
+#  elasticsearch56:
+#    platform: linux/amd64
+#    container_name: elasticsearch56
+#    build:
+#      context: .
+#      dockerfile: elasticsearch5.Dockerfile
+#      network: host
+#    environment:
+#      - discovery.type=single-node
+#    ports:
+#      - 9202:9200
+#      - 9302:9300
+
   elasticsearch:
+    container_name: elasticsearch
     build:
-      context: ./docker
-      dockerfile: Dockerfile.elasticsearch
-    image: c2corg_es:analysis-icu
+      context: .
+      dockerfile: elasticsearch8.Dockerfile
+    environment:
+      - ELASTIC_PASSWORD=elastic2024
+      - discovery.type=single-node
+      - xpack.security.http.ssl.enabled=false
+      - xpack.license.self_generated.type=basic
     ports:
       - 9200:9200
-    command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon -Des.script.inline=true
+      - 9300:9300
     ulimits:
       nofile:
         soft: 65536
         hard: 65536
+
+#  elasticsearch7:
+#    platform: linux/amd64
+#    container_name: elasticsearch
+#    build:
+#      context: .
+#      dockerfile: elasticsearch7.Dockerfile
+#      network: host
+#    environment:
+#       - discovery.type=single-node
+#    ports:
+#      - 9200:9200
+#      - 9300:9300
+#
+
+#  elasticsearch68:
+#    platform: linux/amd64
+#    container_name: elasticsearch68
+#    build:
+#      context: .
+#      dockerfile: elasticsearch6.Dockerfile
+#      network: host
+#    environment:
+#       - discovery.type=single-node
+#    ports:
+#      - 9200:9200
+#      - 9300:9300
+#    volumes:
+#      - ./volumes/es6/data:/usr/share/elasticsearch/data
+#      - ./volumes/es6/config/jvm.options:/usr/share/elasticsearch/config/jvm.options
+
+#  logstash5:
+#    platform: linux/amd64
+#    container_name: logstash5
+#    build:
+#      context: .
+#      dockerfile: logstash5.Dockerfile
+#      network: host
+#    ports:
+#      -  5045:5044
+#    volumes:
+#      - ./dataMigration/v5/logstash.conf:/root/logstash.conf
+
+#  logstash6:
+#    platform: linux/amd64
+#    container_name: logstash6
+#    build:
+#      context: .
+#      dockerfile: logstash6.Dockerfile
+#      network: host
+#    ports:
+#      -  5044:5044
+#    volumes:
+#      - ./dataMigration/v6:/usr/share/logstash/pipeline
+
+  logstash:
+    #platform: linux/amd64
+    container_name: logstash
+    build:
+      context: .
+      dockerfile: logstash8.Dockerfile
+      network: host
+    ports:
+      -  5044:5044
+    volumes:
+      - ./dataMigration/v8:/usr/share/logstash/pipeline
+    environment:
+      - ELASTICSEARCH_URL=elasticsearch
+      - ELASTICSEARCH_HOSTS=elasticsearch
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=elastic2024
+      - xpack.security.enabled=false
+      - xpack.license.self_generated.type=basic
+
+  ## configure the Kibana password in the ES container
+  #curl -u elastic:$ELASTIC_PASSWORD \
+  #  -X POST \
+  #  http://localhost:9200/_security/user/kibana_system/_password \
+  #  -d '{"password":"'"kibana2024"'"}' \
+  #  -H 'Content-Type: application/json'
+
+#  logstash7:
+#    platform: linux/amd64
+#    container_name: logstash7
+#    build:
+#      context: .
+#      dockerfile: logstash7.Dockerfile
+#      network: host
+#    ports:
+#      -  5044:5044
+#    volumes:
+#      - ./dataMigration/v7:/usr/share/logstash/pipeline
 
   redis:
     image: redis:7.2

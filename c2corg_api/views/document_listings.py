@@ -1,11 +1,11 @@
 from c2corg_api.caching import cache_document_listing
 from c2corg_api.models import DBSession
-from c2corg_api.models.area import schema_listing_area
+from c2corg_api.models.area import Area, schema_listing_area
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import get_document_id, \
     get_cache_keys
 from c2corg_api.models.document import (
-    set_available_langs)
+    DocumentGeometry, DocumentLocale, set_available_langs)
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.user import User
@@ -46,6 +46,10 @@ def get_documents(documents_config, meta_params, search_documents):
             documents_config.clazz.document_id.desc())
 
     document_ids, total = search_documents(base_query, base_total_query)
+
+    if total is not None and not isinstance(total, int):
+        total = int(total['value'])
+
     cache_keys = get_cache_keys(
         document_ids, lang, documents_config.document_type)
 
@@ -85,7 +89,9 @@ def _get_documents_from_ids(
     loaded, and the list has the same order has the document id list.
     """
     base_query = base_query.options(
-        load_only(*documents_config.get_load_only_fields())
+        load_only(*[
+            getattr(documents_config.clazz, field)
+            for field in documents_config.get_load_only_fields()])
     )
     base_query = add_load_for_locales(
         base_query, documents_config.clazz, documents_config.clazz_locale,
@@ -96,7 +102,9 @@ def _get_documents_from_ids(
         # 'version'
         base_query = base_query.options(
             joinedload(getattr(documents_config.clazz, 'geometry')).
-            load_only(*documents_config.get_load_only_fields_geometry())
+            load_only(*[
+                getattr(DocumentGeometry, field)
+                for field in documents_config.get_load_only_fields_geometry()])
         )
 
     if documents_config.include_areas:
@@ -104,11 +112,12 @@ def _get_documents_from_ids(
             options(
                 joinedload(getattr(documents_config.clazz, '_areas')).
                 load_only(
-                    'document_id', 'area_type', 'version', 'protected',
-                    'type').
-                joinedload('locales').
+                    Area.document_id, Area.area_type, Area.version,
+                    Area.protected, Area.type).
+                joinedload(Area.locales).
                 load_only(
-                    'lang', 'title', 'version')
+                    DocumentLocale.lang, DocumentLocale.title,
+                    DocumentLocale.version)
             )
 
     documents = _load_documents(
@@ -161,7 +170,7 @@ def add_load_for_profiles(document_query, clazz):
     if clazz == UserProfile:
         # for profiles load names together from the associated user
         document_query = add_profile_filter(document_query, clazz). \
-            options(contains_eager('user').load_only(
+            options(contains_eager(UserProfile.user).load_only(
                 User.id, User.name, User.forum_username))
     return document_query
 
@@ -180,11 +189,14 @@ def add_load_for_locales(
     if clazz_locale:
         locales_load = subqueryload(
             getattr(clazz, 'locales').of_type(clazz_locale))
+        locale_clazz = clazz_locale
     else:
         locales_load = subqueryload(getattr(clazz, 'locales'))
+        locale_clazz = DocumentLocale
 
     if load_only_fields:
-        locales_load = locales_load.load_only(*load_only_fields)
+        locales_load = locales_load.load_only(
+            *[getattr(locale_clazz, field) for field in load_only_fields])
 
     return base_query.options(locales_load)
 

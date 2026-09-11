@@ -151,13 +151,13 @@ def column_windows(session, column, windowsize):
         else:
             return column >= start_id
 
-    q = session.query(
-        column,
+    subq = session.query(
+        column.label('_window_col'),
         func.row_number().over(order_by=column).label('rownum')
-    ). \
-        from_self(column)
+    ).subquery()
+    q = session.query(subq.c._window_col)
     if windowsize > 1:
-        q = q.filter(sa.text("rownum %% %d=1" % windowsize))
+        q = q.filter(subq.c.rownum % windowsize == 1)
 
     intervals = [id for id, in q]
 

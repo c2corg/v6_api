@@ -46,9 +46,9 @@ class SyncWorkerTest(BaseTestCase):
         next(syncer.consume(limit=1))
 
         index = elasticsearch_config['index']
-        doc = SearchWaypoint.get(id=document_id, index=index)
+        doc = SearchWaypoint.get(id=document_id, index=index[:-1]+'w')
         self.assertEqual(doc['title_fr'], 'Mont Granier')
-        self.assertEqual(doc['doc_type'], 'w')
+        self.assertEqual(doc['c2corg_doc_type'], 'w')
 
         # simulate removing a document
         self.session.add(ESDeletedDocument(
@@ -61,4 +61,4 @@ class SyncWorkerTest(BaseTestCase):
 
         next(syncer.consume(limit=1))
         with self.assertRaises(NotFoundError):
-            SearchWaypoint.get(id=document_id, index=index)
+            SearchWaypoint.get(id=document_id)  # JPR8 , index=index

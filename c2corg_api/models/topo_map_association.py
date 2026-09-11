@@ -66,7 +66,7 @@ def update_map(topo_map, reset=False):
         # ignore forwarded maps
         return
 
-    map_geom = select([DocumentGeometry.geom_detail]). \
+    map_geom = select(DocumentGeometry.geom_detail). \
         where(DocumentGeometry.document_id == topo_map.document_id)
     intersecting_documents = DBSession. \
         query(
@@ -111,9 +111,9 @@ def update_maps_for_document(document, reset=False):
         # ignore forwarded maps
         return
 
-    document_geom = select([DocumentGeometry.geom]). \
+    document_geom = select(DocumentGeometry.geom). \
         where(DocumentGeometry.document_id == document.document_id)
-    document_geom_detail = select([DocumentGeometry.geom_detail]). \
+    document_geom_detail = select(DocumentGeometry.geom_detail). \
         where(DocumentGeometry.document_id == document.document_id)
     intersecting_maps = DBSession. \
         query(

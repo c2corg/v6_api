@@ -30,7 +30,7 @@ from cornice.resource import resource
 from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.orm import joinedload, contains_eager
-from sqlalchemy.orm.util import with_polymorphic
+from sqlalchemy.orm import with_polymorphic
 from sqlalchemy.sql.expression import exists, and_
 
 log = logging.getLogger(__name__)
@@ -192,7 +192,7 @@ class DocumentRevertRest(ACLDefault):
             join(locales_type). \
             filter(getattr(clazz, 'document_id') == document_id). \
             filter(DocumentLocale.lang == lang). \
-            options(joinedload('geometry')). \
+            options(joinedload(getattr(clazz, 'geometry'))). \
             options(contains_eager(locales_type_eager, alias=locales_type))
         return document_query.first()
 

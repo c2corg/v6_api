@@ -26,6 +26,7 @@ from elasticsearch_dsl.query import MultiMatch
 from kombu import Exchange, Queue, pools
 from kombu.connection import Connection
 
+
 # the maximum number of documents that can be returned for each document type
 SEARCH_LIMIT_MAX = 50
 
@@ -37,15 +38,21 @@ elasticsearch_config = {
     'client': None,
     'index': None,
     'host': None,
-    'port': None
+    'port': None,
+    'scheme': None,
+    'user': None,
+    'passwd': None,
 }
 
 
 def client_from_config(settings):
     return Elasticsearch([{
         'host': settings['elasticsearch.host'],
-        'port': int(settings['elasticsearch.port'])
-    }], maxsize=int(settings['elasticsearch.pool']))
+        'port': int(settings['elasticsearch.port']),
+        'scheme': settings['elasticsearch.scheme']
+    }], basic_auth=(settings['elasticsearch.user'],
+                    settings['elasticsearch.passwd']),
+        maxsize=int(settings['elasticsearch.pool']))
 
 
 def configure_es_from_config(settings):
@@ -55,6 +62,9 @@ def configure_es_from_config(settings):
     elasticsearch_config['index'] = settings['elasticsearch.index']
     elasticsearch_config['host'] = settings['elasticsearch.host']
     elasticsearch_config['port'] = int(settings['elasticsearch.port'])
+    elasticsearch_config['scheme'] = settings['elasticsearch.scheme']
+    elasticsearch_config['user'] = settings['elasticsearch.user']
+    elasticsearch_config['passwd'] = settings['elasticsearch.passwd']
 
 
 def get_queue_config(settings):
@@ -73,11 +83,12 @@ def get_queue_config(settings):
     return QueueConfiguration(settings)
 
 
-def create_search(document_type):
+def create_search(document_type=None):
     return Search(
         using=elasticsearch_config['client'],
-        index=elasticsearch_config['index'],
-        doc_type=search_documents[document_type])
+        index=(elasticsearch_config['index']),
+        # doc_type="_doc"   # search_documents[document_type]
+    )
 
 
 def get_text_query_on_title(search_term, search_lang=None):
@@ -113,10 +124,10 @@ def get_text_query_on_title(search_term, search_lang=None):
             query=search_term,
             fields=fields,
             type='phrase',
-            fuzziness=2,
             max_expansions=3,
             zero_terms_query="none",
             slop=4,
+            operator="and"
         )
 
 

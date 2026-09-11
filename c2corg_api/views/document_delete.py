@@ -254,8 +254,10 @@ class DeleteBase(ACLDefault):
                               archive_clazz, archive_clazz_locale)
 
     def _remove_merged_documents(self, document_id, document_type):
-        merged_document_ids = DBSession.query(ArchiveDocument.document_id). \
-            filter(ArchiveDocument.redirects_to == document_id).all()
+        merged_document_ids = [
+            row[0] for row in DBSession.
+            query(ArchiveDocument.document_id).
+            filter(ArchiveDocument.redirects_to == document_id).all()]
         for merged_document_id in merged_document_ids:
             self._delete_document(merged_document_id, document_type, True)
 
@@ -367,10 +369,11 @@ def remove_from_cache(document_id):
 
 
 def _remove_versions(document_id):
-    history_metadata_ids = DBSession. \
-        query(DocumentVersion.history_metadata_id). \
-        filter(DocumentVersion.document_id == document_id). \
-        all()
+    history_metadata_ids = [row[0] for row in DBSession.
+                            query(DocumentVersion.history_metadata_id).
+                            filter(
+                                DocumentVersion.document_id == document_id).
+                            all()]
     DBSession.query(DocumentVersion). \
         filter(DocumentVersion.document_id == document_id). \
         delete()
