@@ -2,6 +2,13 @@
 WSGIDaemonProcess c2corg_api-{instanceid} python-path={site_packages}
 
 WSGIScriptAlias {base_url} {base_dir}/apache/app-c2corg_api.wsgi
+
+# Required: mod_wsgi strips the `Authorization` header from the WSGI
+# environ by default (it is normally reserved for the web server's own
+# HTTP auth). This API authenticates its own requests using JWT bearer
+# tokens carried in that same header (see c2corg_api/security/jwt_policy.py
+# and the rate limiting tween), so without this directive every
+# authenticated request would silently look anonymous to the application.
 WSGIPassAuthorization On
 
 <Location {base_url}>
@@ -10,5 +17,16 @@ WSGIPassAuthorization On
 </Location>
 
 # force https
+#
+# Deliberately left disabled here: in every environment this config is
+# deployed to, TLS termination and the HTTP -> HTTPS redirect are already
+# handled by the reverse proxy / load balancer (HAProxy) sitting in front
+# of this Apache instance, which is also what sets the
+# `X-Forwarded-Proto` header the rule below relies on. Enabling it here
+# too would be redundant at best, and would break plain-HTTP access from
+# that front proxy (e.g. its own health checks, or if it ever talks to
+# this backend over HTTP internally) at worst. If the reverse proxy setup
+# ever changes such that this instance is reachable directly from the
+# internet without TLS being terminated upstream, revisit this.
 # RewriteCond %{{HTTP:X-Forwarded-Proto}} !https
 # RewriteRule ^/?(.*) https://%{{SERVER_NAME}}/$1 [R=301,L]
