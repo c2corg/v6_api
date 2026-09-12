@@ -797,3 +797,71 @@ def get_routes_reachable_ids():
     all_routes_reachable_ids = set([r.document_id for r in all_routes_reachable])
 
     return all_routes_reachable_ids
+
+
+def get_route_ids_within_geometry(intersection_geom_wkt, max_duration_seconds=None):
+    """
+    Get the ids of all routes having at least one access waypoint whose
+    geometry intersects the given geometry.
+
+    Unlike get_routes_reachable_ids (static ID-set based on the
+    WaypointStoparea table), this computes the ID-set dynamically from an
+    arbitrary geometry (typically the aller/retour isochrone intersection
+    computed for a given transport search), via a direct PostGIS
+    ST_Intersects.
+
+    intersection_geom_wkt: a WKT geometry, expressed in the same SRID as
+        DocumentGeometry.geom (EPSG:3857). Callers computing a geometry in
+        WGS84 (e.g. from a Navitia isochrone, which is GeoJSON/EPSG:4326)
+        must reproject it to EPSG:3857 before calling this function.
+        If falsy (None or empty), no candidate can intersect it, so an
+        empty set is returned without querying the database.
+    max_duration_seconds: if given, additionally restrict to routes whose
+        calculated_duration does not exceed this budget. NOTE:
+        Route.calculated_duration is stored in DAYS (see
+        c2corg_api/__init__.py::_update_route_duration and the frontend's
+        PlanATripSection.vue, which reads it as `durationInDays * 24` for
+        hours), so the seconds budget given here is converted to days
+        (1 day = 86400 seconds) before being compared in SQL.
+
+    Returns a set of route document_ids.
+    """
+    if not intersection_geom_wkt:
+        return set()
+
+    query = (
+        DBSession.query(Route.document_id)
+        .join(
+            Association,
+            or_(
+                Association.child_document_id == Route.document_id,
+                Association.parent_document_id == Route.document_id,
+            ),
+        )
+        .join(
+            Waypoint,
+            and_(
+                or_(
+                    Waypoint.document_id == Association.child_document_id,
+                    Waypoint.document_id == Association.parent_document_id,
+                ),
+                Waypoint.waypoint_type == 'access',
+            ),
+        )
+        .join(DocumentGeometry, DocumentGeometry.document_id == Waypoint.document_id)
+        .filter(
+            func.ST_Intersects(
+                DocumentGeometry.geom, func.ST_GeomFromText(intersection_geom_wkt, 3857)
+            )
+        )
+    )
+
+    if max_duration_seconds is not None:
+        # calculated_duration is stored in DAYS, max_duration_seconds is in
+        # SECONDS: convert the budget to days for the comparison.
+        max_duration_days = max_duration_seconds / 86400.0
+        query = query.filter(Route.calculated_duration <= max_duration_days)
+
+    route_ids = {r.document_id for r in query.distinct().all()}
+
+    return route_ids

@@ -93,7 +93,24 @@ class DocumentRest(ACLDefault):
             # https://www.elastic.co/guide/en/elasticsearch/reference/master/search-request-from-size.html
             raise HTTPBadRequest('offset + limit greater than 10000')
 
-        if advanced_search.contains_search_params(self.request.GET):
+        reachable_ids_param = self.request.GET.get('reachable_ids')
+        if reachable_ids_param:
+            # a dynamic ID-set (e.g. computed from a transport-
+            # accessibility isochrone) is ANDed with all other ES filters
+            # already present in the query string, exactly like the
+            # static reachable ID-sets used by /reachableroutes and
+            # /reachablewaypoints.
+            reachable_ids = [
+                int(doc_id)
+                for doc_id in reachable_ids_param.split(',')
+                if doc_id.strip()
+            ]
+
+            def search_documents(_, __):
+                return advanced_search.get_all_filtered_docs(
+                    self.request.GET, meta_params, reachable_ids, doc_type
+                )
+        elif advanced_search.contains_search_params(self.request.GET):
             # search with ElasticSearch
             search_documents = advanced_search.get_search_documents(
                 self.request.GET, meta_params, doc_type

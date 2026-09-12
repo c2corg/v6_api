@@ -101,6 +101,44 @@ class TestRouteRest(BaseDocumentTestRest):
         body = self.get_collection_search({'hdif': '700,900'})
         self.assertEqual(body.get('total'), 2)
 
+    def test_get_collection_reachable_ids(self):
+        # DocumentRest._collection_get: a `reachable_ids` param (as
+        # produced by /navitia/reachabledocumentids) is used as a
+        # dynamic ID-set filter, plugged into the same
+        # advanced_search.get_all_filtered_docs used by the static
+        # reachable-ids searches.
+        reset_search_index(self.session)
+
+        body = self.get_collection_search(
+            {'reachable_ids': str(self.route3.document_id)}
+        )
+        self.assertEqual(body.get('total'), 1)
+        self.assertEqual(body['documents'][0]['document_id'], self.route3.document_id)
+
+    def test_get_collection_reachable_ids_anded_with_filters(self):
+        # the reachable_ids id-set must be ANDed with other ES filters,
+        # exactly like any other search parameter.
+        reset_search_index(self.session)
+
+        ids = '%s,%s' % (self.route3.document_id, self.route4.document_id)
+
+        body = self.get_collection_search(
+            {'reachable_ids': ids, 'act': 'rock_climbing'}
+        )
+        self.assertEqual(body.get('total'), 1)
+        self.assertEqual(body['documents'][0]['document_id'], self.route4.document_id)
+
+    def test_get_collection_reachable_ids_empty(self):
+        # an empty (or absent) reachable_ids must not change behaviour :
+        # an empty value still falls through to the *existing*
+        # ES-search-mode branch (contains_search_params sees the key
+        # regardless of its value), exactly as it did before this
+        # feature existed.
+        reset_search_index(self.session)
+
+        body = self.get_collection_search({'reachable_ids': ''})
+        self.assertEqual(body.get('total'), 4)
+
     def test_get(self):
         body = self.get(self.route)
         self.assertEqual(body.get('activities'), self.route.activities)
