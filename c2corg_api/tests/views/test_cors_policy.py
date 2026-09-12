@@ -8,8 +8,11 @@ from c2corg_api.views import (
 
 
 class ConfigureCorsPolicyTest(unittest.TestCase):
-    """ `cors_policy` is a module-level dict shared (by reference) with
-    every `@resource`-decorated view, and mutated in place by
+    """
+    Test `configure_cors_policy`, saving/restoring `cors_policy` state.
+
+    `cors_policy` is a module-level dict shared (by reference) with every
+    `@resource`-decorated view, and mutated in place by
     `configure_cors_policy`. Save/restore it around each test so that
     tests don't leak state into each other or into the rest of the suite.
     """

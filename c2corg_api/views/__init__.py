@@ -47,12 +47,14 @@ cors_policy = dict(
 
 
 def configure_cors_policy(settings):
-    """ Configure the CORS origins allowed to call the API, from the
-    `cors.allowed_origins` setting (a space separated list of origins, see
-    common.ini.in). Must be called once, before `config.scan()`: Cornice
-    reads the `cors_policy` dict when each `@resource`-decorated view is
-    registered, which happens as a side effect of importing the view
-    modules during the scan.
+    """
+    Configure the CORS origins allowed to call the API.
+
+    Reads the `cors.allowed_origins` setting (a space separated list of
+    origins, see common.ini.in). Must be called once, before
+    `config.scan()`: Cornice reads the `cors_policy` dict when each
+    `@resource`-decorated view is registered, which happens as a side
+    effect of importing the view modules during the scan.
     """
     raw_origins = settings.get('cors.allowed_origins') or ''
     tokens = raw_origins.split()

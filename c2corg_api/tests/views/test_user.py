@@ -326,7 +326,9 @@ class TestUserRest(BaseUserTestRest):
         # Usage of utf8 password
         request_utf8 = {
             'username': 'utf8', 'name': 'utf8', 'forum_username': 'utf8f',
-            'password': 'élève 日本1234',
+            # Test fixture, not a real credential; exercises non-ASCII
+            # password handling.
+            'password': 'élève 日本1234',  # nosec
             'email': 'utf8@camptocamp.org'
         }
         body = self.app_post_json(url, request_utf8, status=200).json
@@ -412,7 +414,7 @@ class TestUserRest(BaseUserTestRest):
         url_api_validation = '/users/validate_new_password/%s' % nonce
 
         self.app_post_json(url_api_validation, {
-            'password': 'new password'
+            'password': 'new password'  # nosec - test fixture
             }, status=200)
 
         self.session.expunge(user)

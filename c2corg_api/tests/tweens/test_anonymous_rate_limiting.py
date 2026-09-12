@@ -14,12 +14,16 @@ from c2corg_api.tweens.rate_limiting import (
 
 
 class FakeRedis(object):
-    """ A minimal in-memory stand-in for the subset of the Redis client API
-    used for anonymous rate limiting (`incr`/`expire`), so that the logic
-    can be unit tested without a running Redis server.
+    """
+    A minimal in-memory stand-in for the Redis client API.
+
+    Only covers the subset used for anonymous rate limiting
+    (`incr`/`expire`), so that the logic can be unit tested without a
+    running Redis server.
     """
 
     def __init__(self):
+        """Initialize empty in-memory counters and expirations."""
         self._counters = {}
         self.expirations = {}
 
@@ -38,6 +42,7 @@ class FailingRedis(object):
 
 class DummyRegistry(object):
     def __init__(self, settings):
+        """Wrap `settings` in a Pyramid-registry-like object."""
         self.settings = settings
 
 
@@ -159,9 +164,12 @@ class CheckAnonymousRateLimitTest(unittest.TestCase):
 
 
 class RateLimitingTweenAnonymousTest(unittest.TestCase):
-    """ Checks that the tween routes anonymous requests to the configured
-    protected paths through the anonymous rate limiter, and leaves every
-    other anonymous request untouched.
+    """
+    Test that the tween routes anonymous requests correctly.
+
+    Requests to the configured protected paths must go through the
+    anonymous rate limiter, and every other anonymous request must be
+    left untouched.
     """
 
     def _make_request(self, method, path):

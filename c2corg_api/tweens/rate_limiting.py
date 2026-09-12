@@ -31,10 +31,13 @@ ANONYMOUS_RATE_LIMITED_BUCKETS = {
 
 
 def _client_ip(request):
-    """ Best-effort client IP resolution. In production the application is
-    served behind a reverse proxy / load balancer (see apache/wsgi.conf.in),
-    which is expected to set `X-Forwarded-For`; fall back to the direct
-    peer address otherwise (e.g. local development).
+    """
+    Best-effort client IP resolution.
+
+    In production the application is served behind a reverse proxy /
+    load balancer (see apache/wsgi.conf.in), which is expected to set
+    `X-Forwarded-For`; fall back to the direct peer address otherwise
+    (e.g. local development).
     """
     forwarded_for = request.headers.get('X-Forwarded-For')
     if forwarded_for:
@@ -44,9 +47,11 @@ def _client_ip(request):
 
 
 def _get_anonymous_rate_limit_redis_client():
-    """ Reuse the Redis connection pool that is already configured for the
-    application cache (see `c2corg_api.caching.configure_caches`) instead of
-    introducing a new storage backend just for anonymous rate limiting.
+    """
+    Reuse the Redis connection pool already used for the app cache.
+
+    See `c2corg_api.caching.configure_caches`; this avoids introducing a
+    new storage backend just for anonymous rate limiting.
     """
     try:
         return cache_document_detail.backend.writer_client
@@ -58,9 +63,11 @@ def _get_anonymous_rate_limit_redis_client():
 
 def _is_anonymous_request_rate_limited(
         redis_client, key, window_span, limit):
-    """ Increment the counter stored at `key` in Redis (creating it with a
-    TTL of `window_span` seconds the first time), and return True if the
-    counter now exceeds `limit`.
+    """
+    Increment the counter stored at `key` in Redis.
+
+    Creates it with a TTL of `window_span` seconds the first time, and
+    returns True if the counter now exceeds `limit`.
     """
     if redis_client is None:
         # Fail open: if Redis is unavailable, do not block legitimate
@@ -82,9 +89,12 @@ def _is_anonymous_request_rate_limited(
 
 
 def _check_anonymous_rate_limit(request, registry, bucket):
-    """ Returns True if the anonymous `request` (identified by its client
-    IP) has exceeded the allowed number of attempts for the given `bucket`
-    (e.g. "login") during the current time window.
+    """
+    Return True if the anonymous `request` is rate limited.
+
+    The request is identified by its client IP, and is considered rate
+    limited if it has exceeded the allowed number of attempts for the
+    given `bucket` (e.g. "login") during the current time window.
     """
     settings = registry.settings
     window_span = int(settings.get(
