@@ -14,7 +14,7 @@ from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
 from c2corg_api.models.common.attributes import waypoint_types
 from c2corg_api.models.common.fields_waypoint import fields_waypoint
-from c2corg_api.models.document import UpdateType
+from c2corg_api.models.document import DocumentGeometry, UpdateType
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.waypoint import (
@@ -636,3 +636,40 @@ def get_waypoints_reachable_ids():
     all_waypoints_reachable_ids = set([r.document_id for r in all_routes_reachable])
 
     return all_waypoints_reachable_ids
+
+
+def get_waypoint_ids_within_geometry(intersection_geom_wkt):
+    """
+    Get the ids of all waypoints whose geometry intersects the given
+    geometry.
+
+    Unlike get_waypoints_reachable_ids (static ID-set based on the
+    WaypointStoparea table), this computes the ID-set dynamically from an
+    arbitrary geometry (typically the aller/retour isochrone intersection
+    computed for a given transport search), via a direct PostGIS
+    ST_Intersects. Unlike routes, waypoints have no hiking duration, so
+    there is no equivalent of the max_duration_seconds filter.
+
+    intersection_geom_wkt: a WKT geometry, expressed in the same SRID as
+        DocumentGeometry.geom (EPSG:3857). Callers computing a geometry in
+        WGS84 (e.g. from a Navitia isochrone, which is GeoJSON/EPSG:4326)
+        must reproject it to EPSG:3857 before calling this function.
+        If falsy (None or empty), no candidate can intersect it, so an
+        empty set is returned without querying the database.
+
+    Returns a set of waypoint document_ids.
+    """
+    if not intersection_geom_wkt:
+        return set()
+
+    query = (
+        DBSession.query(Waypoint.document_id)
+        .join(DocumentGeometry, DocumentGeometry.document_id == Waypoint.document_id)
+        .filter(
+            func.ST_Intersects(
+                DocumentGeometry.geom, func.ST_GeomFromText(intersection_geom_wkt, 3857)
+            )
+        )
+    )
+
+    return {w.document_id for w in query.distinct().all()}
