@@ -837,8 +837,13 @@ def get_route_ids_within_geometry(intersection_geom_wkt, max_duration_seconds=No
     if not intersection_geom_wkt:
         return set()
 
+    # Select the full Route entity (rather than just Route.document_id):
+    # since Route.document_id is inherited from the base Document table,
+    # a query selecting only that column does not reliably bring the
+    # "routes" table itself into the FROM clause, which breaks a later
+    # filter on a routes-only column such as calculated_duration.
     query = (
-        DBSession.query(Route.document_id)
+        DBSession.query(Route)
         .join(
             Association,
             or_(
