@@ -152,10 +152,10 @@ class CheckAnonymousRateLimitTest(unittest.TestCase):
 
         self.assertFalse(
             _check_anonymous_rate_limit(request, registry, 'login'))
-        # a different bucket (password reset) has its own counter
+        # a different bucket (account recovery) has its own counter
         self.assertFalse(
             _check_anonymous_rate_limit(
-                request, registry, 'password_reset'))
+                request, registry, 'account_recovery'))
 
 
 class RateLimitingTweenAnonymousTest(unittest.TestCase):
@@ -176,7 +176,7 @@ class RateLimitingTweenAnonymousTest(unittest.TestCase):
             ANONYMOUS_RATE_LIMITED_BUCKETS['/users/login'], 'login')
         self.assertEqual(
             ANONYMOUS_RATE_LIMITED_BUCKETS['/users/request_password_change'],
-            'password_reset')
+            'account_recovery')
 
     @patch('c2corg_api.tweens.rate_limiting.http_error_handler')
     @patch('c2corg_api.tweens.rate_limiting._check_anonymous_rate_limit')
