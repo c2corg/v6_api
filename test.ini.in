@@ -23,3 +23,8 @@ rate_limiting.window_span = 5
 rate_limiting.limit = 12
 rate_limiting.limit_moderator = 15
 rate_limiting.max_times = 2
+# Kept high so that the many login / password reset calls made across the
+# test suite (unrelated to rate limiting itself) don't get rejected; the
+# anonymous rate limiting logic is covered by its own unit tests instead.
+rate_limiting.anonymous_window_span = 5
+rate_limiting.anonymous_limit = 10000

@@ -103,7 +103,7 @@ def _add_global_test_data(session):
         name='Contributor 3',
         username='contributor3', email='contributor3@camptocamp.org',
         forum_username='contributor3',
-        password='poor pass', email_validated=True,
+        password='poor password', email_validated=True,
         tos_validated=datetime.datetime(2006, 1, 1),
         profile=contributor3_profile)
 
@@ -115,7 +115,7 @@ def _add_global_test_data(session):
         name='Contributor no ToS',
         username='contributornotos', email='contributornotos@camptocamp.org',
         forum_username='contributornotos',
-        password='some pass', email_validated=True,
+        password='some password', email_validated=True,
         profile=contributor_notos_profile)
 
     moderator_profile = UserProfile(

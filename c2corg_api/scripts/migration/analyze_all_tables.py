@@ -16,9 +16,19 @@ class AnalyzeAllTables(MigrateBase):
         old_lvl = conn.connection.isolation_level
         conn.connection.set_isolation_level(0)
 
+        # `ANALYZE` does not support bound parameters for identifiers
+        # (schema/table names), so the identifiers returned by
+        # SQL_ALL_TABLES (not user input: they come from Postgres' own
+        # catalog, already filtered to our two known schemas) are quoted
+        # with the dialect's identifier preparer instead of being
+        # interpolated into the SQL string as raw strings.
+        preparer = engine.dialect.identifier_preparer
+
         all_tables = conn.execute(text(SQL_ALL_TABLES))
         for schema, table in all_tables:
-            conn.execute('analyze {}.{};'.format(schema, table))
+            qualified_name = '{}.{}'.format(
+                preparer.quote(schema), preparer.quote(table))
+            conn.execute(text('analyze {};'.format(qualified_name)))
 
         conn.connection.set_isolation_level(old_lvl)
         conn.close()

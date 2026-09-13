@@ -32,7 +32,10 @@ log = logging.getLogger(__name__)
 
 ENCODING = 'UTF-8'
 VALIDATION_EXPIRE_DAYS = 3
-MINIMUM_PASSWORD_LENGTH = 3
+# NIST SP 800-63B recommends a minimum of 8 characters; 10 gives a bit more
+# margin against brute-force/credential-stuffing while staying easy to
+# remember (no arbitrary complexity rules are otherwise enforced).
+MINIMUM_PASSWORD_LENGTH = 10
 
 
 def is_valid_email(email):

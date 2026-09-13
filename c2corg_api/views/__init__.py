@@ -27,10 +27,58 @@ from c2corg_api.views.markdown import cook
 
 log = logging.getLogger(__name__)
 
+# Origins used when no `cors.allowed_origins` setting is provided (e.g. a
+# local dev. server started without going through `make load-env`).
+DEFAULT_CORS_ORIGINS = ('http://localhost:6553',)
+
+# NB: `origins` is deliberately not "*". Cornice's CORS support allows
+# requests carrying the `Authorization` header (used here for JWT bearer
+# tokens) to be echoed back with `Access-Control-Allow-Origin` set to the
+# requesting origin whenever it matches an allowed entry; with a wildcard,
+# *any* website would be allowed to make credentialed cross-origin calls
+# to this API on behalf of a logged-in user. `configure_cors_policy` below
+# overrides this dict (in place, before the view modules using it are
+# imported by `config.scan()`) with the origins configured in the ini
+# settings.
 cors_policy = dict(
     headers=('Content-Type'),
-    origins=('*')
+    origins=DEFAULT_CORS_ORIGINS
 )
+
+
+def configure_cors_policy(settings):
+    """
+    Configure the CORS origins allowed to call the API.
+
+    Reads the `cors.allowed_origins` setting (a space separated list of
+    origins, see common.ini.in). Must be called once, before
+    `config.scan()`: Cornice reads the `cors_policy` dict when each
+    `@resource`-decorated view is registered, which happens as a side
+    effect of importing the view modules during the scan.
+    """
+    raw_origins = settings.get('cors.allowed_origins') or ''
+    tokens = raw_origins.split()
+
+    if '*' in tokens:
+        log.warning(
+            'Ignoring "*" in the "cors.allowed_origins" setting: a '
+            'wildcard would let any website make authenticated '
+            'cross-origin requests to this API; list explicit origins '
+            'instead.')
+
+    origins = tuple(
+        token.strip() for token in tokens
+        if token.strip() and token.strip() != '*')
+
+    if not origins:
+        log.warning(
+            'No (valid) "cors.allowed_origins" setting found, falling '
+            'back to the default origins: %s',
+            ', '.join(DEFAULT_CORS_ORIGINS))
+        return
+
+    cors_policy['origins'] = origins
+    log.info('CORS allowed origins: %s', ', '.join(origins))
 
 
 @view_config(context=HTTPNotFound)

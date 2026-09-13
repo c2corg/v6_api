@@ -10,7 +10,7 @@ from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
 from c2corg_api.views.user import is_unused_user_attribute, ENCODING, \
-    VALIDATION_EXPIRE_DAYS, validate_forum_username
+    MINIMUM_PASSWORD_LENGTH, VALIDATION_EXPIRE_DAYS, validate_forum_username
 from c2corg_api.models.common.attributes import default_langs
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
@@ -69,11 +69,11 @@ class UpdateAccountSchema(colander.MappingSchema):
             ))
     currentpassword = colander.SchemaNode(
             colander.String(encoding=ENCODING),
-            validator=colander.Length(min=3))
+            validator=colander.Length(min=MINIMUM_PASSWORD_LENGTH))
     newpassword = colander.SchemaNode(
             colander.String(encoding=ENCODING),
             missing=colander.drop,
-            validator=colander.Length(min=3))
+            validator=colander.Length(min=MINIMUM_PASSWORD_LENGTH))
 
     is_profile_public = colander.SchemaNode(
             colander.Boolean(),

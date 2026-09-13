@@ -72,6 +72,16 @@ discourse.category = {discourse_category}
 
 ui.url = {ui_url}
 
+# Space separated list of origins allowed to make cross-origin (CORS)
+# requests to this API, e.g. "https://www.camptocamp.org
+# https://demov6.camptocamp.org". This should normally just be the
+# frontend's own origin(s). Do NOT set this to "*": the API accepts the
+# `Authorization` header (JWT bearer tokens) on cross-origin requests, so a
+# wildcard would let any third-party website make authenticated calls on
+# behalf of a logged-in user. See c2corg_api/views/__init__.py
+# (configure_cors_policy).
+cors.allowed_origins = {cors_allowed_origins}
+
 mail.validate_register_url_template = {mail_validate_register_url_template}
 mail.request_password_change_url_template = {mail_request_password_change_url_template}
 mail.validate_change_email_url_template = {mail_validate_change_email_url_template}
@@ -115,3 +125,13 @@ rate_limiting.limit_robot = {rate_limiting_limit_robot}
 rate_limiting.max_times = {rate_limiting_max_times}
 # Email address rate limiting alert messages are sent to
 rate_limiting.alert_address = {rate_limiting_alert_address}
+
+# Rate limiting settings for anonymous (unauthenticated) sensitive
+# endpoints: /users/login and /users/request_password_change. These are
+# not tied to a user account (the requester may not even have one yet, or
+# may be trying to guess a password), so they are limited by client IP
+# instead, using Redis (see c2corg_api/tweens/rate_limiting.py).
+# Window timespan in seconds:
+rate_limiting.anonymous_window_span = {rate_limiting_anonymous_window_span}
+# Max number of attempts allowed per IP and per bucket during a window:
+rate_limiting.anonymous_limit = {rate_limiting_anonymous_limit}

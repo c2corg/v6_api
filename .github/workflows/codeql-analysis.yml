@@ -8,6 +8,13 @@ on:
   schedule:
     - cron: '0 5 * * 3'
 
+# Minimum permissions needed to check out the code and upload the CodeQL
+# analysis results.
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 jobs:
   CodeQL-Build:
     runs-on: ubuntu-latest
