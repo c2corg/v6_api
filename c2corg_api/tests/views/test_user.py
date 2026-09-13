@@ -11,8 +11,11 @@ from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.security.discourse_client import (
     APIDiscourseClient, get_discourse_client, set_discourse_client)
 
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode, quote
 
+import base64
+import hashlib
+import hmac
 import re
 import time
 import datetime
@@ -561,13 +564,29 @@ class TestUserRest(BaseUserTestRest):
 
     def test_login_discourse_success(self):
         self.set_discourse_not_mocked()
-        # noqa See https://meta.discourse.org/t/official-single-sign-on-for-discourse/13045
-        sso = "bm9uY2U9Y2I2ODI1MWVlZmI1MjExZTU4YzAwZmYxMzk1ZjBjMGI%3D%0A"
-        sig = "2828aa29899722b35a2f191d34ef9b3ce695e0e6eeec47deb46d588d70c7cb56"  # noqa
+        # return_sso_url tells the SSO provider (us) which Discourse
+        # instance to redirect back to - not a real secret, only used to
+        # sign this test's own fixture.
+        self.discourse_client.sso_key = \
+            'test_only_shared_secret_not_a_real_credential'
+        return_sso_url = 'https://forum-test.example.org/session/sso_login'
+
+        payload = urlencode({
+            'nonce': 'cb68251eefb5211e58c00ff1395f0c0b',
+            'return_sso_url': return_sso_url,
+        })
+        b64_payload = base64.b64encode(payload.encode('utf-8')).decode(
+            'ascii')
+        sig = hmac.new(
+            self.discourse_client.sso_key.encode('utf-8'),
+            b64_payload.encode('utf-8'),
+            digestmod=hashlib.sha256).hexdigest()
+        sso = quote(b64_payload)
 
         moderator = self.session.query(User).filter(
                 User.username == 'moderator').one()
         redirect1 = self.discourse_client.redirect(moderator, sso, sig)
+        self.assertTrue(redirect1.startswith(return_sso_url + '?'))
 
         body = self.login('moderator', sso=sso, sig=sig, discourse=True).json
         self.assertTrue('token' in body)
