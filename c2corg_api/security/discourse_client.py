@@ -113,7 +113,7 @@ class APIDiscourseClient(object):
         payload = self.decode_payload(sso)
         return parse_qs(payload)['nonce'][0]
 
-    def create_response_payload(self, user, nonce, url_part):
+    def create_response_payload(self, user, nonce, return_sso_url):
         assert nonce is not None, 'No nonce passed'
 
         params = {
@@ -129,7 +129,7 @@ class APIDiscourseClient(object):
         r_payload = b64encode(urllib.parse.urlencode(params).encode('utf-8'))
         h = hmac.new(key, r_payload, digestmod=hashlib.sha256)
         qs = urllib.parse.urlencode({'sso': r_payload, 'sig': h.hexdigest()})
-        return '%s%s?%s' % (self.discourse_public_url, url_part, qs)
+        return '%s?%s' % (return_sso_url, qs)
 
     def get_nonce_from_sso(self, sso, sig):
         payload = urllib.parse.unquote(sso)
@@ -141,17 +141,21 @@ class APIDiscourseClient(object):
 
         self.check_signature(payload, sig)
 
-        # Build the return payload
+        # return_sso_url tells us which Discourse instance to send the
+        # signed response back to, so a single SSO provider can serve
+        # several Discourse instances (e.g. prod and a beta instance)
+        # sharing the same sso_secret.
         qs = parse_qs(decoded)
-        return qs['nonce'][0]
+        return qs['nonce'][0], qs['return_sso_url'][0]
 
     def redirect(self, user, sso, signature):
-        nonce = self.get_nonce_from_sso(sso, signature)
-        return self.create_response_payload(user, nonce, '/session/sso_login')
+        nonce, return_sso_url = self.get_nonce_from_sso(sso, signature)
+        return self.create_response_payload(user, nonce, return_sso_url)
 
     def redirect_without_nonce(self, user):
         nonce = self.request_nonce()
-        return self.create_response_payload(user, nonce, '/session/sso_login')
+        return self.create_response_payload(
+            user, nonce, '%s/session/sso_login' % self.discourse_public_url)
 
 
 c = None
