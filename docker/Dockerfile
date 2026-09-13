@@ -3,6 +3,19 @@ FROM docker.io/python:3.9-slim-bullseye
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL=en_US.UTF-8
 
+# Debian 11 (bullseye) is old enough that deb.debian.org's bullseye-security
+# pool has started drifting out of sync with its own package index (some
+# package files 404 while still listed, and which ones varies from run to
+# run). Pinning to a single snapshot.debian.org timestamp keeps the index
+# and the pool consistent with each other.
+RUN set -x \
+    && echo "deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260731T213502Z bullseye main" \
+       > /etc/apt/sources.list \
+    && echo "deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20260731T213502Z bullseye-security main" \
+       >> /etc/apt/sources.list \
+    && echo "deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260731T213502Z bullseye-updates main" \
+       >> /etc/apt/sources.list
+
 RUN set -x \
     && apt-get update \
     && apt-get -y upgrade \
