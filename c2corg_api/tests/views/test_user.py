@@ -11,6 +11,8 @@ from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.security.discourse_client import (
     APIDiscourseClient, get_discourse_client, set_discourse_client)
 
+from pyramid.httpexceptions import HTTPBadRequest
+
 from urllib.parse import urlparse, urlencode, quote
 
 import base64
@@ -570,18 +572,9 @@ class TestUserRest(BaseUserTestRest):
         self.discourse_client.sso_key = \
             'test_only_shared_secret_not_a_real_credential'
         return_sso_url = 'https://forum-test.example.org/session/sso_login'
+        self.discourse_client.allowed_sso_hosts = {'forum-test.example.org'}
 
-        payload = urlencode({
-            'nonce': 'cb68251eefb5211e58c00ff1395f0c0b',
-            'return_sso_url': return_sso_url,
-        })
-        b64_payload = base64.b64encode(payload.encode('utf-8')).decode(
-            'ascii')
-        sig = hmac.new(
-            self.discourse_client.sso_key.encode('utf-8'),
-            b64_payload.encode('utf-8'),
-            digestmod=hashlib.sha256).hexdigest()
-        sso = quote(b64_payload)
+        sso, sig = self._build_signed_sso_payload(return_sso_url)
 
         moderator = self.session.query(User).filter(
                 User.username == 'moderator').one()
@@ -593,6 +586,37 @@ class TestUserRest(BaseUserTestRest):
         redirect2 = body['redirect']
 
         self.assertEqual(redirect1, redirect2)
+
+    def test_login_discourse_rejects_unlisted_return_sso_url(self):
+        self.set_discourse_not_mocked()
+        self.discourse_client.sso_key = \
+            'test_only_shared_secret_not_a_real_credential'
+        self.discourse_client.allowed_sso_hosts = {'forum-test.example.org'}
+
+        # correctly signed (same secret), but pointing somewhere not on
+        # the allowlist - must be rejected even though the signature is
+        # valid, otherwise a leaked sso_secret could redirect an
+        # authenticated user's browser anywhere.
+        sso, sig = self._build_signed_sso_payload(
+            'https://not-allowed.example.org/session/sso_login')
+
+        moderator = self.session.query(User).filter(
+                User.username == 'moderator').one()
+        with self.assertRaises(HTTPBadRequest):
+            self.discourse_client.redirect(moderator, sso, sig)
+
+    def _build_signed_sso_payload(self, return_sso_url):
+        payload = urlencode({
+            'nonce': 'cb68251eefb5211e58c00ff1395f0c0b',
+            'return_sso_url': return_sso_url,
+        })
+        b64_payload = base64.b64encode(payload.encode('utf-8')).decode(
+            'ascii')
+        sig = hmac.new(
+            self.discourse_client.sso_key.encode('utf-8'),
+            b64_payload.encode('utf-8'),
+            digestmod=hashlib.sha256).hexdigest()
+        return quote(b64_payload), sig
 
     def test_login_failure(self):
         body = self.login(
