@@ -60,6 +60,16 @@ class TestSearchRest(BaseTestRest):
                     lang='fr', title='Mont Blanc du ciel',
                     description='...', summary='Ski')
             ]))
+        self.session.add(Route(
+            activities=['rock_climbing'], elevation_max=1500,
+            elevation_min=700,
+            locales=[
+                RouteLocale(
+                    lang='fr',
+                    title='Vallée d\'Ailefroide, Orage d\'étoiles, '
+                          'Rivière Kwaï',
+                    description='...', summary='...')
+            ]))
         self.book1 = Book(
             activities=['hiking'],
             book_types=['biography'],
@@ -103,6 +113,20 @@ class TestSearchRest(BaseTestRest):
 
         # tests that user results are not included when not authenticated
         self.assertNotIn('users', body)
+
+    def test_search_by_accented_title_word(self):
+        """Single-word queries containing accented characters must match
+        titles containing the same accented characters (regression test
+        for the `search_ngram`/`index_ngram` analyzer mismatch)."""
+        for term in ('Kwaï', 'Rivière'):
+            response = self.app.get(
+                self._prefix + '?q=' + term + '&t=r', status=200)
+            body = response.json
+            routes = body['routes']
+            self.assertTrue(
+                routes['total'] > 0,
+                'expected a match for {0!r}, got {1!r}'.format(
+                    term, routes))
 
     def test_search_by_article_title(self):
         response = self.app.get(

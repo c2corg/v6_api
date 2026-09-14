@@ -339,7 +339,7 @@ analysis_settings = {
         "search_ngram": {
             "char_filter": ["punctuationgreedy"],
             "filter": [
-                "word_delimiter", "lowercase", "asciifolding", "unique"],
+                "word_delimiter", "lowercase", "icu_folding", "unique"],
             "tokenizer": "standard"
         },
         "index_raw": {
