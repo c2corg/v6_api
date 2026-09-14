@@ -120,7 +120,8 @@ def get_text_query_on_title(search_term, search_lang=None):
             fields=fields,
             type='phrase',
             fuzziness=2,
-            max_expansions=3,
+            # see the comment on max_expansions above
+            max_expansions=50,
             zero_terms_query="none",
             slop=4,
         )
