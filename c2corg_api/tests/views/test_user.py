@@ -563,7 +563,9 @@ class TestUserRest(BaseUserTestRest):
         # password.
         contributor = self.session.query(User).get(
             self.global_userids['contributor'])
-        contributor.password = 'abc'
+        # Test fixture, not a real credential; deliberately weak/short
+        # to simulate a pre-policy account.
+        contributor.password = 'abc'  # nosec
         self.session.flush()
 
         body = self.login(
