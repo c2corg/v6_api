@@ -10,7 +10,7 @@ import hashlib
 import requests
 import urllib.error
 
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlparse
 
 log = logging.getLogger(__name__)
 
@@ -24,6 +24,17 @@ class APIDiscourseClient(object):
         self.discourse_public_url = settings['discourse.public_url']
         self.api_key = settings['discourse.api_key']
         self.sso_key = str(settings.get('discourse.sso_secret'))  # no unicode
+
+        # Hosts a signed SSO payload's return_sso_url is allowed to point
+        # to. Our own discourse.public_url is always allowed (that's the
+        # only thing this ever pointed to before multi-instance support
+        # was added); extra hosts (e.g. a beta instance sharing the same
+        # sso_secret during a migration) are opt-in via settings, comma
+        # separated.
+        extra_hosts = settings.get('discourse.allowed_sso_hosts', '')
+        self.allowed_sso_hosts = {
+            urlparse(self.discourse_public_url).hostname,
+        } | {host.strip() for host in extra_hosts.split(',') if host.strip()}
 
         self.discourse_userid_cache = {}
         # FIXME: are we guaranteed usernames can never change? -> no!
@@ -144,9 +155,20 @@ class APIDiscourseClient(object):
         # return_sso_url tells us which Discourse instance to send the
         # signed response back to, so a single SSO provider can serve
         # several Discourse instances (e.g. prod and a beta instance)
-        # sharing the same sso_secret.
+        # sharing the same sso_secret. It's inside the signed payload, so
+        # it can't be tampered with in transit - but if the shared secret
+        # itself were ever compromised, an attacker could otherwise sign a
+        # payload pointing anywhere; only forward users to hosts we
+        # explicitly expect, over https.
         qs = parse_qs(decoded)
-        return qs['nonce'][0], qs['return_sso_url'][0]
+        return_sso_url = qs['return_sso_url'][0]
+        parsed_return_url = urlparse(return_sso_url)
+        if parsed_return_url.scheme != 'https' \
+                or parsed_return_url.hostname not in self.allowed_sso_hosts:
+            log.error('return_sso_url not allowed: %s', return_sso_url)
+            raise HTTPBadRequest('discourse login failed')
+
+        return qs['nonce'][0], return_sso_url
 
     def redirect(self, user, sso, signature):
         nonce, return_sso_url = self.get_nonce_from_sso(sso, signature)
