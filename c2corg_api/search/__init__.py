@@ -109,7 +109,13 @@ def get_text_query_on_title(search_term, search_lang=None):
             fields=fields,
             type='best_fields',
             fuzziness=1,
-            max_expansions=2,
+            # max_expansions caps how many candidate terms the fuzzy match
+            # can consider, not the edit distance. With only 2, on an index
+            # with as many documents as ours the exact term the user typed
+            # can lose out to unrelated terms and the query silently misses
+            # documents that obviously match. 50 is elasticsearch's own
+            # default for fuzzy queries.
+            max_expansions=50,
             zero_terms_query="none",
             slop=4,
         )
@@ -119,7 +125,8 @@ def get_text_query_on_title(search_term, search_lang=None):
             fields=fields,
             type='phrase',
             fuzziness=2,
-            max_expansions=3,
+            # see the comment on max_expansions above
+            max_expansions=50,
             zero_terms_query="none",
             slop=4,
         )
