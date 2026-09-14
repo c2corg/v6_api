@@ -137,6 +137,18 @@ class TestSearchRest(BaseTestRest):
         locales = waypoints['documents'][0]['locales']
         self.assertEqual(len(locales), 1)
 
+    def test_search_lang_finds_other_language(self):
+        """Documents that only exist in a language other than the
+        preferred one must still be found (#2223).
+        """
+        response = self.app.get(
+            self._prefix + '?q=Mont Blanc&pl=fr', status=200)
+        body = response.json
+
+        # "Mont Blanc" waypoint only has an 'en' locale
+        waypoints = body['waypoints']
+        self.assertTrue(waypoints['total'] > 0)
+
     def test_search_authenticated(self):
         """Tests that user results are included when authenticated.
         """

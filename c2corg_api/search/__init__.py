@@ -88,15 +88,20 @@ def get_text_query_on_title(search_term, search_lang=None):
     else:
         mots = True
 
-    # fall back to searching every language when none is given, using
-    # explicit field names rather than a `title_*` wildcard so the query
-    # does not depend on ES resolving the field pattern correctly.
-    langs = [search_lang] if search_lang else default_langs
-    for lang in langs:
+    # always search every language, using explicit field names rather than
+    # a `title_*` wildcard so the query does not depend on ES resolving the
+    # field pattern correctly. Documents only translated in a language
+    # other than the preferred one (e.g. waypoints) must still be found.
+    # The preferred language (if given) is boosted so its matches rank
+    # first without excluding the other languages.
+    for lang in default_langs:
         if not mots:
-            fields.append('title_{0}.ngram'.format(lang))
+            field = 'title_{0}.ngram'.format(lang)
         else:
-            fields.append('title_{0}.contentheavy'.format(lang))
+            field = 'title_{0}.contentheavy'.format(lang)
+        if search_lang and lang == search_lang:
+            field += '^3'
+        fields.append(field)
 
     if not mots:
         return MultiMatch(

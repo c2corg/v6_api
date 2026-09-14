@@ -40,9 +40,10 @@ class SearchRest(ACLDefault):
             The search word.
 
             `pl=...` (optional)
-            When set only the given locale will be included (if available),
-            and the search is restricted to that locale's title fields.
-            Otherwise all locales will be searched and returned.
+            When set, matches in the given locale are boosted so that they
+            are ranked first. Documents that only exist in other locales
+            are still returned. When not set, all locales are searched
+            with the same weight.
 
             `limit=...` (optional)
             How many results should be returned per document type
