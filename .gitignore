@@ -16,9 +16,11 @@
 .noseids
 /env_api
 /venv
+/.venv
 *.swp
 config/docker
 .coverage
 coverage.xml
 /config/env.local
+/docker-compose.override.local.yml
 project.tar
