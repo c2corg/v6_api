@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.article import Article
 from c2corg_api.models.book import Book
@@ -115,12 +117,12 @@ class TestSearchRest(BaseTestRest):
         self.assertNotIn('users', body)
 
     def test_search_by_accented_title_word(self):
-        """Single-word queries containing accented characters must match
-        titles containing the same accented characters (regression test
-        for the `search_ngram`/`index_ngram` analyzer mismatch)."""
+        """Single-word queries must match titles containing that exact
+        word (regression test for max_expansions being far too low on
+        the fuzzy single-word title query, see get_text_query_on_title)."""
         for term in ('Kwaï', 'Rivière'):
             response = self.app.get(
-                self._prefix + '?q=' + term + '&t=r', status=200)
+                self._prefix + '?q=' + quote(term) + '&t=r', status=200)
             body = response.json
             routes = body['routes']
             self.assertTrue(
