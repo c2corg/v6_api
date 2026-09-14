@@ -156,8 +156,12 @@ jobs:
           context: .
           file: ./docker/Dockerfile
           provenance: false # true creates issues with the old docker compose used in prod
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.docker_meta.outputs.tags }}
+          # BuildKit defaults to OCI media types under the docker-container
+          # driver, which the old Docker Engine (1.12) used in prod cannot
+          # read at all (unlike provenance, this isn't optional metadata -
+          # it silently breaks `docker pull` with a generic "not found").
+          # Force the classic Docker manifest format instead.
+          outputs: type=image,name=${{ steps.docker_meta.outputs.tags }},push=${{ github.event_name != 'pull_request' }},oci-mediatypes=false
           labels: ${{ steps.docker_meta.outputs.labels }}
           build-args: |
             VERSION=${{ github.sha }}
