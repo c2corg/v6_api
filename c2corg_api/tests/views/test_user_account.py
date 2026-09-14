@@ -158,6 +158,30 @@ class TestUserAccountRest(BaseUserTestRest):
         user = self.session.query(User).get(user_id)
         self.assertEqual(user.is_profile_public, True)
 
+    def test_update_account_newpassword_too_weak(self):
+        data = {
+            'currentpassword': self.global_passwords['contributor'],
+            'newpassword': 'alllowercase1'  # nosec - test fixture
+        }
+        body = self.post_json_with_contributor(
+            '/users/account', data, status=400)
+        self.assertErrorsContain(body, 'newpassword')
+
+    def test_update_account_newpassword_success(self):
+        user_id = self.global_userids['contributor']
+        user = self.session.query(User).get(user_id)
+        initial_encoded_password = user.password
+
+        data = {
+            'currentpassword': self.global_passwords['contributor'],
+            'newpassword': 'New$Password1'  # nosec - test fixture
+        }
+        self.post_json_with_contributor('/users/account', data, status=200)
+
+        self.session.expunge(user)
+        user = self.session.query(User).get(user_id)
+        self.assertNotEqual(initial_encoded_password, user.password)
+
     def test_update_preferred_lang(self):
         user_id = self.global_userids['contributor']
         user = self.session.query(User).get(user_id)

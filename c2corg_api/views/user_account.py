@@ -10,7 +10,9 @@ from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
 from c2corg_api.views.user import is_unused_user_attribute, ENCODING, \
-    MINIMUM_PASSWORD_LENGTH, VALIDATION_EXPIRE_DAYS, validate_forum_username
+    MINIMUM_PASSWORD_LENGTH, PASSWORD_STRENGTH_ERROR, \
+    VALIDATION_EXPIRE_DAYS, is_password_strong_enough, \
+    validate_forum_username
 from c2corg_api.models.common.attributes import default_langs
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
@@ -67,13 +69,20 @@ class UpdateAccountSchema(colander.MappingSchema):
                     'Already used forum name'
                 )
             ))
+    # Verifies an *existing* credential, so it must accept whatever was
+    # valid when the account was created (e.g. under a looser, older
+    # policy) - just needs to be non-empty, not held to today's policy.
     currentpassword = colander.SchemaNode(
             colander.String(encoding=ENCODING),
-            validator=colander.Length(min=MINIMUM_PASSWORD_LENGTH))
+            validator=colander.Length(min=1))
+    # A *new* password being set: held to the current policy.
     newpassword = colander.SchemaNode(
             colander.String(encoding=ENCODING),
             missing=colander.drop,
-            validator=colander.Length(min=MINIMUM_PASSWORD_LENGTH))
+            validator=colander.All(
+                colander.Length(min=MINIMUM_PASSWORD_LENGTH),
+                colander.Function(
+                    is_password_strong_enough, PASSWORD_STRENGTH_ERROR)))
 
     is_profile_public = colander.SchemaNode(
             colander.Boolean(),

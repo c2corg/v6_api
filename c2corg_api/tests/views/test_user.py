@@ -112,7 +112,7 @@ class TestUserRest(BaseUserTestRest):
             'username': 'test',
             'forum_username': 'test',
             'name': 'Max Mustermann',
-            'password': 'super secret',
+            'password': 'Super$ecret1',
             'email_validated': True,
             'email': 'some_user@camptocamp.org'
         }
@@ -131,7 +131,7 @@ class TestUserRest(BaseUserTestRest):
         request_body = {
             'username': 'test', 'forum_username': 'test',
             'name': 'Max Mustermann',
-            'password': 'super secret',
+            'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org'
         }
         url = self._prefix + '/register'
@@ -148,7 +148,7 @@ class TestUserRest(BaseUserTestRest):
             'username': 'test', 'forum_username': 'test',
             'lang': 'en',
             'name': 'Max Mustermann',
-            'password': 'super secret',
+            'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org'
         }
         url = self._prefix + '/register'
@@ -164,7 +164,7 @@ class TestUserRest(BaseUserTestRest):
             'username': 'test', 'forum_username': 'test',
             'lang': 'nn',
             'name': 'Max Mustermann',
-            'password': 'super secret',
+            'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org'
         }
         url = self._prefix + '/register'
@@ -180,7 +180,7 @@ class TestUserRest(BaseUserTestRest):
                 'username': 'test{}'.format(i),
                 'forum_username': forum_username,
                 'name': 'Max Mustermann{}'.format(i),
-                'password': 'super secret',
+                'password': 'Super$ecret1',
                 'email': 'some_user{}@camptocamp.org'.format(i)
             }
             if value is False:
@@ -196,7 +196,7 @@ class TestUserRest(BaseUserTestRest):
             'username': 'test',
             'forum_username': 'Contributor',
             'name': 'Max Mustermann',
-            'password': 'super secret',
+            'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org'
         }
         url = self._prefix + '/register'
@@ -210,7 +210,7 @@ class TestUserRest(BaseUserTestRest):
             'username': ' contributor ',
             'forum_username': 'Foo',
             'name': 'Max Mustermann',
-            'password': 'super secret',
+            'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org'
         }
         url = self._prefix + '/register'
@@ -222,7 +222,7 @@ class TestUserRest(BaseUserTestRest):
             'username': ' username with spaces ',
             'forum_username': 'Spaceman',
             'name': 'Max Mustermann',
-            'password': 'super secret',
+            'password': 'Super$ecret1',
             'email': 'space@camptocamp.org'
         }
         url = self._prefix + '/register'
@@ -239,7 +239,7 @@ class TestUserRest(BaseUserTestRest):
             'username': 'someone_else@camptocamp.org',
             'forum_username': 'Contributor4',
             'name': 'Max Mustermann',
-            'password': 'super secret',
+            'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org'
         }
         url = self._prefix + '/register'
@@ -254,7 +254,7 @@ class TestUserRest(BaseUserTestRest):
             'username': 'some_user@camptocamp.org',
             'forum_username': 'Contributor4',
             'name': 'Frankie Vincent',
-            'password': 'super secret',
+            'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org'
         }
         url = self._prefix + '/register'
@@ -266,7 +266,7 @@ class TestUserRest(BaseUserTestRest):
             'username': 'test',
             'forum_username': 'Contributor',
             'name': 'Max Mustermann',
-            'password': 'super secret',
+            'password': 'Super$ecret1',
             'email': 'some_useratcamptocamp.org'
         }
         url = self._prefix + '/register'
@@ -280,7 +280,7 @@ class TestUserRest(BaseUserTestRest):
             'username': 'test',
             'forum_username': 'testf',
             'name': 'Max Mustermann',
-            'password': 'super secret',
+            'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org'
         }
         url = self._prefix + '/register'
@@ -333,7 +333,7 @@ class TestUserRest(BaseUserTestRest):
             'username': 'utf8', 'name': 'utf8', 'forum_username': 'utf8f',
             # Test fixture, not a real credential; exercises non-ASCII
             # password handling.
-            'password': 'élève 日本1234',  # nosec
+            'password': 'Élève 日本!1234',  # nosec
             'email': 'utf8@camptocamp.org'
         }
         body = self.app_post_json(url, request_utf8, status=200).json
@@ -345,7 +345,7 @@ class TestUserRest(BaseUserTestRest):
         request_body = {
             'username': 'test', 'forum_username': 'testf',
             'name': 'Max Mustermann',
-            'password': 'super secret',
+            'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org'
         }
         url = self._prefix + '/register'
@@ -382,7 +382,7 @@ class TestUserRest(BaseUserTestRest):
         request_body = {
             'username': 'test', 'forum_username': 'testf',
             'name': 'Max Mustermann',
-            'password': 'super secret',
+            'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org'
         }
         url = self._prefix + '/register'
@@ -419,7 +419,7 @@ class TestUserRest(BaseUserTestRest):
         url_api_validation = '/users/validate_new_password/%s' % nonce
 
         self.app_post_json(url_api_validation, {
-            'password': 'new password'  # nosec - test fixture
+            'password': 'New$Password1'  # nosec - test fixture
             }, status=200)
 
         self.session.expunge(user)
@@ -447,7 +447,7 @@ class TestUserRest(BaseUserTestRest):
 
         # Succeed anyway since only the password has changed
         self.app_post_json(url_api_validation, {
-            'password': 'new password'
+            'password': 'New$Password1'  # nosec - test fixture
             }, status=200)
 
     def test_forgot_password_blocked_account(self):
@@ -467,7 +467,7 @@ class TestUserRest(BaseUserTestRest):
         request_body = {
             'username': 'test', 'forum_username': 'testf',
             'name': 'Max Mustermann',
-            'password': 'super secret',
+            'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org'
         }
 
@@ -553,6 +553,23 @@ class TestUserRest(BaseUserTestRest):
             'moderator@camptocamp.org',
             self.global_passwords['moderator'],
             status=200).json
+        self.assertTrue('token' in body)
+
+    def test_login_success_with_legacy_short_password(self):
+        # Regression test: MINIMUM_PASSWORD_LENGTH/complexity are policy
+        # for *setting* a password (register, reset), not for checking an
+        # existing one - an account created before this policy existed
+        # must still be able to log in with its original short/simple
+        # password.
+        contributor = self.session.query(User).get(
+            self.global_userids['contributor'])
+        # Test fixture, not a real credential; deliberately weak/short
+        # to simulate a pre-policy account.
+        contributor.password = 'abc'  # nosec
+        self.session.flush()
+
+        body = self.login(
+            'contributor', password='abc', status=200).json
         self.assertTrue('token' in body)
 
     def test_login_blocked_account(self):
