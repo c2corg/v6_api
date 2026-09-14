@@ -145,11 +145,6 @@ jobs:
         uses: docker/metadata-action@v6.1.0
         with:
           images: ghcr.io/c2corg/v6_api
-      - name: Join docker meta tags into a single comma-separated value
-        id: tags_csv
-        run: |
-          csv="$(printf '%s' '${{ steps.docker_meta.outputs.tags }}' | paste -sd ',')"
-          echo "csv=$csv" >> "$GITHUB_OUTPUT"
       - name: Checkout repository
         uses: actions/checkout@v6
       - run: git archive --format=tar --output project.tar "$GITHUB_SHA"
@@ -166,11 +161,12 @@ jobs:
           # cannot read at all (unlike provenance, this isn't optional
           # metadata - it silently breaks `docker pull` with a generic
           # "not found"). Force the classic Docker manifest format instead.
-          # tags can be multi-line (one per line), so join them with commas
-          # into a single `name=` value - `outputs` treats each line of its
-          # own value as a separate --output, which breaks if a bare tag
-          # ends up on its own line without a type=image,name= prefix.
-          outputs: type=image,name=${{ steps.tags_csv.outputs.csv }},push=${{ github.event_name != 'pull_request' }},oci-mediatypes=false
+          # Naming stays on the `tags:` input below (handled as repeated
+          # --tag flags, so multiple tags work fine) - buildx's --output
+          # name= does NOT accept a comma-separated list of tags, it errors
+          # on the second one (verified locally before pushing this).
+          tags: ${{ steps.docker_meta.outputs.tags }}
+          outputs: type=image,push=${{ github.event_name != 'pull_request' }},oci-mediatypes=false
           labels: ${{ steps.docker_meta.outputs.labels }}
           build-args: |
             VERSION=${{ github.sha }}
