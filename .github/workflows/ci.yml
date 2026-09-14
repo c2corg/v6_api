@@ -145,6 +145,11 @@ jobs:
         uses: docker/metadata-action@v6.1.0
         with:
           images: ghcr.io/c2corg/v6_api
+      - name: Join docker meta tags into a single comma-separated value
+        id: tags_csv
+        run: |
+          csv="$(printf '%s' '${{ steps.docker_meta.outputs.tags }}' | paste -sd ',')"
+          echo "csv=$csv" >> "$GITHUB_OUTPUT"
       - name: Checkout repository
         uses: actions/checkout@v6
       - run: git archive --format=tar --output project.tar "$GITHUB_SHA"
@@ -157,11 +162,15 @@ jobs:
           file: ./docker/Dockerfile
           provenance: false # true creates issues with the old docker compose used in prod
           # BuildKit defaults to OCI media types under the docker-container
-          # driver, which the old Docker Engine (1.12) used in prod cannot
-          # read at all (unlike provenance, this isn't optional metadata -
-          # it silently breaks `docker pull` with a generic "not found").
-          # Force the classic Docker manifest format instead.
-          outputs: type=image,name=${{ steps.docker_meta.outputs.tags }},push=${{ github.event_name != 'pull_request' }},oci-mediatypes=false
+          # driver, which some environments still consuming this image
+          # cannot read at all (unlike provenance, this isn't optional
+          # metadata - it silently breaks `docker pull` with a generic
+          # "not found"). Force the classic Docker manifest format instead.
+          # tags can be multi-line (one per line), so join them with commas
+          # into a single `name=` value - `outputs` treats each line of its
+          # own value as a separate --output, which breaks if a bare tag
+          # ends up on its own line without a type=image,name= prefix.
+          outputs: type=image,name=${{ steps.tags_csv.outputs.csv }},push=${{ github.event_name != 'pull_request' }},oci-mediatypes=false
           labels: ${{ steps.docker_meta.outputs.labels }}
           build-args: |
             VERSION=${{ github.sha }}
