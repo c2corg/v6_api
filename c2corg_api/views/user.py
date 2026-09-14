@@ -34,8 +34,29 @@ ENCODING = 'UTF-8'
 VALIDATION_EXPIRE_DAYS = 3
 # NIST SP 800-63B recommends a minimum of 8 characters; 10 gives a bit more
 # margin against brute-force/credential-stuffing while staying easy to
-# remember (no arbitrary complexity rules are otherwise enforced).
+# remember.
 MINIMUM_PASSWORD_LENGTH = 10
+
+PASSWORD_STRENGTH_ERROR = (
+    'Password must be at least {0} characters long and contain a '
+    'lowercase letter, an uppercase letter, a digit and a special '
+    'character'.format(MINIMUM_PASSWORD_LENGTH))
+
+
+def is_password_strong_enough(password):
+    """ Simple complexity check for newly created/changed passwords: at
+    least one lowercase letter, one uppercase letter, one digit and one
+    special (non-alphanumeric, non-space) character. Not applied to
+    existing passwords (login, "current password" checks) - only to
+    passwords being set, so it never locks out an account created under
+    a looser policy.
+    """
+    has_lower = any(c.islower() for c in password)
+    has_upper = any(c.isupper() for c in password)
+    has_digit = any(c.isdigit() for c in password)
+    has_special = any(
+        not c.isalnum() and not c.isspace() for c in password)
+    return has_lower and has_upper and has_digit and has_special
 
 
 def is_valid_email(email):
@@ -47,11 +68,18 @@ def is_valid_email(email):
     return True
 
 
-def validate_json_password(request, **kwargs):
+def validate_json_password(request, require_strength=True, **kwargs):
     """Checks if the password was given and encodes it.
        This is done here as the password is not an SQLAlchemy field.
        In addition, we can ensure the password is not leaked in the
        validation error messages.
+
+       `require_strength` gates the length/complexity checks: only a
+       password being *set* (registration, reset) should be held to the
+       current policy. It must stay off for login, otherwise accounts
+       created under an older, looser policy get locked out even though
+       their password is correct - see partial() usage on the login view
+       below.
     """
 
     if 'password' not in request.json:
@@ -59,8 +87,11 @@ def validate_json_password(request, **kwargs):
         return
 
     password = request.json['password']
-    if len(password) < MINIMUM_PASSWORD_LENGTH:
+    if require_strength and len(password) < MINIMUM_PASSWORD_LENGTH:
         request.errors.add('body', 'password', 'Password too short')
+        return
+    if require_strength and not is_password_strong_enough(password):
+        request.errors.add('body', 'password', PASSWORD_STRENGTH_ERROR)
         return
 
     try:
@@ -477,7 +508,9 @@ class UserLoginRest(ACLDefault):
 
     @json_view(
         schema=login_schema,
-        validators=[colander_body_validator, validate_json_password])
+        validators=[
+            colander_body_validator,
+            partial(validate_json_password, require_strength=False)])
     def post(self):
         request = self.request
         username = request.validated['username']
