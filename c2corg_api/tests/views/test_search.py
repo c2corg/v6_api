@@ -55,12 +55,36 @@ class TestSearchRest(BaseTestRest):
                     description='...',
                     summary='The heighest point in Europe')
             ]))
+        # a title that shares an ngram prefix with "Mont Blanc" once split
+        # on the hyphen (regression fixture, see
+        # test_search_hyphenated_compound_word)
+        self.session.add(Waypoint(
+            waypoint_type='summit', elevation=3715,
+            geometry=DocumentGeometry(
+                geom='SRID=3857;POINT(635956 5723604)'),
+            locales=[
+                WaypointLocale(
+                    lang='fr', title='Montaña Blanca',
+                    description='...',
+                    summary='A peak in Tenerife')
+            ]))
         self.session.add(Route(
             activities=['skitouring'], elevation_max=1500, elevation_min=700,
             locales=[
                 RouteLocale(
                     lang='fr', title='Mont Blanc du ciel',
                     description='...', summary='Ski')
+            ]))
+        # a title where the query words appear in a different order,
+        # separated by other words (regression fixture, see
+        # test_search_multiword_any_order)
+        self.session.add(Route(
+            activities=['rock_climbing'], elevation_max=3000,
+            elevation_min=2500,
+            locales=[
+                RouteLocale(
+                    lang='fr', title='Gerbier : Traversée des arêtes',
+                    description='...', summary='...')
             ]))
         self.session.add(Route(
             activities=['rock_climbing'], elevation_max=1500,
@@ -129,6 +153,39 @@ class TestSearchRest(BaseTestRest):
                 routes['total'] > 0,
                 'expected a match for {0!r}, got {1!r}'.format(
                     term, routes))
+
+    def test_search_hyphenated_compound_word(self):
+        """A hyphenated query like "Mont-Blanc" must be treated as two
+        words, not one (regression test: counting literal spaces made
+        "Mont-Blanc" go through the single-word fuzzy/ngram title query,
+        where its ngram prefixes ("mont", "blanc") happened to also match
+        an unrelated title ("Montaña Blanca") at least as well as the
+        real "Mont Blanc", see get_text_query_on_title)."""
+        response = self.app.get(
+            self._prefix + '?q=' + quote('Mont-Blanc') + '&t=w', status=200)
+        body = response.json
+        waypoints = body['waypoints']
+        self.assertTrue(waypoints['total'] > 0)
+        titles = [
+            doc['locales'][0]['title'] for doc in waypoints['documents']]
+        self.assertIn('Mont Blanc', titles)
+        self.assertNotIn('Montaña Blanca', titles)
+
+    def test_search_multiword_any_order(self):
+        """Multi-word queries must match titles containing the same words
+        in a different order, interleaved with other words (regression
+        test: the title query used to require the words to appear in
+        essentially the same order via a `phrase` query, see
+        get_text_query_on_title)."""
+        response = self.app.get(
+            self._prefix + '?q=' + quote('Aretes de Gerbier') + '&t=r',
+            status=200)
+        body = response.json
+        routes = body['routes']
+        self.assertTrue(
+            routes['total'] > 0,
+            'expected a match for "Aretes de Gerbier", got {0!r}'.format(
+                routes))
 
     def test_search_by_article_title(self):
         response = self.app.get(
