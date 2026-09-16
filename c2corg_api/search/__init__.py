@@ -1,3 +1,5 @@
+import re
+
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.book import BOOK_TYPE
@@ -22,7 +24,7 @@ from c2corg_api.search.mappings.xreport_mapping import SearchXreport
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
 from elasticsearch_dsl.connections import connections
-from elasticsearch_dsl.query import MultiMatch
+from elasticsearch_dsl.query import Bool, MultiMatch
 from kombu import Exchange, Queue, pools
 from kombu.connection import Connection
 
@@ -80,13 +82,20 @@ def create_search(document_type):
         doc_type=search_documents[document_type])
 
 
+# any run of non-word characters (space, hyphen, colon, apostrophe, slash,
+# ...) separates two "words", the same way the ES tokenizers used on the
+# title fields would split them. This is what decides whether a search term
+# like "Mont-Blanc" is treated as one word (typo-tolerant prefix search) or
+# several (word-order-independent search) - counting literal spaces only
+# would miss separators such as hyphens and treat "Mont-Blanc" as a single
+# word.
+_WORD_RE = re.compile(r'\w+', re.UNICODE)
+
+
 def get_text_query_on_title(search_term, search_lang=None):
     fields = []
 
-    if search_term.count(' ') == 0:
-        mots = False
-    else:
-        mots = True
+    mots = len(_WORD_RE.findall(search_term)) > 1
 
     # always search every language, using explicit field names rather than
     # a `title_*` wildcard so the query does not depend on ES resolving the
@@ -120,15 +129,33 @@ def get_text_query_on_title(search_term, search_lang=None):
             slop=4,
         )
     else:
-        return MultiMatch(
-            query=search_term,
-            fields=fields,
-            type='phrase',
-            fuzziness=2,
-            # see the comment on max_expansions above
-            max_expansions=50,
-            zero_terms_query="none",
-            slop=4,
+        # require all query words to be present, in any order (so e.g.
+        # "Arêtes de Gerbier" matches "Gerbier : Traversée des arêtes"),
+        # then give an extra score boost to documents where the words also
+        # appear as a (near-)exact phrase, so that word order still
+        # improves ranking without excluding legitimate matches that use a
+        # different order. A plain `phrase` match (the previous behaviour)
+        # requires the words to appear in essentially the same order, which
+        # silently drops matches whenever the title reorders or interleaves
+        # them with other words.
+        return Bool(
+            must=MultiMatch(
+                query=search_term,
+                fields=fields,
+                type='best_fields',
+                operator='and',
+                fuzziness='AUTO',
+                # see the comment on max_expansions above
+                max_expansions=50,
+                zero_terms_query="none",
+            ),
+            should=MultiMatch(
+                query=search_term,
+                fields=fields,
+                type='phrase',
+                slop=4,
+                zero_terms_query="none",
+            )
         )
 
 
