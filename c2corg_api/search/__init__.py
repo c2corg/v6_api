@@ -138,13 +138,19 @@ def get_text_query_on_title(search_term, search_lang=None):
         # requires the words to appear in essentially the same order, which
         # silently drops matches whenever the title reorders or interleaves
         # them with other words.
+        #
+        # No `fuzziness` here (unlike the single-word query above): the
+        # `contentheavy` fields are already stemmed, so distinct short
+        # words can end up just one edit apart once stemmed (e.g. "Gerbier"
+        # and "Gerri" both stem towards "gerb(i)"/"geri") - adding fuzzy
+        # matching on top of that conflates unrelated titles instead of
+        # tolerating typos.
         return Bool(
             must=MultiMatch(
                 query=search_term,
                 fields=fields,
                 type='best_fields',
                 operator='and',
-                fuzziness='AUTO',
                 # see the comment on max_expansions above
                 max_expansions=50,
                 zero_terms_query="none",

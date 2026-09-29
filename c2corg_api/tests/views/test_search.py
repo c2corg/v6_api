@@ -86,6 +86,18 @@ class TestSearchRest(BaseTestRest):
                     lang='fr', title='Gerbier : Traversée des arêtes',
                     description='...', summary='...')
             ]))
+        # an unrelated title whose stemmed tokens are only one edit away
+        # from the stemmed query terms above ("Gerri" -> "geri", one edit
+        # from "Gerbier" -> "gerbi") (regression fixture, see
+        # test_search_multiword_any_order)
+        self.session.add(Route(
+            activities=['rock_climbing'], elevation_max=3000,
+            elevation_min=2500,
+            locales=[
+                RouteLocale(
+                    lang='fr', title='Pic de Gerri : arête Noris - Gerri',
+                    description='...', summary='...')
+            ]))
         self.session.add(Route(
             activities=['rock_climbing'], elevation_max=1500,
             elevation_min=700,
@@ -186,6 +198,8 @@ class TestSearchRest(BaseTestRest):
             routes['total'] > 0,
             'expected a match for "Aretes de Gerbier", got {0!r}'.format(
                 routes))
+        titles = [doc['locales'][0]['title'] for doc in routes['documents']]
+        self.assertNotIn('Pic de Gerri : arête Noris - Gerri', titles)
 
     def test_search_by_article_title(self):
         response = self.app.get(
