@@ -52,7 +52,8 @@ DEFAULT_LISTING = [
     'height_diff_up',
     'public_transport',
     'condition_rating',
-    'quality'
+    'quality',
+    'version_date'
 ]
 DEFAULT_ATTRIBUTES_SETTINGS = {
     'fields': DEFAULT_FIELDS,

@@ -87,7 +87,7 @@ class Document(Base, _DocumentMixin):
     }, _DocumentMixin.__mapper_args__)
 
     _ATTRIBUTES_WHITELISTED = \
-        ['document_id', 'version', 'quality']
+        ['document_id', 'version', 'quality',"version_date"]
 
     _ATTRIBUTES = \
         _ATTRIBUTES_WHITELISTED + ['protected', 'redirects_to']
@@ -428,7 +428,7 @@ class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
 
 
 schema_attributes = [
-    'document_id', 'version', 'locales', 'geometry', 'quality'
+    'document_id', 'version', 'locales', 'geometry', 'quality','version_date'
 ]
 schema_locale_attributes = [
     'version', 'lang', 'title', 'description', 'summary'
