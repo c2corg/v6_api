@@ -1110,3 +1110,15 @@ class TestImageProxyRest(BaseTestRest):
                             format(self.image.document_id),
                             status=302)
         self.assertIn('imageBI.avif', resp.headers['Location'])
+
+    def test_redirect_is_cacheable(self):
+        resp = self.app.get('/images/proxy/{}'.format(self.image.document_id),
+                            status=302)
+        self.assertEqual(
+            'public, max-age=86400', resp.headers['Cache-Control'])
+
+        resp = self.app.get('/images/proxy/{}?size=MI'.
+                            format(self.image.document_id),
+                            status=302)
+        self.assertEqual(
+            'public, max-age=86400', resp.headers['Cache-Control'])
