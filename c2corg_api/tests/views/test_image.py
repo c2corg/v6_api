@@ -1111,6 +1111,30 @@ class TestImageProxyRest(BaseTestRest):
                             status=302)
         self.assertIn('imageBI.avif', resp.headers['Location'])
 
+    def test_merged_image(self):
+        # the files of a merged image are deleted, redirect to the target
+        merged = Image(
+            filename='merged.jpg', redirects_to=self.image.document_id,
+            activities=['paragliding'], height=1500,
+            image_type='collaborative')
+        self.session.add(merged)
+        self.session.flush()
+
+        resp = self.app.get('/images/proxy/{}?size=BI'.
+                            format(merged.document_id),
+                            status=302)
+        self.assertIn('imageBI.jpg', resp.headers['Location'])
+
+    def test_not_an_image(self):
+        article = Article(
+            categories=['site_info'], activities=['hiking'],
+            article_type='collab')
+        self.session.add(article)
+        self.session.flush()
+
+        self.app.get('/images/proxy/{}'.format(article.document_id),
+                     status=404)
+
     def test_redirect_is_cacheable(self):
         resp = self.app.get('/images/proxy/{}'.format(self.image.document_id),
                             status=302)

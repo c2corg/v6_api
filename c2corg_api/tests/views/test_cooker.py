@@ -63,15 +63,27 @@ class TestCookerRest(BaseTestRest):
         self.assertIn('c2c:url-proxy=', html)
 
     def test_image_redirected(self):
+        # the files of a merged image are deleted, use the target ones
         image = self._add_image('image.jpg')
         merged = self._add_image(
             'merged.jpg', redirects_to=image.document_id)
         html = self._cook('[img={}/]'.format(merged.document_id))
 
-        self.assertNotIn('c2c:url=', html)
+        self.assertIn(
+            'c2c:url="{}imageMI.jpg"'.format(self.image_url), html)
         self.assertIn(
             'c2c:url-proxy="/images/proxy/{}?size=MI"'.format(
                 merged.document_id), html)
+
+    def test_not_an_image(self):
+        article = Article(
+            categories=['site_info'], activities=['hiking'],
+            article_type='collab')
+        self.session.add(article)
+        self.session.flush()
+        html = self._cook('[img={}/]'.format(article.document_id))
+
+        self.assertNotIn('c2c:url=', html)
 
     def test_image_sizes_and_svg(self):
         jpg = self._add_image('image.jpg')
@@ -91,13 +103,15 @@ class TestCookerRest(BaseTestRest):
     def test_image_url_same_as_proxy(self):
         jpg = self._add_image('image.jpg')
         svg = self._add_image('image.svg')
+        merged = self._add_image('merged.jpg', redirects_to=jpg.document_id)
         html = self._cook(
             '[img={0}/]\n[img={0} orig/]\n[img={1} big/]\n'
-            '[img={1} orig/]'.format(jpg.document_id, svg.document_id))
+            '[img={1} orig/]\n[img={2}/]'.format(
+                jpg.document_id, svg.document_id, merged.document_id))
 
         imgs = re.findall(
             r'c2c:url="([^"]*)" c2c:url-proxy="([^"]*)"', html)
-        self.assertEqual(4, len(imgs))
+        self.assertEqual(5, len(imgs))
         for url, proxy_url in imgs:
             response = self.app.get(proxy_url, status=302)
             self.assertEqual(url, response.headers['Location'])

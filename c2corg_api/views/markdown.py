@@ -1,7 +1,6 @@
 from c2corg_api.markdown import parse_code
 from c2corg_api.markdown.img import IMG_ID_RE, make_image_url_resolver
-from c2corg_api.models import DBSession
-from c2corg_api.models.image import Image
+from c2corg_api.models.image import get_image_filenames
 from pyramid.threadlocal import get_current_registry
 
 # locale properties that must not be cooked by markdown parser
@@ -35,8 +34,8 @@ def cook(data):
 def _get_image_url_resolver(data):
     """Resolve the filenames of all images embedded in `data` in one query."""
     # this lets the cooked HTML link them directly on the media server.
-    # Unknown and redirected images are left out: their <img> only get the
-    # c2c:url-proxy attribute.
+    # Unknown images are left out: their <img> only get the c2c:url-proxy
+    # attribute. Merged images get the URL of the image they redirect to.
     image_ids = set()
     for key, value in data.items():
         if key not in NOT_MARKDOWN_PROPERTY and isinstance(value, str):
@@ -50,10 +49,5 @@ def _get_image_url_resolver(data):
     if not base_url:
         return None
 
-    filenames = dict(
-        DBSession.query(Image.document_id, Image.filename).
-        filter(Image.document_id.in_(image_ids)).
-        filter(Image.redirects_to.is_(None)).
-        all())
-
-    return make_image_url_resolver(base_url, filenames)
+    return make_image_url_resolver(
+        base_url, get_image_filenames(image_ids))
