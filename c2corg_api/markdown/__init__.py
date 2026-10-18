@@ -37,6 +37,7 @@ _parser_lock = RLock()
 _markdown_parser = None
 _cleaner = None
 _iframe_secret_tag = "iframe_" + secrets.token_hex(32)
+_img_url_secret_attribute = "c2c:url-" + secrets.token_hex(32)
 
 """
 _***_secret_tag is used as a private key to replace critical HTML node and
@@ -46,6 +47,10 @@ HTML node/attribute
 
 How to hack C2C ? if you want to inject an iframe, you will need to know the
 value of _iframe_secret_tag present into server memory.
+
+Same for the c2c:url attribute of embedded images, which clients may use as
+<img src>: only the [img=ID] parser can produce it, a c2c:url attribute written
+in raw HTML is removed by bleach.
 """
 
 
@@ -100,6 +105,7 @@ def _get_cleaner():
                 "c2c:role",
                 "c2c:size",
                 "c2c:url-proxy",
+                _img_url_secret_attribute,
                 "c2c:svg-name",
                 "c2c:emoji-db"
             ],
@@ -132,7 +138,8 @@ def _get_markdown_parser():
     if not _markdown_parser:
         extensions = [
             C2CWikiLinkExtension(),
-            C2CImageExtension(),
+            C2CImageExtension(
+                url_secret_attribute=_img_url_secret_attribute),
             Nl2BrExtension(),
             C2CTocExtension(marker='[toc]', baselevel=2, toc_depth="1-4"),
             C2CVideoExtension(iframe_secret_tag=_iframe_secret_tag),
@@ -149,10 +156,14 @@ def _get_markdown_parser():
     return _markdown_parser
 
 
-def parse_code(text):
+def parse_code(text, image_url_resolver=None):
     """
     Get markdown, and returns HTML.
     This function is thread-safe
+
+    `image_url_resolver` is an optional function
+    `(document_id, size) -> url or None` giving the direct media URL of
+    embedded images (see `img.make_image_url_resolver`).
     """
 
     # we need parsing to be thread safe because
@@ -168,6 +179,7 @@ def parse_code(text):
         # reset parser state. Otherwise, internals parser cache grows
         # indefinitely, and performance decreases over time
         parser.reset()
+        parser.c2c_image_url_resolver = image_url_resolver
 
         try:
             text = parser.convert(text)
@@ -178,7 +190,10 @@ def parse_code(text):
         except Exception as e:
             logger.exception("While parsing markdown", exc_info=e)
             text = _PARSER_EXCEPTION_MESSAGE
+        finally:
+            parser.c2c_image_url_resolver = None
 
     text = text.replace(_iframe_secret_tag, "iframe")
+    text = text.replace(_img_url_secret_attribute, "c2c:url")
 
     return text

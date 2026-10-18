@@ -2,6 +2,11 @@ import os
 import unittest
 
 from c2corg_api.markdown import parse_code
+from c2corg_api.markdown.img import make_image_url_resolver
+
+# fixtures are rendered as if image 123 existed (and no other image)
+IMAGE_URL_RESOLVER = make_image_url_resolver(
+    'https://media.camptocamp.org/c2corg-active/', {123: '1234567890.jpg'})
 
 
 def read_file(path):
@@ -13,7 +18,7 @@ class TestFormat(unittest.TestCase):
 
     def test_all(self):
         def do_test(test_id, text, expected):
-            result = parse_code(text)
+            result = parse_code(text, IMAGE_URL_RESOLVER)
             self.assertEqual(expected.rstrip(), result.rstrip(), test_id)
 
         def process_folder(path):
