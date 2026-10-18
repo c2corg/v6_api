@@ -33,12 +33,10 @@ def cook(data):
 
 
 def _get_image_url_resolver(data):
-    """Resolve the filenames of all images embedded in `data` in one query.
-
-    This lets the cooked HTML link them directly on the media server.
-    Unknown and redirected images are left out: their <img> only get the
-    c2c:url-proxy attribute.
-    """
+    """Resolve the filenames of all images embedded in `data` in one query."""
+    # this lets the cooked HTML link them directly on the media server.
+    # Unknown and redirected images are left out: their <img> only get the
+    # c2c:url-proxy attribute.
     image_ids = set()
     for key, value in data.items():
         if key not in NOT_MARKDOWN_PROPERTY and isinstance(value, str):

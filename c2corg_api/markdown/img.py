@@ -23,11 +23,8 @@ IMG_ID_RE = re.compile(r'\[img=(\d+)')
 
 
 def get_image_url(base_url, filename, size):
-    """Return the media server URL of an image.
-
-    Built like the redirect of `ImageProxyRest.get`
-    (c2corg_api/views/image.py).
-    """
+    """Return the media server URL of an image."""
+    # built like the redirect of ImageProxyRest.get (views/image.py)
     if not size:
         return base_url + filename
     base, ext = os.path.splitext(filename)
@@ -37,11 +34,8 @@ def get_image_url(base_url, filename, size):
 
 
 def make_image_url_resolver(base_url, filenames):
-    """Return a function `(document_id, size) -> url or None`.
-
-    The function is to be given to `parse_code()`. `filenames` maps image
-    document ids (int) to filenames.
-    """
+    """Return a `(document_id, size) -> url or None` for `parse_code()`."""
+    # filenames maps image document ids (int) to filenames
     def resolve(document_id, size):
         filename = filenames.get(int(document_id))
         if not filename:
@@ -53,11 +47,9 @@ def make_image_url_resolver(base_url, filenames):
 
 class C2CImageExtension(Extension):
     def __init__(self, *args, **kwargs):
-        """Take an optional `url_secret_attribute` keyword argument.
-
-        It is the name of the attribute holding the direct image URL, renamed
-        to c2c:url after sanitizing (see c2corg_api.markdown.parse_code).
-        """
+        """Take an optional `url_secret_attribute` keyword argument."""
+        # name of the attribute holding the direct image URL, renamed to
+        # c2c:url after sanitizing (see c2corg_api.markdown.parse_code)
         self._url_secret_attribute = kwargs.pop(
             "url_secret_attribute", "c2c:url")
         super(C2CImageExtension, self).__init__(*args, **kwargs)
