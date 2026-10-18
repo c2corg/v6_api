@@ -30,6 +30,10 @@ from c2corg_api.views.validation import validate_id, validate_pagination, \
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, \
     HTTPBadRequest, HTTPInternalServerError, HTTPFound
 
+# Let browsers cache the redirect to the media server: the image filename
+# for a given document id is stable, so the target rarely changes.
+PROXY_CACHE_CONTROL = 'public, max-age=86400'
+
 
 def check_filename_unique(image, request, updating):
     """Checks that filename is unique
@@ -300,14 +304,16 @@ class ImageProxyRest(ACLDefault):
             raise HTTPNotFound()
         image_url = self.request.registry.settings['image_url']
         if size is None:
-            return HTTPFound("{}{}".format(image_url, image.filename))
+            location = "{}{}".format(image_url, image.filename)
         else:
             base, ext = os.path.splitext(image.filename)
             if extension is None:
                 ext = '.jpg' if ext == '.svg' else ext
             else:
                 ext = '.' + extension
-            return HTTPFound("{}{}{}{}".format(image_url, base, size, ext))
+            location = "{}{}{}{}".format(image_url, base, size, ext)
+        return HTTPFound(
+            location, headers={'Cache-Control': PROXY_CACHE_CONTROL})
 
 
 def set_creator(image):
