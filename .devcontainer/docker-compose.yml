@@ -13,11 +13,16 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
+    # Navitia settings, read with os.getenv() by the API (pserve does not load .env, only the tests do)
+    env_file: ../.env
     environment:
       # Point services to their container hostnames
       PGHOST: postgresql
       PGUSER: postgres
       PGPASSWORD: test
+      # alembic_migration has no __init__.py, so the editable install does not expose it:
+      # without this, initialize_c2corg_api_db only works when run from /workspace
+      PYTHONPATH: /workspace
 
   postgresql:
     image: postgis/postgis:16-3.4

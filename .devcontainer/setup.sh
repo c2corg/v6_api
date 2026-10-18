@@ -54,7 +54,13 @@ CREATE SCHEMA IF NOT EXISTS sympa AUTHORIZATION "postgres";
 CREATE SCHEMA IF NOT EXISTS alembic AUTHORIZATION "postgres";
 SQL
 fi
-initialize_c2corg_api_db development.ini || true
+# Only on a fresh database: initialize_c2corg_api_db is not idempotent (it inserts the default langs).
+# Not "|| true": a failure here leaves an empty database, and the API then fails on every request.
+if psql -d "${DBNAME}" -tAc "SELECT 1 FROM alembic.alembic_version" > /dev/null 2>&1; then
+  echo "  Dev database already initialized"
+else
+  initialize_c2corg_api_db development.ini
+fi
 
 # Create test database (adapted from scripts/database/create_test_schema.sh)
 echo "==> Initializing test database..."
