@@ -11,6 +11,7 @@ from sqlalchemy import (
     String
     )
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.sql.functions import func
 
 from colander import MappingSchema, SchemaNode, Sequence
 from colanderalchemy import SQLAlchemySchemaNode
@@ -167,3 +168,22 @@ def is_personal(image_id):
         filter(Image.document_id == image_id). \
         scalar()
     return image_type == 'personal'
+
+
+def get_image_filenames(image_ids):
+    """Map image ids to the filename of the image they show, in one query."""
+    # A merged image redirects to its target and its own files are deleted,
+    # so use the filename of the target. Merging an already redirected
+    # document is refused, there is at most one level of redirection.
+    # Unknown ids are left out.
+    documents = Document.__table__
+    images = Image.__table__
+    rows = DBSession. \
+        query(documents.c.document_id, images.c.filename). \
+        select_from(documents). \
+        join(images, images.c.document_id == func.coalesce(
+            documents.c.redirects_to, documents.c.document_id)). \
+        filter(documents.c.document_id.in_(image_ids)). \
+        filter(documents.c.type == IMAGE_TYPE). \
+        all()
+    return dict(rows)

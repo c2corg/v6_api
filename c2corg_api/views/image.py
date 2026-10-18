@@ -7,7 +7,8 @@ from c2corg_api.models.document import ArchiveDocumentLocale
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.feed import update_feed_images_upload
 from c2corg_api.models.image import Image, schema_image, schema_update_image, \
-    IMAGE_TYPE, schema_create_image, schema_create_image_list, ArchiveImage
+    IMAGE_TYPE, schema_create_image, schema_create_image_list, ArchiveImage, \
+    get_image_filenames
 from c2corg_api.search.notify_sync import run_on_successful_transaction
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.document_info import DocumentInfoRest
@@ -296,17 +297,15 @@ class ImageProxyRest(ACLDefault):
         document_id = self.request.validated['id']
         size = self.request.validated['size']
         extension = self.request.validated['extension']
-        query = DBSession. \
-            query(Image.filename). \
-            filter(Image.document_id == document_id)
-        image = query.first()
-        if image is None:
+        # follows merged images to their target, whose files still exist
+        filename = get_image_filenames([document_id]).get(document_id)
+        if filename is None:
             raise HTTPNotFound()
         image_url = self.request.registry.settings['image_url']
         if size is None:
-            location = "{}{}".format(image_url, image.filename)
+            location = "{}{}".format(image_url, filename)
         else:
-            base, ext = os.path.splitext(image.filename)
+            base, ext = os.path.splitext(filename)
             if extension is None:
                 ext = '.jpg' if ext == '.svg' else ext
             else:
