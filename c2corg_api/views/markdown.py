@@ -33,9 +33,9 @@ def cook(data):
 
 
 def _get_image_url_resolver(data):
-    """
-    Resolve the filenames of all images embedded in `data` with a single
-    query, so that the cooked HTML can link them directly on the media server.
+    """Resolve the filenames of all images embedded in `data` in one query.
+
+    This lets the cooked HTML link them directly on the media server.
     Unknown and redirected images are left out: their <img> only get the
     c2c:url-proxy attribute.
     """
