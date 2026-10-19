@@ -22,3 +22,7 @@ WORKDIR /workspace
 
 # Upgrade pip
 RUN pip install --upgrade pip setuptools wheel
+
+# Shell prompt with git branch and upstream status
+COPY bash-prompt.sh /etc/bash-prompt.sh
+RUN echo '. /etc/bash-prompt.sh' >> /etc/bash.bashrc
