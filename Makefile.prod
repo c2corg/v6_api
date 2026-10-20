@@ -10,7 +10,6 @@ export site_packages = $(SITE_PACKAGES)
 
 PYTHON = python
 PYTEST = pytest
-FLAKE = flake8
 
 .PHONY: help
 help:

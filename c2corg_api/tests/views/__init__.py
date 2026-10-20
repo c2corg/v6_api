@@ -1,7 +1,5 @@
 import json
-import urllib.request
 import urllib.parse
-import urllib.error
 
 from c2corg_api.caching import cache_document_detail
 from c2corg_api.models.cache_version import CacheVersion, get_cache_key
