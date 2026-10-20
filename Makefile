@@ -79,7 +79,7 @@ init-elastic:
 		fill_es_index development.ini
 
 install:
-		pip install -e ".[dev]"
+		uv sync
 
 run-syncer:
 		python c2corg_api/scripts/es/syncer.py development.ini

@@ -24,7 +24,12 @@ RUN set -x \
  && apt-get -y --purge autoremove \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
-RUN pip install --upgrade pip
+COPY --from=ghcr.io/astral-sh/uv:0.12.21 /uv /usr/local/bin/uv
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PATH=/opt/venv/bin:$PATH
 
 ARG VERSION
 ENV version=$VERSION
@@ -33,7 +38,7 @@ WORKDIR /var/www/
 
 ADD project.tar .
 RUN chown -R root:root /var/www \
- && pip install .
+ && uv sync --frozen --no-dev --no-editable
 
 EXPOSE 8080
 ENTRYPOINT ["./docker/scripts/entrypoint.sh"]

@@ -16,6 +16,7 @@
 .noseids
 /env_api
 /venv
+/.venv
 *.swp
 config/docker
 .coverage

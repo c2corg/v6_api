@@ -2,7 +2,7 @@
 set -e
 
 echo "==> Installing Python dependencies..."
-pip install -e ".[dev]"
+uv sync --frozen
 
 echo "==> Copying env.local.sample to env.local (if not present)..."
 if [ ! -f config/env.local ]; then
