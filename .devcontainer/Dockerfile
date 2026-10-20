@@ -20,8 +20,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set working directory
 WORKDIR /workspace
 
-# Upgrade pip
-RUN pip install --upgrade pip setuptools wheel
+# Python dependencies are managed by uv (see pyproject.toml and uv.lock).
+# The virtual environment lives outside the bind-mounted workspace.
+COPY --from=ghcr.io/astral-sh/uv:0.12.21 /uv /usr/local/bin/uv
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_LINK_MODE=copy \
+    PATH=/opt/venv/bin:$PATH
 
 # Shell prompt with git branch and upstream status
 COPY bash-prompt.sh /etc/bash-prompt.sh

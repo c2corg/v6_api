@@ -76,9 +76,7 @@ For more details, see [`.devcontainer/README.md`](.devcontainer/README.md).
 ### Requirements
 
 - A computer running Linux or Windows (on Windows, take a look at [WSL](https://learn.microsoft.com/fr-fr/windows/wsl/install), it will make your developer life easier). Maybe MacOs can work, but it was not tested.
-- Python 3.9.x installed with pip and the virtualenv package (currently, it will not work with python 3.10+)
-  - On Ubuntu, you can install it from the deadsnakes repository if your embedded python version is too recent (<https://askubuntu.com/questions/1318846/how-do-i-install-python-3-9>)
-  - On Windows, use Microsoft Store to install it (<https://apps.microsoft.com/detail/9p7qfqmjrfp7>)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/), which installs the right Python version (3.9) and all dependencies for you
 - A docker environment with docker compose plugin (either [docker desktop](https://www.docker.com/products/docker-desktop/) or a manual installation)
 - A development IDE is not mandatory, but highly recommended (pycharm, vscode...)
 - If you have GNU make installed, you can use it to run all the commands below to initialize and run your development environment (run `make help` to see what can be done) instead of running them "by hand"
@@ -87,26 +85,22 @@ For more details, see [`.devcontainer/README.md`](.devcontainer/README.md).
 
 - Clone the git repository
 - Cd inside your cloned repo
-- Create a virtual environment in it:
+- Install Python and the dependencies (pinned in `uv.lock`) in a `.venv` virtual environment:
 
 ```shell
-python3.9 -m venv venv
+uv sync
 ```
 
-- Activate the virtual environment (⚠️ Do not forget to activate it in all terminal instances you intend to use)
+- Activate the virtual environment (⚠️ Do not forget to activate it in all terminal instances you intend to use), or prefix commands with `uv run`:
 
 ```shell
 # Linux (or WSL)
-source venv/bin/activate
+source .venv/bin/activate
 # Or Windows Powershell
-.\venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 ```
 
-- Install the API and its python dependencies in the virtual environment with the following command:
-
-```shell
-pip install -e ".[dev]"
-```
+- To add or upgrade a dependency, edit `pyproject.toml` and run `uv lock`, then commit both files.
 
 - Start the necessary tools (postgres database, redis, and elasticsearch) in docker containers:
 
