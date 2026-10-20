@@ -17,7 +17,7 @@ from c2corg_api.models.common import document_types
 ARTICLE_TYPE = document_types.ARTICLE_TYPE
 
 
-class _ArticleMixin(object):
+class _ArticleMixin:
     categories = Column(ArrayOfEnum(article_category))
     activities = Column(ArrayOfEnum(activity_type))
     article_type = Column(enums.article_type)
@@ -40,13 +40,13 @@ class Article(_ArticleMixin, Document):
 
     def to_archive(self):
         article = ArchiveArticle()
-        super(Article, self)._to_archive(article)
+        super()._to_archive(article)
         copy_attributes(self, article, attributes)
 
         return article
 
     def update(self, other):
-        super(Article, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes)
 
 

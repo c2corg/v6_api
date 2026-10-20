@@ -15,7 +15,7 @@ from urllib.parse import parse_qs, urlparse
 log = logging.getLogger(__name__)
 
 
-class APIDiscourseClient(object):
+class APIDiscourseClient:
 
     def __init__(self, settings):
         self.settings = settings

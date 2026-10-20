@@ -95,7 +95,7 @@ class PolygonCoverage(DocumentRest):
         """Returns the coverages from a geom_detail type polygon
         (geom_detail has to be EPSG 4326 since isochrone is 4326)"""
         geom_detail = json.loads(
-            (json.loads(self.request.body)['geom_detail']))
+            json.loads(self.request.body)['geom_detail'])
         polygon = shape(geom_detail)
         return get_coverages(polygon)
 

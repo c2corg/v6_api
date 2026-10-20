@@ -26,7 +26,7 @@ from c2corg_api.models.common import document_types
 ROUTE_TYPE = document_types.ROUTE_TYPE
 
 
-class _RouteMixin(object):
+class _RouteMixin:
 
     # activite
     activities = Column(ArrayOfEnum(enums.activity_type), nullable=False)
@@ -230,13 +230,13 @@ class Route(_RouteMixin, Document):
 
     def to_archive(self):
         route = ArchiveRoute()
-        super(Route, self)._to_archive(route)
+        super()._to_archive(route)
         copy_attributes(self, route, attributes)
 
         return route
 
     def update(self, other):
-        super(Route, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes)
 
 
@@ -262,7 +262,7 @@ class ArchiveRoute(_RouteMixin, ArchiveDocument):
     __table_args__ = Base.__table_args__
 
 
-class _RouteLocaleMixin(object):
+class _RouteLocaleMixin:
 
     # pente
     slope = Column(String)
@@ -309,13 +309,13 @@ class RouteLocale(_RouteLocaleMixin, DocumentLocale):
 
     def to_archive(self):
         locale = ArchiveRouteLocale()
-        super(RouteLocale, self)._to_archive(locale)
+        super()._to_archive(locale)
         copy_attributes(self, locale, attributes_locales)
 
         return locale
 
     def update(self, other):
-        super(RouteLocale, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes_locales)
 
 

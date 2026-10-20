@@ -13,7 +13,7 @@ from c2corg_api.tests.views import BaseTestRest
 class BaseFeedTestRest(BaseTestRest):
 
     def setUp(self):  # noqa
-        super(BaseFeedTestRest, self).setUp()
+        super().setUp()
         self._prefix = '/feed'
 
         self.waypoint1 = Waypoint(

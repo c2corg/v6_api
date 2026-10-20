@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import search_documents, elasticsearch_config
 # from pytest import mark
@@ -655,7 +654,7 @@ class TestUserRest(BaseUserTestRest):
         user = self.session.query(User).filter(
                 User.username == 'contributornotos').one()
         self.assertTrue((
-            datetime.datetime.now(datetime.timezone.utc) -
+            datetime.datetime.now(datetime.UTC) -
             user.tos_validated).total_seconds() < 5)
 
     def assertExpireAlmostEqual(self, expire, days, seconds_delta):  # noqa

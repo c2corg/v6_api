@@ -10,7 +10,7 @@ from sqlalchemy.sql.expression import and_
 class BaseMaskTest(BaseTestRest):
 
     def setUp(self):  # noqa
-        super(BaseMaskTest, self).setUp()
+        super().setUp()
 
         self.contributor = self.session.query(User).get(
             self.global_userids['contributor'])
@@ -81,7 +81,7 @@ class BaseMaskTest(BaseTestRest):
 class TestVersionMaskRest(BaseMaskTest):
 
     def setUp(self):  # noqa
-        super(TestVersionMaskRest, self).setUp()
+        super().setUp()
         self._prefix = '/versions/mask'
 
     def test_mask_unauthorized(self):
@@ -221,7 +221,7 @@ class TestVersionMaskRest(BaseMaskTest):
 class TestVersionUnmaskRest(BaseMaskTest):
 
     def setUp(self):  # noqa
-        super(TestVersionUnmaskRest, self).setUp()
+        super().setUp()
         self._prefix = '/versions/unmask'
 
     def test_unmask_unauthorized(self):

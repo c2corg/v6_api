@@ -1,7 +1,7 @@
 import logging
 import math
 import re
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from functools import partial
 
 from c2corg_api.models.outing import OUTING_TYPE
@@ -286,7 +286,7 @@ def create_period_filter(field, query_term):
         processed_date = datetime.strptime(date, '%Y-%m-%d')
         # Force UTC, to avoid problems when running on a machine that is not
         # set to UTC
-        seconds_since_epoch = (processed_date.replace(tzinfo=timezone.utc)
+        seconds_since_epoch = (processed_date.replace(tzinfo=UTC)
                                .timestamp())
 
         return int(1000 * seconds_since_epoch) % milliseconds_in_one_year

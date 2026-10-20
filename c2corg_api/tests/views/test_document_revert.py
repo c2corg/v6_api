@@ -12,7 +12,7 @@ from json import loads
 class TestDocumentRevertRest(BaseTestRest):
 
     def setUp(self):  # noqa
-        super(TestDocumentRevertRest, self).setUp()
+        super().setUp()
         self._prefix = '/documents/revert'
         self._add_test_data()
 

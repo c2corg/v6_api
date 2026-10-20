@@ -1,7 +1,7 @@
 import abc
 
 
-class Batch(object):
+class Batch:
     """A base class for inserting entities in batches."""
 
     def __init__(self, session, batch_size):

@@ -14,7 +14,7 @@ from sqlalchemy.orm import contains_eager, load_only, joinedload
 from sqlalchemy.orm.util import with_polymorphic
 
 
-class DocumentInfoRest(object):
+class DocumentInfoRest:
     """ Base class for all views that return a basic/info version for a
     document, that only contains the document_id and title/title_prefix
     of the requested locale.

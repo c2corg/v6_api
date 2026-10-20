@@ -26,7 +26,7 @@ from c2corg_api.models.common import document_types
 OUTING_TYPE = document_types.OUTING_TYPE
 
 
-class _OutingMixin(object):
+class _OutingMixin:
 
     activities = Column(ArrayOfEnum(enums.activity_type), nullable=False)
 
@@ -136,13 +136,13 @@ class Outing(_OutingMixin, Document):
 
     def to_archive(self):
         outing = ArchiveOuting()
-        super(Outing, self)._to_archive(outing)
+        super()._to_archive(outing)
         copy_attributes(self, outing, attributes)
 
         return outing
 
     def update(self, other):
-        super(Outing, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes)
 
 
@@ -163,7 +163,7 @@ class ArchiveOuting(_OutingMixin, ArchiveDocument):
     __table_args__ = Base.__table_args__
 
 
-class _OutingLocaleMixin(object):
+class _OutingLocaleMixin:
 
     __mapper_args__ = {
         'polymorphic_identity': OUTING_TYPE
@@ -205,13 +205,13 @@ class OutingLocale(_OutingLocaleMixin, DocumentLocale):
 
     def to_archive(self):
         locale = ArchiveOutingLocale()
-        super(OutingLocale, self)._to_archive(locale)
+        super()._to_archive(locale)
         copy_attributes(self, locale, attributes_locales)
 
         return locale
 
     def update(self, other):
-        super(OutingLocale, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes_locales)
 
 

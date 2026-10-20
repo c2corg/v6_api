@@ -39,7 +39,7 @@ class Lang(Base):
     lang = Column(String(2), primary_key=True)
 
 
-class _DocumentMixin(object):
+class _DocumentMixin:
     """
     Contains the attributes that are common for `Document` and
     `ArchiveDocument`.
@@ -210,7 +210,7 @@ class ArchiveDocument(Base, _DocumentMixin):
 
 
 # Locales for documents
-class _DocumentLocaleMixin(object):
+class _DocumentLocaleMixin:
     id = Column(Integer, primary_key=True)
     version = Column(Integer, nullable=False, server_default='1')
 
@@ -287,7 +287,7 @@ class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
 Geometry.as_binary = 'ST_AsBinary'
 
 
-class _DocumentGeometryMixin(object):
+class _DocumentGeometryMixin:
     version = Column(Integer, nullable=False)
 
     @declared_attr

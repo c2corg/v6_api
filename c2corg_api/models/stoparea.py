@@ -9,7 +9,7 @@ from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import copy_attributes
 
 
-class _StopareaMixin(object):
+class _StopareaMixin:
     navitia_id = Column(String, nullable=False)
     stoparea_name = Column(String, nullable=False)
     line = Column(String, nullable=False)

@@ -52,7 +52,7 @@ class C2CImageExtension(Extension):
         # c2c:url after sanitizing (see c2corg_api.markdown.parse_code)
         self._url_secret_attribute = kwargs.pop(
             "url_secret_attribute", "c2c:url")
-        super(C2CImageExtension, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def extendMarkdown(self, md):  # noqa: N802
         self.md = md
@@ -68,7 +68,7 @@ class C2CImageBlock(BlockProcessor):
 
     def __init__(self, parser, config, url_secret_attribute):
         """Build the processor, see `C2CImageExtension.__init__`."""
-        super(C2CImageBlock, self).__init__(parser)
+        super().__init__(parser)
         self.config = config
         self._url_secret_attribute = url_secret_attribute
 

@@ -30,7 +30,7 @@ from c2corg_api.models.common.fields_image import fields_image
 from c2corg_api.models.common.fields_topo_map import fields_topo_map
 from c2corg_api.models.common.fields_user_profile import fields_user_profile
 from c2corg_api.models.common.fields_coverage import fields_coverage
-from functools import lru_cache
+from functools import cache
 
 
 class GetDocumentsConfig:
@@ -235,7 +235,7 @@ user_profile_documents_config = GetDocumentsConfig(
 
 # waypoint
 
-@lru_cache(maxsize=None)
+@cache
 def adapt_waypoint_schema_for_type(waypoint_type, field_list_type):
     """Get the schema for a waypoint type.
     `field_list_type` should be either "fields" or "listing".

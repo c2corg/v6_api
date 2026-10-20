@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 import functools
 
 from c2corg_api.models.outing import schema_outing, Outing, \
@@ -34,7 +34,7 @@ validate_associations_update = functools.partial(
 
 
 def _validate_dates(request, date_start, date_end):
-    utc_now = datetime.now(timezone.utc)
+    utc_now = datetime.now(UTC)
     utc_now_plus_12h = (utc_now + timedelta(hours=12)).date()
 
     if isinstance(date_start, str):

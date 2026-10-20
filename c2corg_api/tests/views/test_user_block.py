@@ -9,7 +9,7 @@ from c2corg_api.tests.views import BaseTestRest
 class BaseBlockTest(BaseTestRest):
 
     def setUp(self):  # noqa
-        super(BaseBlockTest, self).setUp()
+        super().setUp()
 
         self.contributor = self.session.query(User).get(
             self.global_userids['contributor'])
@@ -52,7 +52,7 @@ class BaseBlockTest(BaseTestRest):
 class TestUserBlockRest(BaseBlockTest):
 
     def setUp(self):  # noqa
-        super(TestUserBlockRest, self).setUp()
+        super().setUp()
         self._prefix = '/users/block'
 
     def test_block_unauthorized(self):
@@ -120,7 +120,7 @@ class TestUserBlockRest(BaseBlockTest):
 class TestUserUnblockRest(BaseBlockTest):
 
     def setUp(self):  # noqa
-        super(TestUserUnblockRest, self).setUp()
+        super().setUp()
         self._prefix = '/users/unblock'
 
     def test_block_unauthorized(self):
@@ -188,7 +188,7 @@ class TestUserUnblockRest(BaseBlockTest):
 class TestUserBlockedRest(BaseBlockTest):
 
     def setUp(self):  # noqa
-        super(TestUserBlockedRest, self).setUp()
+        super().setUp()
         self._prefix = '/users/blocked'
 
     def test_blocked_unauthorized(self):
@@ -234,7 +234,7 @@ class TestUserBlockedRest(BaseBlockTest):
 class TestUserBlockedAllRest(BaseBlockTest):
 
     def setUp(self):  # noqa
-        super(TestUserBlockedAllRest, self).setUp()
+        super().setUp()
         self._prefix = '/users/blocked'
 
     def test_blocked_unauthenticated(self):

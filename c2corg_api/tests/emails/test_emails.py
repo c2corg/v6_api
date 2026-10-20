@@ -28,7 +28,7 @@ class EmailTests(BaseTestCase):
         self.assertIn('Subject: s', msg)
         self.assertIn('Content-Type: text/plain; charset="utf-8"', msg)
         self.assertIn('Content-Transfer-Encoding: base64', msg)
-        self.assertIn(b64encode('b'.encode('utf8')).decode('utf8'), msg)
+        self.assertIn(b64encode(b'b').decode('utf8'), msg)
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_registration_confirmation(self, _send_email):

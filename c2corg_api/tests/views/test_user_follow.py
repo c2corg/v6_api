@@ -7,7 +7,7 @@ from c2corg_api.views.user_follow import get_follower_relation
 class BaseFollowTest(BaseTestRest):
 
     def setUp(self):  # noqa
-        super(BaseFollowTest, self).setUp()
+        super().setUp()
 
         self.contributor = self.session.query(User).get(
             self.global_userids['contributor'])
@@ -30,7 +30,7 @@ class BaseFollowTest(BaseTestRest):
 class TestUserFollowRest(BaseFollowTest):
 
     def setUp(self):  # noqa
-        super(TestUserFollowRest, self).setUp()
+        super().setUp()
         self._prefix = '/users/follow'
 
     def test_follow_unauthenticated(self):
@@ -81,7 +81,7 @@ class TestUserFollowRest(BaseFollowTest):
 class TestUserUnfollowRest(BaseFollowTest):
 
     def setUp(self):  # noqa
-        super(TestUserUnfollowRest, self).setUp()
+        super().setUp()
         self._prefix = '/users/unfollow'
 
     def test_follow_unauthenticated(self):
@@ -131,7 +131,7 @@ class TestUserUnfollowRest(BaseFollowTest):
 class TestUserFollowingUserRest(BaseFollowTest):
 
     def setUp(self):  # noqa
-        super(TestUserFollowingUserRest, self).setUp()
+        super().setUp()
         self._prefix = '/users/following-user'
 
     def test_follow_unauthenticated(self):
@@ -179,7 +179,7 @@ class TestUserFollowingUserRest(BaseFollowTest):
 class TestUserFollowingRest(BaseFollowTest):
 
     def setUp(self):  # noqa
-        super(TestUserFollowingRest, self).setUp()
+        super().setUp()
         self._prefix = '/users/following'
 
     def test_follow_unauthenticated(self):

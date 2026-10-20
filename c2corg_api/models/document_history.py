@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, UTC
 from c2corg_api.models.user import User
 from sqlalchemy import (
     Boolean,
@@ -132,4 +132,4 @@ def is_less_than_24h_old(document_id):
              DocumentVersion.history_metadata_id == HistoryMetaData.id). \
         filter(DocumentVersion.document_id == document_id). \
         order_by(asc(HistoryMetaData.written_at)).limit(1).scalar()
-    return datetime.now(timezone.utc) - written_at <= timedelta(hours=720)
+    return datetime.now(UTC) - written_at <= timedelta(hours=720)

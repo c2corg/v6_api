@@ -14,7 +14,7 @@ from c2corg_api.views.document import DocumentRest
 class TestChangesDocumentRest(BaseTestRest):
 
     def setUp(self):
-        super(TestChangesDocumentRest, self).setUp()
+        super().setUp()
         self._prefix = '/documents/changes'
 
         contributor_id = self.global_userids['contributor']

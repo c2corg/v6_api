@@ -6,7 +6,7 @@ from c2corg_api.tests.views import BaseTestRest
 
 class TestSitemapRest(BaseTestRest):
     def setUp(self):  # noqa
-        super(TestSitemapRest, self).setUp()
+        super().setUp()
         self._prefix = '/sitemaps'
 
         self.waypoint1 = Waypoint(

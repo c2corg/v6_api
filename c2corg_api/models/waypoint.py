@@ -25,7 +25,7 @@ from c2corg_api.models.common import document_types
 WAYPOINT_TYPE = document_types.WAYPOINT_TYPE
 
 
-class _WaypointMixin(object):
+class _WaypointMixin:
 
     # type de WP
     waypoint_type = Column(enums.waypoint_type, nullable=False)
@@ -207,17 +207,17 @@ class Waypoint(_WaypointMixin, Document):
 
     def to_archive(self):
         waypoint = ArchiveWaypoint()
-        super(Waypoint, self)._to_archive(waypoint)
+        super()._to_archive(waypoint)
         copy_attributes(self, waypoint, attributes)
 
         return waypoint
 
     def update(self, other):
-        super(Waypoint, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes)
 
     def get_update_type(self, old_versions):
-        update_types = super(Waypoint, self).get_update_type(old_versions)
+        update_types = super().get_update_type(old_versions)
 
         if self.public_transportation_rating != \
                 old_versions.get('public_transportation_rating', None):
@@ -243,7 +243,7 @@ class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
     __table_args__ = Base.__table_args__
 
 
-class _WaypointLocaleMixin(object):
+class _WaypointLocaleMixin:
 
     # access (climbing_outdoor/indoor, access, local_product, sport_shop)
     access = Column(String)
@@ -280,13 +280,13 @@ class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
 
     def to_archive(self):
         locale = ArchiveWaypointLocale()
-        super(WaypointLocale, self)._to_archive(locale)
+        super()._to_archive(locale)
         copy_attributes(self, locale, attributes_locales)
 
         return locale
 
     def update(self, other):
-        super(WaypointLocale, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes_locales)
 
 

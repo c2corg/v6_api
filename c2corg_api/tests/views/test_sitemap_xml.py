@@ -6,7 +6,7 @@ from c2corg_api.tests.views import BaseTestRest
 
 class TestSitemapXml(BaseTestRest):
     def setUp(self):  # noqa
-        super(TestSitemapXml, self).setUp()
+        super().setUp()
         self._prefix = '/sitemaps.xml'
         self.ui_url = 'https://www.camptocamp.org'
         self.schema_url = '{http://www.sitemaps.org/schemas/sitemap/0.9}'

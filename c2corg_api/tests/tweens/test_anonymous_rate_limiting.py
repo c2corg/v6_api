@@ -13,7 +13,7 @@ from c2corg_api.tweens.rate_limiting import (
 )
 
 
-class FakeRedis(object):
+class FakeRedis:
     """
     A minimal in-memory stand-in for the Redis client API.
 
@@ -35,12 +35,12 @@ class FakeRedis(object):
         self.expirations[key] = ttl
 
 
-class FailingRedis(object):
+class FailingRedis:
     def incr(self, key):
         raise ConnectionError('redis is down')
 
 
-class DummyRegistry(object):
+class DummyRegistry:
     def __init__(self, settings):
         """Wrap `settings` in a Pyramid-registry-like object."""
         self.settings = settings

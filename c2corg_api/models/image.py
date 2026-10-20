@@ -27,7 +27,7 @@ from c2corg_api.models.common import document_types
 IMAGE_TYPE = document_types.IMAGE_TYPE
 
 
-class _ImageMixin(object):
+class _ImageMixin:
 
     activities = Column(ArrayOfEnum(enums.activity_type))
 
@@ -87,13 +87,13 @@ class Image(_ImageMixin, Document):
 
     def to_archive(self):
         image = ArchiveImage()
-        super(Image, self)._to_archive(image)
+        super()._to_archive(image)
         copy_attributes(self, image, attributes)
 
         return image
 
     def update(self, other):
-        super(Image, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes)
 
 

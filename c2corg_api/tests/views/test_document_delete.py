@@ -34,7 +34,7 @@ from httmock import all_requests, HTTMock
 class TestDocumentDeleteRest(BaseTestRest):
 
     def setUp(self):  # noqa
-        super(TestDocumentDeleteRest, self).setUp()
+        super().setUp()
         self._prefix = '/documents/delete/'
 
         user_id = self.global_userids['contributor']

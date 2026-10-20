@@ -36,7 +36,7 @@ class ArrayOfEnum(postgresql.ARRAY):
         return sa.cast(bindvalue, self)
 
     def result_processor(self, dialect, coltype):
-        super_rp = super(ArrayOfEnum, self).result_processor(
+        super_rp = super().result_processor(
             dialect, coltype)
 
         def handle_raw_string(value):

@@ -7,7 +7,7 @@ from c2corg_api.views.document import DocumentRest
 class BaseProtectTest(BaseTestRest):
 
     def setUp(self):  # noqa
-        super(BaseProtectTest, self).setUp()
+        super().setUp()
         contributor_id = self.global_userids['contributor']
 
         self.waypoint = Waypoint(
@@ -50,7 +50,7 @@ class BaseProtectTest(BaseTestRest):
 class TestDocumentProtectRest(BaseProtectTest):
 
     def setUp(self):  # noqa
-        super(TestDocumentProtectRest, self).setUp()
+        super().setUp()
         self._prefix = '/documents/protect'
 
     def test_protect_unauthorized(self):
@@ -97,7 +97,7 @@ class TestDocumentProtectRest(BaseProtectTest):
 class TestDocumentUnprotectRest(BaseProtectTest):
 
     def setUp(self):  # noqa
-        super(TestDocumentUnprotectRest, self).setUp()
+        super().setUp()
         self._prefix = '/documents/unprotect'
 
     def test_unprotect_unauthorized(self):
