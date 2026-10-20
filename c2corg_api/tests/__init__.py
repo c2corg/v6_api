@@ -178,12 +178,9 @@ def _add_global_test_data(session):
 
 
 def setup_package():
-    """
-    Create the test database and ElasticSearch index, once per run.
-
-    Called by the session fixture in conftest.py (not at import time, so
-    importing this package has no side effect).
-    """
+    """Create the test database and ElasticSearch index, once per run."""
+    # Called by the session fixture in conftest.py (not at import time, so
+    # importing this package has no side effect).
     # set up database
     engine = get_engine()
     DBSession.configure(bind=engine)

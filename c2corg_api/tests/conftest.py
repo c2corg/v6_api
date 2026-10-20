@@ -29,15 +29,11 @@ def _selective_get(url, *args, **kwargs):
 
 @pytest.fixture(scope="session", autouse=True)
 def test_database():
-    """
-    Set up the test database and ElasticSearch index once per test run.
-
-    This runs before the first test (it used to happen as a side effect
-    of importing ``c2corg_api.tests``).
-
-    Like before, nothing is torn down at the end, so the test database can
-    be inspected after a run; the next run starts by resetting it.
-    """
+    """Set up the test database and ElasticSearch index once per test run."""
+    # This runs before the first test (it used to happen as a side effect
+    # of importing ``c2corg_api.tests``).
+    # Like before, nothing is torn down at the end, so the test database can
+    # be inspected after a run; the next run starts by resetting it.
     from c2corg_api.tests import setup_package
     setup_package()
     yield
