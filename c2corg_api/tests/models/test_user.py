@@ -1,7 +1,45 @@
-from c2corg_api.models.user import User, Purpose
+import unittest
+
+import bcrypt
+
+from c2corg_api.models.user import User, Purpose, PasswordUtil
 from c2corg_api.models.user_profile import UserProfile
 
 from c2corg_api.tests import BaseTestCase
+
+
+class TestPasswordUtil(unittest.TestCase):
+    # 80 bytes in UTF-8: above bcrypt's 72-byte limit, with multi-byte
+    # characters across the cut
+    long_password = 'Élève 日本 ' * 5 + 'x' * 5
+
+    def test_long_password(self):
+        self.assertGreater(len(self.long_password.encode('utf-8')), 72)
+        encrypted = PasswordUtil.encrypt_password(self.long_password)
+
+        self.assertTrue(
+            PasswordUtil.is_password_valid(self.long_password, encrypted))
+        self.assertFalse(
+            PasswordUtil.is_password_valid('wrong password', encrypted))
+
+    def test_hash_made_by_truncating_bcrypt_still_valid(self):
+        # bcrypt < 5 hashed only the first 72 bytes: hashes stored that way
+        # must keep validating
+        legacy = bcrypt.hashpw(
+            self.long_password.encode('utf-8')[:72], bcrypt.gensalt())
+
+        self.assertTrue(
+            PasswordUtil.is_password_valid(self.long_password, legacy))
+        self.assertTrue(PasswordUtil.is_password_valid(
+            self.long_password, legacy.decode('utf-8')))
+
+    def test_bytes_and_str_inputs(self):
+        encrypted = PasswordUtil.encrypt_password(b'super pass')
+
+        self.assertTrue(
+            PasswordUtil.is_password_valid('super pass', encrypted))
+        self.assertTrue(
+            PasswordUtil.is_password_valid(b'super pass', encrypted))
 
 
 class Testuser(BaseTestCase):

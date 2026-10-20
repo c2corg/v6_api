@@ -32,23 +32,34 @@ class AccountNotValidated(Exception):
         Exception.__init__(self, 'Account not validated yet')
 
 
+# bcrypt only uses the first 72 bytes of a password. bcrypt < 5 silently
+# ignored the rest, bcrypt >= 5 raises a ValueError instead. Truncating
+# ourselves keeps every existing hash valid and long passwords working.
+BCRYPT_MAX_PASSWORD_BYTES = 72
+
+
 class PasswordUtil():
     """
     Utility class abstracting low-level password primitives.
     """
     @staticmethod
+    def _bcrypt_input(password):
+        if isinstance(password, str):
+            password = password.encode('utf-8')
+        return password[:BCRYPT_MAX_PASSWORD_BYTES]
+
+    @staticmethod
     def encrypt_password(plain_password):
-        if isinstance(plain_password, str):
-            plain_password = plain_password.encode('utf-8')
-        return bcrypt.hashpw(plain_password, bcrypt.gensalt()).decode('utf-8')
+        return bcrypt.hashpw(
+            PasswordUtil._bcrypt_input(plain_password),
+            bcrypt.gensalt()).decode('utf-8')
 
     @staticmethod
     def is_password_valid(plain, encrypted):
         if isinstance(encrypted, str):
             encrypted = encrypted.encode('utf-8')
-        if isinstance(plain, str):
-            plain = plain.encode('utf-8')
-        return bcrypt.hashpw(plain, encrypted) == encrypted
+        # checkpw compares in constant time
+        return bcrypt.checkpw(PasswordUtil._bcrypt_input(plain), encrypted)
 
 
 class Purpose(Enum):
