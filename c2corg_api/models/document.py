@@ -390,7 +390,9 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
         else:
             raise HTTPInternalServerError('Bad projection')
 
-        return g1.almost_equals(g2, decimals)
+        # almost_equals(decimal=d) was defined as
+        # equals_exact(tolerance=0.5 * 10 ** -d) and is removed in Shapely 2.1
+        return g1.equals_exact(g2, 0.5 * 10 ** -decimals)
 
     def distance(self, geom, other_geom):
         if geom is None or other_geom is None:

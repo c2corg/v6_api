@@ -1,4 +1,4 @@
-FROM docker.io/python:3.9-slim-bookworm
+FROM docker.io/python:3.14-slim-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL=en_US.UTF-8
