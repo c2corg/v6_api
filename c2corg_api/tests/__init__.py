@@ -178,6 +178,11 @@ def _add_global_test_data(session):
 
 
 def setup_package():
+    """Create the test database and ElasticSearch index, once per run.
+
+    Called by the session fixture in conftest.py (not at import time, so
+    importing this package has no side effect).
+    """
 
     # set up database
     engine = get_engine()
@@ -324,6 +329,3 @@ def reset_cache_key():
     caching_common.CACHE_VERSION = '{0}-{1}-{2}'.format(
         cache_version, int(time.time()), randint(0, 10**9))
     caching_common.cache_status = caching_common.CacheStatus()
-
-
-setup_package()

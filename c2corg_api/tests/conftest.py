@@ -27,6 +27,20 @@ def _selective_get(url, *args, **kwargs):
     return _real_requests.get(url, *args, **kwargs)
 
 
+@pytest.fixture(scope="session", autouse=True)
+def test_database():
+    """Set up the test database and ElasticSearch index once for the whole
+    test run, before the first test (this used to happen as a side effect
+    of importing ``c2corg_api.tests``).
+
+    Like before, nothing is torn down at the end, so the test database can
+    be inspected after a run; the next run starts by resetting it.
+    """
+    from c2corg_api.tests import setup_package
+    setup_package()
+    yield
+
+
 @pytest.fixture(autouse=True)
 def mock_navitia_requests():
     """Automatically mock ``requests.get`` calls targeting the Navitia API
