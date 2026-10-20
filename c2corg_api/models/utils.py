@@ -67,9 +67,9 @@ def get_mid_point(wkb_track):
     track = wkb_to_shape(wkb_track)
 
     if isinstance(track, LineString):
-        mid_point = track.interpolate(0.5, True)
+        mid_point = track.interpolate(0.5, normalized=True)
     elif isinstance(track, MultiLineString) and track.geoms:
-        mid_point = track.geoms[0].interpolate(0.5, True)
+        mid_point = track.geoms[0].interpolate(0.5, normalized=True)
     else:
         return None
 
