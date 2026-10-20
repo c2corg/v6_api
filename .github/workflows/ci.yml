@@ -9,10 +9,25 @@ permissions:
 
 jobs:
   test:
+    name: test (${{ matrix.services }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Same versions as production (see c2corg/v6-docker-compose):
+          # the production PostgreSQL image (PostgreSQL 9.6.1, PostGIS 2.3)
+          # and Redis 5. Bump them together with production.
+          - services: prod
+            postgres: c2corg/c2corg_pgsql:9.6
+            redis: redis:5
+          # Latest releases, to see early what a server upgrade would break.
+          - services: latest
+            postgres: postgis/postgis:latest
+            redis: redis:latest
     services:
       redis:
-        image: redis
+        image: ${{ matrix.redis }}
         # Set health checks to wait until redis has started
         options: >-
           --health-cmd "redis-cli ping"
@@ -34,7 +49,7 @@ jobs:
       #   env:
       #     discovery.type: single-node
       postgres:
-        image: postgis/postgis
+        image: ${{ matrix.postgres }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test
@@ -117,7 +132,7 @@ jobs:
           pytest --cov-report term --cov-report xml --cov=c2corg_api -k "not test_navitia"
       - name: Send coverage to codacy
         # secrets are not available for PR from forks, and dependabot PRs
-        if: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
+        if: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' && matrix.services == 'prod' }}
         uses: codacy/codacy-coverage-reporter-action@v1
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
