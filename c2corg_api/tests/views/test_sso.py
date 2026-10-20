@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 from unittest.mock import patch, Mock
 from urllib.parse import urlparse, parse_qs

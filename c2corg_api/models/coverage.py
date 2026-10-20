@@ -20,7 +20,7 @@ from c2corg_api.models.common import document_types
 COVERAGE_TYPE = document_types.COVERAGE_TYPE
 
 
-class _CoverageMixin(object):
+class _CoverageMixin:
     coverage_type = Column(coverage_types)
 
 
@@ -61,7 +61,7 @@ class Coverage(_CoverageMixin, Document):
     }
 
     def update(self, other):
-        super(Coverage, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes)
 
 

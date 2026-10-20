@@ -18,7 +18,7 @@ LIMIT_DEFAULT = 50
 
 
 @resource(path='/associations-history', cors_policy=cors_policy)
-class HistoryAssociationRest(object):
+class HistoryAssociationRest:
     """ Unique class for returning history of a document's associations.
     """
     def __init__(self, request, **kwargs):

@@ -16,7 +16,7 @@ from httmock import all_requests, HTTMock
 class TestDocumentMergeRest(BaseTestRest):
 
     def setUp(self):  # noqa
-        super(TestDocumentMergeRest, self).setUp()
+        super().setUp()
         self._prefix = '/documents/merge'
 
         contributor_id = self.global_userids['contributor']

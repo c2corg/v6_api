@@ -63,7 +63,7 @@ def get_queue_config(settings):
     # set the number of connections to Redis
     pools.set_limit(int(settings['redis.queue_pool']))
 
-    class QueueConfiguration(object):
+    class QueueConfiguration:
         def __init__(self, settings):
             self.connection = Connection(
                 settings['redis.url'],

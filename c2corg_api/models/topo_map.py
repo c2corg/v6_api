@@ -20,7 +20,7 @@ from c2corg_api.models.common import document_types
 MAP_TYPE = document_types.MAP_TYPE
 
 
-class _MapMixin(object):
+class _MapMixin:
     editor = Column(map_editor)
     scale = Column(map_scale)
     code = Column(String)
@@ -47,13 +47,13 @@ class TopoMap(_MapMixin, Document):
 
     def to_archive(self):
         m = ArchiveTopoMap()
-        super(TopoMap, self)._to_archive(m)
+        super()._to_archive(m)
         copy_attributes(self, m, attributes)
 
         return m
 
     def update(self, other):
-        super(TopoMap, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes)
 
 

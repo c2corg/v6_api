@@ -196,7 +196,7 @@ def creator_wrapper(creator):
     return fn
 
 
-class CacheStatus(object):
+class CacheStatus:
     """ To avoid that requests are made to the cache if it is down, the status
     of the last requests is stored. If a request in the 30 seconds failed,
     no new request will be made.

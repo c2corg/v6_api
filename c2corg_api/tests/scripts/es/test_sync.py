@@ -202,7 +202,7 @@ class SyncTest(BaseTestCase):
             None)
 
     def _create_mock_match(self, actions):
-        class MockBatch(object):
+        class MockBatch:
             def __init__(self, client, batch_size):
                 pass
 

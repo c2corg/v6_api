@@ -25,7 +25,7 @@ class ElasticBatch(Batch):
     """
 
     def __init__(self, client, batch_size):
-        super(ElasticBatch, self).__init__(client, batch_size)
+        super().__init__(client, batch_size)
         self.client = client
         self.actions = []
 

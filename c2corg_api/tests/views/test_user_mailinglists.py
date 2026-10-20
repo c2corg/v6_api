@@ -7,7 +7,7 @@ from c2corg_api.models.common.attributes import mailinglists
 class TestUserMailinglistsRest(BaseTestRest):
 
     def setUp(self):  # noqa
-        super(TestUserMailinglistsRest, self).setUp()
+        super().setUp()
         self._prefix = '/users/mailinglists'
 
         self.contributor = self.session.query(User).get(

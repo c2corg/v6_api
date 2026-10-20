@@ -16,7 +16,7 @@ from sqlalchemy.orm import joinedload, load_only
 
 
 @resource(path='/documents/changes', cors_policy=cors_policy)
-class ChangesDocumentRest(object):
+class ChangesDocumentRest:
     """ Unique class for returning history of changes in documents.
     """
 

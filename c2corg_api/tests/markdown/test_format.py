@@ -10,7 +10,7 @@ IMAGE_URL_RESOLVER = make_image_url_resolver(
 
 
 def read_file(path):
-    with open(path, 'r', encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return f.read()
 
 

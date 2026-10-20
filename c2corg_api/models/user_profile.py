@@ -18,7 +18,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 USERPROFILE_TYPE = document_types.USERPROFILE_TYPE
 
 
-class _UserProfileMixin(object):
+class _UserProfileMixin:
     activities = Column(ArrayOfEnum(activity_type))
     categories = Column(ArrayOfEnum(user_category))
 
@@ -46,13 +46,13 @@ class UserProfile(_UserProfileMixin, Document):
 
     def to_archive(self):
         user_profile = ArchiveUserProfile()
-        super(UserProfile, self)._to_archive(user_profile)
+        super()._to_archive(user_profile)
         copy_attributes(self, user_profile, attributes)
 
         return user_profile
 
     def update(self, other):
-        super(UserProfile, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes)
 
 

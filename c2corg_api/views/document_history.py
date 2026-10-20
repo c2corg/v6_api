@@ -13,7 +13,7 @@ from sqlalchemy.orm import joinedload
 
 
 @resource(path='/document/{id}/history/{lang}', cors_policy=cors_policy)
-class HistoryDocumentRest(object):
+class HistoryDocumentRest:
     """ Unique class for returning history of a document.
     """
 

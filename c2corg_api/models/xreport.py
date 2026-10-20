@@ -27,7 +27,7 @@ from c2corg_api.models import enums
 XREPORT_TYPE = document_types.XREPORT_TYPE
 
 
-class _XreportMixin(object):
+class _XreportMixin:
 
     # Altitude
     elevation = Column(SmallInteger)
@@ -115,12 +115,12 @@ class Xreport(_XreportMixin, Document):
 
     def to_archive(self):
         xreport = ArchiveXreport()
-        super(Xreport, self)._to_archive(xreport)
+        super()._to_archive(xreport)
         copy_attributes(self, xreport, attributes)
         return xreport
 
     def update(self, other):
-        super(Xreport, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes)
 
 
@@ -141,7 +141,7 @@ class ArchiveXreport(_XreportMixin, ArchiveDocument):
     __table_args__ = Base.__table_args__
 
 
-class _XreportLocaleMixin(object):
+class _XreportLocaleMixin:
     # Event location-Lieu de l'évènement
     place = Column(String)
 
@@ -210,13 +210,13 @@ class XreportLocale(_XreportLocaleMixin, DocumentLocale):
 
     def to_archive(self):
         locale = ArchiveXreportLocale()
-        super(XreportLocale, self)._to_archive(locale)
+        super()._to_archive(locale)
         copy_attributes(self, locale, attributes_locales)
 
         return locale
 
     def update(self, other):
-        super(XreportLocale, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes_locales)
 
 

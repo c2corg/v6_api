@@ -38,7 +38,7 @@ class AccountNotValidated(Exception):
 BCRYPT_MAX_PASSWORD_BYTES = 72
 
 
-class PasswordUtil():
+class PasswordUtil:
     """
     Utility class abstracting low-level password primitives.
     """

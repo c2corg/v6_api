@@ -172,7 +172,7 @@ class TestNavitiaRestParams(BaseTestCase):
         r = mock.Mock()
         job_id = "job-123"
 
-        r.get.return_value = "running".encode("utf-8")
+        r.get.return_value = b"running"
 
         status, payload = get_job_status(r, job_id)
 
@@ -195,7 +195,7 @@ class TestNavitiaRestParams(BaseTestCase):
     def test_read_result_from_redis_unknown_status(self):
         def error_side_effect(*args, **kwargs):
             if args[0] == f"job:{job_id}:status":
-                return "abcd".encode("utf-8")
+                return b"abcd"
 
         r = mock.Mock()
         job_id = "job-123"
@@ -210,9 +210,9 @@ class TestNavitiaRestParams(BaseTestCase):
     def test_read_result_from_redis_job_error(self):
         def error_side_effect(*args, **kwargs):
             if args[0] == f"job:{job_id}:status":
-                return "error".encode("utf-8")
+                return b"error"
             if args[0] == f"job:{job_id}:error":
-                return "fake error message".encode("utf-8")
+                return b"fake error message"
 
         r = mock.Mock()
         job_id = "job-123"
@@ -245,7 +245,7 @@ class TestNavitiaRestParams(BaseTestCase):
         r = mock.Mock()
         job_id = "job-123"
 
-        r.get.return_value = "running".encode("utf-8")
+        r.get.return_value = b"running"
 
         response = read_result_from_redis(r, job_id)
 
@@ -255,7 +255,7 @@ class TestNavitiaRestParams(BaseTestCase):
     def test_read_result_from_redis_job_done_no_data(self):
         def error_side_effect(*args, **kwargs):
             if args[0] == f"job:{job_id}:status":
-                return "done".encode("utf-8")
+                return b"done"
             if args[0] == f"job:{job_id}:result":
                 return None
 
@@ -287,7 +287,7 @@ class TestNavitiaRestParams(BaseTestCase):
             )
             routes = [r1, r2]
             if args[0] == f"job:{job_id}:status":
-                return "done".encode("utf-8")
+                return b"done"
             if args[0] == f"job:{job_id}:result":
                 return json.dumps({'documents': routes, 'total': len(routes)})
 

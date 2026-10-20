@@ -14,7 +14,7 @@ import re
 class C2CVideoExtension(Extension):
     def __init__(self, *args, **kwargs):
         self._iframe_secret_tag = kwargs.pop("iframe_secret_tag")
-        super(C2CVideoExtension, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def extendMarkdown(self, md):  # noqa: N802
 
@@ -38,7 +38,7 @@ class C2CVideoBlock(BlockProcessor):
     PATTERN = None
 
     def __init__(self, parser, iframe_secret_tag):
-        super(C2CVideoBlock, self).__init__(parser=parser)
+        super().__init__(parser=parser)
         self._iframe_secret_tag = iframe_secret_tag
         self.RE = re.compile(r"(^|\n)\[video\]" +
                              self.PATTERN +

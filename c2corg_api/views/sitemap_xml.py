@@ -19,7 +19,7 @@ from pyramid.interfaces import IRendererFactory
 from pyramid.renderers import string_renderer_factory
 from sqlalchemy.sql.functions import func
 from math import ceil
-from datetime import date, datetime, timezone
+from datetime import date, datetime, UTC
 from slugify import slugify
 
 log = logging.getLogger(__name__)
@@ -150,7 +150,7 @@ def _get_sitemap_index():
 
     sitemaps = []
 
-    now = datetime.utcnow().replace(tzinfo=timezone.utc)
+    now = datetime.utcnow().replace(tzinfo=UTC)
     lastmod = now.isoformat()
 
     template = """<sitemap>

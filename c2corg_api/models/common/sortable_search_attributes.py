@@ -1,4 +1,3 @@
-# coding: utf-8
 
 # enum mappers: To be able to search e.g. a route with a rating between
 # 'AD' and 'ED', certain enum values are converted to integers using the

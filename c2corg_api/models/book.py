@@ -19,7 +19,7 @@ from c2corg_api.models.common import document_types
 BOOK_TYPE = document_types.BOOK_TYPE
 
 
-class _BookMixin(object):
+class _BookMixin:
     author = Column(String(100))
     editor = Column(String(100))
     activities = Column(ArrayOfEnum(enums.activity_type))
@@ -49,13 +49,13 @@ class Book(_BookMixin, Document):
 
     def to_archive(self):
         book = ArchiveBook()
-        super(Book, self)._to_archive(book)
+        super()._to_archive(book)
         copy_attributes(self, book, attributes)
 
         return book
 
     def update(self, other):
-        super(Book, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes)
 
 

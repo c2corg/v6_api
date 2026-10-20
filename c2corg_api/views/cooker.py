@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 
 
 @resource(path='/cooker', cors_policy=cors_policy)
-class CookerRest(object):
+class CookerRest:
 
     def __init__(self, request, **kwargs):
         self.request = request

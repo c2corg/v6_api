@@ -18,7 +18,7 @@ from c2corg_api.models.common import document_types
 AREA_TYPE = document_types.AREA_TYPE
 
 
-class _AreaMixin(object):
+class _AreaMixin:
     area_type = Column(area_type)
 
 
@@ -41,13 +41,13 @@ class Area(_AreaMixin, Document):
 
     def to_archive(self):
         area = ArchiveArea()
-        super(Area, self)._to_archive(area)
+        super()._to_archive(area)
         copy_attributes(self, area, attributes)
 
         return area
 
     def update(self, other):
-        super(Area, self).update(other)
+        super().update(other)
         copy_attributes(other, self, attributes)
 
 

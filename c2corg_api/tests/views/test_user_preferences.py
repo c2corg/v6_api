@@ -8,7 +8,7 @@ from c2corg_api.tests.views import BaseTestRest
 class TestUserFilterPreferencesRest(BaseTestRest):
 
     def setUp(self):  # noqa
-        super(TestUserFilterPreferencesRest, self).setUp()
+        super().setUp()
         self._prefix = '/users/preferences'
 
         self.area1 = Area(

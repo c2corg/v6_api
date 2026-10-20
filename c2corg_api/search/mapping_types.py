@@ -9,7 +9,7 @@ meta_param_keys = ('pl', 'limit', 'offset')
 reserved_query_fields = meta_param_keys + ('q', 'bbox')
 
 
-class QueryableMixin(object):
+class QueryableMixin:
     def __init__(self, query_name, *args, **kwargs):
         self._query_name = query_name
         if 'enum' in kwargs:
@@ -53,7 +53,7 @@ class QueryableMixin(object):
         if 'is_id' in kwargs:
             self._is_id = kwargs['is_id']
             del kwargs['is_id']
-        super(QueryableMixin, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @staticmethod
     def get_queryable_fields(search_model):
@@ -83,7 +83,7 @@ class Enum(String):
     """
     def __init__(self, *args, **kwargs):
         kwargs['index'] = 'not_analyzed'
-        super(Enum, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class EnumArray(Enum):
@@ -110,7 +110,7 @@ class QDateRange(QueryableMixin):
         self.field_date_start = field_date_start
         self.field_date_end = field_date_end
         kwargs['date_range'] = True
-        super(QDateRange, self).__init__(query_name, *args, **kwargs)
+        super().__init__(query_name, *args, **kwargs)
 
 
 class QPeriod(QueryableMixin):
@@ -122,7 +122,7 @@ class QPeriod(QueryableMixin):
         self.field_date_start = field_date_start
         self.field_date_end = field_date_end
         kwargs['period'] = True
-        super(QPeriod, self).__init__(query_name, *args, **kwargs)
+        super().__init__(query_name, *args, **kwargs)
 
 
 class QDate(QueryableMixin, Date):
@@ -132,7 +132,7 @@ class QDate(QueryableMixin, Date):
     def __init__(self, query_name, field_date, *args, **kwargs):
         self._field_date = field_date
         kwargs['date'] = True
-        super(QDate, self).__init__(query_name, *args, **kwargs)
+        super().__init__(query_name, *args, **kwargs)
 
 
 class QNumberRange(QueryableMixin):
@@ -143,7 +143,7 @@ class QNumberRange(QueryableMixin):
         self.field_min = field_min
         self.field_max = field_max
         kwargs['integer_range'] = True
-        super(QNumberRange, self).__init__(query_name, *args, **kwargs)
+        super().__init__(query_name, *args, **kwargs)
 
 
 class QEnumRange(QueryableMixin, Integer):
@@ -160,7 +160,7 @@ class QEnumRange(QueryableMixin, Integer):
         self._enum_mapper = enum_mapper
         kwargs['model_field'] = model_field
         kwargs['enum_range'] = True
-        super(QEnumRange, self).__init__(query_name, *args, **kwargs)
+        super().__init__(query_name, *args, **kwargs)
 
 
 class QEnumRangeMinMax(QueryableMixin):
@@ -174,4 +174,4 @@ class QEnumRangeMinMax(QueryableMixin):
         self.field_max = field_max
         self._enum_mapper = enum_mapper
         kwargs['enum_range_min_max'] = True
-        super(QEnumRangeMinMax, self).__init__(query_name, *args, **kwargs)
+        super().__init__(query_name, *args, **kwargs)

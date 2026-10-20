@@ -2,7 +2,7 @@ import transaction  # NOQA
 
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from functools import lru_cache
+from functools import cache
 from pyramid.settings import asbool
 import smtplib
 
@@ -14,16 +14,16 @@ import os
 log = logging.getLogger(__name__)
 
 
-class EmailLocalizator(object):
+class EmailLocalizator:
     def __init__(self):
         self.default_lang = 'fr'
 
-    @lru_cache(maxsize=None)
+    @cache
     def _get_file_content(self, lang, key):
         filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % (lang, key)
         if not os.path.isfile(filepath):
             filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % ('fr', key)
-        with open(filepath, 'r') as f:
+        with open(filepath) as f:
             content = f.read().rstrip()  # No trailing new line in subject!
         return content
 

@@ -15,7 +15,7 @@ DBSession = scoped_session(sessionmaker())
 register(DBSession)
 
 
-class BaseMixin(object):
+class BaseMixin:
     __table_args__ = {'schema': schema}
 
 

@@ -16,7 +16,7 @@ emoji1_db.SVG_CDN = 'https://cdn.jsdelivr.net/emojione/assets/svg/'
 RE_EMOJI = r'(:[+\-\w]+:)'
 
 
-class Emoji(object):
+class Emoji:
     def __init__(self, db_name, code, **kwargs):
         self.db_name = db_name
         self.code = code

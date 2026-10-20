@@ -9,7 +9,7 @@ from sqlalchemy import event
 
 class TestCookerRest(BaseTestRest):
     def setUp(self):  # noqa
-        super(TestCookerRest, self).setUp()
+        super().setUp()
         self.image_url = self.app.app.registry.settings['image_url']
 
     def test_get(self):

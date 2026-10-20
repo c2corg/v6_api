@@ -212,7 +212,7 @@ def teardown_package():
         initializees.drop_index()
 
 
-class AssertionsMixin(object):
+class AssertionsMixin:
 
     def assertCoodinateEquals(self, coord1, coord2):  # noqa
         self.assertEqual(len(coord1), len(coord2), 'not the same dimension')
