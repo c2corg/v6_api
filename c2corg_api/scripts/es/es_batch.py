@@ -1,6 +1,6 @@
 from elasticsearch import helpers
 
-from c2corg_api.scripts.migration.batch import Batch
+from c2corg_api.scripts.es.batch import Batch
 from elasticsearch.helpers import BulkIndexError
 import logging
 
