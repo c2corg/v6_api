@@ -89,6 +89,13 @@ class APIDiscourseClient(object):
         discourse_userid = self.get_userid(userid)
         return self.client.unsuspend(discourse_userid)
 
+    def invite_user_to_topic(self, username, topic_id):
+        """Invite a forum user, by username, to a topic."""
+        # pydiscourse only invites by e-mail (invite_user_to_topic); the
+        # c2corg fork used to add this call by username.
+        return self.client._post(
+            '/t/{0}/invite.json'.format(topic_id), user=username)
+
     # Below this: SSO provider
     def decode_payload(self, payload):
         decoded = b64decode(payload.encode('utf-8')).decode('utf-8')

@@ -155,7 +155,7 @@ class TestForumTopicRest(BaseTestRest):
                 referer,
                 "/images/{}/{}".format(locale.document_id, locale.lang)),
             title='{}_{}'.format(locale.document_id, locale.lang),
-            category='Commentaires')
+            category_id='Commentaires')
 
     @patch('pydiscourse.client.DiscourseClient._post',
            side_effect=[{"topic_id": 10},

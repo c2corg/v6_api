@@ -117,7 +117,7 @@ class ForumTopicRest(ACLDefault):
             title = "{}_{}".format(locale.document_id, locale.lang)
             response = client.client.create_post(content,
                                                  title=title,
-                                                 category=category)
+                                                 category_id=category)
         except Exception as e:
             log.error('Error with Discourse: {}'.format(str(e)), exc_info=True)
             raise HTTPInternalServerError('Error with Discourse')
@@ -148,8 +148,7 @@ class ForumTopicRest(ACLDefault):
 
         for (forum_username,) in participants:
             try:
-                client.client.invite_user_to_topic_by_username(forum_username,
-                                                               topic_id)
+                client.invite_user_to_topic(forum_username, topic_id)
             except Exception:
                 log.error('Inviting forum user {} in topic {} failed'
                           .format(forum_username, topic_id),

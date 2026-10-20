@@ -207,7 +207,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.22.2" },
     { name = "phpserialize", specifier = "==1.3.0" },
     { name = "psycopg2-binary", specifier = "==2.9.11" },
-    { name = "pydiscourse", url = "https://github.com/c2corg/pydiscourse/archive/ea03a3a.zip" },
+    { name = "pydiscourse", specifier = "==1.7.0" },
     { name = "pygments", specifier = ">=2.21.0" },
     { name = "pyjwt", specifier = "==2.15.0" },
     { name = "pymdown-extensions", specifier = "==10.21.3" },
@@ -818,15 +818,15 @@ wheels = [
 
 [[package]]
 name = "pydiscourse"
-version = "0.7.0"
-source = { url = "https://github.com/c2corg/pydiscourse/archive/ea03a3a.zip" }
+version = "1.7.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "requests" },
 ]
-sdist = { hash = "sha256:45b263abdc8131b95e1974a7d9ca66943eff33216b6f7b749c18cca3ac55aab0" }
-
-[package.metadata]
-requires-dist = [{ name = "requests", specifier = ">=2.0.0" }]
+sdist = { url = "https://files.pythonhosted.org/packages/a3/5b/559d8c91cdb4bff9095916d1ac885fc265bef42e15815b7b430cb6e1384e/pydiscourse-1.7.0.tar.gz", hash = "sha256:e090b9143750941aef5042bd8a9cdb93376abf6c18fe5ebbf15d7813acbdafb3", size = 19671, upload-time = "2024-04-16T20:37:13.366Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/8e/3ff52fa942d036f9c8a5043b0f24d9be60970dfce2947c39b3d3012035b8/pydiscourse-1.7.0-py2.py3-none-any.whl", hash = "sha256:d3ddf02510fb22dc425dfb7d81e6c363a14503ec53a7f7cb0d16d3f1f13259c4", size = 16263, upload-time = "2024-04-16T20:37:10.364Z" },
+]
 
 [[package]]
 name = "pygments"
