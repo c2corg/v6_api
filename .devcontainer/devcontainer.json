@@ -11,13 +11,12 @@
         "python.defaultInterpreterPath": "/opt/venv/bin/python",
         "python.testing.pytestEnabled": true,
         "python.testing.pytestArgs": ["c2corg_api/tests"],
-        "python.linting.flake8Enabled": true,
         "editor.formatOnSave": true
       },
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-python.flake8"
+        "charliermarsh.ruff"
       ]
     }
   },

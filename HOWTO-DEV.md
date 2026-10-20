@@ -197,7 +197,7 @@ pytest
 - Run the linter:
 
 ```shell
-flake8 c2corg_api es_migration
+ruff check c2corg_api es_migration
 ```
 
 ## Other

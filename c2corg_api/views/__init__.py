@@ -319,7 +319,7 @@ def etag_cache(request, key):
         exception if the ETag received matches the key provided.
 
     Implementation adapted from:
-    https://github.com/Pylons/pylons/blob/799c310/pylons/controllers/util.py#L148  # noqa
+    https://github.com/Pylons/pylons/blob/799c310/pylons/controllers/util.py#L148
     """
     # we are always using a weak ETag validator
     etag = 'W/"%s"' % key

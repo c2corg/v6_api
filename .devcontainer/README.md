@@ -39,7 +39,7 @@ pytest
 pytest c2corg_api/tests/models/test_book.py
 
 # Run the linter
-flake8 c2corg_api es_migration
+ruff check c2corg_api es_migration
 
 # Start the API server (with auto-reload)
 pserve development.ini --reload

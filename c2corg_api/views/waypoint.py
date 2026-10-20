@@ -76,7 +76,8 @@ class WaypointRest(DocumentRest):
         that match the filters.
 
         Request:
-            `GET` `/waypoints/?[q=...][&pl=...][&offset=...][&limit=...][filters]*`  # noqa
+            `GET`
+            `/waypoints/?[q=...][&pl=...][&offset=...][&limit=...][filters]*`
 
         Parameters:
             `q=...` (optional)
@@ -355,7 +356,7 @@ def _get_select_children(waypoint):
     """
     Return a WITH query that selects the document ids of the given waypoint,
     the children and the grand-children of the waypoint.
-    See also: http://docs.sqlalchemy.org/en/latest/core/selectable.html#sqlalchemy.sql.expression.GenerativeSelect.cte  # noqa
+    See also: http://docs.sqlalchemy.org/en/latest/core/selectable.html#sqlalchemy.sql.expression.GenerativeSelect.cte
     """
     select_waypoint = DBSession. \
         query(

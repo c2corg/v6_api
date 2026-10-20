@@ -1750,7 +1750,7 @@ class TestRouteRest(BaseDocumentTestRest):
 
         # Test case 4: single access other cases
         route_types = ['some_other_route_type']
-        starts, ends =  \
+        starts, ends = \
             _find_starting_and_ending_points([waypoints[0]], route_types)
         self.assertEqual(
             starts[0].geometry.geom,

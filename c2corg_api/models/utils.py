@@ -113,7 +113,7 @@ def _force_2d_coords(coords):
 
 def windowed_query(q, column, windowsize):
     """"Break a Query into windows on a given column.
-    Source: https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WindowedRangeQuery  # noqa
+    Source: https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WindowedRangeQuery
 
     If the query does not use eager loading `yield_per` can be used instead for
     native streaming.
@@ -140,7 +140,7 @@ def column_windows(session, column, windowsize):
     so that windows of just a subset of rows can
     be computed.
 
-    Source: https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WindowedRangeQuery  # noqa
+    Source: https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WindowedRangeQuery
     """
     def int_for_range(start_id, end_id):
         if end_id:
