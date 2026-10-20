@@ -11,8 +11,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     services:
+      # Service versions match production (see c2corg/v6-docker-compose):
+      # Redis 5, and the production PostgreSQL image (PostgreSQL 9.6.1,
+      # PostGIS 2.3). Bump them together with production.
       redis:
-        image: redis
+        image: redis:5
         # Set health checks to wait until redis has started
         options: >-
           --health-cmd "redis-cli ping"
@@ -34,7 +37,7 @@ jobs:
       #   env:
       #     discovery.type: single-node
       postgres:
-        image: postgis/postgis
+        image: c2corg/c2corg_pgsql:9.6
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test
