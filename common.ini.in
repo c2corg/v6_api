@@ -10,7 +10,15 @@ pyramid.default_locale_name = en
 
 # size of the connection pool for the database. note that this number is
 # per application instance.
-sqlalchemy.pool_size=20
+# With gunicorn sync workers, each process serves one request at a time, so
+# it needs one connection for the request, plus one per running navitia
+# background job thread (see c2corg_api/views/navitia.py). Connections stay
+# open once in the pool: with 12 workers on each of the 3 API hosts, a big
+# pool here quickly uses all of PostgreSQL's `max_connections`.
+sqlalchemy.pool_size=5
+# extra connections opened above `pool_size` during bursts, closed again
+# when they are given back to the pool (10 is SQLAlchemy's default)
+sqlalchemy.max_overflow=10
 
 elasticsearch.host = {elasticsearch_host}
 elasticsearch.port = {elasticsearch_port}

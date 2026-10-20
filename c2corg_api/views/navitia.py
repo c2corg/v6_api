@@ -7,6 +7,7 @@ import uuid
 import time
 import threading
 import ast
+import transaction
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import Area
 from c2corg_api.models.waypoint import Waypoint, schema_waypoint
@@ -310,6 +311,8 @@ def compute_journey_reachable_routes(job_id, request):
         log.exception(str(exc))
         r.set("job:%s:status" % job_id, "error")
         r.set("job:%s:error" % job_id, str(exc))
+    finally:
+        _end_thread_db_session()
 
 
 def compute_journey_reachable_waypoints(job_id, request):
@@ -385,6 +388,8 @@ def compute_journey_reachable_waypoints(job_id, request):
         log.exception("Error computing reachable waypoints")
         r.set("job:%s:status" % job_id, "error")
         r.set("job:%s:error" % job_id, str(exc))
+    finally:
+        _end_thread_db_session()
 
 
 def validate_isochrone_reachable_params(request, **kwargs):
@@ -813,6 +818,30 @@ def start_job_background(target, request):
     threading.Thread(target=target, args=(
         job_id, request), daemon=True).start()
     return {"job_id": job_id}
+
+
+def _end_thread_db_session():
+    """
+    Release the database session used by a background job thread.
+
+    `DBSession` is a scoped session, so each job thread gets its own session
+    and connection. pyramid_tm only manages the request thread, so the job
+    has to end its transaction and remove its session itself; otherwise the
+    connection stays checked out of the pool (possibly "idle in
+    transaction") for the lifetime of the worker process.
+
+    The jobs only read from the database, so the transaction is aborted
+    (rolled back) rather than committed.
+    """
+    try:
+        # `DBSession` is registered with zope.sqlalchemy: the session joined
+        # this thread's transaction manager, so abort that transaction. This
+        # rolls back and closes the session.
+        transaction.abort()
+    except Exception:
+        log.exception("Error aborting background job transaction")
+    finally:
+        DBSession.remove()
 
 
 def get_job_status(r, job_id):
