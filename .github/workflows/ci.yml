@@ -1,6 +1,16 @@
 name: Continuous integration
 
-on: [push, pull_request]
+# Pull requests (from this repository or from forks) are tested through the
+# pull_request event only. Pushes are limited to master and tags, so a push
+# to a PR branch does not start a second, skipped run next to the real one.
+# To test or publish an image for a branch without a PR, start the workflow
+# by hand (workflow_dispatch).
+on:
+  push:
+    branches: [master]
+    tags: ['*']
+  pull_request:
+  workflow_dispatch:
 
 # Default to the minimum permissions the GITHUB_TOKEN needs. Jobs that
 # need more (e.g. pushing container images) grant it explicitly below.
@@ -10,10 +20,6 @@ permissions:
 jobs:
   test:
     name: test (${{ matrix.services }})
-    # A push to a branch of this repository already runs this workflow, so
-    # the pull_request event only matters for PRs opened from forks.
-    # Without this guard every push to a PR branch runs CI twice.
-    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
