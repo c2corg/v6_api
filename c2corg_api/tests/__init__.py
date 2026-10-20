@@ -2,6 +2,7 @@ import datetime
 import jwt
 import logging
 import os
+import pytest
 import time
 import transaction
 import unittest
@@ -13,10 +14,8 @@ from pyramid.paster import get_appsettings
 from pytz import utc
 from random import randint
 from sqlalchemy import engine_from_config
-from webtest import TestApp
 
 from c2corg_api import caching as caching_common
-from c2corg_api import main
 from c2corg_api.emails.email_service import EmailService
 from c2corg_api.models import DBSession, sessionmaker
 from c2corg_api.models.document import DocumentLocale, DocumentGeometry
@@ -247,32 +246,24 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
         outbox_count = self.get_email_box_length()
         return self.mailer.outbox[outbox_count - 1]
 
-    @classmethod
-    def setUpClass(cls):  # noqa
-        cls.app = main({}, **settings)
-        cls.engine = get_engine()
-        cls.Session = sessionmaker()
+    @pytest.fixture(autouse=True)
+    def _base_fixtures(self, client, db_connection):
+        """Expose the pytest fixtures (see conftest.py) the way the
+        unittest-style tests expect them. Runs before ``setUp``."""
+        self.app = client
+        self.connection = db_connection
+        # the session used in the test code, bound to the test's connection
+        # (the views use DBSession, bound to the same connection)
+        self.session = sessionmaker()(bind=db_connection)
+        yield
+        self.session.close()
 
     def setUp(self):  # noqa
-        self.app = TestApp(self.app)
         registry = self.app.app.registry
         self.email_service = EmailService(settings)
         EmailService.instance = None
 
         self.config = testing.setUp()
-
-        self.connection = self.engine.connect()
-
-        # begin a non-ORM transaction
-        self.trans = self.connection.begin()
-
-        # DBSession is the scoped session manager used in the views,
-        # reconfigure it to use this test's connection
-        DBSession.configure(bind=self.connection)
-
-        # create a session bound to the connection, this session is the one
-        # used in the test code
-        self.session = self.Session(bind=self.connection)
 
         self.queue_config = registry.queue_config
         reset_queue(self.queue_config)
@@ -280,16 +271,9 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
         registry.feed_admin_user_account_id = None
 
     def tearDown(self):  # noqa
-        # rollback - everything that happened with the Session above
-        # (including calls to commit()) is rolled back.
+        # the database transaction is rolled back by the db_connection
+        # fixture, after this
         testing.tearDown()
-        if not keep:
-            self.trans.rollback()
-        else:
-            self.trans.commit()
-        DBSession.remove()
-        self.session.close()
-        self.connection.close()
 
     def app_post_json(self, *args, **kwargs):
         return self.app_send_json('post', *args, **kwargs)
