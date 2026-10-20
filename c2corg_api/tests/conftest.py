@@ -48,13 +48,10 @@ def db_engine():
 
 @pytest.fixture
 def db_connection(test_database, db_engine):
-    """Open a database connection in a transaction rolled back after the test.
-
-    Tests never see each other's changes: everything, including
-    ``commit()`` calls, happens inside this transaction.
-
-    ``DBSession``, the scoped session used by the views, is bound to it.
-    """
+    """Open a connection in a transaction rolled back after the test."""
+    # Tests never see each other's changes: everything, including commit()
+    # calls, happens inside this transaction. DBSession, the scoped session
+    # used by the views, is bound to it.
     from c2corg_api.models import DBSession
     from c2corg_api.tests import keep
 
@@ -80,12 +77,10 @@ def wsgi_app(test_database):
 
 @pytest.fixture
 def client(wsgi_app):
-    """HTTP client used by the tests to call the API.
-
-    Today a WebTest ``TestApp`` around the Pyramid application. This is the
-    single place to swap in another client (e.g. an adapter over FastAPI's
-    ``TestClient`` with the same interface) when the web framework changes.
-    """
+    """Return the HTTP client the tests use to call the API."""
+    # Today a WebTest TestApp around the Pyramid application. This is the
+    # single place to swap in another client (e.g. an adapter over FastAPI's
+    # TestClient with the same interface) when the web framework changes.
     from webtest import TestApp
     return TestApp(wsgi_app)
 
