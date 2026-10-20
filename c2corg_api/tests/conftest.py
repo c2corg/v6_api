@@ -41,15 +41,17 @@ def test_database():
 
 @pytest.fixture(scope="session")
 def db_engine():
+    """Create the SQLAlchemy engine shared by the whole test run."""
     from c2corg_api.tests import get_engine
     return get_engine()
 
 
 @pytest.fixture
 def db_connection(test_database, db_engine):
-    """A database connection inside a transaction that is rolled back at the
-    end of the test, so tests never see each other's changes (everything,
-    including ``commit()`` calls, happens inside this transaction).
+    """Open a database connection in a transaction rolled back after the test.
+
+    Tests never see each other's changes: everything, including
+    ``commit()`` calls, happens inside this transaction.
 
     ``DBSession``, the scoped session used by the views, is bound to it.
     """
@@ -70,7 +72,7 @@ def db_connection(test_database, db_engine):
 
 @pytest.fixture(scope="class")
 def wsgi_app(test_database):
-    """The API's WSGI application, built once per test class."""
+    """Build the API's WSGI application, once per test class."""
     from c2corg_api import main
     from c2corg_api.tests import settings
     return main({}, **settings)

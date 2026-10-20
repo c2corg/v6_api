@@ -248,8 +248,10 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
 
     @pytest.fixture(autouse=True)
     def _base_fixtures(self, client, db_connection):
-        """Expose the pytest fixtures (see conftest.py) the way the
-        unittest-style tests expect them. Runs before ``setUp``."""
+        """Expose the pytest fixtures to the unittest-style tests.
+
+        See conftest.py. Runs before ``setUp``.
+        """
         self.app = client
         self.connection = db_connection
         # the session used in the test code, bound to the test's connection
