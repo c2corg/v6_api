@@ -26,11 +26,10 @@ def _query_using_db(fail=False):
 
 
 class TestNavitiaJobDbSession(BaseTestCase):
-    """The background jobs run in their own thread, outside of pyramid_tm.
+    """Background jobs must give their connection back to the pool."""
 
-    They must end their transaction and remove their scoped session, so
-    that the connection goes back to the pool once the job is done.
-    """
+    # The jobs run in their own thread, outside of pyramid_tm: they must end
+    # their transaction and remove their scoped session themselves.
 
     def setUp(self):  # noqa
         super().setUp()
