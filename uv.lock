@@ -203,7 +203,7 @@ requires-dist = [
     { name = "pyjwt", specifier = "==2.15.0" },
     { name = "pymdown-extensions", specifier = "==11.0.1" },
     { name = "pyproj", specifier = "==3.8.0" },
-    { name = "pyramid", specifier = "==1.10.8" },
+    { name = "pyramid", specifier = "==2.1" },
     { name = "pyramid-debugtoolbar", specifier = "==4.12.1" },
     { name = "pyramid-jwt", specifier = "==1.6.1" },
     { name = "pyramid-mailer", specifier = "==0.15.1" },
@@ -916,7 +916,7 @@ wheels = [
 
 [[package]]
 name = "pyramid"
-version = "1.10.8"
+version = "2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "hupper" },
@@ -929,9 +929,9 @@ dependencies = [
     { name = "zope-deprecation" },
     { name = "zope-interface" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/72/c3/095f0b37069c6122c8411807f0e1bf482fe79e997b8747750eaab2613ddb/pyramid-1.10.8.tar.gz", hash = "sha256:b7cd66595bef92f81764b976ddde2b2fa8e4f5f325e02f65f6ec7f3708b29cf6", size = 2710967, upload-time = "2021-03-01T02:44:58.3Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/f3/05b49d8bbc6f4592f8820d9e306e20b0b4c266171f3455c737c49b4a7338/pyramid-2.1.tar.gz", hash = "sha256:5a24bc1b5f9e0f0d1c0b6ddd1111e84c15dac44a07e3c1d24e74dd9bb4fc22eb", size = 2628991, upload-time = "2026-03-11T01:23:59.642Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3c/0b/6a56fe7dd5ccb1dc9188c3f337c776d7bc6d3f2fc6044c458b0799d37b0d/pyramid-1.10.8-py2.py3-none-any.whl", hash = "sha256:06e99d3174586921490203288e2cc9cd43d12992306f924ca32a2c59233386a9", size = 327105, upload-time = "2021-03-01T02:44:56.249Z" },
+    { url = "https://files.pythonhosted.org/packages/1f/d4/03a8f9b60b8f2a9198c962d08fd9b657c1c0797cbbde3793babbad200845/pyramid-2.1-py3-none-any.whl", hash = "sha256:0aa62604221f6a8ac6e77a0faa02a5b7a294d6675f15581d8d416dffe2ac98e7", size = 243407, upload-time = "2026-03-11T01:23:56.896Z" },
 ]
 
 [[package]]
