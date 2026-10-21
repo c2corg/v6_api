@@ -156,9 +156,12 @@ class TestOutingsTracksRest(BaseTestRest):
         self.route = _route('Route', ['hiking'], 'SRID=3857;POINT(635956 5723604)')
         self.session.add(self.route)
         self.session.flush()
-        self._add_association(
-            Association.create(parent_document=self.route, child_document=self.outing1),
-            user_id=self.global_userids['contributor'],
+        association = Association.create(
+            parent_document=self.route, child_document=self.outing1
+        )
+        self.session.add(association)
+        self.session.add(
+            association.get_log(self.global_userids['contributor'], is_creation=True)
         )
         self.session.flush()
         reset_search_index(self.session)
