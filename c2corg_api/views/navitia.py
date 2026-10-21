@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import os
@@ -5,16 +6,27 @@ import requests
 import redis
 import uuid
 import time
+import re
 import threading
 import ast
 import transaction
+from datetime import datetime
+from sqlalchemy import or_
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import Area
+from c2corg_api.models.association import Association
 from c2corg_api.models.waypoint import Waypoint, schema_waypoint
 from c2corg_api.views.coverage import get_coverage
-from c2corg_api.views.waypoint import build_reachable_waypoints_query
-from c2corg_api.views.route import build_reachable_route_query_with_waypoints
-from shapely.geometry import Point
+from c2corg_api.views.waypoint import (
+    build_reachable_waypoints_query,
+    get_waypoint_ids_within_geometry,
+)
+from c2corg_api.views.route import (
+    build_reachable_route_query_with_waypoints,
+    get_route_ids_within_geometry,
+)
+from shapely.geometry import Point, shape, mapping
+from shapely.ops import transform as shapely_transform
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPInternalServerError,
@@ -24,9 +36,8 @@ from pyramid.httpexceptions import (
 from pyramid.response import Response
 from cornice.resource import resource, view
 from c2corg_api.views import cors_policy, to_json_dict
-from c2corg_api.models.route import schema_route
+from c2corg_api.models.route import schema_route, Route
 from c2corg_api.models.area import schema_listing_area
-from shapely.geometry import shape
 from pyproj import Transformer
 
 
@@ -236,6 +247,123 @@ class NavitiaJourneyReachableWaypointsProgressRest:
         )
 
 
+def validate_round_trip_batch_params(request, **kwargs):
+    """Validates the required parameters for the round-trip batch
+    verification jobs (an explicit shortlist of document ids, plus the
+    same temporal parameters used for a single-item check)"""
+    required_params = ['ids', 'from', 'date', 'min_departure', 'max_return']
+
+    for param in required_params:
+        if param not in request.params:
+            request.errors.add('querystring', param, 'Parameter %s required' % param)
+
+
+@resource(path='/navitia/journeyroundtriproutes/start', cors_policy=cors_policy)
+class StartNavitiaJourneyRoundTripRoutesRest:
+    def __init__(self, request, context=None):
+        self.request = request
+
+    @view(validators=[validate_round_trip_batch_params])
+    def get(self):
+        """
+        start job to verify round-trip (aller + retour) reachability for
+        an explicit shortlist of route ids
+        returns job id
+        """
+        return start_job_background(compute_round_trip_reachable_routes, self.request)
+
+
+@resource(path='/navitia/journeyroundtripwaypoints/start', cors_policy=cors_policy)
+class StartNavitiaJourneyRoundTripWaypointsRest:
+    def __init__(self, request, context=None):
+        self.request = request
+
+    @view(validators=[validate_round_trip_batch_params])
+    def get(self):
+        """
+        start job to verify round-trip (aller + retour) reachability for
+        an explicit shortlist of waypoint ids
+        returns job id
+        """
+        return start_job_background(
+            compute_round_trip_reachable_waypoints, self.request
+        )
+
+
+@resource(
+    path='/navitia/journeyroundtriproutes/result/{job_id}', cors_policy=cors_policy
+)
+class NavitiaJourneyRoundTripRoutesResultRest:
+    def __init__(self, request, context=None):
+        self.request = request
+
+    @view()
+    def get(self):
+        """
+        get the result of the job : verify round-trip reachable routes
+        returns the result
+        """
+        r = redis_client()
+        job_id = self.request.matchdict.get('job_id')
+        return read_result_from_redis(r, job_id)
+
+
+@resource(
+    path='/navitia/journeyroundtripwaypoints/result/{job_id}', cors_policy=cors_policy
+)
+class NavitiaJourneyRoundTripWaypointsResultRest:
+    def __init__(self, request, context=None):
+        self.request = request
+
+    @view()
+    def get(self):
+        """
+        get the result of the job : verify round-trip reachable waypoints
+        returns the result
+        """
+        r = redis_client()
+        job_id = self.request.matchdict.get('job_id')
+        return read_result_from_redis(r, job_id)
+
+
+@resource(
+    path='/navitia/journeyroundtriproutes/progress/{job_id}', cors_policy=cors_policy
+)
+class NavitiaJourneyRoundTripRoutesProgressRest:
+    def __init__(self, request, context=None):
+        self.request = request
+
+    @view()
+    def get(self):
+        """
+        monitor progress of job id for round-trip reachable routes
+        """
+        r = redis_client()
+        job_id = self.request.matchdict.get('job_id')
+        return Response(
+            app_iter=progress_stream(r, job_id), content_type='text/event-stream'
+        )
+
+
+@resource(
+    path='/navitia/journeyroundtripwaypoints/progress/{job_id}', cors_policy=cors_policy
+)
+class NavitiaJourneyRoundTripWaypointsProgressRest:
+    def __init__(self, request, context=None):
+        self.request = request
+
+    @view()
+    def get(self):
+        """
+        monitor progress of job id for round-trip reachable waypoints
+        """
+        r = redis_client()
+        job_id = self.request.matchdict.get('job_id')
+        return Response(
+            app_iter=progress_stream(r, job_id), content_type='text/event-stream'
+        )
+
+
 def compute_journey_reachable_routes(job_id, request):
     """
     Get all waypoints matching filters in params, that are reachable
@@ -391,6 +519,114 @@ def compute_journey_reachable_waypoints(job_id, request):
         _end_thread_db_session()
 
 
+def _compute_round_trip_reachable(
+    job_id, request, document_type, too_many_error_message
+):
+    """
+    Shared implementation for compute_round_trip_reachable_routes and
+    compute_round_trip_reachable_waypoints : verify round-trip (aller +
+    retour) reachability, using real Navitia timetables, for an explicit
+    shortlist of document ids (unlike /navitia/reachabledocumentids,
+    whose dynamically-computed id-set is used directly to filter the
+    topoguide search and is never itself batch-verified against
+    Navitia).
+
+    NOTE : MAX_ROUTE_THRESHOLD is enforced here, as this is a batch of
+    up to 2 Navitia journey calls (aller + retour) per access waypoint
+    of every requested document.
+
+    The full structured per-item result (not a filtered list) is stored
+    in redis under job:%s:result, as:
+        {"results": {"<document_id>": {"aller": {...}, "retour": {...},
+                                        "compatible": bool}, ...},
+         "total": N}
+    """
+    r = redis_client()
+    try:
+        ids_param = request.GET.get('ids', '')
+        ids = [int(doc_id) for doc_id in ids_param.split(',') if doc_id]
+
+        if len(ids) > MAX_ROUTE_THRESHOLD:
+            raise HTTPBadRequest(too_many_error_message)
+
+        from_coords = request.GET.get('from')
+        date = request.GET.get('date')
+        min_departure = request.GET.get('min_departure')
+        max_return = request.GET.get('max_return')
+        hiking_duration_param = request.GET.get('hiking_duration')
+
+        total = len(ids)
+        log.info('Number of round-trip verifications : %d', total)
+        r.set('job:%s:total' % job_id, total)
+
+        count = found = not_found = 0
+        results = {}
+
+        for document_id in ids:
+            hiking_duration_seconds = _resolve_hiking_duration_seconds(
+                hiking_duration_param, document_id, document_type
+            )
+            access_waypoints = _get_access_waypoints_for_document(
+                document_id, document_type
+            )
+
+            item_result = _best_round_trip_result(
+                access_waypoints,
+                from_coords,
+                date,
+                min_departure,
+                max_return,
+                hiking_duration_seconds,
+            )
+            results[str(document_id)] = item_result
+
+            count += 1
+            if item_result['compatible']:
+                found += 1
+            else:
+                not_found += 1
+            _store_job_progress(r, job_id, count, found, not_found)
+
+        r.set(
+            'job:%s:result' % job_id, json.dumps({'results': results, 'total': total})
+        )
+        r.set('job:%s:status' % job_id, 'done')
+    except Exception as exc:
+        log.exception(str(exc))
+        r.set('job:%s:status' % job_id, 'error')
+        r.set('job:%s:error' % job_id, str(exc))
+    finally:
+        _end_thread_db_session()
+
+
+def compute_round_trip_reachable_routes(job_id, request):
+    """
+    Verify round-trip (aller + retour) reachability for an explicit
+    shortlist of route ids (see _compute_round_trip_reachable).
+    the result can be found inside redis
+    """
+    _compute_round_trip_reachable(
+        job_id,
+        request,
+        'route',
+        "Couldn't proceed with computation : Too much routes found.",
+    )
+
+
+def compute_round_trip_reachable_waypoints(job_id, request):
+    """
+    Verify round-trip (aller + retour) reachability for an explicit
+    shortlist of waypoint ids (see _compute_round_trip_reachable).
+    the result can be found inside redis
+    """
+    _compute_round_trip_reachable(
+        job_id,
+        request,
+        'waypoint',
+        "Couldn't proceed with computation : Too much waypoints found.",
+    )
+
+
 def validate_isochrone_reachable_params(request, **kwargs):
     """Validates the required parameters
     for the isochrone reachable doc route"""
@@ -543,6 +779,288 @@ class NavitiaIsochronesReachableWaypointsRest:
             return json.dumps(str(e))
 
 
+# --- Transport accessibility filter -------------------------------------
+#
+# The topoguide can be filtered on the documents reachable by public
+# transport from a starting point, with `transport_*` query parameters (see
+# parse_transport_params). The expensive parts, the 2 Navitia isochrones and
+# the PostGIS query, are cached in redis, so that the same search (by the same
+# user changing other filters, or by anybody else) is computed once.
+
+# The starting point is rounded to this number of decimals (about 110 m):
+# Navitia snaps it to the closest street/stop anyway, and a coarser point
+# lets the searches starting from the same area share their cache.
+TRANSPORT_COORDINATE_DECIMALS = 3
+
+# Public transport timetables change rarely: keep the isochrones one day
+TRANSPORT_ISOCHRONES_CACHE_TTL = 24 * 3600
+# The matching documents change when a document is created or modified
+TRANSPORT_DOCUMENT_IDS_CACHE_TTL = 3600
+
+_TIME_PATTERN = re.compile(r'^([01]\d|2[0-3]):[0-5]\d$')
+
+
+def normalize_transport_from(from_coords):
+    """
+    Returns the 'lon;lat' starting point rounded to
+    TRANSPORT_COORDINATE_DECIMALS, or raises a ValueError if it is invalid.
+    """
+    try:
+        lon_str, lat_str = from_coords.split(';')
+        lon, lat = float(lon_str), float(lat_str)
+    except AttributeError, ValueError:
+        raise ValueError("'from' must be formatted as 'longitude;latitude'")
+
+    if not (-180 <= lon <= 180 and -90 <= lat <= 90):
+        raise ValueError("'from' is not a valid coordinate")
+
+    return '%.*f;%.*f' % (
+        TRANSPORT_COORDINATE_DECIMALS,
+        lon,
+        TRANSPORT_COORDINATE_DECIMALS,
+        lat,
+    )
+
+
+def _parse_positive_int(name, value):
+    if value in (None, ''):
+        return None
+    try:
+        number = int(value)
+    except ValueError:
+        raise ValueError("'%s' must be an integer" % name)
+    if number < 0:
+        raise ValueError("'%s' must not be negative" % name)
+    return number
+
+
+def parse_transport_params(params, prefix=''):
+    """
+    Validate and normalize the transport search parameters found in `params`
+    (the query string), where each name is preceded by `prefix`:
+    from ('lon;lat'), date ('YYYY-MM-DD'), min_departure and max_return
+    ('HH:MM'), and the optional max_duration and hiking_duration (minutes).
+
+    Returns a dict with those keys (the optional ones being None when not
+    given), or raises a ValueError describing the problem.
+    """
+    missing = [
+        prefix + name
+        for name in ('from', 'date', 'min_departure', 'max_return')
+        if not params.get(prefix + name)
+    ]
+    if missing:
+        raise ValueError('Parameter %s required' % ', '.join(missing))
+
+    date = params.get(prefix + 'date')
+    try:
+        datetime.strptime(date, '%Y-%m-%d')
+    except ValueError:
+        raise ValueError("'date' must be formatted as 'YYYY-MM-DD'")
+
+    times = {}
+    for name in ('min_departure', 'max_return'):
+        value = params.get(prefix + name)
+        if not _TIME_PATTERN.match(value):
+            raise ValueError("'%s' must be formatted as 'HH:MM'" % name)
+        times[name] = value
+
+    if _minutes_between(times['min_departure'], times['max_return']) <= 0:
+        raise ValueError("'max_return' must be after 'min_departure'")
+
+    return {
+        'from': normalize_transport_from(params.get(prefix + 'from')),
+        'date': date,
+        'min_departure': times['min_departure'],
+        'max_return': times['max_return'],
+        'max_duration': _parse_positive_int(
+            'max_duration', params.get(prefix + 'max_duration')
+        ),
+        'hiking_duration': _parse_positive_int(
+            'hiking_duration', params.get(prefix + 'hiking_duration')
+        ),
+    }
+
+
+def _cache_client():
+    """redis client for the cache: a missing redis must not slow requests"""
+    return redis.Redis(
+        host=REDIS_HOST,
+        port=REDIS_PORT,
+        db=REDIS_DB,
+        socket_connect_timeout=1,
+        socket_timeout=2,
+    )
+
+
+def _cache_key(kind, **parts):
+    digest = hashlib.sha256(json.dumps(parts, sort_keys=True).encode('utf-8'))
+    return 'transport:%s:%s' % (kind, digest.hexdigest())
+
+
+def _cache_get(key):
+    """returns the cached value, or None if missing or if redis fails"""
+    try:
+        cached = _cache_client().get(key)
+        return json.loads(cached) if cached else None
+    except redis.RedisError, ValueError:
+        log.warning('Could not read %s from the cache', key, exc_info=True)
+        return None
+
+
+def _cache_set(key, value, ttl):
+    try:
+        _cache_client().set(key, json.dumps(value), ex=ttl)
+    except redis.RedisError:
+        log.warning('Could not write %s to the cache', key, exc_info=True)
+
+
+def get_cached_isochrone_pair(transport):
+    """
+    The aller/retour/intersection isochrones of a transport search (see
+    get_navitia_isochrone_pair), computed once per search.
+    """
+    boundary_duration = _resolve_boundary_duration_seconds(
+        transport['min_departure'], transport['max_return'], transport['max_duration']
+    )
+    key = _cache_key(
+        'isochrones',
+        origin=transport['from'],
+        date=transport['date'],
+        min_departure=transport['min_departure'],
+        max_return=transport['max_return'],
+        boundary_duration=boundary_duration,
+    )
+
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
+
+    isochrones = get_navitia_isochrone_pair(
+        transport['from'],
+        transport['date'],
+        transport['min_departure'],
+        transport['max_return'],
+        override_duration_minutes=transport['max_duration'],
+    )
+
+    # an incomplete result can be a temporary failure: do not keep it
+    if isochrones['aller_geom'] and isochrones['retour_geom']:
+        _cache_set(key, isochrones, TRANSPORT_ISOCHRONES_CACHE_TTL)
+
+    return isochrones
+
+
+def get_cached_transport_document_ids(transport, document_type):
+    """
+    The ids of the routes or waypoints (depending on `document_type`) having
+    an access waypoint within the intersection of the aller and retour
+    isochrones of a transport search.
+    """
+    max_duration_seconds = None
+    if document_type == 'route' and transport['hiking_duration']:
+        # A precise budget would be
+        # (max_return - min_departure) - transit_time_estimate,
+        # but transit time is only known per-candidate (it would
+        # require a Navitia journey call per route). As a first
+        # cut / acceptable approximation, use the full transport
+        # window as the max allowed Route.calculated_duration.
+        max_duration_seconds = (
+            _minutes_between(transport['min_departure'], transport['max_return']) * 60
+        )
+
+    key = _cache_key(
+        'document_ids',
+        origin=transport['from'],
+        date=transport['date'],
+        min_departure=transport['min_departure'],
+        max_return=transport['max_return'],
+        max_duration=transport['max_duration'],
+        document_type=document_type,
+        max_duration_seconds=max_duration_seconds,
+    )
+
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
+
+    isochrones = get_cached_isochrone_pair(transport)
+    intersection_geom = isochrones['intersection_geom']
+    intersection_geom_wkt = (
+        _reproject_geojson_to_3857(intersection_geom) if intersection_geom else None
+    )
+
+    if document_type == 'route':
+        document_ids = get_route_ids_within_geometry(
+            intersection_geom_wkt, max_duration_seconds
+        )
+    else:
+        document_ids = get_waypoint_ids_within_geometry(intersection_geom_wkt)
+    document_ids = sorted(document_ids)
+
+    if isochrones['aller_geom'] and isochrones['retour_geom']:
+        _cache_set(key, document_ids, TRANSPORT_DOCUMENT_IDS_CACHE_TTL)
+
+    return document_ids
+
+
+def validate_transport_isochrones_params(request, **kwargs):
+    """Validates the parameters of the transport isochrones route"""
+    try:
+        request.validated['transport'] = parse_transport_params(request.params)
+    except ValueError as exc:
+        request.errors.add('querystring', 'transport', str(exc))
+
+
+@resource(path='/navitia/transportisochrones', cors_policy=cors_policy)
+class NavitiaTransportIsochronesRest:
+    def __init__(self, request, context=None):
+        self.request = request
+
+    @view(validators=[validate_transport_isochrones_params])
+    def get(self):
+        """
+        Returns the aller (departure-anchored) and retour (arrival-anchored)
+        isochrones of a transport search, and their intersection, as
+        GeoJSON geometries (empty if they could not be computed).
+
+        The documents are filtered with the same parameters, prefixed with
+        `transport_`, on the routes and waypoints listings (see
+        DocumentRest._collection_get): this route is used to show the
+        isochrones, and to check a search before using it as a filter. Both
+        share the same cache, so that the isochrones are computed once.
+        """
+        isochrones = get_cached_isochrone_pair(self.request.validated['transport'])
+
+        return {
+            'aller_geom': isochrones['aller_geom'] or '',
+            'retour_geom': isochrones['retour_geom'] or '',
+            'intersection_geom': isochrones['intersection_geom'] or '',
+        }
+
+
+def _resolve_waypoint_journey_target(waypoint_json):
+    """
+    Resolve a waypoint's journey target from its JSON geometry: its
+    (lon, lat) in EPSG:4326 (the waypoint's geometry is stored in
+    EPSG:3857) and the Navitia coverage that contains it.
+
+    Shared by is_wp_journey_reachable (aller-only check) and
+    is_wp_round_trip_reachable (aller + retour check).
+    """
+    geom = shape(json.loads(waypoint_json.get('geometry').get('geom')))
+
+    src_epsg = 3857
+    transformer = Transformer.from_crs(
+        'EPSG:%d' % src_epsg, 'EPSG:4326', always_xy=True
+    )
+    lon, lat = transformer.transform(geom.x, geom.y)
+
+    destination_coverage = get_coverage(lon, lat)
+
+    return lon, lat, destination_coverage
+
+
 def is_wp_journey_reachable(waypoint, journey_params):
     """
     Query the navitia Journey api and returns true
@@ -552,17 +1070,9 @@ def is_wp_journey_reachable(waypoint, journey_params):
     """
     # enhance journey params with the 'to' parameter,
     # from the waypoint geometry.
-    geom = shape(json.loads(waypoint.get('geometry').get('geom')))
-
-    src_epsg = 3857
-    transformer = Transformer.from_crs(
-        'EPSG:%d' % src_epsg, 'EPSG:4326', always_xy=True
-    )
-    lon, lat = transformer.transform(geom.x, geom.y)
+    lon, lat, destination_coverage = _resolve_waypoint_journey_target(waypoint)
 
     journey_params['to'] = '%s;%s' % (lon, lat)
-
-    destination_coverage = get_coverage(lon, lat)
 
     api_key = os.getenv('NAVITIA_API_KEY')
     if not api_key:
@@ -598,12 +1108,313 @@ def is_wp_journey_reachable(waypoint, journey_params):
             raise HTTPInternalServerError(e)
 
 
+def _query_navitia_journeys(params, coverage):
+    """
+    Query the Navitia journeys API, scoped to `coverage` when given
+    (falls back to the generic /journeys endpoint otherwise).
+    Returns the parsed JSON response, or None if no journey was found
+    ("no_solution").
+    """
+    api_key = os.getenv('NAVITIA_API_KEY')
+    if not api_key:
+        raise HTTPInternalServerError('Navitia API config is missing')
+
+    if coverage:
+        url = BASE_URL + '/coverage/%s/journeys' % coverage
+    else:
+        url = BASE_URL + '/journeys'
+
+    try:
+        return navitia_get(
+            url,
+            params=params,
+            headers={'Authorization': api_key},
+        )
+    except Exception as e:
+        if str(e) == 'no_solution':
+            return None
+        raise HTTPInternalServerError(e)
+
+
+def _parse_navitia_datetime(value):
+    """Parse a Navitia 'YYYYMMDDTHHMMSS' datetime string."""
+    return datetime.strptime(value, '%Y%m%dT%H%M%S')
+
+
+def is_wp_round_trip_reachable(
+    waypoint_json, from_coords, date, min_departure, max_return, hiking_duration_seconds
+):
+    """
+    Check both directions of a round trip, using real Navitia timetables
+    (unlike is_wp_journey_reachable, which only checks the aller leg):
+
+    - aller: the EARLIEST journey from `from_coords` to the waypoint,
+      departing at/after `date`+`min_departure`.
+    - retour: the LATEST journey from the waypoint back to `from_coords`,
+      that still arrives at/before `date`+`max_return`.
+
+    `compatible` is True only if both legs were found AND there is
+    enough time between the aller arrival and the retour departure to
+    fit `hiking_duration_seconds`.
+
+    Returns a structured dict (never a plain boolean):
+        {"aller": {"found", "departure", "arrival"},
+         "retour": {"found", "departure", "arrival"},
+         "compatible": bool}
+    """
+    lon, lat, destination_coverage = _resolve_waypoint_journey_target(waypoint_json)
+    wp_coords = '%s;%s' % (lon, lat)
+
+    compact_date = date.replace('-', '')
+    param_day = compact_date[6:8]
+
+    # --- ALLER: earliest arrival, departing at/after min_departure ---
+    aller_params = {
+        'from': from_coords,
+        'to': wp_coords,
+        'datetime': _combine_date_and_time(date, min_departure),
+        'datetime_represents': 'departure',
+    }
+    aller_response = _query_navitia_journeys(aller_params, destination_coverage)
+
+    aller_journey = None
+    if aller_response is not None:
+        same_day_journeys = [
+            journey
+            for journey in aller_response.get('journeys', [])
+            if journey['departure_date_time'][6:8] == param_day
+        ]
+        if same_day_journeys:
+            aller_journey = min(same_day_journeys, key=lambda j: j['arrival_date_time'])
+
+    aller = {
+        'found': aller_journey is not None,
+        'departure': aller_journey['departure_date_time'] if aller_journey else None,
+        'arrival': aller_journey['arrival_date_time'] if aller_journey else None,
+    }
+
+    # --- RETOUR: latest departure, arriving at/before max_return ---
+    retour_params = {
+        'from': wp_coords,
+        'to': from_coords,
+        'datetime': _combine_date_and_time(date, max_return),
+        'datetime_represents': 'arrival',
+    }
+    # the waypoint is now the departure point of the journey, so its
+    # coverage (already resolved above) is reused as the source coverage
+    retour_response = _query_navitia_journeys(retour_params, destination_coverage)
+
+    retour_journey = None
+    if retour_response is not None:
+        same_day_journeys = [
+            journey
+            for journey in retour_response.get('journeys', [])
+            if journey['arrival_date_time'][6:8] == param_day
+        ]
+        if same_day_journeys:
+            retour_journey = max(
+                same_day_journeys, key=lambda j: j['departure_date_time']
+            )
+
+    retour = {
+        'found': retour_journey is not None,
+        'departure': retour_journey['departure_date_time'] if retour_journey else None,
+        'arrival': retour_journey['arrival_date_time'] if retour_journey else None,
+    }
+
+    compatible = False
+    if aller['found'] and retour['found']:
+        aller_arrival_dt = _parse_navitia_datetime(aller['arrival'])
+        retour_departure_dt = _parse_navitia_datetime(retour['departure'])
+        available_seconds = (retour_departure_dt - aller_arrival_dt).total_seconds()
+        compatible = available_seconds >= hiking_duration_seconds
+
+    return {'aller': aller, 'retour': retour, 'compatible': compatible}
+
+
+def _get_access_waypoints_for_document(document_id, document_type):
+    """
+    Resolve the access waypoint(s) of a document:
+    - for a waypoint document, itself, if its waypoint_type is 'access'
+      (otherwise none)
+    - for a route document, its associated waypoints of type 'access'
+    """
+    if document_type == 'waypoint':
+        wp = (
+            DBSession.query(Waypoint)
+            .filter(
+                Waypoint.document_id == document_id, Waypoint.waypoint_type == 'access'
+            )
+            .first()
+        )
+        return [wp] if wp else []
+
+    return (
+        DBSession.query(Waypoint)
+        .join(
+            Association,
+            or_(
+                Waypoint.document_id == Association.child_document_id,
+                Waypoint.document_id == Association.parent_document_id,
+            ),
+        )
+        .filter(
+            Waypoint.waypoint_type == 'access',
+            or_(
+                Association.parent_document_id == document_id,
+                Association.child_document_id == document_id,
+            ),
+        )
+        .distinct()
+        .all()
+    )
+
+
+def _resolve_hiking_duration_seconds(hiking_duration_param, document_id, document_type):
+    """
+    Resolve the hiking duration (in seconds) to use as the round-trip
+    time budget:
+    - the explicit `hiking_duration` param (minutes) if given
+    - otherwise, for a route, its own calculated_duration (stored in
+      DAYS, see Route.calculated_duration), converted to seconds
+    - otherwise (waypoint, or route without a calculated_duration), 0
+    """
+    if hiking_duration_param:
+        return int(hiking_duration_param) * 60
+
+    if document_type == 'route':
+        route = DBSession.query(Route).filter(Route.document_id == document_id).first()
+        if route is not None and route.calculated_duration is not None:
+            # calculated_duration is stored in DAYS: convert to SECONDS
+            return route.calculated_duration * 86400
+
+    return 0
+
+
+def _best_round_trip_result(
+    access_waypoints,
+    from_coords,
+    date,
+    min_departure,
+    max_return,
+    hiking_duration_seconds,
+):
+    """
+    Compute is_wp_round_trip_reachable for each of a document's access
+    waypoints, and return the best result: any compatible=True wins,
+    otherwise the one with the most legs (aller/retour) found.
+    """
+    if not access_waypoints:
+        return {
+            'aller': {'found': False, 'departure': None, 'arrival': None},
+            'retour': {'found': False, 'departure': None, 'arrival': None},
+            'compatible': False,
+        }
+
+    def legs_found(result):
+        return int(result['aller']['found']) + int(result['retour']['found'])
+
+    best = None
+    for wp in access_waypoints:
+        wp_json = to_json_dict(wp, schema_waypoint)
+        result = is_wp_round_trip_reachable(
+            wp_json,
+            from_coords,
+            date,
+            min_departure,
+            max_return,
+            hiking_duration_seconds,
+        )
+
+        if best is None:
+            best = result
+        elif result['compatible'] and not best['compatible']:
+            best = result
+        elif not best['compatible'] and legs_found(result) > legs_found(best):
+            best = result
+
+    return best
+
+
+def validate_round_trip_reachable_params(request, **kwargs):
+    """Validates the required parameters for the single-item round trip
+    reachable verification route"""
+    required_params = [
+        'document_id',
+        'document_type',
+        'from',
+        'date',
+        'min_departure',
+        'max_return',
+    ]
+
+    for param in required_params:
+        if param not in request.params:
+            request.errors.add('querystring', param, 'Parameter %s required' % param)
+
+    document_type = request.params.get('document_type')
+    if document_type is not None and document_type not in ('route', 'waypoint'):
+        request.errors.add(
+            'querystring',
+            'document_type',
+            "document_type must be 'route' or 'waypoint'",
+        )
+
+
+@resource(path='/navitia/roundtripreachable', cors_policy=cors_policy)
+class NavitiaRoundTripReachableRest:
+    def __init__(self, request, context=None):
+        self.request = request
+
+    @view(validators=[validate_round_trip_reachable_params])
+    def get(self):
+        """
+        Synchronous, single-item round-trip (aller + retour) reachability
+        check for one route or waypoint, using real Navitia timetables.
+        Resolves the document's access waypoint(s) and returns the best
+        result across them (see _best_round_trip_result) : at most a
+        handful of Navitia calls, so no job/redis machinery is needed.
+        """
+        params = self.request.params
+        document_id = int(params.get('document_id'))
+        document_type = params.get('document_type')
+        from_coords = params.get('from')
+        date = params.get('date')
+        min_departure = params.get('min_departure')
+        max_return = params.get('max_return')
+        hiking_duration_param = params.get('hiking_duration')
+
+        access_waypoints = _get_access_waypoints_for_document(
+            document_id, document_type
+        )
+
+        hiking_duration_seconds = _resolve_hiking_duration_seconds(
+            hiking_duration_param, document_id, document_type
+        )
+
+        return _best_round_trip_result(
+            access_waypoints,
+            from_coords,
+            date,
+            min_departure,
+            max_return,
+            hiking_duration_seconds,
+        )
+
+
 def get_navitia_isochrone(isochrone_params):
     """
-    Query the navitia Isochrones api, and returns the isochrone object
+    Query the navitia Isochrones api, and returns the isochrone object.
+
+    When 'from' is provided, this computes a departure-anchored
+    "reachable from" isochrone (Navitia ignores 'to' in that case).
+    When 'from' is absent and 'to' is provided instead, this computes an
+    arrival-anchored "reachable to" isochrone. The source coverage is
+    resolved from whichever of 'from'/'to' is present.
     """
-    lon = isochrone_params.get('from').split(';')[0]
-    lat = isochrone_params.get('from').split(';')[1]
+    coord_param = isochrone_params.get('from') or isochrone_params.get('to')
+    lon = coord_param.split(';')[0]
+    lat = coord_param.split(';')[1]
     source_coverage = get_coverage(lon, lat)
 
     # Retrieve navitia API Key from env var
@@ -664,6 +1475,14 @@ def extract_journey_params(request):
     }
 
 
+def _clamp_boundary_duration_seconds(duration_seconds):
+    """
+    Clamp a boundary duration (in seconds) between MIN_TRIP_DURATION and
+    MAX_TRIP_DURATION (both expressed in minutes).
+    """
+    return max(min(duration_seconds, MAX_TRIP_DURATION * 60), MIN_TRIP_DURATION * 60)
+
+
 def extract_isochrone_params(request):
     """
     Extract parameters for isochrone query
@@ -682,14 +1501,127 @@ def extract_isochrone_params(request):
     # normalize boundary
     bd = params['boundary_duration[]']
     if len(bd.split(',')) == 1:
-        duration = int(bd)
-        params['boundary_duration[]'] = max(
-            min(duration, MAX_TRIP_DURATION * 60), MIN_TRIP_DURATION * 60
-        )
+        params['boundary_duration[]'] = _clamp_boundary_duration_seconds(int(bd))
     else:
         # default is max trip duration
         params['boundary_duration[]'] = MAX_TRIP_DURATION * 60
     return params
+
+
+def _combine_date_and_time(date_str, time_str):
+    """
+    Combine a 'YYYY-MM-DD' date and a 'HH:MM' time into the compact
+    'YYYYMMDDTHHMMSS' datetime format expected by the Navitia API.
+    """
+    compact_date = date_str.replace('-', '')
+    compact_time = time_str.replace(':', '')
+    return '%sT%s00' % (compact_date, compact_time)
+
+
+def _minutes_between(start_hhmm, end_hhmm):
+    """
+    Return the number of minutes between two 'HH:MM' times.
+    NOTE: this does not handle a window crossing midnight
+    (end_hhmm < start_hhmm); such a case would yield a negative value.
+    """
+    start_h, start_m = (int(part) for part in start_hhmm.split(':'))
+    end_h, end_m = (int(part) for part in end_hhmm.split(':'))
+    return (end_h * 60 + end_m) - (start_h * 60 + start_m)
+
+
+def _extract_isochrone_shape(isochrone_response):
+    """
+    Return the shapely geometry of the first isochrone found in a Navitia
+    isochrones response, or None if the response has no isochrone.
+    """
+    if not isochrone_response:
+        return None
+    isochrones = isochrone_response.get('isochrones', [])
+    if not isochrones:
+        return None
+    return shape(isochrones[0]['geojson'])
+
+
+def _reproject_geojson_to_3857(geojson):
+    """
+    Reproject a GeoJSON geometry (as returned by the Navitia isochrones
+    API, in EPSG:4326) to EPSG:3857 (the SRID used by
+    DocumentGeometry.geom), and return it as a WKT string.
+    """
+    geom_4326 = shape(geojson)
+    transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3857', always_xy=True)
+    geom_3857 = shapely_transform(transformer.transform, geom_4326)
+    return geom_3857.wkt
+
+
+def _resolve_boundary_duration_seconds(
+    min_departure, max_return, override_duration_minutes=None
+):
+    """
+    The boundary duration of the isochrones of a transport window: the
+    override if given, otherwise derived from the (min_departure, max_return)
+    window; in both cases clamped between MIN_TRIP_DURATION and
+    MAX_TRIP_DURATION.
+    """
+    if override_duration_minutes is not None:
+        return _clamp_boundary_duration_seconds(override_duration_minutes * 60)
+
+    window_minutes = _minutes_between(min_departure, max_return)
+    return _clamp_boundary_duration_seconds(window_minutes * 60)
+
+
+def get_navitia_isochrone_pair(
+    from_coords, date, min_departure, max_return, override_duration_minutes=None
+):
+    """
+    Compute the pair of isochrones needed to check round-trip
+    transport-accessibility from/to `from_coords` within the
+    [min_departure, max_return] window on `date`:
+    - aller_geom: reachable FROM from_coords, anchored at departure
+      (date + min_departure)
+    - retour_geom: reachable TO from_coords, anchored at arrival
+      (date + max_return)
+    - intersection_geom: their intersection (only the area reachable
+      both ways within the window is relevant)
+
+    The boundary duration used for both isochrones is
+    override_duration_minutes if given, otherwise derived from the
+    (min_departure, max_return) window; in both cases it is clamped
+    between MIN_TRIP_DURATION and MAX_TRIP_DURATION.
+
+    Returns a dict {aller_geom, retour_geom, intersection_geom}, each a
+    GeoJSON-like dict (from shapely.geometry.mapping), or None when the
+    corresponding isochrone (or the intersection) could not be computed.
+    """
+    boundary_duration_seconds = _resolve_boundary_duration_seconds(
+        min_departure, max_return, override_duration_minutes
+    )
+
+    aller_params = {
+        'from': from_coords,
+        'datetime': _combine_date_and_time(date, min_departure),
+        'datetime_represents': 'departure',
+        'boundary_duration[]': boundary_duration_seconds,
+    }
+    retour_params = {
+        'to': from_coords,
+        'datetime': _combine_date_and_time(date, max_return),
+        'datetime_represents': 'arrival',
+        'boundary_duration[]': boundary_duration_seconds,
+    }
+
+    aller_shape = _extract_isochrone_shape(get_navitia_isochrone(aller_params))
+    retour_shape = _extract_isochrone_shape(get_navitia_isochrone(retour_params))
+
+    intersection_geom = None
+    if aller_shape is not None and retour_shape is not None:
+        intersection_geom = mapping(aller_shape.intersection(retour_shape))
+
+    return {
+        'aller_geom': mapping(aller_shape) if aller_shape is not None else None,
+        'retour_geom': mapping(retour_shape) if retour_shape is not None else None,
+        'intersection_geom': intersection_geom,
+    }
 
 
 def collect_areas_from_results(results, area_index):
