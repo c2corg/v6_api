@@ -35,19 +35,19 @@ SEARCH_LIMIT_MAX = 50
 # document type in a search request)
 SEARCH_LIMIT_DEFAULT = 10
 
-elasticsearch_config = {
-    'client': None,
-    'index': None,
-    'host': None,
-    'port': None
-}
+elasticsearch_config = {'client': None, 'index': None, 'host': None, 'port': None}
 
 
 def client_from_config(settings):
-    return Elasticsearch([{
-        'host': settings['elasticsearch.host'],
-        'port': int(settings['elasticsearch.port'])
-    }], maxsize=int(settings['elasticsearch.pool']))
+    return Elasticsearch(
+        [
+            {
+                'host': settings['elasticsearch.host'],
+                'port': int(settings['elasticsearch.port']),
+            }
+        ],
+        maxsize=int(settings['elasticsearch.pool']),
+    )
 
 
 def configure_es_from_config(settings):
@@ -66,8 +66,7 @@ def get_queue_config(settings):
     class QueueConfiguration:
         def __init__(self, settings):
             self.connection = Connection(
-                settings['redis.url'],
-                virtual_host=settings['redis.db_queue']
+                settings['redis.url'], virtual_host=settings['redis.db_queue']
             )
             self.exchange = Exchange(settings['redis.exchange'], type='direct')
             self.queue = Queue(settings['redis.queue_es_sync'], self.exchange)
@@ -79,7 +78,8 @@ def create_search(document_type):
     return Search(
         using=elasticsearch_config['client'],
         index=elasticsearch_config['index'],
-        doc_type=search_documents[document_type])
+        doc_type=search_documents[document_type],
+    )
 
 
 # any run of non-word characters (space, hyphen, colon, apostrophe, slash,
@@ -125,7 +125,7 @@ def get_text_query_on_title(search_term, search_lang=None):
             # documents that obviously match. 50 is elasticsearch's own
             # default for fuzzy queries.
             max_expansions=50,
-            zero_terms_query="none",
+            zero_terms_query='none',
             slop=4,
         )
     else:
@@ -153,15 +153,15 @@ def get_text_query_on_title(search_term, search_lang=None):
                 operator='and',
                 # see the comment on max_expansions above
                 max_expansions=50,
-                zero_terms_query="none",
+                zero_terms_query='none',
             ),
             should=MultiMatch(
                 query=search_term,
                 fields=fields,
                 type='phrase',
                 slop=4,
-                zero_terms_query="none",
-            )
+                zero_terms_query='none',
+            ),
         )
 
 
@@ -175,5 +175,5 @@ search_documents = {
     ROUTE_TYPE: SearchRoute,
     MAP_TYPE: SearchTopoMap,
     USERPROFILE_TYPE: SearchUser,
-    WAYPOINT_TYPE: SearchWaypoint
+    WAYPOINT_TYPE: SearchWaypoint,
 }

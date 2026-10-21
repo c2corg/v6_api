@@ -1,14 +1,9 @@
-from c2corg_api.models.schema_utils import restrict_schema, \
-    get_update_schema, get_create_schema
-from sqlalchemy import (
-    Column,
-    Integer,
-    Float,
-    Boolean,
-    SmallInteger,
-    String,
-    ForeignKey
+from c2corg_api.models.schema_utils import (
+    restrict_schema,
+    get_update_schema,
+    get_create_schema,
 )
+from sqlalchemy import Column, Integer, Float, Boolean, SmallInteger, String, ForeignKey
 
 from colanderalchemy import SQLAlchemySchemaNode
 import colander
@@ -17,8 +12,14 @@ from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
-    get_geometry_schema_overrides, schema_locale_attributes, schema_attributes)
+    ArchiveDocument,
+    Document,
+    DocumentLocale,
+    ArchiveDocumentLocale,
+    get_geometry_schema_overrides,
+    schema_locale_attributes,
+    schema_attributes,
+)
 from c2corg_api.models import enums
 from sqlalchemy.orm import relationship
 from c2corg_api.models.common import document_types
@@ -27,7 +28,6 @@ ROUTE_TYPE = document_types.ROUTE_TYPE
 
 
 class _RouteMixin:
-
     # activite
     activities = Column(ArrayOfEnum(enums.activity_type), nullable=False)
 
@@ -69,8 +69,8 @@ class _RouteMixin:
 
     # crampons et materiel de securite sur glacier
     glacier_gear = Column(
-        enums.glacier_gear_type, default='no', server_default='no',
-        nullable=False)
+        enums.glacier_gear_type, default='no', server_default='no', nullable=False
+    )
 
     # configuration
     configuration = Column(ArrayOfEnum(enums.route_configuration_type))
@@ -205,27 +205,32 @@ attributes = [
     'climbing_outdoor_type',
     'slackline_type',
     'slackline_height',
-    'public_transportation_rating']
+    'public_transportation_rating',
+]
 
 
 class Route(_RouteMixin, Document):
-    """
-    """
+    """ """
+
     __tablename__ = 'routes'
 
     document_id = Column(
-        Integer,
-        ForeignKey(schema + '.documents.document_id'), primary_key=True)
+        Integer, ForeignKey(schema + '.documents.document_id'), primary_key=True
+    )
 
     main_waypoint_id = Column(
-        Integer, ForeignKey(schema + '.documents.document_id'), nullable=True,
-        index=True)
+        Integer,
+        ForeignKey(schema + '.documents.document_id'),
+        nullable=True,
+        index=True,
+    )
     main_waypoint = relationship(
-        Document, primaryjoin=main_waypoint_id == Document.document_id)
+        Document, primaryjoin=main_waypoint_id == Document.document_id
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': ROUTE_TYPE,
-        'inherit_condition': Document.document_id == document_id
+        'inherit_condition': Document.document_id == document_id,
     }
 
     def to_archive(self):
@@ -241,29 +246,30 @@ class Route(_RouteMixin, Document):
 
 
 class ArchiveRoute(_RouteMixin, ArchiveDocument):
-    """
-    """
+    """ """
+
     __tablename__ = 'routes_archives'
 
     id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_archives.id'), primary_key=True)
+        Integer, ForeignKey(schema + '.documents_archives.id'), primary_key=True
+    )
 
     main_waypoint_id = Column(
-        Integer, ForeignKey(schema + '.documents.document_id'), nullable=True)
+        Integer, ForeignKey(schema + '.documents.document_id'), nullable=True
+    )
     main_waypoint = relationship(
-        Document, primaryjoin=main_waypoint_id == Document.document_id)
+        Document, primaryjoin=main_waypoint_id == Document.document_id
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': ROUTE_TYPE,
-        'inherit_condition': ArchiveDocument.id == id
+        'inherit_condition': ArchiveDocument.id == id,
     }
 
     __table_args__ = Base.__table_args__
 
 
 class _RouteLocaleMixin:
-
     # pente
     slope = Column(String)
 
@@ -285,23 +291,26 @@ class _RouteLocaleMixin:
 
 
 attributes_locales = [
-    'slope', 'remarks', 'gear', 'external_resources', 'route_history',
-    'slackline_anchor1', 'slackline_anchor2'
+    'slope',
+    'remarks',
+    'gear',
+    'external_resources',
+    'route_history',
+    'slackline_anchor1',
+    'slackline_anchor2',
 ]
 
 
 class RouteLocale(_RouteLocaleMixin, DocumentLocale):
-    """
-    """
+    """ """
+
     __tablename__ = 'routes_locales'
 
-    id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_locales.id'), primary_key=True)
+    id = Column(Integer, ForeignKey(schema + '.documents_locales.id'), primary_key=True)
 
     __mapper_args__ = {
         'polymorphic_identity': ROUTE_TYPE,
-        'inherit_condition': DocumentLocale.id == id
+        'inherit_condition': DocumentLocale.id == id,
     }
 
     # the cached title of the main waypoint
@@ -320,18 +329,17 @@ class RouteLocale(_RouteLocaleMixin, DocumentLocale):
 
 
 class ArchiveRouteLocale(_RouteLocaleMixin, ArchiveDocumentLocale):
-    """
-    """
+    """ """
+
     __tablename__ = 'routes_locales_archives'
 
     id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_locales_archives.id'),
-        primary_key=True)
+        Integer, ForeignKey(schema + '.documents_locales_archives.id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': ROUTE_TYPE,
-        'inherit_condition': ArchiveDocumentLocale.id == id
+        'inherit_condition': ArchiveDocumentLocale.id == id,
     }
 
     __table_args__ = Base.__table_args__
@@ -341,40 +349,42 @@ schema_route_locale = SQLAlchemySchemaNode(
     RouteLocale,
     # whitelisted attributes
     includes=schema_locale_attributes + attributes_locales + ['title_prefix'],
-    overrides={
-        'version': {
-            'missing': None
-        }
-    })
+    overrides={'version': {'missing': None}},
+)
 
 schema_route = SQLAlchemySchemaNode(
     Route,
     # whitelisted attributes
     includes=schema_attributes + attributes,
     overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_route_locale]
-        },
-        'activities': {
-            'validator': colander.Length(min=1)
-        },
-        'geometry': get_geometry_schema_overrides(
-            ['LINESTRING', 'MULTILINESTRING'])
-    })
+        'document_id': {'missing': None},
+        'version': {'missing': None},
+        'locales': {'children': [schema_route_locale]},
+        'activities': {'validator': colander.Length(min=1)},
+        'geometry': get_geometry_schema_overrides(['LINESTRING', 'MULTILINESTRING']),
+    },
+)
 
 schema_create_route = get_create_schema(schema_route)
 schema_update_route = get_update_schema(schema_route)
-schema_association_route = restrict_schema(schema_route, [
-    'locales.title', 'locales.title_prefix', 'elevation_min', 'elevation_max',
-    'activities'
-])
-schema_association_waypoint_route = restrict_schema(schema_route, [
-    'locales.title', 'locales.title_prefix', 'elevation_min', 'elevation_max',
-    'activities', 'geometry.geom_detail'
-])
+schema_association_route = restrict_schema(
+    schema_route,
+    [
+        'locales.title',
+        'locales.title_prefix',
+        'elevation_min',
+        'elevation_max',
+        'activities',
+    ],
+)
+schema_association_waypoint_route = restrict_schema(
+    schema_route,
+    [
+        'locales.title',
+        'locales.title_prefix',
+        'elevation_min',
+        'elevation_max',
+        'activities',
+        'geometry.geom_detail',
+    ],
+)

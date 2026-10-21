@@ -5,7 +5,6 @@ from c2corg_api.tests import BaseTestCase
 
 
 class TestBook(BaseTestCase):
-
     def test_to_archive(self):
         book = Book(
             document_id=1,
@@ -13,12 +12,12 @@ class TestBook(BaseTestCase):
             book_types=['biography'],
             locales=[
                 DocumentLocale(
-                    id=2, lang='en', title='A', summary='C',
-                    description='abc'),
+                    id=2, lang='en', title='A', summary='C', description='abc'
+                ),
                 DocumentLocale(
-                    id=3, lang='fr', title='B', summary='C',
-                    description='bcd'),
-            ]
+                    id=3, lang='fr', title='B', summary='C', description='bcd'
+                ),
+            ],
         )
 
         book_archive = book.to_archive()

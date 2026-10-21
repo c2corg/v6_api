@@ -7,10 +7,8 @@ class SearchBook(SearchDocument):
     class Meta(BaseMeta):
         doc_type = BOOK_TYPE
 
-    activities = QEnumArray(
-        'act', model_field=Book.activities)
-    book_types = QEnumArray(
-        'btyp', model_field=Book.book_types)
+    activities = QEnumArray('act', model_field=Book.activities)
+    book_types = QEnumArray('btyp', model_field=Book.book_types)
 
     FIELDS = ['activities', 'book_types']
 
@@ -21,11 +19,9 @@ class SearchBook(SearchDocument):
         if document.redirects_to:
             return search_document
 
-        SearchDocument.copy_fields(
-            search_document, document, SearchBook.FIELDS)
+        SearchDocument.copy_fields(search_document, document, SearchBook.FIELDS)
 
         return search_document
 
 
-SearchBook.queryable_fields = QueryableMixin.get_queryable_fields(
-    SearchBook)
+SearchBook.queryable_fields = QueryableMixin.get_queryable_fields(SearchBook)

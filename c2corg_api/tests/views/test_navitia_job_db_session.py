@@ -10,16 +10,18 @@ from c2corg_api.views.navitia import (
     compute_journey_reachable_waypoints,
 )
 
-NAVITIA = "c2corg_api.views.navitia."
+NAVITIA = 'c2corg_api.views.navitia.'
 
 
 def _query_using_db(fail=False):
     """Return a fake query whose `all()` really uses `DBSession`."""
+
     def all_():
-        DBSession.execute(text("SELECT 1"))
+        DBSession.execute(text('SELECT 1'))
         if fail:
-            raise RuntimeError("query failed")
+            raise RuntimeError('query failed')
         return []
+
     query = mock.Mock()
     query.all.side_effect = all_
     return query, 0
@@ -46,12 +48,14 @@ class TestNavitiaJobDbSession(BaseTestCase):
         state = {}
 
         def target():
-            job("job-123", request)
-            state["session_left"] = DBSession.registry.has()
+            job('job-123', request)
+            state['session_left'] = DBSession.registry.has()
 
-        with mock.patch(NAVITIA + "redis_client") as redis_client, \
-                mock.patch(NAVITIA + "extract_meta_params"), \
-                mock.patch(NAVITIA + "extract_journey_params"):
+        with (
+            mock.patch(NAVITIA + 'redis_client') as redis_client,
+            mock.patch(NAVITIA + 'extract_meta_params'),
+            mock.patch(NAVITIA + 'extract_journey_params'),
+        ):
             thread = threading.Thread(target=target)
             thread.start()
             thread.join(timeout=30)
@@ -64,26 +68,27 @@ class TestNavitiaJobDbSession(BaseTestCase):
         self.assertEqual(pool.checkedin(), 1)
         # ... and gave it back to the pool
         self.assertEqual(pool.checkedout(), 0)
-        self.assertFalse(state["session_left"])
+        self.assertFalse(state['session_left'])
 
     def test_waypoints_job_releases_connection(self):
         request = mock.Mock()
-        request.GET = {"a": "1"}
-        with mock.patch(NAVITIA + "build_reachable_waypoints_query",
-                        return_value=_query_using_db()):
-            state, r = self._run_in_thread(
-                compute_journey_reachable_waypoints, request)
+        request.GET = {'a': '1'}
+        with mock.patch(
+            NAVITIA + 'build_reachable_waypoints_query', return_value=_query_using_db()
+        ):
+            state, r = self._run_in_thread(compute_journey_reachable_waypoints, request)
 
-        r.set.assert_any_call("job:job-123:status", "done")
+        r.set.assert_any_call('job:job-123:status', 'done')
         self._assert_connection_released(state)
 
     def test_routes_job_releases_connection_on_error(self):
         request = mock.Mock()
         request.GET = {}
-        with mock.patch(NAVITIA + "build_reachable_route_query_with_waypoints",
-                        return_value=_query_using_db(fail=True)):
-            state, r = self._run_in_thread(
-                compute_journey_reachable_routes, request)
+        with mock.patch(
+            NAVITIA + 'build_reachable_route_query_with_waypoints',
+            return_value=_query_using_db(fail=True),
+        ):
+            state, r = self._run_in_thread(compute_journey_reachable_routes, request)
 
-        r.set.assert_any_call("job:job-123:status", "error")
+        r.set.assert_any_call('job:job-123:status', 'error')
         self._assert_connection_released(state)

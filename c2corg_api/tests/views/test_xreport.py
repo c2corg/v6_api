@@ -9,8 +9,13 @@ from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.models.xreport import ArchiveXreport, Xreport, XREPORT_TYPE, \
-    ArchiveXreportLocale, XreportLocale
+from c2corg_api.models.xreport import (
+    ArchiveXreport,
+    Xreport,
+    XREPORT_TYPE,
+    ArchiveXreportLocale,
+    XreportLocale,
+)
 from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
@@ -21,11 +26,10 @@ from dogpile.cache.api import NO_VALUE
 
 
 class TestXreportRest(BaseDocumentTestRest):
-
     def setUp(self):  # noqa
         self.set_prefix_and_model(
-            "/xreports", XREPORT_TYPE, Xreport, ArchiveXreport,
-            ArchiveXreportLocale)
+            '/xreports', XREPORT_TYPE, Xreport, ArchiveXreport, ArchiveXreportLocale
+        )
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
@@ -35,20 +39,25 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertIn('geometry', doc)
 
     def test_get_collection_paginated(self):
-        self.app.get("/xreports?offset=invalid", status=400)
+        self.app.get('/xreports?offset=invalid', status=400)
 
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 0}), [], 4)
+        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
 
         self.assertResultsEqual(
             self.get_collection({'offset': 0, 'limit': 1}),
-            [self.xreport4.document_id], 4)
+            [self.xreport4.document_id],
+            4,
+        )
         self.assertResultsEqual(
             self.get_collection({'offset': 0, 'limit': 2}),
-            [self.xreport4.document_id, self.xreport3.document_id], 4)
+            [self.xreport4.document_id, self.xreport3.document_id],
+            4,
+        )
         self.assertResultsEqual(
             self.get_collection({'offset': 1, 'limit': 2}),
-            [self.xreport3.document_id, self.xreport2.document_id], 4)
+            [self.xreport3.document_id, self.xreport2.document_id],
+            4,
+        )
 
     def test_get_collection_lang(self):
         self.get_collection_lang()
@@ -58,12 +67,20 @@ class TestXreportRest(BaseDocumentTestRest):
 
         self.assertResultsEqual(
             self.get_collection_search({'l': 'en'}),
-            [self.xreport4.document_id, self.xreport1.document_id], 2)
+            [self.xreport4.document_id, self.xreport1.document_id],
+            2,
+        )
 
         self.assertResultsEqual(
             self.get_collection_search({'act': 'skitouring'}),
-            [self.xreport4.document_id, self.xreport3.document_id,
-             self.xreport2.document_id, self.xreport1.document_id], 4)
+            [
+                self.xreport4.document_id,
+                self.xreport3.document_id,
+                self.xreport2.document_id,
+                self.xreport1.document_id,
+            ],
+            4,
+        )
 
     def test_get(self):
         body = self.get(self.xreport1, user='moderator')
@@ -73,8 +90,7 @@ class TestXreportRest(BaseDocumentTestRest):
 
         self.assertIn('author', body)
         author = body.get('author')
-        self.assertEqual(
-            self.global_userids['contributor'], author.get('user_id'))
+        self.assertEqual(self.global_userids['contributor'], author.get('user_id'))
 
         associations = body['associations']
         self.assertIn('images', associations)
@@ -91,8 +107,7 @@ class TestXreportRest(BaseDocumentTestRest):
         linked_routes = associations.get('routes')
         self.assertEqual(len(linked_routes), 1)
 
-        self.assertEqual(body.get('event_activity'),
-                         self.xreport1.event_activity)
+        self.assertEqual(body.get('event_activity'), self.xreport1.event_activity)
 
         self.assertIn('nb_participants', body)
         self.assertIn('nb_impacted', body)
@@ -102,11 +117,9 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertEqual(body.get('date'), '2020-01-01')
 
         locale_en = self.get_locale('en', body.get('locales'))
-        self.assertEqual(
-          locale_en.get('place'), 'some place descrip. in english')
+        self.assertEqual(locale_en.get('place'), 'some place descrip. in english')
         locale_fr = self.get_locale('fr', body.get('locales'))
-        self.assertEqual(
-          locale_fr.get('place'), 'some place descrip. in french')
+        self.assertEqual(locale_fr.get('place'), 'some place descrip. in french')
 
     def test_get_as_guest(self):
         body = self.get(self.xreport1, user=None)
@@ -157,9 +170,9 @@ class TestXreportRest(BaseDocumentTestRest):
         self.get_404(user='moderator')
 
     def test_get_cache_headers(self):
-        response = self.app.get(self._prefix + '/' +
-                                str(self.xreport1.document_id),
-                                status=200)
+        response = self.app.get(
+            self._prefix + '/' + str(self.xreport1.document_id), status=200
+        )
         headers = response.headers
         etag = headers.get('ETag')
         self.assertIsNotNone(etag)
@@ -167,14 +180,13 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertEqual(response.headers.get('Cache-Control'), 'private')
 
     def test_get_version(self):
-        self.get_version(
-            self.xreport1, self.xreport1_version, user='contributor')
+        self.get_version(self.xreport1, self.xreport1_version, user='contributor')
 
     def test_get_version_etag(self):
         auth_headers = self.add_authorization_header(username='contributor')
         url = '{0}/{1}/en/{2}'.format(
-                self._prefix, str(self.xreport1.document_id),
-                str(self.xreport1_version.id))
+            self._prefix, str(self.xreport1.document_id), str(self.xreport1_version.id)
+        )
         response = self.app.get(url, headers=auth_headers, status=200)
 
         # check that the ETag header is set
@@ -194,11 +206,12 @@ class TestXreportRest(BaseDocumentTestRest):
     def test_get_version_caching(self):
         headers = self.add_authorization_header(username='contributor')
         url = '{0}/{1}/en/{2}'.format(
-                self._prefix, str(self.xreport1.document_id),
-                str(self.xreport1_version.id))
+            self._prefix, str(self.xreport1.document_id), str(self.xreport1_version.id)
+        )
         cache_key = '{0}-{1}'.format(
             get_cache_key(self.xreport1.document_id, 'en', XREPORT_TYPE),
-            self.xreport1_version.id)
+            self.xreport1_version.id,
+        )
 
         cache_value = cache_document_version.get(cache_key)
         self.assertEqual(cache_value, NO_VALUE)
@@ -242,9 +255,7 @@ class TestXreportRest(BaseDocumentTestRest):
             'event_activity': 'skitouring',
             'event_type': 'stone_ice_fall',
             'nb_participants': 5,
-            'locales': [
-                {'lang': 'en'}
-            ]
+            'locales': [{'lang': 'en'}],
         }
         self.post_missing_title(body_post, user='moderator')
 
@@ -255,9 +266,12 @@ class TestXreportRest(BaseDocumentTestRest):
             'nb_participants': 5,
             'protected': True,
             'locales': [
-                {'lang': 'en', 'place': 'some place description',
-                 'title': 'Lac d\'Annecy'}
-            ]
+                {
+                    'lang': 'en',
+                    'place': 'some place description',
+                    'title': "Lac d'Annecy",
+                }
+            ],
         }
         self.post_non_whitelisted_attribute(body, user='moderator')
 
@@ -272,27 +286,22 @@ class TestXreportRest(BaseDocumentTestRest):
             'event_type': 'stone_ice_fall',
             'nb_participants': 5,
             'associations': {
-                'images': [
-                    {'document_id': self.image2.document_id}
-                ],
-                'articles': [
-                    {'document_id': self.article2.document_id}
-                ]
+                'images': [{'document_id': self.image2.document_id}],
+                'articles': [{'document_id': self.article2.document_id}],
             },
             'geometry': {
-                'id': 5678, 'version': 6789,
-                'geom':
-                    '{"type": "LineString", "coordinates": ' +
-                    '[[635956, 5723604], [635966, 5723644]]}'
+                'id': 5678,
+                'version': 6789,
+                'geom': '{"type": "LineString", "coordinates": '
+                + '[[635956, 5723604], [635966, 5723644]]}',
             },
-            'locales': [
-                {'title': 'Lac d\'Annecy', 'lang': 'en'}
-            ]
+            'locales': [{'title': "Lac d'Annecy", 'lang': 'en'}],
         }
         errors = self.post_wrong_geom_type(body)
         self.assertEqual(
             errors[0]['description'],
-            "Invalid geometry type. Expected: ['POINT']. Got: LINESTRING.")
+            "Invalid geometry type. Expected: ['POINT']. Got: LINESTRING.",
+        )
 
     def test_post_outdated_attributes_error(self):
         outdated_attributes = [
@@ -302,11 +311,14 @@ class TestXreportRest(BaseDocumentTestRest):
             ('autonomy', 'initiator'),
             ('activity_rate', 'activity_rate_10'),
             ('event_type', 'roped_fall'),
-            ('event_activity', 'hiking')
+            ('event_activity', 'hiking'),
         ]
-        for (key, value) in outdated_attributes:
-            body = {'document_id': 123456, 'event_activity': 'skitouring',
-                    'locales': [{'title': 'Lac d\'Annecy', 'lang': 'en'}]}
+        for key, value in outdated_attributes:
+            body = {
+                'document_id': 123456,
+                'event_activity': 'skitouring',
+                'locales': [{'title': "Lac d'Annecy", 'lang': 'en'}],
+            }
             body[key] = value
             body = self.post_error(body, user='moderator')
             errors = body.get('errors')
@@ -326,25 +338,17 @@ class TestXreportRest(BaseDocumentTestRest):
             'supervision': 'professional_supervision',
             'qualification': 'federal_trainer',
             'associations': {
-                'images': [
-                    {'document_id': self.image2.document_id}
-                ],
-                'articles': [
-                    {'document_id': self.article2.document_id}
-                ]
+                'images': [{'document_id': self.image2.document_id}],
+                'articles': [{'document_id': self.article2.document_id}],
             },
             'geometry': {
                 'version': 1,
                 'document_id': self.waypoint2.document_id,
-                'geom':
-                    '{"type": "Point", "coordinates": [635956, 5723604]}'
+                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
             },
-            'locales': [
-                {'title': 'Lac d\'Annecy', 'lang': 'en'}
-            ]
+            'locales': [{'title': "Lac d'Annecy", 'lang': 'en'}],
         }
-        body, doc = self.post_success(body, user='moderator',
-                                      validate_with_auth=True)
+        body, doc = self.post_success(body, user='moderator', validate_with_auth=True)
         version = doc.versions[0]
 
         archive_xreport = version.document_archive
@@ -355,41 +359,42 @@ class TestXreportRest(BaseDocumentTestRest):
         # self.assertNotIn('nb_outings', archive_xreport)
         self.assertEqual(archive_xreport.autonomy, 'autonomous')
         self.assertEqual(archive_xreport.activity_rate, 'activity_rate_m2')
-        self.assertEqual(archive_xreport.supervision,
-                         'professional_supervision')
+        self.assertEqual(archive_xreport.supervision, 'professional_supervision')
         self.assertEqual(archive_xreport.qualification, 'federal_trainer')
 
         archive_locale = version.document_locales_archive
         self.assertEqual(archive_locale.lang, 'en')
-        self.assertEqual(archive_locale.title, 'Lac d\'Annecy')
+        self.assertEqual(archive_locale.title, "Lac d'Annecy")
 
         # check if geometry is stored in database afterwards
         self.assertIsNotNone(doc.geometry)
 
         # check that a link to the associated waypoint is created
-        association_img = self.session.get(Association,
-            (doc.document_id, self.image2.document_id))
+        association_img = self.session.get(
+            Association, (doc.document_id, self.image2.document_id)
+        )
         self.assertIsNotNone(association_img)
 
-        association_img_log = self.session.query(AssociationLog). \
-            filter(AssociationLog.parent_document_id ==
-                   doc.document_id). \
-            filter(AssociationLog.child_document_id ==
-                   self.image2.document_id). \
-            first()
+        association_img_log = (
+            self.session.query(AssociationLog)
+            .filter(AssociationLog.parent_document_id == doc.document_id)
+            .filter(AssociationLog.child_document_id == self.image2.document_id)
+            .first()
+        )
         self.assertIsNotNone(association_img_log)
 
         # check that a link to the associated xreport is created
-        association_art = self.session.get(Association,
-            (doc.document_id, self.article2.document_id))
+        association_art = self.session.get(
+            Association, (doc.document_id, self.article2.document_id)
+        )
         self.assertIsNotNone(association_art)
 
-        association_art_log = self.session.query(AssociationLog). \
-            filter(AssociationLog.parent_document_id ==
-                   doc.document_id). \
-            filter(AssociationLog.child_document_id ==
-                   self.article2.document_id). \
-            first()
+        association_art_log = (
+            self.session.query(AssociationLog)
+            .filter(AssociationLog.parent_document_id == doc.document_id)
+            .filter(AssociationLog.child_document_id == self.article2.document_id)
+            .first()
+        )
         self.assertIsNotNone(association_art_log)
 
     def test_post_as_contributor_and_get_as_author(self):
@@ -402,8 +407,8 @@ class TestXreportRest(BaseDocumentTestRest):
             'nb_impacted': 666,
             'locales': [
                 # {'title': 'Lac d\'Annecy', 'lang': 'fr'},
-                {'title': 'Lac d\'Annecy', 'lang': 'en'}
-            ]
+                {'title': "Lac d'Annecy", 'lang': 'en'}
+            ],
         }
 
         # create document (POST uses GET schema inside validation)
@@ -427,8 +432,7 @@ class TestXreportRest(BaseDocumentTestRest):
         self.assertIn('autonomy', body)
 
     def test_post_anonymous(self):
-        self.app.app.registry.anonymous_user_id = \
-            self.global_userids['moderator']
+        self.app.app.registry.anonymous_user_id = self.global_userids['moderator']
         body_post = {
             'document_id': 111,
             'version': 1,
@@ -436,10 +440,8 @@ class TestXreportRest(BaseDocumentTestRest):
             'event_type': 'stone_ice_fall',
             'nb_participants': 666,
             'nb_impacted': 666,
-            'locales': [
-                {'title': 'Lac d\'Annecy', 'lang': 'en'}
-            ],
-            'anonymous': True
+            'locales': [{'title': "Lac d'Annecy", 'lang': 'en'}],
+            'anonymous': True,
         }
 
         body_post, doc = self.post_success(body_post, user='contributor')
@@ -460,9 +462,12 @@ class TestXreportRest(BaseDocumentTestRest):
                 'event_type': 'avalanche',
                 'nb_participants': 5,
                 'locales': [
-                    {'lang': 'en', 'title': 'Lac d\'Annecy',
-                     'version': self.locale_en.version}
-                ]
+                    {
+                        'lang': 'en',
+                        'title': "Lac d'Annecy",
+                        'version': self.locale_en.version,
+                    }
+                ],
             }
         }
         self.put_wrong_document_id(body, user='moderator')
@@ -476,13 +481,15 @@ class TestXreportRest(BaseDocumentTestRest):
                 'event_type': 'avalanche',
                 'nb_participants': 5,
                 'locales': [
-                    {'lang': 'en', 'title': 'Lac d\'Annecy',
-                     'version': self.locale_en.version}
-                ]
+                    {
+                        'lang': 'en',
+                        'title': "Lac d'Annecy",
+                        'version': self.locale_en.version,
+                    }
+                ],
             }
         }
-        self.put_wrong_version(
-            body, self.xreport1.document_id, user='moderator')
+        self.put_wrong_version(body, self.xreport1.document_id, user='moderator')
 
     def test_put_wrong_locale_version(self):
         body = {
@@ -492,14 +499,10 @@ class TestXreportRest(BaseDocumentTestRest):
                 'event_activity': 'skitouring',
                 'event_type': 'avalanche',
                 'nb_participants': 5,
-                'locales': [
-                    {'lang': 'en', 'title': 'Lac d\'Annecy',
-                     'version': -9999}
-                ]
+                'locales': [{'lang': 'en', 'title': "Lac d'Annecy", 'version': -9999}],
             }
         }
-        self.put_wrong_version(
-            body, self.xreport1.document_id, user='moderator')
+        self.put_wrong_version(body, self.xreport1.document_id, user='moderator')
 
     def test_put_wrong_ids(self):
         body = {
@@ -510,9 +513,12 @@ class TestXreportRest(BaseDocumentTestRest):
                 'event_type': 'avalanche',
                 'nb_participants': 5,
                 'locales': [
-                    {'lang': 'en', 'title': 'Lac d\'Annecy',
-                     'version': self.locale_en.version}
-                ]
+                    {
+                        'lang': 'en',
+                        'title': "Lac d'Annecy",
+                        'version': self.locale_en.version,
+                    }
+                ],
             }
         }
         self.put_wrong_ids(body, self.xreport1.document_id, user='moderator')
@@ -534,26 +540,25 @@ class TestXreportRest(BaseDocumentTestRest):
                 'age': 50,
                 'rescue': False,
                 'associations': {
-                    'images': [
-                        {'document_id': self.image2.document_id}
-                    ],
-                    'articles': [
-                        {'document_id': self.article2.document_id}
-                    ]
+                    'images': [{'document_id': self.image2.document_id}],
+                    'articles': [{'document_id': self.article2.document_id}],
                 },
                 'geometry': {
-                    'geom':
-                        '{"type": "Point", "coordinates": [635956, 5723604]}'
+                    'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'
                 },
                 'locales': [
-                    {'lang': 'en', 'title': 'New title',
-                     'place': 'some NEW place descrip. in english',
-                     'version': self.locale_en.version}
-                ]
-            }
+                    {
+                        'lang': 'en',
+                        'title': 'New title',
+                        'place': 'some NEW place descrip. in english',
+                        'version': self.locale_en.version,
+                    }
+                ],
+            },
         }
         (body, xreport1) = self.put_success_all(
-            body, self.xreport1, user='moderator', cache_version=3)
+            body, self.xreport1, user='moderator', cache_version=3
+        )
 
         self.assertEqual(xreport1.event_activity, 'skitouring')
         locale_en = xreport1.get_locale('en')
@@ -564,8 +569,7 @@ class TestXreportRest(BaseDocumentTestRest):
         version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.title, 'New title')
-        self.assertEqual(archive_locale.place,
-                         'some NEW place descrip. in english')
+        self.assertEqual(archive_locale.place, 'some NEW place descrip. in english')
 
         archive_document_en = version_en.document_archive
         self.assertEqual(archive_document_en.event_activity, 'skitouring')
@@ -576,34 +580,36 @@ class TestXreportRest(BaseDocumentTestRest):
         # version with lang 'fr'
         version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
-        self.assertEqual(archive_locale.title, 'Lac d\'Annecy')
+        self.assertEqual(archive_locale.title, "Lac d'Annecy")
 
         # check if geometry is stored in database afterwards
         self.assertIsNotNone(xreport1.geometry)
         # check that a link to the associated image is created
-        association_img = self.session.get(Association,
-            (xreport1.document_id, self.image2.document_id))
+        association_img = self.session.get(
+            Association, (xreport1.document_id, self.image2.document_id)
+        )
         self.assertIsNotNone(association_img)
 
-        association_img_log = self.session.query(AssociationLog). \
-            filter(AssociationLog.parent_document_id ==
-                   xreport1.document_id). \
-            filter(AssociationLog.child_document_id ==
-                   self.image2.document_id). \
-            first()
+        association_img_log = (
+            self.session.query(AssociationLog)
+            .filter(AssociationLog.parent_document_id == xreport1.document_id)
+            .filter(AssociationLog.child_document_id == self.image2.document_id)
+            .first()
+        )
         self.assertIsNotNone(association_img_log)
 
         # check that a link to the associated article is created
-        association_main_art = self.session.get(Association,
-            (xreport1.document_id, self.article2.document_id))
+        association_main_art = self.session.get(
+            Association, (xreport1.document_id, self.article2.document_id)
+        )
         self.assertIsNotNone(association_main_art)
 
-        association_art_log = self.session.query(AssociationLog). \
-            filter(AssociationLog.parent_document_id ==
-                   xreport1.document_id). \
-            filter(AssociationLog.child_document_id ==
-                   self.article2.document_id). \
-            first()
+        association_art_log = (
+            self.session.query(AssociationLog)
+            .filter(AssociationLog.parent_document_id == xreport1.document_id)
+            .filter(AssociationLog.child_document_id == self.article2.document_id)
+            .first()
+        )
         self.assertIsNotNone(association_art_log)
 
     def test_put_success_figures_only(self):
@@ -620,14 +626,18 @@ class TestXreportRest(BaseDocumentTestRest):
                 'age': 50,
                 'rescue': False,
                 'locales': [
-                    {'lang': 'en', 'title': 'Lac d\'Annecy',
-                     'place': 'some place descrip. in english',
-                     'version': self.locale_en.version}
-                ]
-            }
+                    {
+                        'lang': 'en',
+                        'title': "Lac d'Annecy",
+                        'place': 'some place descrip. in english',
+                        'version': self.locale_en.version,
+                    }
+                ],
+            },
         }
         (body, xreport1) = self.put_success_figures_only(
-            body, self.xreport1, user='moderator')
+            body, self.xreport1, user='moderator'
+        )
 
         self.assertEqual(xreport1.event_activity, 'skitouring')
 
@@ -642,19 +652,22 @@ class TestXreportRest(BaseDocumentTestRest):
                 'event_type': 'stone_ice_fall',
                 'date': '2020-01-01',
                 'locales': [
-                    {'lang': 'en', 'title': 'New title',
-                     'version': self.locale_en.version}
-                ]
-            }
+                    {
+                        'lang': 'en',
+                        'title': 'New title',
+                        'version': self.locale_en.version,
+                    }
+                ],
+            },
         }
         (body, xreport1) = self.put_success_lang_only(
-            body, self.xreport1, user='moderator')
+            body, self.xreport1, user='moderator'
+        )
 
         self.assertEqual(xreport1.get_locale('en').title, 'New title')
 
     def test_put_success_new_lang(self):
-        """Test updating a document by adding a new locale.
-        """
+        """Test updating a document by adding a new locale."""
         body = {
             'message': 'Adding lang',
             'document': {
@@ -664,15 +677,14 @@ class TestXreportRest(BaseDocumentTestRest):
                 'event_activity': 'skitouring',
                 'event_type': 'stone_ice_fall',
                 'date': '2020-01-01',
-                'locales': [
-                    {'lang': 'es', 'title': 'Lac d\'Annecy'}
-                ]
-            }
+                'locales': [{'lang': 'es', 'title': "Lac d'Annecy"}],
+            },
         }
         (body, xreport1) = self.put_success_new_lang(
-            body, self.xreport1, user='moderator')
+            body, self.xreport1, user='moderator'
+        )
 
-        self.assertEqual(xreport1.get_locale('es').title, 'Lac d\'Annecy')
+        self.assertEqual(xreport1.get_locale('es').title, "Lac d'Annecy")
 
     def test_put_as_author(self):
         body = {
@@ -685,14 +697,18 @@ class TestXreportRest(BaseDocumentTestRest):
                 'event_type': 'person_fall',  # changed
                 'age': 90,  # PERSONAL DATA CHANGED
                 'locales': [
-                    {'lang': 'en', 'title': 'Another final EN title',
-                     'version': self.locale_en.version}
-                ]
-            }
+                    {
+                        'lang': 'en',
+                        'title': 'Another final EN title',
+                        'version': self.locale_en.version,
+                    }
+                ],
+            },
         }
 
         (body, xreport1) = self.put_success_all(
-            body, self.xreport1, user='contributor', cache_version=2)
+            body, self.xreport1, user='contributor', cache_version=2
+        )
 
         # version with lang 'en'
         versions = xreport1.versions
@@ -716,22 +732,22 @@ class TestXreportRest(BaseDocumentTestRest):
                 'event_type': 'crevasse_fall',  # changed
                 'age': 25,  # PERSONAL DATA CHANGED
                 'locales': [
-                    {'lang': 'en', 'title': 'Renamed title by assoc. user',
-                     'version': self.locale_en.version}
+                    {
+                        'lang': 'en',
+                        'title': 'Renamed title by assoc. user',
+                        'version': self.locale_en.version,
+                    }
                 ],
                 'associations': {  # added associations
-                    'articles': [
-                        {'document_id': self.article2.document_id}
-                    ],
-                    'routes': [
-                        {'document_id': self.route3.document_id}
-                    ]
+                    'articles': [{'document_id': self.article2.document_id}],
+                    'routes': [{'document_id': self.route3.document_id}],
                 },
-            }
+            },
         }
 
         (body, xreport1) = self.put_success_all(
-            body, self.xreport1, user='contributor3', cache_version=3)
+            body, self.xreport1, user='contributor3', cache_version=3
+        )
 
         # version with lang 'en'
         versions = xreport1.versions
@@ -755,17 +771,22 @@ class TestXreportRest(BaseDocumentTestRest):
                 'event_type': 'person_fall',
                 'age': 90,
                 'locales': [
-                    {'lang': 'en', 'title': 'Another final EN title',
-                     'version': self.locale_en.version}
-                ]
-            }
+                    {
+                        'lang': 'en',
+                        'title': 'Another final EN title',
+                        'version': self.locale_en.version,
+                    }
+                ],
+            },
         }
 
         headers = self.add_authorization_header(username='contributor2')
         response = self.app_put_json(
-            self._prefix + '/' + str(self.xreport4.document_id), body,
+            self._prefix + '/' + str(self.xreport4.document_id),
+            body,
             headers=headers,
-            status=403)
+            status=403,
+        )
 
         body = response.json
         self.assertEqual(body['status'], 'error')
@@ -776,14 +797,17 @@ class TestXreportRest(BaseDocumentTestRest):
         self._get_association_logs(self.xreport1)
 
     def _add_test_data(self):
-        self.xreport1 = Xreport(event_activity='skitouring',
-                                event_type='stone_ice_fall',
-                                date=datetime.date(2020, 1, 1))
-        self.locale_en = XreportLocale(lang='en',
-                                       title='Lac d\'Annecy',
-                                       place='some place descrip. in english')
-        self.locale_fr = XreportLocale(lang='fr', title='Lac d\'Annecy',
-                                       place='some place descrip. in french')
+        self.xreport1 = Xreport(
+            event_activity='skitouring',
+            event_type='stone_ice_fall',
+            date=datetime.date(2020, 1, 1),
+        )
+        self.locale_en = XreportLocale(
+            lang='en', title="Lac d'Annecy", place='some place descrip. in english'
+        )
+        self.locale_fr = XreportLocale(
+            lang='fr', title="Lac d'Annecy", place='some place descrip. in french'
+        )
 
         self.xreport1.locales.append(self.locale_en)
         self.xreport1.locales.append(self.locale_fr)
@@ -793,78 +817,99 @@ class TestXreportRest(BaseDocumentTestRest):
 
         user_id = self.global_userids['contributor']
         DocumentRest.create_new_version(self.xreport1, user_id)
-        self.xreport1_version = self.session.query(DocumentVersion). \
-            filter(DocumentVersion.document_id ==
-                   self.xreport1.document_id). \
-            filter(DocumentVersion.lang == 'en').first()
+        self.xreport1_version = (
+            self.session.query(DocumentVersion)
+            .filter(DocumentVersion.document_id == self.xreport1.document_id)
+            .filter(DocumentVersion.lang == 'en')
+            .first()
+        )
 
         user_id3 = self.global_userids['contributor3']
-        self._add_association(Association(
-            parent_document_id=user_id3,
-            parent_document_type=USERPROFILE_TYPE,
-            child_document_id=self.xreport1.document_id,
-            child_document_type=XREPORT_TYPE), user_id)
+        self._add_association(
+            Association(
+                parent_document_id=user_id3,
+                parent_document_type=USERPROFILE_TYPE,
+                child_document_id=self.xreport1.document_id,
+                child_document_type=XREPORT_TYPE,
+            ),
+            user_id,
+        )
 
-        self.xreport2 = Xreport(event_activity='skitouring',
-                                event_type='avalanche',
-                                nb_participants=5,
-                                date=datetime.date(2021, 1, 1))
+        self.xreport2 = Xreport(
+            event_activity='skitouring',
+            event_type='avalanche',
+            nb_participants=5,
+            date=datetime.date(2021, 1, 1),
+        )
         self.session.add(self.xreport2)
-        self.xreport3 = Xreport(event_activity='skitouring',
-                                event_type='avalanche',
-                                nb_participants=5,
-                                date=datetime.date(2018, 1, 1))
+        self.xreport3 = Xreport(
+            event_activity='skitouring',
+            event_type='avalanche',
+            nb_participants=5,
+            date=datetime.date(2018, 1, 1),
+        )
         self.session.add(self.xreport3)
-        self.xreport4 = Xreport(event_activity='skitouring',
-                                event_type='avalanche',
-                                nb_participants=5,
-                                nb_impacted=5,
-                                age=50)
-        self.xreport4.locales.append(DocumentLocale(
-            lang='en', title='Lac d\'Annecy'))
-        self.xreport4.locales.append(DocumentLocale(
-            lang='fr', title='Lac d\'Annecy'))
+        self.xreport4 = Xreport(
+            event_activity='skitouring',
+            event_type='avalanche',
+            nb_participants=5,
+            nb_impacted=5,
+            age=50,
+        )
+        self.xreport4.locales.append(DocumentLocale(lang='en', title="Lac d'Annecy"))
+        self.xreport4.locales.append(DocumentLocale(lang='fr', title="Lac d'Annecy"))
         self.session.add(self.xreport4)
 
         self.article2 = Article(
-            categories=['site_info'], activities=['hiking'],
-            article_type='collab')
+            categories=['site_info'], activities=['hiking'], article_type='collab'
+        )
         self.session.add(self.article2)
         self.session.flush()
 
         self.image2 = Image(
-            filename='image2.jpg',
-            activities=['paragliding'], height=1500)
+            filename='image2.jpg', activities=['paragliding'], height=1500
+        )
         self.session.add(self.image2)
         self.session.flush()
 
-        self.waypoint1 = Waypoint(
-            waypoint_type='summit', elevation=2203)
+        self.waypoint1 = Waypoint(waypoint_type='summit', elevation=2203)
         self.session.add(self.waypoint1)
         self.waypoint2 = Waypoint(
-            waypoint_type='climbing_outdoor', elevation=2,
+            waypoint_type='climbing_outdoor',
+            elevation=2,
             rock_types=[],
-            geometry=DocumentGeometry(
-                geom='SRID=3857;POINT(635956 5723604)')
-            )
+            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+        )
         self.session.add(self.waypoint2)
         self.session.flush()
 
         self.outing3 = Outing(
-            activities=['skitouring'], date_start=datetime.date(2016, 2, 1),
-            date_end=datetime.date(2016, 2, 2)
+            activities=['skitouring'],
+            date_start=datetime.date(2016, 2, 1),
+            date_end=datetime.date(2016, 2, 2),
         )
         self.session.add(self.outing3)
         self.route3 = Route(
-            activities=['skitouring'], elevation_max=1500, elevation_min=700,
-            height_diff_up=500, height_diff_down=500, durations='1')
+            activities=['skitouring'],
+            elevation_max=1500,
+            elevation_min=700,
+            height_diff_up=500,
+            height_diff_down=500,
+            durations='1',
+        )
         self.session.add(self.route3)
         self.session.flush()
 
-        self._add_association(Association.create(
-            parent_document=self.outing3,
-            child_document=self.xreport1), user_id)
-        self._add_association(Association.create(
-            parent_document=self.route3,
-            child_document=self.xreport1), user_id)
+        self._add_association(
+            Association.create(
+                parent_document=self.outing3, child_document=self.xreport1
+            ),
+            user_id,
+        )
+        self._add_association(
+            Association.create(
+                parent_document=self.route3, child_document=self.xreport1
+            ),
+            user_id,
+        )
         self.session.flush()

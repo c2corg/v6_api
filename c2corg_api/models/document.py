@@ -12,29 +12,21 @@ from colanderalchemy.schema import SQLAlchemySchemaNode
 from geoalchemy2 import Geometry, WKBElement
 from pyramid.httpexceptions import HTTPInternalServerError
 from shapely import wkt
-from sqlalchemy import (
-    Column,
-    Integer,
-    Boolean,
-    String,
-    ForeignKey,
-    func
-    )
+from sqlalchemy import Column, Integer, Boolean, String, ForeignKey, func
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship, column_property
 from sqlalchemy.sql.schema import UniqueConstraint
 
-UpdateType = enum.Enum(
-    'UpdateType', 'FIGURES LANG GEOM')
+UpdateType = enum.Enum('UpdateType', 'FIGURES LANG GEOM')
 
 DOCUMENT_TYPE = document_types.DOCUMENT_TYPE
 
 
 class Lang(Base):
-    """The supported languages.
-    """
+    """The supported languages."""
+
     __tablename__ = 'langs'
     lang = Column(String(2), primary_key=True)
 
@@ -44,6 +36,7 @@ class _DocumentMixin:
     Contains the attributes that are common for `Document` and
     `ArchiveDocument`.
     """
+
     version = Column(Integer, nullable=False, server_default='1')
 
     # a protected document can only be edited by moderators
@@ -52,18 +45,18 @@ class _DocumentMixin:
     @declared_attr
     def redirects_to(self):
         return Column(
-            Integer, ForeignKey(schema + '.documents.document_id'),
-            nullable=True)
+            Integer, ForeignKey(schema + '.documents.document_id'), nullable=True
+        )
 
     quality = Column(
-        enums.quality_type, nullable=False, default=quality_types[1],
-        server_default=quality_types[1])
+        enums.quality_type,
+        nullable=False,
+        default=quality_types[1],
+        server_default=quality_types[1],
+    )
 
     type = Column(String(1), index=True)
-    __mapper_args__ = {
-        'polymorphic_identity': DOCUMENT_TYPE,
-        'polymorphic_on': type
-    }
+    __mapper_args__ = {'polymorphic_identity': DOCUMENT_TYPE, 'polymorphic_on': type}
 
 
 class Document(Base, _DocumentMixin):
@@ -74,6 +67,7 @@ class Document(Base, _DocumentMixin):
 
     This table contains the current version of a document.
     """
+
     __tablename__ = 'documents'
     document_id = Column(Integer, primary_key=True)
 
@@ -82,15 +76,13 @@ class Document(Base, _DocumentMixin):
 
     available_langs = None
 
-    __mapper_args__ = extend_dict({
-        'version_id_col': _DocumentMixin.version
-    }, _DocumentMixin.__mapper_args__)
+    __mapper_args__ = extend_dict(
+        {'version_id_col': _DocumentMixin.version}, _DocumentMixin.__mapper_args__
+    )
 
-    _ATTRIBUTES_WHITELISTED = \
-        ['document_id', 'version', 'quality']
+    _ATTRIBUTES_WHITELISTED = ['document_id', 'version', 'quality']
 
-    _ATTRIBUTES = \
-        _ATTRIBUTES_WHITELISTED + ['protected', 'redirects_to']
+    _ATTRIBUTES = _ATTRIBUTES_WHITELISTED + ['protected', 'redirects_to']
 
     @abc.abstractmethod
     def to_archive(self):
@@ -136,14 +128,11 @@ class Document(Base, _DocumentMixin):
             self.geometry.document_id = self.document_id
 
     def get_versions(self):
-        """Get the version hashs of this document and of all its locales.
-        """
+        """Get the version hashs of this document and of all its locales."""
         return {
             'document': self.version,
-            'locales': {
-                locale.lang: locale.version for locale in self.locales
-            },
-            'geometry': self.geometry.version if self.geometry else None
+            'locales': {locale.lang: locale.version for locale in self.locales},
+            'geometry': self.geometry.version if self.geometry else None,
         }
 
     def get_update_type(self, old_versions):
@@ -156,8 +145,11 @@ class Document(Base, _DocumentMixin):
         what has changed.
         """
         figures_equal = self.version == old_versions['document']
-        geom_equal = self.geometry.version == old_versions['geometry'] if \
-            self.geometry else old_versions['geometry'] is None
+        geom_equal = (
+            self.geometry.version == old_versions['geometry']
+            if self.geometry
+            else old_versions['geometry'] is None
+        )
 
         changed_langs = []
         locale_versions = old_versions['locales']
@@ -182,15 +174,14 @@ class Document(Base, _DocumentMixin):
         """Get the locale with the given lang or `None` if no locale
         is present.
         """
-        return next(
-            filter(lambda locale: locale.lang == lang, self.locales),
-            None)
+        return next(filter(lambda locale: locale.lang == lang, self.locales), None)
 
 
 class ArchiveDocument(Base, _DocumentMixin):
     """
     The base class for the archive documents.
     """
+
     __tablename__ = 'documents_archives'
 
     id = Column(Integer, primary_key=True)
@@ -198,15 +189,15 @@ class ArchiveDocument(Base, _DocumentMixin):
     @declared_attr
     def document_id(self):
         return Column(
-            Integer, ForeignKey(schema + '.documents.document_id'),
-            nullable=False)
+            Integer, ForeignKey(schema + '.documents.document_id'), nullable=False
+        )
 
     __table_args__ = (
         # only one entry per document id and version
         UniqueConstraint(
-            'version', 'document_id',
-            name='uq_documents_archives_document_id_version'),
-        Base.__table_args__
+            'version', 'document_id', name='uq_documents_archives_document_id_version'
+        ),
+        Base.__table_args__,
     )
 
 
@@ -218,24 +209,22 @@ class _DocumentLocaleMixin:
     @declared_attr
     def document_id(self):
         return Column(
-            Integer, ForeignKey(schema + '.documents.document_id'),
-            nullable=False, index=True)
+            Integer,
+            ForeignKey(schema + '.documents.document_id'),
+            nullable=False,
+            index=True,
+        )
 
     @declared_attr
     def lang(self):
-        return Column(
-            String(2), ForeignKey(schema + '.langs.lang'),
-            nullable=False)
+        return Column(String(2), ForeignKey(schema + '.langs.lang'), nullable=False)
 
     title = Column(String(150), nullable=False)
     summary = Column(String)
     description = Column(String)
 
     type = Column(String(1))
-    __mapper_args__ = {
-        'polymorphic_identity': DOCUMENT_TYPE,
-        'polymorphic_on': type
-    }
+    __mapper_args__ = {'polymorphic_identity': DOCUMENT_TYPE, 'polymorphic_on': type}
 
 
 class DocumentLocale(Base, _DocumentLocaleMixin):
@@ -244,13 +233,10 @@ class DocumentLocale(Base, _DocumentLocaleMixin):
     __mapper_args__ = {
         'polymorphic_identity': DOCUMENT_TYPE,
         'polymorphic_on': _DocumentLocaleMixin.type,
-        'version_id_col': _DocumentLocaleMixin.version
+        'version_id_col': _DocumentLocaleMixin.version,
     }
 
-    _ATTRIBUTES = [
-        'document_id', 'version', 'lang', 'title', 'description',
-        'summary'
-    ]
+    _ATTRIBUTES = ['document_id', 'version', 'lang', 'title', 'description', 'summary']
 
     topic_id = association_proxy('document_topic', 'topic_id')
 
@@ -272,15 +258,18 @@ class ArchiveDocumentLocale(Base, _DocumentLocaleMixin):
 
     __mapper_args__ = {
         'polymorphic_identity': DOCUMENT_TYPE,
-        'polymorphic_on': _DocumentLocaleMixin.type
+        'polymorphic_on': _DocumentLocaleMixin.type,
     }
 
     __table_args__ = (
         # only one entry per document id, version and lang
         UniqueConstraint(
-            'version', 'document_id', 'lang',
-            name='uq_documents_locales_archives_document_id_version_lang'),
-        Base.__table_args__
+            'version',
+            'document_id',
+            'lang',
+            name='uq_documents_locales_archives_document_id_version_lang',
+        ),
+        Base.__table_args__,
     )
 
 
@@ -295,46 +284,44 @@ class _DocumentGeometryMixin:
     def geom(self):
         return Column(
             Geometry(
-                geometry_type='POINT', srid=3857, dimension=2,
-                spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
+                geometry_type='POINT',
+                srid=3857,
+                dimension=2,
+                spatial_index=self.__name__ != 'ArchiveDocumentGeometry',
+            ),
             info={
-                'colanderalchemy': {
-                    'typ': colander_ext.Geometry(['POINT'], srid=3857)
-                }
-            }
+                'colanderalchemy': {'typ': colander_ext.Geometry(['POINT'], srid=3857)}
+            },
         )
 
     @declared_attr
     def geom_detail(self):
         return Column(
             Geometry(
-                geometry_type='GEOMETRY', srid=3857,
+                geometry_type='GEOMETRY',
+                srid=3857,
                 use_typmod=False,
-                spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
+                spatial_index=self.__name__ != 'ArchiveDocumentGeometry',
+            ),
             info={
                 'colanderalchemy': {
                     'typ': colander_ext.Geometry(['GEOMETRY'], srid=3857)
                 }
-            }
+            },
         )
 
 
 class DocumentGeometry(Base, _DocumentGeometryMixin):
     __tablename__ = 'documents_geometries'
 
-    __colanderalchemy_config__ = {
-        'missing': null
-    }
+    __colanderalchemy_config__ = {'missing': null}
 
-    __mapper_args__ = {
-        'version_id_col': _DocumentGeometryMixin.version
-    }
+    __mapper_args__ = {'version_id_col': _DocumentGeometryMixin.version}
     document_id = Column(
-            Integer, ForeignKey(schema + '.documents.document_id'),
-            primary_key=True)
+        Integer, ForeignKey(schema + '.documents.document_id'), primary_key=True
+    )
 
-    _ATTRIBUTES = \
-        ['document_id', 'version', 'geom', 'geom_detail']
+    _ATTRIBUTES = ['document_id', 'version', 'geom', 'geom_detail']
 
     def to_archive(self):
         geometry = ArchiveDocumentGeometry()
@@ -345,8 +332,9 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
         copy_attributes(other, self, DocumentGeometry._ATTRIBUTES)
 
     def almost_equals(self, other):
-        return self._almost_equals(self.geom, other.geom) and \
-               self._almost_equals(self.geom_detail, other.geom_detail)
+        return self._almost_equals(self.geom, other.geom) and self._almost_equals(
+            self.geom_detail, other.geom_detail
+        )
 
     def get_shape(self, geom):
         if isinstance(geom, WKBElement):
@@ -391,7 +379,7 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
 
         # almost_equals(decimal=d) was defined as
         # equals_exact(tolerance=0.5 * 10 ** -d) and is removed in Shapely 2.1
-        return g1.equals_exact(g2, 0.5 * 10 ** -decimals)
+        return g1.equals_exact(g2, 0.5 * 10**-decimals)
 
     def distance(self, geom, other_geom):
         if geom is None or other_geom is None:
@@ -404,11 +392,12 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
 
 
 DocumentGeometry.lon_lat = column_property(
-    func.ST_AsGeoJSON(func.ST_Transform(DocumentGeometry.geom, 4326)),
-    deferred=True)
+    func.ST_AsGeoJSON(func.ST_Transform(DocumentGeometry.geom, 4326)), deferred=True
+)
 
 DocumentGeometry.has_geom_detail = column_property(
-    DocumentGeometry.geom_detail.isnot(None))
+    DocumentGeometry.geom_detail.isnot(None)
+)
 
 
 class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
@@ -416,43 +405,34 @@ class ArchiveDocumentGeometry(Base, _DocumentGeometryMixin):
 
     id = Column(Integer, primary_key=True)
     document_id = Column(
-            Integer, ForeignKey(schema + '.documents.document_id'),
-            nullable=False)
+        Integer, ForeignKey(schema + '.documents.document_id'), nullable=False
+    )
 
     __table_args__ = (
         # only one entry per document id and version
         UniqueConstraint(
-            'version', 'document_id',
-            name='uq_documents_geometries_archives_document_id_version_lang'),
-        Base.__table_args__
+            'version',
+            'document_id',
+            name='uq_documents_geometries_archives_document_id_version_lang',
+        ),
+        Base.__table_args__,
     )
 
 
-schema_attributes = [
-    'document_id', 'version', 'locales', 'geometry', 'quality'
-]
-schema_locale_attributes = [
-    'version', 'lang', 'title', 'description', 'summary'
-]
+schema_attributes = ['document_id', 'version', 'locales', 'geometry', 'quality']
+schema_locale_attributes = ['version', 'lang', 'title', 'description', 'summary']
 
 schema_document_locale = SQLAlchemySchemaNode(
     DocumentLocale,
     # whitelisted attributes
     includes=schema_locale_attributes,
-    overrides={
-        'version': {
-            'missing': None
-        }
-    })
+    overrides={'version': {'missing': None}},
+)
 
 geometry_schema_overrides = {
     # whitelisted attributes
     'includes': ['version', 'geom', 'geom_detail', 'has_geom_detail'],
-    'overrides': {
-        'version': {
-            'missing': None
-        }
-    }
+    'overrides': {'version': {'missing': None}},
 }
 
 
@@ -461,13 +441,9 @@ def get_geometry_schema_overrides(geometry_types):
         # whitelisted attributes
         'includes': ['version', 'geom', 'geom_detail', 'has_geom_detail'],
         'overrides': {
-            'version': {
-                'missing': None
-            },
-            'geom_detail': {
-                'typ': colander_ext.Geometry(geometry_types, srid=3857)
-            }
-        }
+            'version': {'missing': None},
+            'geom_detail': {'typ': colander_ext.Geometry(geometry_types, srid=3857)},
+        },
     }
 
 
@@ -475,41 +451,40 @@ def get_available_langs(document_id):
     """Return the available languages (e.g. ['en', 'fr']) for a single
     document.
     """
-    return DBSession. \
-        query(
-            func.array_agg(
-                DocumentLocale.lang,
-                type_=postgresql.ARRAY(String))). \
-        filter(DocumentLocale.document_id == document_id). \
-        group_by(DocumentLocale.document_id). \
-        scalar()
+    return (
+        DBSession.query(
+            func.array_agg(DocumentLocale.lang, type_=postgresql.ARRAY(String))
+        )
+        .filter(DocumentLocale.document_id == document_id)
+        .group_by(DocumentLocale.document_id)
+        .scalar()
+    )
 
 
 def set_available_langs(documents, loaded=False):
-    """Load and set the available langs for the given documents.
-    """
+    """Load and set the available langs for the given documents."""
     if len(documents) == 0:
         return
 
     if loaded:
         # all locales are already loaded, so simply set the attribute
         for document in documents:
-            document.available_langs = [
-                locale.lang for locale in document.locales]
+            document.available_langs = [locale.lang for locale in document.locales]
     else:
         document_ids = [doc.document_id for doc in documents]
         documents_for_id = {doc.document_id: doc for doc in documents}
 
         # aggregate the langs per document into an array
         lang_agg = func.array_agg(
-            DocumentLocale.lang,
-            type_=postgresql.ARRAY(String)).label('langs')
+            DocumentLocale.lang, type_=postgresql.ARRAY(String)
+        ).label('langs')
 
-        langs_per_doc = DBSession.query(
-            DocumentLocale.document_id, lang_agg). \
-            filter(DocumentLocale.document_id.in_(document_ids)). \
-            group_by(DocumentLocale.document_id). \
-            all()
+        langs_per_doc = (
+            DBSession.query(DocumentLocale.document_id, lang_agg)
+            .filter(DocumentLocale.document_id.in_(document_ids))
+            .group_by(DocumentLocale.document_id)
+            .all()
+        )
 
         for document_id, langs in langs_per_doc:
             document = documents_for_id.get(document_id)

@@ -43,7 +43,5 @@ class ElasticBatch(Batch):
             except BulkIndexError:
                 # when trying to delete a document that does not exist, an
                 # error is raised, and other documents are not inserted
-                log.warning(
-                    'error sending bulk update to ElasticSearch',
-                    exc_info=True)
+                log.warning('error sending bulk update to ElasticSearch', exc_info=True)
             self.actions = []

@@ -8,8 +8,7 @@ log = logging.getLogger(__name__)
 
 
 def jwt_database_validation_tween_factory(handler, registry):
-    """ Check validity of the JWT token.
-    """
+    """Check validity of the JWT token."""
 
     def tween(request):
 
@@ -35,7 +34,6 @@ def jwt_database_validation_tween_factory(handler, registry):
         if valid:
             return handler(request)
         else:
-            return http_error_handler(
-                HTTPUnauthorized('Invalid token'), request)
+            return http_error_handler(HTTPUnauthorized('Invalid token'), request)
 
     return tween

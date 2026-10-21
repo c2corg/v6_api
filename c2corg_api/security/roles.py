@@ -29,32 +29,35 @@ def extract_token(request):
 
 
 def groupfinder(userid, request):
-    is_moderator = DBSession.query(User). \
-        filter(User.id == userid, User.moderator). \
-        count() > 0
+    is_moderator = (
+        DBSession.query(User).filter(User.id == userid, User.moderator).count() > 0
+    )
     return ['group:moderators'] if is_moderator else [Authenticated]
 
 
 def is_valid_token(token):
     now = datetime.datetime.utcnow()
-    token = DBSession.query(Token). \
-        filter(Token.value == token, Token.expire > now).first()
+    token = (
+        DBSession.query(Token).filter(Token.value == token, Token.expire > now).first()
+    )
 
     if not token:
         return False
     else:
-        user_is_blocked = DBSession. \
-            query(User.blocked). \
-            filter(User.id == token.userid). \
-            scalar()
+        user_is_blocked = (
+            DBSession.query(User.blocked).filter(User.id == token.userid).scalar()
+        )
         if user_is_blocked:
             raise HTTPForbidden('account blocked')
     return True
 
 
 def add_or_retrieve_token(value, expire, userid):
-    token = DBSession.query(Token). \
-        filter(Token.value == value, Token.userid == userid).first()
+    token = (
+        DBSession.query(Token)
+        .filter(Token.value == value, Token.userid == userid)
+        .first()
+    )
     if not token:
         token = Token(value=value, expire=expire, userid=userid)
         DBSession.add(token)
@@ -76,7 +79,7 @@ def create_claims(user, exp):
     return {
         'sub': str(user.id),
         'username': user.username,
-        'exp': int((exp - datetime.datetime(1970, 1, 1)).total_seconds())
+        'exp': int((exp - datetime.datetime(1970, 1, 1)).total_seconds()),
     }
 
 
@@ -100,8 +103,7 @@ def log_validated_user_i_know_what_i_do(user, request):
     now = datetime.datetime.utcnow()
     exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
     claims = create_claims(user, exp)
-    token = pyjwt.encode(
-        claims, key=policy.private_key, algorithm=policy.algorithm)
+    token = pyjwt.encode(claims, key=policy.private_key, algorithm=policy.algorithm)
     return add_or_retrieve_token(token, exp, user.id)
 
 
@@ -114,7 +116,8 @@ def renew_token(user, request):
         exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
         claims = create_claims(user, exp)
         token_value = pyjwt.encode(
-            claims, key=policy.private_key, algorithm=policy.algorithm)
+            claims, key=policy.private_key, algorithm=policy.algorithm
+        )
         return add_or_retrieve_token(token_value, exp, user.id)
 
     return None

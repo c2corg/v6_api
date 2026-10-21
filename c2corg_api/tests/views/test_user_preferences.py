@@ -6,7 +6,6 @@ from c2corg_api.tests.views import BaseTestRest
 
 
 class TestUserFilterPreferencesRest(BaseTestRest):
-
     def setUp(self):  # noqa
         super().setUp()
         self._prefix = '/users/preferences'
@@ -15,21 +14,17 @@ class TestUserFilterPreferencesRest(BaseTestRest):
             area_type='range',
             locales=[
                 DocumentLocale(lang='fr', title='France'),
-                DocumentLocale(lang='de', title='Frankreich')
-            ]
+                DocumentLocale(lang='de', title='Frankreich'),
+            ],
         )
         self.area2 = Area(
-            area_type='range',
-            locales=[
-                DocumentLocale(lang='fr', title='Suisse')
-            ]
+            area_type='range', locales=[DocumentLocale(lang='fr', title='Suisse')]
         )
 
         self.session.add_all([self.area1, self.area2])
         self.session.flush()
 
-        self.contributor = self.session.get(User,
-            self.global_userids['contributor'])
+        self.contributor = self.session.get(User, self.global_userids['contributor'])
         self.contributor.feed_filter_areas.append(self.area1)
         self.contributor.feed_filter_activities = ['hiking']
         self.contributor.feed_filter_langs = ['fr']
@@ -54,11 +49,9 @@ class TestUserFilterPreferencesRest(BaseTestRest):
         self.assertEqual('fr', locale['lang'])
 
     def test_get_preferences_lang(self):
-        """ Get the preferences with parameter `lang`.
-        """
+        """Get the preferences with parameter `lang`."""
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.get(
-            self._prefix + '?pl=de', status=200, headers=headers)
+        response = self.app.get(self._prefix + '?pl=de', status=200, headers=headers)
         body = response.json
 
         areas = body['areas']
@@ -76,14 +69,13 @@ class TestUserFilterPreferencesRest(BaseTestRest):
             # wrong lang
             'langs': ['fr', 'xx'],
             # wrong area entry
-            'areas': [{
-                'id': self.area2.document_id
-            }]
+            'areas': [{'id': self.area2.document_id}],
         }
 
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(
-            self._prefix, request_body, status=400, headers=headers)
+            self._prefix, request_body, status=400, headers=headers
+        )
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -92,41 +84,43 @@ class TestUserFilterPreferencesRest(BaseTestRest):
         self.assertIsNotNone(self.get_error(errors, 'activities.1'))
         self.assertIsNotNone(self.get_error(errors, 'langs.1'))
         self.assertCorniceRequired(
-            self.get_error(errors, 'areas.0.document_id'),
-            'areas.0.document_id')
+            self.get_error(errors, 'areas.0.document_id'), 'areas.0.document_id'
+        )
         self.assertCorniceRequired(
-            self.get_error(errors, 'followed_only'), 'followed_only')
+            self.get_error(errors, 'followed_only'), 'followed_only'
+        )
 
     def test_post_preferences(self):
         request_body = {
             'followed_only': True,
             'activities': ['hiking', 'skitouring'],
             'langs': ['fr', 'en'],
-            'areas': [{
-                'document_id': self.area2.document_id
-            }]
+            'areas': [{'document_id': self.area2.document_id}],
         }
 
         headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(
-            self._prefix, request_body, status=200, headers=headers)
+        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
 
         self.session.refresh(self.contributor)
         self.assertTrue(self.contributor.feed_followed_only)
         self.assertEqual(
-            ['hiking', 'skitouring'],
-            self.contributor.feed_filter_activities)
+            ['hiking', 'skitouring'], self.contributor.feed_filter_activities
+        )
         self.assertEqual(['fr', 'en'], self.contributor.feed_filter_langs)
 
         self.assertIsNone(
-            self.session.query(FilterArea).
-            filter(
+            self.session.query(FilterArea)
+            .filter(
                 FilterArea.user_id == self.contributor.id,
-                FilterArea.area_id == self.area1.document_id
-            ).first())
+                FilterArea.area_id == self.area1.document_id,
+            )
+            .first()
+        )
         self.assertIsNotNone(
-            self.session.query(FilterArea).
-            filter(
+            self.session.query(FilterArea)
+            .filter(
                 FilterArea.user_id == self.contributor.id,
-                FilterArea.area_id == self.area2.document_id
-            ).first())
+                FilterArea.area_id == self.area2.document_id,
+            )
+            .first()
+        )

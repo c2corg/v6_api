@@ -194,10 +194,11 @@ pytest
 
 ## Linting
 
-- Run the linter:
+- Format the code and run the linter (CI checks both; in the devcontainer, VS Code formats on save):
 
 ```shell
-ruff check c2corg_api es_migration
+make format   # ruff format + ruff check --fix
+make lint     # ruff check + ruff format --check
 ```
 
 ## Other

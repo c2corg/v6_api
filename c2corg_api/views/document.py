@@ -5,40 +5,57 @@ from c2corg_api.caching import cache_document_detail, cache_document_cooked
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
 from c2corg_api.models.coverage import COVERAGE_TYPE
-from c2corg_api.models.area_association import update_areas_for_document, \
-    get_areas
-from c2corg_api.models.association import create_associations, \
-    synchronize_associations
-from c2corg_api.models.cache_version import update_cache_version, \
-    update_cache_version_associations, get_cache_key
+from c2corg_api.models.area_association import update_areas_for_document, get_areas
+from c2corg_api.models.association import create_associations, synchronize_associations
+from c2corg_api.models.cache_version import (
+    update_cache_version,
+    update_cache_version_associations,
+    get_cache_key,
+)
 from c2corg_api.models.document import (
-    Document, UpdateType, DocumentLocale, ArchiveDocumentLocale,
-    ArchiveDocument, ArchiveDocumentGeometry, set_available_langs,
-    get_available_langs)
+    Document,
+    UpdateType,
+    DocumentLocale,
+    ArchiveDocumentLocale,
+    ArchiveDocument,
+    ArchiveDocumentGeometry,
+    set_available_langs,
+    get_available_langs,
+)
 from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
-from c2corg_api.models.feed import update_feed_document_create, \
-    update_feed_document_update
+from c2corg_api.models.feed import (
+    update_feed_document_create,
+    update_feed_document_update,
+)
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.models.topo_map import schema_listing_topo_map, \
-    MAP_TYPE
-from c2corg_api.models.topo_map_association import update_maps_for_document, \
-    get_maps
+from c2corg_api.models.topo_map import schema_listing_topo_map, MAP_TYPE
+from c2corg_api.models.topo_map_association import update_maps_for_document, get_maps
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import etag_cache, set_best_locale
 from c2corg_api.views import to_json_dict
 import c2corg_api.views.document_associations as doc_associations
-from c2corg_api.views.document_listings import add_load_for_locales, \
-    add_load_for_profiles, get_documents
-from c2corg_api.views.validation import check_required_fields, \
-    check_duplicate_locales, association_permission_checker, \
-    association_permission_removal_checker
+from c2corg_api.views.document_listings import (
+    add_load_for_locales,
+    add_load_for_profiles,
+    get_documents,
+)
+from c2corg_api.views.validation import (
+    check_required_fields,
+    check_duplicate_locales,
+    association_permission_checker,
+    association_permission_removal_checker,
+)
 
 from functools import partial
 
 from c2corg_api.caching import get_or_create
-from pyramid.httpexceptions import HTTPNotFound, HTTPConflict, \
-    HTTPBadRequest, HTTPForbidden
+from pyramid.httpexceptions import (
+    HTTPNotFound,
+    HTTPConflict,
+    HTTPBadRequest,
+    HTTPForbidden,
+)
 from sqlalchemy.orm import joinedload, contains_eager, load_only
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.orm import with_polymorphic
@@ -61,14 +78,13 @@ ES_MAX_RESULT_WINDOW = 10000
 
 
 class DocumentRest(ACLDefault):
-
     # TODO: remove doc_type, it's in documents_config
     def _collection_get(self, doc_type, documents_config):
         validated = self.request.validated
         meta_params = {
             'offset': validated.get('offset', 0),
             'limit': min(validated.get('limit', LIMIT_DEFAULT), LIMIT_MAX),
-            'lang': validated.get('lang')
+            'lang': validated.get('lang'),
         }
 
         if meta_params['offset'] + meta_params['limit'] > ES_MAX_RESULT_WINDOW:
@@ -80,51 +96,54 @@ class DocumentRest(ACLDefault):
         if advanced_search.contains_search_params(self.request.GET):
             # search with ElasticSearch
             search_documents = advanced_search.get_search_documents(
-                self.request.GET, meta_params, doc_type)
+                self.request.GET, meta_params, doc_type
+            )
         else:
             # if no search parameters, directly load documents from the db
-            search_documents = partial(
-                self._search_documents_paginated, meta_params)
+            search_documents = partial(self._search_documents_paginated, meta_params)
 
-        return get_documents(
-            documents_config, meta_params, search_documents)
+        return get_documents(documents_config, meta_params, search_documents)
 
-    def _search_documents_paginated(
-            self, meta_params, base_query, base_total_query):
-        """Return a batch of document ids with the given `offset` and `limit`.
-        """
+    def _search_documents_paginated(self, meta_params, base_query, base_total_query):
+        """Return a batch of document ids with the given `offset` and `limit`."""
         offset = meta_params['offset']
         limit = meta_params['limit']
-        documents = base_query. \
-            options(load_only(
-                Document.document_id, Document.type, Document.version)). \
-            slice(offset, offset + limit). \
-            limit(limit). \
-            all()
+        documents = (
+            base_query.options(
+                load_only(Document.document_id, Document.type, Document.version)
+            )
+            .slice(offset, offset + limit)
+            .limit(limit)
+            .all()
+        )
         total = base_total_query.count()
 
         document_ids = [doc.document_id for doc in documents]
 
         return document_ids, total
 
-    def _get(self, document_config, schema, clazz_locale=None,
-             adapt_schema=None, include_maps=False, include_areas=True,
-             set_custom_associations=None, set_custom_fields=None,
-             custom_cache_key=None):
+    def _get(
+        self,
+        document_config,
+        schema,
+        clazz_locale=None,
+        adapt_schema=None,
+        include_maps=False,
+        include_areas=True,
+        set_custom_associations=None,
+        set_custom_fields=None,
+        custom_cache_key=None,
+    ):
         id = self.request.validated['id']
         lang = self.request.validated.get('lang')
         editing_view = self.request.GET.get('e', '0') != '0'
         cook = self.request.validated.get('cook')
 
         if cook and lang:
-            raise HTTPBadRequest(
-                "You can't use cook service with explicit lang query"
-            )
+            raise HTTPBadRequest("You can't use cook service with explicit lang query")
 
         if cook and editing_view:
-            raise HTTPBadRequest(
-                "You can't use cook service with edition mode"
-            )
+            raise HTTPBadRequest("You can't use cook service with edition mode")
 
         if cook:
             lang = cook
@@ -133,17 +152,27 @@ class DocumentRest(ACLDefault):
 
         def create_response():
             return self._get_in_lang(
-                id, lang, document_config.clazz, schema, editing_view,
-                clazz_locale, adapt_schema, include_maps, include_areas,
-                set_custom_associations, set_custom_fields,
-                cook_locale=cook)
+                id,
+                lang,
+                document_config.clazz,
+                schema,
+                editing_view,
+                clazz_locale,
+                adapt_schema,
+                include_maps,
+                include_areas,
+                set_custom_associations,
+                set_custom_fields,
+                cook_locale=cook,
+            )
 
         if not editing_view:
             cache_key = get_cache_key(
                 id,
                 lang,
                 document_type=document_config.document_type,
-                custom_cache_key=custom_cache_key)
+                custom_cache_key=custom_cache_key,
+            )
 
             if cache_key:
                 # set and check the etag: if the etag value provided in the
@@ -155,11 +184,21 @@ class DocumentRest(ACLDefault):
         # don't cache if requesting a document for editing
         return create_response()
 
-    def _get_in_lang(self, id, lang, clazz, schema, editing_view,
-                     clazz_locale=None, adapt_schema=None,
-                     include_maps=True, include_areas=True,
-                     set_custom_associations=None, set_custom_fields=None,
-                     cook_locale=False):
+    def _get_in_lang(
+        self,
+        id,
+        lang,
+        clazz,
+        schema,
+        editing_view,
+        clazz_locale=None,
+        adapt_schema=None,
+        include_maps=True,
+        include_areas=True,
+        set_custom_associations=None,
+        set_custom_fields=None,
+        cook_locale=False,
+    ):
 
         if cook_locale:
             document = self._get_document_for_cooking(
@@ -173,7 +212,7 @@ class DocumentRest(ACLDefault):
         if document.redirects_to:
             return {
                 'redirects_to': document.redirects_to,
-                'available_langs': get_available_langs(document.redirects_to)
+                'available_langs': get_available_langs(document.redirects_to),
             }
 
         set_available_langs([document])
@@ -196,41 +235,44 @@ class DocumentRest(ACLDefault):
             schema = adapt_schema(schema, document)
 
         return to_json_dict(
-            document,
-            schema,
-            with_special_locales_attrs=True,
-            cook_locale=cook_locale
+            document, schema, with_special_locales_attrs=True, cook_locale=cook_locale
         )
 
     def _set_associations(self, document, lang, editing_view):
         document.associations = doc_associations.get_associations(
-            document, lang, editing_view)
+            document, lang, editing_view
+        )
 
     def _set_maps(self, document, lang):
         topo_maps = get_maps(document, lang)
-        document.maps = [
-            to_json_dict(m, schema_listing_topo_map) for m in topo_maps
-        ]
+        document.maps = [to_json_dict(m, schema_listing_topo_map) for m in topo_maps]
 
     def _set_areas(self, document, lang):
         areas = get_areas(document, lang)
-        document.areas = [
-            to_json_dict(m, schema_listing_area) for m in areas
-        ]
+        document.areas = [to_json_dict(m, schema_listing_area) for m in areas]
 
     def _collection_post(
-            self, schema, before_add=None, after_add=None,
-            allow_anonymous=False):
+        self, schema, before_add=None, after_add=None, allow_anonymous=False
+    ):
         document_in = self.request.validated
         document = self._create_document(
-                document_in, schema, before_add, after_add, allow_anonymous)
+            document_in, schema, before_add, after_add, allow_anonymous
+        )
         return {'document_id': document.document_id}
 
     def _create_document(
-            self, document_in, schema, before_add=None, after_add=None,
-            allow_anonymous=False):
-        if allow_anonymous and document_in.get('anonymous') and \
-           self.request.registry.anonymous_user_id:
+        self,
+        document_in,
+        schema,
+        before_add=None,
+        after_add=None,
+        allow_anonymous=False,
+    ):
+        if (
+            allow_anonymous
+            and document_in.get('anonymous')
+            and self.request.registry.anonymous_user_id
+        ):
             user_id = self.request.registry.anonymous_user_id
         else:
             user_id = self.request.authenticated_userid
@@ -259,13 +301,18 @@ class DocumentRest(ACLDefault):
 
         if document_in.get('associations', None):
             check_association = association_permission_checker(
-                self.request, skip_outing_check=document.type == OUTING_TYPE)
+                self.request, skip_outing_check=document.type == OUTING_TYPE
+            )
 
             added_associations = create_associations(
-                document, document_in['associations'], user_id,
-                check_association=check_association)
+                document,
+                document_in['associations'],
+                user_id,
+                check_association=check_association,
+            )
             update_cache_version_associations(
-                added_associations, [], document.document_id)
+                added_associations, [], document.document_id
+            )
 
         update_feed_document_create(document, user_id)
 
@@ -273,11 +320,10 @@ class DocumentRest(ACLDefault):
         return document
 
     def _put(
-            self, clazz, schema, clazz_locale=None, before_update=None,
-            after_update=None):
+        self, clazz, schema, clazz_locale=None, before_update=None, after_update=None
+    ):
         id = self.request.validated['id']
-        document_in = \
-            schema.objectify(self.request.validated['document'])
+        document_in = schema.objectify(self.request.validated['document'])
         self._check_document_id(id, document_in.document_id)
 
         # get the current version of the document
@@ -290,8 +336,9 @@ class DocumentRest(ACLDefault):
 
         self._check_versions(document, document_in)
 
-        DocumentRest.update_document(document, document_in, self.request,
-                                     before_update, after_update)
+        DocumentRest.update_document(
+            document, document_in, self.request, before_update, after_update
+        )
 
         return {}
 
@@ -302,38 +349,44 @@ class DocumentRest(ACLDefault):
         raised.
         """
         if not lang:
-            document_query = DBSession. \
-                query(clazz). \
-                filter(getattr(clazz, 'document_id') == id). \
-                options(joinedload(getattr(clazz, 'geometry')))
-            document_query = add_load_for_locales(
-                document_query, clazz, clazz_locale)
+            document_query = (
+                DBSession.query(clazz)
+                .filter(getattr(clazz, 'document_id') == id)
+                .options(joinedload(getattr(clazz, 'geometry')))
+            )
+            document_query = add_load_for_locales(document_query, clazz, clazz_locale)
             document_query = add_load_for_profiles(document_query, clazz)
             document = document_query.first()
         else:
-            locales_type = with_polymorphic(DocumentLocale, clazz_locale) \
-                if clazz_locale else DocumentLocale
+            locales_type = (
+                with_polymorphic(DocumentLocale, clazz_locale)
+                if clazz_locale
+                else DocumentLocale
+            )
             locales_attr = getattr(clazz, 'locales')
-            locales_type_eager = locales_attr.of_type(clazz_locale) \
-                if clazz_locale else locales_attr
+            locales_type_eager = (
+                locales_attr.of_type(clazz_locale) if clazz_locale else locales_attr
+            )
 
-            document_query = DBSession. \
-                query(clazz). \
-                join(locales_type). \
-                filter(getattr(clazz, 'document_id') == id). \
-                filter(DocumentLocale.lang == lang). \
-                options(joinedload(getattr(clazz, 'geometry'))).\
-                options(contains_eager(locales_type_eager, alias=locales_type))
+            document_query = (
+                DBSession.query(clazz)
+                .join(locales_type)
+                .filter(getattr(clazz, 'document_id') == id)
+                .filter(DocumentLocale.lang == lang)
+                .options(joinedload(getattr(clazz, 'geometry')))
+                .options(contains_eager(locales_type_eager, alias=locales_type))
+            )
             document_query = add_load_for_profiles(document_query, clazz)
             document = document_query.first()
 
             if not document:
                 # the requested locale might not be available, try to get the
                 # document without locales
-                document_query = DBSession. \
-                    query(clazz). \
-                    filter(getattr(clazz, 'document_id') == id). \
-                    options(joinedload(getattr(clazz, 'geometry')))
+                document_query = (
+                    DBSession.query(clazz)
+                    .filter(getattr(clazz, 'document_id') == id)
+                    .options(joinedload(getattr(clazz, 'geometry')))
+                )
                 document_query = add_load_for_profiles(document_query, clazz)
                 document = document_query.first()
 
@@ -357,12 +410,12 @@ class DocumentRest(ACLDefault):
         in this case, the lang returned is given by lang_priority
         """
 
-        document_query = DBSession. \
-            query(clazz). \
-            filter(getattr(clazz, 'document_id') == document_id). \
-            options(joinedload(getattr(clazz, 'geometry')))
-        document_query = add_load_for_locales(
-            document_query, clazz, clazz_locale)
+        document_query = (
+            DBSession.query(clazz)
+            .filter(getattr(clazz, 'document_id') == document_id)
+            .options(joinedload(getattr(clazz, 'geometry')))
+        )
+        document_query = add_load_for_locales(document_query, clazz, clazz_locale)
         document_query = add_load_for_profiles(document_query, clazz)
         document = document_query.first()
 
@@ -375,8 +428,13 @@ class DocumentRest(ACLDefault):
 
     @staticmethod
     def update_document(
-            document, document_in, request,
-            before_update=None, after_update=None, manage_versions=None):
+        document,
+        document_in,
+        request,
+        before_update=None,
+        after_update=None,
+        manage_versions=None,
+    ):
         user_id = request.authenticated_userid
 
         # remember the current version numbers of the document
@@ -405,8 +463,12 @@ class DocumentRest(ACLDefault):
         if update_types:
             # A new version needs to be created and persisted
             DocumentRest.update_version(
-                document, user_id, request.validated['message'],
-                update_types, changed_langs)
+                document,
+                user_id,
+                request.validated['message'],
+                update_types,
+                changed_langs,
+            )
 
             if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
                 update_areas_for_document(document, reset=True)
@@ -421,24 +483,23 @@ class DocumentRest(ACLDefault):
 
         associations = request.validated.get('associations', None)
         if associations:
-            check_association_add = \
-                association_permission_checker(request)
-            check_association_remove = \
-                association_permission_removal_checker(request)
+            check_association_add = association_permission_checker(request)
+            check_association_remove = association_permission_removal_checker(request)
 
-            added_associations, removed_associations = \
-                synchronize_associations(
-                    document, associations, user_id,
-                    check_association_add=check_association_add,
-                    check_association_remove=check_association_remove)
+            added_associations, removed_associations = synchronize_associations(
+                document,
+                associations,
+                user_id,
+                check_association_add=check_association_add,
+                check_association_remove=check_association_remove,
+            )
 
         if update_types or associations:
             # update search index
             notify_es_syncer(request.registry.queue_config)
             update_feed_document_update(document, user_id, update_types)
         if associations and (removed_associations or added_associations):
-            update_cache_version_associations(
-                added_associations, removed_associations)
+            update_cache_version_associations(added_associations, removed_associations)
 
         return update_types
 
@@ -449,8 +510,9 @@ class DocumentRest(ACLDefault):
         archive_locales = document.get_archive_locales()
         archive_geometry = document.get_archive_geometry()
 
-        meta_data = HistoryMetaData(comment='creation', user_id=user_id,
-                                    written_at=written_at)
+        meta_data = HistoryMetaData(
+            comment='creation', user_id=user_id, written_at=written_at
+        )
         versions = []
         for locale in archive_locales:
             version = DocumentVersion(
@@ -459,7 +521,7 @@ class DocumentRest(ACLDefault):
                 document_archive=archive,
                 document_locales_archive=locale,
                 document_geometry_archive=archive_geometry,
-                history_metadata=meta_data
+                history_metadata=meta_data,
             )
             versions.append(version)
 
@@ -470,23 +532,19 @@ class DocumentRest(ACLDefault):
         DBSession.flush()
 
     @staticmethod
-    def update_version(
-            document, user_id, comment, update_types, changed_langs):
+    def update_version(document, user_id, comment, update_types, changed_langs):
         assert user_id
         assert update_types
 
         meta_data = HistoryMetaData(comment=comment, user_id=user_id)
         archive = DocumentRest._get_document_archive(document, update_types)
-        geometry_archive = \
-            DocumentRest._get_geometry_archive(document, update_types)
+        geometry_archive = DocumentRest._get_geometry_archive(document, update_types)
 
-        langs = DocumentRest._get_langs_to_update(
-            document, update_types, changed_langs)
+        langs = DocumentRest._get_langs_to_update(document, update_types, changed_langs)
         locale_versions = []
         for lang in langs:
             locale = document.get_locale(lang)
-            locale_archive = DocumentRest._get_locale_archive(
-                locale, changed_langs)
+            locale_archive = DocumentRest._get_locale_archive(locale, changed_langs)
 
             version = DocumentVersion(
                 document_id=document.document_id,
@@ -494,7 +552,7 @@ class DocumentRest(ACLDefault):
                 document_archive=archive,
                 document_geometry_archive=geometry_archive,
                 document_locales_archive=locale_archive,
-                history_metadata=meta_data
+                history_metadata=meta_data,
             )
             locale_versions.append(version)
 
@@ -505,41 +563,46 @@ class DocumentRest(ACLDefault):
 
     @staticmethod
     def _get_document_archive(document, update_types):
-        if (UpdateType.FIGURES in update_types):
+        if UpdateType.FIGURES in update_types:
             # the document has changed, create a new archive version
             archive = document.to_archive()
         else:
             # the document has not changed, load the previous archive version
-            archive = DBSession.query(ArchiveDocument). \
-                filter(
+            archive = (
+                DBSession.query(ArchiveDocument)
+                .filter(
                     ArchiveDocument.version == document.version,
-                    ArchiveDocument.document_id == document.document_id). \
-                one()
+                    ArchiveDocument.document_id == document.document_id,
+                )
+                .one()
+            )
         return archive
 
     @staticmethod
     def _get_geometry_archive(document, update_types):
         if not document.geometry:
             return None
-        elif (UpdateType.GEOM in update_types):
+        elif UpdateType.GEOM in update_types:
             # the geometry has changed, create a new archive version
             archive = document.geometry.to_archive()
         else:
             # the geometry has not changed, load the previous archive version
-            archive = DBSession.query(ArchiveDocumentGeometry). \
-                filter(
-                    ArchiveDocumentGeometry.version ==
-                    document.geometry.version,
-                    ArchiveDocumentGeometry.document_id ==
-                    document.document_id
-                ). \
-                one()
+            archive = (
+                DBSession.query(ArchiveDocumentGeometry)
+                .filter(
+                    ArchiveDocumentGeometry.version == document.geometry.version,
+                    ArchiveDocumentGeometry.document_id == document.document_id,
+                )
+                .one()
+            )
         return archive
 
     @staticmethod
     def _get_langs_to_update(document, update_types, changed_langs):
-        if UpdateType.GEOM not in update_types and \
-                UpdateType.FIGURES not in update_types:
+        if (
+            UpdateType.GEOM not in update_types
+            and UpdateType.FIGURES not in update_types
+        ):
             # if the figures or geometry have no been changed, only update the
             # locales that have been changed
             return changed_langs
@@ -554,12 +617,15 @@ class DocumentRest(ACLDefault):
             locale_archive = locale.to_archive()
         else:
             # the locale has not changed, use the old archive version
-            locale_archive = DBSession.query(ArchiveDocumentLocale). \
-                filter(
+            locale_archive = (
+                DBSession.query(ArchiveDocumentLocale)
+                .filter(
                     ArchiveDocumentLocale.version == locale.version,
                     ArchiveDocumentLocale.document_id == locale.document_id,
-                    ArchiveDocumentLocale.lang == locale.lang). \
-                one()
+                    ArchiveDocumentLocale.lang == locale.lang,
+                )
+                .one()
+            )
         return locale_archive
 
     def _check_document_id(self, id, document_id):
@@ -568,7 +634,8 @@ class DocumentRest(ACLDefault):
         """
         if id != document_id:
             raise HTTPBadRequest(
-                'id in the url does not match document_id in request body')
+                'id in the url does not match document_id in request body'
+            )
 
     def _check_versions(self, document, document_in):
         """Check that the passed-in document, geometry and all passed-in
@@ -584,17 +651,17 @@ class DocumentRest(ACLDefault):
             if locale:
                 if locale.version != locale_in.version:
                     raise HTTPConflict(
-                        'version of locale \'%s\' has changed'
-                        % locale.lang)
+                        "version of locale '%s' has changed" % locale.lang
+                    )
         if document.geometry and document_in.geometry:
             if document.geometry.version != document_in.geometry.version:
                 raise HTTPConflict('version of geometry has changed')
 
 
-def validate_document_for_type(document, request, fields, type_field,
-                               valid_type_values, updating):
-    """Checks that all required fields are given.
-    """
+def validate_document_for_type(
+    document, request, fields, type_field, valid_type_values, updating
+):
+    """Checks that all required fields are given."""
     document_type = document.get(type_field)
 
     if not document_type:
@@ -611,8 +678,7 @@ def validate_document_for_type(document, request, fields, type_field,
         document_type = document_type[0]
 
     if document_type not in valid_type_values:
-        request.errors.add(
-            'body', type_field, 'invalid value: %s' % document_type)
+        request.errors.add('body', type_field, 'invalid value: %s' % document_type)
         return
 
     fields_req = fields.get(document_type)['required']
@@ -620,44 +686,56 @@ def validate_document_for_type(document, request, fields, type_field,
 
 
 def validate_document(document, request, fields, updating):
-    """Checks that all required fields are given.
-    """
+    """Checks that all required fields are given."""
     check_required_fields(document, fields, request, updating)
     check_duplicate_locales(document, request)
 
 
-def make_validator_create(
-        fields, type_field=None, valid_type_values=None):
-    """Returns a validator function used for the creation of documents.
-    """
+def make_validator_create(fields, type_field=None, valid_type_values=None):
+    """Returns a validator function used for the creation of documents."""
     if type_field is None or valid_type_values is None:
+
         def f(request, **kwargs):
             document = request.validated
             if document:
                 validate_document(document, request, fields, updating=False)
     else:
+
         def f(request, **kwargs):
             document = request.validated
             if document:
                 validate_document_for_type(
-                    document, request, fields, type_field, valid_type_values,
-                    updating=False)
+                    document,
+                    request,
+                    fields,
+                    type_field,
+                    valid_type_values,
+                    updating=False,
+                )
+
     return f
 
 
 def make_validator_update(fields, type_field=None, valid_type_values=None):
-    """Returns a validator function used for updating documents.
-    """
+    """Returns a validator function used for updating documents."""
     if type_field is None or valid_type_values is None:
+
         def f(request, **kwargs):
             document = request.validated.get('document')
             if document:
                 validate_document(document, request, fields, updating=True)
     else:
+
         def f(request, **kwargs):
             document = request.validated.get('document')
             if document:
                 validate_document_for_type(
-                    document, request, fields, type_field, valid_type_values,
-                    updating=True)
+                    document,
+                    request,
+                    fields,
+                    type_field,
+                    valid_type_values,
+                    updating=True,
+                )
+
     return f

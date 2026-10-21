@@ -9,18 +9,17 @@ from base64 import b64encode
 
 
 class EmailTests(BaseTestCase):
-
     @patch('c2corg_api.emails.email_service.smtplib.SMTP')
     def test_send_email(self, smtp):
         self.email_service._send_email('toto@localhost', subject='s', body='b')
 
-        smtp.assert_called_once_with(self.settings['mail.host'],
-                                     port=self.settings['mail.port'])
+        smtp.assert_called_once_with(
+            self.settings['mail.host'], port=self.settings['mail.port']
+        )
 
         smtp.return_value.sendmail.assert_called_once_with(
-            self.settings['mail.from'],
-            'toto@localhost',
-            ANY)
+            self.settings['mail.from'], 'toto@localhost', ANY
+        )
 
         msg = smtp.return_value.sendmail.call_args_list[0][0][2]
         self.assertIn('From: noreply@camptocamp.org', msg)
@@ -39,12 +38,13 @@ class EmailTests(BaseTestCase):
         _send_email.assert_called_once_with(
             'me@localhost',
             subject='Registration on Camptocamp.org',
-            body='''Hello
+            body="""Hello
 
 To activate your account click on http://somelink
 
 Thank you very much
-The Camptocamp.org team''')
+The Camptocamp.org team""",
+        )
 
     def test_localization(self):
         localizator = EmailLocalizator()
@@ -58,4 +58,5 @@ The Camptocamp.org team''')
 
         def badlang():
             localizator.get_translation('toto', 'registration_subject')
+
         self.assertRaises(Exception, badlang)

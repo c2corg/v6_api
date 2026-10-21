@@ -5,24 +5,22 @@ from c2corg_api.models.common.attributes import mailinglists
 
 
 class TestUserMailinglistsRest(BaseTestRest):
-
     def setUp(self):  # noqa
         super().setUp()
         self._prefix = '/users/mailinglists'
 
-        self.contributor = self.session.get(User,
-            self.global_userids['contributor'])
+        self.contributor = self.session.get(User, self.global_userids['contributor'])
         ml1 = Mailinglist(
             listname='meteofrance-74',
             email=self.contributor.email,
             user_id=self.contributor.id,
-            user=self.contributor
+            user=self.contributor,
         )
         ml2 = Mailinglist(
             listname='avalanche.en',
             email=self.contributor.email,
             user_id=self.contributor.id,
-            user=self.contributor
+            user=self.contributor,
         )
         self.session.add_all([ml1, ml2])
         self.session.flush()
@@ -47,14 +45,12 @@ class TestUserMailinglistsRest(BaseTestRest):
         self.app_post_json(self._prefix, {}, status=403)
 
     def test_post_mailinglists_invalid(self):
-        request_body = {
-            'wrong_mailinglist_name': True,
-            'avalanche': 'incorrect_value'
-        }
+        request_body = {'wrong_mailinglist_name': True, 'avalanche': 'incorrect_value'}
 
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(
-            self._prefix, request_body, status=400, headers=headers)
+            self._prefix, request_body, status=400, headers=headers
+        )
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -63,17 +59,16 @@ class TestUserMailinglistsRest(BaseTestRest):
         self.assertIsNotNone(self.get_error(errors, 'avalanche'))
 
     def test_post_mailinglists(self):
-        request_body = {
-            'meteofrance-66': True,
-            'meteofrance-74': False
-        }
+        request_body = {'meteofrance-66': True, 'meteofrance-74': False}
 
         headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(
-            self._prefix, request_body, status=200, headers=headers)
+        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
 
-        mls = self.session.query(Mailinglist.listname).filter(
-            Mailinglist.email == self.contributor.email).all()
+        mls = (
+            self.session.query(Mailinglist.listname)
+            .filter(Mailinglist.email == self.contributor.email)
+            .all()
+        )
         subscribed_mailinglists = [list[0] for list in mls]
         self.assertEqual(len(subscribed_mailinglists), 2)
         self.assertIn('meteofrance-66', subscribed_mailinglists)

@@ -5,24 +5,22 @@ from c2corg_api.tests import BaseTestCase
 
 
 class TestImage(BaseTestCase):
-
     def test_to_archive(self):
         image = Image(
-            document_id=1, activities=['skitouring'], height=1200,
+            document_id=1,
+            activities=['skitouring'],
+            height=1200,
             locales=[
-                DocumentLocale(
-                    id=2, lang='en', title='A', description='abc'),
-                DocumentLocale(
-                    id=3, lang='fr', title='B', description='bcd'),
-            ]
+                DocumentLocale(id=2, lang='en', title='A', description='abc'),
+                DocumentLocale(id=3, lang='fr', title='B', description='bcd'),
+            ],
         )
 
         image_archive = image.to_archive()
 
         self.assertIsNone(image_archive.id)
         self.assertEqual(image_archive.document_id, image.document_id)
-        self.assertEqual(
-            image_archive.activities, image.activities)
+        self.assertEqual(image_archive.activities, image.activities)
         self.assertEqual(image_archive.height, image.height)
 
         archive_locals = image.get_archive_locales()

@@ -47,7 +47,6 @@ class DummyRegistry:
 
 
 class ClientIpTest(unittest.TestCase):
-
     def test_uses_x_forwarded_for_when_present(self):
         request = DummyRequest()
         request.headers['X-Forwarded-For'] = '203.0.113.5, 10.0.0.1'
@@ -60,12 +59,12 @@ class ClientIpTest(unittest.TestCase):
 
 
 class IsAnonymousRequestRateLimitedTest(unittest.TestCase):
-
     def test_allows_requests_under_the_limit(self):
         redis_client = FakeRedis()
         for _ in range(3):
             limited = _is_anonymous_request_rate_limited(
-                redis_client, 'k', window_span=60, limit=3)
+                redis_client, 'k', window_span=60, limit=3
+            )
         self.assertFalse(limited)
 
     def test_blocks_requests_over_the_limit(self):
@@ -73,94 +72,85 @@ class IsAnonymousRequestRateLimitedTest(unittest.TestCase):
         limited = None
         for _ in range(4):
             limited = _is_anonymous_request_rate_limited(
-                redis_client, 'k', window_span=60, limit=3)
+                redis_client, 'k', window_span=60, limit=3
+            )
         self.assertTrue(limited)
 
     def test_sets_expiration_only_on_first_increment(self):
         redis_client = FakeRedis()
-        _is_anonymous_request_rate_limited(
-            redis_client, 'k', window_span=42, limit=3)
-        _is_anonymous_request_rate_limited(
-            redis_client, 'k', window_span=42, limit=3)
+        _is_anonymous_request_rate_limited(redis_client, 'k', window_span=42, limit=3)
+        _is_anonymous_request_rate_limited(redis_client, 'k', window_span=42, limit=3)
         self.assertEqual(redis_client.expirations, {'k': 42})
 
     def test_fails_open_when_redis_client_is_none(self):
-        limited = _is_anonymous_request_rate_limited(
-            None, 'k', window_span=60, limit=1)
+        limited = _is_anonymous_request_rate_limited(None, 'k', window_span=60, limit=1)
         self.assertFalse(limited)
 
     def test_fails_open_on_redis_error(self):
         limited = _is_anonymous_request_rate_limited(
-            FailingRedis(), 'k', window_span=60, limit=1)
+            FailingRedis(), 'k', window_span=60, limit=1
+        )
         self.assertFalse(limited)
 
 
 class CheckAnonymousRateLimitTest(unittest.TestCase):
-
     def _make_request(self, ip='192.0.2.1'):
         request = DummyRequest()
         request.remote_addr = ip
         return request
 
-    @patch(
-        'c2corg_api.tweens.rate_limiting.'
-        '_get_anonymous_rate_limit_redis_client')
+    @patch('c2corg_api.tweens.rate_limiting._get_anonymous_rate_limit_redis_client')
     def test_blocks_after_the_configured_limit(self, get_client):
         redis_client = FakeRedis()
         get_client.return_value = redis_client
-        registry = DummyRegistry({
-            'rate_limiting.anonymous_window_span': '60',
-            'rate_limiting.anonymous_limit': '2',
-        })
+        registry = DummyRegistry(
+            {
+                'rate_limiting.anonymous_window_span': '60',
+                'rate_limiting.anonymous_limit': '2',
+            }
+        )
         request = self._make_request()
 
-        self.assertFalse(
-            _check_anonymous_rate_limit(request, registry, 'login'))
-        self.assertFalse(
-            _check_anonymous_rate_limit(request, registry, 'login'))
-        self.assertTrue(
-            _check_anonymous_rate_limit(request, registry, 'login'))
+        self.assertFalse(_check_anonymous_rate_limit(request, registry, 'login'))
+        self.assertFalse(_check_anonymous_rate_limit(request, registry, 'login'))
+        self.assertTrue(_check_anonymous_rate_limit(request, registry, 'login'))
 
-    @patch(
-        'c2corg_api.tweens.rate_limiting.'
-        '_get_anonymous_rate_limit_redis_client')
+    @patch('c2corg_api.tweens.rate_limiting._get_anonymous_rate_limit_redis_client')
     def test_different_ips_are_tracked_independently(self, get_client):
         redis_client = FakeRedis()
         get_client.return_value = redis_client
-        registry = DummyRegistry({
-            'rate_limiting.anonymous_window_span': '60',
-            'rate_limiting.anonymous_limit': '1',
-        })
+        registry = DummyRegistry(
+            {
+                'rate_limiting.anonymous_window_span': '60',
+                'rate_limiting.anonymous_limit': '1',
+            }
+        )
 
         request_a = self._make_request('192.0.2.1')
         request_b = self._make_request('192.0.2.2')
 
-        self.assertFalse(
-            _check_anonymous_rate_limit(request_a, registry, 'login'))
+        self.assertFalse(_check_anonymous_rate_limit(request_a, registry, 'login'))
         # request_a is now at the limit, but request_b is a different IP
-        self.assertFalse(
-            _check_anonymous_rate_limit(request_b, registry, 'login'))
-        self.assertTrue(
-            _check_anonymous_rate_limit(request_a, registry, 'login'))
+        self.assertFalse(_check_anonymous_rate_limit(request_b, registry, 'login'))
+        self.assertTrue(_check_anonymous_rate_limit(request_a, registry, 'login'))
 
-    @patch(
-        'c2corg_api.tweens.rate_limiting.'
-        '_get_anonymous_rate_limit_redis_client')
+    @patch('c2corg_api.tweens.rate_limiting._get_anonymous_rate_limit_redis_client')
     def test_different_buckets_are_tracked_independently(self, get_client):
         redis_client = FakeRedis()
         get_client.return_value = redis_client
-        registry = DummyRegistry({
-            'rate_limiting.anonymous_window_span': '60',
-            'rate_limiting.anonymous_limit': '1',
-        })
+        registry = DummyRegistry(
+            {
+                'rate_limiting.anonymous_window_span': '60',
+                'rate_limiting.anonymous_limit': '1',
+            }
+        )
         request = self._make_request()
 
-        self.assertFalse(
-            _check_anonymous_rate_limit(request, registry, 'login'))
+        self.assertFalse(_check_anonymous_rate_limit(request, registry, 'login'))
         # a different bucket (account recovery) has its own counter
         self.assertFalse(
-            _check_anonymous_rate_limit(
-                request, registry, 'account_recovery'))
+            _check_anonymous_rate_limit(request, registry, 'account_recovery')
+        )
 
 
 class RateLimitingTweenAnonymousTest(unittest.TestCase):
@@ -180,11 +170,11 @@ class RateLimitingTweenAnonymousTest(unittest.TestCase):
         return request
 
     def test_known_paths_are_covered(self):
-        self.assertEqual(
-            ANONYMOUS_RATE_LIMITED_BUCKETS['/users/login'], 'login')
+        self.assertEqual(ANONYMOUS_RATE_LIMITED_BUCKETS['/users/login'], 'login')
         self.assertEqual(
             ANONYMOUS_RATE_LIMITED_BUCKETS['/users/request_password_change'],
-            'account_recovery')
+            'account_recovery',
+        )
 
     @patch('c2corg_api.tweens.rate_limiting.http_error_handler')
     @patch('c2corg_api.tweens.rate_limiting._check_anonymous_rate_limit')
@@ -192,8 +182,7 @@ class RateLimitingTweenAnonymousTest(unittest.TestCase):
         check.return_value = True
         error_handler.return_value = 'too many requests'
         handler = Mock()
-        tween = rate_limiting_tween_factory(
-            handler, DummyRegistry({}))
+        tween = rate_limiting_tween_factory(handler, DummyRegistry({}))
 
         request = self._make_request('POST', '/users/login')
         response = tween(request)
@@ -209,8 +198,7 @@ class RateLimitingTweenAnonymousTest(unittest.TestCase):
     def test_login_is_allowed_when_not_rate_limited(self, check):
         check.return_value = False
         handler = Mock(return_value='handled')
-        tween = rate_limiting_tween_factory(
-            handler, DummyRegistry({}))
+        tween = rate_limiting_tween_factory(handler, DummyRegistry({}))
 
         request = self._make_request('POST', '/users/login')
         response = tween(request)
@@ -221,8 +209,7 @@ class RateLimitingTweenAnonymousTest(unittest.TestCase):
     @patch('c2corg_api.tweens.rate_limiting._check_anonymous_rate_limit')
     def test_unrelated_anonymous_paths_are_not_rate_limited(self, check):
         handler = Mock(return_value='handled')
-        tween = rate_limiting_tween_factory(
-            handler, DummyRegistry({}))
+        tween = rate_limiting_tween_factory(handler, DummyRegistry({}))
 
         request = self._make_request('POST', '/waypoints')
         response = tween(request)
@@ -233,8 +220,7 @@ class RateLimitingTweenAnonymousTest(unittest.TestCase):
 
     def test_get_requests_are_never_rate_limited(self):
         handler = Mock(return_value='handled')
-        tween = rate_limiting_tween_factory(
-            handler, DummyRegistry({}))
+        tween = rate_limiting_tween_factory(handler, DummyRegistry({}))
 
         request = self._make_request('GET', '/users/login')
         response = tween(request)

@@ -16,7 +16,6 @@ log = logging.getLogger(__name__)
 
 
 class APIDiscourseClient:
-
     def __init__(self, settings):
         self.settings = settings
         self.timeout = int(settings['url.timeout'])
@@ -41,10 +40,11 @@ class APIDiscourseClient:
         self.discourse_username_cache = {}
 
         self.client = DiscourseClient(
-                self.discourse_base_url,
-                api_username='system',  # the built-in Discourse user
-                api_key=self.api_key,
-                timeout=self.timeout)
+            self.discourse_base_url,
+            api_username='system',  # the built-in Discourse user
+            api_key=self.api_key,
+            timeout=self.timeout,
+        )
 
     def get_userid(self, userid):
         discourse_userid = self.discourse_userid_cache.get(userid)
@@ -71,7 +71,8 @@ class APIDiscourseClient:
             username=user.forum_username,
             email=user.email,
             external_id=user.id,
-            **{"custom.user_field_1": str(user.id)})
+            **{'custom.user_field_1': str(user.id)},
+        )
         if result:
             self.discourse_userid_cache[user.id] = result['id']
         return result
@@ -93,8 +94,7 @@ class APIDiscourseClient:
         """Invite a forum user, by username, to a topic."""
         # pydiscourse only invites by e-mail (invite_user_to_topic); the
         # c2corg fork used to add this call by username.
-        return self.client._post(
-            '/t/{0}/invite.json'.format(topic_id), user=username)
+        return self.client._post('/t/{0}/invite.json'.format(topic_id), user=username)
 
     # Below this: SSO provider
     def decode_payload(self, payload):
@@ -170,8 +170,10 @@ class APIDiscourseClient:
         qs = parse_qs(decoded)
         return_sso_url = qs['return_sso_url'][0]
         parsed_return_url = urlparse(return_sso_url)
-        if parsed_return_url.scheme != 'https' \
-                or parsed_return_url.hostname not in self.allowed_sso_hosts:
+        if (
+            parsed_return_url.scheme != 'https'
+            or parsed_return_url.hostname not in self.allowed_sso_hosts
+        ):
             log.error('return_sso_url not allowed: %s', return_sso_url)
             raise HTTPBadRequest('discourse login failed')
 
@@ -184,7 +186,8 @@ class APIDiscourseClient:
     def redirect_without_nonce(self, user):
         nonce = self.request_nonce()
         return self.create_response_payload(
-            user, nonce, '%s/session/sso_login' % self.discourse_public_url)
+            user, nonce, '%s/session/sso_login' % self.discourse_public_url
+        )
 
 
 c = None

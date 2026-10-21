@@ -15,20 +15,18 @@ from dogpile.cache.api import NO_VALUE
 
 
 class BaseTestRest(BaseTestCase):
-
     def assertErrorsContain(self, body, key, value=None):  # noqa
         for error in body['errors']:
             if error.get('name') == key:
                 if value is not None:
                     self.assertEqual(error.get('description'), value)
                 return
-        self.fail(str(body) + " does not contain " + key)
+        self.fail(str(body) + ' does not contain ' + key)
 
     def assertBodyEqual(self, body, key, expected):  # noqa
         self.assertEqual(body.get(key), expected)
 
-    def add_authorization_header(self, username=None, token=None,
-                                 headers=None):
+    def add_authorization_header(self, username=None, token=None, headers=None):
         if not headers:
             headers = {}
         if not token:
@@ -62,8 +60,7 @@ class BaseTestRest(BaseTestCase):
 
     def assertError(self, errors, name, description):  # noqa
         for error in errors:
-            if description == error.get('description') and \
-                    name == error.get('name'):
+            if description == error.get('description') and name == error.get('name'):
                 return
         self.fail('no error ({}, {}) in {}'.format(name, description, errors))
 
@@ -78,10 +75,10 @@ class BaseTestRest(BaseTestCase):
         r = self.app_post_json(url, body, headers=headers, status=status)
         return r.json
 
-    def post_json_with_contributor(self, url, body={}, status=200,
-                                   username='contributor', headers={}):
-        headers = self.add_authorization_header(username=username,
-                                                headers=headers)
+    def post_json_with_contributor(
+        self, url, body={}, status=200, username='contributor', headers={}
+    ):
+        headers = self.add_authorization_header(username=username, headers=headers)
         r = self.app_post_json(url, body, headers=headers, status=status)
         return r.json
 
@@ -91,8 +88,7 @@ class BaseTestRest(BaseTestCase):
 
     def assertNotNotifiedEs(self):  # noqa
         queue = self.queue_config.queue(self.queue_config.connection)
-        self.assertIsNone(
-            queue.get(), 'unexpected sync. notification sent for ES')
+        self.assertIsNone(queue.get(), 'unexpected sync. notification sent for ES')
 
     def sync_es(self):
         self.assertNotifiedEs()
@@ -104,9 +100,7 @@ class BaseTestRest(BaseTestCase):
         return versions_in_lang[0]
 
     def get_locale(self, lang, locales):
-        return next(
-            filter(lambda locale: locale['lang'] == lang, locales),
-            None)
+        return next(filter(lambda locale: locale['lang'] == lang, locales), None)
 
     def check_cache_version(self, document_id, version):
         cache_version = self.session.get(CacheVersion, document_id)
@@ -114,8 +108,9 @@ class BaseTestRest(BaseTestCase):
         self.assertEqual(cache_version.version, version)
 
     def get_feed_change(self, document_id, change_type=None):
-        q = self.session.query(DocumentChange). \
-            filter(DocumentChange.document_id == document_id)
+        q = self.session.query(DocumentChange).filter(
+            DocumentChange.document_id == document_id
+        )
 
         if change_type:
             q = q.filter(DocumentChange.change_type == change_type)
@@ -124,10 +119,9 @@ class BaseTestRest(BaseTestCase):
 
 
 class BaseDocumentTestRest(BaseTestRest):
-
     def set_prefix_and_model(
-            self, prefix, doc_type, model,
-            model_archive, model_archive_locale):
+        self, prefix, doc_type, model, model_archive, model_archive_locale
+    ):
         self._prefix = prefix
         self._doc_type = doc_type
         self._model = model
@@ -138,11 +132,10 @@ class BaseDocumentTestRest(BaseTestRest):
         prefix = self._prefix
         limit = None
         if params:
-            prefix += "?" + urllib.parse.urlencode(params)
+            prefix += '?' + urllib.parse.urlencode(params)
             limit = params['limit']
 
-        headers = {} if not user else \
-            self.add_authorization_header(username=user)
+        headers = {} if not user else self.add_authorization_header(username=user)
 
         response = self.app.get(prefix, headers=headers, status=200)
         self.assertEqual(response.content_type, 'application/json')
@@ -160,14 +153,19 @@ class BaseDocumentTestRest(BaseTestRest):
 
         if limit is None:
             if self._model == UserProfile:
-                nb_docs = self.session.query(UserProfile). \
-                    join(User). \
-                    filter(User.email_validated). \
-                    filter(UserProfile.redirects_to.is_(None)).count()
+                nb_docs = (
+                    self.session.query(UserProfile)
+                    .join(User)
+                    .filter(User.email_validated)
+                    .filter(UserProfile.redirects_to.is_(None))
+                    .count()
+                )
             else:
-                nb_docs = self.session.query(self._model). \
-                    filter(getattr(self._model, 'redirects_to').is_(None)).\
-                    count()
+                nb_docs = (
+                    self.session.query(self._model)
+                    .filter(getattr(self._model, 'redirects_to').is_(None))
+                    .count()
+                )
             self.assertEqual(len(documents), nb_docs)
         else:
             self.assertLessEqual(len(documents), limit)
@@ -177,10 +175,9 @@ class BaseDocumentTestRest(BaseTestRest):
     def get_collection_search(self, params=None, user=None):
         prefix = self._prefix
         if params:
-            prefix += "?" + urllib.parse.urlencode(params)
+            prefix += '?' + urllib.parse.urlencode(params)
 
-        headers = {} if not user else \
-            self.add_authorization_header(username=user)
+        headers = {} if not user else self.add_authorization_header(username=user)
 
         response = self.app.get(prefix, headers=headers, status=200)
         self.assertEqual(response.content_type, 'application/json')
@@ -188,11 +185,9 @@ class BaseDocumentTestRest(BaseTestRest):
         return response.json
 
     def get_collection_lang(self, user=None):
-        headers = {} if not user else \
-            self.add_authorization_header(username=user)
+        headers = {} if not user else self.add_authorization_header(username=user)
 
-        response = self.app.get(
-            self._prefix + '?pl=es', headers=headers, status=200)
+        response = self.app.get(self._prefix + '?pl=es', headers=headers, status=200)
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -217,12 +212,10 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(actual_total, total)
 
     def get(self, reference, user=None, check_title=True, ignore_checks=False):
-        headers = {} if not user else \
-            self.add_authorization_header(username=user)
-        response = self.app.get(self._prefix + '/' +
-                                str(reference.document_id),
-                                headers=headers,
-                                status=200)
+        headers = {} if not user else self.add_authorization_header(username=user)
+        response = self.app.get(
+            self._prefix + '/' + str(reference.document_id), headers=headers, status=200
+        )
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -248,14 +241,12 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def get_caching(self, reference, user=None):
-        headers = {} if not user else \
-            self.add_authorization_header(username=user)
+        headers = {} if not user else self.add_authorization_header(username=user)
 
         url = '{0}/{1}'.format(self._prefix, str(reference.document_id))
         cache_key = get_cache_key(
-            reference.document_id,
-            None,
-            document_type=self._doc_type)
+            reference.document_id, None, document_type=self._doc_type
+        )
 
         cache_value = cache_document_detail.get(cache_key)
 
@@ -276,19 +267,19 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(body, fake_cache_value)
 
         # check that cache handles document types
-        prefix = "/routes" if self._prefix != "/routes" else "/waypoint"
+        prefix = '/routes' if self._prefix != '/routes' else '/waypoint'
         url = '{0}/{1}'.format(prefix, str(reference.document_id))
         self.app.get(url, headers=headers, status=404)
 
     def get_version(self, reference, reference_version, user=None):
-        headers = {} if not user else \
-            self.add_authorization_header(username=user)
+        headers = {} if not user else self.add_authorization_header(username=user)
         response = self.app.get(
             '{0}/{1}/en/{2}'.format(
-                self._prefix, str(reference.document_id),
-                str(reference_version.id)),
+                self._prefix, str(reference.document_id), str(reference_version.id)
+            ),
             headers=headers,
-            status=200)
+            status=200,
+        )
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -301,10 +292,8 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertIn('version', body)
         self.assertIn('previous_version_id', body)
         self.assertIn('next_version_id', body)
-        self.assertEqual(
-            body['document']['document_id'], reference.document_id)
-        self.assertEqual(
-            body['version']['version_id'], reference_version.id)
+        self.assertEqual(body['document']['document_id'], reference.document_id)
+        self.assertEqual(body['version']['version_id'], reference_version.id)
 
         version = body['version']
         written_at = version['written_at']
@@ -315,17 +304,15 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def get_info(self, reference, lang):
         response = self.app.get(
-            '{0}/{1}/{2}/info'.format(
-                self._prefix, str(reference.document_id),
-                lang),
-            status=200)
+            '{0}/{1}/{2}/info'.format(self._prefix, str(reference.document_id), lang),
+            status=200,
+        )
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
         self.assertIn('document_id', body)
         self.assertIn('locales', body)
-        self.assertEqual(
-            body['document_id'], reference.document_id)
+        self.assertEqual(body['document_id'], reference.document_id)
         self.assertEqual(len(body['locales']), 1)
         locale = body['locales'][0]
         self.assertIn('lang', locale)
@@ -337,13 +324,13 @@ class BaseDocumentTestRest(BaseTestRest):
         self.app.get(self._prefix + '/9999999/en/info', status=404)
 
     def _get_cooked(self, reference, lang, user=None):
-        headers = {} if not user else \
-            self.add_authorization_header(username=user)
+        headers = {} if not user else self.add_authorization_header(username=user)
 
-        response = self.app.get(self._prefix + '/' +
-                                str(reference.document_id) + '?cook=' + lang,
-                                headers=headers,
-                                status=200)
+        response = self.app.get(
+            self._prefix + '/' + str(reference.document_id) + '?cook=' + lang,
+            headers=headers,
+            status=200,
+        )
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -358,30 +345,30 @@ class BaseDocumentTestRest(BaseTestRest):
         return body, locales[0], cooked
 
     def get_cooked(self, reference, user=None):
-        body, locale, cooked = self._get_cooked(reference, "en", user)
+        body, locale, cooked = self._get_cooked(reference, 'en', user)
 
         self.assertEqual(locale.get('lang'), self.locale_en.lang)
-        self.assertEqual(locale.get('lang'), "en")
-        self.assertEqual(cooked.get('lang'), "en")
+        self.assertEqual(locale.get('lang'), 'en')
+        self.assertEqual(cooked.get('lang'), 'en')
 
         return body
 
     def get_cooked_with_defaulting(self, reference, user=None):
-        body, locale, cooked = self._get_cooked(reference, "it", user)
+        body, locale, cooked = self._get_cooked(reference, 'it', user)
 
-        self.assertEqual(locale.get('lang'), "fr")
-        self.assertEqual(cooked.get('lang'), "fr")
+        self.assertEqual(locale.get('lang'), 'fr')
+        self.assertEqual(cooked.get('lang'), 'fr')
 
         return body
 
     def get_lang(self, reference, user=None):
-        headers = {} if not user else \
-            self.add_authorization_header(username=user)
+        headers = {} if not user else self.add_authorization_header(username=user)
 
-        response = self.app.get(self._prefix + '/' +
-                                str(reference.document_id) + '?l=en',
-                                headers=headers,
-                                status=200)
+        response = self.app.get(
+            self._prefix + '/' + str(reference.document_id) + '?l=en',
+            headers=headers,
+            status=200,
+        )
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -394,13 +381,13 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def get_new_lang(self, reference, user=None):
-        headers = {} if not user else \
-            self.add_authorization_header(username=user)
+        headers = {} if not user else self.add_authorization_header(username=user)
 
-        response = self.app.get(self._prefix + '/' +
-                                str(reference.document_id) + '?l=it',
-                                headers=headers,
-                                status=200)
+        response = self.app.get(
+            self._prefix + '/' + str(reference.document_id) + '?l=it',
+            headers=headers,
+            status=200,
+        )
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -408,22 +395,20 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(len(locales), 0)
 
     def get_404(self, user=None):
-        headers = {} if not user else \
-            self.add_authorization_header(username=user)
+        headers = {} if not user else self.add_authorization_header(username=user)
 
-        self.app.get(
-            self._prefix + '/9999999', headers=headers, status=404)
-        self.app.get(
-            self._prefix + '/9999999?l=es', headers=headers, status=404)
+        self.app.get(self._prefix + '/9999999', headers=headers, status=404)
+        self.app.get(self._prefix + '/9999999?l=es', headers=headers, status=404)
 
     def post_error(self, request_body, user='contributor'):
-        response = self.app_post_json(self._prefix, request_body,
-                                      expect_errors=True, status=403)
+        response = self.app_post_json(
+            self._prefix, request_body, expect_errors=True, status=403
+        )
 
         headers = self.add_authorization_header(username=user)
-        response = self.app_post_json(self._prefix, request_body,
-                                      headers=headers, expect_errors=True,
-                                      status=400)
+        response = self.app_post_json(
+            self._prefix, request_body, headers=headers, expect_errors=True, status=400
+        )
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -432,13 +417,14 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def post_missing_title(self, request_body, user='contributor', prefix=''):
-        response = self.app_post_json(self._prefix, request_body,
-                                      expect_errors=True, status=403)
+        response = self.app_post_json(
+            self._prefix, request_body, expect_errors=True, status=403
+        )
 
         headers = self.add_authorization_header(username=user)
-        response = self.app_post_json(self._prefix, request_body,
-                                      headers=headers,
-                                      expect_errors=True, status=400)
+        response = self.app_post_json(
+            self._prefix, request_body, headers=headers, expect_errors=True, status=400
+        )
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -447,13 +433,14 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def post_missing_geometry(self, request_body):
-        response = self.app_post_json(self._prefix, request_body,
-                                      expect_errors=True, status=403)
+        response = self.app_post_json(
+            self._prefix, request_body, expect_errors=True, status=403
+        )
 
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(
-            self._prefix, request_body, headers=headers,
-            expect_errors=True, status=400)
+            self._prefix, request_body, headers=headers, expect_errors=True, status=400
+        )
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -463,13 +450,14 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def post_missing_geom(self, request_body):
-        response = self.app_post_json(self._prefix, request_body,
-                                      expect_errors=True, status=403)
+        response = self.app_post_json(
+            self._prefix, request_body, expect_errors=True, status=403
+        )
 
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(
-            self._prefix, request_body, headers=headers,
-            expect_errors=True, status=400)
+            self._prefix, request_body, headers=headers, expect_errors=True, status=400
+        )
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -479,13 +467,14 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def post_wrong_geom_type(self, request_body):
-        response = self.app_post_json(self._prefix, request_body,
-                                      expect_errors=True, status=403)
+        response = self.app_post_json(
+            self._prefix, request_body, expect_errors=True, status=403
+        )
 
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(
-            self._prefix, request_body, headers=headers,
-            expect_errors=True, status=400)
+            self._prefix, request_body, headers=headers, expect_errors=True, status=400
+        )
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -493,13 +482,14 @@ class BaseDocumentTestRest(BaseTestRest):
         return errors
 
     def post_missing_locales(self, request_body):
-        response = self.app_post_json(self._prefix, request_body,
-                                      expect_errors=True, status=403)
+        response = self.app_post_json(
+            self._prefix, request_body, expect_errors=True, status=403
+        )
 
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(
-            self._prefix, request_body, headers=headers,
-            expect_errors=True, status=400)
+            self._prefix, request_body, headers=headers, expect_errors=True, status=400
+        )
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -510,31 +500,32 @@ class BaseDocumentTestRest(BaseTestRest):
         return body
 
     def post_same_locale_twice(self, request_body):
-        response = self.app_post_json(self._prefix, request_body,
-                                      expect_errors=True, status=403)
+        response = self.app_post_json(
+            self._prefix, request_body, expect_errors=True, status=403
+        )
 
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(
-            self._prefix, request_body, headers=headers,
-            expect_errors=True, status=400)
+            self._prefix, request_body, headers=headers, expect_errors=True, status=400
+        )
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
         errors = body.get('errors')
         self.assertEqual(len(errors), 1)
-        self.assertEqual(
-            errors[0].get('description'), 'lang "en" is given twice')
+        self.assertEqual(errors[0].get('description'), 'lang "en" is given twice')
         self.assertEqual(errors[0].get('name'), 'locales')
         return body
 
     def post_missing_field(self, request_body, field):
-        response = self.app_post_json(self._prefix, request_body,
-                                      expect_errors=True, status=403)
+        response = self.app_post_json(
+            self._prefix, request_body, expect_errors=True, status=403
+        )
 
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(
-            self._prefix, request_body, headers=headers,
-            expect_errors=True, status=400)
+            self._prefix, request_body, headers=headers, expect_errors=True, status=400
+        )
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -552,7 +543,8 @@ class BaseDocumentTestRest(BaseTestRest):
 
         headers = self.add_authorization_header(username=user)
         response = self.app_post_json(
-            self._prefix, request_body, headers=headers, status=200)
+            self._prefix, request_body, headers=headers, status=200
+        )
 
         body = response.json
         document_id = body.get('document_id')
@@ -563,7 +555,8 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def post_missing_content_type(self, request_body):
         response = self.app.post(
-            self._prefix, params=json.dumps(request_body), status=415)
+            self._prefix, params=json.dumps(request_body), status=415
+        )
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -573,19 +566,24 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(errors[0].get('name'), 'Content-Type')
         return body
 
-    def post_success(self, request_body, user='contributor',
-                     validate_with_auth=False, skip_validation=False):
+    def post_success(
+        self,
+        request_body,
+        user='contributor',
+        validate_with_auth=False,
+        skip_validation=False,
+    ):
         response = self.app_post_json(self._prefix, request_body, status=403)
 
         headers = self.add_authorization_header(username=user)
-        response = self.app_post_json(self._prefix, request_body,
-                                      headers=headers, status=200)
+        response = self.app_post_json(
+            self._prefix, request_body, headers=headers, status=200
+        )
 
         body = response.json
         if skip_validation:
             document_id = body.get('document_id')
-            response = self.app.get(
-                self._prefix + '/' + str(document_id), status=200)
+            response = self.app.get(self._prefix + '/' + str(document_id), status=200)
             doc = self.session.get(self._model, document_id)
             return response.json, doc
         else:
@@ -596,11 +594,11 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertIsNotNone(document_id)
 
         if validate_with_auth:
-            response = self.app.get(self._prefix + '/' + str(document_id),
-                                    headers=headers, status=200)
+            response = self.app.get(
+                self._prefix + '/' + str(document_id), headers=headers, status=200
+            )
         else:
-            response = self.app.get(self._prefix + '/' + str(document_id),
-                                    status=200)
+            response = self.app.get(self._prefix + '/' + str(document_id), status=200)
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -628,23 +626,21 @@ class BaseDocumentTestRest(BaseTestRest):
         archive_locale = version.document_locales_archive
         waypoint_locale_en = doc.locales[0]
         self.assertEqual(1, waypoint_locale_en.version)
-        self.assertEqual(
-            archive_locale.version, waypoint_locale_en.version)
+        self.assertEqual(archive_locale.version, waypoint_locale_en.version)
         self.assertEqual(archive_locale.document_id, document_id)
         self.assertEqual(archive_locale.lang, lang)
 
         # check updates to the search index
         self.sync_es()
         search_doc = search_documents[self._doc_type].get(
-            id=doc.document_id,
-            index=elasticsearch_config['index'])
+            id=doc.document_id, index=elasticsearch_config['index']
+        )
 
         self.assertIsNotNone(search_doc['doc_type'])
         self.assertEqual(search_doc['doc_type'], doc.type)
 
         if isinstance(doc, Route):
-            title = waypoint_locale_en.title_prefix + ' : ' + \
-                waypoint_locale_en.title
+            title = waypoint_locale_en.title_prefix + ' : ' + waypoint_locale_en.title
             self.assertEqual(search_doc['title_en'], title)
         else:
             self.assertEqual(search_doc['title_en'], waypoint_locale_en.title)
@@ -657,12 +653,13 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def put_wrong_document_id(self, request_body, user='contributor'):
         response = self.app_put_json(
-            self._prefix + '/9999999', request_body, status=403)
+            self._prefix + '/9999999', request_body, status=403
+        )
 
         headers = self.add_authorization_header(username=user)
         response = self.app_put_json(
-            self._prefix + '/9999999', request_body, headers=headers,
-            status=404)
+            self._prefix + '/9999999', request_body, headers=headers, status=404
+        )
 
         body = response.json
         self.assertEqual(body['status'], 'error')
@@ -670,12 +667,13 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def put_wrong_version(self, request_body, id, user='contributor'):
         response = self.app_put_json(
-            self._prefix + '/' + str(id), request_body, status=403)
+            self._prefix + '/' + str(id), request_body, status=403
+        )
 
         headers = self.add_authorization_header(username=user)
         response = self.app_put_json(
-            self._prefix + '/' + str(id), request_body, headers=headers,
-            status=409)
+            self._prefix + '/' + str(id), request_body, headers=headers, status=409
+        )
 
         body = response.json
         self.assertEqual(body['status'], 'error')
@@ -686,43 +684,44 @@ class BaseDocumentTestRest(BaseTestRest):
         request body.
         """
         response = self.app_put_json(
-            self._prefix + '/' + str(id + 1), request_body, status=403)
+            self._prefix + '/' + str(id + 1), request_body, status=403
+        )
 
         headers = self.add_authorization_header(username=user)
         response = self.app_put_json(
-            self._prefix + '/' + str(id + 1), request_body, headers=headers,
-            status=400)
+            self._prefix + '/' + str(id + 1), request_body, headers=headers, status=400
+        )
         body = response.json
         self.assertEqual(body['status'], 'error')
         self.assertEqual(body['errors'][0]['name'], 'Bad Request')
 
     def put_put_no_document(self, id, user='contributor'):
-        request_body = {
-            'message': '...'
-        }
+        request_body = {'message': '...'}
         response = self.app_put_json(
-            self._prefix + '/' + str(id), request_body, status=403)
+            self._prefix + '/' + str(id), request_body, status=403
+        )
 
         headers = self.add_authorization_header(username=user)
         response = self.app_put_json(
-            self._prefix + '/' + str(id), request_body, headers=headers,
-            status=400)
+            self._prefix + '/' + str(id), request_body, headers=headers, status=400
+        )
 
         body = response.json
         self.assertEqual(body['status'], 'error')
-        self.assertEqual(
-            body['errors'][0]['description'], 'Required')
+        self.assertEqual(body['errors'][0]['description'], 'Required')
 
-    def put_missing_field(
-            self, request_body, document, field, user='contributor'):
+    def put_missing_field(self, request_body, document, field, user='contributor'):
         response = self.app_put_json(
-            self._prefix + '/' + str(document.document_id), request_body,
-            status=403)
+            self._prefix + '/' + str(document.document_id), request_body, status=403
+        )
 
         headers = self.add_authorization_header(username=user)
         response = self.app_put_json(
-            self._prefix + '/' + str(document.document_id), request_body,
-            headers=headers, status=400)
+            self._prefix + '/' + str(document.document_id),
+            request_body,
+            headers=headers,
+            status=400,
+        )
 
         body = response.json
         self.assertEqual(body.get('status'), 'error')
@@ -731,28 +730,29 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertCorniceRequired(errors[0], field)
 
     def put_success_all(
-            self, request_body, document, user='contributor', check_es=True,
-            cache_version=2):
-        """Test updating a document with changes to the figures and locales.
-        """
+        self, request_body, document, user='contributor', check_es=True, cache_version=2
+    ):
+        """Test updating a document with changes to the figures and locales."""
         response = self.app_put_json(
-            self._prefix + '/' + str(document.document_id), request_body,
-            status=403)
+            self._prefix + '/' + str(document.document_id), request_body, status=403
+        )
 
         headers = self.add_authorization_header(username=user)
         self.app_put_json(
-            self._prefix + '/' + str(document.document_id), request_body,
-            headers=headers, status=200)
+            self._prefix + '/' + str(document.document_id),
+            request_body,
+            headers=headers,
+            status=200,
+        )
 
         response = self.app.get(
-            self._prefix + '/' + str(document.document_id), headers=headers,
-            status=200)
+            self._prefix + '/' + str(document.document_id), headers=headers, status=200
+        )
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
         document_id = body.get('document_id')
-        self.assertNotEqual(
-            body.get('version'), document.version)
+        self.assertNotEqual(body.get('version'), document.version)
         self.assertEqual(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
@@ -762,21 +762,20 @@ class BaseDocumentTestRest(BaseTestRest):
         locale_en = document.get_locale('en')
 
         # check that a new archive_document was created
-        archive_count = self.session.query(self._model_archive). \
-            filter(
-                getattr(self._model_archive, 'document_id') == document_id). \
-            count()
+        archive_count = (
+            self.session.query(self._model_archive)
+            .filter(getattr(self._model_archive, 'document_id') == document_id)
+            .count()
+        )
         self.assertEqual(archive_count, 2)
 
         # check that only one new archive_document_locale was created (only
         # for 'en' not 'fr')
-        archive_locale_count = \
-            self.session.query(self._model_archive_locale). \
-            filter(
-                document_id == getattr(
-                    self._model_archive_locale, 'document_id')
-            ). \
-            count()
+        archive_locale_count = (
+            self.session.query(self._model_archive_locale)
+            .filter(document_id == getattr(self._model_archive_locale, 'document_id'))
+            .count()
+        )
         self.assertEqual(archive_locale_count, 3)
 
         # check that new versions were created
@@ -794,8 +793,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
         archive_document_en = version_en.document_archive
         self.assertEqual(archive_document_en.document_id, document_id)
-        self.assertEqual(
-            archive_document_en.version, document.version)
+        self.assertEqual(archive_document_en.version, document.version)
 
         archive_locale = version_en.document_locales_archive
         self.assertEqual(archive_locale.document_id, document_id)
@@ -815,16 +813,15 @@ class BaseDocumentTestRest(BaseTestRest):
 
         archive_locale_fr = version_fr.document_locales_archive
         self.assertEqual(archive_locale_fr.document_id, document_id)
-        self.assertEqual(
-            archive_locale_fr.version, self.locale_fr.version)
+        self.assertEqual(archive_locale_fr.version, self.locale_fr.version)
         self.assertEqual(archive_locale_fr.lang, 'fr')
 
         if check_es:
             sync_es(self.session)
             # check updates to the search index
             search_doc = search_documents[self._doc_type].get(
-                id=document.document_id,
-                index=elasticsearch_config['index'])
+                id=document.document_id, index=elasticsearch_config['index']
+            )
 
             self.assertEqual(search_doc['doc_type'], document.type)
             self.assertEqual(search_doc['title_en'], archive_locale.title)
@@ -835,27 +832,29 @@ class BaseDocumentTestRest(BaseTestRest):
         return (body, document)
 
     def put_success_figures_only(
-            self, request_body, document, user='contributor', check_es=True):
-        """Test updating a document with changes to the figures only.
-        """
+        self, request_body, document, user='contributor', check_es=True
+    ):
+        """Test updating a document with changes to the figures only."""
         response = self.app_put_json(
-            self._prefix + '/' + str(document.document_id), request_body,
-            status=403)
+            self._prefix + '/' + str(document.document_id), request_body, status=403
+        )
 
         headers = self.add_authorization_header(username=user)
         self.app_put_json(
-            self._prefix + '/' + str(document.document_id), request_body,
-            headers=headers, status=200)
+            self._prefix + '/' + str(document.document_id),
+            request_body,
+            headers=headers,
+            status=200,
+        )
 
         response = self.app.get(
-            self._prefix + '/' + str(document.document_id), headers=headers,
-            status=200)
+            self._prefix + '/' + str(document.document_id), headers=headers, status=200
+        )
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
         document_id = body.get('document_id')
-        self.assertNotEqual(
-            body.get('version'), document.version)
+        self.assertNotEqual(body.get('version'), document.version)
         self.assertEqual(body.get('document_id'), document_id)
 
         # check that the document was updated correctly
@@ -864,20 +863,19 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(len(document.locales), 2)
 
         # check that a new archive_document was created
-        archive_count = self.session.query(self._model_archive). \
-            filter(
-                getattr(self._model_archive, 'document_id') == document_id). \
-            count()
+        archive_count = (
+            self.session.query(self._model_archive)
+            .filter(getattr(self._model_archive, 'document_id') == document_id)
+            .count()
+        )
         self.assertEqual(archive_count, 2)
 
         # check that no new archive_document_locale was created
-        archive_locale_count = \
-            self.session.query(self._model_archive_locale). \
-            filter(
-                document_id == getattr(
-                    self._model_archive_locale, 'document_id')
-            ). \
-            count()
+        archive_locale_count = (
+            self.session.query(self._model_archive_locale)
+            .filter(document_id == getattr(self._model_archive_locale, 'document_id'))
+            .count()
+        )
         self.assertEqual(archive_locale_count, 2)
 
         # check that new versions were created
@@ -908,8 +906,8 @@ class BaseDocumentTestRest(BaseTestRest):
         # check updates to the search index
         sync_es(self.session)
         search_doc = search_documents[self._doc_type].get(
-            id=document.document_id,
-            index=elasticsearch_config['index'])
+            id=document.document_id, index=elasticsearch_config['index']
+        )
 
         self.assertEqual(search_doc['doc_type'], document.type)
 
@@ -922,29 +920,30 @@ class BaseDocumentTestRest(BaseTestRest):
             title = locale_fr.title_prefix + ' : ' + locale_fr.title
             self.assertEqual(search_doc['title_fr'], title)
         elif check_es:
-            self.assertEqual(
-                search_doc['title_en'], document.get_locale('en').title)
-            self.assertEqual(
-                search_doc['title_fr'], document.get_locale('fr').title)
+            self.assertEqual(search_doc['title_en'], document.get_locale('en').title)
+            self.assertEqual(search_doc['title_fr'], document.get_locale('fr').title)
 
         return (body, document)
 
     def put_success_lang_only(
-            self, request_body, document, user='contributor', check_es=True):
-        """Test updating a document with only changes to a locale.
-        """
+        self, request_body, document, user='contributor', check_es=True
+    ):
+        """Test updating a document with only changes to a locale."""
         response = self.app_put_json(
-            self._prefix + '/' + str(document.document_id), request_body,
-            status=403)
+            self._prefix + '/' + str(document.document_id), request_body, status=403
+        )
 
         headers = self.add_authorization_header(username=user)
         self.app_put_json(
-            self._prefix + '/' + str(document.document_id), request_body,
-            headers=headers, status=200)
+            self._prefix + '/' + str(document.document_id),
+            request_body,
+            headers=headers,
+            status=200,
+        )
 
         response = self.app.get(
-            self._prefix + '/' + str(document.document_id), headers=headers,
-            status=200)
+            self._prefix + '/' + str(document.document_id), headers=headers, status=200
+        )
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -960,22 +959,21 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(len(document.locales), 2)
 
         # check that no new archive_document was created
-        archive_count = self.session.query(self._model_archive). \
-            filter(
-                getattr(self._model_archive, 'document_id') == document_id). \
-            count()
+        archive_count = (
+            self.session.query(self._model_archive)
+            .filter(getattr(self._model_archive, 'document_id') == document_id)
+            .count()
+        )
 
         expected_count = 2 if document.type == 'r' else 1
         self.assertEqual(archive_count, expected_count)
 
         # check that one new archive_document_locale was created
-        archive_locale_count = \
-            self.session.query(self._model_archive_locale). \
-            filter(
-                document_id == getattr(
-                    self._model_archive_locale, 'document_id')
-            ). \
-            count()
+        archive_locale_count = (
+            self.session.query(self._model_archive_locale)
+            .filter(document_id == getattr(self._model_archive_locale, 'document_id'))
+            .count()
+        )
         self.assertEqual(archive_locale_count, 3)
 
         # check that one new version was created
@@ -1011,33 +1009,34 @@ class BaseDocumentTestRest(BaseTestRest):
         if check_es:
             sync_es(self.session)
             search_doc = search_documents[self._doc_type].get(
-                id=document.document_id,
-                index=elasticsearch_config['index'])
+                id=document.document_id, index=elasticsearch_config['index']
+            )
 
             self.assertEqual(search_doc['doc_type'], document.type)
-            self.assertEqual(
-                search_doc['title_en'], document.get_locale('en').title)
-            self.assertEqual(
-                search_doc['title_fr'], document.get_locale('fr').title)
+            self.assertEqual(search_doc['title_en'], document.get_locale('en').title)
+            self.assertEqual(search_doc['title_fr'], document.get_locale('fr').title)
 
         return (body, document)
 
     def put_success_new_lang(
-            self, request_body, document, user='contributor', check_es=True):
-        """Test updating a document by adding a new locale.
-        """
+        self, request_body, document, user='contributor', check_es=True
+    ):
+        """Test updating a document by adding a new locale."""
         response = self.app_put_json(
-            self._prefix + '/' + str(document.document_id), request_body,
-            status=403)
+            self._prefix + '/' + str(document.document_id), request_body, status=403
+        )
 
         headers = self.add_authorization_header(username=user)
         self.app_put_json(
-            self._prefix + '/' + str(document.document_id), request_body,
-            headers=headers, status=200)
+            self._prefix + '/' + str(document.document_id),
+            request_body,
+            headers=headers,
+            status=200,
+        )
 
         response = self.app.get(
-            self._prefix + '/' + str(document.document_id), headers=headers,
-            status=200)
+            self._prefix + '/' + str(document.document_id), headers=headers, status=200
+        )
         self.assertEqual(response.content_type, 'application/json')
 
         body = response.json
@@ -1053,22 +1052,21 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertEqual(len(document.locales), 3)
 
         # check that no new archive_document was created
-        archive_count = self.session.query(self._model_archive). \
-            filter(
-                getattr(self._model_archive, 'document_id') == document_id). \
-            count()
+        archive_count = (
+            self.session.query(self._model_archive)
+            .filter(getattr(self._model_archive, 'document_id') == document_id)
+            .count()
+        )
 
         expected_count = 2 if document.type == 'r' else 1
         self.assertEqual(archive_count, expected_count)
 
         # check that one new archive_document_locale was created
-        archive_locale_count = \
-            self.session.query(self._model_archive_locale). \
-            filter(
-                document_id == getattr(
-                    self._model_archive_locale, 'document_id')
-            ). \
-            count()
+        archive_locale_count = (
+            self.session.query(self._model_archive_locale)
+            .filter(document_id == getattr(self._model_archive_locale, 'document_id'))
+            .count()
+        )
         self.assertEqual(archive_locale_count, 3)
 
         # check that one new version was created
@@ -1110,37 +1108,27 @@ class BaseDocumentTestRest(BaseTestRest):
         if check_es:
             sync_es(self.session)
             search_doc = search_documents[self._doc_type].get(
-                id=document.document_id,
-                index=elasticsearch_config['index'])
+                id=document.document_id, index=elasticsearch_config['index']
+            )
 
             self.assertEqual(search_doc['doc_type'], document.type)
-            self.assertEqual(
-                search_doc['title_en'], document.get_locale('en').title)
-            self.assertEqual(
-                search_doc['title_fr'], document.get_locale('fr').title)
-            self.assertEqual(
-                search_doc['title_es'], document.get_locale('es').title)
+            self.assertEqual(search_doc['title_en'], document.get_locale('en').title)
+            self.assertEqual(search_doc['title_fr'], document.get_locale('fr').title)
+            self.assertEqual(search_doc['title_es'], document.get_locale('es').title)
 
         return (body, document)
 
     def _get_association_logs(self, document):
-        url = '/associations-history?d={}'.format(
-            document.document_id
-        )
+        url = '/associations-history?d={}'.format(document.document_id)
 
         resp = self.app.get(url, status=200)
         self.assertIsInstance(resp.json['count'], int)
-        associations = resp.json["associations"]
+        associations = resp.json['associations']
 
-        self.assertNotEqual(
-            len(associations),
-            0,
-            "Need at least one association")
+        self.assertNotEqual(len(associations), 0, 'Need at least one association')
 
         for association in associations:
-            self._assert_association_log_structure(
-                association,
-                document.document_id)
+            self._assert_association_log_structure(association, document.document_id)
 
         return associations
 
@@ -1170,14 +1158,14 @@ class BaseDocumentTestRest(BaseTestRest):
 
         self.assertTrue(child_id == document_id or parent_id == document_id)
 
-        if parent["type"] == USERPROFILE_TYPE:
-            self.assertIsInstance(parent["name"], str)
+        if parent['type'] == USERPROFILE_TYPE:
+            self.assertIsInstance(parent['name'], str)
 
-        if child["type"] == USERPROFILE_TYPE:
-            self.assertIsInstance(child["name"], str)
+        if child['type'] == USERPROFILE_TYPE:
+            self.assertIsInstance(child['name'], str)
 
     def _add_association(self, association, user_id):
-        """ used for setup """
+        """used for setup"""
         self.session.add(association)
         self.session.add(association.get_log(user_id, is_creation=True))
 

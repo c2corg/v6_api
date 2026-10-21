@@ -16,7 +16,7 @@ from elasticsearch_dsl import Index
 from pyramid.paster import (
     get_appsettings,
     setup_logging,
-    )
+)
 
 from pyramid.scripts.common import parse_vars
 
@@ -26,8 +26,10 @@ from c2corg_api.search import configure_es_from_config, elasticsearch_config
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print('usage: %s <config_uri> [var=value]\n'
-          '(example: "%s development.ini")' % (cmd, cmd))
+    print(
+        'usage: %s <config_uri> [var=value]\n'
+        '(example: "%s development.ini")' % (cmd, cmd)
+    )
     sys.exit(1)
 
 
@@ -43,8 +45,7 @@ def main(argv=sys.argv):
 
 
 def setup_es():
-    """Create the ElasticSearch index and configure the mapping.
-    """
+    """Create the ElasticSearch index and configure the mapping."""
     client = elasticsearch_config['client']
     index_name = elasticsearch_config['index']
 
@@ -52,12 +53,16 @@ def setup_es():
     print('ElasticSearch version: {0}'.format(info['version']['number']))
 
     if client.indices.exists(index_name):
-        print('Index "{0}" already exists. To re-create the index, manually '
-              'delete the index and run this script again.'.format(index_name))
+        print(
+            'Index "{0}" already exists. To re-create the index, manually '
+            'delete the index and run this script again.'.format(index_name)
+        )
         print('To delete the index run:')
-        print('curl -XDELETE \'http://{0}:{1}/{2}/\''.format(
-            elasticsearch_config['host'], elasticsearch_config['port'],
-            index_name))
+        print(
+            "curl -XDELETE 'http://{0}:{1}/{2}/'".format(
+                elasticsearch_config['host'], elasticsearch_config['port'], index_name
+            )
+        )
         sys.exit(0)
 
     index = Index(index_name)
@@ -80,8 +85,7 @@ def setup_es():
 
 
 def drop_index(silent=True):
-    """Remove the ElasticSearch index.
-    """
+    """Remove the ElasticSearch index."""
     index = Index(elasticsearch_config['index'])
     try:
         index.delete()

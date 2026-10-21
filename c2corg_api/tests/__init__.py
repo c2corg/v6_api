@@ -36,7 +36,8 @@ configfile = os.path.realpath(os.path.join(curdir, '../../test.ini'))
 settings = get_appsettings(configfile)
 
 alembic_scripts_folder = os.path.realpath(
-    os.path.join(curdir, '../../alembic_migration'))
+    os.path.join(curdir, '../../alembic_migration')
+)
 
 if settings['noauthorization']:
     log.warning('Authorization disabled for these tests')
@@ -48,12 +49,9 @@ def get_engine():
 
 def _get_alembic_config():
     alembic_config = Config()
-    alembic_config.set_main_option(
-        'script_location', alembic_scripts_folder)
-    alembic_config.set_main_option(
-        'sqlalchemy.url', settings['sqlalchemy.url'])
-    alembic_config.set_main_option(
-        'version_table_schema', 'alembic')
+    alembic_config.set_main_option('script_location', alembic_scripts_folder)
+    alembic_config.set_main_option('sqlalchemy.url', settings['sqlalchemy.url'])
+    alembic_config.set_main_option('version_table_schema', 'alembic')
     return alembic_config
 
 
@@ -72,84 +70,109 @@ def _add_global_test_data(session):
         categories=['amateur'],
         locales=[
             DocumentLocale(title='', description='Me', lang='en'),
-            DocumentLocale(title='', description='Moi', lang='fr')],
-        geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'))
+            DocumentLocale(title='', description='Moi', lang='fr'),
+        ],
+        geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+    )
 
     contributor = User(
         name='Contributor',
-        username='contributor', email='contributor@camptocamp.org',
-        forum_username='contributor', password='super pass',
-        tos_validated=datetime.datetime(2020, 12, 28), email_validated=True,
-        profile=contributor_profile)
+        username='contributor',
+        email='contributor@camptocamp.org',
+        forum_username='contributor',
+        password='super pass',
+        tos_validated=datetime.datetime(2020, 12, 28),
+        email_validated=True,
+        profile=contributor_profile,
+    )
 
     contributor2_profile = UserProfile(
-        categories=['amateur'],
-        locales=[DocumentLocale(title='...', lang='en')])
+        categories=['amateur'], locales=[DocumentLocale(title='...', lang='en')]
+    )
 
     contributor2 = User(
         name='Contributor 2',
-        username='contributor2', email='contributor2@camptocamp.org',
+        username='contributor2',
+        email='contributor2@camptocamp.org',
         forum_username='contributor2',
-        password='better pass', email_validated=True,
+        password='better pass',
+        email_validated=True,
         tos_validated=datetime.datetime(2021, 2, 12),
-        profile=contributor2_profile)
+        profile=contributor2_profile,
+    )
 
     contributor3_profile = UserProfile(
-        categories=['amateur'],
-        locales=[DocumentLocale(title='...', lang='en')])
+        categories=['amateur'], locales=[DocumentLocale(title='...', lang='en')]
+    )
 
     contributor3 = User(
         name='Contributor 3',
-        username='contributor3', email='contributor3@camptocamp.org',
+        username='contributor3',
+        email='contributor3@camptocamp.org',
         forum_username='contributor3',
-        password='poor password', email_validated=True,
+        password='poor password',
+        email_validated=True,
         tos_validated=datetime.datetime(2006, 1, 1),
-        profile=contributor3_profile)
+        profile=contributor3_profile,
+    )
 
     contributor_notos_profile = UserProfile(
-        categories=['amateur'],
-        locales=[DocumentLocale(title='...', lang='en')])
+        categories=['amateur'], locales=[DocumentLocale(title='...', lang='en')]
+    )
 
     contributor_notos = User(
         name='Contributor no ToS',
-        username='contributornotos', email='contributornotos@camptocamp.org',
+        username='contributornotos',
+        email='contributornotos@camptocamp.org',
         forum_username='contributornotos',
-        password='some password', email_validated=True,
-        profile=contributor_notos_profile)
+        password='some password',
+        email_validated=True,
+        profile=contributor_notos_profile,
+    )
 
     moderator_profile = UserProfile(
-        categories=['mountain_guide'],
-        locales=[DocumentLocale(title='', lang='en')])
+        categories=['mountain_guide'], locales=[DocumentLocale(title='', lang='en')]
+    )
 
     moderator = User(
         name='Moderator',
-        username='moderator', email='moderator@camptocamp.org',
+        username='moderator',
+        email='moderator@camptocamp.org',
         forum_username='moderator',
-        moderator=True, password='even better pass',
+        moderator=True,
+        password='even better pass',
         tos_validated=datetime.datetime(2021, 2, 12),
-        email_validated=True, profile=moderator_profile)
+        email_validated=True,
+        profile=moderator_profile,
+    )
 
-    robot_profile = UserProfile(
-        locales=[DocumentLocale(title='', lang='en')])
+    robot_profile = UserProfile(locales=[DocumentLocale(title='', lang='en')])
 
     robot = User(
         name='Robot',
-        username='robot', email='robot@camptocamp.org',
+        username='robot',
+        email='robot@camptocamp.org',
         forum_username='robot',
-        robot=True, password='bombproof pass',
+        robot=True,
+        password='bombproof pass',
         tos_validated=datetime.datetime(2021, 6, 6),
-        email_validated=True, profile=robot_profile)
+        email_validated=True,
+        profile=robot_profile,
+    )
 
-    users = [robot, moderator, contributor, contributor2,
-             contributor3, contributor_notos]
+    users = [
+        robot,
+        moderator,
+        contributor,
+        contributor2,
+        contributor3,
+        contributor_notos,
+    ]
     session.add_all(users)
     session.flush()
 
     domain = 'www.somewhere.com'
-    sso_key = SsoKey(
-        domain=domain,
-        key=domain
-    )
+    sso_key = SsoKey(domain=domain, key=domain)
     session.add(sso_key)
 
     sso_external_id = SsoExternalId(
@@ -213,13 +236,14 @@ def teardown_package():
 
 
 class AssertionsMixin:
-
     def assertCoodinateEquals(self, coord1, coord2):  # noqa
         self.assertEqual(len(coord1), len(coord2), 'not the same dimension')
         for i in range(0, len(coord1)):
             self.assertAlmostEqual(
-                coord1[i], coord2[i],
-                msg='{} does not almost equal {}'.format(coord1[i], coord2[i]))
+                coord1[i],
+                coord2[i],
+                msg='{} does not almost equal {}'.format(coord1[i], coord2[i]),
+            )
 
 
 class BaseTestCase(unittest.TestCase, AssertionsMixin):
@@ -292,10 +316,7 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
         res = getattr(self.app, action + '_json')(*args, **kwargs)
         if status != '*' and res.status_code != status:
             errors = res.body if res.status_code == 400 else ''
-            self.fail('Bad response: %s (not %d) : %s' % (
-                res.status,
-                status,
-                errors))
+            self.fail('Bad response: %s (not %d) : %s' % (res.status, status, errors))
         return res
 
 
@@ -308,5 +329,6 @@ def reset_queue(queue_config):
 def reset_cache_key():
     cache_version = settings['cache_version']
     caching_common.CACHE_VERSION = '{0}-{1}-{2}'.format(
-        cache_version, int(time.time()), randint(0, 10**9))
+        cache_version, int(time.time()), randint(0, 10**9)
+    )
     caching_common.cache_status = caching_common.CacheStatus()

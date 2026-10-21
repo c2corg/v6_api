@@ -1,10 +1,11 @@
 from c2corg_api.tests.views import BaseTestRest
-from c2corg_api.views.document_schemas import route_documents_config, \
-    topo_map_documents_config
+from c2corg_api.views.document_schemas import (
+    route_documents_config,
+    topo_map_documents_config,
+)
 
 
 class TestGetDocumentsConfig(BaseTestRest):
-
     def test_get_load_only_fields_routes(self):
         fields = route_documents_config.get_load_only_fields()
         self.assertIn('elevation_max', fields)

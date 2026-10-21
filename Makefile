@@ -27,7 +27,8 @@ help:
 	@echo "- run-background-jobs"	Run the background jobs
 	@echo
 	@echo "- test					Run the unit tests"
-	@echo "- lint					Run the ruff linter on the Python code"
+	@echo "- format				Format the Python code with ruff (and apply safe lint fixes)"
+	@echo "- lint					Check the Python code with ruff (lint and formatting)"
 	@echo
 	@echo "Secondary targets:"
 	@echo
@@ -61,8 +62,14 @@ stop:
 serve:
 		pserve development.ini --reload
 
-lint: 
+.PHONY: format
+format:
+		ruff format $(SRC_DIRS)
+		ruff check --fix $(SRC_DIRS)
+
+lint:
 		ruff check $(SRC_DIRS)
+		ruff format --check $(SRC_DIRS)
 		@echo "Wonderful, python style is Ok!"
 
 test:

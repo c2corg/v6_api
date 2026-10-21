@@ -10,29 +10,30 @@ class TestSitemapRest(BaseTestRest):
         self._prefix = '/sitemaps'
 
         self.waypoint1 = Waypoint(
-            waypoint_type='summit', elevation=2000,
-            locales=[
-                WaypointLocale(
-                    lang='fr', title='Dent de Crolles')
-            ])
+            waypoint_type='summit',
+            elevation=2000,
+            locales=[WaypointLocale(lang='fr', title='Dent de Crolles')],
+        )
         self.session.add(self.waypoint1)
         self.waypoint2 = Waypoint(
-            waypoint_type='summit', elevation=4985,
+            waypoint_type='summit',
+            elevation=4985,
             locales=[
-                WaypointLocale(
-                    lang='en', title='Mont Blanc'),
-                WaypointLocale(
-                    lang='fr', title='Mont Blanc')
-            ])
+                WaypointLocale(lang='en', title='Mont Blanc'),
+                WaypointLocale(lang='fr', title='Mont Blanc'),
+            ],
+        )
         self.session.add(self.waypoint2)
         self.route = Route(
-            activities=['skitouring'], elevation_max=1500, elevation_min=700,
+            activities=['skitouring'],
+            elevation_max=1500,
+            elevation_min=700,
             locales=[
                 RouteLocale(
-                    lang='fr', title='Mont Blanc du ciel',
-                    title_prefix='Mont Blanc'
+                    lang='fr', title='Mont Blanc du ciel', title_prefix='Mont Blanc'
                 )
-            ])
+            ],
+        )
         self.session.add(self.route)
         self.session.flush()
 

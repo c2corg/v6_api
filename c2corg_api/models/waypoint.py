@@ -1,5 +1,8 @@
-from c2corg_api.models.schema_utils import restrict_schema, \
-    get_update_schema, get_create_schema
+from c2corg_api.models.schema_utils import (
+    restrict_schema,
+    get_update_schema,
+    get_create_schema,
+)
 from sqlalchemy import (
     Boolean,
     Column,
@@ -7,7 +10,7 @@ from sqlalchemy import (
     SmallInteger,
     String,
     ForeignKey,
-    )
+)
 
 
 from colanderalchemy import SQLAlchemySchemaNode
@@ -15,9 +18,14 @@ from colanderalchemy import SQLAlchemySchemaNode
 from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
-    schema_attributes, schema_locale_attributes,
-    get_geometry_schema_overrides)
+    ArchiveDocument,
+    Document,
+    DocumentLocale,
+    ArchiveDocumentLocale,
+    schema_attributes,
+    schema_locale_attributes,
+    get_geometry_schema_overrides,
+)
 from c2corg_api.models import enums
 from c2corg_api.models.common import document_types
 
@@ -26,7 +34,6 @@ WAYPOINT_TYPE = document_types.WAYPOINT_TYPE
 
 
 class _WaypointMixin:
-
     # type de WP
     waypoint_type = Column(enums.waypoint_type, nullable=False)
 
@@ -123,8 +130,7 @@ class _WaypointMixin:
     phone = Column(String(50))
 
     # type de transport en commun (access)
-    public_transportation_types = Column(ArrayOfEnum(
-        enums.public_transportation_type))
+    public_transportation_types = Column(ArrayOfEnum(enums.public_transportation_type))
 
     # accessibilite en transports en commun (access)
     public_transportation_rating = Column(enums.public_transportation_rating)
@@ -174,35 +180,68 @@ class _WaypointMixin:
 
 
 attributes = [
-    'waypoint_type', 'elevation', 'prominence', 'length', 'height_median',
-    'elevation_min', 'routes_quantity', 'capacity', 'slope', 'height_max',
-    'capacity_staffed', 'climbing_outdoor_types', 'climbing_indoor_types',
-    'public_transportation_types', 'product_types', 'ground_types',
-    'weather_station_types', 'rain_proof', 'public_transportation_rating',
-    'paragliding_rating', 'children_proof', 'snow_clearance_rating',
-    'exposition_rating', 'rock_types', 'orientations',
-    'best_periods', 'url', 'maps_info', 'phone', 'lift_access',
-    'phone_custodian', 'custodianship', 'parking_fee', 'matress_unstaffed',
-    'blanket_unstaffed', 'gas_unstaffed', 'heating_unstaffed',
-    'climbing_styles', 'access_time', 'climbing_rating_max',
-    'climbing_rating_min', 'climbing_rating_median', 'height_min',
-    'equipment_ratings', 'slackline_types', 'slackline_length_min',
-    'slackline_length_max'
+    'waypoint_type',
+    'elevation',
+    'prominence',
+    'length',
+    'height_median',
+    'elevation_min',
+    'routes_quantity',
+    'capacity',
+    'slope',
+    'height_max',
+    'capacity_staffed',
+    'climbing_outdoor_types',
+    'climbing_indoor_types',
+    'public_transportation_types',
+    'product_types',
+    'ground_types',
+    'weather_station_types',
+    'rain_proof',
+    'public_transportation_rating',
+    'paragliding_rating',
+    'children_proof',
+    'snow_clearance_rating',
+    'exposition_rating',
+    'rock_types',
+    'orientations',
+    'best_periods',
+    'url',
+    'maps_info',
+    'phone',
+    'lift_access',
+    'phone_custodian',
+    'custodianship',
+    'parking_fee',
+    'matress_unstaffed',
+    'blanket_unstaffed',
+    'gas_unstaffed',
+    'heating_unstaffed',
+    'climbing_styles',
+    'access_time',
+    'climbing_rating_max',
+    'climbing_rating_min',
+    'climbing_rating_median',
+    'height_min',
+    'equipment_ratings',
+    'slackline_types',
+    'slackline_length_min',
+    'slackline_length_max',
 ]
 
 
 class Waypoint(_WaypointMixin, Document):
-    """
-    """
+    """ """
+
     __tablename__ = 'waypoints'
 
     document_id = Column(
-        Integer,
-        ForeignKey(schema + '.documents.document_id'), primary_key=True)
+        Integer, ForeignKey(schema + '.documents.document_id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': WAYPOINT_TYPE,
-        'inherit_condition': Document.document_id == document_id
+        'inherit_condition': Document.document_id == document_id,
     }
 
     def to_archive(self):
@@ -219,32 +258,32 @@ class Waypoint(_WaypointMixin, Document):
     def get_update_type(self, old_versions):
         update_types = super().get_update_type(old_versions)
 
-        if self.public_transportation_rating != \
-                old_versions.get('public_transportation_rating', None):
+        if self.public_transportation_rating != old_versions.get(
+            'public_transportation_rating', None
+        ):
             update_types[0].append('public_transportation_rating')
 
         return update_types
 
 
 class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
-    """
-    """
+    """ """
+
     __tablename__ = 'waypoints_archives'
 
     id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_archives.id'), primary_key=True)
+        Integer, ForeignKey(schema + '.documents_archives.id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': WAYPOINT_TYPE,
-        'inherit_condition': ArchiveDocument.id == id
+        'inherit_condition': ArchiveDocument.id == id,
     }
 
     __table_args__ = Base.__table_args__
 
 
 class _WaypointLocaleMixin:
-
     # access (climbing_outdoor/indoor, access, local_product, sport_shop)
     access = Column(String)
 
@@ -259,23 +298,19 @@ class _WaypointLocaleMixin:
     external_resources = Column(String)
 
 
-attributes_locales = [
-    'access', 'access_period', 'external_resources'
-]
+attributes_locales = ['access', 'access_period', 'external_resources']
 
 
 class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
-    """
-    """
+    """ """
+
     __tablename__ = 'waypoints_locales'
 
-    id = Column(
-                Integer,
-                ForeignKey(schema + '.documents_locales.id'), primary_key=True)
+    id = Column(Integer, ForeignKey(schema + '.documents_locales.id'), primary_key=True)
 
     __mapper_args__ = {
         'polymorphic_identity': WAYPOINT_TYPE,
-        'inherit_condition': DocumentLocale.id == id
+        'inherit_condition': DocumentLocale.id == id,
     }
 
     def to_archive(self):
@@ -291,18 +326,17 @@ class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
 
 
 class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
-    """
-    """
+    """ """
+
     __tablename__ = 'waypoints_locales_archives'
 
     id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_locales_archives.id'),
-        primary_key=True)
+        Integer, ForeignKey(schema + '.documents_locales_archives.id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': WAYPOINT_TYPE,
-        'inherit_condition': ArchiveDocumentLocale.id == id
+        'inherit_condition': ArchiveDocumentLocale.id == id,
     }
 
     __table_args__ = Base.__table_args__
@@ -312,11 +346,8 @@ schema_waypoint_locale = SQLAlchemySchemaNode(
     WaypointLocale,
     # whitelisted attributes
     includes=schema_locale_attributes + attributes_locales,
-    overrides={
-        'version': {
-            'missing': None
-        }
-    })
+    overrides={'version': {'missing': None}},
+)
 
 
 schema_waypoint = SQLAlchemySchemaNode(
@@ -324,21 +355,22 @@ schema_waypoint = SQLAlchemySchemaNode(
     # whitelisted attributes
     includes=schema_attributes + attributes,
     overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_waypoint_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POINT'])
-    })
+        'document_id': {'missing': None},
+        'version': {'missing': None},
+        'locales': {'children': [schema_waypoint_locale]},
+        'geometry': get_geometry_schema_overrides(['POINT']),
+    },
+)
 
 schema_create_waypoint = get_create_schema(schema_waypoint)
 schema_update_waypoint = get_update_schema(schema_waypoint)
-schema_association_waypoint = restrict_schema(schema_waypoint, [
-    'elevation', 'locales.title', 'locales.access_period', 'geometry.geom',
-    'public_transportation_rating'
-])
+schema_association_waypoint = restrict_schema(
+    schema_waypoint,
+    [
+        'elevation',
+        'locales.title',
+        'locales.access_period',
+        'geometry.geom',
+        'public_transportation_rating',
+    ],
+)

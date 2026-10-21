@@ -17,36 +17,35 @@ class TestPasswordUtil(unittest.TestCase):
         self.assertGreater(len(self.long_password.encode('utf-8')), 72)
         encrypted = PasswordUtil.encrypt_password(self.long_password)
 
-        self.assertTrue(
-            PasswordUtil.is_password_valid(self.long_password, encrypted))
-        self.assertFalse(
-            PasswordUtil.is_password_valid('wrong password', encrypted))
+        self.assertTrue(PasswordUtil.is_password_valid(self.long_password, encrypted))
+        self.assertFalse(PasswordUtil.is_password_valid('wrong password', encrypted))
 
     def test_hash_made_by_truncating_bcrypt_still_valid(self):
         # bcrypt < 5 hashed only the first 72 bytes: hashes stored that way
         # must keep validating
         legacy = bcrypt.hashpw(
-            self.long_password.encode('utf-8')[:72], bcrypt.gensalt())
+            self.long_password.encode('utf-8')[:72], bcrypt.gensalt()
+        )
 
+        self.assertTrue(PasswordUtil.is_password_valid(self.long_password, legacy))
         self.assertTrue(
-            PasswordUtil.is_password_valid(self.long_password, legacy))
-        self.assertTrue(PasswordUtil.is_password_valid(
-            self.long_password, legacy.decode('utf-8')))
+            PasswordUtil.is_password_valid(self.long_password, legacy.decode('utf-8'))
+        )
 
     def test_bytes_and_str_inputs(self):
         encrypted = PasswordUtil.encrypt_password(b'super pass')
 
-        self.assertTrue(
-            PasswordUtil.is_password_valid('super pass', encrypted))
-        self.assertTrue(
-            PasswordUtil.is_password_valid(b'super pass', encrypted))
+        self.assertTrue(PasswordUtil.is_password_valid('super pass', encrypted))
+        self.assertTrue(PasswordUtil.is_password_valid(b'super pass', encrypted))
 
 
 class Testuser(BaseTestCase):
     def test_validate_password(self):
         tony = User(
-            username='tonymontana', email_validated=True,
-            email='tony@montana.com', password='foobar'
+            username='tonymontana',
+            email_validated=True,
+            email='tony@montana.com',
+            password='foobar',
         )
 
         self.assertFalse(tony.validate_password('foobare'))
@@ -58,23 +57,27 @@ class Testuser(BaseTestCase):
 
         def change_email():
             tony.update_validation_nonce(Purpose.change_email, 2)
-        self.assertRaisesRegex(
-            Exception, 'Account not validated', change_email)
+
+        self.assertRaisesRegex(Exception, 'Account not validated', change_email)
 
         tony.email_validated = True
         change_email()
 
     def test_last_modified(self):
-        """Check that the last modified field is set.
-        """
+        """Check that the last modified field is set."""
         profile = UserProfile()
         self.session.add(profile)
         self.session.flush()
 
         user = User(
             id=profile.document_id,
-            username='user', name='user', forum_username='user',
-            email_validated=True, email='user@mail.com', password='foobar')
+            username='user',
+            name='user',
+            forum_username='user',
+            email_validated=True,
+            email='user@mail.com',
+            password='foobar',
+        )
         self.session.add(user)
         self.session.flush()
         self.session.refresh(user)

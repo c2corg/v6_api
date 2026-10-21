@@ -14,13 +14,13 @@ class SearchArea(SearchDocument):
     @staticmethod
     def to_search_document(document, index):
         search_document = SearchDocument.to_search_document(
-            document, index, include_areas=False)
+            document, index, include_areas=False
+        )
 
         if document.redirects_to:
             return search_document
 
-        SearchDocument.copy_fields(
-            search_document, document, SearchArea.FIELDS)
+        SearchDocument.copy_fields(search_document, document, SearchArea.FIELDS)
 
         return search_document
 

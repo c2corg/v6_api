@@ -22,8 +22,8 @@ class SyncWorker(ConsumerMixin):
     """
 
     def __init__(
-            self, connection, queue, batch_size, session=None,
-            session_factory=None):
+        self, connection, queue, batch_size, session=None, session_factory=None
+    ):
         self.connection = connection
         self.queue = queue
         self.batch_size = batch_size
@@ -32,8 +32,7 @@ class SyncWorker(ConsumerMixin):
         self.connect_max_retries = 3
 
     def get_consumers(self, consumer_factory, channel):
-        return [consumer_factory(
-            queues=[self.queue], callbacks=[self.process_task])]
+        return [consumer_factory(queues=[self.queue], callbacks=[self.process_task])]
 
     def process_task(self, body, message):
         log.info('Sync requested')
@@ -61,8 +60,10 @@ class SyncWorker(ConsumerMixin):
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print('usage: %s <config_uri> [var=value]\n'
-          '(example: "%s development.ini")' % (cmd, cmd))
+    print(
+        'usage: %s <config_uri> [var=value]\n'
+        '(example: "%s development.ini")' % (cmd, cmd)
+    )
     sys.exit(1)
 
 
@@ -85,8 +86,11 @@ def main(argv=sys.argv):
     with queue_config.connection:
         try:
             worker = SyncWorker(
-                queue_config.connection, queue_config.queue, batch_size,
-                session_factory=Session)
+                queue_config.connection,
+                queue_config.queue,
+                batch_size,
+                session_factory=Session,
+            )
             log.info('Syncer started, running initial sync')
             worker.sync()
             log.info('Waiting on messages')
@@ -95,5 +99,5 @@ def main(argv=sys.argv):
             log.info('Syncer stopped')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

@@ -13,17 +13,20 @@ from c2corg_api.models.common.attributes import quality_types
 from shapely.geometry import shape, Polygon
 
 from c2corg_api.models.document import (
-    DocumentGeometry, ArchiveDocumentLocale, DocumentLocale)
+    DocumentGeometry,
+    ArchiveDocumentLocale,
+    DocumentLocale,
+)
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
 
 
 class TestAreaRest(BaseDocumentTestRest):
-
     def setUp(self):  # noqa
         self.set_prefix_and_model(
-            "/areas", AREA_TYPE, Area, ArchiveArea, ArchiveDocumentLocale)
+            '/areas', AREA_TYPE, Area, ArchiveArea, ArchiveDocumentLocale
+        )
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
@@ -34,20 +37,23 @@ class TestAreaRest(BaseDocumentTestRest):
         self.assertNotIn('geometry', doc)
 
     def test_get_collection_paginated(self):
-        self.app.get("/areas?offset=invalid", status=400)
+        self.app.get('/areas?offset=invalid', status=400)
+
+        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
 
         self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 0}), [], 4)
-
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}),
-            [self.area4.document_id], 4)
+            self.get_collection({'offset': 0, 'limit': 1}), [self.area4.document_id], 4
+        )
         self.assertResultsEqual(
             self.get_collection({'offset': 0, 'limit': 2}),
-            [self.area4.document_id, self.area3.document_id], 4)
+            [self.area4.document_id, self.area3.document_id],
+            4,
+        )
         self.assertResultsEqual(
             self.get_collection({'offset': 1, 'limit': 2}),
-            [self.area3.document_id, self.area2.document_id], 4)
+            [self.area3.document_id, self.area2.document_id],
+            4,
+        )
 
     def test_get_collection_lang(self):
         self.get_collection_lang()
@@ -57,11 +63,15 @@ class TestAreaRest(BaseDocumentTestRest):
 
         self.assertResultsEqual(
             self.get_collection_search({'l': 'en'}),
-            [self.area4.document_id, self.area1.document_id], 2)
+            [self.area4.document_id, self.area1.document_id],
+            2,
+        )
 
         self.assertResultsEqual(
             self.get_collection_search({'atyp': 'admin_limits'}),
-            [self.area4.document_id], 1)
+            [self.area4.document_id],
+            1,
+        )
 
     def test_get(self):
         body = self.get(self.area1)
@@ -114,9 +124,7 @@ class TestAreaRest(BaseDocumentTestRest):
             'geometry': {
                 'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
             },
-            'locales': [
-                {'lang': 'en'}
-            ]
+            'locales': [{'lang': 'en'}],
         }
         self.post_missing_title(body_post, user='moderator')
 
@@ -125,12 +133,11 @@ class TestAreaRest(BaseDocumentTestRest):
             'area_type': 'range',
             'protected': True,
             'geometry': {
-                'id': 5678, 'version': 6789,
-                'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
+                'id': 5678,
+                'version': 6789,
+                'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}',  # noqa
             },
-            'locales': [
-                {'lang': 'en', 'title': 'Chartreuse'}
-            ]
+            'locales': [{'lang': 'en', 'title': 'Chartreuse'}],
         }
         self.post_non_whitelisted_attribute(body, user='moderator')
 
@@ -141,17 +148,12 @@ class TestAreaRest(BaseDocumentTestRest):
         body = {
             'area_type': 'range',
             'geometry': {
-                'id': 5678, 'version': 6789,
-                'geom_detail': '{"type":"Polygon","coordinates":[[[668518.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668518.249382151,5728802.39591739]]]}'  # noqa
+                'id': 5678,
+                'version': 6789,
+                'geom_detail': '{"type":"Polygon","coordinates":[[[668518.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668518.249382151,5728802.39591739]]]}',  # noqa
             },
-            'locales': [
-                {'lang': 'en', 'title': 'Chartreuse'}
-            ],
-            'associations': {
-                'images': [
-                    {'document_id': self.image.document_id}
-                ]
-            }
+            'locales': [{'lang': 'en', 'title': 'Chartreuse'}],
+            'associations': {'images': [{'document_id': self.image.document_id}]},
         }
         body, doc = self.post_success(body, user='moderator')
         self._assert_geometry(body)
@@ -170,10 +172,11 @@ class TestAreaRest(BaseDocumentTestRest):
         self.assertIsNotNone(archive_geometry.geom_detail)
 
         # check that a link for intersecting documents is created
-        links = self.session.query(AreaAssociation). \
-            filter(
-                AreaAssociation.area_id == doc.document_id). \
-            all()
+        links = (
+            self.session.query(AreaAssociation)
+            .filter(AreaAssociation.area_id == doc.document_id)
+            .all()
+        )
         self.assertEqual(len(links), 2)
         self.assertEqual(links[0].document_id, self.waypoint1.document_id)
         self.check_cache_version(self.waypoint1.document_id, 2)
@@ -181,8 +184,9 @@ class TestAreaRest(BaseDocumentTestRest):
         self.check_cache_version(self.route.document_id, 2)
 
         # check that a link to the provided image is created
-        association_image = self.session.get(Association,
-            (doc.document_id, self.image.document_id))
+        association_image = self.session.get(
+            Association, (doc.document_id, self.image.document_id)
+        )
         self.assertIsNotNone(association_image)
 
     def test_put_wrong_document_id(self):
@@ -192,9 +196,12 @@ class TestAreaRest(BaseDocumentTestRest):
                 'version': self.area1.version,
                 'area_type': 'range',
                 'locales': [
-                    {'lang': 'en', 'title': 'Chartreuse',
-                     'version': self.locale_en.version}
-                ]
+                    {
+                        'lang': 'en',
+                        'title': 'Chartreuse',
+                        'version': self.locale_en.version,
+                    }
+                ],
             }
         }
         self.put_wrong_document_id(body)
@@ -206,9 +213,12 @@ class TestAreaRest(BaseDocumentTestRest):
                 'version': -9999,
                 'area_type': 'range',
                 'locales': [
-                    {'lang': 'en', 'title': 'Chartreuse',
-                     'version': self.locale_en.version}
-                ]
+                    {
+                        'lang': 'en',
+                        'title': 'Chartreuse',
+                        'version': self.locale_en.version,
+                    }
+                ],
             }
         }
         self.put_wrong_version(body, self.area1.document_id)
@@ -219,10 +229,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'document_id': self.area1.document_id,
                 'version': self.area1.version,
                 'area_type': 'range',
-                'locales': [
-                    {'lang': 'en', 'title': 'Chartreuse',
-                     'version': -9999}
-                ]
+                'locales': [{'lang': 'en', 'title': 'Chartreuse', 'version': -9999}],
             }
         }
         self.put_wrong_version(body, self.area1.document_id)
@@ -234,9 +241,12 @@ class TestAreaRest(BaseDocumentTestRest):
                 'version': self.area1.version,
                 'area_type': 'range',
                 'locales': [
-                    {'lang': 'en', 'title': 'Chartreuse',
-                     'version': self.locale_en.version}
-                ]
+                    {
+                        'lang': 'en',
+                        'title': 'Chartreuse',
+                        'version': self.locale_en.version,
+                    }
+                ],
             }
         }
         self.put_wrong_ids(body, self.area1.document_id)
@@ -253,25 +263,31 @@ class TestAreaRest(BaseDocumentTestRest):
                 'area_type': 'admin_limits',
                 'geometry': {
                     'version': self.area1.geometry.version,
-                    'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
+                    'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}',  # noqa
                 },
                 'locales': [
-                    {'lang': 'en', 'title': 'New title',
-                     'version': self.locale_en.version}
-                ]
-            }
+                    {
+                        'lang': 'en',
+                        'title': 'New title',
+                        'version': self.locale_en.version,
+                    }
+                ],
+            },
         }
         headers = self.add_authorization_header(username='contributor')
         response = self.app_put_json(
-            self._prefix + '/' + str(self.area1.document_id), body,
-            headers=headers, status=400)
+            self._prefix + '/' + str(self.area1.document_id),
+            body,
+            headers=headers,
+            status=400,
+        )
 
         body = response.json
         self.assertEqual(body['status'], 'error')
         self.assertEqual(body['errors'][0]['name'], 'Bad Request')
         self.assertEqual(
-            body['errors'][0]['description'],
-            'No permission to change the geometry')
+            body['errors'][0]['description'], 'No permission to change the geometry'
+        )
 
     def test_put_success_all(self):
         body = {
@@ -282,10 +298,13 @@ class TestAreaRest(BaseDocumentTestRest):
                 'area_type': 'admin_limits',
                 'quality': quality_types[1],
                 'locales': [
-                    {'lang': 'en', 'title': 'New title',
-                     'version': self.locale_en.version}
-                ]
-            }
+                    {
+                        'lang': 'en',
+                        'title': 'New title',
+                        'version': self.locale_en.version,
+                    }
+                ],
+            },
         }
         (body, area) = self.put_success_all(body, self.area1, cache_version=2)
 
@@ -322,19 +341,21 @@ class TestAreaRest(BaseDocumentTestRest):
                 'quality': quality_types[1],
                 'geometry': {
                     'version': self.area1.geometry.version,
-                    'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}'  # noqa
+                    'geom_detail': '{"type":"Polygon","coordinates":[[[668519.249382151,5728802.39591739],[668518.249382151,5745465.66808356],[689156.247019149,5745465.66808356],[689156.247019149,5728802.39591739],[668519.249382151,5728802.39591739]]]}',  # noqa
                 },
                 'locales': [
-                    {'lang': 'en', 'title': 'New title',
-                     'version': self.locale_en.version}
+                    {
+                        'lang': 'en',
+                        'title': 'New title',
+                        'version': self.locale_en.version,
+                    }
                 ],
-                'associations': {
-                    'images': []
-                }
-            }
+                'associations': {'images': []},
+            },
         }
         (body, area) = self.put_success_all(
-            body, self.area1, user='moderator', cache_version=3)
+            body, self.area1, user='moderator', cache_version=3
+        )
 
         # version with lang 'en'
         version_en = area.versions[2]
@@ -344,10 +365,11 @@ class TestAreaRest(BaseDocumentTestRest):
         self.assertEqual(archive_geometry_en.version, 2)
 
         # check that the links to intersecting documents are updated
-        links = self.session.query(AreaAssociation). \
-            filter(
-                AreaAssociation.area_id == self.area1.document_id). \
-            all()
+        links = (
+            self.session.query(AreaAssociation)
+            .filter(AreaAssociation.area_id == self.area1.document_id)
+            .all()
+        )
         self.assertEqual(len(links), 2)
         self.assertEqual(links[0].document_id, self.waypoint1.document_id)
         self.check_cache_version(self.waypoint1.document_id, 2)
@@ -357,8 +379,9 @@ class TestAreaRest(BaseDocumentTestRest):
         self.check_cache_version(self.waypoint2.document_id, 2)
 
         # check that existing link to the image is removed
-        association_image = self.session.get(Association,
-            (area.document_id, self.image.document_id))
+        association_image = self.session.get(
+            Association, (area.document_id, self.image.document_id)
+        )
         self.assertIsNone(association_image)
 
     def test_put_success_figures_only(self):
@@ -370,10 +393,13 @@ class TestAreaRest(BaseDocumentTestRest):
                 'area_type': 'admin_limits',
                 'quality': quality_types[1],
                 'locales': [
-                    {'lang': 'en', 'title': 'Chartreuse',
-                     'version': self.locale_en.version}
-                ]
-            }
+                    {
+                        'lang': 'en',
+                        'title': 'Chartreuse',
+                        'version': self.locale_en.version,
+                    }
+                ],
+            },
         }
         (body, area) = self.put_success_figures_only(body, self.area1)
 
@@ -381,10 +407,11 @@ class TestAreaRest(BaseDocumentTestRest):
 
         # check that the links to intersecting documents are not updated,
         # because the geometry did not change
-        links = self.session.query(AreaAssociation). \
-            filter(
-                AreaAssociation.area_id == self.area1.document_id). \
-            all()
+        links = (
+            self.session.query(AreaAssociation)
+            .filter(AreaAssociation.area_id == self.area1.document_id)
+            .all()
+        )
         self.assertEqual(len(links), 1)
         self.assertEqual(links[0].document_id, self.waypoint2.document_id)
 
@@ -397,28 +424,30 @@ class TestAreaRest(BaseDocumentTestRest):
                 'area_type': 'range',
                 'quality': quality_types[1],
                 'locales': [
-                    {'lang': 'en', 'title': 'New title',
-                     'version': self.locale_en.version}
-                ]
-            }
+                    {
+                        'lang': 'en',
+                        'title': 'New title',
+                        'version': self.locale_en.version,
+                    }
+                ],
+            },
         }
         (body, area) = self.put_success_lang_only(body, self.area1)
 
-        self.assertEqual(
-            area.get_locale('en').title, 'New title')
+        self.assertEqual(area.get_locale('en').title, 'New title')
 
         # check that the links to intersecting documents are not updated,
         # because the geometry did not change
-        links = self.session.query(AreaAssociation). \
-            filter(
-                AreaAssociation.area_id == self.area1.document_id). \
-            all()
+        links = (
+            self.session.query(AreaAssociation)
+            .filter(AreaAssociation.area_id == self.area1.document_id)
+            .all()
+        )
         self.assertEqual(len(links), 1)
         self.assertEqual(links[0].document_id, self.waypoint2.document_id)
 
     def test_put_success_new_lang(self):
-        """Test updating a document by adding a new locale.
-        """
+        """Test updating a document by adding a new locale."""
         body = {
             'message': 'Adding lang',
             'document': {
@@ -426,10 +455,8 @@ class TestAreaRest(BaseDocumentTestRest):
                 'version': self.area1.version,
                 'area_type': 'range',
                 'quality': quality_types[1],
-                'locales': [
-                    {'lang': 'es', 'title': 'Chartreuse'}
-                ]
-            }
+                'locales': [{'lang': 'es', 'title': 'Chartreuse'}],
+            },
         }
         (body, area) = self.put_success_new_lang(body, self.area1)
 
@@ -467,54 +494,56 @@ class TestAreaRest(BaseDocumentTestRest):
         user_id = self.global_userids['contributor']
         DocumentRest.create_new_version(self.area1, user_id)
 
-        self.area1_version = self.session.query(DocumentVersion). \
-            filter(DocumentVersion.document_id == self.area1.document_id). \
-            filter(DocumentVersion.lang == 'en').first()
+        self.area1_version = (
+            self.session.query(DocumentVersion)
+            .filter(DocumentVersion.document_id == self.area1.document_id)
+            .filter(DocumentVersion.lang == 'en')
+            .first()
+        )
 
         self.area2 = Area(area_type='range')
         self.session.add(self.area2)
         self.area3 = Area(area_type='range')
         self.session.add(self.area3)
         self.area4 = Area(area_type='admin_limits')
-        self.area4.locales.append(DocumentLocale(
-            lang='en', title='Isère'))
-        self.area4.locales.append(DocumentLocale(
-            lang='fr', title='Isère'))
+        self.area4.locales.append(DocumentLocale(lang='en', title='Isère'))
+        self.area4.locales.append(DocumentLocale(lang='fr', title='Isère'))
         self.session.add(self.area4)
 
         self.waypoint1 = Waypoint(
             waypoint_type='summit',
             geometry=DocumentGeometry(
-                geom='SRID=3857;POINT(677461.381691516 5740879.44638645)')
+                geom='SRID=3857;POINT(677461.381691516 5740879.44638645)'
+            ),
         )
         self.waypoint2 = Waypoint(
             waypoint_type='summit',
             geometry=DocumentGeometry(
-                geom='SRID=3857;POINT(693666.031687976 5741108.7574713)')
+                geom='SRID=3857;POINT(693666.031687976 5741108.7574713)'
+            ),
         )
         route_geom = 'SRID=3857;LINESTRING(668518 5728802, 668528 5728812)'
         self.route = Route(
-            activities=['skitouring'],
-            geometry=DocumentGeometry(geom_detail=route_geom))
+            activities=['skitouring'], geometry=DocumentGeometry(geom_detail=route_geom)
+        )
 
         self.session.add_all([self.waypoint1, self.waypoint2, self.route])
-        self.session.add(AreaAssociation(
-            document=self.waypoint2, area=self.area1))
+        self.session.add(AreaAssociation(document=self.waypoint2, area=self.area1))
 
         self.image = Image(
             filename='image.jpg',
-            activities=['paragliding'], height=1500,
-            image_type='collaborative', locales=[
+            activities=['paragliding'],
+            height=1500,
+            image_type='collaborative',
+            locales=[
                 DocumentLocale(
-                    lang='en', title='Mont Blanc from the air',
-                    description='...')
-            ])
+                    lang='en', title='Mont Blanc from the air', description='...'
+                )
+            ],
+        )
 
         self.session.add(self.image)
         self.session.flush()
 
-        self._add_association(
-            Association.create(self.area1, self.image),
-            user_id
-        )
+        self._add_association(Association.create(self.area1, self.image), user_id)
         self.session.flush()

@@ -8,9 +8,9 @@ class AlertProcessor(BlockProcessor):
     RE = re.compile(r'(^|\n)[ ]{0,3}(!{2,4})(([^!]|$).*)')
 
     roles = {
-        "!!": "info",
-        "!!!": "warning",
-        "!!!!": "danger",
+        '!!': 'info',
+        '!!!': 'warning',
+        '!!!!': 'danger',
     }
 
     def test(self, parent, block):
@@ -20,13 +20,13 @@ class AlertProcessor(BlockProcessor):
         block = blocks.pop(0)
         m = self.RE.search(block)
         level = m.group(2)
-        tester = re.compile("^[ ]{0,3}" + level + "([^!]|$)")
+        tester = re.compile('^[ ]{0,3}' + level + '([^!]|$)')
 
-        before = block[:m.start()]  # Lines before blockquote
+        before = block[: m.start()]  # Lines before blockquote
         # Pass lines before alert banner
         self.parser.parseBlocks(parent, [before])
 
-        after = block[m.start():].split('\n')
+        after = block[m.start() :].split('\n')
         if len(after[0]) == 0:
             after.pop(0)
 
@@ -44,18 +44,18 @@ class AlertProcessor(BlockProcessor):
         block = '\n'.join([self.clean(line) for line in block])
 
         quote = ElementTree.SubElement(parent, 'div')
-        quote.set("c2c:role", self.roles[level])
+        quote.set('c2c:role', self.roles[level])
         # Recursively parse block with div as parent.
         self.parser.parseChunk(quote, block)
 
         # and continue parsing next part of the block
-        self.parser.parseBlocks(parent, ["\n".join(after)])
+        self.parser.parseBlocks(parent, ['\n'.join(after)])
 
     def clean(self, line):
-        """ Remove ``!`` from beginning of a line. """
+        """Remove ``!`` from beginning of a line."""
         m = self.RE.match(line)
-        if line.strip() in ("!!", "!!!", "!!!!"):
-            return ""
+        if line.strip() in ('!!', '!!!', '!!!!'):
+            return ''
         elif m:
             return m.group(3)
         else:
@@ -65,9 +65,7 @@ class AlertProcessor(BlockProcessor):
 class AlertExtension(Extension):
     def extendMarkdown(self, md):  # noqa: N802
         md.parser.blockprocessors.register(
-            AlertProcessor(md.parser),
-            'c2c_alert',
-            10.20
+            AlertProcessor(md.parser), 'c2c_alert', 10.20
         )
 
 

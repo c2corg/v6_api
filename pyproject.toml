@@ -92,8 +92,12 @@ include-package-data = true
 include = ["c2corg_api*"]
 
 [tool.ruff]
-line-length = 79
+line-length = 88
 target-version = "py314"
+
+[tool.ruff.format]
+# Single quotes: what most of the code already used before ruff format.
+quote-style = "single"
 
 [tool.ruff.lint]
 # Same checks as the former flake8 + pep8-naming setup. pycodestyle's

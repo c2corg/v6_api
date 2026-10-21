@@ -4,17 +4,17 @@ from c2corg_api.models.document import (
     schema_document_locale,
     Document,
     get_geometry_schema_overrides,
-    schema_attributes)
-from c2corg_api.models.schema_utils import get_update_schema, \
-    get_create_schema, restrict_schema
+    schema_attributes,
+)
+from c2corg_api.models.schema_utils import (
+    get_update_schema,
+    get_create_schema,
+    restrict_schema,
+)
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.common.fields_coverage import fields_coverage
 from colanderalchemy import SQLAlchemySchemaNode
-from sqlalchemy import (
-    Column,
-    Integer,
-    ForeignKey
-)
+from sqlalchemy import Column, Integer, ForeignKey
 from c2corg_api.models.common import document_types
 
 COVERAGE_TYPE = document_types.COVERAGE_TYPE
@@ -49,15 +49,16 @@ class Coverage(_CoverageMixin, Document):
         See the Navitia documentation for coverage details:
         https://doc.navitia.io/#coverage
     """
+
     __tablename__ = 'coverages'
 
     document_id = Column(
-        Integer,
-        ForeignKey(schema + '.documents.document_id'), primary_key=True)
+        Integer, ForeignKey(schema + '.documents.document_id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': COVERAGE_TYPE,
-        'inherit_condition': Document.document_id == document_id
+        'inherit_condition': Document.document_id == document_id,
     }
 
     def update(self, other):
@@ -73,19 +74,15 @@ schema_coverage = SQLAlchemySchemaNode(
     # whitelisted attributes
     includes=schema_coverage_attributes + attributes,
     overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_coverage_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POLYGON'])
-    })
+        'document_id': {'missing': None},
+        'version': {'missing': None},
+        'locales': {'children': [schema_coverage_locale]},
+        'geometry': get_geometry_schema_overrides(['POLYGON']),
+    },
+)
 
 schema_create_coverage = get_create_schema(schema_coverage)
 schema_update_coverage = get_update_schema(schema_coverage)
 schema_listing_coverage = restrict_schema(
-    schema_coverage, fields_coverage.get('listing'))
+    schema_coverage, fields_coverage.get('listing')
+)

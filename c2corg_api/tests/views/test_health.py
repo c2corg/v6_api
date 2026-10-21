@@ -10,5 +10,5 @@ class TestHealthRest(BaseTestRest):
 
         data = r.json
 
-        self.assertEqual(data["es"], "ok")
-        self.assertEqual(data["redis"], "ok")
+        self.assertEqual(data['es'], 'ok')
+        self.assertEqual(data['redis'], 'ok')

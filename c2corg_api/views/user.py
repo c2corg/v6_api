@@ -7,17 +7,24 @@ import requests
 from c2corg_api.emails.email_service import get_email_service
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentLocale
-from c2corg_api.models.user import (
-        User, schema_user, schema_create_user, Purpose)
+from c2corg_api.models.user import User, schema_user, schema_create_user, Purpose
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import (
-    try_login, log_validated_user_i_know_what_i_do,
-    remove_token, extract_token, renew_token)
+    try_login,
+    log_validated_user_i_know_what_i_do,
+    remove_token,
+    extract_token,
+    renew_token,
+)
 from c2corg_api.views import (
-        cors_policy, json_view, restricted_view, restricted_json_view,
-        to_json_dict)
+    cors_policy,
+    json_view,
+    restricted_view,
+    restricted_json_view,
+    to_json_dict,
+)
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.validation import validate_required_json_string
@@ -40,11 +47,12 @@ MINIMUM_PASSWORD_LENGTH = 10
 PASSWORD_STRENGTH_ERROR = (
     'Password must be at least {0} characters long and contain a '
     'lowercase letter, an uppercase letter, a digit and a special '
-    'character'.format(MINIMUM_PASSWORD_LENGTH))
+    'character'.format(MINIMUM_PASSWORD_LENGTH)
+)
 
 
 def is_password_strong_enough(password):
-    """ Simple complexity check for newly created/changed passwords: at
+    """Simple complexity check for newly created/changed passwords: at
     least one lowercase letter, one uppercase letter, one digit and one
     special (non-alphanumeric, non-space) character. Not applied to
     existing passwords (login, "current password" checks) - only to
@@ -54,8 +62,7 @@ def is_password_strong_enough(password):
     has_lower = any(c.islower() for c in password)
     has_upper = any(c.isupper() for c in password)
     has_digit = any(c.isdigit() for c in password)
-    has_special = any(
-        not c.isalnum() and not c.isspace() for c in password)
+    has_special = any(not c.isalnum() and not c.isspace() for c in password)
     return has_lower and has_upper and has_digit and has_special
 
 
@@ -70,16 +77,16 @@ def is_valid_email(email):
 
 def validate_json_password(request, require_strength=True, **kwargs):
     """Checks if the password was given and encodes it.
-       This is done here as the password is not an SQLAlchemy field.
-       In addition, we can ensure the password is not leaked in the
-       validation error messages.
+    This is done here as the password is not an SQLAlchemy field.
+    In addition, we can ensure the password is not leaked in the
+    validation error messages.
 
-       `require_strength` gates the length/complexity checks: only a
-       password being *set* (registration, reset) should be held to the
-       current policy. It must stay off for login, otherwise accounts
-       created under an older, looser policy get locked out even though
-       their password is correct - see partial() usage on the login view
-       below.
+    `require_strength` gates the length/complexity checks: only a
+    password being *set* (registration, reset) should be held to the
+    current policy. It must stay off for login, otherwise accounts
+    created under an older, looser policy get locked out even though
+    their password is correct - see partial() usage on the login view
+    below.
     """
 
     if 'password' not in request.json:
@@ -114,8 +121,7 @@ def is_unused_user_attribute(attrname, value, lowercase=False):
 
 
 def validate_unique_attribute(attrname, request, lowercase=False, **kwargs):
-    """Checks if the given attribute is unique.
-    """
+    """Checks if the given attribute is unique."""
 
     if attrname in request.json:
         value = request.json[attrname]
@@ -139,9 +145,13 @@ def check_forum_username(value):
         return 'Last character is invalid'
     if re.search(r'[-_\.]{2,}', value):
         return 'Contains consecutive special characters'
-    if re.search((r'\.(js|json|css|htm|html|xml|jpg|jpeg|'
-                  r'png|gif|bmp|ico|tif|tiff|woff)$'),
-                 value):
+    if re.search(
+        (
+            r'\.(js|json|css|htm|html|xml|jpg|jpeg|'
+            r'png|gif|bmp|ico|tif|tiff|woff)$'
+        ),
+        value,
+    ):
         return 'Ended by confusing suffix'
     return False
 
@@ -159,7 +169,7 @@ def validate_forum_username(request, **kwargs):
 
 def validate_username(request, **kwargs):
     """Checks username is set, strips leading/trailing whitespaces,
-       checks unicity and if an email, that it matches the provided email.
+    checks unicity and if an email, that it matches the provided email.
     """
 
     if 'username' not in request.json:
@@ -168,8 +178,9 @@ def validate_username(request, **kwargs):
 
     username = request.json['username'].strip()
     if not username:
-        request.errors.add('body', 'username',
-                           'Username cannot be empty or whitespaces')
+        request.errors.add(
+            'body', 'username', 'Username cannot be empty or whitespaces'
+        )
         return
 
     if not is_unused_user_attribute('username', username, lowercase=True):
@@ -179,20 +190,20 @@ def validate_username(request, **kwargs):
     # or that it is the same as the actual email.
     if 'email' in request.json:
         email = request.json['email']
-        if (is_valid_email(username) and email != username):
+        if is_valid_email(username) and email != username:
             request.errors.add(
                 'body',
                 'username',
-                'An email address used as username should be the same as the' +
-                ' one used as the account email address.')
+                'An email address used as username should be the same as the'
+                + ' one used as the account email address.',
+            )
             return
 
     request.validated['username'] = username
 
 
 def validate_captcha(request, **kwargs):
-    """Validate the recaptcha sent by UI.
-    """
+    """Validate the recaptcha sent by UI."""
 
     settings = request.registry.settings
     if asbool(settings['skip.captcha.validation']):
@@ -209,10 +220,8 @@ def validate_captcha(request, **kwargs):
 
     url = 'https://www.google.com/recaptcha/api/siteverify'
     try:
-        r = requests.post(url, timeout=timeout, data={
-            'secret': secret,
-            'response': captcha
-            }
+        r = requests.post(
+            url, timeout=timeout, data={'secret': secret, 'response': captcha}
         )
 
         response = r.json()
@@ -230,32 +239,28 @@ def validate_captcha(request, **kwargs):
 
 @resource(path='/users/register', cors_policy=cors_policy)
 class UserRegistrationRest(ACLDefault):
-
     @json_view(
         schema=schema_create_user,
         validators=[
             colander_body_validator,
             validate_json_password,
-            partial(validate_unique_attribute, "email"),
-            partial(validate_unique_attribute,
-                    "forum_username",
-                    lowercase=True),
+            partial(validate_unique_attribute, 'email'),
+            partial(validate_unique_attribute, 'forum_username', lowercase=True),
             validate_username,
             validate_forum_username,
-            validate_captcha])
+            validate_captcha,
+        ],
+    )
     def post(self):
         user = schema_create_user.objectify(self.request.validated)
         user.password = self.request.validated['password']
-        user.update_validation_nonce(
-                Purpose.registration,
-                VALIDATION_EXPIRE_DAYS)
+        user.update_validation_nonce(Purpose.registration, VALIDATION_EXPIRE_DAYS)
 
         # Directly create the user profile, the document id of the profile
         # is the user id
         lang = user.lang
         user.profile = UserProfile(
-            categories=['amateur'],
-            locales=[DocumentLocale(lang=lang, title='')]
+            categories=['amateur'], locales=[DocumentLocale(lang=lang, title='')]
         )
         # Checkbox is mandatory on the frontend when registering
         # so we can store ToS acceptance.
@@ -275,8 +280,7 @@ class UserRegistrationRest(ACLDefault):
         email_service = get_email_service(self.request)
         nonce = user.validation_nonce
         settings = self.request.registry.settings
-        link = settings['mail.validate_register_url_template'].format(
-            '#', nonce)
+        link = settings['mail.validate_register_url_template'].format('#', nonce)
         email_service.send_registration_confirmation(user, link)
 
         return to_json_dict(user, schema_user)
@@ -288,10 +292,13 @@ def validate_user_from_nonce(purpose, request, **kwargs):
         request.errors.add('querystring', 'nonce', 'missing nonce')
     else:
         now = datetime.datetime.utcnow()
-        user = DBSession.query(User).filter(
-                and_(
-                    User.validation_nonce == nonce,
-                    User.validation_nonce_expire > now)).first()
+        user = (
+            DBSession.query(User)
+            .filter(
+                and_(User.validation_nonce == nonce, User.validation_nonce_expire > now)
+            )
+            .first()
+        )
         if user is None:
             request.errors.add('querystring', 'nonce', 'invalid nonce')
         elif not user.validate_nonce_purpose(purpose):
@@ -300,9 +307,7 @@ def validate_user_from_nonce(purpose, request, **kwargs):
             request.validated['user'] = user
 
 
-@resource(
-        path='/users/validate_new_password/{nonce}',
-        cors_policy=cors_policy)
+@resource(path='/users/validate_new_password/{nonce}', cors_policy=cors_policy)
 class UserValidateNewPasswordRest(ACLDefault):
     """
     This service allows to set a new password in case a user has forgotten
@@ -310,9 +315,12 @@ class UserValidateNewPasswordRest(ACLDefault):
     `/users/request_password_change` service (see below).
     """
 
-    @json_view(validators=[
-        partial(validate_user_from_nonce, Purpose.new_password),
-        validate_json_password])
+    @json_view(
+        validators=[
+            partial(validate_user_from_nonce, Purpose.new_password),
+            validate_json_password,
+        ]
+    )
     def post(self):
         request = self.request
         user = request.validated['user']
@@ -331,9 +339,7 @@ class UserValidateNewPasswordRest(ACLDefault):
             except Exception:
                 # Since only the password is changed, any error with discourse
                 # must not prevent login and validation.
-                log.error(
-                    'Error logging into discourse for %d', user.id,
-                    exc_info=True)
+                log.error('Error logging into discourse for %d', user.id, exc_info=True)
 
             user.clear_validation_nonce()
             try:
@@ -350,7 +356,7 @@ class UserValidateNewPasswordRest(ACLDefault):
 
 
 def validate_required_user_from_email(request, **kwargs):
-    validate_required_json_string("email", request)
+    validate_required_json_string('email', request)
     if len(request.errors) != 0:
         return
     email = request.validated['email']
@@ -378,9 +384,7 @@ class UserRequestChangePasswordRest(ACLDefault):
         if user.blocked:
             raise HTTPForbidden('account blocked')
 
-        user.update_validation_nonce(
-                Purpose.new_password,
-                VALIDATION_EXPIRE_DAYS)
+        user.update_validation_nonce(Purpose.new_password, VALIDATION_EXPIRE_DAYS)
 
         try:
             DBSession.flush()
@@ -391,20 +395,15 @@ class UserRequestChangePasswordRest(ACLDefault):
         email_service = get_email_service(request)
         nonce = user.validation_nonce
         settings = request.registry.settings
-        link = settings['mail.request_password_change_url_template'].format(
-            '#', nonce)
+        link = settings['mail.request_password_change_url_template'].format('#', nonce)
         email_service.send_request_change_password(user, link)
 
         return {}
 
 
-@resource(
-        path='/users/validate_register_email/{nonce}',
-        cors_policy=cors_policy)
+@resource(path='/users/validate_register_email/{nonce}', cors_policy=cors_policy)
 class UserNonceValidationRest(ACLDefault):
-
-    @json_view(validators=[partial(
-        validate_user_from_nonce, Purpose.registration)])
+    @json_view(validators=[partial(validate_user_from_nonce, Purpose.registration)])
     def post(self):
         request = self.request
         user = request.validated['user']
@@ -429,9 +428,7 @@ class UserNonceValidationRest(ACLDefault):
                 response['redirect_internal'] = r
             except Exception:
                 # Any error with discourse must prevent login and validation
-                log.error(
-                    'Error logging into discourse for %d', user.id,
-                    exc_info=True)
+                log.error('Error logging into discourse for %d', user.id, exc_info=True)
                 raise HTTPInternalServerError('Error with Discourse')
 
             try:
@@ -447,13 +444,9 @@ class UserNonceValidationRest(ACLDefault):
             return None
 
 
-@resource(
-        path='/users/validate_change_email/{nonce}',
-        cors_policy=cors_policy)
+@resource(path='/users/validate_change_email/{nonce}', cors_policy=cors_policy)
 class UserChangeEmailNonceValidationRest(ACLDefault):
-
-    @json_view(validators=[partial(
-        validate_user_from_nonce, Purpose.change_email)])
+    @json_view(validators=[partial(validate_user_from_nonce, Purpose.change_email)])
     def post(self):
         request = self.request
         user = request.validated['user']
@@ -499,30 +492,29 @@ def token_to_response(user, token, request):
         'expire': int(expire_time.total_seconds()),
         'roles': roles,
         'id': user.id,
-        'lang': user.lang
+        'lang': user.lang,
     }
 
 
 @resource(path='/users/login', cors_policy=cors_policy)
 class UserLoginRest(ACLDefault):
-
     @json_view(
         schema=login_schema,
         validators=[
             colander_body_validator,
-            partial(validate_json_password, require_strength=False)])
+            partial(validate_json_password, require_strength=False),
+        ],
+    )
     def post(self):
         request = self.request
         username = request.validated['username']
         password = request.validated['password']
         accept_tos = request.validated['accept_tos']
-        user = DBSession.query(User). \
-            filter(User.username == username).first()
+        user = DBSession.query(User).filter(User.username == username).first()
 
         # try to use the username as email if we didn't find the user
         if user is None and is_valid_email(username):
-            user = DBSession.query(User). \
-                filter(User.email == username).first()
+            user = DBSession.query(User).filter(User.email == username).first()
 
         token = try_login(user, password, request) if user else None
         if token:
@@ -537,9 +529,9 @@ class UserLoginRest(ACLDefault):
             if user.tos_validated is None and accept_tos is True:
                 try:
                     DBSession.execute(
-                        User.__table__.update().
-                        where(User.id == user.id).
-                        values(tos_validated=datetime.datetime.utcnow())
+                        User.__table__.update()
+                        .where(User.id == user.id)
+                        .values(tos_validated=datetime.datetime.utcnow())
                     )
                     DBSession.flush()
                 except Exception:
@@ -562,8 +554,8 @@ class UserLoginRest(ACLDefault):
                 except Exception:
                     # Any error with discourse should not prevent login
                     log.warning(
-                        'Error logging into discourse for %d', user.id,
-                        exc_info=True)
+                        'Error logging into discourse for %d', user.id, exc_info=True
+                    )
             return response
         else:
             request.errors.status = 401
@@ -573,7 +565,6 @@ class UserLoginRest(ACLDefault):
 
 @resource(path='/users/renew', cors_policy=cors_policy)
 class UserRenewRest(ACLDefault):
-
     @restricted_view(renderer='json')
     def post(self):
         request = self.request
@@ -588,7 +579,6 @@ class UserRenewRest(ACLDefault):
 
 @resource(path='/users/logout', cors_policy=cors_policy)
 class UserLogoutRest(ACLDefault):
-
     @restricted_json_view(renderer='json')
     def post(self):
         request = self.request
@@ -603,6 +593,6 @@ class UserLogoutRest(ACLDefault):
             except Exception:
                 # Any error with discourse should not prevent logout
                 log.warning(
-                    'Error logging out of discourse for %d', userid,
-                    exc_info=True)
+                    'Error logging out of discourse for %d', userid, exc_info=True
+                )
         return result

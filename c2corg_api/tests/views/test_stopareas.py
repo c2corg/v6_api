@@ -3,10 +3,8 @@ from c2corg_api.tests.views import BaseDocumentTestRest
 
 
 class TestStopareaRest(BaseDocumentTestRest):
-
     def setUp(self):  # noqa
-        self.set_prefix_and_model(
-            "/stopareas", "sa", Stoparea, None, None)
+        self.set_prefix_and_model('/stopareas', 'sa', Stoparea, None, None)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
@@ -51,10 +49,8 @@ class TestStopareaRest(BaseDocumentTestRest):
 
 
 class TestStopareaInfoRest(BaseDocumentTestRest):
-
     def setUp(self):  # noqa
-        self.set_prefix_and_model(
-            "/stopareas", "sa", Stoparea, None, None)
+        self.set_prefix_and_model('/stopareas', 'sa', Stoparea, None, None)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
@@ -65,7 +61,7 @@ class TestStopareaInfoRest(BaseDocumentTestRest):
             navitia_id='nav1',
             stoparea_name='Stop Area 1',
             line='line1',
-            operator='operator1'
+            operator='operator1',
         )
 
         self.session.add(stoparea)

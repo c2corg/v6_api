@@ -13,7 +13,6 @@ from elasticsearch.exceptions import NotFoundError
 
 
 class SyncWorkerTest(BaseTestCase):
-
     def test_process_task(self):
         """Tests that the syncer listens to messages and sends changes to
         ElasticSearch.
@@ -21,15 +20,18 @@ class SyncWorkerTest(BaseTestCase):
         document_id = 51251
         waypoint = Waypoint(
             document_id=document_id,
-            waypoint_type='summit', elevation=2000,
-            geometry=DocumentGeometry(
-                geom='SRID=3857;POINT(635956 5723604)'),
+            waypoint_type='summit',
+            elevation=2000,
+            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
                 WaypointLocale(
-                    lang='fr', title='Mont Granier',
+                    lang='fr',
+                    title='Mont Granier',
                     description='...',
-                    summary='Le Mont [b]Granier[/b]')
-            ])
+                    summary='Le Mont [b]Granier[/b]',
+                )
+            ],
+        )
         self.session.add(waypoint)
         self.session.flush()
         user_id = self.global_userids['contributor']
@@ -41,8 +43,11 @@ class SyncWorkerTest(BaseTestCase):
         t.commit()
 
         syncer = SyncWorker(
-            self.queue_config.connection, self.queue_config.queue, 1000,
-            session=self.session)
+            self.queue_config.connection,
+            self.queue_config.queue,
+            1000,
+            session=self.session,
+        )
         next(syncer.consume(limit=1))
 
         index = elasticsearch_config['index']
@@ -51,8 +56,7 @@ class SyncWorkerTest(BaseTestCase):
         self.assertEqual(doc['doc_type'], 'w')
 
         # simulate removing a document
-        self.session.add(ESDeletedDocument(
-            document_id=document_id, type=WAYPOINT_TYPE))
+        self.session.add(ESDeletedDocument(document_id=document_id, type=WAYPOINT_TYPE))
         self.session.flush()
 
         t = transaction.begin()
