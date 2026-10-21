@@ -45,7 +45,7 @@ dependencies = [
     "requests==2.33.0",
     "setuptools==78.1.1",
     "Shapely==2.1.2",
-    "SQLAlchemy==2.0.54",
+    "SQLAlchemy==2.1.4",
     "transaction==5.0",
     "waitress==3.0.2",
     "zope.sqlalchemy==4.1",

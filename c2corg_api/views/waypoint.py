@@ -1,6 +1,7 @@
 import functools
 import logging
 from sqlalchemy import case
+from sqlalchemy.dialects import postgresql
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
@@ -331,7 +332,7 @@ def set_linked_routes(waypoint, lang):
             Association.child_document_id == Route.document_id).
         filter(Route.redirects_to.is_(None)).
         order_by(Route.document_id.desc()).
-        distinct(Route.document_id).
+        ext(postgresql.distinct_on(Route.document_id)).
         limit(NUM_ROUTES).
         all())
 
