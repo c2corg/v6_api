@@ -65,7 +65,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff==0.16.10",
+    "ruff==0.17.1",
     "WebTest==3.0.4",
     "ipdb==0.13.13",
     "httmock==1.4.0",
