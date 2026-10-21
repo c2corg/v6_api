@@ -50,6 +50,9 @@ def upgrade():
                 geometry_type='MULTILINESTRING', srid=3857,
                 spatial_index=False, management=True),
             nullable=True),
+        # the line this one is a duplicate of (the same line in another
+        # feed): hidden, see c2corg_api.transport.dedup
+        sa.Column('duplicate_of', sa.Integer(), nullable=True),
         sa.Column('details', postgresql.JSONB(), nullable=False),
         sa.ForeignKeyConstraint(
             ['feed_id'], ['guidebook.transport_feeds.feed_id'],
@@ -62,6 +65,9 @@ def upgrade():
     op.execute(
         'CREATE INDEX idx_transport_lines_geom '
         'ON guidebook.transport_lines USING gist (geom)')
+    op.execute(
+        'CREATE INDEX idx_transport_lines_duplicate_of '
+        'ON guidebook.transport_lines (duplicate_of)')
 
     op.create_table(
         'transport_stops',
@@ -85,6 +91,9 @@ def upgrade():
         sa.Column(
             'navitia_ids', postgresql.ARRAY(sa.String()), nullable=False,
             server_default='{}'),
+        # the stop that is the anchor of the cluster of stops of the same place
+        # (itself for an anchor), see c2corg_api.transport.dedup
+        sa.Column('cluster_id', sa.Integer(), nullable=True),
         sa.Column('details', postgresql.JSONB(), nullable=False),
         sa.ForeignKeyConstraint(
             ['feed_id'], ['guidebook.transport_feeds.feed_id'],
@@ -97,6 +106,9 @@ def upgrade():
     op.execute(
         'CREATE INDEX idx_transport_stops_geom '
         'ON guidebook.transport_stops USING gist (geom)')
+    op.execute(
+        'CREATE INDEX idx_transport_stops_cluster_id '
+        'ON guidebook.transport_stops (cluster_id)')
     op.execute(
         'CREATE INDEX idx_transport_stops_navitia_ids '
         'ON guidebook.transport_stops USING gin (navitia_ids)')

@@ -259,6 +259,49 @@ The same import runs every month (the 1st, at 3:00) in the background jobs
 psql -v max_distance=50 -f c2corg_api/transport/link_stops.sql
 ```
 
+### Duplicate stops and lines
+
+The same stop or line is often in several feeds (a regional express coach and
+the network of a department, a train and a regional feed...), with other ids and
+other names. Once the feeds are imported, `import_gtfs` groups the stops of the
+same place and hides the lines that are in several feeds (nothing is deleted):
+
+- **stops**: `transport_stops.cluster_id` is the id of the main stop of the
+  place (the one with the most departures; itself for a stop alone). On the
+  map a place is one stop, and its modal gives the timetables of all its feeds.
+  A stop joins the main stop if it is at less than 15 m, whatever its name, or
+  at less than 50 m with a name that looks like it (one contains the other, or
+  half of the words are the same) or a line with the same code. It never
+  follows a street from one stop to the next.
+- **lines**: `transport_lines.duplicate_of` is the line a hidden line is a
+  duplicate of. Two lines of two feeds with the same mode and code are
+  duplicates if each path is covered at 90% by the other one, within 25 m (a
+  short line in a long one is not a duplicate). The line with the most trips is
+  kept; a hidden line still gives the kept line on `/transport-lines/{id}`.
+
+The thresholds are the constants of `c2corg_api/transport/dedup.py`.
+
+To do it again, once the imports are done, without importing anything (after
+changing the thresholds, after an import of Navitia stops, or if a feed was
+imported by hand), it links the Navitia stops, groups the stops and hides the
+lines again in one transaction:
+
+```shell
+transport_postprocess development.ini
+```
+
+With `--report`, it writes the groups of stops with different names (the main
+stop, then the stops of its group with their distance) and the hidden lines
+(with the line they duplicate): read them to check the thresholds, on an
+area where several feeds overlap (for example Isère and Cars Région Express).
+
+```shell
+transport_postprocess development.ini --report
+```
+
+The same thing is done by `import_gtfs`, the next time it imports a feed. The
+Navitia import script only links the Navitia stops, it does not need more.
+
 ## Other
 
 - Flush redis cache:

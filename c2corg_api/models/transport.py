@@ -44,6 +44,9 @@ class TransportLine(Base):
     operator = Column(String)
     url = Column(String)
     geom = Column(Geometry('MULTILINESTRING', srid=3857, management=True))
+    # the line this one is a duplicate of (the same line in another feed):
+    # hidden, see c2corg_api.transport.dedup
+    duplicate_of = Column(Integer)
     # directions, ordered stops and timetables, only read on click
     details = Column(JSONB, nullable=False)
 
@@ -67,5 +70,8 @@ class TransportStop(Base):
                   nullable=False)
     ref_ids = Column(ARRAY(String), nullable=False, default=list)
     navitia_ids = Column(ARRAY(String), nullable=False, default=list)
+    # the stop that is the anchor of the cluster of stops of the same place
+    # (itself for an anchor), see c2corg_api.transport.dedup
+    cluster_id = Column(Integer)
     # lines and departures, only read on click
     details = Column(JSONB, nullable=False)

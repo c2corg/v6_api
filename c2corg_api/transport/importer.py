@@ -15,14 +15,14 @@ import requests
 import transaction
 from pyramid.paster import get_appsettings, setup_logging
 from shapely import wkt
-from sqlalchemy import engine_from_config
+from sqlalchemy import engine_from_config, text
 from zope.sqlalchemy import mark_changed
 
 from c2corg_api.models import Base, DBSession
 from c2corg_api.models.transport import (
     TransportFeed, TransportLine, TransportStop)
 from c2corg_api.transport import gtfs
-from c2corg_api.transport.linking import link_transport_stops
+from c2corg_api.transport.postprocess import postprocess
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +76,20 @@ def save(session, feed, parsed, checksum):
     record.status = 'ok'
     session.flush()
 
+    # what was grouped with the stops and lines of this feed is alone until the
+    # next postprocess
+    session.execute(text("""
+        UPDATE guidebook.transport_stops SET cluster_id = stop_pk
+        WHERE cluster_id IN (
+            SELECT stop_pk FROM guidebook.transport_stops
+            WHERE feed_id = :feed)
+    """), {'feed': feed['id']})
+    session.execute(text("""
+        UPDATE guidebook.transport_lines SET duplicate_of = NULL
+        WHERE duplicate_of IN (
+            SELECT line_id FROM guidebook.transport_lines
+            WHERE feed_id = :feed)
+    """), {'feed': feed['id']})
     session.query(TransportLine).filter_by(feed_id=feed['id']).delete()
     session.query(TransportStop).filter_by(feed_id=feed['id']).delete()
 
@@ -108,6 +122,11 @@ def save(session, feed, parsed, checksum):
         }
         for stop in parsed['stops']
     ])
+    # alone, until the postprocess
+    session.execute(text("""
+        UPDATE guidebook.transport_stops SET cluster_id = stop_pk
+        WHERE feed_id = :feed
+    """), {'feed': feed['id']})
 
 
 def import_feed(session, feed, force=False, today=None):
@@ -147,7 +166,7 @@ def import_feeds(session, feed_ids=None, force=False):
                 imported += import_feed(session, feed, force)
         except Exception:
             log.exception('Import of the feed %s failed', feed['id'])
-    link_transport_stops(session)
+    postprocess(session)
     return imported
 
 

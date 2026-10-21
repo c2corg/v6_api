@@ -4,11 +4,12 @@ from c2corg_api.models.transport import (
     TransportFeed, TransportLine, TransportStop)
 from c2corg_api.tests import BaseTestCase
 from c2corg_api.tests.transport.db_fixture import (
-    FEED, add_navitia_stops, import_test_feed)
+    FEED, OTHER_FEED, add_navitia_stops, import_test_feed)
 from c2corg_api.tests.transport.gtfs_fixture import gtfs_archive
 from c2corg_api.transport import importer
 from c2corg_api.transport.importer import load_feeds
 from c2corg_api.transport.linking import link_transport_stops
+from c2corg_api.transport.postprocess import postprocess, report
 
 
 class TestFeeds(BaseTestCase):
@@ -161,3 +162,92 @@ class TestImportFeeds(BaseTestCase):
     def test_only_the_requested_feeds(self):
         self.assertEqual(self.run_import(feed_ids=['broken']), 0)
         self.assertEqual(self.session.query(TransportFeed).count(), 0)
+
+
+class TestPostprocess(BaseTestCase):
+    """The same feed twice: the stops and the lines are the same."""
+
+    def setUp(self):  # noqa
+        BaseTestCase.setUp(self)
+        import_test_feed(self.session)
+        import_test_feed(self.session, feed=OTHER_FEED)
+
+    def stops(self):
+        self.session.expire_all()
+        stops = self.session.query(TransportStop).order_by(
+            TransportStop.stop_pk).all()
+        return {(stop.feed_id, stop.stop_id): stop for stop in stops}
+
+    def line(self, feed_id, route_id):
+        self.session.expire_all()
+        return self.session.query(TransportLine).filter_by(
+            feed_id=feed_id, route_id=route_id).one()
+
+    def test_each_stop_is_its_own_cluster_after_an_import(self):
+        for stop in self.stops().values():
+            self.assertEqual(stop.cluster_id, stop.stop_pk)
+
+    def test_the_stops_of_the_same_place_are_grouped(self):
+        found = postprocess(self.session)
+
+        stops = self.stops()
+        for stop_id in ('S1', 'S2', 'S3'):
+            anchor = stops[('test', stop_id)]
+            member = stops[('other', stop_id)]
+            # as many departures: the first stop is the anchor
+            self.assertEqual(anchor.cluster_id, anchor.stop_pk)
+            self.assertEqual(member.cluster_id, anchor.stop_pk)
+        self.assertEqual(len(found['clusters']), 3)
+
+    def test_the_duplicate_line_is_hidden(self):
+        found = postprocess(self.session)
+
+        kept, hidden = self.line('test', 'R1'), self.line('other', 'R1')
+        self.assertIsNone(kept.duplicate_of)
+        self.assertEqual(hidden.duplicate_of, kept.line_id)
+        self.assertEqual(found['hidden_lines'], {hidden.line_id: kept.line_id})
+        # no path: nothing to compare
+        self.assertIsNone(self.line('other', 'R2').duplicate_of)
+
+    def test_the_postprocess_can_be_done_again(self):
+        postprocess(self.session)
+        before = {key: stop.cluster_id for key, stop in self.stops().items()}
+        postprocess(self.session)
+
+        self.assertEqual(
+            {key: stop.cluster_id for key, stop in self.stops().items()},
+            before)
+        self.assertEqual(self.line('other', 'R1').duplicate_of,
+                         self.line('test', 'R1').line_id)
+
+    def test_what_was_grouped_with_an_imported_feed_is_released(self):
+        postprocess(self.session)
+
+        # the anchors and the kept lines are the ones of the feed `test`
+        import_test_feed(self.session)
+
+        for (feed_id, _), stop in self.stops().items():
+            self.assertEqual(stop.cluster_id, stop.stop_pk, feed_id)
+        self.assertIsNone(self.line('other', 'R1').duplicate_of)
+
+    def test_a_far_stop_is_not_grouped(self):
+        import_test_feed(self.session, feed=dict(FEED, id='far'), stops=(
+            'stop_id,stop_name,stop_lat,stop_lon,location_type,'
+            'parent_station,stop_code\n'
+            'S1,Gare,46.0,7.0,1,,\nS1a,Gare quai A,46.0,7.0,0,S1,QA\n'
+            'S2,Mairie,46.01,7.01,0,,\nS3,Col,46.02,7.02,0,,\n'))
+
+        postprocess(self.session)
+
+        stops = self.stops()
+        self.assertEqual(stops[('far', 'S1')].cluster_id,
+                         stops[('far', 'S1')].stop_pk)
+
+    def test_the_report_shows_what_was_hidden(self):
+        found = postprocess(self.session)
+
+        lines = report(found)
+
+        # the stops have the same names: only the hidden line
+        self.assertEqual(len(lines), 1)
+        self.assertIn('hidden', lines[0])

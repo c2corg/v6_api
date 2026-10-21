@@ -17,16 +17,20 @@ FEED = {
     'attribution': 'Test attribution',
 }
 
+# the same feed under another id: its stops and lines are the ones of FEED
+OTHER_FEED = dict(FEED, id='other', name='Other feed',
+                  attribution='Other attribution')
+
 _to_3857 = Transformer.from_crs(4326, 3857, always_xy=True).transform
 
 # the stops of the GTFS fixture are around (6.0, 45.0)
 WORLD = '-100000,-100000,10000000,10000000'
 
 
-def import_test_feed(session, **overrides):
-    """Imports the GTFS fixture as the feed `test`."""
+def import_test_feed(session, feed=FEED, **overrides):
+    """Imports the GTFS fixture as the feed `test` (or another one)."""
     importer.save(
-        session, FEED, gtfs.parse(gtfs_archive(**overrides), TODAY),
+        session, feed, gtfs.parse(gtfs_archive(**overrides), TODAY),
         'checksum')
     session.flush()
 

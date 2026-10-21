@@ -3,8 +3,9 @@ from pyproj import Transformer
 from c2corg_api.models.transport import TransportLine, TransportStop
 from c2corg_api.tests import BaseTestCase
 from c2corg_api.tests.transport.db_fixture import (
-    WORLD, add_navitia_stops, import_test_feed)
+    OTHER_FEED, WORLD, add_navitia_stops, import_test_feed)
 from c2corg_api.transport.linking import link_transport_stops
+from c2corg_api.transport.postprocess import postprocess
 
 # the Mairie stop (S2) of the fixture, in EPSG:3857
 MAIRIE = Transformer.from_crs(4326, 3857, always_xy=True).transform(
@@ -209,3 +210,98 @@ class TestStop(TransportTestCase):
     def test_stop_not_found(self):
         response = self.app.get('/transport-stops/999999', status=404)
         self.assertEqual(response.json['error'], 'Stop not found')
+
+
+class TestClusters(TransportTestCase):
+    """The feed twice: the stops are one cluster, the lines are duplicates."""
+
+    def setUp(self):  # noqa
+        TransportTestCase.setUp(self)
+        import_test_feed(self.session, feed=OTHER_FEED)
+        postprocess(self.session)
+        self.session.flush()
+
+    def stop_of(self, feed_id, stop_id):
+        return self.session.query(TransportStop).filter_by(
+            feed_id=feed_id, stop_id=stop_id).one()
+
+    def stop(self, stop_id):
+        return self.stop_of('test', stop_id)
+
+    def line(self, route_id):
+        # the kept line: the one of the first feed
+        return self.session.query(TransportLine).filter_by(
+            feed_id='test', route_id=route_id).one()
+
+    def test_a_cluster_is_one_stop(self):
+        response = self.app.get(
+            '/stopareas?bbox=' + WORLD + '&all=1', status=200)
+
+        gtfs = [s for s in response.json['documents'] if s['kind'] == 'gtfs']
+        self.assertEqual(sorted(s['stoparea_name'] for s in gtfs),
+                         ['Col', 'Gare', 'Mairie'])
+        # the anchor is the one of the first feed
+        mairie = next(s for s in gtfs if s['stoparea_name'] == 'Mairie')
+        self.assertEqual(mairie['id'], self.stop_of('test', 'S2').stop_pk)
+        self.assertTrue(mairie['linked'])
+
+    def test_a_stop_linked_in_a_feed_links_the_cluster(self):
+        response = self.app.get('/stopareas?bbox=' + WORLD, status=200)
+
+        names = {s['stoparea_name'] for s in response.json['documents']
+                 if s['kind'] == 'gtfs'}
+        self.assertEqual(names, {'Mairie', 'Col'})
+
+    def test_the_details_of_a_member_are_the_ones_of_the_cluster(self):
+        anchor = self.stop_of('test', 'S2')
+        member = self.stop_of('other', 'S2')
+
+        response = self.app.get(
+            '/transport-stops/%d' % member.stop_pk, status=200)
+        alone = self.app.get(
+            '/transport-stops/%d' % anchor.stop_pk, status=200)
+
+        self.assertEqual(response.json['id'], anchor.stop_pk)
+        self.assertEqual(response.json['details'], alone.json['details'])
+        self.assertEqual([f['attribution'] for f in response.json['feeds']],
+                         ['Test attribution', 'Other attribution'])
+        self.assertEqual(response.json['feed']['attribution'],
+                         'Test attribution')
+
+    def test_a_departure_of_two_feeds_is_shown_once(self):
+        response = self.app.get(
+            '/transport-stops/%d' % self.stop_of('test', 'S1').stop_pk,
+            status=200)
+
+        lines = {line['route_id']: line
+                 for line in response.json['details']['lines']}
+        self.assertEqual(set(lines), {'R1', 'R2'})
+        self.assertEqual([d[0] for d in lines['R1']['departures']],
+                         [480, 720, 1020])
+
+    def test_a_line_of_a_stop_is_the_kept_one(self):
+        response = self.app.get(
+            '/transport-stops/%d' % self.stop_of('other', 'S1').stop_pk,
+            status=200)
+
+        lines = {line['route_id']: line['line_id']
+                 for line in response.json['details']['lines']}
+        self.assertEqual(lines['R1'], self.line('R1').line_id)
+
+    def test_a_duplicate_line_is_hidden(self):
+        response = self.app.get('/transport-lines?bbox=' + WORLD, status=200)
+
+        self.assertEqual(
+            [f['id'] for f in response.json['features']],
+            [self.line('R1').line_id])
+
+    def test_a_hidden_line_gives_the_kept_line(self):
+        hidden = self.session.query(TransportLine).filter_by(
+            feed_id='other', route_id='R1').one()
+
+        response = self.app.get(
+            '/transport-lines/%d' % hidden.line_id, status=200)
+
+        self.assertEqual(response.json['line_id'], self.line('R1').line_id)
+        self.assertEqual(response.json['feed']['attribution'],
+                         'Test attribution')
