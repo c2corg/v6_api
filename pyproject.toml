@@ -66,6 +66,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "ruff==0.17.1",
+    "pre-commit==4.6.2",
     "WebTest==3.0.4",
     "ipdb==0.13.13",
     "httmock==1.4.0",
@@ -103,7 +104,7 @@ quote-style = "single"
 # Same checks as the former flake8 + pep8-naming setup. pycodestyle's
 # whitespace and indentation rules (E1, E2, E3) are preview rules in ruff.
 preview = true
-select = ["E", "W", "F", "N", "UP"]
+select = ["E", "W", "F", "I", "N", "UP"]
 ignore = [
     "E226", "E241", "E242",  # in pycodestyle's default ignore list
     "N818",  # off by default in pep8-naming
@@ -115,6 +116,9 @@ ignore = [
     # unsafe fix (yield in a for loop -> yield from)
     "UP028",
 ]
+
+[tool.ruff.lint.isort]
+known-first-party = ["c2corg_api", "es_migration"]
 
 [tool.pytest.ini_options]
 addopts = "--cov=c2corg_api"

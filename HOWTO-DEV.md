@@ -197,8 +197,14 @@ pytest
 - Format the code and run the linter (CI checks both; in the devcontainer, VS Code formats on save):
 
 ```shell
-make format   # ruff format + ruff check --fix
+make format   # ruff format + ruff check --fix (also sorts imports)
 make lint     # ruff check + ruff format --check
+```
+
+- Optional but recommended: run ruff automatically before each commit (the devcontainer does this for you):
+
+```shell
+uv run pre-commit install
 ```
 
 ## Other
