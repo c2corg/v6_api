@@ -15,15 +15,21 @@ from pyproj import Transformer
 from shapely.geometry import LineString, MultiLineString, Point
 from shapely.ops import linemerge, transform, unary_union
 
+from c2corg_api.transport.settings import env_float, env_int
+
+# The thresholds are read from the environment (see `.env`), the values here
+# are the defaults.
+
 # timetables cover this number of days, from the day of the import
-SERVICE_DAYS = 365
+SERVICE_DAYS = env_int('TRANSPORT_SERVICE_DAYS', 365, minimum=1, maximum=800)
 
 # the paths follow the roads, at most this far (in meters)
-SIMPLIFY_TOLERANCE = 5
+SIMPLIFY_TOLERANCE = env_float('TRANSPORT_SIMPLIFY_TOLERANCE', 5, minimum=0)
 
 # the stop sequences of a direction that are not a part of a more frequent
 # one (variants): only the most frequent are kept
-MAX_VARIANTS_PER_DIRECTION = 6
+MAX_VARIANTS_PER_DIRECTION = env_int(
+    'TRANSPORT_MAX_VARIANTS_PER_DIRECTION', 6, minimum=1)
 
 _to_3857 = Transformer.from_crs(4326, 3857, always_xy=True).transform
 

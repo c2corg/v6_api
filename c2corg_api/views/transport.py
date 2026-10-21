@@ -15,6 +15,7 @@ from c2corg_api.models.transport import (
     TransportFeed, TransportLine, TransportStop)
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
 from c2corg_api.transport.merge import merge_details
+from c2corg_api.transport.settings import env_int
 from c2corg_api.views import cors_policy
 from c2corg_api.views.validation import validate_id
 from cornice.resource import resource, view
@@ -23,11 +24,12 @@ from sqlalchemy.orm import aliased
 
 # safety nets: a very wide bbox could return a lot (a Navitia stop is stored
 # once per line)
-MAX_STOPAREAS_BY_BBOX = 5000
-MAX_LINES_BY_BBOX = 500
+MAX_STOPAREAS_BY_BBOX = env_int('TRANSPORT_MAX_STOPS_BY_BBOX', 5000, minimum=1)
+MAX_LINES_BY_BBOX = env_int('TRANSPORT_MAX_LINES_BY_BBOX', 500, minimum=1)
 
-# the data changes once a month
-CACHE_CONTROL = 'public, max-age=86400'
+# the data changes once a month (seconds)
+CACHE_CONTROL = 'public, max-age=%d' % env_int(
+    'TRANSPORT_CACHE_MAX_AGE', 86400, minimum=0)
 
 
 def validate_bbox_param(request, **kwargs):

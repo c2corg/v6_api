@@ -14,13 +14,16 @@ import re
 
 from sqlalchemy import text
 
+from c2corg_api.transport.settings import env_int
+
 log = logging.getLogger(__name__)
 
 SQL_FILE = os.path.join(os.path.dirname(__file__), 'link_stops.sql')
 
 # a Navitia stop closer than this (meters) to a GTFS stop served by one of
-# its lines is the same stop
-MAX_DISTANCE = 50
+# its lines is the same stop (the variable `TRANSPORT_LINK_DISTANCE` of the
+# environment, see `.env`)
+MAX_DISTANCE = env_int('TRANSPORT_LINK_DISTANCE', 50, minimum=0)
 
 
 def _statements():

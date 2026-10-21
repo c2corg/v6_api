@@ -17,6 +17,7 @@ and the duplicate lines are hidden.
   are hidden (`duplicate_of`), and not deleted.
 
 To compute them again after the imports: `transport_postprocess <config_uri>`.
+The thresholds are the variables `TRANSPORT_*` of the environment (`.env`).
 """
 import logging
 import re
@@ -25,17 +26,24 @@ from collections import defaultdict
 
 from sqlalchemy import text
 
+from c2corg_api.transport.settings import env_float, env_int
+
 log = logging.getLogger(__name__)
 
+# The thresholds are read from the environment (see `.env`), the values here
+# are the defaults.
+
 # meters: two stops this close are the same place, whatever their names
-SAME_PLACE_DISTANCE = 15
+SAME_PLACE_DISTANCE = env_int('TRANSPORT_SAME_PLACE_DISTANCE', 15, minimum=0)
 # meters: two stops this close are the same place if they look like it
-NEAR_DISTANCE = 50
+NEAR_DISTANCE = max(
+    SAME_PLACE_DISTANCE, env_int('TRANSPORT_NEAR_DISTANCE', 50, minimum=0))
 
 # meters: the path of a line is covered by the one of a duplicate within this
-LINE_TOLERANCE = 25
+LINE_TOLERANCE = env_int('TRANSPORT_LINE_TOLERANCE', 25, minimum=1)
 # at least this share of each path must be covered by the other
-LINE_OVERLAP = 0.9
+LINE_OVERLAP = env_float(
+    'TRANSPORT_LINE_OVERLAP', 0.9, minimum=0.5, maximum=1)
 
 _STOP_WORDS = {
     'a', 'au', 'aux', 'd', 'de', 'des', 'du', 'en', 'et', 'l', 'la', 'le',

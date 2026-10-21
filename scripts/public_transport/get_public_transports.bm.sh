@@ -17,6 +17,8 @@
 #   API_PORT    Local API port (default: 6543)
 #   PGUSER      PostgreSQL user (default: postgres)
 #   PGDATABASE  PostgreSQL database (default: c2corg)
+#   TRANSPORT_LINK_DISTANCE  Distance in meters under which a Navitia stop is a GTFS stop
+#                            served by one of its lines, to link them (default: 50)
 #   PGHOST      PostgreSQL host (default: localhost)
 #   PGPORT      PostgreSQL port (default: 5432)
 #   PGPASSWORD  PostgreSQL password (forwarded to psql natively)
@@ -367,7 +369,7 @@ if psql_cmd -q < "$SQL_FILE"; then
     # Navitia stops by their ids: link them again with the new stops
     LINK_SQL="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../c2corg_api/transport/link_stops.sql"
     log "Linking the Navitia stops to the GTFS stops..."
-    if psql_cmd -q -v ON_ERROR_STOP=1 -v max_distance=50 < "$LINK_SQL"; then
+    if psql_cmd -q -v ON_ERROR_STOP=1 -v max_distance="${TRANSPORT_LINK_DISTANCE:-50}" < "$LINK_SQL"; then
         log "Stops linked."
     else
         log "WARNING: the stops could not be linked (are the transport tables created? see import_gtfs)."

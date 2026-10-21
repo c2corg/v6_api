@@ -279,7 +279,27 @@ same place and hides the lines that are in several feeds (nothing is deleted):
   short line in a long one is not a duplicate). The line with the most trips is
   kept; a hidden line still gives the kept line on `/transport-lines/{id}`.
 
-The thresholds are the constants of `c2corg_api/transport/dedup.py`.
+The thresholds are variables of the environment, with the defaults of `.env`:
+change the value (the environment of the API and of the jobs), not the code. A
+variable that is not set, empty or not valid is ignored, and the default is
+used.
+
+| Variable | Default | |
+| --- | --- | --- |
+| `TRANSPORT_SAME_PLACE_DISTANCE` | 15 | m: two stops this close are the same place |
+| `TRANSPORT_NEAR_DISTANCE` | 50 | m: ... if their names look alike or they share a line code |
+| `TRANSPORT_LINE_TOLERANCE` | 25 | m: a path is covered by the other within this |
+| `TRANSPORT_LINE_OVERLAP` | 0.9 | share of each path covered, 0.5 to 1 |
+| `TRANSPORT_LINK_DISTANCE` | 50 | m: a Navitia stop is a GTFS stop of one of its lines |
+| `TRANSPORT_SIMPLIFY_TOLERANCE` | 5 | m: simplification of the paths |
+| `TRANSPORT_SERVICE_DAYS` | 365 | days of timetables stored |
+| `TRANSPORT_MAX_VARIANTS_PER_DIRECTION` | 6 | stop sequences kept per direction |
+| `TRANSPORT_MAX_STOPS_BY_BBOX`, `TRANSPORT_MAX_LINES_BY_BBOX` | 5000, 500 | most the API gives for an extent |
+| `TRANSPORT_CACHE_MAX_AGE` | 86400 | s: cache of the transport data |
+
+The import (`import_gtfs`) and the postprocess need the variables in their
+environment (`export $(grep -v '^#' .env | xargs)` for a try), then the
+postprocess is done again to apply new thresholds.
 
 To do it again, once the imports are done, without importing anything (after
 changing the thresholds, after an import of Navitia stops, or if a feed was
