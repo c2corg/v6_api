@@ -264,7 +264,11 @@ class TestRoutesMapRest(BaseTestRest):
         self.assertEqual(body['documents'][0]['title'], 'Mont Blanc : Hike route')
 
     def test_tracks_filtered_by_ids(self):
-        route = self.session.query(Route).first()
+        route = (
+            self.session.query(Route)
+            .filter(Route.locales.any(RouteLocale.title == 'Ski route'))
+            .one()
+        )
         body = self.app.get(
             '/routes/map/tracks?bbox=' + BBOX + '&ids=' + str(route.document_id),
             status=200,
