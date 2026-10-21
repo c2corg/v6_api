@@ -21,7 +21,7 @@ from sqlalchemy import (
     func
     )
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship, column_property
 from sqlalchemy.sql.schema import UniqueConstraint
@@ -118,13 +118,14 @@ class Document(Base, _DocumentMixin):
         """
         copy_attributes(other, self, Document._ATTRIBUTES_WHITELISTED)
 
-        for locale_in in other.locales:
-            locale = self.get_locale(locale_in.lang)
-            if locale:
-                locale.update(locale_in)
-                locale.document_id = self.document_id
-            else:
-                self.locales.append(locale_in)
+        with DBSession.no_autoflush:
+            for locale_in in other.locales:
+                locale = self.get_locale(locale_in.lang)
+                if locale:
+                    locale.update(locale_in)
+                    locale.document_id = self.document_id
+                else:
+                    self.locales.append(locale_in)
 
         if other.geometry:
             if self.geometry:
@@ -295,7 +296,6 @@ class _DocumentGeometryMixin:
         return Column(
             Geometry(
                 geometry_type='POINT', srid=3857, dimension=2,
-                management=True,
                 spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
             info={
                 'colanderalchemy': {
@@ -309,7 +309,6 @@ class _DocumentGeometryMixin:
         return Column(
             Geometry(
                 geometry_type='GEOMETRY', srid=3857,
-                management=True,
                 use_typmod=False,
                 spatial_index=self.__name__ != 'ArchiveDocumentGeometry'),
             info={

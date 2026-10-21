@@ -294,13 +294,19 @@ def _get_default_geom(linked_docs):
         return None
 
     linked_waypoint_ids = [d['document_id'] for d in linked_docs]
+    # Fetch the geometry as EWKB, which carries its SRID, so that it is
+    # written back with SRID 3857 whatever the PostGIS / geoalchemy2
+    # versions (a plain geometry result may come back without it).
     default_geom = DBSession. \
-        query(func.ST_SetSRID(func.ST_Centroid(func.ST_ConvexHull(
-            func.ST_Collect(DocumentGeometry.geom))), 3857)). \
+        query(func.ST_AsEWKB(func.ST_SetSRID(func.ST_Centroid(
+            func.ST_ConvexHull(func.ST_Collect(DocumentGeometry.geom))),
+            3857))). \
         filter(DocumentGeometry.document_id.in_(linked_waypoint_ids)). \
         scalar()
 
-    return default_geom
+    if default_geom is None:
+        return None
+    return WKBElement(bytes(default_geom), srid=3857, extended=True)
 
 
 def etag_cache(request, key):

@@ -42,7 +42,7 @@ class BaseProtectTest(BaseTestRest):
         self.session.flush()
 
     def is_protected(self, document_id):
-        document = self.session.query(Document).get(document_id)
+        document = self.session.get(Document, document_id)
         self.session.refresh(document)
         return document.protected
 

@@ -702,18 +702,27 @@ def upgrade():
     op.create_table('documents_geometries',
     sa.Column('version', sa.Integer(), nullable=False),
     sa.Column('document_id', sa.Integer(), nullable=False),
-    sa.Column('geom', geoalchemy2.types.Geometry(geometry_type='POINT', srid=3857, management=True), nullable=True),
-    sa.Column('geom_detail', geoalchemy2.types.Geometry(srid=3857, management=True, use_typmod=False), nullable=True),
+    sa.Column('geom', geoalchemy2.types.Geometry(geometry_type='POINT', srid=3857), nullable=True),
+    sa.Column('geom_detail', geoalchemy2.types.Geometry(srid=3857, use_typmod=False, spatial_index=False), nullable=True),
     sa.ForeignKeyConstraint(['document_id'], ['guidebook.documents.document_id'], ),
     sa.PrimaryKeyConstraint('document_id'),
     schema='guidebook'
     )
+    # geom_detail uses use_typmod=False (see below, dimension constraint is dropped to allow
+    # mixed 2D/3D/4D geometries), which routes it through geoalchemy2's legacy "managed"
+    # AddGeometryColumn() codepath. That codepath's automatic spatial-index creation collides
+    # with alembic's own index creation (the Index object re-attaches itself to the table),
+    # raising a DuplicateTable error - so spatial_index is disabled above and the index is
+    # created explicitly here instead.
+    op.create_index(
+        'idx_documents_geometries_geom_detail', 'documents_geometries', ['geom_detail'],
+        unique=False, schema='guidebook', postgresql_using='gist')
     op.create_table('documents_geometries_archives',
     sa.Column('version', sa.Integer(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('document_id', sa.Integer(), nullable=False),
-    sa.Column('geom', geoalchemy2.types.Geometry(geometry_type='POINT', srid=3857, spatial_index=False, management=True), nullable=True),
-    sa.Column('geom_detail', geoalchemy2.types.Geometry(srid=3857, spatial_index=False, management=True, use_typmod=False), nullable=True),
+    sa.Column('geom', geoalchemy2.types.Geometry(geometry_type='POINT', srid=3857, spatial_index=False), nullable=True),
+    sa.Column('geom_detail', geoalchemy2.types.Geometry(srid=3857, spatial_index=False, use_typmod=False), nullable=True),
     sa.ForeignKeyConstraint(['document_id'], ['guidebook.documents.document_id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('version', 'document_id', name='uq_documents_geometries_archives_document_id_version_lang'),

@@ -18,7 +18,7 @@ from c2corg_api.views.waypoint import update_linked_route_titles
 from colander import MappingSchema, required, SchemaNode, Integer
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
-from sqlalchemy.sql.elements import not_
+from sqlalchemy import not_
 from sqlalchemy.sql.expression import and_, or_
 from sqlalchemy.sql.functions import func
 
@@ -129,7 +129,7 @@ class MergeDocumentRest(ACLDefault):
         """
         source_document_id = self.request.validated['source_document_id']
         target_document_id = self.request.validated['target_document_id']
-        source_doc = DBSession.query(Document).get(source_document_id)
+        source_doc = DBSession.get(Document, source_document_id)
 
         # transfer associations from source to target
         transfer_associations(source_document_id, target_document_id)
@@ -290,7 +290,7 @@ def _and_in(condition1, field2, in_ids):
 
 
 def _transfer_main_waypoint(source_document_id, target_document_id):
-    target_waypoint = DBSession.query(Waypoint).get(target_document_id)
+    target_waypoint = DBSession.get(Waypoint, target_document_id)
 
     DBSession.execute(
         Route.__table__.update().

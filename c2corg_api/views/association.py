@@ -140,9 +140,10 @@ class AssociationRest(ACLDefault):
         return {}
 
     def _load(self, association_in):
-        return DBSession.query(Association). \
-            get((association_in.parent_document_id,
-                 association_in.child_document_id))
+        return DBSession.get(
+            Association,
+            (association_in.parent_document_id,
+             association_in.child_document_id))
 
 
 def _check_required_associations(association):

@@ -61,7 +61,8 @@ def db_connection(test_database, db_engine):
     yield connection
     if keep:
         trans.commit()
-    else:
+    elif trans.is_active:
+        # the code under test may already have rolled it back
         trans.rollback()
     DBSession.remove()
     connection.close()

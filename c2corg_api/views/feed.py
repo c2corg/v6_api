@@ -162,8 +162,8 @@ def get_changes_of_personal_feed(
         user_id, token_id, token_time, limit, ignore_admin_changes_filter):
     user = DBSession.query(User). \
         filter(User.id == user_id). \
-        options(undefer('has_area_filter')). \
-        options(undefer('is_following_users')). \
+        options(undefer(User.has_area_filter)). \
+        options(undefer(User.is_following_users)). \
         first()
 
     if has_no_custom_filter(user):
@@ -249,7 +249,7 @@ def create_followed_users_filter(user):
         query(func.array_agg(FollowedUser.followed_user_id)). \
         filter(FollowedUser.follower_user_id == user.id). \
         group_by(FollowedUser.follower_user_id). \
-        subquery('followed_users')
+        scalar_subquery()
     return DocumentChange.user_ids.op('&&')(followed_users)
 
 
@@ -261,7 +261,7 @@ def create_area_filter(user):
         query(func.array_agg(FilterArea.area_id)). \
         filter(FilterArea.user_id == user.id). \
         group_by(FilterArea.user_id). \
-        subquery('filtered_area_ids')
+        scalar_subquery()
     return DocumentChange.area_ids.op('&&')(filtered_area_ids)
 
 
