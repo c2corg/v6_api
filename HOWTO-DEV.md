@@ -76,7 +76,7 @@ For more details, see [`.devcontainer/README.md`](.devcontainer/README.md).
 ### Requirements
 
 - A computer running Linux or Windows (on Windows, take a look at [WSL](https://learn.microsoft.com/fr-fr/windows/wsl/install), it will make your developer life easier). Maybe MacOs can work, but it was not tested.
-- [uv](https://docs.astral.sh/uv/getting-started/installation/), which installs the right Python version (3.14) and all dependencies for you
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13 or newer, which installs the right Python version (3.15) and all dependencies for you
 - A docker environment with docker compose plugin (either [docker desktop](https://www.docker.com/products/docker-desktop/) or a manual installation)
 - A development IDE is not mandatory, but highly recommended (pycharm, vscode...)
 - If you have GNU make installed, you can use it to run all the commands below to initialize and run your development environment (run `make help` to see what can be done) instead of running them "by hand"

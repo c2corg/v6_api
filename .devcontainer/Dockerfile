@@ -1,4 +1,4 @@
-FROM python:3.14-slim-bookworm
+FROM python:3.15-slim-bookworm
 
 # Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
@@ -22,7 +22,7 @@ WORKDIR /workspace
 
 # Python dependencies are managed by uv (see pyproject.toml and uv.lock).
 # The virtual environment lives outside the bind-mounted workspace.
-COPY --from=ghcr.io/astral-sh/uv:0.12.21 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /usr/local/bin/uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_PYTHON_DOWNLOADS=never \
     UV_LINK_MODE=copy \
