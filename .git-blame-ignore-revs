@@ -1,0 +1,5 @@
+# Commits ignored by git blame (git config blame.ignoreRevsFile .git-blame-ignore-revs;
+# GitHub uses this file automatically).
+
+# style: format the code with ruff format
+a00091106132eff0ab8490e8c483ecac5e9e3b3a
