@@ -207,7 +207,7 @@ requires-dist = [
     { name = "pyramid-debugtoolbar", specifier = "==4.12.1" },
     { name = "pyramid-jwt", specifier = "==1.6.1" },
     { name = "pyramid-mailer", specifier = "==0.15.1" },
-    { name = "pyramid-tm", specifier = "==2.3" },
+    { name = "pyramid-tm", specifier = "==2.6" },
     { name = "python-dotenv", specifier = "==1.2.2" },
     { name = "python-json-logger", specifier = "==3.3.0" },
     { name = "python-slugify", specifier = "==8.0.4" },
@@ -990,15 +990,15 @@ wheels = [
 
 [[package]]
 name = "pyramid-tm"
-version = "2.3"
+version = "2.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyramid" },
     { name = "transaction" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cc/81/0fb96c26d691634b116541a4557c546f1ca74edfb924f2c4456dcbb33ffa/pyramid_tm-2.3.tar.gz", hash = "sha256:e95e9d068b27b98c1bf23552c256e9e0a042a38b08943ef5336b91888cdffa74", size = 37543, upload-time = "2019-09-30T17:22:55.732Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cf/b3/d6db704d25fc7b03d96a753fcc7e63f4ea2f93aedeb7c072472744d33267/pyramid_tm-2.6.tar.gz", hash = "sha256:8148d2191285280c9a0c23e6df1018b3514b4cef02115b872dd0350a4d78709c", size = 40028, upload-time = "2024-11-14T07:30:54.256Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/66/d5adeeb9d08763245989526c7c107f38dcbdf088cf870d6b177ede994894/pyramid_tm-2.3-py2.py3-none-any.whl", hash = "sha256:f594b014f913052b046af5c5f402052529e5bd427b7d77f54e90901d9c021d69", size = 15278, upload-time = "2019-09-30T17:22:53.41Z" },
+    { url = "https://files.pythonhosted.org/packages/68/78/77ac3fbfb73339bd09f4c33a6d79947ad58c5d4d8062fbdbc2be1ddcac57/pyramid_tm-2.6-py3-none-any.whl", hash = "sha256:665a4ee1d6f41f0c7ffa5e54d9b01d70cd3e8e5bd76277529acbdd6b6bd6fe9e", size = 10792, upload-time = "2024-11-14T07:30:52.428Z" },
 ]
 
 [[package]]
