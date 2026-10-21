@@ -48,10 +48,7 @@ class UserFilterPreferencesRest(ACLDefault):
                     DocumentLocale.lang, DocumentLocale.title,
                     DocumentLocale.version)
 
-        return DBSession. \
-            query(User). \
-            options(area_joinedload). \
-            get(user_id)
+        return DBSession.get(User, user_id, options=[area_joinedload])
 
     @restricted_view(validators=[validate_preferred_lang_param])
     def get(self):

@@ -58,7 +58,7 @@ class UserMailinglistsRest(ACLDefault):
 
         """
         user_id = self.request.authenticated_userid
-        user = DBSession.query(User).get(user_id)
+        user = DBSession.get(User, user_id)
 
         subscribed_lists = DBSession.query(Mailinglist). \
             filter(Mailinglist.user_id == user_id).all()

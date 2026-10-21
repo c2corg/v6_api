@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, Float, ForeignKey
 from colanderalchemy import SQLAlchemySchemaNode
-from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import declared_attr
 
 from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import copy_attributes
