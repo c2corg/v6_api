@@ -4,6 +4,7 @@ from apscheduler.events import EVENT_JOB_ERROR
 
 from c2corg_api.jobs.purge_non_activated_accounts import purge_account
 from c2corg_api.jobs.purge_expired_tokens import purge_token
+from c2corg_api.jobs.import_transport import import_transport
 
 import logging
 log = logging.getLogger(__name__)
@@ -35,6 +36,17 @@ def configure_scheduler_from_config(settings):
         trigger='cron',
         hour=0,
         minute=30
+    )
+
+    # run `import_transport` job on the 1st of each month at 3:00
+    scheduler.add_job(
+        import_transport,
+        id='import_transport',
+        name='Import the public transport GTFS feeds',
+        trigger='cron',
+        day=1,
+        hour=3,
+        minute=0
     )
 
     scheduler.add_listener(exception_listener, EVENT_JOB_ERROR)

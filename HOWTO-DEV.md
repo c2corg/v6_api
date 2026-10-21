@@ -200,6 +200,33 @@ pytest
 ruff check c2corg_api es_migration
 ```
 
+## Public transport (GTFS)
+
+The lines and stops shown on the maps come from open GTFS feeds, listed in
+`c2corg_api/transport/feeds.json` (id, name, stable download URL, license,
+attribution). Adding a network is adding an entry.
+
+- Import the feeds (the ones that did not change since the last import are
+  skipped; `--feed <id>` imports only this feed, `--force` imports it
+  anyway):
+
+```shell
+import_gtfs development.ini [--feed giffre] [--force]
+```
+
+The same import runs every month (the 1st, at 3:00) in the background jobs
+(`python c2corg_api/scripts/jobs/scheduler.py development.ini`).
+
+- The Navitia stops (`guidebook.stopareas`, filled by
+  `scripts/public_transport/get_public_transports.sh`) are linked to the GTFS
+  stops after each GTFS import and at the end of the Navitia import script
+  (`c2corg_api/transport/link_stops.sql`): a stop of a waypoint then shows the
+  timetables of its lines. To link them by hand:
+
+```shell
+psql -v max_distance=50 -f c2corg_api/transport/link_stops.sql
+```
+
 ## Other
 
 - Flush redis cache:

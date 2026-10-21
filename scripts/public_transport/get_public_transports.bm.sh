@@ -362,6 +362,16 @@ log "SQL file size: $(wc -l < "$SQL_FILE") lines."
 log "Executing SQL file (this includes TRUNCATE + all inserts)..."
 if psql_cmd -q < "$SQL_FILE"; then
     log "SQL executed successfully. Done."
+
+    # the stops of the GTFS feeds (c2corg_api/transport) are linked to the
+    # Navitia stops by their ids: link them again with the new stops
+    LINK_SQL="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../c2corg_api/transport/link_stops.sql"
+    log "Linking the Navitia stops to the GTFS stops..."
+    if psql_cmd -q -v ON_ERROR_STOP=1 -v max_distance=50 < "$LINK_SQL"; then
+        log "Stops linked."
+    else
+        log "WARNING: the stops could not be linked (are the transport tables created? see import_gtfs)."
+    fi
 else
     log_err "SQL execution FAILED. The database has NOT been modified. SQL file kept at: $SQL_FILE"
     exit 1
