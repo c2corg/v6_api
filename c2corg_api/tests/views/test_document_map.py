@@ -262,3 +262,19 @@ class TestRoutesMapRest(BaseTestRest):
         ).json
         self.assertEqual(len(body['documents']), 1)
         self.assertEqual(body['documents'][0]['title'], 'Mont Blanc : Hike route')
+
+    def test_tracks_filtered_by_ids(self):
+        route = self.session.query(Route).first()
+        body = self.app.get(
+            '/routes/map/tracks?bbox=' + BBOX + '&ids=' + str(route.document_id),
+            status=200,
+        ).json
+        self.assertEqual(
+            [r['document_id'] for r in body['documents']], [route.document_id]
+        )
+
+    def test_tracks_filtered_by_empty_ids(self):
+        body = self.app.get(
+            '/routes/map/tracks?bbox=' + BBOX + '&ids=', status=200
+        ).json
+        self.assertEqual(body['documents'], [])

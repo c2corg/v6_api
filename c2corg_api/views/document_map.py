@@ -98,13 +98,28 @@ def _lon_lat_to_3857(lon, lat):
     return x, y
 
 
+def _build_search(doc_type, params, bbox, meta_params):
+    """Builds the search query of the documents matching the filters in the
+    given bbox. On top of the filters of the documents listing, an `ids=1,2`
+    parameter restricts the result to the given documents (an empty list
+    matches nothing).
+    """
+    params = dict(params, bbox=_bbox_param(bbox))
+    ids = params.pop('ids', None)
+
+    search = build_query(params, meta_params, doc_type)
+    if ids is not None:
+        search = search.filter(
+            'ids', values=[value for value in ids.split(',') if value.isdigit()]
+        )
+    return search
+
+
 def get_heatmap(doc_type, params, bbox, zoom):
     """Returns the density buckets (`{x, y, count}` in EPSG:3857) of the
     documents matching the search filters in the given bbox.
     """
-    search = build_query(
-        dict(params, bbox=_bbox_param(bbox)), {'limit': 0, 'offset': 0}, doc_type
-    )
+    search = _build_search(doc_type, params, bbox, {'limit': 0, 'offset': 0})
     search.aggs.bucket(
         'density',
         'geohash_grid',
@@ -127,10 +142,11 @@ def get_track_candidates(doc_type, params, bbox):
     search filters around the given bbox. `truncated` is set when there
     are more candidates than what is asked to the search index.
     """
-    search = build_query(
-        dict(params, bbox=_bbox_param(_expanded_bbox(bbox))),
-        {'limit': TRACKS_CANDIDATES_MAX, 'offset': 0},
+    search = _build_search(
         doc_type,
+        params,
+        _expanded_bbox(bbox),
+        {'limit': TRACKS_CANDIDATES_MAX, 'offset': 0},
     )
     response = search.execute()
     document_ids = [int(doc.meta.id) for doc in response]
