@@ -1,31 +1,30 @@
-from datetime import date, timedelta
 import json
+from datetime import date, timedelta
+
+from shapely.geometry import LineString, shape
+from shapely.geometry.point import Point
 
 from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association, AssociationLog
+from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import (
-    Outing,
+    OUTING_TYPE,
     ArchiveOuting,
     ArchiveOutingLocale,
+    Outing,
     OutingLocale,
-    OUTING_TYPE,
 )
+from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.models.common.attributes import quality_types
-from shapely.geometry import shape, LineString
-
-from c2corg_api.models.route import Route, RouteLocale
-from c2corg_api.models.document import DocumentGeometry, DocumentLocale
-from c2corg_api.models.document_topic import DocumentTopic
-from c2corg_api.views.document import DocumentRest
-
 from c2corg_api.tests.views import BaseDocumentTestRest
-from shapely.geometry.point import Point
+from c2corg_api.views.document import DocumentRest
 
 
 class TestOutingRest(BaseDocumentTestRest):

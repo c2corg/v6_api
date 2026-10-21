@@ -1,20 +1,21 @@
-from c2corg_api.models import schema, Base
+from colanderalchemy import SQLAlchemySchemaNode
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.ext.associationproxy import association_proxy
+
+from c2corg_api.models import Base, schema
+from c2corg_api.models.common import document_types
+from c2corg_api.models.common.fields_user_profile import fields_user_profile
 from c2corg_api.models.document import (
     ArchiveDocument,
     Document,
-    get_geometry_schema_overrides,
-    schema_document_locale,
-    schema_attributes,
     DocumentLocale,
+    get_geometry_schema_overrides,
+    schema_attributes,
+    schema_document_locale,
 )
-from c2corg_api.models.enums import user_category, activity_type
-from c2corg_api.models.schema_utils import restrict_schema, get_update_schema
-from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
-from c2corg_api.models.common.fields_user_profile import fields_user_profile
-from colanderalchemy import SQLAlchemySchemaNode
-from sqlalchemy import Column, Integer, ForeignKey
-from c2corg_api.models.common import document_types
-from sqlalchemy.ext.associationproxy import association_proxy
+from c2corg_api.models.enums import activity_type, user_category
+from c2corg_api.models.schema_utils import get_update_schema, restrict_schema
+from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
 USERPROFILE_TYPE = document_types.USERPROFILE_TYPE
 

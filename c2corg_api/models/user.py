@@ -1,24 +1,20 @@
+import binascii
+import datetime
+import os
+from enum import Enum
+
 import bcrypt
-from c2corg_api.models.utils import ArrayOfEnum
-from c2corg_api.models.common.attributes import default_langs
-from c2corg_api.models.user_profile import UserProfile
-from sqlalchemy import Boolean, Column, Integer, DateTime, String
-
-from colanderalchemy import SQLAlchemySchemaNode
-
-from c2corg_api.models import Base, users_schema, schema, enums
-
 import colander
-from sqlalchemy.orm import relationship, backref
+from colanderalchemy import SQLAlchemySchemaNode
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import ForeignKey, Index
 
-from enum import Enum
-
-import os
-import binascii
-
-import datetime
+from c2corg_api.models import Base, enums, schema, users_schema
+from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.models.utils import ArrayOfEnum
 
 
 class AccountNotValidated(Exception):

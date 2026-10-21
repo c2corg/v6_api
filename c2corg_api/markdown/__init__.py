@@ -1,22 +1,22 @@
-import markdown
-import bleach
-import bleach.css_sanitizer
-import secrets
 import logging
+import secrets
 from threading import RLock
 
-from .wikilinks import C2CWikiLinkExtension
-from .img import C2CImageExtension
-from .video import C2CVideoExtension
-from .ltag import C2CLTagExtension
-from .header import C2CHeaderExtension
-from .ptag import C2CPTagExtension
-from .alerts import AlertExtension
-from .toc import C2CTocExtension
-from .emojis import C2CEmojiExtension
-from .nbsp import C2CNbspExtension
+import bleach
+import bleach.css_sanitizer
+import markdown
 from markdown.extensions.nl2br import Nl2BrExtension
 
+from .alerts import AlertExtension
+from .emojis import C2CEmojiExtension
+from .header import C2CHeaderExtension
+from .img import C2CImageExtension
+from .ltag import C2CLTagExtension
+from .nbsp import C2CNbspExtension
+from .ptag import C2CPTagExtension
+from .toc import C2CTocExtension
+from .video import C2CVideoExtension
+from .wikilinks import C2CWikiLinkExtension
 
 logger = logging.getLogger('MARKDOWN')
 

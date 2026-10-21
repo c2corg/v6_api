@@ -1,16 +1,14 @@
 from datetime import date, datetime
 
-from c2corg_api.models.feed import DocumentChange
-from c2corg_api.models.common.attributes import default_langs
-from c2corg_api.models.user import User
-from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.article import Article
-from c2corg_api.models.waypoint import Waypoint, WaypointLocale, WAYPOINT_TYPE
+from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
+from c2corg_api.models.feed import DocumentChange
 from c2corg_api.models.outing import Outing, OutingLocale
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.user import User
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint, WaypointLocale
 from c2corg_api.scripts.es.fill_index import fill_index
 from c2corg_api.tests.search import force_search_index
-
 from c2corg_api.tests.views import BaseTestRest
 
 

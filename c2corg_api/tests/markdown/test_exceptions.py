@@ -1,7 +1,8 @@
 import unittest
+
 import markdown
-from markdown.extensions import Extension
 from markdown.blockprocessors import BlockProcessor
+from markdown.extensions import Extension
 
 import c2corg_api.markdown as c2c_markdown
 

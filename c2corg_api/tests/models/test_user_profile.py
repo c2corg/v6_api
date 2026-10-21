@@ -1,6 +1,5 @@
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.user_profile import UserProfile
-
 from c2corg_api.tests import BaseTestCase
 
 

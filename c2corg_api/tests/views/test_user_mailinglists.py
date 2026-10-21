@@ -1,7 +1,7 @@
-from c2corg_api.models.user import User
-from c2corg_api.models.mailinglist import Mailinglist
-from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.models.common.attributes import mailinglists
+from c2corg_api.models.mailinglist import Mailinglist
+from c2corg_api.models.user import User
+from c2corg_api.tests.views import BaseTestRest
 
 
 class TestUserMailinglistsRest(BaseTestRest):

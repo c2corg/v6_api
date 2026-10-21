@@ -1,36 +1,35 @@
 import functools
+import urllib
+
+from colander import null
+from cornice.errors import Errors
+from dateutil import parser as datetime_parser
+from pyramid.httpexceptions import HTTPBadRequest
+from sqlalchemy.sql.expression import and_, exists
+from webob.descriptors import parse_int_safe
 
 from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area import AREA_TYPE
+from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.association import (
     Association,
-    updatable_associations,
     association_keys,
+    updatable_associations,
 )
 from c2corg_api.models.book import BOOK_TYPE
+from c2corg_api.models.common import document_types
+from c2corg_api.models.common.associations import valid_associations
+from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.document import Document
-from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.models.user import User
-from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
+from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
+from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.views.document_associations import get_first_column
-
-from c2corg_api.models.common.associations import valid_associations
-from c2corg_api.models.common.attributes import default_langs
-from c2corg_api.models.common import document_types
-from colander import null
-from cornice.errors import Errors
-from pyramid.httpexceptions import HTTPBadRequest
-from sqlalchemy.sql.expression import exists, and_
-from webob.descriptors import parse_int_safe
-from dateutil import parser as datetime_parser
-import urllib
-
 
 # Validation functions
 

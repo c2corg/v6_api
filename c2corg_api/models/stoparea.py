@@ -1,11 +1,10 @@
-from sqlalchemy import Column, Integer, String
-from geoalchemy2.types import Geometry
-from colanderalchemy import SQLAlchemySchemaNode
 import colander
+from colanderalchemy import SQLAlchemySchemaNode
 from geoalchemy2 import shape
+from geoalchemy2.types import Geometry
+from sqlalchemy import Column, Integer, String
 
-
-from c2corg_api.models import schema, Base
+from c2corg_api.models import Base, schema
 from c2corg_api.models.utils import copy_attributes
 
 

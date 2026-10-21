@@ -1,20 +1,18 @@
 import datetime
-from unittest.mock import patch, call
+from unittest.mock import call, patch
 
-from c2corg_api.models.common.document_types import OUTING_TYPE
-
-from c2corg_api.models.cache_version import CacheVersion
-from c2corg_api.tests.views import BaseTestRest
+from requests.exceptions import ConnectionError
 
 from c2corg_api.models.association import Association
+from c2corg_api.models.cache_version import CacheVersion
+from c2corg_api.models.common.document_types import OUTING_TYPE
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_topic import DocumentTopic
+from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.models.image import Image
-
-from requests.exceptions import ConnectionError
+from c2corg_api.tests.views import BaseTestRest
 
 
 class TestForumTopicRest(BaseTestRest):

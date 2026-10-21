@@ -1,31 +1,26 @@
-from c2corg_api.scripts.es.sync import sync_es
-from c2corg_api.search import search_documents, elasticsearch_config
-# from pytest import mark
+import base64
+import datetime
+import hashlib
+import hmac
+import re
+import time
+from unittest.mock import MagicMock, Mock, patch
+from urllib.parse import quote, urlencode, urlparse
 
+from pyramid.httpexceptions import HTTPBadRequest
+
+# from pytest import mark
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
-from c2corg_api.models.user_profile import UserProfile, USERPROFILE_TYPE
-
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
+from c2corg_api.scripts.es.sync import sync_es
+from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.security.discourse_client import (
     APIDiscourseClient,
     get_discourse_client,
     set_discourse_client,
 )
-
-from pyramid.httpexceptions import HTTPBadRequest
-
-from urllib.parse import urlparse, urlencode, quote
-
-import base64
-import hashlib
-import hmac
-import re
-import time
-import datetime
-
-from unittest.mock import Mock, MagicMock, patch
-
+from c2corg_api.tests.views import BaseTestRest
 
 forum_username_tests = {
     # min length
@@ -480,8 +475,9 @@ class TestUserRest(BaseUserTestRest):
     # @mark.jobs
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_purge_accounts(self, _send_email):
-        from c2corg_api.jobs.purge_non_activated_accounts import purge_account
         from datetime import datetime
+
+        from c2corg_api.jobs.purge_non_activated_accounts import purge_account
 
         request_body = {
             'username': 'test',
@@ -514,8 +510,9 @@ class TestUserRest(BaseUserTestRest):
 
     # @mark.jobs
     def test_purge_tokens(self):
-        from c2corg_api.jobs.purge_expired_tokens import purge_token
         from datetime import datetime
+
+        from c2corg_api.jobs.purge_expired_tokens import purge_token
 
         body = self.login('moderator', status=200).json
         token_value = body['token']

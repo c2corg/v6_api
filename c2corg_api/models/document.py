@@ -1,23 +1,22 @@
+import abc
 import enum
 
-import abc
-
-from c2corg_api.ext import colander_ext
-from c2corg_api.models import Base, schema, DBSession, enums
-from c2corg_api.models.utils import copy_attributes, extend_dict, wkb_to_shape
-from c2corg_api.models.common import document_types
-from c2corg_api.models.common.attributes import quality_types
 from colander import null
 from colanderalchemy.schema import SQLAlchemySchemaNode
 from geoalchemy2 import Geometry, WKBElement
 from pyramid.httpexceptions import HTTPInternalServerError
 from shapely import wkt
-from sqlalchemy import Column, Integer, Boolean, String, ForeignKey, func
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, func
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.orm import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy.orm import relationship, column_property
+from sqlalchemy.orm import column_property, declared_attr, relationship
 from sqlalchemy.sql.schema import UniqueConstraint
+
+from c2corg_api.ext import colander_ext
+from c2corg_api.models import Base, DBSession, enums, schema
+from c2corg_api.models.common import document_types
+from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.utils import copy_attributes, extend_dict, wkb_to_shape
 
 UpdateType = enum.Enum('UpdateType', 'FIGURES LANG GEOM')
 

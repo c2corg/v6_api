@@ -1,8 +1,8 @@
 from urllib.parse import quote
 
-from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.article import Article
 from c2corg_api.models.book import Book
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.fill_index import fill_index

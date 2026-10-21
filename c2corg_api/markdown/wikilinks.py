@@ -9,9 +9,10 @@ Inspired from https://github.com/waylan/Python-Markdown/blob/master
 /markdown/extensions/wikilinks.py
 """
 
+from xml.etree import ElementTree  # nosec
+
 from markdown.extensions import Extension
 from markdown.inlinepatterns import Pattern
-from xml.etree import ElementTree  # nosec
 
 # document_type/document_id(/lang(/slug))(#anchor)
 

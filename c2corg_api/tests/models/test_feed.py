@@ -3,8 +3,7 @@ from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.feed import DocumentChange
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
-
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.tests import BaseTestCase
 
 

@@ -1,8 +1,12 @@
-from c2corg_api.caching import cache_document_listing
+from sqlalchemy.orm import contains_eager, joinedload, load_only, subqueryload
+from sqlalchemy.sql.expression import and_
+from sqlalchemy.sql.functions import func
+
+from c2corg_api.caching import cache_document_listing, get_or_create_multi
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import Area, schema_listing_area
 from c2corg_api.models.association import Association
-from c2corg_api.models.cache_version import get_document_id, get_cache_keys
+from c2corg_api.models.cache_version import get_cache_keys, get_document_id
 from c2corg_api.models.document import (
     DocumentGeometry,
     DocumentLocale,
@@ -12,11 +16,7 @@ from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.views import to_json_dict, set_best_locale
-from c2corg_api.caching import get_or_create_multi
-from sqlalchemy.orm import joinedload, contains_eager, subqueryload, load_only
-from sqlalchemy.sql.expression import and_
-from sqlalchemy.sql.functions import func
+from c2corg_api.views import set_best_locale, to_json_dict
 
 
 def get_documents_for_ids(document_ids, lang, documents_config, total=None):

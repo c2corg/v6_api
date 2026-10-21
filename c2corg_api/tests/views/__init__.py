@@ -1,17 +1,18 @@
 import json
 import urllib.parse
 
+from dateutil import parser as datetime_parser
+from dogpile.cache.api import NO_VALUE
+
 from c2corg_api.caching import cache_document_detail
 from c2corg_api.models.cache_version import CacheVersion, get_cache_key
 from c2corg_api.models.feed import DocumentChange
 from c2corg_api.models.route import Route
 from c2corg_api.models.user import User
-from c2corg_api.models.user_profile import UserProfile, USERPROFILE_TYPE
+from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
 from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.tests import BaseTestCase
-from dateutil import parser as datetime_parser
-from dogpile.cache.api import NO_VALUE
 
 
 class BaseTestRest(BaseTestCase):

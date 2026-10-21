@@ -1,57 +1,55 @@
-import os
 import functools
+import os
+
 import requests
+from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPForbidden,
+    HTTPFound,
+    HTTPInternalServerError,
+    HTTPNotFound,
+)
 
 from c2corg_api.models import DBSession
+from c2corg_api.models.common.fields_image import fields_image
 from c2corg_api.models.document import ArchiveDocumentLocale
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.feed import update_feed_images_upload
 from c2corg_api.models.image import (
-    Image,
-    schema_image,
-    schema_update_image,
     IMAGE_TYPE,
+    ArchiveImage,
+    Image,
+    get_image_filenames,
     schema_create_image,
     schema_create_image_list,
-    ArchiveImage,
-    get_image_filenames,
+    schema_image,
+    schema_update_image,
 )
 from c2corg_api.search.notify_sync import run_on_successful_transaction
 from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views.document_info import DocumentInfoRest
-from c2corg_api.views.document_schemas import image_documents_config
-from c2corg_api.views.document_version import DocumentVersionRest
-
-from c2corg_api.models.common.fields_image import fields_image
-from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
-
+from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
     DocumentRest,
     make_validator_create,
     make_validator_update,
     validate_document,
 )
-from c2corg_api.views import cors_policy, restricted_json_view
-from c2corg_api.views import set_creator as set_creator_on_documents
+from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import image_documents_config
+from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.validation import (
-    validate_id,
-    validate_pagination,
-    validate_lang_param,
-    validate_preferred_lang_param,
     validate_associations,
     validate_associations_in,
-    validate_lang,
-    validate_version_id,
     validate_cook_param,
-)
-
-from pyramid.httpexceptions import (
-    HTTPForbidden,
-    HTTPNotFound,
-    HTTPBadRequest,
-    HTTPInternalServerError,
-    HTTPFound,
+    validate_id,
+    validate_lang,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+    validate_version_id,
 )
 
 # Let browsers cache the redirect to the media server: the image filename

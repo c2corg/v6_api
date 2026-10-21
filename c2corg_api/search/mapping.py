@@ -1,10 +1,11 @@
 import json
 
-from c2corg_api.models.document import Document
-from c2corg_api.search.mapping_types import Enum, QEnumArray, QLong, QEnumRange
+from elasticsearch_dsl import DocType, GeoPoint, Long, MetaField, String
+
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.common.sortable_search_attributes import sortable_quality_types
-from elasticsearch_dsl import DocType, String, MetaField, Long, GeoPoint
+from c2corg_api.models.document import Document
+from c2corg_api.search.mapping_types import Enum, QEnumArray, QEnumRange, QLong
 
 
 class BaseMeta:

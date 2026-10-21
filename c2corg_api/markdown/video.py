@@ -5,10 +5,11 @@ c2corg video Extension for Python-Markdown
 Converts video tags to advanced HTML video tags.
 """
 
-from markdown.extensions import Extension
-from markdown.blockprocessors import BlockProcessor
-from xml.etree import ElementTree  # nosec
 import re
+from xml.etree import ElementTree  # nosec
+
+from markdown.blockprocessors import BlockProcessor
+from markdown.extensions import Extension
 
 
 class C2CVideoExtension(Extension):

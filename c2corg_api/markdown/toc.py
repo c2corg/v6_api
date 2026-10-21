@@ -14,17 +14,17 @@ License: [BSD](http://www.opensource.org/licenses/bsd-license.php)
 Modified for C2C : remove title emphasis, toc HTML class. Add c2c:role
 """
 
-from markdown.util import code_escape
 from markdown.extensions.toc import (
+    AtomicString,
     TocExtension,
     TocTreeprocessor,
+    html,
+    nest_toc_tokens,
     stashedHTML2text,
     unescape,
     unique,
-    nest_toc_tokens,
-    AtomicString,
-    html,
 )
+from markdown.util import code_escape
 
 
 def not_emphasis(elt):

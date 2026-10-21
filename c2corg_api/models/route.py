@@ -1,28 +1,25 @@
-from c2corg_api.models.schema_utils import (
-    restrict_schema,
-    get_update_schema,
-    get_create_schema,
-)
-from sqlalchemy import Column, Integer, Float, Boolean, SmallInteger, String, ForeignKey
-
-from colanderalchemy import SQLAlchemySchemaNode
 import colander
+from colanderalchemy import SQLAlchemySchemaNode
+from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, SmallInteger, String
+from sqlalchemy.orm import relationship
 
-from c2corg_api.models import schema, Base
-from c2corg_api.models.utils import ArrayOfEnum
-from c2corg_api.models.utils import copy_attributes
+from c2corg_api.models import Base, enums, schema
+from c2corg_api.models.common import document_types
 from c2corg_api.models.document import (
     ArchiveDocument,
+    ArchiveDocumentLocale,
     Document,
     DocumentLocale,
-    ArchiveDocumentLocale,
     get_geometry_schema_overrides,
-    schema_locale_attributes,
     schema_attributes,
+    schema_locale_attributes,
 )
-from c2corg_api.models import enums
-from sqlalchemy.orm import relationship
-from c2corg_api.models.common import document_types
+from c2corg_api.models.schema_utils import (
+    get_create_schema,
+    get_update_schema,
+    restrict_schema,
+)
+from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
 ROUTE_TYPE = document_types.ROUTE_TYPE
 

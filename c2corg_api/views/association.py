@@ -1,29 +1,29 @@
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.models import DBSession
-from c2corg_api.models.cache_version import update_cache_version_associations
-from c2corg_api.models.document import Document
-from c2corg_api.models.feed import update_feed_association_update
-from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.models.route import Route, ROUTE_TYPE
-from c2corg_api.models.waypoint import WAYPOINT_TYPE
-from c2corg_api.scripts.es import sync
-from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.views.validation import (
-    validate_association_permission,
-    check_permission_for_association_removal,
-)
-from c2corg_api.models.common.associations import valid_associations
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest
+from sqlalchemy.sql.expression import exists
 
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.models import DBSession
 from c2corg_api.models.association import (
-    schema_association,
     Association,
     exists_already,
+    schema_association,
 )
-from sqlalchemy.sql.expression import exists
+from c2corg_api.models.cache_version import update_cache_version_associations
+from c2corg_api.models.common.associations import valid_associations
+from c2corg_api.models.document import Document
+from c2corg_api.models.feed import update_feed_association_update
+from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.route import ROUTE_TYPE, Route
+from c2corg_api.models.waypoint import WAYPOINT_TYPE
+from c2corg_api.scripts.es import sync
+from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views.validation import (
+    check_permission_for_association_removal,
+    validate_association_permission,
+)
 
 
 def validate_association(request, **kwargs):

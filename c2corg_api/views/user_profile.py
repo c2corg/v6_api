@@ -1,29 +1,29 @@
+from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
+from sqlalchemy.orm import load_only
+
 from c2corg_api.models import DBSession
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import (
-    schema_update_user_profile,
-    UserProfile,
-    schema_user_profile,
-    schema_internal_user_profile,
     USERPROFILE_TYPE,
+    UserProfile,
+    schema_internal_user_profile,
+    schema_update_user_profile,
+    schema_user_profile,
 )
+from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
+from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import user_profile_documents_config
-from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
-
-from c2corg_api.views.document import DocumentRest
-from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
 from c2corg_api.views.validation import (
-    validate_id,
-    validate_pagination,
-    validate_lang_param,
-    validate_preferred_lang_param,
-    validate_lang,
     validate_cook_param,
+    validate_id,
+    validate_lang,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
 )
-from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
-from sqlalchemy.orm import load_only
 
 
 @resource(collection_path='/profiles', path='/profiles/{id}', cors_policy=cors_policy)

@@ -1,9 +1,9 @@
+from unittest.mock import patch
+
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.search import search_documents, elasticsearch_config
+from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.tests.views.test_user import BaseUserTestRest, forum_username_tests
-
-from unittest.mock import patch
 
 
 class TestUserAccountRest(BaseUserTestRest):

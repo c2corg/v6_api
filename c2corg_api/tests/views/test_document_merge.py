@@ -1,15 +1,16 @@
+from httmock import HTTMock, all_requests
+from sqlalchemy.sql.expression import or_
+
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale, UpdateType
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
-from c2corg_api.models.feed import update_feed_document_create, DocumentChange
+from c2corg_api.models.feed import DocumentChange, update_feed_document_create
 from c2corg_api.models.image import Image
-from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
+from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.document import DocumentRest
-from sqlalchemy.sql.expression import or_
-from httmock import all_requests, HTTMock
 
 
 class TestDocumentMergeRest(BaseTestRest):

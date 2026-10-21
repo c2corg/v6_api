@@ -1,31 +1,30 @@
 import datetime
 import json
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
+
+from shapely.geometry import Point, shape
 
 from c2corg_api.models.area import Area
 from c2corg_api.models.article import Article
-from c2corg_api.models.book import Book
 from c2corg_api.models.association import Association
+from c2corg_api.models.book import Book
 from c2corg_api.models.cache_version import CacheVersion
+from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.document import (
+    ArchiveDocumentLocale,
+    DocumentGeometry,
+    DocumentLocale,
+)
 from c2corg_api.models.document_history import DocumentVersion
-from c2corg_api.models.feed import update_feed_document_create, DocumentChange
-from c2corg_api.models.outing import OutingLocale, Outing, OUTING_TYPE
+from c2corg_api.models.document_topic import DocumentTopic
+from c2corg_api.models.feed import DocumentChange, update_feed_document_create
+from c2corg_api.models.image import IMAGE_TYPE, ArchiveImage, Image
+from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.models.common.attributes import quality_types
-from shapely.geometry import shape, Point
-
-from c2corg_api.models.image import Image, ArchiveImage, IMAGE_TYPE
-from c2corg_api.models.document import (
-    DocumentGeometry,
-    ArchiveDocumentLocale,
-    DocumentLocale,
-)
-from c2corg_api.models.document_topic import DocumentTopic
-from c2corg_api.views.document import DocumentRest
-
 from c2corg_api.tests.views import BaseDocumentTestRest, BaseTestRest
+from c2corg_api.views.document import DocumentRest
 
 
 class BaseTestImage(BaseDocumentTestRest):

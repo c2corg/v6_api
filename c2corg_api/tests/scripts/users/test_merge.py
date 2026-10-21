@@ -1,38 +1,38 @@
 import datetime
 
+from sqlalchemy.sql.expression import any_, exists, or_
+
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document import (
-    Document,
     ArchiveDocument,
-    DocumentLocale,
-    ArchiveDocumentLocale,
-    DocumentGeometry,
     ArchiveDocumentGeometry,
+    ArchiveDocumentLocale,
+    Document,
+    DocumentGeometry,
+    DocumentLocale,
 )
 from c2corg_api.models.document_history import HistoryMetaData
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.feed import DocumentChange, update_feed_document_create
 from c2corg_api.models.mailinglist import Mailinglist
-from c2corg_api.models.outing import Outing, OutingLocale, OUTING_TYPE
-from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
+from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
+from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.sso import SsoExternalId
 from c2corg_api.models.token import Token
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import (
-    UserProfile,
-    ArchiveUserProfile,
     USERPROFILE_TYPE,
+    ArchiveUserProfile,
+    UserProfile,
 )
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.users.merge import merge_user_accounts
 from c2corg_api.tests import BaseTestCase
 from c2corg_api.views.document import DocumentRest
-
-from sqlalchemy.sql.expression import or_, any_, exists
 
 
 class MergeUsersTest(BaseTestCase):

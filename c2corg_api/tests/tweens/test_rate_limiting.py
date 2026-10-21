@@ -1,10 +1,11 @@
-import time
 import datetime
-import pytz
+import time
 from unittest.mock import patch
 
-from c2corg_api.tests.views import BaseTestRest
+import pytz
+
 from c2corg_api.models.user import User
+from c2corg_api.tests.views import BaseTestRest
 
 
 class RateLimitingTest(BaseTestRest):

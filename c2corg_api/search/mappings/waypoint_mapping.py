@@ -1,21 +1,21 @@
-from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
-from c2corg_api.search.mapping import SearchDocument, BaseMeta
-from c2corg_api.search.mapping_types import (
-    QueryableMixin,
-    QInteger,
-    QEnumArray,
-    QEnum,
-    QBoolean,
-    QEnumRange,
-    QEnumRangeMinMax,
-    QNumberRange,
-)
 from c2corg_api.models.common.sortable_search_attributes import (
     sortable_access_times,
     sortable_climbing_ratings,
-    sortable_paragliding_ratings,
-    sortable_exposition_ratings,
     sortable_equipment_ratings,
+    sortable_exposition_ratings,
+    sortable_paragliding_ratings,
+)
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
+from c2corg_api.search.mapping import BaseMeta, SearchDocument
+from c2corg_api.search.mapping_types import (
+    QBoolean,
+    QEnum,
+    QEnumArray,
+    QEnumRange,
+    QEnumRangeMinMax,
+    QInteger,
+    QNumberRange,
+    QueryableMixin,
 )
 
 

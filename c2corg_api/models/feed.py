@@ -1,34 +1,35 @@
 import logging
 
-from c2corg_api.models import Base, schema, users_schema, enums, DBSession
-from c2corg_api.models.area import Area, AREA_TYPE
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql.array import ARRAY
+from sqlalchemy.orm import column_property, relationship
+from sqlalchemy.sql.elements import literal_column
+from sqlalchemy.sql.expression import cast, select, text
+from sqlalchemy.sql.functions import func
+from sqlalchemy.sql.schema import (
+    CheckConstraint,
+    Column,
+    ForeignKey,
+    Index,
+    PrimaryKeyConstraint,
+)
+from sqlalchemy.sql.sqltypes import Boolean, DateTime, Integer, String
+
+from c2corg_api.models import Base, DBSession, enums, schema, users_schema
+from c2corg_api.models.area import AREA_TYPE, Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.association import Association
 from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.document import Document, DocumentLocale, UpdateType
 from c2corg_api.models.enums import feed_change_type
-from c2corg_api.models.image import Image, IMAGE_TYPE
+from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.views.validation import association_keys
-from sqlalchemy.dialects import postgresql
-from sqlalchemy.dialects.postgresql.array import ARRAY
-from sqlalchemy.orm import relationship, column_property
-from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import select, text, cast
-from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import (
-    Column,
-    ForeignKey,
-    PrimaryKeyConstraint,
-    CheckConstraint,
-    Index,
-)
-from sqlalchemy.sql.sqltypes import Integer, String, DateTime, Boolean
 
 log = logging.getLogger(__name__)
 

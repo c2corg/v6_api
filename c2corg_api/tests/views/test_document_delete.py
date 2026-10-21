@@ -1,54 +1,55 @@
 import datetime
 
+from httmock import HTTMock, all_requests
+from sqlalchemy.sql.expression import or_
+
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
-from c2corg_api.models.article import Article, ArchiveArticle
+from c2corg_api.models.article import ArchiveArticle, Article
 from c2corg_api.models.association import Association, AssociationLog
-from c2corg_api.models.book import Book, ArchiveBook
+from c2corg_api.models.book import ArchiveBook, Book
 from c2corg_api.models.document import (
-    Document,
-    DocumentLocale,
-    DocumentGeometry,
     ArchiveDocument,
-    ArchiveDocumentLocale,
     ArchiveDocumentGeometry,
+    ArchiveDocumentLocale,
+    Document,
+    DocumentGeometry,
+    DocumentLocale,
     UpdateType,
     get_available_langs,
 )
 from c2corg_api.models.document_history import DocumentVersion
-from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
+from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.feed import (
     DocumentChange,
     update_feed_document_create,
     update_feed_images_upload,
 )
-from c2corg_api.models.image import Image, ArchiveImage
+from c2corg_api.models.image import ArchiveImage, Image
 from c2corg_api.models.outing import (
-    Outing,
-    OutingLocale,
     ArchiveOuting,
     ArchiveOutingLocale,
+    Outing,
+    OutingLocale,
 )
-from c2corg_api.models.route import Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale
+from c2corg_api.models.route import ArchiveRoute, ArchiveRouteLocale, Route, RouteLocale
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import (
-    Waypoint,
-    WaypointLocale,
     ArchiveWaypoint,
     ArchiveWaypointLocale,
+    Waypoint,
+    WaypointLocale,
 )
 from c2corg_api.models.xreport import (
-    Xreport,
-    XreportLocale,
     ArchiveXreport,
     ArchiveXreportLocale,
+    Xreport,
+    XreportLocale,
 )
-from c2corg_api.views.document import DocumentRest
 from c2corg_api.tests.views import BaseTestRest
-from sqlalchemy.sql.expression import or_
-from httmock import all_requests, HTTMock
+from c2corg_api.views.document import DocumentRest
 
 
 class TestDocumentDeleteRest(BaseTestRest):

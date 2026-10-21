@@ -1,20 +1,16 @@
+import ast
 import json
 import logging
 import os
-import requests
-import redis
-import uuid
-import time
 import threading
-import ast
+import time
+import uuid
+
+import redis
+import requests
 import transaction
-from c2corg_api.models import DBSession
-from c2corg_api.models.area import Area
-from c2corg_api.models.waypoint import Waypoint, schema_waypoint
-from c2corg_api.views.coverage import get_coverage
-from c2corg_api.views.waypoint import build_reachable_waypoints_query
-from c2corg_api.views.route import build_reachable_route_query_with_waypoints
-from shapely.geometry import Point
+from cornice.resource import resource, view
+from pyproj import Transformer
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPInternalServerError,
@@ -22,13 +18,16 @@ from pyramid.httpexceptions import (
     HTTPUnauthorized,
 )
 from pyramid.response import Response
-from cornice.resource import resource, view
-from c2corg_api.views import cors_policy, to_json_dict
-from c2corg_api.models.route import schema_route
-from c2corg_api.models.area import schema_listing_area
-from shapely.geometry import shape
-from pyproj import Transformer
+from shapely.geometry import Point, shape
 
+from c2corg_api.models import DBSession
+from c2corg_api.models.area import Area, schema_listing_area
+from c2corg_api.models.route import schema_route
+from c2corg_api.models.waypoint import Waypoint, schema_waypoint
+from c2corg_api.views import cors_policy, to_json_dict
+from c2corg_api.views.coverage import get_coverage
+from c2corg_api.views.route import build_reachable_route_query_with_waypoints
+from c2corg_api.views.waypoint import build_reachable_waypoints_query
 
 log = logging.getLogger(__name__)
 

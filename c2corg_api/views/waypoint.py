@@ -1,69 +1,63 @@
 import functools
 import logging
-from sqlalchemy import case
+
+from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
+from sqlalchemy import case, func
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.orm import aliased, joinedload, load_only
+from sqlalchemy.sql.elements import literal_column
+from sqlalchemy.sql.expression import and_, column, text, union
 
 from c2corg_api.models import DBSession
+from c2corg_api.models.area import Area, schema_listing_area
+from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
+from c2corg_api.models.common.attributes import waypoint_types
+from c2corg_api.models.common.fields_waypoint import fields_waypoint
 from c2corg_api.models.document import UpdateType
 from c2corg_api.models.outing import Outing
-from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
+from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
+from c2corg_api.models.waypoint import (
+    WAYPOINT_TYPE,
+    ArchiveWaypoint,
+    ArchiveWaypointLocale,
+    Waypoint,
+    schema_create_waypoint,
+    schema_update_waypoint,
+    schema_waypoint,
+)
+from c2corg_api.models.waypoint_stoparea import WaypointStoparea
+from c2corg_api.search.advanced_search import get_all_filtered_docs
+from c2corg_api.views import cors_policy, restricted_json_view, to_json_dict
+from c2corg_api.views.document import (
+    LIMIT_DEFAULT,
+    NUM_RECENT_OUTINGS,
+    DocumentRest,
+    make_validator_create,
+    make_validator_update,
+)
 from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import (
-    waypoint_documents_config,
-    waypoint_schema_adaptor,
     outing_documents_config,
     route_documents_config,
+    waypoint_documents_config,
+    waypoint_schema_adaptor,
 )
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.route import set_route_title_prefix, update_pt_rating
-from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
-
-from c2corg_api.search.advanced_search import get_all_filtered_docs
-
-from c2corg_api.models.waypoint import (
-    Waypoint,
-    schema_waypoint,
-    schema_update_waypoint,
-    ArchiveWaypoint,
-    ArchiveWaypointLocale,
-    WAYPOINT_TYPE,
-    schema_create_waypoint,
-)
-
-from c2corg_api.views.document import (
-    DocumentRest,
-    make_validator_create,
-    make_validator_update,
-    NUM_RECENT_OUTINGS,
-)
-from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import (
-    validate_id,
-    validate_pagination,
-    validate_lang,
-    validate_version_id,
-    validate_lang_param,
-    validate_preferred_lang_param,
     validate_associations,
     validate_cook_param,
+    validate_id,
+    validate_lang,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+    validate_version_id,
 )
-from c2corg_api.models.common.fields_waypoint import fields_waypoint
-from c2corg_api.models.common.attributes import waypoint_types
-from sqlalchemy.orm import joinedload, load_only
-from sqlalchemy.orm import aliased
-from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import and_, text, union, column
-from c2corg_api.models.area import Area
-from c2corg_api.models.area_association import AreaAssociation
-from c2corg_api.views import to_json_dict
-from c2corg_api.views.document import LIMIT_DEFAULT
-from c2corg_api.models.waypoint_stoparea import WaypointStoparea
-from c2corg_api.models.area import schema_listing_area
-from sqlalchemy import func
 
 log = logging.getLogger(__name__)
 

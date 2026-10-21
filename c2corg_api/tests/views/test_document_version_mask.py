@@ -1,10 +1,11 @@
+from sqlalchemy.sql.expression import and_
+
 from c2corg_api.models.document import UpdateType
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.document import DocumentRest
-from sqlalchemy.sql.expression import and_
 
 
 class BaseMaskTest(BaseTestRest):

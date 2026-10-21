@@ -1,6 +1,6 @@
-import jwt
 import unittest
 
+import jwt
 from webob import Request
 
 from c2corg_api.security.jwt_policy import IntegerSubJWTAuthenticationPolicy

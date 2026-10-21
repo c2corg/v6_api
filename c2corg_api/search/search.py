@@ -1,12 +1,13 @@
 import logging
 
+from elasticsearch_dsl.search import MultiSearch
+
 from c2corg_api.search import (
     create_search,
     elasticsearch_config,
     get_text_query_on_title,
 )
 from c2corg_api.views.document_listings import get_documents
-from elasticsearch_dsl.search import MultiSearch
 
 log = logging.getLogger(__name__)
 

@@ -1,21 +1,20 @@
 import json
 
+from shapely.geometry import Polygon, shape
+
+from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.document import (
+    ArchiveDocumentLocale,
+    DocumentGeometry,
+    DocumentLocale,
+)
 from c2corg_api.models.route import Route
-from c2corg_api.models.topo_map import ArchiveTopoMap, TopoMap, MAP_TYPE
+from c2corg_api.models.topo_map import MAP_TYPE, ArchiveTopoMap, TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.models.common.attributes import quality_types
-from shapely.geometry import shape, Polygon
-
-from c2corg_api.models.document import (
-    DocumentGeometry,
-    ArchiveDocumentLocale,
-    DocumentLocale,
-)
-from c2corg_api.views.document import DocumentRest
-
 from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.views.document import DocumentRest
 
 
 class TestTopoMapRest(BaseDocumentTestRest):

@@ -1,13 +1,13 @@
 import json
 
+from geoalchemy2.shape import from_shape
+from shapely.geometry import Point
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import StaleDataError
-from shapely.geometry import Point
-from geoalchemy2.shape import from_shape
 
+from c2corg_api.models.document import DocumentGeometry, UpdateType, set_available_langs
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.models.document import UpdateType, DocumentGeometry, set_available_langs
 from c2corg_api.tests import BaseTestCase
 
 

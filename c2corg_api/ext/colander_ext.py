@@ -2,13 +2,12 @@
 # https://github.com/camptocamp/c2cgeoform/blob/master/c2cgeoform/ext/
 
 import struct
+from numbers import Number
 
-from colander import null, Invalid, SchemaType
-
+import geojson
+from colander import Invalid, SchemaType, null
 from geoalchemy2 import WKBElement
 from geomet import wkb
-import geojson
-from numbers import Number
 
 # EWKB SRID flag, see https://git.osgeo.org/gitea/postgis/postgis/raw/
 # master/doc/ZMSgeoms.txt

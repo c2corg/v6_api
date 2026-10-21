@@ -1,39 +1,40 @@
 import datetime
 import logging
 import re
+from functools import partial
 
 import colander
 import requests
+from cornice.resource import resource
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPForbidden, HTTPInternalServerError
+from pyramid.settings import asbool
+from sqlalchemy.sql.expression import and_, func
+
 from c2corg_api.emails.email_service import get_email_service
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentLocale
-from c2corg_api.models.user import User, schema_user, schema_create_user, Purpose
+from c2corg_api.models.user import Purpose, User, schema_create_user, schema_user
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import (
-    try_login,
+    extract_token,
     log_validated_user_i_know_what_i_do,
     remove_token,
-    extract_token,
     renew_token,
+    try_login,
 )
 from c2corg_api.views import (
     cors_policy,
     json_view,
-    restricted_view,
     restricted_json_view,
+    restricted_view,
     to_json_dict,
 )
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.validation import validate_required_json_string
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from functools import partial
-from pyramid.httpexceptions import HTTPInternalServerError, HTTPForbidden
-from pyramid.settings import asbool
-from sqlalchemy.sql.expression import and_, func
 
 log = logging.getLogger(__name__)
 

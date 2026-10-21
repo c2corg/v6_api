@@ -1,9 +1,5 @@
-from c2corg_api.models.schema_utils import (
-    restrict_schema,
-    get_update_schema,
-    get_create_schema,
-)
-from c2corg_api.models.common.fields_image import fields_image
+from colander import MappingSchema, SchemaNode, Sequence
+from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Column,
     DateTime,
@@ -16,20 +12,23 @@ from sqlalchemy import (
 from sqlalchemy.orm import declared_attr
 from sqlalchemy.sql.functions import func
 
-from colander import MappingSchema, SchemaNode, Sequence
-from colanderalchemy import SQLAlchemySchemaNode
-
-from c2corg_api.models import schema, enums, Base, DBSession
-from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
+from c2corg_api.models import Base, DBSession, enums, schema
+from c2corg_api.models.common import document_types
+from c2corg_api.models.common.fields_image import fields_image
 from c2corg_api.models.document import (
     ArchiveDocument,
     Document,
+    DocumentLocale,
     get_geometry_schema_overrides,
     schema_attributes,
-    DocumentLocale,
     schema_locale_attributes,
 )
-from c2corg_api.models.common import document_types
+from c2corg_api.models.schema_utils import (
+    get_create_schema,
+    get_update_schema,
+    restrict_schema,
+)
+from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
 IMAGE_TYPE = document_types.IMAGE_TYPE
 

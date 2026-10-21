@@ -1,6 +1,5 @@
-from c2corg_api.models.route import RouteLocale, Route
-from c2corg_api.models.waypoint import WaypointLocale, Waypoint
-
+from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.views import BaseTestRest
 
 

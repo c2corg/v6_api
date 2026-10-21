@@ -1,32 +1,31 @@
-import logging
-
 import collections.abc
 import datetime
+import logging
 
-from c2corg_api.ext.colander_ext import geojson_from_wkbelement
-from c2corg_api.models import DBSession
-from c2corg_api.models.document import DocumentGeometry
-from c2corg_api.models.document_history import get_creators
-from c2corg_api.models.user import AccountNotValidated
-from c2corg_api.models.common.attributes import langs_priority
 from colander import null
-from pyramid.httpexceptions import (
-    HTTPError,
-    HTTPNotFound,
-    HTTPForbidden,
-    HTTPNotModified,
-)
-from pyramid.view import view_config
-from pyramid.interfaces import IRendererFactory
 from cornice import Errors
 from cornice.renderer import JSONError
 from cornice.resource import view
 from geoalchemy2 import WKBElement
+from pyramid.httpexceptions import (
+    HTTPError,
+    HTTPForbidden,
+    HTTPNotFound,
+    HTTPNotModified,
+)
+from pyramid.interfaces import IRendererFactory
+from pyramid.view import view_config
 from sqlalchemy.inspection import inspect
 from sqlalchemy.sql.functions import func
+
+from c2corg_api.ext.colander_ext import geojson_from_wkbelement
+from c2corg_api.models import DBSession
+from c2corg_api.models.common.attributes import langs_priority
+from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document_history import get_creators
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
-
+from c2corg_api.models.user import AccountNotValidated
 from c2corg_api.views.markdown import cook
 
 log = logging.getLogger(__name__)

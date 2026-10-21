@@ -1,15 +1,16 @@
 import logging
 
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api import DBSession
-from c2corg_api.models.cache_version import update_cache_version_direct
-from c2corg_api.models.document import Document, UpdateType
-from c2corg_api.views import cors_policy, restricted_json_view
-from c2corg_api.views.document import DocumentRest
-from colander import MappingSchema, SchemaNode, Integer, required
+from colander import Integer, MappingSchema, SchemaNode, required
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest
+
+from c2corg_api import DBSession
+from c2corg_api.models.cache_version import update_cache_version_direct
+from c2corg_api.models.document import Document, UpdateType
+from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views.document import DocumentRest
 
 log = logging.getLogger(__name__)
 

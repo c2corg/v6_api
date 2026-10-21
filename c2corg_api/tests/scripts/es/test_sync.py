@@ -11,14 +11,14 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.sync import (
-    get_changed_documents,
-    get_documents_per_type,
-    sync_documents,
     create_search_documents,
-    get_changed_users,
+    get_changed_documents,
     get_changed_documents_for_associations,
+    get_changed_users,
     get_deleted_locale_documents,
+    get_documents_per_type,
     sync_deleted_documents,
+    sync_documents,
 )
 from c2corg_api.tests import BaseTestCase, global_userids
 from c2corg_api.views.document import DocumentRest

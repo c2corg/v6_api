@@ -1,14 +1,15 @@
-import logging
 import datetime
-import pytz
+import logging
+from smtplib import SMTPAuthenticationError
 
+import pytz
 from pyramid.httpexceptions import HTTPBadRequest, HTTPTooManyRequests
+
 from c2corg_api.caching import cache_document_detail
 from c2corg_api.emails.email_service import get_email_service
-from c2corg_api.views import http_error_handler
 from c2corg_api.models import DBSession
 from c2corg_api.models.user import User
-from smtplib import SMTPAuthenticationError
+from c2corg_api.views import http_error_handler
 
 log = logging.getLogger(__name__)
 

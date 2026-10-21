@@ -1,11 +1,10 @@
-from c2corg_api.tests import BaseTestCase
+from base64 import b64encode
+from unittest.mock import ANY, patch
 
-from c2corg_api.models.user import User
 from c2corg_api.emails.email_service import EmailLocalizator
 from c2corg_api.models.common.attributes import default_langs
-
-from unittest.mock import patch, ANY
-from base64 import b64encode
+from c2corg_api.models.user import User
+from c2corg_api.tests import BaseTestCase
 
 
 class EmailTests(BaseTestCase):

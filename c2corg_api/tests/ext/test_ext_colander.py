@@ -1,15 +1,17 @@
-from c2corg_api.ext.colander_ext import (
-    from_wkb,
-    wkbelement_from_geojson,
-    geojson_from_wkbelement,
-)
-from c2corg_api.models.document import DocumentGeometry, Document
-from c2corg_api.tests import BaseTestCase
-from colander import null, Invalid
+import json
+
+from colander import Invalid, null
 from geoalchemy2 import WKBElement
 from geoalchemy2.shape import from_shape
 from geomet import wkb as geomet_wkb
-import json
+
+from c2corg_api.ext.colander_ext import (
+    from_wkb,
+    geojson_from_wkbelement,
+    wkbelement_from_geojson,
+)
+from c2corg_api.models.document import Document, DocumentGeometry
+from c2corg_api.tests import BaseTestCase
 
 
 class TestGeometry(BaseTestCase):

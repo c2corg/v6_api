@@ -1,27 +1,11 @@
-from c2corg_api.views.validation import (
-    validate_associations,
-    validate_pagination,
-    validate_preferred_lang_param,
-)
-from c2corg_api.views import cors_policy, restricted_json_view
-from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
-from shapely.geometry import Point, shape
-from c2corg_api.views.document import (
-    DocumentRest,
-    make_validator_create,
-    make_validator_update,
-)
-from c2corg_api.views.validation import (
-    validate_cook_param,
-    validate_id,
-    validate_lang_param,
-)
-from c2corg_api.views.document_schemas import coverage_documents_config
-from c2corg_api.models.utils import wkb_to_shape
 import functools
 import json
 import logging
+
+from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
+from shapely.geometry import Point, shape
+
 from c2corg_api.models import DBSession
 from c2corg_api.models.common.fields_coverage import fields_coverage
 from c2corg_api.models.coverage import (
@@ -31,7 +15,22 @@ from c2corg_api.models.coverage import (
     schema_create_coverage,
     schema_update_coverage,
 )
-
+from c2corg_api.models.utils import wkb_to_shape
+from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views.document import (
+    DocumentRest,
+    make_validator_create,
+    make_validator_update,
+)
+from c2corg_api.views.document_schemas import coverage_documents_config
+from c2corg_api.views.validation import (
+    validate_associations,
+    validate_cook_param,
+    validate_id,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+)
 
 log = logging.getLogger(__name__)
 

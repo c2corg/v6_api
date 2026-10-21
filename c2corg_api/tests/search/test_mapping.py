@@ -1,4 +1,5 @@
 from c2corg_api.models.area import Area
+from c2corg_api.models.article import Article
 from c2corg_api.models.book import Book
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing
@@ -6,9 +7,9 @@ from c2corg_api.models.route import Route
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint
-from c2corg_api.models.article import Article
 from c2corg_api.search.mapping_types import QueryableMixin
 from c2corg_api.search.mappings.area_mapping import SearchArea
+from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.book_mapping import SearchBook
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
@@ -16,7 +17,6 @@ from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
-from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.tests import BaseTestCase
 
 

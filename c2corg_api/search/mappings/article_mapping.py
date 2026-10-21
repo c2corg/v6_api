@@ -1,6 +1,6 @@
 from c2corg_api.models.article import ARTICLE_TYPE, Article
-from c2corg_api.search.mapping import SearchDocument, BaseMeta
-from c2corg_api.search.mapping_types import QueryableMixin, QEnum, QEnumArray
+from c2corg_api.search.mapping import BaseMeta, SearchDocument
+from c2corg_api.search.mapping_types import QEnum, QEnumArray, QueryableMixin
 
 
 class SearchArticle(SearchDocument):

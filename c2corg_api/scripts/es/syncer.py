@@ -1,14 +1,15 @@
 import logging
-import sys
 import os
-from c2corg_api.scripts.es.sync import sync_es
-from c2corg_api.search import configure_es_from_config, get_queue_config
-from pyramid.scripts.common import parse_vars
-from pyramid.paster import get_appsettings, setup_logging
-from sqlalchemy import engine_from_config
+import sys
 
 from kombu.mixins import ConsumerMixin
+from pyramid.paster import get_appsettings, setup_logging
+from pyramid.scripts.common import parse_vars
+from sqlalchemy import engine_from_config
 from sqlalchemy.orm import sessionmaker
+
+from c2corg_api.scripts.es.sync import sync_es
+from c2corg_api.search import configure_es_from_config, get_queue_config
 
 log = logging.getLogger('c2corg_api_syncer')
 

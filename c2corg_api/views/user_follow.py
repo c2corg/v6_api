@@ -1,19 +1,20 @@
 import logging
 
-from c2corg_api.security.acl import ACLDefault
+from colander import Integer, MappingSchema, SchemaNode, required
+from cornice.resource import resource
+from cornice.validators import colander_body_validator
+
 from c2corg_api import DBSession
 from c2corg_api.models.feed import FollowedUser
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import user_profile_documents_config
 from c2corg_api.views.validation import (
+    validate_body_user_id,
     validate_id,
     validate_preferred_lang_param,
-    validate_body_user_id,
 )
-from colander import MappingSchema, SchemaNode, Integer, required
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
 
 log = logging.getLogger(__name__)
 

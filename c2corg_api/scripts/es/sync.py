@@ -1,16 +1,22 @@
-from c2corg_api.models import es_sync, document_types, document_locale_types
+import logging
+
+from sqlalchemy.orm import joinedload
+from sqlalchemy.sql.elements import literal
+from sqlalchemy.sql.expression import and_, or_, union
+
+from c2corg_api.models import document_locale_types, document_types, es_sync
 from c2corg_api.models.area import Area
-from c2corg_api.models.association import AssociationLog, Association
+from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.association_views import (
-    WaypointsForRoutesView,
     WaypointsForOutingsView,
+    WaypointsForRoutesView,
 )
 from c2corg_api.models.document import Document, DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.document_tag import DocumentTagLog
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
-from c2corg_api.models.outing import Outing, OUTING_TYPE
-from c2corg_api.models.route import Route, ROUTE_TYPE
+from c2corg_api.models.outing import OUTING_TYPE, Outing
+from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.utils import windowed_query
@@ -18,11 +24,6 @@ from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.views.document_listings import add_load_for_profiles
-from sqlalchemy.orm import joinedload
-import logging
-
-from sqlalchemy.sql.elements import literal
-from sqlalchemy.sql.expression import or_, and_, union
 
 log = logging.getLogger(__name__)
 

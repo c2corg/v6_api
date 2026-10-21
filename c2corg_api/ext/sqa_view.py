@@ -1,4 +1,4 @@
-from sqlalchemy.sql.schema import Table, Column, MetaData
+from sqlalchemy.sql.schema import Column, MetaData, Table
 
 # Support for views in SQLAlchemy
 # See: https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/Views
