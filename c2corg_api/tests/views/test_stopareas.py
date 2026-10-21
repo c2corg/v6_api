@@ -151,6 +151,8 @@ class TestStopareaBboxRest(BaseDocumentTestRest):
 
         self.assertEqual(result['total_results'], 1)
         stop = result['documents'][0]
+        self.assertEqual(stop['kind'], 'navitia')
+        self.assertTrue(stop['linked'])
         self.assertEqual(stop['navitia_id'], 'nav1')
         self.assertEqual(stop['stoparea_name'], 'Stop 1')
         self.assertEqual(stop['coordinates'], {'x': 1000, 'y': 1000})

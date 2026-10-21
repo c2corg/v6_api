@@ -83,6 +83,8 @@ main = "c2corg_api:main"
 initialize_c2corg_api_db = "c2corg_api.scripts.initializedb:main"
 initialize_c2corg_api_es = "c2corg_api.scripts.initializees:main"
 fill_es_index = "c2corg_api.scripts.es.fill_index:main"
+import_gtfs = "c2corg_api.transport.importer:main"
+transport_postprocess = "c2corg_api.transport.postprocess:main"
 
 [tool.setuptools]
 zip-safe = false

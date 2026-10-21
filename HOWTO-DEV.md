@@ -200,6 +200,128 @@ pytest
 ruff check c2corg_api es_migration
 ```
 
+## Public transport (GTFS)
+
+The lines and stops shown on the maps come from open GTFS feeds, listed in
+`c2corg_api/transport/feeds.json` (id, name, stable download URL, license,
+attribution). Adding a network is adding an entry.
+
+- Import the feeds (the ones that did not change since the last import are
+  skipped; `--feed <id>` imports only this feed, and can be repeated, `--force`
+  imports it anyway):
+
+```shell
+import_gtfs development.ini [--feed giffre] [--force]
+```
+
+Ids of the feeds to start with (`feeds.json` has more: the other departments,
+the other ski resorts and the school lines are left out on purpose). The lines
+of a feed without paths (`shapes.txt`) are not drawn, its stops and timetables
+are shown anyway.
+
+| Region | Ids |
+| --- | --- |
+| Auvergne-Rhône-Alpes | `isere`, `savoie`, `haute-savoie`, `drome`, `ardeche`, `cars-region-express`, `chamonix`, `sibra`, `tag`, `synchro` |
+| Provence-Alpes-Côte d'Azur | `zou-express`, `zou-proximite`, `zou-trains`, `altigo`, `queyras`, `ecrins` |
+| Nouvelle-Aquitaine (Pyrénées) | `pyrenees-atlantiques`, `txik-txak`, `idelis`, `oloron` |
+| Occitanie (Pyrénées) | `lio-occitanie`, `tlp`, `arrens-marsous`, `bagneres-la-mongie` |
+| Switzerland | none: see below |
+
+```shell
+import_gtfs development.ini --feed isere --feed savoie --feed haute-savoie
+```
+
+Notes:
+
+- `lio-occitanie`, `puy-de-dome`, `drome` and `ardeche` are the largest feeds
+  (18 to 26 MB zipped): the import reads the whole timetable of a feed in
+  memory, plan a few GB for them, and import the feeds one at a time with
+  `--feed` on a small machine.
+- `cars-region-express` and the departments overlap on some stops: a stop can
+  be drawn twice.
+- The ski resorts shuttles (`courchevel-*`, `belleville`, `val-d-isere`...)
+  only run in season: their timetables are empty out of it.
+- Switzerland is not importable yet: the national GTFS feed
+  (opentransportdata.swiss, updated twice a week, the download link changes
+  with each release) has no `shapes.txt`, it is about 120 MB zipped, and it
+  needs an importer that does not keep a whole feed in memory.
+
+The same import runs every month (the 1st, at 3:00) in the background jobs
+(`python c2corg_api/scripts/jobs/scheduler.py development.ini`).
+
+- The Navitia stops (`guidebook.stopareas`, filled by
+  `scripts/public_transport/get_public_transports.sh`) are linked to the GTFS
+  stops after each GTFS import and at the end of the Navitia import script
+  (`c2corg_api/transport/link_stops.sql`): a stop of a waypoint then shows the
+  timetables of its lines. To link them by hand:
+
+```shell
+psql -v max_distance=50 -f c2corg_api/transport/link_stops.sql
+```
+
+### Duplicate stops and lines
+
+The same stop or line is often in several feeds (a regional express coach and
+the network of a department, a train and a regional feed...), with other ids and
+other names. Once the feeds are imported, `import_gtfs` groups the stops of the
+same place and hides the lines that are in several feeds (nothing is deleted):
+
+- **stops**: `transport_stops.cluster_id` is the id of the main stop of the
+  place (the one with the most departures; itself for a stop alone). On the
+  map a place is one stop, and its modal gives the timetables of all its feeds.
+  A stop joins the main stop if it is at less than 15 m, whatever its name, or
+  at less than 50 m with a name that looks like it (one contains the other, or
+  half of the words are the same) or a line with the same code. It never
+  follows a street from one stop to the next.
+- **lines**: `transport_lines.duplicate_of` is the line a hidden line is a
+  duplicate of. Two lines of two feeds with the same mode and code are
+  duplicates if each path is covered at 90% by the other one, within 25 m (a
+  short line in a long one is not a duplicate). The line with the most trips is
+  kept; a hidden line still gives the kept line on `/transport-lines/{id}`.
+
+The thresholds are variables of the environment, with the defaults of `.env`:
+change the value (the environment of the API and of the jobs), not the code. A
+variable that is not set, empty or not valid is ignored, and the default is
+used.
+
+| Variable | Default | |
+| --- | --- | --- |
+| `TRANSPORT_SAME_PLACE_DISTANCE` | 15 | m: two stops this close are the same place |
+| `TRANSPORT_NEAR_DISTANCE` | 50 | m: ... if their names look alike or they share a line code |
+| `TRANSPORT_LINE_TOLERANCE` | 25 | m: a path is covered by the other within this |
+| `TRANSPORT_LINE_OVERLAP` | 0.9 | share of each path covered, 0.5 to 1 |
+| `TRANSPORT_LINK_DISTANCE` | 50 | m: a Navitia stop is a GTFS stop of one of its lines |
+| `TRANSPORT_SIMPLIFY_TOLERANCE` | 5 | m: simplification of the paths |
+| `TRANSPORT_SERVICE_DAYS` | 365 | days of timetables stored |
+| `TRANSPORT_MAX_VARIANTS_PER_DIRECTION` | 6 | stop sequences kept per direction |
+| `TRANSPORT_MAX_STOPS_BY_BBOX`, `TRANSPORT_MAX_LINES_BY_BBOX` | 5000, 500 | most the API gives for an extent |
+| `TRANSPORT_CACHE_MAX_AGE` | 86400 | s: cache of the transport data |
+
+The import (`import_gtfs`) and the postprocess need the variables in their
+environment (`export $(grep -v '^#' .env | xargs)` for a try), then the
+postprocess is done again to apply new thresholds.
+
+To do it again, once the imports are done, without importing anything (after
+changing the thresholds, after an import of Navitia stops, or if a feed was
+imported by hand), it links the Navitia stops, groups the stops and hides the
+lines again in one transaction:
+
+```shell
+transport_postprocess development.ini
+```
+
+With `--report`, it writes the groups of stops with different names (the main
+stop, then the stops of its group with their distance) and the hidden lines
+(with the line they duplicate): read them to check the thresholds, on an
+area where several feeds overlap (for example Isère and Cars Région Express).
+
+```shell
+transport_postprocess development.ini --report
+```
+
+The same thing is done by `import_gtfs`, the next time it imports a feed. The
+Navitia import script only links the Navitia stops, it does not need more.
+
 ## Other
 
 - Flush redis cache:
