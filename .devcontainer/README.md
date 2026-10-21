@@ -38,7 +38,8 @@ pytest
 # Run a specific test file
 pytest c2corg_api/tests/models/test_book.py
 
-# Run the linter
+# Format the code, then run the linter (also: make format / make lint)
+ruff format c2corg_api es_migration
 ruff check c2corg_api es_migration
 
 # Start the API server (with auto-reload)

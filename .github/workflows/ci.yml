@@ -85,7 +85,9 @@ jobs:
           uv sync --frozen
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - name: Lint
-        run: ruff check c2corg_api es_migration
+        run: |
+          ruff check c2corg_api es_migration
+          ruff format --check c2corg_api es_migration
       - name: Configure postgres
         run: |
           scripts/database/create_test_schema.sh
