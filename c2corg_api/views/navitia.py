@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import math
 import os
 import requests
 import redis
@@ -10,6 +11,7 @@ import re
 import threading
 import ast
 import transaction
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from sqlalchemy import or_
 from c2corg_api.models import DBSession
@@ -48,6 +50,13 @@ log = logging.getLogger(__name__)
 MAX_ROUTE_THRESHOLD = 50
 MAX_TRIP_DURATION = 240
 MIN_TRIP_DURATION = 20
+
+# Routes done one way: the way back starts from another access waypoint
+ONE_WAY_ROUTE_TYPES = ('traverse', 'raid', 'expedition')
+
+# Number of documents whose round trip is checked at the same time by the
+# batch jobs (each one makes its 2 Navitia requests at once)
+ROUND_TRIP_DEFAULT_WORKERS = 3
 
 # redis to store job's value (progress, result, error...)
 REDIS_HOST = 'redis'
@@ -526,10 +535,8 @@ def _compute_round_trip_reachable(
     Shared implementation for compute_round_trip_reachable_routes and
     compute_round_trip_reachable_waypoints : verify round-trip (aller +
     retour) reachability, using real Navitia timetables, for an explicit
-    shortlist of document ids (unlike /navitia/reachabledocumentids,
-    whose dynamically-computed id-set is used directly to filter the
-    topoguide search and is never itself batch-verified against
-    Navitia).
+    shortlist of document ids (unlike the transport search filter of the
+    topoguide, which only uses the isochrones).
 
     NOTE : MAX_ROUTE_THRESHOLD is enforced here, as this is a batch of
     up to 2 Navitia journey calls (aller + retour) per access waypoint
@@ -545,6 +552,7 @@ def _compute_round_trip_reachable(
     try:
         ids_param = request.GET.get('ids', '')
         ids = [int(doc_id) for doc_id in ids_param.split(',') if doc_id]
+        ids = list(dict.fromkeys(ids))
 
         if len(ids) > MAX_ROUTE_THRESHOLD:
             raise HTTPBadRequest(too_many_error_message)
@@ -559,33 +567,48 @@ def _compute_round_trip_reachable(
         log.info('Number of round-trip verifications : %d', total)
         r.set('job:%s:total' % job_id, total)
 
+        # the database is read here: the threads below only call Navitia
+        prepared_documents = {
+            document_id: prepare_round_trip_document(
+                document_id, document_type, from_coords, hiking_duration_param
+            )
+            for document_id in ids
+        }
+
         count = found = not_found = 0
         results = {}
 
-        for document_id in ids:
-            hiking_duration_seconds = _resolve_hiking_duration_seconds(
-                hiking_duration_param, document_id, document_type
-            )
-            access_waypoints = _get_access_waypoints_for_document(
-                document_id, document_type
-            )
+        # Several documents are checked at the same time, the time of the job
+        # being the one of the Navitia requests. Their number stays small to
+        # respect the Navitia rate limit.
+        with ThreadPoolExecutor(max_workers=_round_trip_max_workers()) as executor:
+            futures = {
+                executor.submit(
+                    best_round_trip_result,
+                    prepared,
+                    from_coords,
+                    date,
+                    min_departure,
+                    max_return,
+                ): document_id
+                for document_id, prepared in prepared_documents.items()
+            }
 
-            item_result = _best_round_trip_result(
-                access_waypoints,
-                from_coords,
-                date,
-                min_departure,
-                max_return,
-                hiking_duration_seconds,
-            )
-            results[str(document_id)] = item_result
+            try:
+                for future in as_completed(futures):
+                    item_result = future.result()
+                    results[str(futures[future])] = item_result
 
-            count += 1
-            if item_result['compatible']:
-                found += 1
-            else:
-                not_found += 1
-            _store_job_progress(r, job_id, count, found, not_found)
+                    count += 1
+                    if item_result['compatible']:
+                        found += 1
+                    else:
+                        not_found += 1
+                    _store_job_progress(r, job_id, count, found, not_found)
+            except BaseException:
+                # no need to go on with the other documents
+                executor.shutdown(wait=True, cancel_futures=True)
+                raise
 
         r.set(
             'job:%s:result' % job_id, json.dumps({'results': results, 'total': total})
@@ -1141,12 +1164,135 @@ def _parse_navitia_datetime(value):
     return datetime.strptime(value, '%Y%m%dT%H%M%S')
 
 
+def _round_trip_max_workers():
+    """Number of documents checked at once (NAVITIA_ROUND_TRIP_WORKERS)"""
+    try:
+        return max(1, int(os.getenv('NAVITIA_ROUND_TRIP_WORKERS', '')))
+    except ValueError:
+        return ROUND_TRIP_DEFAULT_WORKERS
+
+
+def resolve_round_trip_target(waypoint_json):
+    """
+    Everything needed to query Navitia about an access waypoint (its
+    coordinates and coverage), resolved once and from the database: the
+    Navitia requests can then run in other threads without touching it.
+    """
+    lon, lat, coverage = _resolve_waypoint_journey_target(waypoint_json)
+    return {
+        'document_id': waypoint_json.get('document_id'),
+        'lon': float(lon),
+        'lat': float(lat),
+        'coords': '%s;%s' % (lon, lat),
+        'coverage': coverage,
+    }
+
+
+def _no_leg():
+    return {'found': False, 'departure': None, 'arrival': None}
+
+
+def _query_aller_leg(target, from_coords, date, min_departure):
+    """
+    The aller leg to an access waypoint: the EARLIEST journey from
+    `from_coords` departing at/after `date`+`min_departure`, on that day.
+    """
+    params = {
+        'from': from_coords,
+        'to': target['coords'],
+        'datetime': _combine_date_and_time(date, min_departure),
+        'datetime_represents': 'departure',
+    }
+    response = _query_navitia_journeys(params, target['coverage'])
+    if response is None:
+        return _no_leg()
+
+    param_day = date.replace('-', '')[6:8]
+    same_day_journeys = [
+        journey
+        for journey in response.get('journeys', [])
+        if journey['departure_date_time'][6:8] == param_day
+    ]
+    if not same_day_journeys:
+        return _no_leg()
+
+    journey = min(same_day_journeys, key=lambda j: j['arrival_date_time'])
+    return {
+        'found': True,
+        'departure': journey['departure_date_time'],
+        'arrival': journey['arrival_date_time'],
+    }
+
+
+def _query_retour_leg(target, from_coords, date, max_return):
+    """
+    The retour leg from an access waypoint: the LATEST journey back to
+    `from_coords` arriving at/before `date`+`max_return`, on that day.
+    """
+    params = {
+        'from': target['coords'],
+        'to': from_coords,
+        'datetime': _combine_date_and_time(date, max_return),
+        'datetime_represents': 'arrival',
+    }
+    # the waypoint is the departure point of the journey, so its coverage
+    # is used as the source coverage
+    response = _query_navitia_journeys(params, target['coverage'])
+    if response is None:
+        return _no_leg()
+
+    param_day = date.replace('-', '')[6:8]
+    same_day_journeys = [
+        journey
+        for journey in response.get('journeys', [])
+        if journey['arrival_date_time'][6:8] == param_day
+    ]
+    if not same_day_journeys:
+        return _no_leg()
+
+    journey = max(same_day_journeys, key=lambda j: j['departure_date_time'])
+    return {
+        'found': True,
+        'departure': journey['departure_date_time'],
+        'arrival': journey['arrival_date_time'],
+    }
+
+
+def _query_round_trip_legs(target, from_coords, date, min_departure, max_return):
+    """The aller and retour legs of an access waypoint, requested at once."""
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        aller = executor.submit(
+            _query_aller_leg, target, from_coords, date, min_departure
+        )
+        retour = executor.submit(
+            _query_retour_leg, target, from_coords, date, max_return
+        )
+        return aller.result(), retour.result()
+
+
+def _legs_compatible(aller, retour, hiking_duration_seconds):
+    """
+    True if both legs were found AND there is enough time between the
+    arrival of the aller and the departure of the retour to fit
+    `hiking_duration_seconds`.
+    """
+    if not (aller['found'] and retour['found']):
+        return False
+
+    available_seconds = (
+        _parse_navitia_datetime(retour['departure'])
+        - _parse_navitia_datetime(aller['arrival'])
+    ).total_seconds()
+    return available_seconds >= hiking_duration_seconds
+
+
 def is_wp_round_trip_reachable(
     waypoint_json, from_coords, date, min_departure, max_return, hiking_duration_seconds
 ):
     """
-    Check both directions of a round trip, using real Navitia timetables
-    (unlike is_wp_journey_reachable, which only checks the aller leg):
+    Check both directions of a round trip to an access waypoint, using
+    real Navitia timetables (unlike is_wp_journey_reachable, which only
+    checks the aller leg):
 
     - aller: the EARLIEST journey from `from_coords` to the waypoint,
       departing at/after `date`+`min_departure`.
@@ -1162,74 +1308,16 @@ def is_wp_round_trip_reachable(
          "retour": {"found", "departure", "arrival"},
          "compatible": bool}
     """
-    lon, lat, destination_coverage = _resolve_waypoint_journey_target(waypoint_json)
-    wp_coords = '%s;%s' % (lon, lat)
+    target = resolve_round_trip_target(waypoint_json)
+    aller, retour = _query_round_trip_legs(
+        target, from_coords, date, min_departure, max_return
+    )
 
-    compact_date = date.replace('-', '')
-    param_day = compact_date[6:8]
-
-    # --- ALLER: earliest arrival, departing at/after min_departure ---
-    aller_params = {
-        'from': from_coords,
-        'to': wp_coords,
-        'datetime': _combine_date_and_time(date, min_departure),
-        'datetime_represents': 'departure',
+    return {
+        'aller': aller,
+        'retour': retour,
+        'compatible': _legs_compatible(aller, retour, hiking_duration_seconds),
     }
-    aller_response = _query_navitia_journeys(aller_params, destination_coverage)
-
-    aller_journey = None
-    if aller_response is not None:
-        same_day_journeys = [
-            journey
-            for journey in aller_response.get('journeys', [])
-            if journey['departure_date_time'][6:8] == param_day
-        ]
-        if same_day_journeys:
-            aller_journey = min(same_day_journeys, key=lambda j: j['arrival_date_time'])
-
-    aller = {
-        'found': aller_journey is not None,
-        'departure': aller_journey['departure_date_time'] if aller_journey else None,
-        'arrival': aller_journey['arrival_date_time'] if aller_journey else None,
-    }
-
-    # --- RETOUR: latest departure, arriving at/before max_return ---
-    retour_params = {
-        'from': wp_coords,
-        'to': from_coords,
-        'datetime': _combine_date_and_time(date, max_return),
-        'datetime_represents': 'arrival',
-    }
-    # the waypoint is now the departure point of the journey, so its
-    # coverage (already resolved above) is reused as the source coverage
-    retour_response = _query_navitia_journeys(retour_params, destination_coverage)
-
-    retour_journey = None
-    if retour_response is not None:
-        same_day_journeys = [
-            journey
-            for journey in retour_response.get('journeys', [])
-            if journey['arrival_date_time'][6:8] == param_day
-        ]
-        if same_day_journeys:
-            retour_journey = max(
-                same_day_journeys, key=lambda j: j['departure_date_time']
-            )
-
-    retour = {
-        'found': retour_journey is not None,
-        'departure': retour_journey['departure_date_time'] if retour_journey else None,
-        'arrival': retour_journey['arrival_date_time'] if retour_journey else None,
-    }
-
-    compatible = False
-    if aller['found'] and retour['found']:
-        aller_arrival_dt = _parse_navitia_datetime(aller['arrival'])
-        retour_departure_dt = _parse_navitia_datetime(retour['departure'])
-        available_seconds = (retour_departure_dt - aller_arrival_dt).total_seconds()
-        compatible = available_seconds >= hiking_duration_seconds
-
-    return {'aller': aller, 'retour': retour, 'compatible': compatible}
 
 
 def _get_access_waypoints_for_document(document_id, document_type):
@@ -1291,49 +1379,162 @@ def _resolve_hiking_duration_seconds(hiking_duration_param, document_id, documen
     return 0
 
 
-def _best_round_trip_result(
-    access_waypoints,
-    from_coords,
-    date,
-    min_departure,
-    max_return,
-    hiking_duration_seconds,
+def _is_one_way_route(document_id):
+    """
+    Whether a route is done one way (a traverse...): the way back then
+    starts from another access waypoint than the one reached by the aller.
+    """
+    route = DBSession.query(Route).filter(Route.document_id == document_id).first()
+    return bool(
+        route is not None
+        and route.route_types
+        and any(route_type in ONE_WAY_ROUTE_TYPES for route_type in route.route_types)
+    )
+
+
+def _sort_targets_by_distance(targets, from_coords):
+    """
+    The closest access waypoints first: they are the most likely to be
+    reachable, which lets the check stop sooner.
+    """
+    from_lon, from_lat = (float(part) for part in from_coords.split(';'))
+    scale = math.cos(math.radians(from_lat))
+
+    return sorted(
+        targets,
+        key=lambda target: math.hypot(
+            (target['lon'] - from_lon) * scale, target['lat'] - from_lat
+        ),
+    )
+
+
+def prepare_round_trip_document(
+    document_id, document_type, from_coords, hiking_duration_param
 ):
     """
-    Compute is_wp_round_trip_reachable for each of a document's access
-    waypoints, and return the best result: any compatible=True wins,
-    otherwise the one with the most legs (aller/retour) found.
+    Reads from the database what the round trip check of a document needs.
+    It is done before the check, in the thread of the request or of the job:
+    the Navitia requests themselves do not use the database, and can run in
+    other threads.
     """
-    if not access_waypoints:
-        return {
-            'aller': {'found': False, 'departure': None, 'arrival': None},
-            'retour': {'found': False, 'departure': None, 'arrival': None},
-            'compatible': False,
-        }
+    access_waypoints = _get_access_waypoints_for_document(document_id, document_type)
+
+    targets = [
+        resolve_round_trip_target(to_json_dict(wp, schema_waypoint))
+        for wp in access_waypoints
+    ]
+
+    return {
+        'targets': _sort_targets_by_distance(targets, from_coords),
+        'hiking_duration_seconds': _resolve_hiking_duration_seconds(
+            hiking_duration_param, document_id, document_type
+        ),
+        'one_way': document_type == 'route' and _is_one_way_route(document_id),
+    }
+
+
+def _round_trip_result(aller, aller_target, retour, retour_target, compatible):
+    return {
+        'aller': aller,
+        'retour': retour,
+        'compatible': compatible,
+        # the access waypoints the aller reaches and the retour leaves from:
+        # different ones for a traverse
+        'aller_waypoint_id': aller_target['document_id'] if aller['found'] else None,
+        'retour_waypoint_id': retour_target['document_id'] if retour['found'] else None,
+    }
+
+
+def _best_same_waypoint_result(
+    targets, from_coords, date, min_departure, max_return, hiking_duration_seconds
+):
+    """
+    For an out-and-back route (or a waypoint): the retour leaves from the
+    access waypoint the aller reached. The check stops at the first access
+    waypoint where it works, otherwise the best result is the one with the
+    most legs (aller/retour) found.
+    """
 
     def legs_found(result):
         return int(result['aller']['found']) + int(result['retour']['found'])
 
     best = None
-    for wp in access_waypoints:
-        wp_json = to_json_dict(wp, schema_waypoint)
-        result = is_wp_round_trip_reachable(
-            wp_json,
-            from_coords,
-            date,
-            min_departure,
-            max_return,
-            hiking_duration_seconds,
+    for target in targets:
+        aller, retour = _query_round_trip_legs(
+            target, from_coords, date, min_departure, max_return
+        )
+        result = _round_trip_result(
+            aller,
+            target,
+            retour,
+            target,
+            _legs_compatible(aller, retour, hiking_duration_seconds),
         )
 
-        if best is None:
-            best = result
-        elif result['compatible'] and not best['compatible']:
-            best = result
-        elif not best['compatible'] and legs_found(result) > legs_found(best):
+        if result['compatible']:
+            return result
+        if best is None or legs_found(result) > legs_found(best):
             best = result
 
     return best
+
+
+def _best_one_way_result(
+    targets, from_coords, date, min_departure, max_return, hiking_duration_seconds
+):
+    """
+    For a traverse: arrive by an access waypoint, leave from another one.
+    Every aller leg is combined with every retour leg found, the check
+    stops at the first working pair, otherwise the best result is the
+    earliest aller with the latest retour.
+    """
+    alleres = []
+    retours = []
+
+    for target in targets:
+        aller, retour = _query_round_trip_legs(
+            target, from_coords, date, min_departure, max_return
+        )
+        if aller['found']:
+            alleres.append((aller, target))
+        if retour['found']:
+            retours.append((retour, target))
+
+        for aller_leg, aller_target in alleres:
+            for retour_leg, retour_target in retours:
+                if _legs_compatible(aller_leg, retour_leg, hiking_duration_seconds):
+                    return _round_trip_result(
+                        aller_leg, aller_target, retour_leg, retour_target, True
+                    )
+
+    aller, aller_target = min(
+        alleres, key=lambda item: item[0]['arrival'], default=(_no_leg(), targets[0])
+    )
+    retour, retour_target = max(
+        retours, key=lambda item: item[0]['departure'], default=(_no_leg(), targets[0])
+    )
+    return _round_trip_result(aller, aller_target, retour, retour_target, False)
+
+
+def best_round_trip_result(prepared, from_coords, date, min_departure, max_return):
+    """
+    The round trip check of a document prepared by
+    prepare_round_trip_document, using real Navitia timetables, over all
+    its access waypoints.
+    """
+    targets = prepared['targets']
+    if not targets:
+        return _round_trip_result(_no_leg(), {}, _no_leg(), {}, False)
+
+    check = _best_one_way_result if prepared['one_way'] else _best_same_waypoint_result
+    return check(
+        targets,
+        from_coords,
+        date,
+        min_departure,
+        max_return,
+        prepared['hiking_duration_seconds'],
+    )
 
 
 def validate_round_trip_reachable_params(request, **kwargs):
@@ -1372,7 +1573,7 @@ class NavitiaRoundTripReachableRest:
         Synchronous, single-item round-trip (aller + retour) reachability
         check for one route or waypoint, using real Navitia timetables.
         Resolves the document's access waypoint(s) and returns the best
-        result across them (see _best_round_trip_result) : at most a
+        result across them (see best_round_trip_result) : at most a
         handful of Navitia calls, so no job/redis machinery is needed.
         """
         params = self.request.params
@@ -1384,21 +1585,12 @@ class NavitiaRoundTripReachableRest:
         max_return = params.get('max_return')
         hiking_duration_param = params.get('hiking_duration')
 
-        access_waypoints = _get_access_waypoints_for_document(
-            document_id, document_type
+        prepared = prepare_round_trip_document(
+            document_id, document_type, from_coords, hiking_duration_param
         )
 
-        hiking_duration_seconds = _resolve_hiking_duration_seconds(
-            hiking_duration_param, document_id, document_type
-        )
-
-        return _best_round_trip_result(
-            access_waypoints,
-            from_coords,
-            date,
-            min_departure,
-            max_return,
-            hiking_duration_seconds,
+        return best_round_trip_result(
+            prepared, from_coords, date, min_departure, max_return
         )
 
 
