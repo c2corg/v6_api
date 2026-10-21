@@ -1,5 +1,6 @@
 import datetime
 import json
+from unittest import mock
 
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
@@ -101,43 +102,70 @@ class TestRouteRest(BaseDocumentTestRest):
         body = self.get_collection_search({'hdif': '700,900'})
         self.assertEqual(body.get('total'), 2)
 
-    def test_get_collection_reachable_ids(self):
-        # DocumentRest._collection_get: a `reachable_ids` param (as
-        # produced by /navitia/reachabledocumentids) is used as a
-        # dynamic ID-set filter, plugged into the same
-        # advanced_search.get_all_filtered_docs used by the static
-        # reachable-ids searches.
+    def _transport_search(self, **params):
+        search = {
+            'transport_from': '5.1;45.1',
+            'transport_date': '2026-01-16',
+            'transport_min_departure': '08:00',
+            'transport_max_return': '18:00',
+        }
+        search.update(params)
+        return search
+
+    def test_get_collection_transport(self):
+        # DocumentRest._collection_get: the `transport_*` params select the
+        # routes reachable by public transport, with an ID-set filter plugged
+        # into the same advanced_search.get_all_filtered_docs used by the
+        # static reachable-ids searches.
         reset_search_index(self.session)
 
-        body = self.get_collection_search(
-            {'reachable_ids': str(self.route3.document_id)}
-        )
+        with mock.patch(
+            'c2corg_api.views.navitia.get_cached_transport_document_ids'
+        ) as mock_ids:
+            mock_ids.return_value = [self.route3.document_id]
+            body = self.get_collection_search(self._transport_search())
+
         self.assertEqual(body.get('total'), 1)
         self.assertEqual(body['documents'][0]['document_id'], self.route3.document_id)
+        # parsed (and normalized) search, for routes
+        transport, document_type = mock_ids.call_args.args
+        self.assertEqual(transport['from'], '5.100;45.100')
+        self.assertEqual(document_type, 'route')
 
-    def test_get_collection_reachable_ids_anded_with_filters(self):
-        # the reachable_ids id-set must be ANDed with other ES filters,
-        # exactly like any other search parameter.
+    def test_get_collection_transport_anded_with_filters(self):
+        # the id-set must be ANDed with other ES filters, exactly like any
+        # other search parameter.
         reset_search_index(self.session)
 
-        ids = '%s,%s' % (self.route3.document_id, self.route4.document_id)
+        with mock.patch(
+            'c2corg_api.views.navitia.get_cached_transport_document_ids'
+        ) as mock_ids:
+            mock_ids.return_value = [self.route3.document_id, self.route4.document_id]
+            body = self.get_collection_search(
+                self._transport_search(act='rock_climbing')
+            )
 
-        body = self.get_collection_search(
-            {'reachable_ids': ids, 'act': 'rock_climbing'}
-        )
         self.assertEqual(body.get('total'), 1)
         self.assertEqual(body['documents'][0]['document_id'], self.route4.document_id)
 
-    def test_get_collection_reachable_ids_empty(self):
-        # an empty (or absent) reachable_ids must not change behaviour :
-        # an empty value still falls through to the *existing*
-        # ES-search-mode branch (contains_search_params sees the key
-        # regardless of its value), exactly as it did before this
-        # feature existed.
+    def test_get_collection_transport_nothing_reachable(self):
+        # no route reachable: the search is empty, not unfiltered
         reset_search_index(self.session)
 
-        body = self.get_collection_search({'reachable_ids': ''})
-        self.assertEqual(body.get('total'), 4)
+        with mock.patch(
+            'c2corg_api.views.navitia.get_cached_transport_document_ids'
+        ) as mock_ids:
+            mock_ids.return_value = []
+            body = self.get_collection_search(self._transport_search())
+
+        self.assertEqual(body.get('total'), 0)
+        self.assertEqual(body.get('documents'), [])
+
+    def test_get_collection_transport_invalid(self):
+        self.app.get(
+            self._prefix + '?transport_from=5.1%3B45.1&transport_date=bad',
+            status=400,
+        )
 
     def test_get(self):
         body = self.get(self.route)

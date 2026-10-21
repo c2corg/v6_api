@@ -28,6 +28,8 @@ from c2corg_api.models.feed import (
     update_feed_document_update,
 )
 from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.route import ROUTE_TYPE
+from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.models.topo_map import schema_listing_topo_map, MAP_TYPE
 from c2corg_api.models.topo_map_association import update_maps_for_document, get_maps
 from c2corg_api.search import advanced_search
@@ -73,6 +75,9 @@ LIMIT_DEFAULT = 30
 # the number of recent outings that are included for waypoint and routes
 NUM_RECENT_OUTINGS = 10
 
+# prefix of the query string parameters of the public transport filter
+TRANSPORT_QUERY_PREFIX = 'transport_'
+
 # page offset limit by ElasticSearch
 ES_MAX_RESULT_WINDOW = 10000
 
@@ -93,19 +98,12 @@ class DocumentRest(ACLDefault):
             # https://www.elastic.co/guide/en/elasticsearch/reference/master/search-request-from-size.html
             raise HTTPBadRequest('offset + limit greater than 10000')
 
-        reachable_ids_param = self.request.GET.get('reachable_ids')
-        if reachable_ids_param:
-            # a dynamic ID-set (e.g. computed from a transport-
-            # accessibility isochrone) is ANDed with all other ES filters
-            # already present in the query string, exactly like the
-            # static reachable ID-sets used by /reachableroutes and
+        reachable_ids = self._get_transport_reachable_ids(doc_type)
+        if reachable_ids is not None:
+            # the documents reachable by public transport are ANDed with all
+            # other ES filters already present in the query string, exactly
+            # like the static reachable ID-sets used by /reachableroutes and
             # /reachablewaypoints.
-            reachable_ids = [
-                int(doc_id)
-                for doc_id in reachable_ids_param.split(',')
-                if doc_id.strip()
-            ]
-
             def search_documents(_, __):
                 return advanced_search.get_all_filtered_docs(
                     self.request.GET, meta_params, reachable_ids, doc_type
@@ -120,6 +118,33 @@ class DocumentRest(ACLDefault):
             search_documents = partial(self._search_documents_paginated, meta_params)
 
         return get_documents(documents_config, meta_params, search_documents)
+
+    def _get_transport_reachable_ids(self, doc_type):
+        """Returns the ids of the routes or waypoints reachable by public
+        transport, according to the `transport_*` parameters of the query
+        string (see parse_transport_params), or None if there are none.
+        """
+        if doc_type not in (ROUTE_TYPE, WAYPOINT_TYPE):
+            return None
+        if self.request.GET.get(TRANSPORT_QUERY_PREFIX + 'from') is None:
+            return None
+
+        # imported here: the navitia views import the route and waypoint
+        # views, which import this module
+        from c2corg_api.views.navitia import (
+            get_cached_transport_document_ids,
+            parse_transport_params,
+        )
+
+        try:
+            transport = parse_transport_params(
+                self.request.GET, prefix=TRANSPORT_QUERY_PREFIX
+            )
+        except ValueError as exc:
+            raise HTTPBadRequest(str(exc))
+
+        document_type = 'route' if doc_type == ROUTE_TYPE else 'waypoint'
+        return get_cached_transport_document_ids(transport, document_type)
 
     def _search_documents_paginated(self, meta_params, base_query, base_total_query):
         """Return a batch of document ids with the given `offset` and `limit`."""
