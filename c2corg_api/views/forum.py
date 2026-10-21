@@ -36,10 +36,10 @@ class PrivateMessageRest(ACLDefault):
         messages = client.client.private_messages_unread(d_username)
 
         count = len(messages['topic_list']['topics'])
-        link = '%s/users/%s/messages' % (
+        link = '%s/u/%s/messages' % (
             client.discourse_public_url, d_username)
 
-        return {link: link, count: count}
+        return {'link': link, 'count': count}
 
 
 class SchemaTopicCreate(colander.MappingSchema):
