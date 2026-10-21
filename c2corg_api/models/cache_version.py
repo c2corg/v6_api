@@ -205,3 +205,10 @@ def get_cache_keys(document_ids, lang, document_type):
 
 def get_document_id(cache_key):
     return int(cache_key.split('-')[0])
+
+def get_version_date(document_id, version):
+ 
+    date = DBSession.query(CacheVersion.last_updated). \
+        filter(CacheVersion.document_id == document_id and CacheVersion.version == version ). \
+        first()
+    return date
