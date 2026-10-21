@@ -85,10 +85,10 @@ For more details, see [`.devcontainer/README.md`](.devcontainer/README.md).
 
 - Clone the git repository
 - Cd inside your cloned repo
-- Install Python and the dependencies (pinned in `uv.lock`) in a `.venv` virtual environment:
+- Install Python and the dependencies (pinned in `uv.lock`) in a `.venv` virtual environment, and the git pre-commit hook:
 
 ```shell
-uv sync
+make install   # or: uv sync && uv run pre-commit install
 ```
 
 - Activate the virtual environment (⚠️ Do not forget to activate it in all terminal instances you intend to use), or prefix commands with `uv run`:
@@ -201,7 +201,7 @@ make format   # ruff format + ruff check --fix (also sorts imports)
 make lint     # ruff check + ruff format --check
 ```
 
-- Optional but recommended: run ruff automatically before each commit (the devcontainer does this for you):
+- A git pre-commit hook runs ruff before each commit. `make install` and the devcontainer install it; otherwise run once per clone:
 
 ```shell
 uv run pre-commit install

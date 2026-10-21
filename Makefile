@@ -41,7 +41,7 @@ help:
 	@echo "- init-elastic"			Initialize the elasticsearch index
 	@echo "- flush-redis			Clear the Redis cache"
 	@echo
-	@echo "- install				Install the project dependencies"
+	@echo "- install				Install the project dependencies and the git pre-commit hook"
 	@echo "- loadenv				Replace the env vars in the .in templates"
 
 
@@ -87,6 +87,7 @@ init-elastic:
 
 install:
 		uv sync
+		uv run --frozen pre-commit install
 
 run-syncer:
 		python c2corg_api/scripts/es/syncer.py development.ini
