@@ -19,16 +19,15 @@ def get_tracks(model, document_ids, bbox_3857, limit):
 
     return (
         DBSession.query(model.document_id, DocumentGeometry.geom_detail)
-        .join(
-            DocumentGeometry,
-            DocumentGeometry.document_id == model.document_id)
+        .join(DocumentGeometry, DocumentGeometry.document_id == model.document_id)
         .filter(model.document_id.in_(document_ids))
         .filter(model.redirects_to.is_(None))
         .filter(DocumentGeometry.geom_detail.isnot(None))
         .filter(DocumentGeometry.geom_detail.ST_Intersects(envelope))
         .order_by(model.document_id)
         .limit(limit + 1)
-        .all())
+        .all()
+    )
 
 
 def get_locales_for_documents(locale_model, document_ids):
@@ -42,4 +41,5 @@ def get_locales_for_documents(locale_model, document_ids):
     return (
         DBSession.query(locale_model)
         .filter(locale_model.document_id.in_(document_ids))
-        .all())
+        .all()
+    )

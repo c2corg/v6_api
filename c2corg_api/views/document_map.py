@@ -4,15 +4,17 @@ import math
 from cornice.resource import resource, view
 
 from c2corg_api.ext.colander_ext import geojson_from_wkbelement
-from c2corg_api.models.document_map_queries import (
-    get_locales_for_documents, get_tracks)
+from c2corg_api.models.document_map_queries import get_locales_for_documents, get_tracks
 from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.search.search_filters import build_query
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy, get_best_locale
-from c2corg_api.views.validation import validate_bbox, \
-    validate_preferred_lang_param, validate_zoom
+from c2corg_api.views.validation import (
+    validate_bbox,
+    validate_preferred_lang_param,
+    validate_zoom,
+)
 
 log = logging.getLogger(__name__)
 
@@ -31,8 +33,7 @@ HEATMAP_BUCKETS_MAX = 10000
 # geohash length (cell size) used for the heatmap, indexed by the lowest map
 # zoom level it applies to: ~1250km, 156km, 39km, 4.9km, 1.2km and 150m
 # cells. Meant to give roughly 100 cells across a viewport.
-HEATMAP_PRECISION_BY_MIN_ZOOM = (
-    (0, 2), (3, 3), (5, 4), (8, 5), (11, 6), (14, 7))
+HEATMAP_PRECISION_BY_MIN_ZOOM = ((0, 2), (3, 3), (5, 4), (8, 5), (11, 6), (14, 7))
 
 # radius of the sphere used by EPSG:3857 (meters)
 WEB_MERCATOR_RADIUS = 6378137
@@ -49,8 +50,8 @@ def _search_params(request):
     from the listing.
     """
     return {
-        key: request.GET.get(key) for key in request.GET
-        if key not in NON_FILTER_PARAMS}
+        key: request.GET.get(key) for key in request.GET if key not in NON_FILTER_PARAMS
+    }
 
 
 def _expanded_bbox(bbox, ratio=0.5):
@@ -93,8 +94,7 @@ def _geohash_center(geohash):
 
 def _lon_lat_to_3857(lon, lat):
     x = math.radians(lon) * WEB_MERCATOR_RADIUS
-    y = WEB_MERCATOR_RADIUS * math.log(
-        math.tan(math.pi / 4 + math.radians(lat) / 2))
+    y = WEB_MERCATOR_RADIUS * math.log(math.tan(math.pi / 4 + math.radians(lat) / 2))
     return x, y
 
 
@@ -103,11 +103,15 @@ def get_heatmap(doc_type, params, bbox, zoom):
     documents matching the search filters in the given bbox.
     """
     search = build_query(
-        dict(params, bbox=_bbox_param(bbox)),
-        {'limit': 0, 'offset': 0}, doc_type)
+        dict(params, bbox=_bbox_param(bbox)), {'limit': 0, 'offset': 0}, doc_type
+    )
     search.aggs.bucket(
-        'density', 'geohash_grid', field='geom',
-        precision=_heatmap_precision(zoom), size=HEATMAP_BUCKETS_MAX)
+        'density',
+        'geohash_grid',
+        field='geom',
+        precision=_heatmap_precision(zoom),
+        size=HEATMAP_BUCKETS_MAX,
+    )
     response = search.execute()
 
     buckets = []
@@ -125,7 +129,9 @@ def get_track_candidates(doc_type, params, bbox):
     """
     search = build_query(
         dict(params, bbox=_bbox_param(_expanded_bbox(bbox))),
-        {'limit': TRACKS_CANDIDATES_MAX, 'offset': 0}, doc_type)
+        {'limit': TRACKS_CANDIDATES_MAX, 'offset': 0},
+        doc_type,
+    )
     response = search.execute()
     document_ids = [int(doc.meta.id) for doc in response]
     return document_ids, response.hits.total > len(document_ids)
@@ -134,17 +140,18 @@ def get_track_candidates(doc_type, params, bbox):
 def _titles_by_document_id(locale_model, document_ids, lang):
     locales_by_document = {}
     for locale in get_locales_for_documents(locale_model, document_ids):
-        locales_by_document.setdefault(locale.document_id, {})[
-            locale.lang] = locale
+        locales_by_document.setdefault(locale.document_id, {})[locale.lang] = locale
 
     titles = {}
     for document_id, available_locales in locales_by_document.items():
         best_locale = get_best_locale(available_locales, lang)
         if best_locale:
             title_prefix = getattr(best_locale, 'title_prefix', None)
-            titles[document_id] = '{} : {}'.format(
-                title_prefix, best_locale.title) \
-                if title_prefix else best_locale.title
+            titles[document_id] = (
+                '{} : {}'.format(title_prefix, best_locale.title)
+                if title_prefix
+                else best_locale.title
+            )
     return titles
 
 
@@ -162,7 +169,8 @@ def get_tracks_response(doc_type, model, locale_model, request):
         return {'documents': [], 'truncated': True}
 
     titles = _titles_by_document_id(
-        locale_model, [row.document_id for row in rows], lang)
+        locale_model, [row.document_id for row in rows], lang
+    )
 
     return {
         'documents': [
@@ -170,20 +178,21 @@ def get_tracks_response(doc_type, model, locale_model, request):
                 'document_id': row.document_id,
                 'type': doc_type,
                 'title': titles.get(row.document_id),
-                'geometry': {
-                    'geom_detail': geojson_from_wkbelement(row.geom_detail)
-                }
+                'geometry': {'geom_detail': geojson_from_wkbelement(row.geom_detail)},
             }
             for row in rows
         ],
-        'truncated': False
+        'truncated': False,
     }
 
 
 def get_heatmap_response(doc_type, request):
     return get_heatmap(
-        doc_type, _search_params(request),
-        request.validated['bbox'], request.validated['zoom'])
+        doc_type,
+        _search_params(request),
+        request.validated['bbox'],
+        request.validated['zoom'],
+    )
 
 
 # The heatmap resources return a grid of density buckets for the given bbox,
@@ -220,7 +229,6 @@ def get_heatmap_response(doc_type, request):
 
 @resource(path='/outings/map/heatmap', cors_policy=cors_policy)
 class OutingsHeatmapRest(ACLDefault):
-
     @view(validators=[validate_bbox, validate_zoom])
     def get(self):
         return get_heatmap_response(OUTING_TYPE, self.request)
@@ -228,16 +236,13 @@ class OutingsHeatmapRest(ACLDefault):
 
 @resource(path='/outings/map/tracks', cors_policy=cors_policy)
 class OutingsTracksRest(ACLDefault):
-
     @view(validators=[validate_bbox, validate_preferred_lang_param])
     def get(self):
-        return get_tracks_response(
-            OUTING_TYPE, Outing, OutingLocale, self.request)
+        return get_tracks_response(OUTING_TYPE, Outing, OutingLocale, self.request)
 
 
 @resource(path='/routes/map/heatmap', cors_policy=cors_policy)
 class RoutesHeatmapRest(ACLDefault):
-
     @view(validators=[validate_bbox, validate_zoom])
     def get(self):
         return get_heatmap_response(ROUTE_TYPE, self.request)
@@ -245,8 +250,6 @@ class RoutesHeatmapRest(ACLDefault):
 
 @resource(path='/routes/map/tracks', cors_policy=cors_policy)
 class RoutesTracksRest(ACLDefault):
-
     @view(validators=[validate_bbox, validate_preferred_lang_param])
     def get(self):
-        return get_tracks_response(
-            ROUTE_TYPE, Route, RouteLocale, self.request)
+        return get_tracks_response(ROUTE_TYPE, Route, RouteLocale, self.request)

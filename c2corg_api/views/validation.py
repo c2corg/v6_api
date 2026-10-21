@@ -186,8 +186,7 @@ def validate_token_pagination(request, **kwargs):
 
 
 def validate_zoom(request, **kwargs):
-    """Checks that a required `zoom=...` integer query parameter is given.
-    """
+    """Checks that a required `zoom=...` integer query parameter is given."""
     check_get_for_integer_property(request, 'zoom', True)
 
 
