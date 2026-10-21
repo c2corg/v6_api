@@ -285,8 +285,11 @@ def parse(archive_file, today=None):
             if row['trip_id'] in trips and row['stop_id'] in stops:
                 minutes = _minutes(
                     row.get('departure_time') or row.get('arrival_time'))
-                sequences[row['trip_id']].append(
-                    (int(row['stop_sequence']), row['stop_id'], minutes))
+                # the id of the stop is the string of stops.txt, not a copy
+                # for each of the millions of rows of a large feed
+                sequences[row['trip_id']].append((
+                    int(row['stop_sequence']), stops[row['stop_id']]['id'],
+                    minutes))
         for trip_id, sequence in sequences.items():
             sequence.sort()
             trip = trips[trip_id]

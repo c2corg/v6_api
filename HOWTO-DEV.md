@@ -207,12 +207,44 @@ The lines and stops shown on the maps come from open GTFS feeds, listed in
 attribution). Adding a network is adding an entry.
 
 - Import the feeds (the ones that did not change since the last import are
-  skipped; `--feed <id>` imports only this feed, `--force` imports it
-  anyway):
+  skipped; `--feed <id>` imports only this feed, and can be repeated, `--force`
+  imports it anyway):
 
 ```shell
 import_gtfs development.ini [--feed giffre] [--force]
 ```
+
+Ids of the feeds to start with (`feeds.json` has more: the other departments,
+the other ski resorts and the school lines are left out on purpose). The lines
+of a feed without paths (`shapes.txt`) are not drawn, its stops and timetables
+are shown anyway.
+
+| Region | Ids |
+| --- | --- |
+| Auvergne-Rhône-Alpes | `isere`, `savoie`, `haute-savoie`, `drome`, `ardeche`, `cars-region-express`, `chamonix`, `sibra`, `tag`, `synchro` |
+| Provence-Alpes-Côte d'Azur | `zou-express`, `zou-proximite`, `zou-trains`, `altigo`, `queyras`, `ecrins` |
+| Nouvelle-Aquitaine (Pyrénées) | `pyrenees-atlantiques`, `txik-txak`, `idelis`, `oloron` |
+| Occitanie (Pyrénées) | `lio-occitanie`, `tlp`, `arrens-marsous`, `bagneres-la-mongie` |
+| Switzerland | none: see below |
+
+```shell
+import_gtfs development.ini --feed isere --feed savoie --feed haute-savoie
+```
+
+Notes:
+
+- `lio-occitanie`, `puy-de-dome`, `drome` and `ardeche` are the largest feeds
+  (18 to 26 MB zipped): the import reads the whole timetable of a feed in
+  memory, plan a few GB for them, and import the feeds one at a time with
+  `--feed` on a small machine.
+- `cars-region-express` and the departments overlap on some stops: a stop can
+  be drawn twice.
+- The ski resorts shuttles (`courchevel-*`, `belleville`, `val-d-isere`...)
+  only run in season: their timetables are empty out of it.
+- Switzerland is not importable yet: the national GTFS feed
+  (opentransportdata.swiss, updated twice a week, the download link changes
+  with each release) has no `shapes.txt`, it is about 120 MB zipped, and it
+  needs an importer that does not keep a whole feed in memory.
 
 The same import runs every month (the 1st, at 3:00) in the background jobs
 (`python c2corg_api/scripts/jobs/scheduler.py development.ini`).
