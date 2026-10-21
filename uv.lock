@@ -217,7 +217,7 @@ requires-dist = [
     { name = "setuptools", specifier = "==78.1.1" },
     { name = "shapely", specifier = "==2.1.2" },
     { name = "sqlalchemy", specifier = "==1.3.24" },
-    { name = "transaction", specifier = "==5.0" },
+    { name = "transaction", specifier = "==5.1" },
     { name = "waitress", specifier = "==3.0.2" },
     { name = "zipp", specifier = ">=3.19.1" },
     { name = "zope-sqlalchemy", specifier = "==3.1" },
@@ -1284,14 +1284,14 @@ wheels = [
 
 [[package]]
 name = "transaction"
-version = "5.0"
+version = "5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "zope-interface" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ef/fe/37ef03bdecfb078053421dc7ba2ed974c57e22548f2bd235a9ec5cd8efbb/transaction-5.0.tar.gz", hash = "sha256:106e7bd782bcc0cb5119fc9225b0c9a71dfc53adb938be905223adaef22b1174", size = 87121, upload-time = "2024-09-18T07:25:05.921Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0e/d9/df20286b7d3073d1b26e5267ffc43fc07e90550b7d2d71d2cc7c1ca8852a/transaction-5.1.tar.gz", hash = "sha256:f6ca8639a3e54f6991de0d9c0983a7cd91acb21a825cb544c168269be956bd41", size = 70013, upload-time = "2026-03-17T07:47:00.54Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ae/2a/b531f79737312fedf0af878e38bfd42be3a31a7cc74bc89c5f22173ce2ad/transaction-5.0-py3-none-any.whl", hash = "sha256:b4c0b2d49a042d86235fa76531c3356b66d7635bb0e9f29ba2512915fc7b7a42", size = 46295, upload-time = "2024-09-18T07:25:03.686Z" },
+    { url = "https://files.pythonhosted.org/packages/53/c4/6fc6a256e4873fdc1daf34fb6a6ff4d7f9dac49505a7004f5cac3a485cfc/transaction-5.1-py3-none-any.whl", hash = "sha256:05aa77c4543cec8b541565ad8b304857490878605ed727851bc5a531b9060789", size = 46386, upload-time = "2026-03-17T07:46:59.05Z" },
 ]
 
 [[package]]
