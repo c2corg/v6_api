@@ -1,12 +1,13 @@
 import logging
+from os.path import isfile
 
-from c2corg_api.security.acl import ACLDefault
+from cornice.resource import resource, view
+
 from c2corg_api.caching import cache_document_detail
 from c2corg_api.models import DBSession, es_sync
 from c2corg_api.search import elasticsearch_config
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy
-from cornice.resource import resource, view
-from os.path import isfile
 
 log = logging.getLogger(__name__)
 

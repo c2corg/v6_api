@@ -5,17 +5,17 @@ from c2corg_api.models.article import Article
 from c2corg_api.models.book import Book
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.outing import Outing, OutingLocale
-from c2corg_api.models.xreport import Xreport, XreportLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.models.xreport import Xreport, XreportLocale
+from c2corg_api.scripts.es.fill_index import fill_index
 from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.book_mapping import SearchBook
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
-from c2corg_api.search.mappings.xreport_mapping import SearchXreport
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
+from c2corg_api.search.mappings.xreport_mapping import SearchXreport
 from c2corg_api.tests import BaseTestCase
-from c2corg_api.scripts.es.fill_index import fill_index
 
 
 class FillIndexTest(BaseTestCase):

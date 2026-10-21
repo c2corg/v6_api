@@ -1,17 +1,18 @@
-from datetime import datetime, timedelta, UTC
-from c2corg_api.models.user import User
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey
-from sqlalchemy.orm import relationship, backref
-from sqlalchemy.sql.expression import over, and_, asc
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import backref, relationship
+from sqlalchemy.sql.expression import and_, asc, over
 from sqlalchemy.sql.functions import func
 
 from c2corg_api.models import Base, DBSession, schema, users_schema
 from c2corg_api.models.document import (
-    Document,
     ArchiveDocument,
-    ArchiveDocumentLocale,
     ArchiveDocumentGeometry,
+    ArchiveDocumentLocale,
+    Document,
 )
+from c2corg_api.models.user import User
 
 
 class HistoryMetaData(Base):

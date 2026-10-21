@@ -6,13 +6,11 @@ removed.
 """
 
 import logging
-
 import os
 import sys
 
 from pyramid.paster import get_appsettings, setup_logging
 from pyramid.scripts.common import parse_vars
-
 from redis.client import Redis
 from redis.connection import ConnectionPool
 

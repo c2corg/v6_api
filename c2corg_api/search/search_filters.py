@@ -1,12 +1,9 @@
 import logging
 import math
 import re
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from functools import partial
 
-from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.search import create_search, get_text_query_on_title, search_documents
-from c2corg_api.search.mapping_types import reserved_query_fields
 from elasticsearch_dsl.query import (
     Bool,
     GeoBoundingBox,
@@ -17,6 +14,10 @@ from elasticsearch_dsl.query import (
     Terms,
 )
 from pyproj import Transformer
+
+from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.search import create_search, get_text_query_on_title, search_documents
+from c2corg_api.search.mapping_types import reserved_query_fields
 
 log = logging.getLogger(__name__)
 

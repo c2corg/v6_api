@@ -1,35 +1,35 @@
-from c2corg_api.models.route import ROUTE_TYPE, Route
-from c2corg_api.search.mapping import SearchDocument, BaseMeta
-from c2corg_api.search.mapping_types import (
-    QueryableMixin,
-    QInteger,
-    QEnumArray,
-    QEnum,
-    QLong,
-    QEnumRange,
-    QNumberRange,
-)
-from c2corg_api.search.utils import get_title
 from c2corg_api.models.common.sortable_search_attributes import (
+    sortable_aid_ratings,
+    sortable_climbing_ratings,
+    sortable_engagement_ratings,
+    sortable_equipment_ratings,
+    sortable_exposition_ratings,
+    sortable_exposition_rock_ratings,
+    sortable_global_ratings,
+    sortable_hiking_ratings,
+    sortable_ice_ratings,
+    sortable_labande_ski_ratings,
+    sortable_mixed_ratings,
+    sortable_mtb_down_ratings,
+    sortable_mtb_up_ratings,
+    sortable_risk_ratings,
     sortable_route_duration_types,
     sortable_ski_ratings,
-    sortable_exposition_ratings,
-    sortable_labande_ski_ratings,
-    sortable_global_ratings,
-    sortable_engagement_ratings,
-    sortable_risk_ratings,
-    sortable_equipment_ratings,
-    sortable_ice_ratings,
-    sortable_mixed_ratings,
-    sortable_exposition_rock_ratings,
-    sortable_aid_ratings,
-    sortable_via_ferrata_ratings,
-    sortable_hiking_ratings,
     sortable_snowshoe_ratings,
-    sortable_mtb_up_ratings,
-    sortable_mtb_down_ratings,
-    sortable_climbing_ratings,
+    sortable_via_ferrata_ratings,
 )
+from c2corg_api.models.route import ROUTE_TYPE, Route
+from c2corg_api.search.mapping import BaseMeta, SearchDocument
+from c2corg_api.search.mapping_types import (
+    QEnum,
+    QEnumArray,
+    QEnumRange,
+    QInteger,
+    QLong,
+    QNumberRange,
+    QueryableMixin,
+)
+from c2corg_api.search.utils import get_title
 
 
 class SearchRoute(SearchDocument):

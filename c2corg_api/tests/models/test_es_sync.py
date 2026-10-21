@@ -1,5 +1,4 @@
 from c2corg_api.models.es_sync import get_status, mark_as_updated
-
 from c2corg_api.tests import BaseTestCase
 
 

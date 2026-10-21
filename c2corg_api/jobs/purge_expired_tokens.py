@@ -1,8 +1,9 @@
-from c2corg_api.models.token import Token
+import logging
 from datetime import datetime
+
 from sqlalchemy.orm import sessionmaker
 
-import logging
+from c2corg_api.models.token import Token
 
 log = logging.getLogger(__name__)
 

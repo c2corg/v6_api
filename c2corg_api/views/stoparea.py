@@ -1,14 +1,13 @@
-from c2corg_api.models import DBSession
 from cornice.resource import resource, view
 
+from c2corg_api.models import DBSession
 from c2corg_api.models.stoparea import Stoparea
-
 from c2corg_api.views import cors_policy
 from c2corg_api.views.validation import (
     validate_id,
-    validate_pagination,
     validate_lang,
     validate_lang_param,
+    validate_pagination,
     validate_preferred_lang_param,
 )
 

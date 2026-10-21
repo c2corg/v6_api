@@ -1,17 +1,18 @@
 import logging
 
-from c2corg_api.security.acl import ACLDefault
+from colander import Integer, MappingSchema, SchemaNode, required
+from cornice.resource import resource
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPBadRequest
+
 from c2corg_api import DBSession
 from c2corg_api.models.document import Document
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import create_int_validator
-from colander import MappingSchema, SchemaNode, Integer, required
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from pyramid.httpexceptions import HTTPBadRequest
 
 log = logging.getLogger(__name__)
 

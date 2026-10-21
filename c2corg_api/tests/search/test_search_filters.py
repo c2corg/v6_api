@@ -1,14 +1,3 @@
-from c2corg_api.search import create_search, get_text_query_on_title
-from c2corg_api.search.mappings.image_mapping import SearchImage
-from c2corg_api.search.mappings.route_mapping import SearchRoute
-from c2corg_api.search.search_filters import (
-    create_filter,
-    build_query,
-    create_bbox_filter,
-)
-from c2corg_api.search.mappings.outing_mapping import SearchOuting
-from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
-from c2corg_api.tests import BaseTestCase
 from elasticsearch_dsl.query import (
     Bool,
     GeoBoundingBox,
@@ -18,6 +7,18 @@ from elasticsearch_dsl.query import (
     Term,
     Terms,
 )
+
+from c2corg_api.search import create_search, get_text_query_on_title
+from c2corg_api.search.mappings.image_mapping import SearchImage
+from c2corg_api.search.mappings.outing_mapping import SearchOuting
+from c2corg_api.search.mappings.route_mapping import SearchRoute
+from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
+from c2corg_api.search.search_filters import (
+    build_query,
+    create_bbox_filter,
+    create_filter,
+)
+from c2corg_api.tests import BaseTestCase
 
 
 class AdvancedSearchTest(BaseTestCase):

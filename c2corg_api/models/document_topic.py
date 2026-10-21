@@ -3,9 +3,9 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
 )
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import backref, relationship
 
-from c2corg_api.models import schema, Base
+from c2corg_api.models import Base, schema
 from c2corg_api.models.document import DocumentLocale
 
 

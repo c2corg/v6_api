@@ -1,12 +1,13 @@
+from json import loads
+
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry, UpdateType
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.views.document import DocumentRest
 from c2corg_api.tests.views import BaseTestRest
-from json import loads
+from c2corg_api.views.document import DocumentRest
 
 
 class TestDocumentRevertRest(BaseTestRest):

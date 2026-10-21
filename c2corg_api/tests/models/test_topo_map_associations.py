@@ -1,13 +1,12 @@
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import (
-    update_map,
     TopoMapAssociation,
-    update_maps_for_document,
     get_maps,
+    update_map,
+    update_maps_for_document,
 )
 from c2corg_api.models.waypoint import Waypoint
-
 from c2corg_api.tests import BaseTestCase
 
 

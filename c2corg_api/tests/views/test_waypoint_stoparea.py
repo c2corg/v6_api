@@ -1,7 +1,6 @@
-from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.stoparea import Stoparea
+from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
-
 from c2corg_api.tests.views import BaseDocumentTestRest
 
 

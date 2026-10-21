@@ -1,21 +1,20 @@
+from dogpile.cache.api import NO_VALUE
+
 from c2corg_api.caching import cache_document_version
-from c2corg_api.models.article import ArchiveArticle, Article, ARTICLE_TYPE
-from c2corg_api.models.association import AssociationLog, Association
+from c2corg_api.models.article import ARTICLE_TYPE, ArchiveArticle, Article
+from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.cache_version import get_cache_key
+from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.document import (
+    ArchiveDocumentLocale,
+    DocumentGeometry,
+    DocumentLocale,
+)
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
-
-from c2corg_api.models.document import (
-    ArchiveDocumentLocale,
-    DocumentLocale,
-    DocumentGeometry,
-)
-from c2corg_api.views.document import DocumentRest
-
 from c2corg_api.tests.views import BaseDocumentTestRest
-from c2corg_api.models.common.attributes import quality_types
-from dogpile.cache.api import NO_VALUE
+from c2corg_api.views.document import DocumentRest
 
 
 class TestArticleRest(BaseDocumentTestRest):

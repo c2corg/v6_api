@@ -5,11 +5,12 @@ LTag Extension for Python-Markdown
 See https://regex101.com/r/bVjbkp/6
 """
 
-from markdown.extensions import Extension
-from markdown.blockprocessors import BlockProcessor
-from markdown.treeprocessors import Treeprocessor
-from xml.etree import ElementTree  # nosec
 import re
+from xml.etree import ElementTree  # nosec
+
+from markdown.blockprocessors import BlockProcessor
+from markdown.extensions import Extension
+from markdown.treeprocessors import Treeprocessor
 
 
 def _pairwise(iterable):

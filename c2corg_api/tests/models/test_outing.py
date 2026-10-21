@@ -1,5 +1,4 @@
 from c2corg_api.models.outing import Outing, OutingLocale
-
 from c2corg_api.tests import BaseTestCase
 
 

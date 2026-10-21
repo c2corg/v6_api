@@ -2,9 +2,8 @@ import unittest
 
 import bcrypt
 
-from c2corg_api.models.user import User, Purpose, PasswordUtil
+from c2corg_api.models.user import PasswordUtil, Purpose, User
 from c2corg_api.models.user_profile import UserProfile
-
 from c2corg_api.tests import BaseTestCase
 
 

@@ -1,11 +1,19 @@
 from collections import defaultdict
+from urllib import parse as urllib_parse
 
-from c2corg_api.security.acl import ACLDefault
+from cornice.resource import resource, view
+from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
+from sqlalchemy.orm import load_only, undefer
+from sqlalchemy.sql.expression import and_, or_
+from sqlalchemy.sql.functions import func
+
 from c2corg_api.models import DBSession
-from c2corg_api.models.feed import DocumentChange, FollowedUser, FilterArea
+from c2corg_api.models.feed import DocumentChange, FilterArea, FollowedUser
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
+from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import cors_policy, restricted_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import document_configs
 from c2corg_api.views.validation import (
@@ -13,13 +21,6 @@ from c2corg_api.views.validation import (
     validate_token_pagination,
     validate_user_id,
 )
-from cornice.resource import resource, view
-from c2corg_api.views import cors_policy, restricted_view
-from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden
-from sqlalchemy.orm import undefer, load_only
-from sqlalchemy.sql.expression import or_, and_
-from sqlalchemy.sql.functions import func
-from urllib import parse as urllib_parse
 
 DEFAULT_PAGE_LIMIT = 10
 MAX_PAGE_LIMIT = 50

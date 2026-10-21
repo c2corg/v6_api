@@ -1,4 +1,10 @@
-from c2corg_api.security.acl import ACLDefault
+from colander import Integer, MappingSchema, SchemaNode, required
+from cornice.resource import resource
+from cornice.validators import colander_body_validator
+from sqlalchemy import not_
+from sqlalchemy.sql.expression import and_, or_
+from sqlalchemy.sql.functions import func
+
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.cache_version import (
@@ -13,16 +19,11 @@ from c2corg_api.models.route import Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.image import delete_all_files_for_image
 from c2corg_api.views.waypoint import update_linked_route_titles
-from colander import MappingSchema, required, SchemaNode, Integer
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from sqlalchemy import not_
-from sqlalchemy.sql.expression import and_, or_
-from sqlalchemy.sql.functions import func
 
 
 class MergeSchema(MappingSchema):

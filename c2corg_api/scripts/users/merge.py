@@ -1,12 +1,12 @@
 import argparse
-import sys
-import os
 import logging
-import transaction
+import os
+import sys
 
+import transaction
 from pyramid.paster import get_appsettings
 from sqlalchemy import engine_from_config
-from sqlalchemy.sql.expression import and_, or_, any_
+from sqlalchemy.sql.expression import and_, any_, or_
 from sqlalchemy.sql.functions import func
 
 from c2corg_api.models import DBSession
@@ -18,25 +18,25 @@ from c2corg_api.models.cache_version import (
 )
 from c2corg_api.models.document_history import HistoryMetaData
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
-from c2corg_api.models.feed import DocumentChange, FollowedUser, FilterArea
+from c2corg_api.models.feed import DocumentChange, FilterArea, FollowedUser
 from c2corg_api.models.mailinglist import Mailinglist
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.sso import SsoExternalId
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import (
-    UserProfile,
-    ArchiveUserProfile,
     USERPROFILE_TYPE,
+    ArchiveUserProfile,
+    UserProfile,
 )
 from c2corg_api.search import get_queue_config
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views.document_delete import (
-    remove_whole_document,
     remove_from_cache,
+    remove_whole_document,
     update_deleted_documents_list,
 )
-from c2corg_api.views.document_merge import transfer_associations, _and_in
+from c2corg_api.views.document_merge import _and_in, transfer_associations
 
 
 def usage(argv):

@@ -1,6 +1,6 @@
 from c2corg_api.models.image import IMAGE_TYPE, Image
-from c2corg_api.search.mapping import SearchDocument, BaseMeta
-from c2corg_api.search.mapping_types import QueryableMixin, QEnumArray, QInteger, QDate
+from c2corg_api.search.mapping import BaseMeta, SearchDocument
+from c2corg_api.search.mapping_types import QDate, QEnumArray, QInteger, QueryableMixin
 
 
 class SearchImage(SearchDocument):

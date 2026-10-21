@@ -1,28 +1,29 @@
 import datetime
 
+from dogpile.cache.api import NO_VALUE
+
 from c2corg_api.caching import cache_document_version
 from c2corg_api.models.article import Article
-from c2corg_api.models.association import AssociationLog, Association
+from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.cache_version import get_cache_key
-from c2corg_api.models.document import DocumentLocale, DocumentGeometry
+from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing
+from c2corg_api.models.route import Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
+from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.models.xreport import (
-    ArchiveXreport,
-    Xreport,
     XREPORT_TYPE,
+    ArchiveXreport,
     ArchiveXreportLocale,
+    Xreport,
     XreportLocale,
 )
-from c2corg_api.models.route import Route
-from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
 from c2corg_api.views.document import DocumentRest
-from c2corg_api.models.common.attributes import quality_types
-from dogpile.cache.api import NO_VALUE
 
 
 class TestXreportRest(BaseDocumentTestRest):

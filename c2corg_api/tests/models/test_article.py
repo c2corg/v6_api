@@ -1,6 +1,5 @@
-from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.article import Article
-
+from c2corg_api.models.document import DocumentLocale
 from c2corg_api.tests import BaseTestCase
 
 

@@ -1,41 +1,40 @@
 import functools
 
+from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPBadRequest
+
 from c2corg_api.models.area import (
-    schema_area,
-    Area,
-    schema_update_area,
     AREA_TYPE,
-    schema_create_area,
     ArchiveArea,
+    Area,
+    schema_area,
+    schema_create_area,
+    schema_update_area,
 )
 from c2corg_api.models.area_association import update_area
 from c2corg_api.models.cache_version import update_cache_version_for_area
-from c2corg_api.models.document import UpdateType, ArchiveDocumentLocale
-from c2corg_api.views.document_info import DocumentInfoRest
-from c2corg_api.views.document_schemas import area_documents_config
-from c2corg_api.views.document_version import DocumentVersionRest
-
 from c2corg_api.models.common.fields_area import fields_area
-from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
-
+from c2corg_api.models.document import ArchiveDocumentLocale, UpdateType
+from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import (
     DocumentRest,
     make_validator_create,
     make_validator_update,
 )
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import area_documents_config
+from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.validation import (
-    validate_id,
-    validate_pagination,
-    validate_lang_param,
-    validate_preferred_lang_param,
-    validate_lang,
     validate_associations,
-    validate_version_id,
     validate_cook_param,
+    validate_id,
+    validate_lang,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+    validate_version_id,
 )
-from pyramid.httpexceptions import HTTPBadRequest
 
 validate_area_create = make_validator_create(fields_area.get('required'))
 validate_area_update = make_validator_update(fields_area.get('required'))

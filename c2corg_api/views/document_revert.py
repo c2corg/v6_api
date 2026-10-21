@@ -1,54 +1,54 @@
 import logging
 
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api import DBSession
-from c2corg_api.models.area import AREA_TYPE, Area, ArchiveArea
-from c2corg_api.models.article import ARTICLE_TYPE, Article, ArchiveArticle
-from c2corg_api.models.book import BOOK_TYPE, Book, ArchiveBook
-from c2corg_api.models.document import Document, DocumentLocale, ArchiveDocumentLocale
-from c2corg_api.models.document_history import DocumentVersion
-from c2corg_api.models.image import IMAGE_TYPE, Image, ArchiveImage
-from c2corg_api.models.outing import (
-    OUTING_TYPE,
-    Outing,
-    OutingLocale,
-    ArchiveOuting,
-    ArchiveOutingLocale,
-)
-from c2corg_api.models.route import (
-    ROUTE_TYPE,
-    Route,
-    RouteLocale,
-    ArchiveRoute,
-    ArchiveRouteLocale,
-)
-from c2corg_api.models.waypoint import (
-    WAYPOINT_TYPE,
-    Waypoint,
-    WaypointLocale,
-    ArchiveWaypoint,
-    ArchiveWaypointLocale,
-)
-from c2corg_api.models.xreport import (
-    XREPORT_TYPE,
-    Xreport,
-    XreportLocale,
-    ArchiveXreport,
-    ArchiveXreportLocale,
-)
-from c2corg_api.views import cors_policy, restricted_json_view
-from c2corg_api.views.area import update_associations
-from c2corg_api.views.document import DocumentRest
-from c2corg_api.views.waypoint import update_linked_route_titles
-from c2corg_api.views.route import update_linked_attributes
-from c2corg_api.models.common.attributes import default_langs
-from colander import MappingSchema, SchemaNode, Integer, String, required, OneOf
+from colander import Integer, MappingSchema, OneOf, SchemaNode, String, required
 from cornice.resource import resource
 from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest
-from sqlalchemy.orm import joinedload, contains_eager
-from sqlalchemy.orm import with_polymorphic
-from sqlalchemy.sql.expression import exists, and_
+from sqlalchemy.orm import contains_eager, joinedload, with_polymorphic
+from sqlalchemy.sql.expression import and_, exists
+
+from c2corg_api import DBSession
+from c2corg_api.models.area import AREA_TYPE, ArchiveArea, Area
+from c2corg_api.models.article import ARTICLE_TYPE, ArchiveArticle, Article
+from c2corg_api.models.book import BOOK_TYPE, ArchiveBook, Book
+from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.models.document import ArchiveDocumentLocale, Document, DocumentLocale
+from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.image import IMAGE_TYPE, ArchiveImage, Image
+from c2corg_api.models.outing import (
+    OUTING_TYPE,
+    ArchiveOuting,
+    ArchiveOutingLocale,
+    Outing,
+    OutingLocale,
+)
+from c2corg_api.models.route import (
+    ROUTE_TYPE,
+    ArchiveRoute,
+    ArchiveRouteLocale,
+    Route,
+    RouteLocale,
+)
+from c2corg_api.models.waypoint import (
+    WAYPOINT_TYPE,
+    ArchiveWaypoint,
+    ArchiveWaypointLocale,
+    Waypoint,
+    WaypointLocale,
+)
+from c2corg_api.models.xreport import (
+    XREPORT_TYPE,
+    ArchiveXreport,
+    ArchiveXreportLocale,
+    Xreport,
+    XreportLocale,
+)
+from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views.area import update_associations
+from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.route import update_linked_attributes
+from c2corg_api.views.waypoint import update_linked_route_titles
 
 log = logging.getLogger(__name__)
 

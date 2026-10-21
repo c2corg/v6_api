@@ -1,5 +1,5 @@
-from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
+from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.document_tag import get_tag_relation

@@ -1,27 +1,25 @@
 import os
 import sys
 
+from elasticsearch_dsl import Index
+from pyramid.paster import (
+    get_appsettings,
+    setup_logging,
+)
+from pyramid.scripts.common import parse_vars
+
+from c2corg_api.search import configure_es_from_config, elasticsearch_config
+from c2corg_api.search.mapping import analysis_settings
 from c2corg_api.search.mappings.area_mapping import SearchArea
 from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.book_mapping import SearchBook
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
-from c2corg_api.search.mappings.xreport_mapping import SearchXreport
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
-from elasticsearch_dsl import Index
-
-from pyramid.paster import (
-    get_appsettings,
-    setup_logging,
-)
-
-from pyramid.scripts.common import parse_vars
-
-from c2corg_api.search.mapping import analysis_settings
-from c2corg_api.search import configure_es_from_config, elasticsearch_config
+from c2corg_api.search.mappings.xreport_mapping import SearchXreport
 
 
 def usage(argv):

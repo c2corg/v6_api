@@ -2,49 +2,48 @@ import datetime
 import json
 from unittest.mock import patch
 
+from dogpile.cache.api import NO_VALUE
+from shapely.geometry import Point, shape
+
+from c2corg_api import caching
 from c2corg_api.caching import (
-    cache_document_listing,
     cache_document_history,
+    cache_document_listing,
     cache_document_version,
 )
-from c2corg_api import caching
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association
-from c2corg_api.models.cache_version import get_cache_key, CacheVersion
+from c2corg_api.models.cache_version import CacheVersion, get_cache_key
+from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.document import (
+    DOCUMENT_TYPE,
+    ArchiveDocumentGeometry,
+    DocumentGeometry,
+    DocumentLocale,
+)
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.outing import Outing, OutingLocale
+from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
+from c2corg_api.models.waypoint import (
+    WAYPOINT_TYPE,
+    ArchiveWaypoint,
+    ArchiveWaypointLocale,
+    Waypoint,
+    WaypointLocale,
+)
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.tests.search import reset_search_index
+from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.document_listings import get_documents
 from c2corg_api.views.waypoint import waypoint_documents_config
-from c2corg_api.models.common.attributes import quality_types
-from dogpile.cache.api import NO_VALUE
-from shapely.geometry import shape, Point
-
-from c2corg_api.models.route import Route, RouteLocale
-from c2corg_api.models.waypoint import (
-    Waypoint,
-    WaypointLocale,
-    ArchiveWaypoint,
-    ArchiveWaypointLocale,
-    WAYPOINT_TYPE,
-)
-from c2corg_api.models.document import (
-    DocumentGeometry,
-    ArchiveDocumentGeometry,
-    DocumentLocale,
-    DOCUMENT_TYPE,
-)
-from c2corg_api.models.document_topic import DocumentTopic
-from c2corg_api.views.document import DocumentRest
-
-from c2corg_api.tests.views import BaseDocumentTestRest
 
 
 class TestWaypointRest(BaseDocumentTestRest):

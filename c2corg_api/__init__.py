@@ -1,23 +1,20 @@
 import logging
 import os
+
 import requests
+from pyramid.authorization import ACLAuthorizationPolicy
+from pyramid.config import Configurator
+from pyramid.settings import asbool
+from sqlalchemy import engine_from_config, event, exc, text
+from sqlalchemy.pool import Pool
 
 from c2corg_api.caching import configure_caches
-from c2corg_api.security.acl import ACLDefault
-from pyramid.config import Configurator
-from sqlalchemy import engine_from_config, exc, event
-from sqlalchemy.pool import Pool
-from sqlalchemy import text
-
+from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route
-
-from c2corg_api.models import DBSession
 from c2corg_api.search import configure_es_from_config, get_queue_config
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import configure_cors_policy
-
-from pyramid.authorization import ACLAuthorizationPolicy
-from pyramid.settings import asbool
 
 log = logging.getLogger(__name__)
 
@@ -52,8 +49,8 @@ def main(global_config, **settings):
         bypass_auth = asbool(settings['noauthorization'])
 
     if not bypass_auth:
-        from c2corg_api.security.roles import groupfinder
         from c2corg_api.security.jwt_policy import IntegerSubJWTAuthenticationPolicy
+        from c2corg_api.security.roles import groupfinder
 
         policy = IntegerSubJWTAuthenticationPolicy(
             private_key=settings['jwt.private_key'],

@@ -3,10 +3,10 @@ import datetime
 from c2corg_api.models.area import Area
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.feed import DocumentChange, FilterArea, FollowedUser
-from c2corg_api.models.outing import Outing, OutingLocale, OUTING_TYPE
-from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
+from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
+from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.user import User
-from c2corg_api.models.waypoint import Waypoint, WaypointLocale, WAYPOINT_TYPE
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint, WaypointLocale
 from c2corg_api.tests.views import BaseTestRest
 
 

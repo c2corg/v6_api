@@ -1,8 +1,9 @@
 import logging
 
+from cornice.resource import resource, view
+
 from c2corg_api.views import cors_policy
 from c2corg_api.views.markdown import cook
-from cornice.resource import resource, view
 
 log = logging.getLogger(__name__)
 

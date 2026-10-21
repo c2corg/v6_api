@@ -10,14 +10,13 @@ from c2corg_api.models.cache_version import (
     update_cache_version_for_area,
     update_cache_version_for_map,
 )
-from c2corg_api.models.outing import Outing, OUTING_TYPE
-from c2corg_api.models.route import Route, ROUTE_TYPE
+from c2corg_api.models.outing import OUTING_TYPE, Outing
+from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE, WaypointLocale
-
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint, WaypointLocale
 from c2corg_api.tests import BaseTestCase
 from c2corg_api.views.document import DocumentRest
 

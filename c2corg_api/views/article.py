@@ -1,41 +1,40 @@
 import functools
 
+from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
+
 from c2corg_api.models import DBSession
 from c2corg_api.models.article import (
+    ARTICLE_TYPE,
+    ArchiveArticle,
     Article,
     schema_article,
     schema_create_article,
     schema_update_article,
-    ARTICLE_TYPE,
-    ArchiveArticle,
 )
+from c2corg_api.models.common.fields_article import fields_article
 from c2corg_api.models.document import ArchiveDocumentLocale
 from c2corg_api.models.document_history import has_been_created_by
-from c2corg_api.views.document_info import DocumentInfoRest
-from c2corg_api.views.document_version import DocumentVersionRest
-from pyramid.httpexceptions import HTTPNotFound, HTTPBadRequest, HTTPForbidden
-
-from c2corg_api.models.common.fields_article import fields_article
-from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
+from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
-
-from c2corg_api.views.document_schemas import article_documents_config
 from c2corg_api.views.document import (
     DocumentRest,
     make_validator_create,
     make_validator_update,
 )
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import article_documents_config
+from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.validation import (
-    validate_id,
-    validate_pagination,
-    validate_lang_param,
-    validate_preferred_lang_param,
     validate_associations,
-    validate_lang,
-    validate_version_id,
     validate_cook_param,
+    validate_id,
+    validate_lang,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+    validate_version_id,
 )
 
 validate_article_create = make_validator_create(fields_article.get('required'))

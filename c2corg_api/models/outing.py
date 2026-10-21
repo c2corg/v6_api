@@ -1,27 +1,24 @@
 import colander
-from c2corg_api.models.schema_utils import (
-    restrict_schema,
-    get_update_schema,
-    get_create_schema,
-)
-from sqlalchemy import Column, Integer, Boolean, SmallInteger, String, Date, ForeignKey
-
 from colanderalchemy import SQLAlchemySchemaNode
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, SmallInteger, String
 
-from c2corg_api.models import schema, Base
-from c2corg_api.models.utils import ArrayOfEnum
-from c2corg_api.models.utils import copy_attributes
+from c2corg_api.models import Base, enums, schema
+from c2corg_api.models.common import document_types
 from c2corg_api.models.document import (
     ArchiveDocument,
+    ArchiveDocumentLocale,
     Document,
     DocumentLocale,
-    ArchiveDocumentLocale,
-    schema_locale_attributes,
-    schema_attributes,
     get_geometry_schema_overrides,
+    schema_attributes,
+    schema_locale_attributes,
 )
-from c2corg_api.models import enums
-from c2corg_api.models.common import document_types
+from c2corg_api.models.schema_utils import (
+    get_create_schema,
+    get_update_schema,
+    restrict_schema,
+)
+from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
 OUTING_TYPE = document_types.OUTING_TYPE
 

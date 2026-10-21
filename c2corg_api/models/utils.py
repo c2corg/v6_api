@@ -1,11 +1,13 @@
-from geoalchemy2 import WKBElement, shape as ga_shape
+import re
+
+import sqlalchemy as sa
+from geoalchemy2 import WKBElement
+from geoalchemy2 import shape as ga_shape
 from geomet import wkb
 from shapely.geometry import LineString, MultiLineString, shape
 from sqlalchemy.dialects import postgresql
-import sqlalchemy as sa
 from sqlalchemy.sql.expression import and_
 from sqlalchemy.sql.functions import func
-import re
 
 
 def copy_attributes(obj_from, obj_to, attributes):

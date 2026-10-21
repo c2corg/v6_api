@@ -1,16 +1,24 @@
+from functools import cache
+
 from c2corg_api.models.area import AREA_TYPE, Area, schema_listing_area
 from c2corg_api.models.article import ARTICLE_TYPE, Article, schema_listing_article
 from c2corg_api.models.book import BOOK_TYPE, Book, schema_listing_book
+from c2corg_api.models.common import attributes
+from c2corg_api.models.common.fields_area import fields_area
+from c2corg_api.models.common.fields_article import fields_article
+from c2corg_api.models.common.fields_book import fields_book
+from c2corg_api.models.common.fields_coverage import fields_coverage
+from c2corg_api.models.common.fields_image import fields_image
+from c2corg_api.models.common.fields_outing import fields_outing
+from c2corg_api.models.common.fields_route import fields_route
+from c2corg_api.models.common.fields_topo_map import fields_topo_map
+from c2corg_api.models.common.fields_user_profile import fields_user_profile
+from c2corg_api.models.common.fields_waypoint import fields_waypoint
+from c2corg_api.models.common.fields_xreport import fields_xreport
 from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage, schema_listing_coverage
 from c2corg_api.models.image import IMAGE_TYPE, Image, schema_listing_image
 from c2corg_api.models.outing import OUTING_TYPE, Outing, schema_outing
-from c2corg_api.models.xreport import (
-    XREPORT_TYPE,
-    Xreport,
-    schema_listing_xreport,
-    XreportLocale,
-)
-from c2corg_api.models.route import schema_route, ROUTE_TYPE, Route, RouteLocale
+from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale, schema_route
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.topo_map import MAP_TYPE, TopoMap, schema_listing_topo_map
 from c2corg_api.models.user_profile import (
@@ -20,24 +28,17 @@ from c2corg_api.models.user_profile import (
 )
 from c2corg_api.models.waypoint import (
     WAYPOINT_TYPE,
-    schema_waypoint,
     Waypoint,
     WaypointLocale,
+    schema_waypoint,
+)
+from c2corg_api.models.xreport import (
+    XREPORT_TYPE,
+    Xreport,
+    XreportLocale,
+    schema_listing_xreport,
 )
 from c2corg_api.views import set_author
-from c2corg_api.models.common import attributes
-from c2corg_api.models.common.fields_outing import fields_outing
-from c2corg_api.models.common.fields_xreport import fields_xreport
-from c2corg_api.models.common.fields_route import fields_route
-from c2corg_api.models.common.fields_waypoint import fields_waypoint
-from c2corg_api.models.common.fields_area import fields_area
-from c2corg_api.models.common.fields_article import fields_article
-from c2corg_api.models.common.fields_book import fields_book
-from c2corg_api.models.common.fields_image import fields_image
-from c2corg_api.models.common.fields_topo_map import fields_topo_map
-from c2corg_api.models.common.fields_user_profile import fields_user_profile
-from c2corg_api.models.common.fields_coverage import fields_coverage
-from functools import cache
 
 
 class GetDocumentsConfig:

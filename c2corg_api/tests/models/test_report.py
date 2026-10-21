@@ -1,5 +1,4 @@
 from c2corg_api.models.xreport import Xreport, XreportLocale
-
 from c2corg_api.tests import BaseTestCase
 
 

@@ -6,8 +6,8 @@ Must be run before fill_index.py when building the index from scratch.
 Usage: python create_index.py <config>.ini
 """
 
-import sys
 import logging
+import sys
 
 from pyramid.paster import get_appsettings, setup_logging
 from pyramid.scripts.common import parse_vars

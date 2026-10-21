@@ -1,7 +1,8 @@
-from c2corg_api.models import Base, schema
 from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import Column, CheckConstraint, ForeignKey
+from sqlalchemy.sql.schema import CheckConstraint, Column, ForeignKey
 from sqlalchemy.sql.sqltypes import DateTime, Integer, String
+
+from c2corg_api.models import Base, schema
 
 
 class ESSyncStatus(Base):

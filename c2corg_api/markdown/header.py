@@ -1,8 +1,9 @@
+import logging
+import re
+from xml.etree import ElementTree  # nosec
+
 from markdown import Extension
 from markdown.blockprocessors import BlockProcessor
-from xml.etree import ElementTree  # nosec
-import re
-import logging
 
 logger = logging.getLogger('MARKDOWN')
 

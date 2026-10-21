@@ -1,11 +1,11 @@
 import datetime
 
-from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.article import Article
+from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.image import Image
-from c2corg_api.models.outing import Outing, OUTING_TYPE
+from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint

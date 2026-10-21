@@ -1,16 +1,13 @@
-from pydiscourse.client import DiscourseClient
-
-import logging
-
-from base64 import b64encode, b64decode
-from pyramid.httpexceptions import HTTPBadRequest
-
-import hmac
 import hashlib
-import requests
+import hmac
+import logging
 import urllib.error
-
+from base64 import b64decode, b64encode
 from urllib.parse import parse_qs, urlparse
+
+import requests
+from pydiscourse.client import DiscourseClient
+from pyramid.httpexceptions import HTTPBadRequest
 
 log = logging.getLogger(__name__)
 

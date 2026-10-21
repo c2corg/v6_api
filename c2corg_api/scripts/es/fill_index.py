@@ -1,30 +1,27 @@
 import logging
-
 import os
 import sys
+from datetime import datetime, timedelta
 
 import transaction
-from c2corg_api.scripts.es import sync
 from pyramid.paster import (
     get_appsettings,
     setup_logging,
 )
-
 from pyramid.scripts.common import parse_vars
-from datetime import datetime, timedelta
-
 from sqlalchemy import engine_from_config
+from sqlalchemy.orm.session import sessionmaker
+from zope.sqlalchemy import register
 
-from c2corg_api.models import es_sync, document_types
+from c2corg_api.models import document_types, es_sync
 from c2corg_api.models.document import Document
+from c2corg_api.scripts.es import sync
 from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import (
     configure_es_from_config,
     elasticsearch_config,
     search_documents,
 )
-from sqlalchemy.orm.session import sessionmaker
-from zope.sqlalchemy import register
 
 
 def usage(argv):

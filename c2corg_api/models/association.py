@@ -1,23 +1,23 @@
+from colanderalchemy.schema import SQLAlchemySchemaNode
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, column
+from sqlalchemy.orm import relationship
+from sqlalchemy.schema import PrimaryKeyConstraint
+from sqlalchemy.sql.elements import literal_column
+from sqlalchemy.sql.expression import and_, or_, union
+from sqlalchemy.sql.functions import func
+
+from c2corg_api.models import Base, DBSession, schema, users_schema
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.book import BOOK_TYPE
+from c2corg_api.models.document import Document
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
-from colanderalchemy.schema import SQLAlchemySchemaNode
-from sqlalchemy import Boolean, Column, Integer, DateTime, ForeignKey, String, column
-from sqlalchemy.schema import PrimaryKeyConstraint
-from sqlalchemy.orm import relationship
-
-from c2corg_api.models import Base, schema, users_schema, DBSession
-from c2corg_api.models.document import Document
-from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import or_, and_, union
-from sqlalchemy.sql.functions import func
+from c2corg_api.models.xreport import XREPORT_TYPE
 
 
 class Association(Base):

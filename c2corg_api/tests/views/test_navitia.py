@@ -1,46 +1,47 @@
-from unittest import mock
-from shapely.geometry import Polygon
 import json
-import requests
-from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound, HTTPUnauthorized
-from unittest.mock import call
-from c2corg_api.tests import BaseTestCase
-from c2corg_api.views import to_json_dict
-from c2corg_api.models.route import schema_route
 import os
 from datetime import datetime, time
-from c2corg_api.views.navitia import (
-    start_job_background,
-    _store_job_progress,
-    get_job_status,
-    redis_client,
-    read_result_from_redis,
-    progress_stream,
-    compute_journey_reachable_routes,
-    compute_journey_reachable_waypoints,
-    navitia_get,
-    handle_navitia_response,
-    extract_meta_params,
-    extract_journey_params,
-    extract_isochrone_params,
-    is_wp_in_isochrone,
-    get_navitia_isochrone,
-    is_wp_journey_reachable,
-    MAX_TRIP_DURATION,
-    MIN_TRIP_DURATION,
-    BASE_URL,
-)
+from unittest import mock
+from unittest.mock import call
 
-from c2corg_api.models.route import Route
-from c2corg_api.models.waypoint import Waypoint
+import requests
+from dotenv import load_dotenv
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPUnauthorized,
+)
+from shapely.geometry import Polygon
+
 from c2corg_api.models.area import Area
 from c2corg_api.models.document import DocumentGeometry
-from pyramid.httpexceptions import HTTPInternalServerError
-
-from c2corg_api.views.navitia import MAX_ROUTE_THRESHOLD
-
-
-from dotenv import load_dotenv
+from c2corg_api.models.route import Route, schema_route
+from c2corg_api.models.waypoint import Waypoint
+from c2corg_api.tests import BaseTestCase
+from c2corg_api.views import to_json_dict
+from c2corg_api.views.navitia import (
+    BASE_URL,
+    MAX_ROUTE_THRESHOLD,
+    MAX_TRIP_DURATION,
+    MIN_TRIP_DURATION,
+    _store_job_progress,
+    compute_journey_reachable_routes,
+    compute_journey_reachable_waypoints,
+    extract_isochrone_params,
+    extract_journey_params,
+    extract_meta_params,
+    get_job_status,
+    get_navitia_isochrone,
+    handle_navitia_response,
+    is_wp_in_isochrone,
+    is_wp_journey_reachable,
+    navitia_get,
+    progress_stream,
+    read_result_from_redis,
+    redis_client,
+    start_job_background,
+)
 
 # load .env into os.environ (call once)
 load_dotenv()

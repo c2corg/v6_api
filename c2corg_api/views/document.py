@@ -1,65 +1,64 @@
 import logging
+from functools import partial
 
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.caching import cache_document_detail, cache_document_cooked
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPForbidden,
+    HTTPNotFound,
+)
+from sqlalchemy.orm import contains_eager, joinedload, load_only, with_polymorphic
+from sqlalchemy.orm.exc import StaleDataError
+
+import c2corg_api.views.document_associations as doc_associations
+from c2corg_api.caching import (
+    cache_document_cooked,
+    cache_document_detail,
+    get_or_create,
+)
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
-from c2corg_api.models.coverage import COVERAGE_TYPE
-from c2corg_api.models.area_association import update_areas_for_document, get_areas
+from c2corg_api.models.area_association import get_areas, update_areas_for_document
 from c2corg_api.models.association import create_associations, synchronize_associations
 from c2corg_api.models.cache_version import (
+    get_cache_key,
     update_cache_version,
     update_cache_version_associations,
-    get_cache_key,
 )
+from c2corg_api.models.coverage import COVERAGE_TYPE
 from c2corg_api.models.document import (
-    Document,
-    UpdateType,
-    DocumentLocale,
-    ArchiveDocumentLocale,
     ArchiveDocument,
     ArchiveDocumentGeometry,
-    set_available_langs,
+    ArchiveDocumentLocale,
+    Document,
+    DocumentLocale,
+    UpdateType,
     get_available_langs,
+    set_available_langs,
 )
-from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
+from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.feed import (
     update_feed_document_create,
     update_feed_document_update,
 )
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.models.topo_map import schema_listing_topo_map, MAP_TYPE
-from c2corg_api.models.topo_map_association import update_maps_for_document, get_maps
+from c2corg_api.models.topo_map import MAP_TYPE, schema_listing_topo_map
+from c2corg_api.models.topo_map_association import get_maps, update_maps_for_document
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.views import etag_cache, set_best_locale
-from c2corg_api.views import to_json_dict
-import c2corg_api.views.document_associations as doc_associations
+from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import etag_cache, set_best_locale, to_json_dict
 from c2corg_api.views.document_listings import (
     add_load_for_locales,
     add_load_for_profiles,
     get_documents,
 )
 from c2corg_api.views.validation import (
-    check_required_fields,
-    check_duplicate_locales,
     association_permission_checker,
     association_permission_removal_checker,
+    check_duplicate_locales,
+    check_required_fields,
 )
-
-from functools import partial
-
-from c2corg_api.caching import get_or_create
-from pyramid.httpexceptions import (
-    HTTPNotFound,
-    HTTPConflict,
-    HTTPBadRequest,
-    HTTPForbidden,
-)
-from sqlalchemy.orm import joinedload, contains_eager, load_only
-from sqlalchemy.orm.exc import StaleDataError
-from sqlalchemy.orm import with_polymorphic
-
 
 log = logging.getLogger(__name__)
 

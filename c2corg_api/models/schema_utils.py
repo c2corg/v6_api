@@ -1,4 +1,4 @@
-from colander import MappingSchema, SchemaNode, String, Integer, Sequence
+from colander import Integer, MappingSchema, SchemaNode, Sequence, String
 
 default_fields_doc = ['document_id', 'version', 'waypoint_type']
 default_fields_locale = ['version', 'lang']

@@ -1,12 +1,12 @@
 from c2corg_api.models.association import (
-    _get_current_associations,
     Association,
     _diff_associations,
+    _get_current_associations,
     synchronize_associations,
 )
-from c2corg_api.models.route import Route, ROUTE_TYPE
+from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.tests import BaseTestCase
 
 

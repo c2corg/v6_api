@@ -1,7 +1,7 @@
-import transaction
 import logging
-from kombu.pools import producers
 
+import transaction
+from kombu.pools import producers
 
 log = logging.getLogger(__name__)
 

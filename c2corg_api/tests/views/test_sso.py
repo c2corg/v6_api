@@ -1,10 +1,10 @@
-from unittest.mock import patch, Mock
-from urllib.parse import urlparse, parse_qs
+from unittest.mock import Mock, patch
+from urllib.parse import parse_qs, urlparse
 
 from pydiscourse.exceptions import DiscourseClientError
 
+from c2corg_api.models.sso import SsoExternalId, SsoKey
 from c2corg_api.models.user import User
-from c2corg_api.models.sso import SsoKey, SsoExternalId
 from c2corg_api.security.discourse_client import set_discourse_client
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.sso import localized_now, sso_expire_from_now

@@ -1,9 +1,9 @@
-from unittest.mock import Mock, MagicMock
+from unittest.mock import MagicMock, Mock
 
 from c2corg_api.models.user import User
 from c2corg_api.security.discourse_client import (
-    set_discourse_client,
     APIDiscourseClient,
+    set_discourse_client,
 )
 from c2corg_api.tests.views import BaseTestRest
 

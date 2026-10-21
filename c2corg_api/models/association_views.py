@@ -1,3 +1,9 @@
+from sqlalchemy import Integer
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql.expression import and_, join, select, text, union
+from sqlalchemy.sql.functions import func
+
 from c2corg_api.ext import sqa_view
 from c2corg_api.models import Base, schema
 from c2corg_api.models.association import Association
@@ -6,11 +12,6 @@ from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
-from sqlalchemy.dialects import postgresql
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql.expression import and_, union, select, text, join
-from sqlalchemy.sql.functions import func
-from sqlalchemy import Integer
 
 # This file contains definitions for database views that are used when filling
 # the search index.

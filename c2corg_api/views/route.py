@@ -1,78 +1,73 @@
-from itertools import combinations
-
 import functools
-from sqlalchemy import case
+from itertools import combinations
+from operator import and_
 
-from c2corg_api.models import DBSession
-from c2corg_api.models.association import Association
-from c2corg_api.models.document import DocumentLocale, DocumentGeometry
-from c2corg_api.models.outing import Outing
-from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views.document_associations import get_first_column
-from c2corg_api.views.document_info import DocumentInfoRest
-from c2corg_api.views.document_listings import get_documents_for_ids
-from c2corg_api.views.document_schemas import (
-    route_documents_config,
-    route_schema_adaptor,
-    outing_documents_config,
-)
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.models.utils import get_mid_point
-from c2corg_api.search.advanced_search import get_all_filtered_docs
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
+from sqlalchemy import case, func, literal_column
+from sqlalchemy.orm import load_only
+from sqlalchemy.sql.expression import column, or_, text, union
 
-from c2corg_api.models.route import (
-    Route,
-    schema_route,
-    schema_update_route,
-    ArchiveRoute,
-    ArchiveRouteLocale,
-    RouteLocale,
-    ROUTE_TYPE,
-    schema_create_route,
-)
-from c2corg_api.views.document import (
-    DocumentRest,
-    make_validator_create,
-    make_validator_update,
-    NUM_RECENT_OUTINGS,
-)
-from c2corg_api.views import (
-    cors_policy,
-    restricted_json_view,
-    get_best_locale,
-    restricted_view,
-    set_default_geom_from_associations,
-)
-from c2corg_api.views.validation import (
-    validate_id,
-    validate_pagination,
-    validate_lang,
-    validate_version_id,
-    validate_lang_param,
-    validate_preferred_lang_param,
-    validate_associations,
-    validate_cook_param,
-)
-from c2corg_api.models.common.fields_route import fields_route
+from c2corg_api.models import DBSession
+from c2corg_api.models.area import Area, schema_listing_area
+from c2corg_api.models.area_association import AreaAssociation
+from c2corg_api.models.association import Association
 from c2corg_api.models.common.attributes import (
     activities,
     public_transportation_ratings,
 )
-from sqlalchemy.orm import load_only
-from sqlalchemy.sql.expression import text, or_, column, union
-
-from operator import and_
-from c2corg_api.models.area import Area
-from c2corg_api.models.area_association import AreaAssociation
-from c2corg_api.views import to_json_dict
-from c2corg_api.views.document import LIMIT_DEFAULT
+from c2corg_api.models.common.fields_route import fields_route
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
+from c2corg_api.models.outing import Outing
+from c2corg_api.models.route import (
+    ROUTE_TYPE,
+    ArchiveRoute,
+    ArchiveRouteLocale,
+    Route,
+    RouteLocale,
+    schema_create_route,
+    schema_route,
+    schema_update_route,
+)
+from c2corg_api.models.utils import get_mid_point
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
-from c2corg_api.models.area import schema_listing_area
-from sqlalchemy import func, literal_column
-
+from c2corg_api.search.advanced_search import get_all_filtered_docs
+from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import (
+    cors_policy,
+    get_best_locale,
+    restricted_json_view,
+    restricted_view,
+    set_default_geom_from_associations,
+    to_json_dict,
+)
+from c2corg_api.views.document import (
+    LIMIT_DEFAULT,
+    NUM_RECENT_OUTINGS,
+    DocumentRest,
+    make_validator_create,
+    make_validator_update,
+)
+from c2corg_api.views.document_associations import get_first_column
+from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_listings import get_documents_for_ids
+from c2corg_api.views.document_schemas import (
+    outing_documents_config,
+    route_documents_config,
+    route_schema_adaptor,
+)
+from c2corg_api.views.document_version import DocumentVersionRest
+from c2corg_api.views.validation import (
+    validate_associations,
+    validate_cook_param,
+    validate_id,
+    validate_lang,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+    validate_version_id,
+)
 
 validate_route_create = make_validator_create(fields_route, 'activities', activities)
 validate_route_update = make_validator_update(fields_route, 'activities', activities)

@@ -1,38 +1,37 @@
 import datetime
 import json
 
+from shapely.geometry import LineString, shape
+from shapely.geometry.point import Point
+
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.book import Book
+from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.outing import Outing, OutingLocale
+from c2corg_api.models.route import (
+    ROUTE_TYPE,
+    ArchiveRoute,
+    ArchiveRouteLocale,
+    Route,
+    RouteLocale,
+)
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.views.route import (
-    check_title_prefix,
-    _pt_rating,
-    _find_starting_and_ending_points,
-)
-from c2corg_api.models.common.attributes import quality_types
-from shapely.geometry import shape, LineString
-
-from c2corg_api.models.route import (
-    Route,
-    RouteLocale,
-    ArchiveRoute,
-    ArchiveRouteLocale,
-    ROUTE_TYPE,
-)
-from c2corg_api.models.document import DocumentGeometry, DocumentLocale
-from c2corg_api.models.document_topic import DocumentTopic
-from c2corg_api.views.document import DocumentRest
-
 from c2corg_api.tests.views import BaseDocumentTestRest
-from shapely.geometry.point import Point
+from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.route import (
+    _find_starting_and_ending_points,
+    _pt_rating,
+    check_title_prefix,
+)
 
 
 class TestRouteRest(BaseDocumentTestRest):

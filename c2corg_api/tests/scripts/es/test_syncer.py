@@ -1,15 +1,15 @@
 import transaction
+from elasticsearch.exceptions import NotFoundError
 
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.es_sync import ESDeletedDocument
-from c2corg_api.models.waypoint import Waypoint, WaypointLocale, WAYPOINT_TYPE
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint, WaypointLocale
 from c2corg_api.scripts.es.syncer import SyncWorker
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.tests import BaseTestCase
 from c2corg_api.views.document import DocumentRest
-from elasticsearch.exceptions import NotFoundError
 
 
 class SyncWorkerTest(BaseTestCase):

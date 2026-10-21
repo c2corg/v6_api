@@ -1,24 +1,20 @@
-import colander
+import logging
 
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.models.common import document_types
+import colander
+from cornice.resource import resource
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPInternalServerError
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association, association_keys_for_types
 from c2corg_api.models.cache_version import update_cache_version_direct
+from c2corg_api.models.common import document_types
 from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.user import User
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
-
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
-
 from c2corg_api.views import cors_policy, restricted_view
-
-from pyramid.httpexceptions import HTTPInternalServerError
-
-import logging
 
 log = logging.getLogger(__name__)
 

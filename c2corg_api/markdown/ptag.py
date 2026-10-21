@@ -5,10 +5,11 @@ c2corg p Extension for Python-Markdown
 Converts tags [p] to div with clear:both
 """
 
-from markdown.extensions import Extension
-from markdown.blockprocessors import BlockProcessor
-from xml.etree import ElementTree  # nosec
 import re
+from xml.etree import ElementTree  # nosec
+
+from markdown.blockprocessors import BlockProcessor
+from markdown.extensions import Extension
 
 P_RE = r'(?:\n|^)\[p\](?:\n|$)'
 

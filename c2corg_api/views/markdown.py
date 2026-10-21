@@ -1,7 +1,8 @@
+from pyramid.threadlocal import get_current_registry
+
 from c2corg_api.markdown import parse_code
 from c2corg_api.markdown.img import IMG_ID_RE, make_image_url_resolver
 from c2corg_api.models.image import get_image_filenames
-from pyramid.threadlocal import get_current_registry
 
 # locale properties that must not be cooked by markdown parser
 NOT_MARKDOWN_PROPERTY = {

@@ -1,22 +1,21 @@
 import json
 
+from shapely.geometry import Point, shape
+
+from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.document import ArchiveDocumentLocale, DocumentLocale
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import (
-    UserProfile,
-    ArchiveUserProfile,
     USERPROFILE_TYPE,
+    ArchiveUserProfile,
+    UserProfile,
 )
 from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.models.common.attributes import quality_types
-from shapely.geometry import shape, Point
-
-from c2corg_api.models.document import ArchiveDocumentLocale, DocumentLocale
-from c2corg_api.views.document import DocumentRest
-
 from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.views.document import DocumentRest
 
 
 class TestUserProfileRest(BaseDocumentTestRest):

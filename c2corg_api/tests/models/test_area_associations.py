@@ -1,13 +1,12 @@
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import (
-    update_area,
     AreaAssociation,
-    update_areas_for_document,
     get_areas,
+    update_area,
+    update_areas_for_document,
 )
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.waypoint import Waypoint
-
 from c2corg_api.tests import BaseTestCase
 
 

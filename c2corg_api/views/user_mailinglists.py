@@ -1,10 +1,11 @@
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api import DBSession
-from c2corg_api.models.user import User
-from c2corg_api.models.mailinglist import Mailinglist
-from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
-from c2corg_api.models.common.attributes import mailinglists as valid_mailinglists
 from cornice.resource import resource
+
+from c2corg_api import DBSession
+from c2corg_api.models.common.attributes import mailinglists as valid_mailinglists
+from c2corg_api.models.mailinglist import Mailinglist
+from c2corg_api.models.user import User
+from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
 
 
 def validate_mailinglist_statuses(request, **kwargs):

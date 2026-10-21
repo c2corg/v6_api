@@ -1,11 +1,10 @@
-from sqlalchemy import Column, Integer, Float, ForeignKey
 from colanderalchemy import SQLAlchemySchemaNode
-from sqlalchemy.orm import declared_attr
+from sqlalchemy import Column, Float, ForeignKey, Integer
+from sqlalchemy.orm import declared_attr, relationship
 
-from c2corg_api.models import schema, Base
-from c2corg_api.models.utils import copy_attributes
+from c2corg_api.models import Base, schema
 from c2corg_api.models.document import get_geometry_schema_overrides
-from sqlalchemy.orm import relationship
+from c2corg_api.models.utils import copy_attributes
 
 # don't remove this import
 # pylint: disable=unused-import

@@ -1,12 +1,12 @@
 from c2corg_api.models.common.document_types import (
-    ROUTE_TYPE,
-    OUTING_TYPE,
-    WAYPOINT_TYPE,
-    USERPROFILE_TYPE,
-    IMAGE_TYPE,
-    ARTICLE_TYPE,
     AREA_TYPE,
+    ARTICLE_TYPE,
     BOOK_TYPE,
+    IMAGE_TYPE,
+    OUTING_TYPE,
+    ROUTE_TYPE,
+    USERPROFILE_TYPE,
+    WAYPOINT_TYPE,
     XREPORT_TYPE,
 )
 

@@ -1,5 +1,5 @@
-from c2corg_api.tests import BaseTestCase
 from c2corg_api.search.utils import strip_bbcodes
+from c2corg_api.tests import BaseTestCase
 
 
 class UtilsTest(BaseTestCase):

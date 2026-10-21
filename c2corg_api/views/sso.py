@@ -1,9 +1,8 @@
+import logging
 from base64 import b64encode
 from datetime import datetime, timedelta
 from os import urandom
-from pytz import utc
 from urllib.parse import urlencode
-import logging
 
 import colander
 from cornice.resource import resource, view
@@ -12,28 +11,28 @@ from pydiscourse.exceptions import DiscourseClientError
 from pyramid.httpexceptions import (
     HTTPInternalServerError,
 )
-
-from c2corg_api.models.common.attributes import default_langs
+from pytz import utc
 
 from c2corg_api.models import DBSession
+from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.sso import (
-    SsoKey,
     SsoExternalId,
+    SsoKey,
 )
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import log_validated_user_i_know_what_i_do
 from c2corg_api.views import (
     cors_policy,
     json_view,
 )
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.user import (
     token_to_response,
-    validate_unique_attribute,
     validate_forum_username,
+    validate_unique_attribute,
 )
 
 CONST_EXPIRE_AFTER_MINUTES = 10

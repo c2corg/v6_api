@@ -1,10 +1,11 @@
 import re
 
+from sqlalchemy import event
+
 from c2corg_api.models.article import Article
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.image import Image
 from c2corg_api.tests.views import BaseTestRest
-from sqlalchemy import event
 
 
 class TestCookerRest(BaseTestRest):
