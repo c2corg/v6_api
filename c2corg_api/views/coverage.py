@@ -1,6 +1,7 @@
 import functools
 import json
 import logging
+import time
 
 from cornice.resource import resource, view
 from shapely.geometry import Point, shape
@@ -114,43 +115,49 @@ class PolygonCoverage(DocumentRest):
         return get_coverages(polygon)
 
 
+# The coverages (and their polygons) almost never change, but parsing all
+# their geometries is costly and done for every Navitia call: keep the parsed
+# polygons in memory for a few minutes. Each worker process has its own copy,
+# so a modified coverage is picked up by every worker after this delay.
+COVERAGES_CACHE_TTL = 300
+
+_coverages_cache = {'loaded_at': None, 'coverages': []}
+
+
+def _get_coverage_polygons():
+    """returns the list of (coverage_type, shapely polygon)"""
+    loaded_at = _coverages_cache['loaded_at']
+    if loaded_at is None or time.monotonic() - loaded_at > COVERAGES_CACHE_TTL:
+        _coverages_cache['coverages'] = [
+            (coverage.coverage_type, wkb_to_shape(coverage.geometry.geom_detail))
+            for coverage in DBSession.query(Coverage).all()
+        ]
+        _coverages_cache['loaded_at'] = time.monotonic()
+
+    return _coverages_cache['coverages']
+
+
+def clear_coverages_cache():
+    """forget the cached coverage polygons (they are loaded again on demand)"""
+    _coverages_cache['loaded_at'] = None
+    _coverages_cache['coverages'] = []
+
+
 def get_coverage(lon, lat):
-    """Get the coverage that contains a point(lon, lat)."""
+    """get the coverage that contains a point(lon, lat)"""
     pt = Point(lon, lat)
 
-    coverage_found = None
-
-    coverages = DBSession.query(Coverage).all()
-
-    for coverage in coverages:
-        geom = coverage.geometry.geom_detail
-
-        # convert WKB → Shapely polygon
-        poly = wkb_to_shape(geom)
-
+    for coverage_type, poly in _get_coverage_polygons():
         if poly.contains(pt):
-            coverage_found = coverage
-            break
+            return coverage_type
 
-    if coverage_found:
-        return coverage_found.coverage_type
-    else:
-        return None
+    return None
 
 
 def get_coverages(polygon):
-    """Get all the coverages that intersects a polygon."""
-    coverage_found = []
-
-    coverages = DBSession.query(Coverage).all()
-
-    for coverage in coverages:
-        geom = coverage.geometry.geom_detail
-
-        # convert WKB → Shapely polygon
-        poly = wkb_to_shape(geom)
-
-        if poly.contains(polygon) or poly.intersects(polygon):
-            coverage_found.append(coverage.coverage_type)
-
-    return coverage_found
+    """get all the coverages that intersects a polygon"""
+    return [
+        coverage_type
+        for coverage_type, poly in _get_coverage_polygons()
+        if poly.contains(polygon) or poly.intersects(polygon)
+    ]
