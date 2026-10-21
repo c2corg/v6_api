@@ -22,8 +22,6 @@ from c2corg_api.views.document_associations import get_first_column
 
 from c2corg_api.models.common.associations import valid_associations
 from c2corg_api.models.common.attributes import default_langs
-from c2corg_api.models.common.attributes import activities \
-    as valid_activities
 from c2corg_api.models.common import document_types
 from colander import null
 from cornice.errors import Errors
@@ -226,25 +224,6 @@ def validate_bbox(request, **kwargs):
         return
 
     request.validated['bbox'] = (xmin, ymin, xmax, ymax)
-
-
-def validate_activities(request, **kwargs):
-    """Checks and parses an optional `act=activity1,activity2` query
-    parameter into `request.validated['activities']` (a list, or `None`
-    if not given).
-    """
-    act_param = request.GET.get('act')
-    if not act_param:
-        request.validated['activities'] = None
-        return
-
-    values = act_param.split(',')
-    for value in values:
-        if value not in valid_activities:
-            request.errors.add('querystring', 'act', 'invalid activity')
-            return
-
-    request.validated['activities'] = values
 
 
 def validate_simple_token_pagination(request, **kwargs):
