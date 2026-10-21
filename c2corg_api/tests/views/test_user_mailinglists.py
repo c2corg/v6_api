@@ -10,7 +10,7 @@ class TestUserMailinglistsRest(BaseTestRest):
         super().setUp()
         self._prefix = '/users/mailinglists'
 
-        self.contributor = self.session.query(User).get(
+        self.contributor = self.session.get(User,
             self.global_userids['contributor'])
         ml1 = Mailinglist(
             listname='meteofrance-74',

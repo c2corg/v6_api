@@ -123,7 +123,7 @@ class TestLangs(BaseTestRest):
 
             self.assertEqual([lang], json['langs'])
 
-            user = self.session.query(User).get(user_id)
+            user = self.session.get(User, user_id)
             user.ratelimit_times = 0
 
     def test_preferred_lang(self):
@@ -134,8 +134,8 @@ class TestLangs(BaseTestRest):
 
             user_id = self.global_userids['contributor']
 
-            user = self.session.query(User).get(user_id)
+            user = self.session.get(User, user_id)
             self.session.expunge(user)
 
-            user = self.session.query(User).get(user_id)
+            user = self.session.get(User, user_id)
             self.assertEqual(user.lang, lang)
