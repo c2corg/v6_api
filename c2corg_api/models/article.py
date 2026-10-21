@@ -1,17 +1,20 @@
 from c2corg_api.models import schema, Base, enums, DBSession
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, schema_document_locale, schema_attributes)
+    ArchiveDocument,
+    Document,
+    schema_document_locale,
+    schema_attributes,
+)
 from c2corg_api.models.enums import article_category, activity_type
-from c2corg_api.models.schema_utils import get_update_schema, \
-    restrict_schema, get_create_schema
+from c2corg_api.models.schema_utils import (
+    get_update_schema,
+    restrict_schema,
+    get_create_schema,
+)
 from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
 from c2corg_api.models.common.fields_article import fields_article
 from colanderalchemy import SQLAlchemySchemaNode
-from sqlalchemy import (
-    Column,
-    Integer,
-    ForeignKey
-    )
+from sqlalchemy import Column, Integer, ForeignKey
 from c2corg_api.models.common import document_types
 
 ARTICLE_TYPE = document_types.ARTICLE_TYPE
@@ -30,12 +33,12 @@ class Article(_ArticleMixin, Document):
     __tablename__ = 'articles'
 
     document_id = Column(
-        Integer,
-        ForeignKey(schema + '.documents.document_id'), primary_key=True)
+        Integer, ForeignKey(schema + '.documents.document_id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': ARTICLE_TYPE,
-        'inherit_condition': Document.document_id == document_id
+        'inherit_condition': Document.document_id == document_id,
     }
 
     def to_archive(self):
@@ -54,12 +57,12 @@ class ArchiveArticle(_ArticleMixin, ArchiveDocument):
     __tablename__ = 'articles_archives'
 
     id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_archives.id'), primary_key=True)
+        Integer, ForeignKey(schema + '.documents_archives.id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': ARTICLE_TYPE,
-        'inherit_condition': ArchiveDocument.id == id
+        'inherit_condition': ArchiveDocument.id == id,
     }
 
     __table_args__ = Base.__table_args__
@@ -74,26 +77,22 @@ schema_article = SQLAlchemySchemaNode(
     # whitelisted attributes
     includes=schema_article_attributes + attributes,
     overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_article_locale]
-        },
-    })
+        'document_id': {'missing': None},
+        'version': {'missing': None},
+        'locales': {'children': [schema_article_locale]},
+    },
+)
 
 schema_create_article = get_create_schema(schema_article)
 schema_update_article = get_update_schema(schema_article)
-schema_listing_article = restrict_schema(
-    schema_article, fields_article.get('listing'))
+schema_listing_article = restrict_schema(schema_article, fields_article.get('listing'))
 
 
 def is_personal(article_id):
-    article_type = DBSession.query(Article.article_type). \
-        select_from(Article.__table__). \
-        filter(Article.document_id == article_id). \
-        scalar()
+    article_type = (
+        DBSession.query(Article.article_type)
+        .select_from(Article.__table__)
+        .filter(Article.document_id == article_id)
+        .scalar()
+    )
     return article_type == 'personal'

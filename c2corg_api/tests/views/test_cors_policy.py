@@ -30,13 +30,15 @@ class ConfigureCorsPolicyTest(unittest.TestCase):
         self.assertNotIn('*', cors_policy['origins'])
 
     def test_parses_space_separated_origins(self):
-        configure_cors_policy({
-            'cors.allowed_origins':
-                'https://www.camptocamp.org https://demov6.camptocamp.org'
-        })
+        configure_cors_policy(
+            {
+                'cors.allowed_origins': 'https://www.camptocamp.org https://demov6.camptocamp.org'
+            }
+        )
         self.assertEqual(
             cors_policy['origins'],
-            ('https://www.camptocamp.org', 'https://demov6.camptocamp.org'))
+            ('https://www.camptocamp.org', 'https://demov6.camptocamp.org'),
+        )
 
     def test_falls_back_to_default_when_setting_missing(self):
         configure_cors_policy({})

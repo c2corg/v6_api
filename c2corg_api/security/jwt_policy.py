@@ -44,6 +44,6 @@ class IntegerSubJWTAuthenticationPolicy(JWTAuthenticationPolicy):
         if sub is not None:
             try:
                 return int(sub)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 return sub
         return None

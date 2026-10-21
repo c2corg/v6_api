@@ -12,78 +12,56 @@ activities = [
     'paragliding',
     'mountain_biking',
     'via_ferrata',
-    'slacklining'
+    'slacklining',
 ]
 
 waypoint_types = [
-    'summit',               # sommet
-    'pass',                 # col
-    'lake',                 # lac
-    'waterfall',            # cascade
-    'locality',             # lieu-dit (v5: vallon)
-    'bisse',                # bisse
-    'canyon',               # canyon
-
-    'access',               # acces
-
-    'climbing_outdoor',     # site d'escalade
-    'climbing_indoor',      # S.A.E.
-
-    'hut',                  # refuge
-    'gite',                 # gite
-    'shelter',              # abri
-    'bivouac',              # bivouac
-    'camp_site',            # camping
-    'base_camp',            # camp de base
-
-    'local_product',        # produit locaux
-
+    'summit',  # sommet
+    'pass',  # col
+    'lake',  # lac
+    'waterfall',  # cascade
+    'locality',  # lieu-dit (v5: vallon)
+    'bisse',  # bisse
+    'canyon',  # canyon
+    'access',  # acces
+    'climbing_outdoor',  # site d'escalade
+    'climbing_indoor',  # S.A.E.
+    'hut',  # refuge
+    'gite',  # gite
+    'shelter',  # abri
+    'bivouac',  # bivouac
+    'camp_site',  # camping
+    'base_camp',  # camp de base
+    'local_product',  # produit locaux
     'paragliding_takeoff',  # deco
     'paragliding_landing',  # attero
-
-    'cave',                 # grotte
-    'waterpoint',           # point d'eau/source
-
-    'weather_station',      # station meteo
-    'webcam',               # webcam
-    'virtual',              # sur-WP virtuel
-
+    'cave',  # grotte
+    'waterpoint',  # point d'eau/source
+    'weather_station',  # station meteo
+    'webcam',  # webcam
+    'virtual',  # sur-WP virtuel
     'slackline_spot',
-
-    'misc',                 # divers
+    'misc',  # divers
 ]
 
-climbing_outdoor_types = [
-    'single',
-    'multi',
-    'bloc',
-    'psicobloc'
-]
+climbing_outdoor_types = ['single', 'multi', 'bloc', 'psicobloc']
 
-climbing_indoor_types = [
-    'pitch',
-    'bloc'
-]
+climbing_indoor_types = ['pitch', 'bloc']
 
-public_transportation_types = [
-    'train',
-    'bus',
-    'service_on_demand',
-    'boat'
-]
+public_transportation_types = ['train', 'bus', 'service_on_demand', 'boat']
 
 product_types = [
     'farm_sale',  # vente chez le producteur
     'restaurant',
     'grocery',
     'bar',
-    'sport_shop'
+    'sport_shop',
 ]
 
 ground_types = [
     'prairie',
     'scree',  # eboulis
-    'snow'
+    'snow',
 ]
 
 weather_station_types = [
@@ -95,39 +73,24 @@ weather_station_types = [
     'precipitation',  # precipitations (sans rechauffeur)
     'precipitation_heater',  # precipitations (avec rechauffeur)
     'snow_height',
-    'insolation'
+    'insolation',
 ]
 
-rain_proof_types = [
-    'exposed',
-    'partly_protected',
-    'protected',
-    'inside'
-]
+rain_proof_types = ['exposed', 'partly_protected', 'protected', 'inside']
 
 public_transportation_ratings = [
-    'good service',      # service regulier
+    'good service',  # service regulier
     'seasonal service',  # service saisonnier
-    'poor service',      # service reduit
-    'nearby service',    # service a proximite
-    'unknown service',    # service inconnu
-    'no service'         # pas de service
+    'poor service',  # service reduit
+    'nearby service',  # service a proximite
+    'unknown service',  # service inconnu
+    'no service',  # pas de service
 ]
 
 # Cotation deco/attero
-paragliding_ratings = [
-    '1',
-    '2',
-    '3',
-    '4'
-]
+paragliding_ratings = ['1', '2', '3', '4']
 
-children_proof_types = [
-    'very_safe',
-    'safe',
-    'dangerous',
-    'very_dangerous'
-]
+children_proof_types = ['very_safe', 'safe', 'dangerous', 'very_dangerous']
 
 snow_clearance_ratings = [
     'often',
@@ -135,15 +98,10 @@ snow_clearance_ratings = [
     'progressive',
     'naturally',
     'closed_in_winter',
-    'non_applicable'
+    'non_applicable',
 ]
 
-exposition_ratings = [
-    'E1',
-    'E2',
-    'E3',
-    'E4'
-]
+exposition_ratings = ['E1', 'E2', 'E3', 'E4']
 
 rock_types = [
     'basalte',
@@ -160,19 +118,10 @@ rock_types = [
     'rhyolite',
     'schiste',
     'trachyte',
-    'artificial'
+    'artificial',
 ]
 
-orientation_types = [
-    'N',
-    'NE',
-    'E',
-    'SE',
-    'S',
-    'SW',
-    'W',
-    'NW'
-]
+orientation_types = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 
 months = [
     'jan',
@@ -186,22 +135,18 @@ months = [
     'sep',
     'oct',
     'nov',
-    'dec'
+    'dec',
 ]
 
-parking_fee_types = [
-    'yes',
-    'seasonal',
-    'no'
-]
+parking_fee_types = ['yes', 'seasonal', 'no']
 
 climbing_styles = [
-    'slab',             # dalle
-    'vertical',         # vertical
-    'overhang',         # devers/surplomb
-    'roof',             # toit
-    'small_pillar',     # colonnettes
-    'crack_dihedral'    # fissure/diedre
+    'slab',  # dalle
+    'vertical',  # vertical
+    'overhang',  # devers/surplomb
+    'roof',  # toit
+    'small_pillar',  # colonnettes
+    'crack_dihedral',  # fissure/diedre
 ]
 
 access_times = [
@@ -257,50 +202,29 @@ climbing_ratings = [
     '9b',
     '9b+',
     '9c',
-    '9c+'
+    '9c+',
 ]
 
-equipment_ratings = [
-    'P1',
-    'P1+',
-    'P2',
-    'P2+',
-    'P3',
-    'P3+',
-    'P4',
-    'P4+'
-]
+equipment_ratings = ['P1', 'P1+', 'P2', 'P2+', 'P3', 'P3+', 'P4', 'P4+']
 
 route_types = [
     'return_same_way',  # aller-retour (descente en rappel dans la voie)
-    'loop',             # boucle avec retour au pied de la voie (descente en
-                        # rappel dans une autre voie)
-    'loop_hut',         # boucle avec retour au refuge
-    'traverse',         # traversee
-    'raid',             # raid
-    'expedition'        # expe
+    'loop',  # boucle avec retour au pied de la voie (descente en
+    # rappel dans une autre voie)
+    'loop_hut',  # boucle avec retour au refuge
+    'traverse',  # traversee
+    'raid',  # raid
+    'expedition',  # expe
 ]
 
-route_duration_types = [
-    '1',
-    '2',
-    '3',
-    '4',
-    '5',
-    '6',
-    '7',
-    '8',
-    '9',
-    '10',
-    '10+'
-]
+route_duration_types = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '10+']
 
 glacier_gear_types = [
     'no',
     'glacier_safety_gear',  # materiel de securite sur glacier
-    'crampons_spring',      # crampons en debut de saison
-    'crampons_req',         # crampons indispensable
-    'glacier_crampons'      # crampons + materiel de securite sur glacier
+    'crampons_spring',  # crampons en debut de saison
+    'crampons_req',  # crampons indispensable
+    'glacier_crampons',  # crampons + materiel de securite sur glacier
 ]
 
 route_configuration_types = [
@@ -309,7 +233,7 @@ route_configuration_types = [
     'face',
     'corridor',
     'goulotte',
-    'glacier'
+    'glacier',
 ]
 
 ski_ratings = [
@@ -330,18 +254,10 @@ ski_ratings = [
     '5.3',
     '5.4',
     '5.5',
-    '5.6'
+    '5.6',
 ]
 
-labande_ski_ratings = [
-    'S1',
-    'S2',
-    'S3',
-    'S4',
-    'S5',
-    'S6',
-    'S7'
-]
+labande_ski_ratings = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7']
 
 global_ratings = [
     'F',
@@ -364,40 +280,14 @@ global_ratings = [
     'ED4',
     'ED5',
     'ED6',
-    'ED7'
+    'ED7',
 ]
 
-engagement_ratings = [
-    'I',
-    'II',
-    'III',
-    'IV',
-    'V',
-    'VI'
-]
+engagement_ratings = ['I', 'II', 'III', 'IV', 'V', 'VI']
 
-risk_ratings = [
-    'X1',
-    'X2',
-    'X3',
-    'X4',
-    'X5'
-]
+risk_ratings = ['X1', 'X2', 'X3', 'X4', 'X5']
 
-ice_ratings = [
-    '1',
-    '2',
-    '3',
-    '3+',
-    '4',
-    '4+',
-    '5',
-    '5+',
-    '6',
-    '6+',
-    '7',
-    '7+'
-]
+ice_ratings = ['1', '2', '3', '3+', '4', '4+', '5', '5+', '6', '6+', '7', '7+']
 
 mixed_ratings = [
     'M1',
@@ -421,17 +311,10 @@ mixed_ratings = [
     'M11',
     'M11+',
     'M12',
-    'M12+'
+    'M12+',
 ]
 
-exposition_rock_ratings = [
-    'E1',
-    'E2',
-    'E3',
-    'E4',
-    'E5',
-    'E6'
-]
+exposition_rock_ratings = ['E1', 'E2', 'E3', 'E4', 'E5', 'E6']
 
 aid_ratings = [
     'A0',
@@ -445,131 +328,48 @@ aid_ratings = [
     'A4',
     'A4+',
     'A5',
-    'A5+'
+    'A5+',
 ]
 
-via_ferrata_ratings = [
-    'K1',
-    'K2',
-    'K3',
-    'K4',
-    'K5',
-    'K6'
-]
+via_ferrata_ratings = ['K1', 'K2', 'K3', 'K4', 'K5', 'K6']
 
-hiking_ratings = [
-    'T1',
-    'T2',
-    'T3',
-    'T4',
-    'T5'
-]
+hiking_ratings = ['T1', 'T2', 'T3', 'T4', 'T5']
 
-snowshoe_ratings = [
-    'R1',
-    'R2',
-    'R3',
-    'R4',
-    'R5'
-]
+snowshoe_ratings = ['R1', 'R2', 'R3', 'R4', 'R5']
 
-mtb_up_ratings = [
-    'M1',
-    'M2',
-    'M3',
-    'M4',
-    'M5'
-]
+mtb_up_ratings = ['M1', 'M2', 'M3', 'M4', 'M5']
 
-mtb_down_ratings = [
-    'V1',
-    'V2',
-    'V3',
-    'V4',
-    'V5'
-]
+mtb_down_ratings = ['V1', 'V2', 'V3', 'V4', 'V5']
 
-map_editors = [
-    'IGN',
-    'Swisstopo',
-    'Escursionista'
-]
+map_editors = ['IGN', 'Swisstopo', 'Escursionista']
 
-map_scales = [
-    '25000',
-    '50000',
-    '100000'
-]
+map_scales = ['25000', '50000', '100000']
 
-area_types = [
-    'range',
-    'admin_limits',
-    'country'
-]
+area_types = ['range', 'admin_limits', 'country']
 
-frequentation_types = [
-    'quiet',
-    'some',
-    'crowded',
-    'overcrowded'
-]
+frequentation_types = ['quiet', 'some', 'crowded', 'overcrowded']
 
-access_conditions = [
-    'cleared',
-    'snowy',
-    'closed_snow',
-    'closed_cleared'
-]
+access_conditions = ['cleared', 'snowy', 'closed_snow', 'closed_cleared']
 
-lift_status = [
-    'open',
-    'closed'
-]
+lift_status = ['open', 'closed']
 
-condition_ratings = [
-    'excellent',
-    'good',
-    'average',
-    'poor',
-    'awful'
-]
+condition_ratings = ['excellent', 'good', 'average', 'poor', 'awful']
 
-snow_quality_ratings = [
-    'excellent',
-    'good',
-    'average',
-    'poor',
-    'awful'
-]
+snow_quality_ratings = ['excellent', 'good', 'average', 'poor', 'awful']
 
-snow_quantity_ratings = [
-    'excellent',
-    'good',
-    'average',
-    'poor',
-    'awful'
-]
+snow_quantity_ratings = ['excellent', 'good', 'average', 'poor', 'awful']
 
-glacier_ratings = [
-    'easy',
-    'possible',
-    'difficult',
-    'impossible'
-]
+glacier_ratings = ['easy', 'possible', 'difficult', 'impossible']
 
 avalanche_signs = [
     'no',
     'danger_sign',
     'recent_avalanche',
     'natural_avalanche',
-    'accidental_avalanche'
+    'accidental_avalanche',
 ]
 
-hut_status = [
-    'open_guarded',
-    'open_non_guarded',
-    'closed_hut'
-]
+hut_status = ['open_guarded', 'open_non_guarded', 'closed_hut']
 
 image_categories = [
     'landscapes',
@@ -588,14 +388,10 @@ image_categories = [
     'equipment',
     'book',
     'help',
-    'misc'
+    'misc',
 ]
 
-image_types = [
-    'collaborative',
-    'personal',
-    'copyright'
-]
+image_types = ['collaborative', 'personal', 'copyright']
 
 user_categories = [
     'amateur',
@@ -609,22 +405,16 @@ user_categories = [
     'ski_patroller',
     'avalanche_forecaster',
     'club',
-    'institution'
+    'institution',
 ]
 
-quality_types = [
-    'empty',
-    'draft',
-    'medium',
-    'fine',
-    'great'
-]
+quality_types = ['empty', 'draft', 'medium', 'fine', 'great']
 
 custodianship_types = [
     'accessible_when_wardened',
     'always_accessible',
     'key_needed',
-    'no_warden'
+    'no_warden',
 ]
 
 article_categories = [
@@ -638,19 +428,12 @@ article_categories = [
     'c2c_meetings',
     'tags',
     'site_info',
-    'association'
+    'association',
 ]
 
-article_types = [
-    'collab',
-    'personal'
-]
+article_types = ['collab', 'personal']
 
-feed_change_types = [
-    'created',
-    'updated',
-    'added_photos'
-]
+feed_change_types = ['created', 'updated', 'added_photos']
 
 book_types = [
     'topo',
@@ -661,7 +444,7 @@ book_types = [
     'novel',
     'technics',
     'tourism',
-    'magazine'
+    'magazine',
 ]
 
 mailinglists = [
@@ -684,7 +467,7 @@ mailinglists = [
     'meteofrance-2a',
     'meteofrance-2b',
     'aran',
-    'catalunya'
+    'catalunya',
 ]
 
 event_activities = [
@@ -694,7 +477,7 @@ event_activities = [
     'snow_ice_mixed',
     'ice_climbing',
     'skitouring',
-    'other'
+    'other',
 ]
 
 event_types = [
@@ -709,32 +492,21 @@ event_types = [
     'weather_event',
     'safety_operation',
     'critical_situation',
-    'other'
+    'other',
 ]
 
 author_statuses = [
     'primary_impacted',
     'secondary_impacted',
     'internal_witness',
-    'external_witness'
+    'external_witness',
 ]
 
-activity_rates = [
-    'activity_rate_y5',
-    'activity_rate_m2',
-    'activity_rate_w1'
-]
+activity_rates = ['activity_rate_y5', 'activity_rate_m2', 'activity_rate_w1']
 
-genders = [
-    'male',
-    'female'
-]
+genders = ['male', 'female']
 
-previous_injuries = [
-    'no',
-    'previous_injuries_2',
-    'previous_injuries_3'
-]
+previous_injuries = ['no', 'previous_injuries_2', 'previous_injuries_3']
 
 severities = [
     'severity_no',
@@ -750,45 +522,20 @@ autonomies = [
     'expert',
 ]
 
-supervision = [
-    'no_supervision',
-    'federal_supervision',
-    'professional_supervision'
-]
+supervision = ['no_supervision', 'federal_supervision', 'professional_supervision']
 
-qualification = [
-    'federal_supervisor',
-    'federal_trainer',
-    'professional_diploma'
-]
+qualification = ['federal_supervisor', 'federal_trainer', 'professional_diploma']
 
-avalanche_levels = [
-    'level_1',
-    'level_2',
-    'level_3',
-    'level_4',
-    'level_5',
-    'level_na'
-]
+avalanche_levels = ['level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'level_na']
 
 avalanche_slopes = [
     'slope_lt_30',
     'slope_30_35',
     'slope_35_40',
     'slope_40_45',
-    'slope_gt_45'
+    'slope_gt_45',
 ]
 
-slackline_types = [
-    'slackline',
-    'highline',
-    'waterline'
-]
+slackline_types = ['slackline', 'highline', 'waterline']
 
-coverage_types = [
-    'fr-idf',
-    'fr-ne',
-    'fr-nw',
-    'fr-se',
-    'fr-sw'
-]
+coverage_types = ['fr-idf', 'fr-ne', 'fr-nw', 'fr-se', 'fr-sw']

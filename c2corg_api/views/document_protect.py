@@ -32,9 +32,10 @@ class DocumentProtectRest(ACLDefault):
     @restricted_json_view(
         permission='moderator',
         schema=ProtectSchema(),
-        validators=[colander_body_validator])
+        validators=[colander_body_validator],
+    )
     def post(self):
-        """ Mark the given document as not editable.
+        """Mark the given document as not editable.
 
         Request:
             `POST` `/documents/protect`
@@ -54,8 +55,8 @@ class DocumentProtectRest(ACLDefault):
 
         user_id = self.request.authenticated_userid
         DocumentRest.update_version(
-            document, user_id, 'Protected document',
-            [UpdateType.FIGURES], [])
+            document, user_id, 'Protected document', [UpdateType.FIGURES], []
+        )
 
         update_cache_version_direct(document_id)
 
@@ -64,13 +65,13 @@ class DocumentProtectRest(ACLDefault):
 
 @resource(path='/documents/unprotect', cors_policy=cors_policy)
 class DocumentUnprotectRest(ACLDefault):
-
     @restricted_json_view(
         permission='moderator',
         schema=ProtectSchema(),
-        validators=[colander_body_validator])
+        validators=[colander_body_validator],
+    )
     def post(self):
-        """ Mark the given document as editable.
+        """Mark the given document as editable.
 
         Request:
             `POST` `/documents/unprotect`
@@ -90,8 +91,8 @@ class DocumentUnprotectRest(ACLDefault):
 
         user_id = self.request.authenticated_userid
         DocumentRest.update_version(
-            document, user_id, 'Unprotected document',
-            [UpdateType.FIGURES], [])
+            document, user_id, 'Unprotected document', [UpdateType.FIGURES], []
+        )
 
         update_cache_version_direct(document_id)
 

@@ -4,7 +4,6 @@ from c2corg_api.tests import BaseTestCase
 
 
 class TestESSyncStatus(BaseTestCase):
-
     def test_get_status(self):
         last_update, date_now = get_status(self.session)
         self.assertIsNotNone(last_update)

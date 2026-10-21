@@ -71,30 +71,20 @@ class SchemaAssociationUser(MappingSchema):
 
 
 class SchemaAssociations(MappingSchema):
-    users = SchemaNode(
-        Sequence(), SchemaAssociationUser(), missing=None)
-    routes = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    xreports = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    waypoints = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    waypoint_children = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    books = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    images = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    articles = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    outings = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    coverages = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
+    users = SchemaNode(Sequence(), SchemaAssociationUser(), missing=None)
+    routes = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    xreports = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    waypoints = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    waypoint_children = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    books = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    images = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    articles = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    outings = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    coverages = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
 
 
 def get_create_schema(document_schema):
-    """ Create a Colander schema for the create view which contains
+    """Create a Colander schema for the create view which contains
     associations for the document.
     """
     schema = document_schema.clone()

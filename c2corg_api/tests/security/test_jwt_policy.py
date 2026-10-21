@@ -8,7 +8,6 @@ from c2corg_api.security.roles import extract_token
 
 
 class TestIntegerSubJWTAuthenticationPolicy(unittest.TestCase):
-
     def setUp(self):
         self.secret = 'a_long_enough_secret_key_for_hs256_testing'
         self.policy = IntegerSubJWTAuthenticationPolicy(
@@ -20,8 +19,7 @@ class TestIntegerSubJWTAuthenticationPolicy(unittest.TestCase):
             'sub': '12345',
             'username': 'testuser',
         }
-        self.token = jwt.encode(
-            self.claims, self.secret, algorithm='HS256')
+        self.token = jwt.encode(self.claims, self.secret, algorithm='HS256')
 
     def _make_request(self, authorization_header=None):
         environ = {'REQUEST_METHOD': 'GET', 'PATH_INFO': '/'}
@@ -34,8 +32,7 @@ class TestIntegerSubJWTAuthenticationPolicy(unittest.TestCase):
 
     def test_get_claims_legacy_format(self):
         """JWT token="<token>" format used by the frontend."""
-        request = self._make_request(
-            'JWT token="' + self.token + '"')
+        request = self._make_request('JWT token="' + self.token + '"')
         claims = self.policy.get_claims(request)
         self.assertEqual(claims['sub'], '12345')
         self.assertEqual(claims['username'], 'testuser')
@@ -64,8 +61,7 @@ class TestIntegerSubJWTAuthenticationPolicy(unittest.TestCase):
 
     def test_unauthenticated_userid_returns_int(self):
         """sub claim is a string but unauthenticated_userid returns int."""
-        request = self._make_request(
-            'JWT token="' + self.token + '"')
+        request = self._make_request('JWT token="' + self.token + '"')
         userid = self.policy.unauthenticated_userid(request)
         self.assertIsInstance(userid, int)
         self.assertEqual(userid, 12345)
@@ -84,7 +80,6 @@ class TestIntegerSubJWTAuthenticationPolicy(unittest.TestCase):
 
 
 class TestExtractToken(unittest.TestCase):
-
     def _make_request(self, authorization_header):
         environ = {
             'REQUEST_METHOD': 'GET',

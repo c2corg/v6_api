@@ -3,7 +3,7 @@
 
 import struct
 
-from colander import (null, Invalid, SchemaType)
+from colander import null, Invalid, SchemaType
 
 from geoalchemy2 import WKBElement
 from geomet import wkb
@@ -16,7 +16,7 @@ _EWKB_SRID_FLAG = 0x20000000
 
 
 class Geometry(SchemaType):
-    """ A Colander type meant to be used with GeoAlchemy 2 geometry columns.
+    """A Colander type meant to be used with GeoAlchemy 2 geometry columns.
     Example usage
     .. code-block:: python
         geom = Column(
@@ -32,6 +32,7 @@ class Geometry(SchemaType):
     srid
         The SRID of the geometry should also match the column definition.
     """
+
     def __init__(self, geometry_types=['GEOMETRY'], srid=-1, map_srid=-1):
         self.geometry_types = [t.upper() for t in geometry_types]
         self.srid = int(srid)
@@ -74,8 +75,10 @@ class Geometry(SchemaType):
                 return wkbelement_from_geojson(data, self.srid)
         else:
             raise Invalid(
-                node, 'Invalid geometry type. Expected: %s. Got: %s.'
-                % (allowed_types, geom_type))
+                node,
+                'Invalid geometry type. Expected: %s. Got: %s.'
+                % (allowed_types, geom_type),
+            )
 
     def cstruct_children(self, node, cstruct):
         return []
@@ -100,8 +103,10 @@ def _to_ewkb(wkb_bytes, srid):
     geom_type = struct.unpack(fmt, wkb_bytes[1:5])[0]
     ewkb_type = geom_type | _EWKB_SRID_FLAG
     return (
-        wkb_bytes[0:1] + struct.pack(fmt, ewkb_type) +
-        struct.pack(fmt, srid) + wkb_bytes[5:]
+        wkb_bytes[0:1]
+        + struct.pack(fmt, ewkb_type)
+        + struct.pack(fmt, srid)
+        + wkb_bytes[5:]
     )
 
 

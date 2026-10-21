@@ -6,6 +6,7 @@ from c2corg_api.jobs.purge_non_activated_accounts import purge_account
 from c2corg_api.jobs.purge_expired_tokens import purge_token
 
 import logging
+
 log = logging.getLogger(__name__)
 
 
@@ -24,7 +25,7 @@ def configure_scheduler_from_config(settings):
         name='Purge accounts which where not activated',
         trigger='cron',
         hour=0,
-        minute=0
+        minute=0,
     )
 
     # run `purge_token` job at 0:30
@@ -34,7 +35,7 @@ def configure_scheduler_from_config(settings):
         name='Purge expired tokens',
         trigger='cron',
         hour=0,
-        minute=30
+        minute=30,
     )
 
     scheduler.add_listener(exception_listener, EVENT_JOB_ERROR)

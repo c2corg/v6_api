@@ -1,11 +1,11 @@
-'''
+"""
 c2corg img Extension for Python-Markdown
 ==============================================
 
 Converts tags like
 [img=<id>(<options>)(/)?](<caption>)?([/img])?
 to advanced HTML img tags.
-'''
+"""
 
 from markdown.extensions import Extension
 from markdown.blockprocessors import BlockProcessor
@@ -35,6 +35,7 @@ def get_image_url(base_url, filename, size):
 
 def make_image_url_resolver(base_url, filenames):
     """Return a `(document_id, size) -> url or None` for `parse_code()`."""
+
     # filenames maps image document ids (int) to filenames
     def resolve(document_id, size):
         filename = filenames.get(int(document_id))
@@ -50,17 +51,16 @@ class C2CImageExtension(Extension):
         """Take an optional `url_secret_attribute` keyword argument."""
         # name of the attribute holding the direct image URL, renamed to
         # c2c:url after sanitizing (see c2corg_api.markdown.parse_code)
-        self._url_secret_attribute = kwargs.pop(
-            "url_secret_attribute", "c2c:url")
+        self._url_secret_attribute = kwargs.pop('url_secret_attribute', 'c2c:url')
         super().__init__(*args, **kwargs)
 
     def extendMarkdown(self, md):  # noqa: N802
         self.md = md
         md.parser.blockprocessors.register(
-            C2CImageBlock(
-                md.parser, self.getConfigs(), self._url_secret_attribute),
+            C2CImageBlock(md.parser, self.getConfigs(), self._url_secret_attribute),
             'c2c_imgblock',
-            15)
+            15,
+        )
 
 
 class C2CImageBlock(BlockProcessor):
@@ -79,12 +79,12 @@ class C2CImageBlock(BlockProcessor):
         block = blocks.pop(0)
         m = self.RE.search(block)
 
-        before = block[:m.start()]
+        before = block[: m.start()]
         self.parser.parseBlocks(parent, [before])
 
         parent.append(self.build_element(m))
 
-        after = block[m.end():]
+        after = block[m.end() :]
         self.parser.parseBlocks(parent, [after])
 
     def build_element(self, m):
@@ -108,12 +108,12 @@ class C2CImageBlock(BlockProcessor):
 
         img = ElementTree.Element('img')
 
-        img_url = '/images/proxy/%s' % (img_id, )
+        img_url = '/images/proxy/%s' % (img_id,)
 
         if img_size:
             img_url += '?size=' + img_size
 
-        img.set('alt', (caption or img_id).replace("\n", " "))
+        img.set('alt', (caption or img_id).replace('\n', ' '))
         img.set('c2c:url-proxy', img_url)
 
         # direct URL to the media server, when the image is known. Clients

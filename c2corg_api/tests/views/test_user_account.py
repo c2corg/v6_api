@@ -1,14 +1,12 @@
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.search import search_documents, elasticsearch_config
-from c2corg_api.tests.views.test_user import BaseUserTestRest, \
-    forum_username_tests
+from c2corg_api.tests.views.test_user import BaseUserTestRest, forum_username_tests
 
 from unittest.mock import patch
 
 
 class TestUserAccountRest(BaseUserTestRest):
-
     def test_read_account_info(self):
         url = '/users/account'
         body = self.get_json_with_contributor(url, status=200)
@@ -18,8 +16,7 @@ class TestUserAccountRest(BaseUserTestRest):
         self.assertBodyEqual(body, 'is_profile_public', False)
 
     def test_read_account_info_blocked_account(self):
-        contributor = self.session.get(User,
-            self.global_userids['contributor'])
+        contributor = self.session.get(User, self.global_userids['contributor'])
         contributor.blocked = True
         self.session.flush()
 
@@ -30,9 +27,7 @@ class TestUserAccountRest(BaseUserTestRest):
         url = '/users/account'
         currentpassword = self.global_passwords['contributor']
 
-        data = {
-            'currentpassword': currentpassword
-        }
+        data = {'currentpassword': currentpassword}
         data[field] = value
         self.post_json_with_contributor(url, data, status=200)
 
@@ -44,9 +39,7 @@ class TestUserAccountRest(BaseUserTestRest):
         url = '/users/account'
         currentpassword = self.global_passwords['contributor']
 
-        data = {
-            'currentpassword': currentpassword
-        }
+        data = {'currentpassword': currentpassword}
         data[field] = value
         self.post_json_with_contributor(url, data, status=500)
 
@@ -88,15 +81,14 @@ class TestUserAccountRest(BaseUserTestRest):
         # check that the search index is updated with the new name
         self.sync_es()
         search_doc = search_documents[USERPROFILE_TYPE].get(
-            id=user_id,
-            index=elasticsearch_config['index'])
+            id=user_id, index=elasticsearch_config['index']
+        )
 
         # and check that the cache version of the user profile was updated
         self.check_cache_version(user_id, 2)
 
         self.assertIsNotNone(search_doc['doc_type'])
-        self.assertEqual(
-            search_doc['title_en'], 'changed contributor')
+        self.assertEqual(search_doc['title_en'], 'changed contributor')
 
     def test_update_account_name_discourse_down(self):
         self._update_account_field_discourse_down('name', 'changed')
@@ -108,34 +100,31 @@ class TestUserAccountRest(BaseUserTestRest):
             i += 1
             body = {
                 'currentpassword': self.global_passwords['contributor'],
-                'forum_username': forum_username
+                'forum_username': forum_username,
             }
             if value is False:
                 self.post_json_with_contributor(url, body, status=200)
             else:
                 json = self.post_json_with_contributor(url, body, status=400)
-                self.assertEqual(json['errors'][0]['description'],
-                                 value)
+                self.assertEqual(json['errors'][0]['description'], value)
 
     def test_update_account_forum_username_unique(self):
         url = '/users/account'
 
         data = {
             'currentpassword': self.global_passwords['contributor'],
-            'forum_username': 'unique'
+            'forum_username': 'unique',
         }
         self.post_json_with_contributor(url, data, status=200)
 
         data = {
             'currentpassword': self.global_passwords['contributor2'],
-            'forum_username': 'Unique'
+            'forum_username': 'Unique',
         }
-        json = self.post_json_with_contributor(url,
-                                               data,
-                                               status=400,
-                                               username='contributor2')
-        self.assertEqual(json['errors'][0]['description'],
-                         'Already used forum name')
+        json = self.post_json_with_contributor(
+            url, data, status=400, username='contributor2'
+        )
+        self.assertEqual(json['errors'][0]['description'], 'Already used forum name')
 
     def test_update_account_forum_username_discourse_up(self):
         self._update_account_field_discourse_up('forum_username', 'changed')
@@ -150,7 +139,7 @@ class TestUserAccountRest(BaseUserTestRest):
     def test_update_is_profile_public_discourse_down(self):
         data = {
             'currentpassword': self.global_passwords['contributor'],
-            'is_profile_public': True
+            'is_profile_public': True,
         }
         self.post_json_with_contributor('/users/account', data, status=200)
 
@@ -161,10 +150,9 @@ class TestUserAccountRest(BaseUserTestRest):
     def test_update_account_newpassword_too_weak(self):
         data = {
             'currentpassword': self.global_passwords['contributor'],
-            'newpassword': 'alllowercase1'  # nosec - test fixture
+            'newpassword': 'alllowercase1',  # nosec - test fixture
         }
-        body = self.post_json_with_contributor(
-            '/users/account', data, status=400)
+        body = self.post_json_with_contributor('/users/account', data, status=400)
         self.assertErrorsContain(body, 'newpassword')
 
     def test_update_account_newpassword_success(self):
@@ -174,7 +162,7 @@ class TestUserAccountRest(BaseUserTestRest):
 
         data = {
             'currentpassword': self.global_passwords['contributor'],
-            'newpassword': 'New$Password1'  # nosec - test fixture
+            'newpassword': 'New$Password1',  # nosec - test fixture
         }
         self.post_json_with_contributor('/users/account', data, status=200)
 
@@ -187,9 +175,7 @@ class TestUserAccountRest(BaseUserTestRest):
         user = self.session.get(User, user_id)
         self.assertEqual(user.lang, 'fr')
 
-        request_body = {
-            'lang': 'en'
-        }
+        request_body = {'lang': 'en'}
         url = self._prefix + '/update_preferred_language'
         self.post_json_with_contributor(url, request_body, status=200)
 

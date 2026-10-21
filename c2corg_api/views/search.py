@@ -19,8 +19,10 @@ from c2corg_api.views.xreport import xreport_documents_config
 from c2corg_api.views.route import route_documents_config
 from c2corg_api.views.topo_map import topo_map_documents_config
 from c2corg_api.views.user_profile import user_profile_documents_config
-from c2corg_api.views.validation import validate_pagination, \
-    validate_preferred_lang_param
+from c2corg_api.views.validation import (
+    validate_pagination,
+    validate_preferred_lang_param,
+)
 from c2corg_api.views.waypoint import waypoint_documents_config
 from c2corg_api.security.acl import ACLDefault
 from cornice.resource import resource, view
@@ -57,11 +59,8 @@ class SearchRest(ACLDefault):
         search_term = self.request.params.get('q')
         lang = self.request.validated.get('lang')
         limit = self.request.validated.get('limit')
-        limit = min(
-            SEARCH_LIMIT_DEFAULT if limit is None else limit,
-            SEARCH_LIMIT_MAX)
-        types_to_include = self._parse_types_to_include(
-            self.request.params.get('t'))
+        limit = min(SEARCH_LIMIT_DEFAULT if limit is None else limit, SEARCH_LIMIT_MAX)
+        types_to_include = self._parse_types_to_include(self.request.params.get('t'))
 
         search_types = []
         if self._include_type(WAYPOINT_TYPE, types_to_include):
@@ -91,8 +90,9 @@ class SearchRest(ACLDefault):
         if self._include_type(IMAGE_TYPE, types_to_include):
             search_types.append(('images', image_documents_config))
 
-        if self._include_type(USERPROFILE_TYPE, types_to_include) and \
-                self.request.has_permission('authenticated'):
+        if self._include_type(
+            USERPROFILE_TYPE, types_to_include
+        ) and self.request.has_permission('authenticated'):
             search_types.append(('users', user_profile_documents_config))
 
         return search.search_for_types(search_types, search_term, limit, lang)

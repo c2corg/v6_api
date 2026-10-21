@@ -11,116 +11,168 @@ from c2corg_api.tests.views import BaseTestRest
 
 
 class TestSearchRest(BaseTestRest):
-
     def setUp(self):  # noqa
         super().setUp()
         self._prefix = '/search'
 
         self.article1 = Article(
-            categories=['site_info'], activities=['hiking'],
+            categories=['site_info'],
+            activities=['hiking'],
             article_type='collab',
             locales=[
                 DocumentLocale(
-                    lang='en', title='Lac d\'Annecy',
+                    lang='en',
+                    title="Lac d'Annecy",
                     description='...',
-                    summary='Lac d\'Annecy'),
+                    summary="Lac d'Annecy",
+                ),
                 DocumentLocale(
-                    lang='en', title='Lac d\'Annecy',
+                    lang='en',
+                    title="Lac d'Annecy",
                     description='...',
-                    summary='Lac d\'Annecy')
-            ])
+                    summary="Lac d'Annecy",
+                ),
+            ],
+        )
         self.session.add(self.article1)
         self.waypoint1 = Waypoint(
-            waypoint_type='summit', elevation=2000,
-            geometry=DocumentGeometry(
-                geom='SRID=3857;POINT(635956 5723604)'),
+            waypoint_type='summit',
+            elevation=2000,
+            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
             locales=[
                 WaypointLocale(
-                    lang='fr', title='Dent de Crolles',
+                    lang='fr',
+                    title='Dent de Crolles',
                     description='...',
-                    summary='La Dent de Crolles'),
+                    summary='La Dent de Crolles',
+                ),
                 WaypointLocale(
-                    lang='en', title='Dent de Crolles',
+                    lang='en',
+                    title='Dent de Crolles',
                     description='...',
-                    summary='The Dent de Crolles')
-            ])
+                    summary='The Dent de Crolles',
+                ),
+            ],
+        )
         self.session.add(self.waypoint1)
-        self.session.add(Waypoint(
-            waypoint_type='summit', elevation=4985,
-            geometry=DocumentGeometry(
-                geom='SRID=3857;POINT(635956 5723604)'),
-            locales=[
-                WaypointLocale(
-                    lang='en', title='Mont Blanc',
-                    description='...',
-                    summary='The heighest point in Europe')
-            ]))
+        self.session.add(
+            Waypoint(
+                waypoint_type='summit',
+                elevation=4985,
+                geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+                locales=[
+                    WaypointLocale(
+                        lang='en',
+                        title='Mont Blanc',
+                        description='...',
+                        summary='The heighest point in Europe',
+                    )
+                ],
+            )
+        )
         # a title that shares an ngram prefix with "Mont Blanc" once split
         # on the hyphen (regression fixture, see
         # test_search_hyphenated_compound_word)
-        self.session.add(Waypoint(
-            waypoint_type='summit', elevation=3715,
-            geometry=DocumentGeometry(
-                geom='SRID=3857;POINT(635956 5723604)'),
-            locales=[
-                WaypointLocale(
-                    lang='fr', title='Montaña Blanca',
-                    description='...',
-                    summary='A peak in Tenerife')
-            ]))
-        self.session.add(Route(
-            activities=['skitouring'], elevation_max=1500, elevation_min=700,
-            locales=[
-                RouteLocale(
-                    lang='fr', title='Mont Blanc du ciel',
-                    description='...', summary='Ski')
-            ]))
+        self.session.add(
+            Waypoint(
+                waypoint_type='summit',
+                elevation=3715,
+                geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+                locales=[
+                    WaypointLocale(
+                        lang='fr',
+                        title='Montaña Blanca',
+                        description='...',
+                        summary='A peak in Tenerife',
+                    )
+                ],
+            )
+        )
+        self.session.add(
+            Route(
+                activities=['skitouring'],
+                elevation_max=1500,
+                elevation_min=700,
+                locales=[
+                    RouteLocale(
+                        lang='fr',
+                        title='Mont Blanc du ciel',
+                        description='...',
+                        summary='Ski',
+                    )
+                ],
+            )
+        )
         # a title where the query words appear in a different order,
         # separated by other words (regression fixture, see
         # test_search_multiword_any_order)
-        self.session.add(Route(
-            activities=['rock_climbing'], elevation_max=3000,
-            elevation_min=2500,
-            locales=[
-                RouteLocale(
-                    lang='fr', title='Gerbier : Traversée des arêtes',
-                    description='...', summary='...')
-            ]))
+        self.session.add(
+            Route(
+                activities=['rock_climbing'],
+                elevation_max=3000,
+                elevation_min=2500,
+                locales=[
+                    RouteLocale(
+                        lang='fr',
+                        title='Gerbier : Traversée des arêtes',
+                        description='...',
+                        summary='...',
+                    )
+                ],
+            )
+        )
         # an unrelated title whose stemmed tokens are only one edit away
         # from the stemmed query terms above ("Gerri" -> "geri", one edit
         # from "Gerbier" -> "gerbi") (regression fixture, see
         # test_search_multiword_any_order)
-        self.session.add(Route(
-            activities=['rock_climbing'], elevation_max=3000,
-            elevation_min=2500,
-            locales=[
-                RouteLocale(
-                    lang='fr', title='Pic de Gerri : arête Noris - Gerri',
-                    description='...', summary='...')
-            ]))
-        self.session.add(Route(
-            activities=['rock_climbing'], elevation_max=1500,
-            elevation_min=700,
-            locales=[
-                RouteLocale(
-                    lang='fr',
-                    title='Vallée d\'Ailefroide, Orage d\'étoiles, '
-                          'Rivière Kwaï',
-                    description='...', summary='...')
-            ]))
+        self.session.add(
+            Route(
+                activities=['rock_climbing'],
+                elevation_max=3000,
+                elevation_min=2500,
+                locales=[
+                    RouteLocale(
+                        lang='fr',
+                        title='Pic de Gerri : arête Noris - Gerri',
+                        description='...',
+                        summary='...',
+                    )
+                ],
+            )
+        )
+        self.session.add(
+            Route(
+                activities=['rock_climbing'],
+                elevation_max=1500,
+                elevation_min=700,
+                locales=[
+                    RouteLocale(
+                        lang='fr',
+                        title="Vallée d'Ailefroide, Orage d'étoiles, Rivière Kwaï",
+                        description='...',
+                        summary='...',
+                    )
+                ],
+            )
+        )
         self.book1 = Book(
             activities=['hiking'],
             book_types=['biography'],
             locales=[
                 DocumentLocale(
-                    lang='en', title='Lac d\'Annecy',
+                    lang='en',
+                    title="Lac d'Annecy",
                     description='...',
-                    summary='Lac d\'Annecy'),
+                    summary="Lac d'Annecy",
+                ),
                 DocumentLocale(
-                    lang='en', title='Lac d\'Annecy',
+                    lang='en',
+                    title="Lac d'Annecy",
                     description='...',
-                    summary='Lac d\'Annecy')
-            ])
+                    summary="Lac d'Annecy",
+                ),
+            ],
+        )
         self.session.add(self.book1)
         self.session.flush()
         fill_index(self.session)
@@ -158,13 +210,14 @@ class TestSearchRest(BaseTestRest):
         the fuzzy single-word title query, see get_text_query_on_title)."""
         for term in ('Kwaï', 'Rivière'):
             response = self.app.get(
-                self._prefix + '?q=' + quote(term) + '&t=r', status=200)
+                self._prefix + '?q=' + quote(term) + '&t=r', status=200
+            )
             body = response.json
             routes = body['routes']
             self.assertTrue(
                 routes['total'] > 0,
-                'expected a match for {0!r}, got {1!r}'.format(
-                    term, routes))
+                'expected a match for {0!r}, got {1!r}'.format(term, routes),
+            )
 
     def test_search_hyphenated_compound_word(self):
         """A hyphenated query like "Mont-Blanc" must be treated as two
@@ -174,12 +227,12 @@ class TestSearchRest(BaseTestRest):
         an unrelated title ("Montaña Blanca") at least as well as the
         real "Mont Blanc", see get_text_query_on_title)."""
         response = self.app.get(
-            self._prefix + '?q=' + quote('Mont-Blanc') + '&t=w', status=200)
+            self._prefix + '?q=' + quote('Mont-Blanc') + '&t=w', status=200
+        )
         body = response.json
         waypoints = body['waypoints']
         self.assertTrue(waypoints['total'] > 0)
-        titles = [
-            doc['locales'][0]['title'] for doc in waypoints['documents']]
+        titles = [doc['locales'][0]['title'] for doc in waypoints['documents']]
         self.assertIn('Mont Blanc', titles)
         self.assertNotIn('Montaña Blanca', titles)
 
@@ -190,21 +243,21 @@ class TestSearchRest(BaseTestRest):
         essentially the same order via a `phrase` query, see
         get_text_query_on_title)."""
         response = self.app.get(
-            self._prefix + '?q=' + quote('Aretes de Gerbier') + '&t=r',
-            status=200)
+            self._prefix + '?q=' + quote('Aretes de Gerbier') + '&t=r', status=200
+        )
         body = response.json
         routes = body['routes']
         self.assertTrue(
             routes['total'] > 0,
-            'expected a match for "Aretes de Gerbier", got {0!r}'.format(
-                routes))
+            'expected a match for "Aretes de Gerbier", got {0!r}'.format(routes),
+        )
         titles = [doc['locales'][0]['title'] for doc in routes['documents']]
         self.assertNotIn('Pic de Gerri : arête Noris - Gerri', titles)
 
     def test_search_by_article_title(self):
         response = self.app.get(
-            self._prefix + '?q=' + str(self.article1.locales[0].title),
-            status=200)
+            self._prefix + '?q=' + str(self.article1.locales[0].title), status=200
+        )
         body = response.json
         articles = body['articles']
 
@@ -213,8 +266,8 @@ class TestSearchRest(BaseTestRest):
 
     def test_search_by_book_title(self):
         response = self.app.get(
-            self._prefix + '?q=' + str(self.book1.locales[0].title),
-            status=200)
+            self._prefix + '?q=' + str(self.book1.locales[0].title), status=200
+        )
         body = response.json
         books = body['books']
 
@@ -238,8 +291,7 @@ class TestSearchRest(BaseTestRest):
         """Documents that only exist in a language other than the
         preferred one must still be found (#2223).
         """
-        response = self.app.get(
-            self._prefix + '?q=Mont Blanc&pl=fr', status=200)
+        response = self.app.get(self._prefix + '?q=Mont Blanc&pl=fr', status=200)
         body = response.json
 
         # "Mont Blanc" waypoint only has an 'en' locale
@@ -247,11 +299,11 @@ class TestSearchRest(BaseTestRest):
         self.assertTrue(waypoints['total'] > 0)
 
     def test_search_authenticated(self):
-        """Tests that user results are included when authenticated.
-        """
+        """Tests that user results are included when authenticated."""
         headers = self.add_authorization_header(username='contributor')
-        response = self.app.get(self._prefix + '?q=crolles', headers=headers,
-                                status=200)
+        response = self.app.get(
+            self._prefix + '?q=crolles', headers=headers, status=200
+        )
         body = response.json
 
         self.assertIn('users', body)
@@ -259,16 +311,14 @@ class TestSearchRest(BaseTestRest):
         self.assertIn('total', users)
 
     def test_search_user_unauthenticated(self):
-        """Tests that user results are not included when not authenticated.
-        """
+        """Tests that user results are not included when not authenticated."""
         response = self.app.get(self._prefix + '?q=alex&t=u', status=200)
         body = response.json
 
         self.assertNotIn('users', body)
 
     def test_search_limit_types(self):
-        response = self.app.get(self._prefix + '?q=crolles&t=w,r,c,b',
-                                status=200)
+        response = self.app.get(self._prefix + '?q=crolles&t=w,r,c,b', status=200)
         body = response.json
 
         self.assertIn('waypoints', body)
@@ -283,7 +333,8 @@ class TestSearchRest(BaseTestRest):
 
     def test_search_by_document_id(self):
         response = self.app.get(
-            self._prefix + '?q=' + str(self.waypoint1.document_id), status=200)
+            self._prefix + '?q=' + str(self.waypoint1.document_id), status=200
+        )
         body = response.json
 
         waypoints = body['waypoints']

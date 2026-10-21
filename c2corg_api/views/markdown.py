@@ -11,11 +11,11 @@ NOT_MARKDOWN_PROPERTY = {
     'slope',
     'conditions_levels',
     'topic_id',
-    'participants'
+    'participants',
 }
 
 # document ids are postgres integers, larger values can't be queried
-_MAX_DOCUMENT_ID = 2 ** 31 - 1
+_MAX_DOCUMENT_ID = 2**31 - 1
 
 
 def cook(data):
@@ -49,5 +49,4 @@ def _get_image_url_resolver(data):
     if not base_url:
         return None
 
-    return make_image_url_resolver(
-        base_url, get_image_filenames(image_ids))
+    return make_image_url_resolver(base_url, get_image_filenames(image_ids))

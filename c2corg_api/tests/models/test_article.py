@@ -5,19 +5,20 @@ from c2corg_api.tests import BaseTestCase
 
 
 class TestArticle(BaseTestCase):
-
     def test_to_archive(self):
         article = Article(
-            document_id=1, categories=['expeditions'], activities=['hiking'],
+            document_id=1,
+            categories=['expeditions'],
+            activities=['hiking'],
             article_type='personal',
             locales=[
                 DocumentLocale(
-                    id=2, lang='en', title='A', summary='C',
-                    description='abc'),
+                    id=2, lang='en', title='A', summary='C', description='abc'
+                ),
                 DocumentLocale(
-                    id=3, lang='fr', title='B', summary='C',
-                    description='bcd'),
-            ]
+                    id=3, lang='fr', title='B', summary='C', description='bcd'
+                ),
+            ],
         )
 
         article_archive = article.to_archive()

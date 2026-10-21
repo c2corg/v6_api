@@ -11,7 +11,10 @@ from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
 
 from c2corg_api.models.document import (
-    ArchiveDocumentLocale, DocumentLocale, DocumentGeometry)
+    ArchiveDocumentLocale,
+    DocumentLocale,
+    DocumentGeometry,
+)
 from c2corg_api.views.document import DocumentRest
 
 from c2corg_api.tests.views import BaseDocumentTestRest
@@ -20,11 +23,10 @@ from dogpile.cache.api import NO_VALUE
 
 
 class TestBookRest(BaseDocumentTestRest):
-
     def setUp(self):  # noqa
         self.set_prefix_and_model(
-            "/books", BOOK_TYPE, Book, ArchiveBook,
-            ArchiveDocumentLocale)
+            '/books', BOOK_TYPE, Book, ArchiveBook, ArchiveDocumentLocale
+        )
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
@@ -34,20 +36,23 @@ class TestBookRest(BaseDocumentTestRest):
         self.assertNotIn('geometry', doc)
 
     def test_get_collection_paginated(self):
-        self.app.get("/books?offset=invalid", status=400)
+        self.app.get('/books?offset=invalid', status=400)
+
+        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
 
         self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 0}), [], 4)
-
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}),
-            [self.book4.document_id], 4)
+            self.get_collection({'offset': 0, 'limit': 1}), [self.book4.document_id], 4
+        )
         self.assertResultsEqual(
             self.get_collection({'offset': 0, 'limit': 2}),
-            [self.book4.document_id, self.book3.document_id], 4)
+            [self.book4.document_id, self.book3.document_id],
+            4,
+        )
         self.assertResultsEqual(
             self.get_collection({'offset': 1, 'limit': 2}),
-            [self.book3.document_id, self.book2.document_id], 4)
+            [self.book3.document_id, self.book2.document_id],
+            4,
+        )
 
     def test_get_collection_lang(self):
         self.get_collection_lang()
@@ -57,12 +62,20 @@ class TestBookRest(BaseDocumentTestRest):
 
         self.assertResultsEqual(
             self.get_collection_search({'l': 'en'}),
-            [self.book4.document_id, self.book1.document_id], 2)
+            [self.book4.document_id, self.book1.document_id],
+            2,
+        )
 
         self.assertResultsEqual(
             self.get_collection_search({'btyp': ['biography']}),
-            [self.book4.document_id, self.book3.document_id,
-             self.book2.document_id, self.book1.document_id], 4)
+            [
+                self.book4.document_id,
+                self.book3.document_id,
+                self.book2.document_id,
+                self.book1.document_id,
+            ],
+            4,
+        )
 
     def test_get(self):
         body = self.get(self.book1)
@@ -105,8 +118,8 @@ class TestBookRest(BaseDocumentTestRest):
 
     def test_get_version_etag(self):
         url = '{0}/{1}/en/{2}'.format(
-                self._prefix, str(self.book1.document_id),
-                str(self.book1_version.id))
+            self._prefix, str(self.book1.document_id), str(self.book1_version.id)
+        )
         response = self.app.get(url, status=200)
 
         # check that the ETag header is set
@@ -115,18 +128,17 @@ class TestBookRest(BaseDocumentTestRest):
         self.assertIsNotNone(etag)
 
         # then request the document again with the etag
-        headers = {
-            'If-None-Match': etag
-        }
+        headers = {'If-None-Match': etag}
         self.app.get(url, status=304, headers=headers)
 
     def test_get_version_caching(self):
         url = '{0}/{1}/en/{2}'.format(
-                self._prefix, str(self.book1.document_id),
-                str(self.book1_version.id))
+            self._prefix, str(self.book1.document_id), str(self.book1_version.id)
+        )
         cache_key = '{0}-{1}'.format(
             get_cache_key(self.book1.document_id, 'en', BOOK_TYPE),
-            self.book1_version.id)
+            self.book1_version.id,
+        )
 
         cache_value = cache_document_version.get(cache_key)
         self.assertEqual(cache_value, NO_VALUE)
@@ -169,9 +181,7 @@ class TestBookRest(BaseDocumentTestRest):
         body_post = {
             'activities': ['hiking'],
             'book_types': ['biography'],
-            'locales': [
-                {'lang': 'en'}
-            ]
+            'locales': [{'lang': 'en'}],
         }
         self.post_missing_title(body_post, user='moderator')
 
@@ -179,9 +189,7 @@ class TestBookRest(BaseDocumentTestRest):
         body = {
             'book_types': ['biography'],
             'protected': True,
-            'locales': [
-                {'lang': 'en', 'title': 'Escalades au Thaurac'}
-            ]
+            'locales': [{'lang': 'en', 'title': 'Escalades au Thaurac'}],
         }
         self.post_non_whitelisted_attribute(body, user='moderator')
 
@@ -201,22 +209,15 @@ class TestBookRest(BaseDocumentTestRest):
             'publication_date': '1984',
             'url': 'http://www.nowhere.to.find',
             'associations': {
-                'waypoints': [
-                    {'document_id': self.waypoint2.document_id}
-                ],
-                'articles': [
-                    {'document_id': self.article2.document_id}
-                ]
+                'waypoints': [{'document_id': self.waypoint2.document_id}],
+                'articles': [{'document_id': self.article2.document_id}],
             },
             'geometry': {
                 'version': 1,
                 'document_id': self.waypoint2.document_id,
-                'geom':
-                    '{"type": "Point", "coordinates": [635956, 5723604]}'
+                'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
             },
-            'locales': [
-                {'lang': 'en', 'title': 'Escalades au Thaurac'}
-            ]
+            'locales': [{'lang': 'en', 'title': 'Escalades au Thaurac'}],
         }
         body, doc = self.post_success(body, user='moderator')
         version = doc.versions[0]
@@ -233,29 +234,31 @@ class TestBookRest(BaseDocumentTestRest):
         self.assertIsNone(doc.geometry)
 
         # check that a link to the associated waypoint is created
-        association_wp = self.session.get(Association,
-            (doc.document_id, self.waypoint2.document_id))
+        association_wp = self.session.get(
+            Association, (doc.document_id, self.waypoint2.document_id)
+        )
         self.assertIsNotNone(association_wp)
 
-        association_wp_log = self.session.query(AssociationLog). \
-            filter(AssociationLog.parent_document_id ==
-                   doc.document_id). \
-            filter(AssociationLog.child_document_id ==
-                   self.waypoint2.document_id). \
-            first()
+        association_wp_log = (
+            self.session.query(AssociationLog)
+            .filter(AssociationLog.parent_document_id == doc.document_id)
+            .filter(AssociationLog.child_document_id == self.waypoint2.document_id)
+            .first()
+        )
         self.assertIsNotNone(association_wp_log)
 
         # check that a link to the associated article is created
-        association_art = self.session.get(Association,
-            (doc.document_id, self.article2.document_id))
+        association_art = self.session.get(
+            Association, (doc.document_id, self.article2.document_id)
+        )
         self.assertIsNotNone(association_art)
 
-        association_art_log = self.session.query(AssociationLog). \
-            filter(AssociationLog.parent_document_id ==
-                   doc.document_id). \
-            filter(AssociationLog.child_document_id ==
-                   self.article2.document_id). \
-            first()
+        association_art_log = (
+            self.session.query(AssociationLog)
+            .filter(AssociationLog.parent_document_id == doc.document_id)
+            .filter(AssociationLog.child_document_id == self.article2.document_id)
+            .first()
+        )
         self.assertIsNotNone(association_art_log)
 
     def test_put_wrong_document_id(self):
@@ -266,9 +269,12 @@ class TestBookRest(BaseDocumentTestRest):
                 'activities': ['hiking'],
                 'book_types': ['biography'],
                 'locales': [
-                    {'lang': 'en', 'title': 'Escalades au Thaurac',
-                     'version': self.locale_en.version}
-                ]
+                    {
+                        'lang': 'en',
+                        'title': 'Escalades au Thaurac',
+                        'version': self.locale_en.version,
+                    }
+                ],
             }
         }
         self.put_wrong_document_id(body, user='moderator')
@@ -281,13 +287,15 @@ class TestBookRest(BaseDocumentTestRest):
                 'activities': ['hiking'],
                 'book_types': ['biography'],
                 'locales': [
-                    {'lang': 'en', 'title': 'Escalades au Thaurac',
-                     'version': self.locale_en.version}
-                ]
+                    {
+                        'lang': 'en',
+                        'title': 'Escalades au Thaurac',
+                        'version': self.locale_en.version,
+                    }
+                ],
             }
         }
-        self.put_wrong_version(
-            body, self.book1.document_id, user='moderator')
+        self.put_wrong_version(body, self.book1.document_id, user='moderator')
 
     def test_put_wrong_locale_version(self):
         body = {
@@ -297,13 +305,11 @@ class TestBookRest(BaseDocumentTestRest):
                 'activities': ['hiking'],
                 'book_types': ['biography'],
                 'locales': [
-                    {'lang': 'en', 'title': 'Escalades au Thaurac',
-                     'version': -9999}
-                ]
+                    {'lang': 'en', 'title': 'Escalades au Thaurac', 'version': -9999}
+                ],
             }
         }
-        self.put_wrong_version(
-            body, self.book1.document_id, user='moderator')
+        self.put_wrong_version(body, self.book1.document_id, user='moderator')
 
     def test_put_wrong_ids(self):
         body = {
@@ -313,9 +319,12 @@ class TestBookRest(BaseDocumentTestRest):
                 'activities': ['hiking'],
                 'book_types': ['biography'],
                 'locales': [
-                    {'lang': 'en', 'title': 'Escalades au Thaurac',
-                     'version': self.locale_en.version}
-                ]
+                    {
+                        'lang': 'en',
+                        'title': 'Escalades au Thaurac',
+                        'version': self.locale_en.version,
+                    }
+                ],
             }
         }
         self.put_wrong_ids(body, self.book1.document_id, user='moderator')
@@ -333,31 +342,28 @@ class TestBookRest(BaseDocumentTestRest):
                 'activities': ['hiking'],
                 'book_types': ['magazine'],
                 'associations': {
-                    'articles': [
-                        {'document_id': self.article2.document_id}
-                    ],
-                    'images': [
-                        {'document_id': self.image2.document_id}
-                    ],
-                    'routes': [
-                        {'document_id': self.route2.document_id}
-                    ]
+                    'articles': [{'document_id': self.article2.document_id}],
+                    'images': [{'document_id': self.image2.document_id}],
+                    'routes': [{'document_id': self.route2.document_id}],
                 },
                 'geometry': {
                     'version': 1,
                     'document_id': self.waypoint2.document_id,
-                    'geom':
-                        '{"type": "Point", "coordinates": [635956, 5723604]}'
+                    'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
                 },
                 'locales': [
-                    {'lang': 'en', 'title': 'New title',
-                     'version': self.locale_en.version}
-                ]
-            }
+                    {
+                        'lang': 'en',
+                        'title': 'New title',
+                        'version': self.locale_en.version,
+                    }
+                ],
+            },
         }
 
         (body, book1) = self.put_success_all(
-            body, self.book1, user='moderator', cache_version=3)
+            body, self.book1, user='moderator', cache_version=3
+        )
 
         self.assertEqual(book1.activities, ['hiking'])
         locale_en = book1.get_locale('en')
@@ -382,29 +388,31 @@ class TestBookRest(BaseDocumentTestRest):
         self.assertIsNone(book1.geometry)
 
         # check that a link to the associated image is created
-        association_img = self.session.get(Association,
-            (book1.document_id, self.image2.document_id))
+        association_img = self.session.get(
+            Association, (book1.document_id, self.image2.document_id)
+        )
         self.assertIsNotNone(association_img)
 
-        association_img_log = self.session.query(AssociationLog). \
-            filter(AssociationLog.parent_document_id ==
-                   book1.document_id). \
-            filter(AssociationLog.child_document_id ==
-                   self.image2.document_id). \
-            first()
+        association_img_log = (
+            self.session.query(AssociationLog)
+            .filter(AssociationLog.parent_document_id == book1.document_id)
+            .filter(AssociationLog.child_document_id == self.image2.document_id)
+            .first()
+        )
         self.assertIsNotNone(association_img_log)
 
         # check that a link to the associated route is created
-        association_rou = self.session.get(Association,
-            (book1.document_id, self.route2.document_id))
+        association_rou = self.session.get(
+            Association, (book1.document_id, self.route2.document_id)
+        )
         self.assertIsNotNone(association_rou)
 
-        association_rou_log = self.session.query(AssociationLog). \
-            filter(AssociationLog.parent_document_id ==
-                   book1.document_id). \
-            filter(AssociationLog.child_document_id ==
-                   self.route2.document_id). \
-            first()
+        association_rou_log = (
+            self.session.query(AssociationLog)
+            .filter(AssociationLog.parent_document_id == book1.document_id)
+            .filter(AssociationLog.child_document_id == self.route2.document_id)
+            .first()
+        )
         self.assertIsNotNone(association_rou_log)
 
     def test_put_success_figures_only(self):
@@ -417,11 +425,12 @@ class TestBookRest(BaseDocumentTestRest):
                 'activities': ['hiking'],
                 'book_types': ['biography'],
                 'author': 'New author',
-                'editor': 'New editor'
-            }
+                'editor': 'New editor',
+            },
         }
         (body, book1) = self.put_success_figures_only(
-            body, self.book1, user='moderator')
+            body, self.book1, user='moderator'
+        )
 
         self.assertEqual(book1.activities, ['hiking'])
         self.assertEqual(book1.book_types, ['biography'])
@@ -436,19 +445,20 @@ class TestBookRest(BaseDocumentTestRest):
                 'activities': ['hiking'],
                 'book_types': ['biography'],
                 'locales': [
-                    {'lang': 'en', 'title': 'New title',
-                     'version': self.locale_en.version}
-                ]
-            }
+                    {
+                        'lang': 'en',
+                        'title': 'New title',
+                        'version': self.locale_en.version,
+                    }
+                ],
+            },
         }
-        (body, book1) = self.put_success_lang_only(
-            body, self.book1, user='moderator')
+        (body, book1) = self.put_success_lang_only(body, self.book1, user='moderator')
 
         self.assertEqual(book1.get_locale('en').title, 'New title')
 
     def test_put_success_new_lang(self):
-        """Test updating a document by adding a new locale.
-        """
+        """Test updating a document by adding a new locale."""
         body = {
             'message': 'Adding lang',
             'document': {
@@ -457,13 +467,10 @@ class TestBookRest(BaseDocumentTestRest):
                 'quality': quality_types[1],
                 'activities': ['hiking'],
                 'book_types': ['biography'],
-                'locales': [
-                    {'lang': 'es', 'title': 'Escalades au Thaurac'}
-                ]
-            }
+                'locales': [{'lang': 'es', 'title': 'Escalades au Thaurac'}],
+            },
         }
-        (body, book1) = self.put_success_new_lang(
-            body, self.book1, user='moderator')
+        (body, book1) = self.put_success_new_lang(body, self.book1, user='moderator')
 
         self.assertEqual(book1.get_locale('es').title, 'Escalades au Thaurac')
 
@@ -471,12 +478,9 @@ class TestBookRest(BaseDocumentTestRest):
         self._get_association_logs(self.book1)
 
     def _add_test_data(self):
-        self.book1 = Book(activities=['hiking'],
-                          book_types=['biography'])
-        self.locale_en = DocumentLocale(lang='en',
-                                        title='Escalades au Thaurac')
-        self.locale_fr = DocumentLocale(lang='fr',
-                                        title='Escalades au Thaurac')
+        self.book1 = Book(activities=['hiking'], book_types=['biography'])
+        self.locale_en = DocumentLocale(lang='en', title='Escalades au Thaurac')
+        self.locale_fr = DocumentLocale(lang='fr', title='Escalades au Thaurac')
 
         self.book1.locales.append(self.locale_en)
         self.book1.locales.append(self.locale_fr)
@@ -486,95 +490,121 @@ class TestBookRest(BaseDocumentTestRest):
 
         user_id = self.global_userids['contributor']
         DocumentRest.create_new_version(self.book1, user_id)
-        self.book1_version = self.session.query(DocumentVersion). \
-            filter(DocumentVersion.document_id == self.book1.document_id). \
-            filter(DocumentVersion.lang == 'en').first()
+        self.book1_version = (
+            self.session.query(DocumentVersion)
+            .filter(DocumentVersion.document_id == self.book1.document_id)
+            .filter(DocumentVersion.lang == 'en')
+            .first()
+        )
 
-        self.book2 = Book(
-            activities=['hiking'], book_types=['biography'])
+        self.book2 = Book(activities=['hiking'], book_types=['biography'])
         self.session.add(self.book2)
-        self.book3 = Book(
-            activities=['hiking'], book_types=['biography'])
+        self.book3 = Book(activities=['hiking'], book_types=['biography'])
         self.session.add(self.book3)
-        self.book4 = Book(
-            activities=['hiking'], book_types=['biography'])
-        self.book4.locales.append(DocumentLocale(
-            lang='en', title='Escalades au Thaurac'))
-        self.book4.locales.append(DocumentLocale(
-            lang='fr', title='Escalades au Thaurac'))
+        self.book4 = Book(activities=['hiking'], book_types=['biography'])
+        self.book4.locales.append(
+            DocumentLocale(lang='en', title='Escalades au Thaurac')
+        )
+        self.book4.locales.append(
+            DocumentLocale(lang='fr', title='Escalades au Thaurac')
+        )
         self.session.add(self.book4)
-        self.waypoint1 = Waypoint(
-            waypoint_type='summit', elevation=2203)
+        self.waypoint1 = Waypoint(waypoint_type='summit', elevation=2203)
         self.session.add(self.waypoint1)
         self.waypoint2 = Waypoint(
-            waypoint_type='climbing_outdoor', elevation=2,
+            waypoint_type='climbing_outdoor',
+            elevation=2,
             rock_types=[],
-            geometry=DocumentGeometry(
-                geom='SRID=3857;POINT(635956 5723604)')
-            )
+            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+        )
         self.session.add(self.waypoint2)
         self.session.flush()
 
         self.article2 = Article(
-            categories=['site_info'], activities=['hiking'],
-            article_type='collab')
+            categories=['site_info'], activities=['hiking'], article_type='collab'
+        )
         self.session.add(self.article2)
         self.session.flush()
 
         self.image = Image(
             filename='image.jpg',
-            activities=['paragliding'], height=1500,
-            image_type='collaborative')
+            activities=['paragliding'],
+            height=1500,
+            image_type='collaborative',
+        )
 
         self.locale_en_img = DocumentLocale(
-            lang='en', title='Mont Blanc from the air', description='...',
-            document_topic=DocumentTopic(topic_id=1))
+            lang='en',
+            title='Mont Blanc from the air',
+            description='...',
+            document_topic=DocumentTopic(topic_id=1),
+        )
 
         self.locale_fr_img = DocumentLocale(
-            lang='fr', title='Mont Blanc du ciel', description='...')
+            lang='fr', title='Mont Blanc du ciel', description='...'
+        )
 
         self.image.locales.append(self.locale_en_img)
         self.image.locales.append(self.locale_fr_img)
 
-        self.image.geometry = DocumentGeometry(
-            geom='SRID=3857;POINT(635956 5723604)')
+        self.image.geometry = DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)')
 
         self.session.add(self.image)
         self.session.flush()
 
         self.image2 = Image(
-            filename='image2.jpg',
-            activities=['paragliding'], height=1500)
+            filename='image2.jpg', activities=['paragliding'], height=1500
+        )
         self.session.add(self.image2)
         self.session.flush()
 
         self.route2 = Route(
-            activities=['skitouring'], elevation_max=1500, elevation_min=700,
-            height_diff_up=800, height_diff_down=800, durations='1',
+            activities=['skitouring'],
+            elevation_max=1500,
+            elevation_min=700,
+            height_diff_up=800,
+            height_diff_down=800,
+            durations='1',
             locales=[
                 RouteLocale(
-                    lang='en', title='Mont Blanc from the air',
-                    description='...', gear='paraglider'),
+                    lang='en',
+                    title='Mont Blanc from the air',
+                    description='...',
+                    gear='paraglider',
+                ),
                 RouteLocale(
-                    lang='fr', title='Mont Blanc du ciel', description='...',
-                    gear='paraglider')]
+                    lang='fr',
+                    title='Mont Blanc du ciel',
+                    description='...',
+                    gear='paraglider',
+                ),
+            ],
         )
         self.session.add(self.route2)
         self.session.flush()
 
         self.route3 = Route(
-            activities=['skitouring'], elevation_max=1500, elevation_min=700,
-            height_diff_up=500, height_diff_down=500, durations='1')
+            activities=['skitouring'],
+            elevation_max=1500,
+            elevation_min=700,
+            height_diff_up=500,
+            height_diff_down=500,
+            durations='1',
+        )
         self.session.add(self.route3)
         self.session.flush()
 
         # self._add_association(Association.create(
         #     parent_document=self.book1,
         #     child_document=self.image2), user_id)
-        self._add_association(Association.create(
-            parent_document=self.book1,
-            child_document=self.route3), user_id)
-        self._add_association(Association.create(
-            parent_document=self.book2,
-            child_document=self.waypoint2), user_id)
+        self._add_association(
+            Association.create(parent_document=self.book1, child_document=self.route3),
+            user_id,
+        )
+        self._add_association(
+            Association.create(
+                parent_document=self.book2, child_document=self.waypoint2
+            ),
+            user_id,
+        )
         self.session.flush()

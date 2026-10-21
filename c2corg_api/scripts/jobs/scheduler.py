@@ -16,8 +16,10 @@ log = logging.getLogger('c2corg_api_background_jobs')
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print('usage: %s <config_uri> [var=value]\n'
-          '(example: "%s development.ini")' % (cmd, cmd))
+    print(
+        'usage: %s <config_uri> [var=value]\n'
+        '(example: "%s development.ini")' % (cmd, cmd)
+    )
     sys.exit(1)
 
 
@@ -37,5 +39,5 @@ def main(argv=sys.argv):
     signal.pause()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

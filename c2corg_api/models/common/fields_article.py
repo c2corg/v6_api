@@ -6,14 +6,10 @@ DEFAULT_FIELDS = [
     'activities',
     'categories',
     'quality',
-    'article_type'
+    'article_type',
 ]
 
-DEFAULT_REQUIRED = [
-    'locales',
-    'locales.title',
-    'article_type'
-]
+DEFAULT_REQUIRED = ['locales', 'locales.title', 'article_type']
 
 LISTING_FIELDS = [
     'locales',
@@ -22,11 +18,11 @@ LISTING_FIELDS = [
     'categories',
     'activities',
     'quality',
-    'article_type'
+    'article_type',
 ]
 
 fields_article = {
     'fields': DEFAULT_FIELDS,
     'required': DEFAULT_REQUIRED,
-    'listing': LISTING_FIELDS
+    'listing': LISTING_FIELDS,
 }

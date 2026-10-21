@@ -1,15 +1,10 @@
-from c2corg_api.models.schema_utils import restrict_schema, \
-    get_update_schema, get_create_schema
+from c2corg_api.models.schema_utils import (
+    restrict_schema,
+    get_update_schema,
+    get_create_schema,
+)
 from c2corg_api.models.common.fields_xreport import fields_xreport
-from sqlalchemy import (
-    Column,
-    Integer,
-    Boolean,
-    SmallInteger,
-    ForeignKey,
-    String,
-    Date
-    )
+from sqlalchemy import Column, Integer, Boolean, SmallInteger, ForeignKey, String, Date
 
 from colanderalchemy import SQLAlchemySchemaNode
 
@@ -19,8 +14,11 @@ from c2corg_api.models.document import (
     ArchiveDocument,
     Document,
     get_geometry_schema_overrides,
-    schema_attributes, DocumentLocale, ArchiveDocumentLocale,
-    schema_locale_attributes)
+    schema_attributes,
+    DocumentLocale,
+    ArchiveDocumentLocale,
+    schema_locale_attributes,
+)
 from c2corg_api.models.common import document_types
 from c2corg_api.models import enums
 
@@ -28,7 +26,6 @@ XREPORT_TYPE = document_types.XREPORT_TYPE
 
 
 class _XreportMixin:
-
     # Altitude
     elevation = Column(SmallInteger)
 
@@ -83,34 +80,56 @@ class _XreportMixin:
 
 
 attributes = [
-    'elevation', 'date', 'event_type', 'event_activity',
-    'nb_participants', 'nb_impacted', 'rescue',
-    'avalanche_level', 'avalanche_slope', 'severity',
-    'author_status', 'activity_rate', 'age', 'gender',
-    'previous_injuries', 'autonomy', 'supervision', 'qualification',
-    'disable_comments', 'anonymous'
+    'elevation',
+    'date',
+    'event_type',
+    'event_activity',
+    'nb_participants',
+    'nb_impacted',
+    'rescue',
+    'avalanche_level',
+    'avalanche_slope',
+    'severity',
+    'author_status',
+    'activity_rate',
+    'age',
+    'gender',
+    'previous_injuries',
+    'autonomy',
+    'supervision',
+    'qualification',
+    'disable_comments',
+    'anonymous',
 ]
 
 attributes_without_personal = [
-    'elevation', 'date', 'event_type', 'event_activity',
-    'nb_participants', 'nb_impacted', 'rescue',
-    'avalanche_level', 'avalanche_slope', 'severity',
-    'disable_comments', 'anonymous'
+    'elevation',
+    'date',
+    'event_type',
+    'event_activity',
+    'nb_participants',
+    'nb_impacted',
+    'rescue',
+    'avalanche_level',
+    'avalanche_slope',
+    'severity',
+    'disable_comments',
+    'anonymous',
 ]
 
 
 class Xreport(_XreportMixin, Document):
-    """
-    """
+    """ """
+
     __tablename__ = 'xreports'
 
     document_id = Column(
-        Integer,
-        ForeignKey(schema + '.documents.document_id'), primary_key=True)
+        Integer, ForeignKey(schema + '.documents.document_id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': XREPORT_TYPE,
-        'inherit_condition': Document.document_id == document_id
+        'inherit_condition': Document.document_id == document_id,
     }
 
     def to_archive(self):
@@ -125,17 +144,17 @@ class Xreport(_XreportMixin, Document):
 
 
 class ArchiveXreport(_XreportMixin, ArchiveDocument):
-    """
-    """
+    """ """
+
     __tablename__ = 'xreports_archives'
 
     id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_archives.id'), primary_key=True)
+        Integer, ForeignKey(schema + '.documents_archives.id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': XREPORT_TYPE,
-        'inherit_condition': ArchiveDocument.id == id
+        'inherit_condition': ArchiveDocument.id == id,
     }
 
     __table_args__ = Base.__table_args__
@@ -187,25 +206,32 @@ class _XreportLocaleMixin:
 
 
 attributes_locales = [
-    'place', 'route_study', 'conditions', 'training', 'motivations',
-    'group_management', 'risk', 'time_management', 'safety',
-    'reduce_impact', 'increase_impact',
-    'modifications', 'other_comments'
+    'place',
+    'route_study',
+    'conditions',
+    'training',
+    'motivations',
+    'group_management',
+    'risk',
+    'time_management',
+    'safety',
+    'reduce_impact',
+    'increase_impact',
+    'modifications',
+    'other_comments',
 ]
 
 
 class XreportLocale(_XreportLocaleMixin, DocumentLocale):
-    """
-    """
+    """ """
+
     __tablename__ = 'xreports_locales'
 
-    id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_locales.id'), primary_key=True)
+    id = Column(Integer, ForeignKey(schema + '.documents_locales.id'), primary_key=True)
 
     __mapper_args__ = {
         'polymorphic_identity': XREPORT_TYPE,
-        'inherit_condition': DocumentLocale.id == id
+        'inherit_condition': DocumentLocale.id == id,
     }
 
     def to_archive(self):
@@ -221,18 +247,17 @@ class XreportLocale(_XreportLocaleMixin, DocumentLocale):
 
 
 class ArchiveXreportLocale(_XreportLocaleMixin, ArchiveDocumentLocale):
-    """
-    """
+    """ """
+
     __tablename__ = 'xreports_locales_archives'
 
     id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_locales_archives.id'),
-        primary_key=True)
+        Integer, ForeignKey(schema + '.documents_locales_archives.id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': XREPORT_TYPE,
-        'inherit_condition': ArchiveDocumentLocale.id == id
+        'inherit_condition': ArchiveDocumentLocale.id == id,
     }
 
     __table_args__ = Base.__table_args__
@@ -242,28 +267,22 @@ schema_xreport_locale = SQLAlchemySchemaNode(
     XreportLocale,
     # whitelisted attributes
     includes=schema_locale_attributes + attributes_locales,
-    overrides={
-        'version': {
-            'missing': None
-        }
-    })
+    overrides={'version': {'missing': None}},
+)
 
 schema_xreport = SQLAlchemySchemaNode(
     Xreport,
     # whitelisted attributes
     includes=schema_attributes + attributes,
     overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
+        'document_id': {'missing': None},
+        'version': {'missing': None},
         'locales': {
             'children': [schema_xreport_locale],
         },
-        'geometry': get_geometry_schema_overrides(['POINT'])
-    })
+        'geometry': get_geometry_schema_overrides(['POINT']),
+    },
+)
 
 # schema that hides personal information of a xreport
 schema_xreport_without_personal = SQLAlchemySchemaNode(
@@ -274,13 +293,11 @@ schema_xreport_without_personal = SQLAlchemySchemaNode(
         'locales': {
             'children': [schema_xreport_locale],
         },
-        'geometry': get_geometry_schema_overrides(['POINT'])
-    })
+        'geometry': get_geometry_schema_overrides(['POINT']),
+    },
+)
 
 
 schema_create_xreport = get_create_schema(schema_xreport)
 schema_update_xreport = get_update_schema(schema_xreport)
-schema_listing_xreport = restrict_schema(
-    schema_xreport,
-    fields_xreport.get('listing')
-)
+schema_listing_xreport = restrict_schema(schema_xreport, fields_xreport.get('listing'))

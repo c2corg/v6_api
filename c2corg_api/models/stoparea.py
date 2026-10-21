@@ -24,11 +24,9 @@ class Stoparea(Base, _StopareaMixin):
     """
     Stoparea model representing a stop area
     """
+
     __tablename__ = 'stopareas'
-    __table_args__ = {
-        'schema': schema,
-        'extend_existing': True
-    }
+    __table_args__ = {'schema': schema, 'extend_existing': True}
 
     stoparea_id = Column(Integer, primary_key=True)
 
@@ -37,23 +35,22 @@ class Stoparea(Base, _StopareaMixin):
 
     def to_dict(self):
         return {
-            "id": self.stoparea_id,
-            "navitia_id": self.navitia_id,
-            "stoparea_name": self.stoparea_name,
-            "line": self.line,
-            "operator": self.operator,
-            "coordinates": {
-                "x": shape.to_shape(self.geom).x,
-                "y": shape.to_shape(self.geom).y
-            } if self.geom is not None else None
+            'id': self.stoparea_id,
+            'navitia_id': self.navitia_id,
+            'stoparea_name': self.stoparea_name,
+            'line': self.line,
+            'operator': self.operator,
+            'coordinates': {
+                'x': shape.to_shape(self.geom).x,
+                'y': shape.to_shape(self.geom).y,
+            }
+            if self.geom is not None
+            else None,
         }
 
 
 schema_stoparea = SQLAlchemySchemaNode(
     Stoparea,
     includes=attributes,
-    overrides={
-        'stoparea_id': {'missing': None},
-        'geom': {'typ': colander.String()}
-    }
+    overrides={'stoparea_id': {'missing': None}, 'geom': {'typ': colander.String()}},
 )

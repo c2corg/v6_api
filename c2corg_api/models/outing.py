@@ -1,15 +1,10 @@
 import colander
-from c2corg_api.models.schema_utils import restrict_schema, \
-    get_update_schema, get_create_schema
-from sqlalchemy import (
-    Column,
-    Integer,
-    Boolean,
-    SmallInteger,
-    String,
-    Date,
-    ForeignKey
-    )
+from c2corg_api.models.schema_utils import (
+    restrict_schema,
+    get_update_schema,
+    get_create_schema,
+)
+from sqlalchemy import Column, Integer, Boolean, SmallInteger, String, Date, ForeignKey
 
 from colanderalchemy import SQLAlchemySchemaNode
 
@@ -17,9 +12,14 @@ from c2corg_api.models import schema, Base
 from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.models.utils import copy_attributes
 from c2corg_api.models.document import (
-    ArchiveDocument, Document, DocumentLocale, ArchiveDocumentLocale,
+    ArchiveDocument,
+    Document,
+    DocumentLocale,
+    ArchiveDocumentLocale,
     schema_locale_attributes,
-    schema_attributes, get_geometry_schema_overrides)
+    schema_attributes,
+    get_geometry_schema_overrides,
+)
 from c2corg_api.models import enums
 from c2corg_api.models.common import document_types
 
@@ -27,7 +27,6 @@ OUTING_TYPE = document_types.OUTING_TYPE
 
 
 class _OutingMixin:
-
     activities = Column(ArrayOfEnum(enums.activity_type), nullable=False)
 
     date_start = Column(Date, nullable=False)
@@ -106,32 +105,58 @@ class _OutingMixin:
 
 
 attributes = [
-    'access_condition', 'activities', 'avalanche_signs',
-    'condition_rating', 'date_end', 'date_start',
-    'elevation_access', 'elevation_down_snow',
-    'elevation_max', 'elevation_min', 'elevation_up_snow', 'frequentation',
-    'glacier_rating', 'height_diff_down', 'height_diff_up', 'hut_status',
-    'length_total', 'lift_status', 'partial_trip', 'participant_count',
-    'public_transport', 'snow_quality', 'snow_quantity', 'disable_comments',
-    'hiking_rating', 'ski_rating', 'labande_global_rating', 'ice_rating',
-    'snowshoe_rating', 'global_rating', 'height_diff_difficulties',
-    'engagement_rating', 'equipment_rating', 'rock_free_rating',
-    'via_ferrata_rating', 'mtb_up_rating', 'mtb_down_rating'
-    ]
+    'access_condition',
+    'activities',
+    'avalanche_signs',
+    'condition_rating',
+    'date_end',
+    'date_start',
+    'elevation_access',
+    'elevation_down_snow',
+    'elevation_max',
+    'elevation_min',
+    'elevation_up_snow',
+    'frequentation',
+    'glacier_rating',
+    'height_diff_down',
+    'height_diff_up',
+    'hut_status',
+    'length_total',
+    'lift_status',
+    'partial_trip',
+    'participant_count',
+    'public_transport',
+    'snow_quality',
+    'snow_quantity',
+    'disable_comments',
+    'hiking_rating',
+    'ski_rating',
+    'labande_global_rating',
+    'ice_rating',
+    'snowshoe_rating',
+    'global_rating',
+    'height_diff_difficulties',
+    'engagement_rating',
+    'equipment_rating',
+    'rock_free_rating',
+    'via_ferrata_rating',
+    'mtb_up_rating',
+    'mtb_down_rating',
+]
 
 
 class Outing(_OutingMixin, Document):
-    """
-    """
+    """ """
+
     __tablename__ = 'outings'
 
     document_id = Column(
-        Integer,
-        ForeignKey(schema + '.documents.document_id'), primary_key=True)
+        Integer, ForeignKey(schema + '.documents.document_id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': OUTING_TYPE,
-        'inherit_condition': Document.document_id == document_id
+        'inherit_condition': Document.document_id == document_id,
     }
 
     def to_archive(self):
@@ -147,27 +172,24 @@ class Outing(_OutingMixin, Document):
 
 
 class ArchiveOuting(_OutingMixin, ArchiveDocument):
-    """
-    """
+    """ """
+
     __tablename__ = 'outings_archives'
 
     id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_archives.id'), primary_key=True)
+        Integer, ForeignKey(schema + '.documents_archives.id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': OUTING_TYPE,
-        'inherit_condition': ArchiveDocument.id == id
+        'inherit_condition': ArchiveDocument.id == id,
     }
 
     __table_args__ = Base.__table_args__
 
 
 class _OutingLocaleMixin:
-
-    __mapper_args__ = {
-        'polymorphic_identity': OUTING_TYPE
-    }
+    __mapper_args__ = {'polymorphic_identity': OUTING_TYPE}
 
     participants = Column(String)
 
@@ -189,19 +211,24 @@ class _OutingLocaleMixin:
 
 
 attributes_locales = [
-    'access_comment', 'avalanches', 'conditions', 'conditions_levels',
-    'hut_comment', 'participants', 'route_description', 'timing', 'weather'
+    'access_comment',
+    'avalanches',
+    'conditions',
+    'conditions_levels',
+    'hut_comment',
+    'participants',
+    'route_description',
+    'timing',
+    'weather',
 ]
 
 
 class OutingLocale(_OutingLocaleMixin, DocumentLocale):
-    """
-    """
+    """ """
+
     __tablename__ = 'outings_locales'
 
-    id = Column(
-                Integer,
-                ForeignKey(schema + '.documents_locales.id'), primary_key=True)
+    id = Column(Integer, ForeignKey(schema + '.documents_locales.id'), primary_key=True)
 
     def to_archive(self):
         locale = ArchiveOutingLocale()
@@ -216,14 +243,13 @@ class OutingLocale(_OutingLocaleMixin, DocumentLocale):
 
 
 class ArchiveOutingLocale(_OutingLocaleMixin, ArchiveDocumentLocale):
-    """
-    """
+    """ """
+
     __tablename__ = 'outings_locales_archives'
 
     id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_locales_archives.id'),
-        primary_key=True)
+        Integer, ForeignKey(schema + '.documents_locales_archives.id'), primary_key=True
+    )
 
     __table_args__ = Base.__table_args__
 
@@ -232,35 +258,24 @@ schema_outing_locale = SQLAlchemySchemaNode(
     OutingLocale,
     # whitelisted attributes
     includes=schema_locale_attributes + attributes_locales,
-    overrides={
-        'version': {
-            'missing': None
-        }
-    })
+    overrides={'version': {'missing': None}},
+)
 
 schema_outing = SQLAlchemySchemaNode(
     Outing,
     # whitelisted attributes
     includes=schema_attributes + attributes,
     overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_outing_locale]
-        },
-        'activities': {
-            'validator': colander.Length(min=1)
-        },
-        'geometry': get_geometry_schema_overrides(
-            ['LINESTRING', 'MULTILINESTRING'])
-    })
+        'document_id': {'missing': None},
+        'version': {'missing': None},
+        'locales': {'children': [schema_outing_locale]},
+        'activities': {'validator': colander.Length(min=1)},
+        'geometry': get_geometry_schema_overrides(['LINESTRING', 'MULTILINESTRING']),
+    },
+)
 
 schema_create_outing = get_create_schema(schema_outing)
 schema_update_outing = get_update_schema(schema_outing)
-schema_association_outing = restrict_schema(schema_outing, [
-    'locales.title', 'activities', 'date_start', 'date_end'
-])
+schema_association_outing = restrict_schema(
+    schema_outing, ['locales.title', 'activities', 'date_start', 'date_end']
+)

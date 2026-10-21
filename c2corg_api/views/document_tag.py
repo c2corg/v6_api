@@ -21,42 +21,45 @@ class DocumentTagSchema(MappingSchema):
 
 
 def get_tag_relation(user_id, document_id):
-    return DBSession. \
-        query(DocumentTag). \
-        filter(DocumentTag.user_id == user_id). \
-        filter(DocumentTag.document_id == document_id). \
-        first()
+    return (
+        DBSession.query(DocumentTag)
+        .filter(DocumentTag.user_id == user_id)
+        .filter(DocumentTag.document_id == document_id)
+        .first()
+    )
 
 
 validate_document_id = create_int_validator('document_id')
 
 
 def validate_document(request, **kwargs):
-    """ Check that the document exists, is a route and
+    """Check that the document exists, is a route and
     not merged with another document.
     """
     document_id = request.validated['document_id']
-    document_exists_query = DBSession.query(Document). \
-        filter(Document.document_id == document_id). \
-        filter(Document.type == ROUTE_TYPE). \
-        filter(Document.redirects_to.is_(None)). \
-        exists()
+    document_exists_query = (
+        DBSession.query(Document)
+        .filter(Document.document_id == document_id)
+        .filter(Document.type == ROUTE_TYPE)
+        .filter(Document.redirects_to.is_(None))
+        .exists()
+    )
     document_exists = DBSession.query(document_exists_query).scalar()
 
     if not document_exists:
         request.errors.add(
-            'body', 'document_id',
-            'document {0} does not exist'.format(document_id))
+            'body', 'document_id', 'document {0} does not exist'.format(document_id)
+        )
 
 
 @resource(path='/tags/add', cors_policy=cors_policy)
 class DocumentTagRest(ACLDefault):
-
     @restricted_json_view(
         schema=DocumentTagSchema(),
-        validators=[colander_body_validator, validate_document])
+        validators=[colander_body_validator, validate_document],
+    )
     def post(self):
-        """ Tag the given document as todo.
+        """Tag the given document as todo.
         Creates a tag relation, so that the authenticated user is
         marking the given document as todo.
 
@@ -75,12 +78,19 @@ class DocumentTagRest(ACLDefault):
         if get_tag_relation(user_id, document_id):
             raise HTTPBadRequest('This document is already tagged.')
 
-        DBSession.add(DocumentTag(
-            user_id=user_id, document_id=document_id,
-            document_type=document_type))
-        DBSession.add(DocumentTagLog(
-            user_id=user_id, document_id=document_id,
-            document_type=document_type, is_creation=True))
+        DBSession.add(
+            DocumentTag(
+                user_id=user_id, document_id=document_id, document_type=document_type
+            )
+        )
+        DBSession.add(
+            DocumentTagLog(
+                user_id=user_id,
+                document_id=document_id,
+                document_type=document_type,
+                is_creation=True,
+            )
+        )
 
         notify_es_syncer(self.request.registry.queue_config)
 
@@ -89,12 +99,12 @@ class DocumentTagRest(ACLDefault):
 
 @resource(path='/tags/remove', cors_policy=cors_policy)
 class DocumentUntagRest(ACLDefault):
-
     @restricted_json_view(
         schema=DocumentTagSchema(),
-        validators=[colander_body_validator, validate_document])
+        validators=[colander_body_validator, validate_document],
+    )
     def post(self):
-        """ Untag the given document.
+        """Untag the given document.
 
         Request:
             `POST` `/tags/remove`
@@ -110,13 +120,20 @@ class DocumentUntagRest(ACLDefault):
 
         if tag_relation:
             DBSession.delete(tag_relation)
-            DBSession.add(DocumentTagLog(
-                user_id=user_id, document_id=document_id,
-                document_type=document_type, is_creation=False))
+            DBSession.add(
+                DocumentTagLog(
+                    user_id=user_id,
+                    document_id=document_id,
+                    document_type=document_type,
+                    is_creation=False,
+                )
+            )
         else:
             log.warning(
-                'tried to delete not existing tag relation '
-                '({0}, {1})'.format(user_id, document_id))
+                'tried to delete not existing tag relation ({0}, {1})'.format(
+                    user_id, document_id
+                )
+            )
             raise HTTPBadRequest('This document has no such tag.')
 
         notify_es_syncer(self.request.registry.queue_config)
@@ -126,7 +143,6 @@ class DocumentUntagRest(ACLDefault):
 
 @resource(path='/tags/has/{document_id}', cors_policy=cors_policy)
 class DocumentTaggedRest(ACLDefault):
-
     @restricted_json_view(validators=[validate_document_id])
     def get(self):
         """
@@ -144,6 +160,4 @@ class DocumentTaggedRest(ACLDefault):
         user_id = self.request.authenticated_userid
         tag_relation = get_tag_relation(user_id, document_id)
 
-        return {
-            'todo': tag_relation is not None
-        }
+        return {'todo': tag_relation is not None}

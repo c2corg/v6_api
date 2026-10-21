@@ -2,8 +2,7 @@ from c2corg_api.security.acl import ACLDefault
 from c2corg_api.caching import cache_document_version
 from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import get_cache_key
-from c2corg_api.models.document_history import DocumentVersion, \
-    HistoryMetaData
+from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user import User
 from c2corg_api.views import to_json_dict, etag_cache
 from c2corg_api.caching import get_or_create
@@ -15,57 +14,59 @@ from sqlalchemy.sql.expression import union
 
 
 class DocumentVersionRest(ACLDefault):
-    """ Base class for all views that return a specific version of a document.
-    """
+    """Base class for all views that return a specific version of a document."""
 
-    def _get_version(self, clazz, document_type, locale_clazz,
-                     schema, adapt_schema=None):
+    def _get_version(
+        self, clazz, document_type, locale_clazz, schema, adapt_schema=None
+    ):
         document_id = self.request.validated['id']
         lang = self.request.validated['lang']
         version_id = self.request.validated['version_id']
 
         def create_response():
             return self._load_version(
-                document_id, lang, version_id, clazz,
-                locale_clazz, schema, adapt_schema)
+                document_id, lang, version_id, clazz, locale_clazz, schema, adapt_schema
+            )
 
-        base_cache_key = get_cache_key(
-            document_id,
-            lang,
-            document_type=document_type)
+        base_cache_key = get_cache_key(document_id, lang, document_type=document_type)
 
         if not base_cache_key:
-            raise HTTPNotFound(
-                'no version for document {0}'.format(document_id))
+            raise HTTPNotFound('no version for document {0}'.format(document_id))
         else:
             # version caching is distinct for moderators
             cache_key = '{0}-{1}{2}'.format(
-                base_cache_key, version_id,
-                '-mod' if self.request.has_permission('moderator') else '')
+                base_cache_key,
+                version_id,
+                '-mod' if self.request.has_permission('moderator') else '',
+            )
             # set and check the etag: if the etag value provided in the
             # request equals the current etag, return 'NotModified'
             etag_cache(self.request, cache_key)
 
-            return get_or_create(
-                cache_document_version, cache_key, create_response)
+            return get_or_create(cache_document_version, cache_key, create_response)
 
     def _load_version(
-            self, document_id, lang, version_id, clazz, locale_clazz, schema,
-            adapt_schema):
-        version = DBSession.query(DocumentVersion) \
-            .options(joinedload(DocumentVersion.history_metadata).
-                     joinedload(HistoryMetaData.user).
-                     load_only(User.id, User.name)) \
-            .options(joinedload(
-                DocumentVersion.document_archive.of_type(clazz))) \
-            .options(joinedload(
-                DocumentVersion.document_locales_archive.of_type(
-                    locale_clazz))) \
-            .options(joinedload(DocumentVersion.document_geometry_archive)) \
-            .filter(DocumentVersion.id == version_id) \
-            .filter(DocumentVersion.document_id == document_id) \
-            .filter(DocumentVersion.lang == lang) \
+        self, document_id, lang, version_id, clazz, locale_clazz, schema, adapt_schema
+    ):
+        version = (
+            DBSession.query(DocumentVersion)
+            .options(
+                joinedload(DocumentVersion.history_metadata)
+                .joinedload(HistoryMetaData.user)
+                .load_only(User.id, User.name)
+            )
+            .options(joinedload(DocumentVersion.document_archive.of_type(clazz)))
+            .options(
+                joinedload(
+                    DocumentVersion.document_locales_archive.of_type(locale_clazz)
+                )
+            )
+            .options(joinedload(DocumentVersion.document_geometry_archive))
+            .filter(DocumentVersion.id == version_id)
+            .filter(DocumentVersion.document_id == document_id)
+            .filter(DocumentVersion.lang == lang)
             .first()
+        )
         if version is None:
             raise HTTPNotFound('invalid version')
 
@@ -78,11 +79,7 @@ class DocumentVersionRest(ACLDefault):
             if adapt_schema:
                 schema = adapt_schema(schema, archive_document)
 
-            document = to_json_dict(
-                archive_document,
-                schema,
-                cook_locale=True
-            )
+            document = to_json_dict(archive_document, schema, cook_locale=True)
         # TODO if masked, return limited info as in DocumentInfoRest?
 
         previous_version_id, next_version_id = get_neighbour_version_ids(
@@ -113,32 +110,29 @@ def get_neighbour_version_ids(version_id, document_id, lang):
     Get the previous and next version for a version of a document with a
     specific language.
     """
-    next_version = DBSession \
-        .query(
-            DocumentVersion.id.label('id'),
-            literal_column('1').label('t')) \
-        .filter(DocumentVersion.id > version_id) \
-        .filter(DocumentVersion.document_id == document_id) \
-        .filter(DocumentVersion.lang == lang) \
-        .order_by(DocumentVersion.id) \
-        .limit(1) \
+    next_version = (
+        DBSession.query(DocumentVersion.id.label('id'), literal_column('1').label('t'))
+        .filter(DocumentVersion.id > version_id)
+        .filter(DocumentVersion.document_id == document_id)
+        .filter(DocumentVersion.lang == lang)
+        .order_by(DocumentVersion.id)
+        .limit(1)
         .subquery()
+    )
 
-    previous_version = DBSession \
-        .query(
-            DocumentVersion.id.label('id'),
-            literal_column('-1').label('t')) \
-        .filter(DocumentVersion.id < version_id) \
-        .filter(DocumentVersion.document_id == document_id) \
-        .filter(DocumentVersion.lang == lang) \
-        .order_by(DocumentVersion.id.desc()) \
-        .limit(1) \
+    previous_version = (
+        DBSession.query(DocumentVersion.id.label('id'), literal_column('-1').label('t'))
+        .filter(DocumentVersion.id < version_id)
+        .filter(DocumentVersion.document_id == document_id)
+        .filter(DocumentVersion.lang == lang)
+        .order_by(DocumentVersion.id.desc())
+        .limit(1)
         .subquery()
+    )
 
-    query = DBSession \
-        .query(column('id'), column('t')) \
-        .select_from(union(
-            next_version.select(), previous_version.select()).subquery())
+    query = DBSession.query(column('id'), column('t')).select_from(
+        union(next_version.select(), previous_version.select()).subquery()
+    )
 
     previous_version_id = None
     next_version_id = None

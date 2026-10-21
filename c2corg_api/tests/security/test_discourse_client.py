@@ -1,4 +1,5 @@
 """Tests for the Discourse API client wrapper."""
+
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -30,7 +31,8 @@ class TestAPIDiscourseClient(unittest.TestCase):
         # Discourse no longer accepts api_key/api_username as query
         # parameters (the c2corg pydiscourse fork sent them that way).
         request.return_value = _ok_response(
-            {'user': {'id': 42, 'username': 'contributor'}})
+            {'user': {'id': 42, 'username': 'contributor'}}
+        )
 
         client = APIDiscourseClient(SETTINGS)
         self.assertEqual(client.get_userid(5), 42)
@@ -55,5 +57,4 @@ class TestAPIDiscourseClient(unittest.TestCase):
         verb, url = request.call_args.args
         self.assertEqual(verb, 'POST')
         self.assertEqual(url, 'http://discourse.test/t/10/invite.json')
-        self.assertEqual(
-            request.call_args.kwargs['data'], {'user': 'contributor'})
+        self.assertEqual(request.call_args.kwargs['data'], {'user': 'contributor'})

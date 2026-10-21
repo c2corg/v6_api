@@ -23,12 +23,14 @@ BASE_USERNAME = 'testuserc2c'
 
 # no-op function referenced from `loadtests.ini` (required for
 # `get_appsettings` to work)
-def no_op(global_config, **settings): pass
+def no_op(global_config, **settings):
+    pass
 
 
 def main(argv=sys.argv):
     settings_file = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), 'loadtests.ini')
+        os.path.dirname(os.path.abspath(__file__)), 'loadtests.ini'
+    )
     settings = get_appsettings(settings_file)
 
     engine = engine_from_config(settings, 'sqlalchemy.')
@@ -49,9 +51,8 @@ def main(argv=sys.argv):
 
             profile = UserProfile(
                 categories=['amateur'],
-                geometry=DocumentGeometry(
-                    version=1, geom=None, geom_detail=None),
-                locales=[DocumentLocale(lang=lang, title='')]
+                geometry=DocumentGeometry(version=1, geom=None, geom_detail=None),
+                locales=[DocumentLocale(lang=lang, title='')],
             )
             user = User(
                 username=username,
@@ -60,7 +61,7 @@ def main(argv=sys.argv):
                 email=email,
                 lang=lang,
                 password=password,
-                profile=profile
+                profile=profile,
             )
             # make sure user account is directly validated
             user.clear_validation_nonce()
@@ -83,7 +84,7 @@ def main(argv=sys.argv):
                     document_archive=archive,
                     document_locales_archive=locale,
                     document_geometry_archive=archive_geometry,
-                    history_metadata=meta_data
+                    history_metadata=meta_data,
                 )
                 versions.append(version)
             session.add(archive)
@@ -92,9 +93,10 @@ def main(argv=sys.argv):
             session.add_all(versions)
             session.flush()
 
-    print('Created %d users with base username `%s`' % (
-        NB_USERS_TO_CREATE, BASE_USERNAME))
+    print(
+        'Created %d users with base username `%s`' % (NB_USERS_TO_CREATE, BASE_USERNAME)
+    )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

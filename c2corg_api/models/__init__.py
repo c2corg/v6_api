@@ -2,7 +2,7 @@ from sqlalchemy.orm import (
     declarative_base,
     scoped_session,
     sessionmaker,
-    )
+)
 
 from zope.sqlalchemy import register
 

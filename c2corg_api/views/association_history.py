@@ -5,7 +5,8 @@ from c2corg_api.views import cors_policy
 from c2corg_api.views.validation import (
     validate_pagination,
     validate_user_id_not_required,
-    validate_document_id_not_required)
+    validate_document_id_not_required,
+)
 from c2corg_api.models import DBSession
 from c2corg_api.models.user import User
 from c2corg_api.models.document import Document, DocumentLocale
@@ -19,14 +20,18 @@ LIMIT_DEFAULT = 50
 
 @resource(path='/associations-history', cors_policy=cors_policy)
 class HistoryAssociationRest:
-    """ Unique class for returning history of a document's associations.
-    """
+    """Unique class for returning history of a document's associations."""
+
     def __init__(self, request, **kwargs):
         self.request = request
 
-    @view(validators=[validate_document_id_not_required,
-                      validate_pagination,
-                      validate_user_id_not_required])
+    @view(
+        validators=[
+            validate_document_id_not_required,
+            validate_pagination,
+            validate_user_id_not_required,
+        ]
+    )
     def get(self):
         validated = self.request.validated
         document_id = validated.get('d', None)
@@ -34,35 +39,42 @@ class HistoryAssociationRest:
         offset = validated.get('offset', 0)
         limit = min(validated.get('limit', LIMIT_DEFAULT), LIMIT_MAX)
 
-        user_join = joinedload(AssociationLog.user) \
-            .load_only(
-                User.id,
-                User.name,
-                User.forum_username,
-                User.robot,
-                User.moderator,
-                User.blocked
-            )
+        user_join = joinedload(AssociationLog.user).load_only(
+            User.id,
+            User.name,
+            User.forum_username,
+            User.robot,
+            User.moderator,
+            User.blocked,
+        )
 
-        child_join = joinedload(AssociationLog.child_document) \
-            .load_only(Document.document_id, Document.type) \
-            .joinedload(Document.locales) \
+        child_join = (
+            joinedload(AssociationLog.child_document)
+            .load_only(Document.document_id, Document.type)
+            .joinedload(Document.locales)
             .load_only(DocumentLocale.title, DocumentLocale.lang)
+        )
 
-        parent_join = joinedload(AssociationLog.parent_document) \
-            .load_only(Document.document_id, Document.type) \
-            .joinedload(Document.locales) \
+        parent_join = (
+            joinedload(AssociationLog.parent_document)
+            .load_only(Document.document_id, Document.type)
+            .joinedload(Document.locales)
             .load_only(DocumentLocale.title, DocumentLocale.lang)
+        )
 
-        query = DBSession.query(AssociationLog) \
-            .options(user_join) \
-            .options(parent_join) \
+        query = (
+            DBSession.query(AssociationLog)
+            .options(user_join)
+            .options(parent_join)
             .options(child_join)
+        )
 
         if document_id:
-            query = query.filter(or_(
-                AssociationLog.parent_document_id == document_id,
-                AssociationLog.child_document_id == document_id)
+            query = query.filter(
+                or_(
+                    AssociationLog.parent_document_id == document_id,
+                    AssociationLog.child_document_id == document_id,
+                )
             )
 
         if user_id:
@@ -70,14 +82,13 @@ class HistoryAssociationRest:
 
         count = query.count()
 
-        query = query.order_by(AssociationLog.id.desc()) \
-            .limit(limit) \
-            .offset(offset) \
-            .all()
+        query = (
+            query.order_by(AssociationLog.id.desc()).limit(limit).offset(offset).all()
+        )
 
         return {
             'count': count,
-            'associations': [serialize_association_log(log) for log in query]
+            'associations': [serialize_association_log(log) for log in query],
         }
 
 
@@ -108,7 +119,7 @@ def serialize_association_log(log):
             'forum_username': log.user.forum_username,
             'robot': log.user.robot,
             'moderator': log.user.moderator,
-            'blocked': log.user.blocked
+            'blocked': log.user.blocked,
         },
         'child_document': serialize_document(log.child_document),
         'parent_document': serialize_document(log.parent_document),

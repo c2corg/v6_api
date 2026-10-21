@@ -4,13 +4,10 @@ from pyramid.security import Authenticated
 
 
 class RolesTest(BaseTestCase):
-
     def test_groupfinder(self):
         self.assertEqual(
-            [Authenticated],
-            groupfinder(self.global_userids['contributor'], None)
+            [Authenticated], groupfinder(self.global_userids['contributor'], None)
         )
         self.assertEqual(
-            ['group:moderators'],
-            groupfinder(self.global_userids['moderator'], None)
+            ['group:moderators'], groupfinder(self.global_userids['moderator'], None)
         )
