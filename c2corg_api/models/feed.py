@@ -62,7 +62,8 @@ User.has_area_filter = column_property(
     scalar_subquery(),
     deferred=True
 )
-User.feed_filter_areas = relationship('Area', secondary=FilterArea.__table__)
+User.feed_filter_areas = relationship(
+    'Area', secondary=FilterArea.__table__, overlaps='area,user')
 
 
 class FollowedUser(Base):

@@ -415,7 +415,7 @@ def _remove_archive_locale(archive_clazz_locale, document_id, lang=None):
             filter(ArchiveDocumentLocale.document_id == document_id)
         if lang:
             query = query.filter(ArchiveDocumentLocale.lang == lang)
-        archive_document_locale_ids = query.subquery()
+        archive_document_locale_ids = query.scalar_subquery()
         DBSession.execute(archive_clazz_locale.__table__.delete().where(
             getattr(archive_clazz_locale, 'id').in_(
                 archive_document_locale_ids)
@@ -433,7 +433,7 @@ def _remove_locale(clazz_locale, document_id, lang=None):
         filter(DocumentLocale.document_id == document_id)
     if lang:
         query = query.filter(DocumentLocale.lang == lang)
-    document_locale_ids = query.subquery()
+    document_locale_ids = query.scalar_subquery()
     # Remove links to comments (comments themselves are not removed)
     DBSession.execute(DocumentTopic.__table__.delete().where(
         DocumentTopic.document_locale_id.in_(document_locale_ids)
@@ -466,7 +466,7 @@ def _remove_geometry(document_id):
 def _remove_archive(archive_clazz, document_id):
     archive_document_ids = DBSession.query(ArchiveDocument.id). \
         filter(ArchiveDocument.document_id == document_id). \
-        subquery()
+        scalar_subquery()
     DBSession.execute(archive_clazz.__table__.delete().where(
         getattr(archive_clazz, 'id').in_(archive_document_ids)
     ))

@@ -434,7 +434,8 @@ def update_all_pt_rating(waypoint_extrapolation=True):
     # Merge all routes
     routes = DBSession \
         .query(Route) \
-        .select_from(union(parent_routes.select(), children_routes.select())) \
+        .select_from(union(
+            parent_routes.select(), children_routes.select()).subquery()) \
         .join(Route, Route.document_id == column('route_id')) \
         .all()
 
