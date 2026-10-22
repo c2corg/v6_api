@@ -40,7 +40,7 @@ dependencies = [
     "pyramid_tm==2.3",
     "python-json-logger==3.3.0",
     "python-slugify==8.0.4",
-    "redis==5.2.1",
+    "redis==6.4.0",
     "requests==2.33.0",
     "setuptools==78.1.1",
     "Shapely==2.2.0",
