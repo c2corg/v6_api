@@ -19,23 +19,6 @@ from c2corg_api.views import cors_policy, restricted_view
 log = logging.getLogger(__name__)
 
 
-@resource(path='/forum/private-messages/unread-count', cors_policy=cors_policy)
-class PrivateMessageRest(ACLDefault):
-    @restricted_view(renderer='json')
-    def get(self):
-        settings = self.request.registry.settings
-        userid = self.request.authenticated_userid
-
-        client = get_discourse_client(settings)
-        d_username = client.get_username(userid)
-        messages = client.client.private_messages_unread(d_username)
-
-        count = len(messages['topic_list']['topics'])
-        link = '%s/u/%s/messages' % (client.discourse_public_url, d_username)
-
-        return {'link': link, 'count': count}
-
-
 class SchemaTopicCreate(colander.MappingSchema):
     document_id = colander.SchemaNode(colander.Int())
     lang = colander.SchemaNode(colander.String())

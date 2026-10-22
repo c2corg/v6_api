@@ -33,8 +33,6 @@ class APIDiscourseClient:
         } | {host.strip() for host in extra_hosts.split(',') if host.strip()}
 
         self.discourse_userid_cache = {}
-        # FIXME: are we guaranteed usernames can never change? -> no!
-        self.discourse_username_cache = {}
 
         self.client = DiscourseClient(
             self.discourse_base_url,
@@ -49,17 +47,7 @@ class APIDiscourseClient:
             discourse_user = self.client.by_external_id(userid)
             discourse_userid = discourse_user['id']
             self.discourse_userid_cache[userid] = discourse_userid
-            self.discourse_username_cache[userid] = discourse_user['username']
         return discourse_userid
-
-    def get_username(self, userid):
-        discourse_username = self.discourse_username_cache.get(userid)
-        if not discourse_username:
-            discourse_user = self.client.by_external_id(userid)
-            self.discourse_userid_cache[userid] = discourse_user['id']
-            discourse_username = discourse_user['username']
-            self.discourse_username_cache[userid] = discourse_username
-        return discourse_username
 
     def sync_sso(self, user):
         result = self.client.sync_sso(

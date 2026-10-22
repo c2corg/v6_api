@@ -169,20 +169,3 @@ class TestForumTopicRest(BaseTestRest):
             ],
             any_order=True,
         )
-
-
-class TestForumPrivateMessageRest(BaseTestRest):
-    @patch(
-        'pydiscourse.client.DiscourseClient.private_messages_unread',
-        return_value={'topic_list': {'topics': [{'id': 1}, {'id': 2}]}},
-    )
-    @patch(
-        'c2corg_api.security.discourse_client.APIDiscourseClient.get_username',
-        return_value='alice',
-    )
-    def test_get(self, _username_mock, _messages_mock):
-        json = self.get_json_with_contributor(
-            '/forum/private-messages/unread-count', status=200
-        )
-        self.assertEqual(2, json['count'])
-        self.assertTrue(json['link'].endswith('/u/alice/messages'))
