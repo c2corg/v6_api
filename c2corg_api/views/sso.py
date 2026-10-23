@@ -124,8 +124,8 @@ class SsoSyncRest(ACLDefault):
         ],
     )
     def post(self):
-        """
-        Synchronize user details and return authentication url.
+        """Synchronize user details and return authentication url.
+
         Important: Email addresses need to be validated by external site.
         """
         request = self.request
@@ -206,7 +206,7 @@ class SsoSyncRest(ACLDefault):
 
 
 def get_discourse_userid(client, userid):
-    """Get discourse user id with 404 handling"""
+    """Get discourse user id with 404 handling."""
     try:
         return client.get_userid(userid)
     except DiscourseClientError as e:

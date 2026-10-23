@@ -32,7 +32,7 @@ class MergeSchema(MappingSchema):
 
 
 def validate_documents(request, **kwargs):
-    """Checks that
+    """Check that.
 
     - the documents exists.
     - the documents are of the same type.
@@ -117,7 +117,7 @@ class MergeDocumentRest(ACLDefault):
         validators=[colander_body_validator, validate_documents],
     )
     def post(self):
-        """Merges a document into another document.
+        """Merge a document into another document.
 
         - Associations and tags of the source document are transferred to
           the target document.
@@ -140,7 +140,6 @@ class MergeDocumentRest(ACLDefault):
                 'source_document_id': @document_id@,
                 'target_document_id': @document_id@
             }
-
         """
         source_document_id = self.request.validated['source_document_id']
         target_document_id = self.request.validated['target_document_id']

@@ -76,7 +76,9 @@ class UserProfileRest(DocumentRest):
         return self._put(UserProfile, schema_internal_user_profile)
 
     def _reset_title(self):
-        """The title of user profile documents is left empty. Because the title
+        """Set the title of a user profile to an empty string.
+
+        The title of user profile documents is left empty. Because the title
         must be non-null it is set to an empty string though.
         """
         document = self.request.validated['document']

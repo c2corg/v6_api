@@ -46,7 +46,7 @@ BASE_URL = 'https://api.navitia.io/v1'
 
 
 def validate_navitia_params(request, **kwargs):
-    """Validates the required parameters for the Navitia API"""
+    """Validate the required parameters for the Navitia API."""
     required_params = ['from', 'to', 'datetime', 'datetime_represents']
 
     for param in required_params:
@@ -62,7 +62,7 @@ class NavitiaRest:
     @view(validators=[validate_navitia_params])
     def get(self):
         """
-        Endpoint to retrieve trips from the Navitia API
+        Endpoint to retrieve trips from the Navitia API.
 
         Required query string parameters:
         - from: starting coordinates (format: longitude;latitude)
@@ -119,7 +119,7 @@ class NavitiaRest:
 
 
 def validate_journey_reachable_params(request, **kwargs):
-    """Validates the required parameters for the journey reachable doc route"""
+    """Validate the required parameters for the journey reachable doc route."""
     required_params = [
         'from',
         'datetime',
@@ -140,10 +140,7 @@ class StartNavitiaJourneyReachableRoutesRest:
 
     @view(validators=[validate_journey_reachable_params])
     def get(self):
-        """
-        start job to retrieve journey reachable routes
-        returns job id
-        """
+        """Start a job finding the journey-reachable routes, return its id."""
         return start_job_background(compute_journey_reachable_routes, self.request)
 
 
@@ -154,10 +151,7 @@ class StartNavitiaJourneyReachableWaypointsRest:
 
     @view(validators=[validate_journey_reachable_params])
     def get(self):
-        """
-        start job to retrieve journey reachable waypoints
-        returns job id
-        """
+        """Start a job finding the journey-reachable waypoints, return its id."""
         return start_job_background(compute_journey_reachable_waypoints, self.request)
 
 
@@ -170,9 +164,10 @@ class NavitiaJourneyReachableRoutesResultRest:
 
     @view()
     def get(self):
-        """
-        get the result of the job : get journey reachable routes
-        returns the result
+        """Get the result of a reachable-routes job.
+
+        Get the result of the job : get journey reachable routes
+        returns the result.
         """
         r = redis_client()
         job_id = self.request.matchdict.get('job_id')
@@ -188,9 +183,10 @@ class NavitiaJourneyReachableWaypointsResultRest:
 
     @view()
     def get(self):
-        """
-        get the result of the job : get journey reachable waypoints
-        returns the result
+        """Get the result of a reachable-waypoints job.
+
+        Get the result of the job : get journey reachable waypoints
+        returns the result.
         """
         r = redis_client()
         job_id = self.request.matchdict.get('job_id')
@@ -206,9 +202,7 @@ class NavitiaJourneyReachableRoutesProgressRest:
 
     @view()
     def get(self):
-        """
-        monitor progress of job id for journey reachable routes
-        """
+        """Monitor progress of job id for journey reachable routes."""
         r = redis_client()
         job_id = self.request.matchdict.get('job_id')
         return Response(
@@ -225,9 +219,7 @@ class NavitiaJourneyReachableWaypointsProgressRest:
 
     @view()
     def get(self):
-        """
-        monitor progress of job id for journey reachable waypoints
-        """
+        """Monitor progress of job id for journey reachable waypoints."""
         r = redis_client()
         job_id = self.request.matchdict.get('job_id')
         return Response(
@@ -236,8 +228,9 @@ class NavitiaJourneyReachableWaypointsProgressRest:
 
 
 def compute_journey_reachable_routes(job_id, request):
-    """
-    Get all waypoints matching filters in params, that are reachable
+    """Get the routes reachable with a Navitia journey.
+
+    Get all routes matching filters in params, that are reachable
     (means there exists a Navitia journey for at least one of
     their waypoints of type access).
 
@@ -315,8 +308,9 @@ def compute_journey_reachable_routes(job_id, request):
 
 
 def compute_journey_reachable_waypoints(job_id, request):
-    """
-    Get all routes matching filters in params, that are reachable
+    """Get the waypoints reachable with a Navitia journey.
+
+    Get all waypoints matching filters in params, that are reachable
     (means there exists a Navitia journey for at least one of
     their waypoints of type access).
 
@@ -391,8 +385,7 @@ def compute_journey_reachable_waypoints(job_id, request):
 
 
 def validate_isochrone_reachable_params(request, **kwargs):
-    """Validates the required parameters
-    for the isochrone reachable doc route"""
+    """Validate the required parameters for the isochrone reachable doc route."""
     required_params = ['from', 'datetime', 'datetime_represents', 'boundary_duration']
 
     for param in required_params:
@@ -407,11 +400,12 @@ class NavitiaIsochronesReachableRoutesRest:
 
     @view(validators=[validate_isochrone_reachable_params])
     def get(self):
-        """
+        """Get the routes with an access waypoint inside the isochron.
+
         Get all routes matching filters in params, that have at least
         one waypoint of type access that is inside the isochron.
         The isochron is created by querying navitia api
-        with specific parameters, see validate_isochrone_reachable_params func
+        with specific parameters, see validate_isochrone_reachable_params func.
         """
         try:
             meta_params = extract_meta_params(self.request)
@@ -485,11 +479,12 @@ class NavitiaIsochronesReachableWaypointsRest:
 
     @view(validators=[validate_isochrone_reachable_params])
     def get(self):
-        """
+        """Get the waypoints inside the isochron.
+
         Get all waypoints matching filters in params,
         that are inside the isochron.
         The isochron is created by querying navitia api
-        with specific parameters, see validate_isochrone_reachable_params func
+        with specific parameters, see validate_isochrone_reachable_params func.
         """
         try:
             meta_params = extract_meta_params(self.request)
@@ -543,11 +538,12 @@ class NavitiaIsochronesReachableWaypointsRest:
 
 
 def is_wp_journey_reachable(waypoint, journey_params):
-    """
+    """Check with the Navitia journey API if a waypoint is reachable.
+
     Query the navitia Journey api and returns true
     if the waypoint is reachable (at least one journey has been found)
     NOTE : the journey's departure time has to be
-    the same day as the datetime's day in journey_params
+    the same day as the datetime's day in journey_params.
     """
     # enhance journey params with the 'to' parameter,
     # from the waypoint geometry.
@@ -596,9 +592,7 @@ def is_wp_journey_reachable(waypoint, journey_params):
 
 
 def get_navitia_isochrone(isochrone_params):
-    """
-    Query the navitia Isochrones api, and returns the isochrone object
-    """
+    """Query the navitia Isochrones api, and returns the isochrone object."""
     lon = isochrone_params.get('from').split(';')[0]
     lat = isochrone_params.get('from').split(';')[1]
     source_coverage = get_coverage(lon, lat)
@@ -619,9 +613,7 @@ def get_navitia_isochrone(isochrone_params):
 
 
 def is_wp_in_isochrone(waypoint, isochrone_geom):
-    """
-    Returns true if waypoints is contained in isochrone_geom
-    """
+    """Return true if waypoints is contained in isochrone_geom."""
     # get lon & lat
     geom = shape(json.loads(waypoint.get('geometry').get('geom')))
 
@@ -634,9 +626,7 @@ def is_wp_in_isochrone(waypoint, isochrone_geom):
 
 
 def extract_meta_params(request):
-    """
-    Extract meta parameters such as offset, limit and lang
-    """
+    """Extract meta parameters such as offset, limit and lang."""
     v = request.validated
     return {
         'offset': 0,
@@ -646,9 +636,7 @@ def extract_meta_params(request):
 
 
 def extract_journey_params(request):
-    """
-    Extract parameters for journey query
-    """
+    """Extract parameters for journey query."""
     return {
         'from': request.params.get('from'),
         'datetime': request.params.get('datetime'),
@@ -661,7 +649,7 @@ def extract_journey_params(request):
 
 def extract_isochrone_params(request):
     """
-    Extract parameters for isochrone query
+    Extract parameters for isochrone query.
 
     NOTE : the boundary duration is bounded by constants
         MAX_TRIP_DURATION and MIN_TRIP_DURATION
@@ -688,7 +676,8 @@ def extract_isochrone_params(request):
 
 
 def collect_areas_from_results(results, area_index):
-    """
+    """Load the areas referenced in the results by document_id.
+
     Extract all area document_ids from results, load Area objects from DB,
     and return {document_id: Area}.
     """
@@ -711,7 +700,8 @@ def collect_areas_from_results(results, area_index):
 
 
 def collect_waypoints_from_results(results):
-    """
+    """Load the waypoints referenced in the results by document_id.
+
     Extract all waypoint document_ids from results,
     load Waypoint objects from DB,
     and return {document_id: Waypoint}.
@@ -735,11 +725,10 @@ def collect_waypoints_from_results(results):
 
 
 def handle_navitia_response(response):
-    """
-    Handles Navitia HTTP errors and returns parsed JSON on success.
+    """Handle Navitia HTTP errors and returns parsed JSON on success.
+
     Raises HTTP* exceptions otherwise.
     """
-
     if response.status_code == 400:
         raise HTTPBadRequest('invalid_param')
 
@@ -779,14 +768,17 @@ def navitia_get(url, *, params=None, headers=None, timeout=30):
 
 
 def redis_client():
-    """fast way to get redis client"""
+    """Fast way to get redis client."""
     return redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
 
 
 def start_job_background(target, request):
-    """start a job in the background,
+    """Start a job in the background.
+
+    Start a job in the background,
     target is the query function to execute in bg
-    request is the request to pass to the function"""
+    request is the request to pass to the function.
+    """
     job_id = str(uuid.uuid4())
     r = redis_client()
     r.set(f'job:{job_id}:progress', 0)
@@ -820,7 +812,7 @@ def _end_thread_db_session():
 
 
 def get_job_status(r, job_id):
-    """returns the ongoing job status"""
+    """Return the ongoing job status."""
     status = r.get(f'job:{job_id}:status')
     if status is None:
         return None, {'error': 'unknown_job_id'}
@@ -829,7 +821,7 @@ def get_job_status(r, job_id):
 
 
 def read_result_from_redis(r, job_id):
-    """returns the result from redis"""
+    """Return the result from redis."""
     status = r.get(f'job:{job_id}:status')
     if status is None:
         return {'error': 'unknown_job_id'}
@@ -851,7 +843,7 @@ def read_result_from_redis(r, job_id):
 
 
 def progress_stream(r, job_id, poll_interval=0.5):
-    """yield the job progress"""
+    """Yield the job progress."""
     while True:
         raw_progress = r.get(f'job:{job_id}:progress')
         raw_found = r.get(f'job:{job_id}:found')
@@ -885,11 +877,12 @@ def progress_stream(r, job_id, poll_interval=0.5):
 
 
 def _store_job_progress(r, job_id, count, found, not_found):
-    """
-    store job progress which is :
+    """Store the progress of a job.
+
+    Store job progress which is :
     progress : the number of queries done
     found : the number of successful queries
-    not_found: the number of unsuccessful queries
+    not_found: the number of unsuccessful queries.
     """
     r.set(f'job:{job_id}:progress', count)
     r.set(f'job:{job_id}:found', found)

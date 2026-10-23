@@ -52,7 +52,7 @@ validate_version_id = create_int_validator('version_id')
 
 
 def validate_lang_(lang, request):
-    """Checks if a given lang is one of the available langs."""
+    """Check if a given lang is one of the available langs."""
     if lang is not None:
         if lang in default_langs:
             request.validated['lang'] = lang
@@ -61,7 +61,7 @@ def validate_lang_(lang, request):
 
 
 def validate_cook_(cook, request):
-    """Checks if a given cooking lang is one of the available langs."""
+    """Check if a given cooking lang is one of the available langs."""
     if cook is not None:
         if cook in default_langs:
             request.validated['cook'] = cook
@@ -70,7 +70,9 @@ def validate_cook_(cook, request):
 
 
 def validate_lang(request, **kwargs):
-    """Checks if the language given in the url as match-parameter
+    """Check the language given in the URL path.
+
+    Checks if the language given in the url as match-parameter
     is correct (".../{lang}").
     """
     lang = request.matchdict['lang']
@@ -78,7 +80,9 @@ def validate_lang(request, **kwargs):
 
 
 def validate_document_type(request, **kwargs):
-    """Checks if the document type given in the url as match-parameter
+    """Check the document type given in the URL path.
+
+    Checks if the document type given in the url as match-parameter
     is correct (".../{doc_type}").
     """
     doc_type = request.matchdict['doc_type']
@@ -90,7 +94,9 @@ def validate_document_type(request, **kwargs):
 
 
 def validate_lang_param(request, **kwargs):
-    """Checks if the language given in the url as GET parameter
+    """Check the `l` language parameter of the URL.
+
+    Checks if the language given in the url as GET parameter
     is correct ("...?l=...").
     """
     lang = request.GET.get('l')
@@ -98,7 +104,9 @@ def validate_lang_param(request, **kwargs):
 
 
 def validate_cook_param(request, **kwargs):
-    """Checks if the cooking language given in the url as GET parameter
+    """Check the `cook` language parameter of the URL.
+
+    Checks if the cooking language given in the url as GET parameter
     is correct ("...?cook=...").
     """
     cook = request.GET.get('cook')
@@ -106,7 +114,9 @@ def validate_cook_param(request, **kwargs):
 
 
 def validate_preferred_lang_param(request, **kwargs):
-    """Checks if the preferred language given in the url as GET parameter
+    """Check the `pl` preferred language parameter of the URL.
+
+    Checks if the preferred language given in the url as GET parameter
     is correct ("...?pl=...").
     """
     lang = request.GET.get('pl')
@@ -118,8 +128,7 @@ def is_missing(val):
 
 
 def check_required_fields(document, fields, request, updating):
-    """Checks that the given fields are set on the document."""
-
+    """Check that the given fields are set on the document."""
     for field in fields:
         if '.' not in field:
             if updating and field in ['geometry', 'locales']:
@@ -155,7 +164,7 @@ def check_duplicate_locales(document, request):
 
 
 def check_get_for_integer_property(request, key, required):
-    """Checks if the value associated to a given key is an integer."""
+    """Check if the value associated to a given key is an integer."""
     if not required and request.GET.get(key) is None:
         return
 
@@ -166,7 +175,8 @@ def check_get_for_integer_property(request, key, required):
 
 
 def validate_pagination(request, **kwargs):
-    """
+    """Check that the optional offset and limit are integers.
+
     Checks if a given optional offset is an integer and
     if a given optional limit is an integer.
     """
@@ -175,39 +185,29 @@ def validate_pagination(request, **kwargs):
 
 
 def validate_token_pagination(request, **kwargs):
-    """
-    Validate token pagination parameters (limit and token) for feed.
-    """
+    """Validate token pagination parameters (limit and token) for feed."""
     check_get_for_integer_property(request, 'limit', False)
     validate_token(request)
 
 
 def validate_simple_token_pagination(request, **kwargs):
-    """
-    Validate token pagination parameters (limit and token) for changes feed.
-    """
+    """Validate token pagination parameters (limit and token) for changes feed."""
     check_get_for_integer_property(request, 'limit', False)
     validate_simple_token(request)
 
 
 def validate_user_id(request, **kwargs):
-    """
-    Checks for a required user id parameter.
-    """
+    """Check for a required user id parameter."""
     check_get_for_integer_property(request, 'u', True)
 
 
 def validate_user_id_not_required(request, **kwargs):
-    """
-    Checks for a non-required user id parameter.
-    """
+    """Check for a non-required user id parameter."""
     check_get_for_integer_property(request, 'u', False)
 
 
 def validate_document_id_not_required(request, **kwargs):
-    """
-    Checks for a non-required document id parameter.
-    """
+    """Check for a non-required document id parameter."""
     check_get_for_integer_property(request, 'd', False)
 
 
@@ -334,7 +334,9 @@ def validate_outing_association(
     child_document_type,
     raise_exc,
 ):
-    """If the given association is an association with an outing, this
+    """Check that the user may change the associations of an outing.
+
+    If the given association is an association with an outing, this
     function checks if the authenticated user is allowed to change the
     associations with the outing (either moderator or participant).
     """
@@ -449,9 +451,9 @@ def validate_personal_association(
 
 
 def has_permission_for_outing(request, outing_id):
-    """Check if the user with the given id has permission to change an
-    outing. That is only users that are currently assigned to the outing
-    can modify it.
+    """Check if the user with the given id has permission to change an outing.
+
+    That is only users that are currently assigned to the outing can modify it.
     """
     if request.has_permission('moderator'):
         # moderators can change everything
@@ -535,8 +537,7 @@ def _check_permission_association_doc(request, doc_type, document_id):
 
 
 def validate_required_json_string(key, request):
-    """Checks if a given key is present in the request."""
-
+    """Check if a given key is present in the request."""
     value = None
     if key in request.json:
         value = request.json[key]
@@ -567,7 +568,7 @@ def validate_associations(document_type, is_on_create, request, **kwargs):
 
 
 def validate_associations_in(associations_in, document_type, errors):
-    """Validate the provided associations:
+    """Validate the provided associations.
 
         - Check that the linked documents exist.
         - Check that the linked documents have the right document type (e.g. a
@@ -660,14 +661,19 @@ def get_associated_user_ids(xreport_id):
 
 
 def is_associated_user(xreport_id, user_id):
-    """Required to check if an associated user is able to edit Xreport."""
+    """Check that an associated user may edit an Xreport.
+
+    Required to check if an associated user is able to edit Xreport.
+    """
     associated_user_ids = get_associated_user_ids(xreport_id)
     if user_id in associated_user_ids:
         return True
 
 
 def _check_for_valid_documents_ids(associations, errors):
-    """Check that the given documents do exists and that they are of the
+    """Check that the documents exist and have the right type.
+
+    Check that the given documents do exists and that they are of the
     correct type (e.g. a document listed as route association must really be
     a route).
     """
@@ -714,7 +720,7 @@ def _get_linked_document_ids(associations):
 
 
 def _is_any_climbing_indoor_waypoint(associations_in):
-    """Check if there is any climbing indoor waypoints in the linked waypoints"""
+    """Check if there is any climbing indoor waypoints in the linked waypoints."""
     waypoints_id = [doc['document_id'] for doc in associations_in['waypoints']]
 
     # load the waypoint type for each linked waypoint

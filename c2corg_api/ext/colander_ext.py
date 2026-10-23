@@ -15,7 +15,9 @@ _EWKB_SRID_FLAG = 0x20000000
 
 
 class Geometry(SchemaType):
-    """A Colander type meant to be used with GeoAlchemy 2 geometry columns.
+    """Colander type for GeoAlchemy 2 geometry columns.
+
+    A Colander type meant to be used with GeoAlchemy 2 geometry columns.
     Example usage
     .. code-block:: python
         geom = Column(
@@ -37,7 +39,8 @@ class Geometry(SchemaType):
         self.srid = int(srid)
 
     def serialize(self, node, appstruct):
-        """
+        """Convert a `WKBElement` (appstruct) into a GeoJSON string (cstruct).
+
         In Colander speak: Converts a Python data structure (an appstruct) into
         a serialization (a cstruct).
         Or: Converts a `WKBElement` into a GeoJSON string.
@@ -50,7 +53,8 @@ class Geometry(SchemaType):
         raise Invalid(node, f'Unexpected value: {appstruct!r}')
 
     def deserialize(self, node, cstruct):
-        """
+        """Convert a GeoJSON string (cstruct) into a `WKBElement` (appstruct).
+
         In Colander speak: Converts a serialized value (a cstruct) into a
         Python data structure (a appstruct).
         Or: Converts a GeoJSON string into a `WKBElement`.

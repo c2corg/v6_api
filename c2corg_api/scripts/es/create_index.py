@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-"""
-Creates (or recreates) the ES index with the correct mappings.
+"""Creates (or recreates) the ES index with the correct mappings.
+
 Must be run before fill_index.py when building the index from scratch.
 
 Usage: python create_index.py <config>.ini

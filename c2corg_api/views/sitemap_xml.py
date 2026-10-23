@@ -46,7 +46,7 @@ validate_page = create_int_validator('i')
 
 
 def render_errors(request):
-    """Returns an HTTPError with the given status and message.
+    """Return an HTTPError with the given status and message.
 
     Patch :func:`pyramid.renderers.string_renderer_factory` to add
     a ``render_errors`` callable
@@ -73,8 +73,9 @@ string_renderer_factory.render_errors = render_errors
 class SitemapXml(ACLDefault):
     @view()
     def collection_get(self):
-        """Returns a sitemap index file.
-        See: http://www.sitemaps.org/protocol.html
+        """Return a sitemap index file.
+
+        See: http://www.sitemaps.org/protocol.html.
 
         The response consists of a list of URLs of sitemaps.
 
@@ -107,9 +108,7 @@ class SitemapXml(ACLDefault):
 
     @view(validators=[validate_page, validate_document_type])
     def get(self):
-        """Returns a sitemap file for a given
-        type and sitemap page number.
-        """
+        """Return a sitemap file for a given type and sitemap page number."""
         doc_type = self.request.validated['doc_type']
         i = self.request.validated['i']
 

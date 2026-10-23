@@ -29,9 +29,7 @@ BCRYPT_MAX_PASSWORD_BYTES = 72
 
 
 class PasswordUtil:
-    """
-    Utility class abstracting low-level password primitives.
-    """
+    """Utility class abstracting low-level password primitives."""
 
     @staticmethod
     def _bcrypt_input(password):
@@ -60,9 +58,7 @@ class Purpose(Enum):
 
 
 class User(Base):
-    """
-    Class containing the users' private and authentication data.
-    """
+    """Class containing the users' private and authentication data."""
 
     __tablename__ = 'user'
     __table_args__ = {'schema': users_schema}
@@ -130,10 +126,11 @@ class User(Base):
 
     def update_validation_nonce(self, purpose, days):
         """Generate and overwrite the nonce.
+
         A nonce is a random number which is used for authentication when doing
-        particular actions like changing password or validating an email. It
-        must have a short lifespan to avoid unused nonces to become a security
-        risk."""
+        particular actions like changing password or validating an email. It must have a
+        short lifespan to avoid unused nonces to become a security risk.
+        """
         if purpose != Purpose.registration and not self.email_validated:
             # An account must be validated before any other action is tried.
             raise AccountNotValidated()

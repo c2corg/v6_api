@@ -34,7 +34,9 @@ validate_document_id = create_int_validator('document_id')
 
 
 def validate_document(request, **kwargs):
-    """Check that the document exists, is a route and
+    """Check that the document exists, is a route and is not merged.
+
+    Check that the document exists, is a route and
     not merged with another document.
     """
     document_id = request.validated['document_id']
@@ -61,8 +63,9 @@ class DocumentTagRest(ACLDefault):
     )
     def post(self):
         """Tag the given document as todo.
-        Creates a tag relation, so that the authenticated user is
-        marking the given document as todo.
+
+        Creates a tag relation, so that the authenticated user is marking the given
+        document as todo.
 
 
         Request:
@@ -70,7 +73,6 @@ class DocumentTagRest(ACLDefault):
 
         Request body:
             {'document_id': @document_id@}
-
         """
         document_id = self.request.validated['document_id']
         document_type = ROUTE_TYPE

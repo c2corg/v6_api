@@ -36,7 +36,6 @@ class FeedRest(ACLDefault):
             `GET` `/feed[?pl=...][&limit=...][&token=...]`
 
         Parameters:
-
             `pl=...` (optional)
             When set only the given locale will be included (if available).
             Otherwise all locales will be returned.
@@ -101,7 +100,6 @@ class ProfileFeedRest(ACLDefault):
             `GET` `/profile-feed?u={user_id}[&pl=...][&limit=...][&token=...]`
 
         Parameters:
-
             `u={user_id}` (required)
             The id of the user whose profile feed is requested.
 
@@ -192,7 +190,9 @@ def get_changes_of_personal_feed(
 
 
 def create_personal_filter(user, ignore_admin_changes_filter):
-    """Create a filter condition for the query to get the changes taking
+    """Create the feed filter from the preferences of the user.
+
+    Create a filter condition for the query to get the changes taking
     the filter preferences of the user into account.
     """
     if user.feed_followed_only:
@@ -366,7 +366,9 @@ def load_feed(changes, lang):
 
 
 def get_documents_to_load(changes):
-    """Return a dict containing the document ids (grouped by document type)
+    """Return the document ids needed for the given changes.
+
+    Return a dict containing the document ids (grouped by document type)
     that are needed for the given changes.
 
     For example given the changes:

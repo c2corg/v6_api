@@ -49,7 +49,9 @@ def get_documents(documents_config, meta_params, search_documents):
     cache_keys = get_cache_keys(document_ids, lang, documents_config.document_type)
 
     def get_documents_from_cache_keys(*cache_keys):
-        """This method is called from dogpile.cache with the cache keys
+        """Load the documents for the cache keys that are not cached yet.
+
+        This method is called from dogpile.cache with the cache keys
         for the documents that are not cached yet.
         """
         ids = [get_document_id(cache_key) for cache_key in cache_keys]
@@ -78,8 +80,9 @@ def get_documents(documents_config, meta_params, search_documents):
 
 def _get_documents_from_ids(document_ids, base_query, documents_config, lang):
     """Load the documents for the ids and return them as json dict.
-    The returned list contains None values for documents that could not be
-    loaded, and the list has the same order has the document id list.
+
+    The returned list contains None values for documents that could not be loaded, and
+    the list has the same order has the document id list.
     """
     base_query = base_query.options(
         load_only(
@@ -158,9 +161,10 @@ def _get_documents_from_ids(document_ids, base_query, documents_config, lang):
 
 
 def _load_documents(document_ids, clazz, base_query):
-    """Load documents given a list of document ids. Note that the
-    returned list does not contain the documents in the same order as
-    the passed in document id list.
+    """Load documents given a list of document ids.
+
+    Note that the returned list does not contain the documents in the same order as the
+    passed in document id list.
     """
     if not document_ids:
         return []

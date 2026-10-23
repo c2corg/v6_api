@@ -58,7 +58,7 @@ PROXY_CACHE_CONTROL = 'public, max-age=86400'
 
 
 def check_filename_unique(image, request, updating):
-    """Checks that filename is unique"""
+    """Check that filename is unique."""
     if 'filename' not in image:
         return
     sql = DBSession.query(Image).filter(Image.filename == image['filename'])
@@ -137,9 +137,10 @@ def create_image(self, document_in):
 
 
 def before_image_update(request, document, document_in):
-    """
-    callback sent to DocumentRest.update_document()
-    check update of filename, and publish on image backend if needed
+    """Check filename updates and publish them on the image backend.
+
+    Callback sent to DocumentRest.update_document()
+    check update of filename, and publish on image backend if needed.
     """
     old_filename = document.filename
     new_filename = document_in.filename
@@ -162,7 +163,9 @@ def publish_image_in_backend(request, filename):
 
 
 def delete_all_files_for_image(document_id, request):
-    """When the current database transaction is committed successfully,
+    """Delete the files of an image document after commit.
+
+    When the current database transaction is committed successfully,
     delete all files of the given image document by making a request to
     the image service.
     Note that no error is raised if this requests fails.
@@ -292,7 +295,7 @@ class ImageInfoRest(DocumentInfoRest):
 
 
 def validate_size(request, **kwargs):
-    """Checks if size is one of the available sizes."""
+    """Check if size is one of the available sizes."""
     size = request.GET.get('size', None)
     if size in (None, 'SI', 'MI', 'BI'):
         request.validated['size'] = size
@@ -301,7 +304,7 @@ def validate_size(request, **kwargs):
 
 
 def validate_extension(request, **kwargs):
-    """Checks if the extension is an modern one."""
+    """Check if the extension is an modern one."""
     ext = request.GET.get('extension', None)
     size = request.GET.get('size', None)
     if (ext is None) or (ext in ('webp', 'avif') and size is not None):

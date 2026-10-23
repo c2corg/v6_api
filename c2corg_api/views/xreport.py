@@ -104,7 +104,9 @@ class XreportRest(DocumentRest):
 
 
 def _has_permission(request, xreport_id):
-    """Check if the authenticated user has permission to view non-public
+    """Check if the user may see or change the non-public xreport data.
+
+    Check if the authenticated user has permission to view non-public
     information of the xreport or th change the xreport. That is only
     moderators and users that are currently assigned to the xreport
     can modify it.

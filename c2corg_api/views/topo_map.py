@@ -72,7 +72,9 @@ def insert_associations(topo_map, user_id):
 
 
 def update_associations(topo_map, update_types, user_id):
-    """Update the links between this mapq and documents when the geometry
+    """Update the links between this map and documents.
+
+    Update the links between this map and documents when the geometry
     has changed.
     """
     if update_types:

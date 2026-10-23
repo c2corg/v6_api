@@ -342,7 +342,9 @@ class DocumentRest(ACLDefault):
         return {}
 
     def _get_document(self, clazz, id, clazz_locale=None, lang=None):
-        """Get a document with either a single locale (if `lang is given)
+        """Get a document with one locale or with all locales.
+
+        Get a document with either a single locale (if `lang is given)
         or with all locales.
         If no document exists for the given id, a `HTTPNotFound` exception is
         raised.
@@ -404,11 +406,12 @@ class DocumentRest(ACLDefault):
 
     @staticmethod
     def _get_document_for_cooking(clazz, document_id, lang, clazz_locale=None):
-        """Get a document with a single locale
-        this locale may not be the one requested, if this one doesn't exists
-        in this case, the lang returned is given by lang_priority
-        """
+        """Get a document with a single locale for cooking.
 
+        Get a document with a single locale
+        this locale may not be the one requested, if this one doesn't exists
+        in this case, the lang returned is given by lang_priority.
+        """
         document_query = (
             DBSession.query(clazz)
             .filter(clazz.document_id == document_id)
@@ -634,7 +637,9 @@ class DocumentRest(ACLDefault):
         return locale_archive
 
     def _check_document_id(self, id, document_id):
-        """Checks that the id given in the URL ("/waypoints/{id}") matches
+        """Check that the URL id matches the document_id of the body.
+
+        Checks that the id given in the URL ("/waypoints/{id}") matches
         the document_id given in the request body.
         """
         if id != document_id:
@@ -643,7 +648,9 @@ class DocumentRest(ACLDefault):
             )
 
     def _check_versions(self, document, document_in):
-        """Check that the passed-in document, geometry and all passed-in
+        """Check that the passed-in versions match the database.
+
+        Check that the passed-in document, geometry and all passed-in
         locales have the same version as the current document, geometry and
         locales in the database.
         If not (that is the document has changed), a `HTTPConflict` exception
@@ -664,7 +671,7 @@ class DocumentRest(ACLDefault):
 def validate_document_for_type(
     document, request, fields, type_field, valid_type_values, updating
 ):
-    """Checks that all required fields are given."""
+    """Check that all required fields are given."""
     document_type = document.get(type_field)
 
     if not document_type:
@@ -689,13 +696,13 @@ def validate_document_for_type(
 
 
 def validate_document(document, request, fields, updating):
-    """Checks that all required fields are given."""
+    """Check that all required fields are given."""
     check_required_fields(document, fields, request, updating)
     check_duplicate_locales(document, request)
 
 
 def make_validator_create(fields, type_field=None, valid_type_values=None):
-    """Returns a validator function used for the creation of documents."""
+    """Return a validator function used for the creation of documents."""
     if type_field is None or valid_type_values is None:
 
         def f(request, **kwargs):
@@ -720,7 +727,7 @@ def make_validator_create(fields, type_field=None, valid_type_values=None):
 
 
 def make_validator_update(fields, type_field=None, valid_type_values=None):
-    """Returns a validator function used for updating documents."""
+    """Return a validator function used for updating documents."""
     if type_field is None or valid_type_values is None:
 
         def f(request, **kwargs):

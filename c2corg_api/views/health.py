@@ -16,7 +16,9 @@ log = logging.getLogger(__name__)
 class HealthRest(ACLDefault):
     @view()
     def get(self):
-        """Returns information about the version of the API and the status
+        """Return the API version and the status of its components.
+
+        Returns information about the version of the API and the status
         of its components:
 
             - Git revision
@@ -27,7 +29,6 @@ class HealthRest(ACLDefault):
             - Redis status
             - Number of keys in Redis
             - Maintenance mode status
-
         """
         status = {'version': self.request.registry.settings.get('cache_version')}
 

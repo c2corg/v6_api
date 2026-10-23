@@ -12,7 +12,9 @@ from c2corg_api.views.document_listings import add_load_for_profiles
 
 
 class DocumentInfoRest:
-    """Base class for all views that return a basic/info version for a
+    """Base class for the views returning basic document info.
+
+    Base class for all views that return a basic/info version for a
     document, that only contains the document_id and title/title_prefix
     of the requested locale.
     This view is used by the UI to generate URL slugs.

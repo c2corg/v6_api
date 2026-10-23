@@ -62,8 +62,8 @@ def sync_es(session, batch_size=1000):
 
 def get_changed_documents(session, last_update):
     """Get the documents that have changed since the last update.
-    Returns a list of (document_id, document_type) tuples ordered by
-    document_type.
+
+    Returns a list of (document_id, document_type) tuples ordered by document_type.
     """
     # TODO if there are many changed documents getting all ids is not very
     # efficient. stop in that case and prompt to run `fill_index` manually?
@@ -81,8 +81,9 @@ def get_changed_documents(session, last_update):
 
 
 def get_changed_users(session, last_update):
-    """Get the users that have changed. Needed to update the profile when
-    the user name has changed.
+    """Get the users that have changed.
+
+    Needed to update the profile when the user name has changed.
     """
     return (
         session.query(User.id, literal(USERPROFILE_TYPE))
@@ -92,8 +93,9 @@ def get_changed_users(session, last_update):
 
 
 def get_changed_documents_for_associations(session, last_update):
-    """Check if associations have been created/removed. If so return the
-    documents that have to be updated.
+    """Check if associations have been created/removed.
+
+    If so return the documents that have to be updated.
     """
     associations_changed = (
         session.query(AssociationLog)
@@ -127,7 +129,9 @@ def get_changed_routes_from_associations(session, last_update):
 
 
 def get_changed_routes_wr(session, last_update):
-    """Returns the routes when associations between waypoint and route have
+    """Return the routes whose waypoint associations changed.
+
+    Returns the routes when associations between waypoint and route have
     been created/removed.
 
     E.g. when an association between waypoint W1 and route R1 is created,
@@ -148,7 +152,9 @@ def get_changed_routes_wr(session, last_update):
 
 
 def get_changed_routes_and_outings_ww(session, last_update):
-    """Returns the routes and outings when associations between waypoint
+    """Return the routes and outings whose waypoint-waypoint links changed.
+
+    Returns the routes and outings when associations between waypoint
     and waypoint have been created/removed.
     E.g. when an association between waypoint W1 and W2 is created,
     all routes associated to W2, all routes associated to the direct
@@ -244,7 +250,9 @@ def get_changed_routes_and_outings_ww(session, last_update):
 
 
 def get_changed_outings_ro_uo(session, last_update):
-    """Returns the outings when associations between outing and route, or
+    """Return the outings whose route or user associations changed.
+
+    Returns the outings when associations between outing and route, or
     between outing and user have been created/removed.
 
     E.g. when an association between outing O1 and route R1 is created,
@@ -276,9 +284,7 @@ def get_changed_outings_ro_uo(session, last_update):
 
 
 def get_deleted_locale_documents(session, last_update):
-    """Returns the ids of documents that had locales deleted
-    since the last update.
-    """
+    """Return the ids of documents that had locales deleted since the last update."""
     return (
         session.query(ESDeletedLocale.document_id, ESDeletedLocale.type)
         .filter(ESDeletedLocale.deleted_at >= last_update)
@@ -288,7 +294,7 @@ def get_deleted_locale_documents(session, last_update):
 
 
 def get_deleted_documents(session, last_update):
-    """Returns the ids of documents deleted since the last update."""
+    """Return the ids of documents deleted since the last update."""
     return (
         session.query(ESDeletedDocument.document_id, ESDeletedDocument.type)
         .filter(ESDeletedDocument.deleted_at >= last_update)
@@ -297,7 +303,7 @@ def get_deleted_documents(session, last_update):
 
 
 def get_tagged_documents(session, last_update):
-    """Returns the ids of documents tagged/untagged since the last update."""
+    """Return the ids of documents tagged/untagged since the last update."""
     return (
         session.query(DocumentTagLog.document_id, DocumentTagLog.document_type)
         .filter(DocumentTagLog.written_at >= last_update)

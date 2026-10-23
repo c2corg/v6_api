@@ -65,7 +65,6 @@ class UserFilterPreferencesRest(ACLDefault):
             `GET` `/users/preferences[?pl=...]`
 
         Parameters:
-
             `pl=...` (optional)
             When set only the given locale will be included (if available).
             Otherwise the default locale of the user will be used.

@@ -27,7 +27,9 @@ from c2corg_api.views.validation import (
 
 
 def validate_association(request, **kwargs):
-    """Check if the given documents exist and if an association between the
+    """Check that the documents exist and can be associated.
+
+    Check if the given documents exist and if an association between the
     two document types is valid.
     """
     parent_document_id = request.validated.get('parent_document_id')

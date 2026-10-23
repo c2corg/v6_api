@@ -100,7 +100,9 @@ def insert_associations(area, user_id):
 
 
 def update_associations(area, update_types, user_id):
-    """Update the links between this area and documents when the geometry
+    """Update the links between this area and documents.
+
+    Update the links between this area and documents when the geometry
     has changed.
     """
     if update_types:

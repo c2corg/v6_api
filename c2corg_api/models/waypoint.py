@@ -227,7 +227,7 @@ attributes = [
 
 
 class Waypoint(_WaypointMixin, Document):
-    """ """
+    """Current version of a waypoint."""
 
     __tablename__ = 'waypoints'
 
@@ -263,7 +263,7 @@ class Waypoint(_WaypointMixin, Document):
 
 
 class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
-    """ """
+    """Archived version of a waypoint."""
 
     __tablename__ = 'waypoints_archives'
 
@@ -298,7 +298,7 @@ attributes_locales = ['access', 'access_period', 'external_resources']
 
 
 class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
-    """ """
+    """Current version of a waypoint locale."""
 
     __tablename__ = 'waypoints_locales'
 
@@ -322,7 +322,7 @@ class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
 
 
 class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
-    """ """
+    """Archived version of a waypoint locale."""
 
     __tablename__ = 'waypoints_locales_archives'
 

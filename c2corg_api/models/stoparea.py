@@ -20,9 +20,7 @@ attributes = ['navitia_id', 'stoparea_name', 'line', 'operator', 'geom']
 
 
 class Stoparea(Base, _StopareaMixin):
-    """
-    Stoparea model representing a stop area
-    """
+    """Stoparea model representing a stop area."""
 
     __tablename__ = 'stopareas'
     __table_args__ = {'schema': schema, 'extend_existing': True}

@@ -1,6 +1,4 @@
-"""
-c2corg img Extension for Python-Markdown
-==============================================
+"""c2corg img extension for Python-Markdown.
 
 Converts tags like
 [img=<id>(<options>)(/)?](<caption>)?([/img])?

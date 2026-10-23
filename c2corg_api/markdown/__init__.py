@@ -177,15 +177,14 @@ def _get_markdown_parser():
 
 
 def parse_code(text, image_url_resolver=None):
-    """
-    Get markdown, and returns HTML.
-    This function is thread-safe
+    """Get markdown, and returns HTML.
+
+    This function is thread-safe.
 
     `image_url_resolver` is an optional function
     `(document_id, size) -> url or None` giving the direct media URL of
     embedded images (see `img.make_image_url_resolver`).
     """
-
     # we need parsing to be thread safe because
     # L numbering, and Markdown() has internal global variables
 

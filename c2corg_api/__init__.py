@@ -24,8 +24,7 @@ class RootFactory(ACLDefault):
 
 
 def main(global_config, **settings):
-    """This function returns a Pyramid WSGI application."""
-
+    """Thi function returns a Pyramid WSGI application."""
     # Configure SQLAlchemy
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
@@ -135,9 +134,11 @@ def delete_waypoint_stopareas(connection, waypoint_id):
 @event.listens_for(DocumentGeometry, 'after_insert')
 @event.listens_for(DocumentGeometry, 'after_update')
 def process_new_waypoint(mapper, connection, geometry):
-    """Processes a new waypoint to find its public transports after
-    inserting it into documents_geometries."""
+    """Find the public transports of a newly inserted waypoint.
 
+    Processes a new waypoint to find its public transports after
+    inserting it into documents_geometries.
+    """
     # When GHCI runs without access to GH secrets
     # (eg. for PR triggered by dependabot)
     # return immediatly by matching test key from .env
@@ -403,7 +404,8 @@ def process_new_waypoint(mapper, connection, geometry):
 @event.listens_for(Route, 'after_insert')
 @event.listens_for(Route, 'after_update')
 def calculate_route_duration(mapper, connection, route):
-    """
+    """Calculate the estimated duration of a route after an insert or update.
+
     Calcule la durée estimée d'un itinéraire
     après son insertion ou sa mise à jour,
     en intégrant les règles métier mises à
@@ -456,7 +458,10 @@ def _get_climbing_activities():
 def _calculate_min_duration_for_activities(
     route, activities, height_diff_up, height_diff_down, route_id
 ):
-    """Calcule la durée minimale parmi toutes les activités."""
+    """Calculate the minimum duration over all activities.
+
+    Calcule la durée minimale parmi toutes les activités.
+    """
     min_duration = None
     climbing_activities = _get_climbing_activities()
 
@@ -479,9 +484,7 @@ def _calculate_min_duration_for_activities(
 def _calculate_climbing_duration(
     route, height_diff_up, height_diff_down, route_id, activity
 ):
-    """
-    Compute duration for climbing activities according to bash script
-    """
+    """Compute duration for climbing activities according to bash script."""
     v_diff = 50.0  # Climbing ascent speed for difficulties (m/h)
 
     h = float(route.route_length if route.route_length is not None else 0) / 1000  # km
@@ -583,8 +586,11 @@ def _get_activity_parameters(activity):
 def _calculate_standard_duration(
     activity, route, height_diff_up, height_diff_down, route_id
 ):
-    """Calculate duration for standard (non-climbing) activities
-    according to DIN 33466."""
+    """Calculate the duration of non-climbing activities (DIN 33466).
+
+    Calculate duration for standard (non-climbing) activities
+    according to DIN 33466.
+    """
     v, a, d = _get_activity_parameters(activity)
 
     h = float(route.route_length if route.route_length is not None else 0) / 1000  # km

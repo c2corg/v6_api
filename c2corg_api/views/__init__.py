@@ -87,7 +87,9 @@ def configure_cors_policy(settings):
 @view_config(context=HTTPError)
 @view_config(context=HTTPForbidden)
 def http_error_handler(exc, request):
-    """In case of a HTTP error, return the error details as JSON, e.g.:
+    """Return the details of an HTTP error as JSON.
+
+    In case of a HTTP error, return the error details as JSON, e.g.:
 
     {
         "status": "error",
@@ -135,20 +137,29 @@ def account_error_handler(exc, request):
 
 
 def json_view(**kw):
-    """A Cornice view that expects 'application/json' as content-type."""
+    """Cornice view that expects 'application/json' as content-type.
+
+    A Cornice view that expects 'application/json' as content-type.
+    """
     kw['content_type'] = 'application/json'
     return view(**kw)
 
 
 def restricted_json_view(**kw):
-    """A Cornice view that handles restricted json resources."""
+    """Cornice view for restricted JSON resources.
+
+    A Cornice view that handles restricted json resources.
+    """
     if 'permission' not in kw:
         kw['permission'] = 'authenticated'
     return json_view(**kw)
 
 
 def restricted_view(**kw):
-    """A Cornice view that handles restricted resources."""
+    """Cornice view for restricted resources.
+
+    A Cornice view that handles restricted resources.
+    """
     if 'permission' not in kw:
         kw['permission'] = 'authenticated'
     return view(**kw)
@@ -205,12 +216,13 @@ def to_json_dict(
 
 
 def serialize(data):
-    """
+    """Serialize with Colander for JSON output.
+
     Colanders `serialize` method is not intended for JSON serialization (it
     turns everything into a string and keeps colander.null).
     https://github.com/tisdall/cornice/blob/c18b873/cornice/schemas.py
     Returns the most agnostic version of specified data.
-    (remove colander notions, datetimes in ISO, ...)
+    (remove colander notions, datetimes in ISO, ...).
     """
     if isinstance(data, str):
         return str(data)
@@ -229,9 +241,10 @@ def serialize(data):
 
 
 def set_best_locale(documents, preferred_lang, expunge=True):
-    """Sets the "best" locale on the given documents. The "best" locale is
-    the locale in the given "preferred language" if available. Otherwise
-    it is the "most relevant" translation according to `langs_priority`.
+    """Set the "best" locale on the given documents.
+
+    The "best" locale is the locale in the given "preferred language" if available.
+    Otherwise it is the "most relevant" translation according to `langs_priority`.
     """
     if preferred_lang is None:
         return
@@ -265,7 +278,9 @@ def get_best_locale(available_locales, preferred_lang):
 
 
 def set_creator(documents, field_name):
-    """Set the creator (the user who created the first version of a document)
+    """Set the creator on a list of documents.
+
+    Set the creator (the user who created the first version of a document)
     on a list of documents.
     """
     if not documents:
@@ -279,9 +294,7 @@ def set_creator(documents, field_name):
 
 
 def set_author(outings, lang):
-    """Set the author (the user who created an outing) on a list of
-    outings.
-    """
+    """Set the author (the user who created an outing) on a list of outings."""
     set_creator(outings, 'author')
 
 
@@ -330,7 +343,9 @@ def _get_default_geom(linked_docs):
 
 
 def etag_cache(request, key):
-    """Use the HTTP Entity Tag cache for Browser side caching
+    """Use the HTTP Entity Tag cache for browser-side caching.
+
+    Use the HTTP Entity Tag cache for Browser side caching
     If a "If-None-Match" header is found, and equivalent to ``key``,
     then a ``304`` HTTP message will be returned with the ETag to tell
     the browser that it should use its current cache of the page.

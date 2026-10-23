@@ -31,10 +31,7 @@ class Lang(Base):
 
 
 class _DocumentMixin:
-    """
-    Contains the attributes that are common for `Document` and
-    `ArchiveDocument`.
-    """
+    """Contains the attributes that are common for `Document` and `ArchiveDocument`."""
 
     version = Column(Integer, nullable=False, server_default='1')
 
@@ -59,10 +56,10 @@ class _DocumentMixin:
 
 
 class Document(Base, _DocumentMixin):
-    """
-    The base class from which all document types will inherit. For each child
-    class (e.g. waypoint, route, ...) a separate table will be created, which
-    is linked to the base table via "joined table inheritance".
+    """The base class from which all document types will inherit.
+
+    For each child class (e.g. waypoint, route, ...) a separate table will be created,
+    which is linked to the base table via "joined table inheritance".
 
     This table contains the current version of a document.
     """
@@ -86,14 +83,13 @@ class Document(Base, _DocumentMixin):
     @abc.abstractmethod
     def to_archive(self):
         """Create an `Archive*` instance with the same attributes.
+
         This method is supposed to be implemented by child classes.
         """
         return
 
     def _to_archive(self, doc):
-        """Copy the attributes of this document into a passed in
-        `Archive*` instance.
-        """
+        """Copy the attributes of this document into a passed in `Archive*` instance."""
         copy_attributes(self, doc, Document._ATTRIBUTES)
         return doc
 
@@ -104,7 +100,8 @@ class Document(Base, _DocumentMixin):
         return self.geometry.to_archive() if self.geometry else None
 
     def update(self, other):
-        """Copies the attributes from `other` to this document.
+        """Copy the attributes from `other` to this document.
+
         Also updates all locales.
         """
         copy_attributes(other, self, Document._ATTRIBUTES_WHITELISTED)
@@ -135,7 +132,9 @@ class Document(Base, _DocumentMixin):
         }
 
     def get_update_type(self, old_versions):
-        """Get the update types (figures have changed, locales have
+        """Get the update types and the changed languages.
+
+        Get the update types (figures have changed, locales have
         changed, geometry has changed, or nothing has changed) and
         the languages that have changed.
         This is done by comparing the old version hashs (before flushing to
@@ -170,16 +169,12 @@ class Document(Base, _DocumentMixin):
         return (update_types, changed_langs)
 
     def get_locale(self, lang):
-        """Get the locale with the given lang or `None` if no locale
-        is present.
-        """
+        """Get the locale with the given lang or `None` if no locale is present."""
         return next(filter(lambda locale: locale.lang == lang, self.locales), None)
 
 
 class ArchiveDocument(Base, _DocumentMixin):
-    """
-    The base class for the archive documents.
-    """
+    """The base class for the archive documents."""
 
     __tablename__ = 'documents_archives'
 
@@ -447,9 +442,7 @@ def get_geometry_schema_overrides(geometry_types):
 
 
 def get_available_langs(document_id):
-    """Return the available languages (e.g. ['en', 'fr']) for a single
-    document.
-    """
+    """Return the available languages (e.g. ['en', 'fr']) for a single document."""
     return (
         DBSession.query(
             func.array_agg(DocumentLocale.lang, type_=postgresql.ARRAY(String))

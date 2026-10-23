@@ -30,7 +30,7 @@ attributes = ['area_type']
 
 
 class Area(_AreaMixin, Document):
-    """ """
+    """Current version of an area."""
 
     __tablename__ = 'areas'
 
@@ -56,7 +56,7 @@ class Area(_AreaMixin, Document):
 
 
 class ArchiveArea(_AreaMixin, ArchiveDocument):
-    """ """
+    """Archived version of an area."""
 
     __tablename__ = 'areas_archives'
 

@@ -7,7 +7,9 @@ log = logging.getLogger(__name__)
 
 
 def notify_es_syncer(queue_config):
-    """When the current transaction is committed successfully, notify the
+    """Notify the ES syncer of a changed document after commit.
+
+    When the current transaction is committed successfully, notify the
     syncer script that a document has changed by pushing a friendly message
     into the Redis queue.
     """
@@ -44,7 +46,9 @@ def notify_es_syncer(queue_config):
 
 
 def run_on_successful_transaction(operation):
-    """Run the given operation when the current transaction is committed
+    """Run the given operation once the transaction is committed.
+
+    Run the given operation when the current transaction is committed
     successfully.
     """
 

@@ -10,7 +10,8 @@ from c2corg_api.models.document import DocumentLocale
 
 
 class DocumentTopic(Base):
-    """
+    """Discourse comment topic of each document locale.
+
     Mapping between document locales and the corresponding Discourse topics
     for the comments.
     """

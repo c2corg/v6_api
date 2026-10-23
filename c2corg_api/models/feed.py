@@ -105,7 +105,9 @@ User.is_following_users = column_property(
 
 
 class DocumentChange(Base):
-    """This table contains "changes" that are shown in the homepage feed and
+    """Changes shown in the homepage feed and the user profiles.
+
+    This table contains "changes" that are shown in the homepage feed and
     the user profile.
     For example if a user creates a document or uploads images, an entry is
     added to this table.
@@ -188,7 +190,7 @@ class DocumentChange(Base):
 
 
 def update_feed_document_create(document, user_id):
-    """Creates a new entry in the feed table when creating a new document."""
+    """Create a new entry in the feed table when creating a new document."""
     if document.redirects_to or document.type in NO_FEED_DOCUMENT_TYPES:
         return
 
@@ -226,7 +228,7 @@ def update_feed_document_create(document, user_id):
 
 
 def update_feed_document_update(document, user_id, update_types):
-    """Update the feed entry for a document:
+    """Update the feed entry for a document.
 
     - update `area_ids` if the geometry has changed.
     - update `activities` if figures have changed.
@@ -334,6 +336,7 @@ def update_feed_association_update(
     user_id,
 ):
     """Update the feed entries when associations have been created or deleted.
+
     Currently only associations between outings and users are considered.
     """
     if not (
@@ -344,7 +347,9 @@ def update_feed_association_update(
 
 
 def update_feed_images_upload(images, images_in, user_id):
-    """When uploading a set of images, create a feed entry for the document
+    """Create a feed entry for the document of uploaded images.
+
+    When uploading a set of images, create a feed entry for the document
     the images are linked to.
     """
     if not images or not images_in:
@@ -396,7 +401,9 @@ def update_feed_images_upload(images, images_in, user_id):
 
 
 def _update_images(change, image1_id, image2_id, image3_id, more_images):
-    """Set the new images on a feed entry by keeping the old images if
+    """Set the new images on a feed entry.
+
+    Set the new images on a feed entry by keeping the old images if
     there are not enough new ones.
     """
     existing_images = [
@@ -474,9 +481,7 @@ def update_langs_of_changes(document_id):
 
 
 def get_linked_document(images_in):
-    """Given a list of image inputs, return a linked document from the first
-    image.
-    """
+    """Given a list of image inputs, return a linked document from the first image."""
     assert images_in
 
     image_in = images_in[0]
@@ -497,7 +502,7 @@ def get_linked_document(images_in):
 
 
 def get_images(images, images_in, document_id, document_type):
-    """Returns the first 3 images that are associated to the given document."""
+    """Return the first 3 images that are associated to the given document."""
     image_count = len(images)
 
     # get all the images linked to the document

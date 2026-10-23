@@ -1,7 +1,4 @@
-"""
-Inspired from
-https://facelessuser.github.io/pymdown-extensions/extensions/emoji/
-"""
+"""Inspired from https://facelessuser.github.io/pymdown-extensions/extensions/emoji/."""
 
 import copy
 from xml.etree import ElementTree  # nosec
@@ -33,7 +30,6 @@ class Emoji:
 
     def get_alt(self, user_code):
         """Get alt form."""
-
         if self.unicode_alt is None:
             alt = user_code
         else:

@@ -92,8 +92,9 @@ class Enum(String):
 
 
 class EnumArray(Enum):
-    """Arrays are handled in an implicit manner in ElasticSearch. This type is
-    only to mark that a field may contain multiple values.
+    """Arrays are handled in an implicit manner in ElasticSearch.
+
+    This type is only to mark that a field may contain multiple values.
     """
 
     pass
@@ -108,8 +109,9 @@ QBoolean = get_as_queryable(Boolean)
 
 
 class QDateRange(QueryableMixin):
-    """Search field for date-ranges with two fields (start/end). Used for
-    `date_start`/`date_end` for outings.
+    """Search field for date-ranges with two fields (start/end).
+
+    Used for `date_start`/`date_end` for outings.
     """
 
     def __init__(self, query_name, field_date_start, field_date_end, *args, **kwargs):
@@ -120,8 +122,9 @@ class QDateRange(QueryableMixin):
 
 
 class QPeriod(QueryableMixin):
-    """Search field for period with two fields (start/end). Used for
-    `date_start`/`date_end` for outings, regardless of the year.
+    """Search field for period with two fields (start/end).
+
+    Used for `date_start`/`date_end` for outings, regardless of the year.
     """
 
     def __init__(self, query_name, field_date_start, field_date_end, *args, **kwargs):
@@ -132,8 +135,9 @@ class QPeriod(QueryableMixin):
 
 
 class QDate(QueryableMixin, Date):
-    """Search field for date-ranges with a single field. Used for `date` for
-    images.
+    """Search field for date-ranges with a single field.
+
+    Used for `date` for images.
     """
 
     def __init__(self, query_name, field_date, *args, **kwargs):
@@ -143,8 +147,9 @@ class QDate(QueryableMixin, Date):
 
 
 class QNumberRange(QueryableMixin):
-    """Search field for number ranges. Used for elevation_min/elevation_max
-    for routes.
+    """Search field for number ranges.
+
+    Used for elevation_min/elevation_max for routes.
     """
 
     def __init__(self, query_name, field_min, field_max, *args, **kwargs):
@@ -155,13 +160,13 @@ class QNumberRange(QueryableMixin):
 
 
 class QEnumRange(QueryableMixin, Integer):
-    """Search field for enum ranges. To make it more convenient to search
-    for ranges with enum fields (e.g. to search a route with a rating between
-    'AD' and 'ED') the enum values are converted to integer values and
-    stored as such in ElasticSearch. When doing a search, a filter using these
-    numbers is used.
-    The enums are converted to integers using the mappers defined in
-    `c2corg_api.models.common.sortable_search_attributes`.
+    """Search field for enum ranges.
+
+    To make it more convenient to search for ranges with enum fields (e.g. to search a
+    route with a rating between 'AD' and 'ED') the enum values are converted to integer
+    values and stored as such in ElasticSearch. When doing a search, a filter using
+    these numbers is used. The enums are converted to integers using the mappers defined
+    in `c2corg_api.models.common.sortable_search_attributes`.
     """
 
     def __init__(self, query_name, model_field, enum_mapper, *args, **kwargs):
@@ -172,9 +177,10 @@ class QEnumRange(QueryableMixin, Integer):
 
 
 class QEnumRangeMinMax(QueryableMixin):
-    """Search field for combined enums. For example the fields
-    `climbing_rating_min` and `climbing_rating_max` are combined into a single
-    search field.
+    """Search field for combined enums.
+
+    For example the fields `climbing_rating_min` and `climbing_rating_max` are combined
+    into a single search field.
     """
 
     def __init__(self, query_name, field_min, field_max, enum_mapper, *args, **kwargs):

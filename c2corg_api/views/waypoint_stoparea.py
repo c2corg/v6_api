@@ -58,8 +58,11 @@ class WaypointStopareasByWaypointRest:
 
     @view(validators=[validate_waypoint_id])
     def get(self):
-        """Returns all stopareas associated with a waypoint,
-        with their full attributes and distance."""
+        """Return the stopareas of a waypoint with their distance.
+
+        Returns all stopareas associated with a waypoint,
+        with their full attributes and distance.
+        """
         waypoint_id = self.request.matchdict['waypoint_id']
 
         query = (
@@ -91,8 +94,11 @@ class WaypointStopareasReachableRest:
 
     @view(validators=[validate_waypoint_id])
     def get(self):
-        """Returns true if the waypoint has at least one stoparea
-        associated with it, false otherwise."""
+        """Return whether the waypoint has at least one stoparea.
+
+        Returns true if the waypoint has at least one stoparea
+        associated with it, false otherwise.
+        """
         waypoint_id = self.request.matchdict['waypoint_id']
 
         has_stopareas = DBSession.query(

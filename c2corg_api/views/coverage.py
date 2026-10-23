@@ -90,8 +90,7 @@ class WaypointCoverageRest(DocumentRest):
 
     @view(validators=[])
     def get(self):
-        """Returns the coverage from a longitude and a latitude"""
-
+        """Return the coverage from a longitude and a latitude."""
         lon = float(self.request.GET['lon'])
         lat = float(self.request.GET['lat'])
 
@@ -105,15 +104,18 @@ class PolygonCoverage(DocumentRest):
 
     @view(validators=[])
     def post(self):
-        """Returns the coverages from a geom_detail type polygon
-        (geom_detail has to be EPSG 4326 since isochrone is 4326)"""
+        """Return the coverages for a geom_detail polygon.
+
+        Returns the coverages from a geom_detail type polygon
+        (geom_detail has to be EPSG 4326 since isochrone is 4326).
+        """
         geom_detail = json.loads(json.loads(self.request.body)['geom_detail'])
         polygon = shape(geom_detail)
         return get_coverages(polygon)
 
 
 def get_coverage(lon, lat):
-    """get the coverage that contains a point(lon, lat)"""
+    """Get the coverage that contains a point(lon, lat)."""
     pt = Point(lon, lat)
 
     coverage_found = None
@@ -137,7 +139,7 @@ def get_coverage(lon, lat):
 
 
 def get_coverages(polygon):
-    """get all the coverages that intersects a polygon"""
+    """Get all the coverages that intersects a polygon."""
     coverage_found = []
 
     coverages = DBSession.query(Coverage).all()
