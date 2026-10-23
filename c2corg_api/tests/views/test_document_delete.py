@@ -1,4 +1,5 @@
 import datetime
+from collections import Counter
 
 from httmock import HTTMock, all_requests
 from sqlalchemy.sql.expression import or_
@@ -1029,7 +1030,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         # get_available_langs() returns None
         assert (not final_available_langs) == (not available_langs)
         if available_langs:
-            self.assertCountEqual(final_available_langs, available_langs)
+            assert Counter(final_available_langs) == Counter(available_langs)
 
         # Check that archives have been removed too
         count = (

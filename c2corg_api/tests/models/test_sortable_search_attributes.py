@@ -1,5 +1,7 @@
 import unittest
 
+import pytest
+
 from c2corg_api.models.common import attributes, sortable_search_attributes
 
 
@@ -16,7 +18,7 @@ class SortableSearchAttributes(unittest.TestCase):
             original_attribute_key = sortable_attribute_key.replace('sortable_', '')
 
             if original_attribute_key not in attributes.__dict__:
-                self.fail(f'{original_attribute_key} not found in {attributes}')
+                pytest.fail(f'{original_attribute_key} not found in {attributes}')
 
             self._check_values(sortable_attribute_key, original_attribute_key)
 
@@ -27,11 +29,11 @@ class SortableSearchAttributes(unittest.TestCase):
         used_numbers = set()
         for val in original_attribute:
             if val not in sortable_attribute:
-                self.fail(
+                pytest.fail(
                     f'{val} defined on {original_attribute_key} but not on '
                     f'{sortable_attribute_key}'
                 )
             num = sortable_attribute[val]
             if num in used_numbers:
-                self.fail(f'{num} is used twice in {sortable_attribute_key}')
+                pytest.fail(f'{num} is used twice in {sortable_attribute_key}')
             used_numbers.add(num)

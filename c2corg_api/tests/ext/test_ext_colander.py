@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from colander import Invalid, null
 from geoalchemy2 import WKBElement
 from geoalchemy2.shape import from_shape
@@ -52,7 +53,8 @@ class TestGeometry(BaseTestCase):
 
         geom_schema = Geometry()
 
-        self.assertRaises(Invalid, geom_schema.serialize, {}, 'Point(1 0)')
+        with pytest.raises(Invalid):
+            geom_schema.serialize({}, 'Point(1 0)')
 
     def test_deserialize_null(self):
         from c2corg_api.ext.colander_ext import Geometry
@@ -98,24 +100,18 @@ class TestGeometry(BaseTestCase):
 
         geom_schema = Geometry()
 
-        self.assertRaises(
-            Invalid,
-            geom_schema.deserialize,
-            {},
-            '{"type": "InvalidType", "coordinates": [1.0, 2.0]}',
-        )
+        with pytest.raises(Invalid):
+            geom_schema.deserialize(
+                {}, '{"type": "InvalidType", "coordinates": [1.0, 2.0]}'
+            )
 
     def test_serialize_invalid_syntax(self):
         from c2corg_api.ext.colander_ext import Geometry
 
         geom_schema = Geometry()
 
-        self.assertRaises(
-            Invalid,
-            geom_schema.deserialize,
-            {},
-            '"type": "Point", "coordinates": [1.0, 2.0]}',
-        )
+        with pytest.raises(Invalid):
+            geom_schema.deserialize({}, '"type": "Point", "coordinates": [1.0, 2.0]}')
 
     def test_save_and_load(self):
         fake_doc = Document()

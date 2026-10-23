@@ -1,3 +1,4 @@
+import pytest
 from elasticsearch_dsl.query import (
     Bool,
     GeoBoundingBox,
@@ -386,7 +387,7 @@ class AdvancedSearchTest(BaseTestCase):
         # assuming the property is named 'geom'
         bbox1 = f1['geo_bounding_box']['geom']
         bbox2 = f2['geo_bounding_box']['geom']
-        self.assertAlmostEqual(bbox1['left'], bbox2['left'])
-        self.assertAlmostEqual(bbox1['bottom'], bbox2['bottom'])
-        self.assertAlmostEqual(bbox1['right'], bbox2['right'])
-        self.assertAlmostEqual(bbox1['top'], bbox2['top'])
+        assert bbox1['left'] == pytest.approx(bbox2['left'], abs=5e-8)
+        assert bbox1['bottom'] == pytest.approx(bbox2['bottom'], abs=5e-8)
+        assert bbox1['right'] == pytest.approx(bbox2['right'], abs=5e-8)
+        assert bbox1['top'] == pytest.approx(bbox2['top'], abs=5e-8)

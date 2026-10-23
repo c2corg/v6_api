@@ -1,5 +1,7 @@
 import datetime
 
+import pytest
+
 from c2corg_api.models import es_sync
 from c2corg_api.models.article import Article
 from c2corg_api.models.book import Book
@@ -190,8 +192,8 @@ class FillIndexTest(BaseTestCase):
         assert waypoint1.doc_type == 'w'
         assert waypoint1.quality == 2
         assert waypoint1.access_time == 3
-        self.assertAlmostEqual(waypoint1.geom[0], 5.71288994)
-        self.assertAlmostEqual(waypoint1.geom[1], 45.64476395)
+        assert waypoint1.geom[0] == pytest.approx(5.71288994, abs=5e-8)
+        assert waypoint1.geom[1] == pytest.approx(45.64476395, abs=5e-8)
 
         waypoint2 = SearchWaypoint.get(id=71172)
         assert waypoint2 is not None

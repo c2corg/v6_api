@@ -2,6 +2,7 @@ import datetime
 import json
 from unittest.mock import Mock, patch
 
+import pytest
 from shapely.geometry import Point, shape
 
 from c2corg_api.models.area import Area
@@ -220,8 +221,8 @@ class BaseTestImage(BaseDocumentTestRest):
         geom = geometry.get('geom')
         point = shape(json.loads(geom))
         assert isinstance(point, Point)
-        self.assertAlmostEqual(point.x, 635956)
-        self.assertAlmostEqual(point.y, 5723604)
+        assert point.x == pytest.approx(635956, abs=5e-8)
+        assert point.y == pytest.approx(5723604, abs=5e-8)
 
 
 class TestImageRest(BaseTestImage):

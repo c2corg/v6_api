@@ -1,6 +1,7 @@
 import unittest
 
 import bcrypt
+import pytest
 
 from c2corg_api.models.user import PasswordUtil, Purpose, User
 from c2corg_api.models.user_profile import UserProfile
@@ -57,7 +58,8 @@ class Testuser(BaseTestCase):
         def change_email():
             tony.update_validation_nonce(Purpose.change_email, 2)
 
-        self.assertRaisesRegex(Exception, 'Account not validated', change_email)
+        with pytest.raises(Exception, match='Account not validated'):
+            change_email()
 
         tony.email_validated = True
         change_email()

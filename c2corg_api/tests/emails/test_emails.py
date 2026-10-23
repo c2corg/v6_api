@@ -1,6 +1,8 @@
 from base64 import b64encode
 from unittest.mock import ANY, patch
 
+import pytest
+
 from c2corg_api.emails.email_service import EmailLocalizator
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.user import User
@@ -58,4 +60,5 @@ The Camptocamp.org team""",
         def badlang():
             localizator.get_translation('toto', 'registration_subject')
 
-        self.assertRaises(Exception, badlang)
+        with pytest.raises(Exception):
+            badlang()

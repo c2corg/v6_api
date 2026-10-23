@@ -2,6 +2,7 @@ import datetime
 import json
 from unittest.mock import patch
 
+import pytest
 from dogpile.cache.api import NO_VALUE
 from shapely.geometry import Point, shape
 
@@ -1375,8 +1376,8 @@ class TestWaypointRest(BaseDocumentTestRest):
         geom = geometry.get(field)
         point = shape(json.loads(geom))
         assert isinstance(point, Point)
-        self.assertAlmostEqual(point.x, 635956)
-        self.assertAlmostEqual(point.y, 5723604)
+        assert point.x == pytest.approx(635956, abs=5e-8)
+        assert point.y == pytest.approx(5723604, abs=5e-8)
 
     def test_history(self):
         id = self.waypoint.document_id

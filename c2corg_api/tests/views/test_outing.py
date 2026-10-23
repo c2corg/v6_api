@@ -1,6 +1,7 @@
 import json
 from datetime import date, timedelta
 
+import pytest
 from shapely.geometry import LineString, shape
 from shapely.geometry.point import Point
 
@@ -1235,10 +1236,10 @@ class TestOutingRest(BaseDocumentTestRest):
         geom = geometry.get('geom_detail')
         line = shape(json.loads(geom))
         assert isinstance(line, LineString)
-        self.assertAlmostEqual(line.coords[0][0], 635956)
-        self.assertAlmostEqual(line.coords[0][1], 5723604)
-        self.assertAlmostEqual(line.coords[1][0], 635966)
-        self.assertAlmostEqual(line.coords[1][1], 5723644)
+        assert line.coords[0][0] == pytest.approx(635956, abs=5e-8)
+        assert line.coords[0][1] == pytest.approx(5723604, abs=5e-8)
+        assert line.coords[1][0] == pytest.approx(635966, abs=5e-8)
+        assert line.coords[1][1] == pytest.approx(5723644, abs=5e-8)
 
     def _assert_default_geometry(self, body, x=635961, y=5723624):
         assert body.get('geometry') is not None
@@ -1249,8 +1250,8 @@ class TestOutingRest(BaseDocumentTestRest):
         geom = geometry.get('geom')
         point = shape(json.loads(geom))
         assert isinstance(point, Point)
-        self.assertAlmostEqual(point.x, x)
-        self.assertAlmostEqual(point.y, y)
+        assert point.x == pytest.approx(x, abs=5e-8)
+        assert point.y == pytest.approx(y, abs=5e-8)
 
     def _add_test_data(self):
         self.outing = Outing(
