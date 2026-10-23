@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import sessionmaker
 
@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 
 
 def purge_token(test_session=None):
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     session = sessionmaker()() if not test_session else test_session
 
     try:

@@ -1,6 +1,6 @@
 import functools
 import logging
-from datetime import date
+from datetime import UTC, datetime
 from math import ceil
 
 from cornice.resource import resource, view
@@ -84,10 +84,11 @@ class SitemapRest(ACLDefault):
 
 
 def _get_cache_key(doc_type=None, i=None):
+    today = datetime.now(UTC).date().isoformat()
     if doc_type:
-        return f'{doc_type}-{i}-{date.today().isoformat()}-{caching.CACHE_VERSION}'
+        return f'{doc_type}-{i}-{today}-{caching.CACHE_VERSION}'
     else:
-        return f'{date.today().isoformat()}-{caching.CACHE_VERSION}'
+        return f'{today}-{caching.CACHE_VERSION}'
 
 
 def _get_sitemap_index():

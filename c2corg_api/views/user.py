@@ -265,7 +265,7 @@ class UserRegistrationRest(ACLDefault):
         )
         # Checkbox is mandatory on the frontend when registering
         # so we can store ToS acceptance.
-        user.tos_validated = datetime.datetime.utcnow()
+        user.tos_validated = datetime.datetime.now(datetime.UTC)
 
         DBSession.add(user)
         try:
@@ -292,7 +292,7 @@ def validate_user_from_nonce(purpose, request, **kwargs):
     if nonce is None:
         request.errors.add('querystring', 'nonce', 'missing nonce')
     else:
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.UTC)
         user = (
             DBSession.query(User)
             .filter(
@@ -484,14 +484,13 @@ login_schema = LoginSchema()
 
 def token_to_response(user, token, request):
     assert token is not None
-    expire_time = token.expire - datetime.datetime(1970, 1, 1)
     roles = ['moderator'] if user.moderator else []
     return {
         'token': token.value,
         'username': user.username,
         'name': user.name,
         'forum_username': user.forum_username,
-        'expire': int(expire_time.total_seconds()),
+        'expire': int(token.expire.timestamp()),
         'roles': roles,
         'id': user.id,
         'lang': user.lang,
@@ -533,7 +532,7 @@ class UserLoginRest(ACLDefault):
                     DBSession.execute(
                         User.__table__.update()
                         .where(User.id == user.id)
-                        .values(tos_validated=datetime.datetime.utcnow())
+                        .values(tos_validated=datetime.datetime.now(datetime.UTC))
                     )
                     DBSession.flush()
                 except Exception as e:

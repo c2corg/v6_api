@@ -1,7 +1,7 @@
 import logging
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import transaction
 from pyramid.paster import (
@@ -54,19 +54,18 @@ def fill_index(session, batch_size=1000):
     client = elasticsearch_config['client']
     index_name = elasticsearch_config['index']
 
-    status = {'start_time': datetime.now(), 'last_progress_update': None}
+    status = {'start_time': datetime.now(UTC), 'last_progress_update': None}
 
     _, date_now = es_sync.get_status(session)
 
     total = session.query(Document).filter(Document.redirects_to.is_(None)).count()
 
     def progress(count, total_count):
-        if (
-            status['last_progress_update'] is None
-            or status['last_progress_update'] + timedelta(seconds=1) < datetime.now()
-        ):
+        if status['last_progress_update'] is None or status[
+            'last_progress_update'
+        ] + timedelta(seconds=1) < datetime.now(UTC):
             print(f'{count} of {total_count}')
-            status['last_progress_update'] = datetime.now()
+            status['last_progress_update'] = datetime.now(UTC)
 
     batch = ElasticBatch(client, batch_size)
     count = 0
@@ -90,7 +89,7 @@ def fill_index(session, batch_size=1000):
 
     es_sync.mark_as_updated(session, date_now)
 
-    duration = datetime.now() - status['start_time']
+    duration = datetime.now(UTC) - status['start_time']
     print(f'Done (duration: {duration})')
 
 
