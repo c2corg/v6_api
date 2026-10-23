@@ -120,7 +120,8 @@ jobs:
         run: |
           export $(cat .env | grep -v "^#" | grep -v "^NAVITIA_API_KEY" | xargs)
           export NAVITIA_API_KEY="${NAVITIA_API_KEY:-test-key}"
-          pytest --cov-report term --cov-report xml --cov=c2corg_api
+          # coverage floor just below the baseline (90%, see pyproject.toml)
+          pytest --cov-report term --cov-report xml --cov=c2corg_api --cov-fail-under=89
       - name: Run tests (without secrets)
         # secrets are not available for dependabot runs
         if: ${{ github.actor == 'dependabot[bot]' }}

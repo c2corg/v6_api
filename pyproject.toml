@@ -126,6 +126,21 @@ convention = "pep257"
 [tool.ruff.lint.isort]
 known-first-party = ["c2corg_api", "es_migration"]
 
+# Baseline (2026-10-23): 90% of lines and branches, tests excluded. CI fails
+# below 89% (`--cov-fail-under` in ci.yml, not here: the Dependabot runs skip
+# the navitia tests).
+[tool.coverage.run]
+source = ["c2corg_api"]
+# the tests themselves are not part of the coverage figure
+omit = ["c2corg_api/tests/*"]
+branch = true
+
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+
 [tool.pytest.ini_options]
 addopts = "--cov=c2corg_api"
 filterwarnings = ["ignore::DeprecationWarning"]
