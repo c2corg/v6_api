@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.expression import and_
@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 
 def purge_account(test_session=None):
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     session = sessionmaker()() if not test_session else test_session
 
     def delete(cls, attr, ids):

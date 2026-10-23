@@ -99,8 +99,9 @@ quote-style = "single"
 preview = true
 # B: flake8-bugbear (likely bugs and design problems).
 # D: docstring style (pep257 convention, see pydocstyle below).
+# DTZ: no naive datetimes (the database columns are timestamptz).
 # RUF100: report `# noqa` comments that no longer silence anything.
-select = ["E", "W", "F", "I", "N", "UP", "B", "D", "RUF100"]
+select = ["E", "W", "F", "I", "N", "UP", "B", "D", "DTZ", "RUF100"]
 ignore = [
     "E226", "E241", "E242",  # in pycodestyle's default ignore list
     "N818",  # off by default in pep8-naming
@@ -118,6 +119,7 @@ ignore = [
     "B018",  # a bare `response.json` checks that the body is JSON
     "B023",  # fake generators defined and used within one loop iteration
     "D",  # test docstrings describe test cases, not an API
+    "DTZ",  # fixtures use naive UTC datetimes; the test database runs in UTC
 ]
 
 [tool.ruff.lint.pydocstyle]

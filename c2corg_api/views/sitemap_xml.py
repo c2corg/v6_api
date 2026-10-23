@@ -1,6 +1,6 @@
 import functools
 import logging
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from math import ceil
 
 from cornice.renderer import JSONError
@@ -123,10 +123,11 @@ class SitemapXml(ACLDefault):
 
 
 def _get_cache_key(doc_type=None, i=None):
+    today = datetime.now(UTC).date().isoformat()
     if doc_type:
-        return f'{doc_type}-{i}-{date.today().isoformat()}-{caching.CACHE_VERSION}'
+        return f'{doc_type}-{i}-{today}-{caching.CACHE_VERSION}'
     else:
-        return f'{date.today().isoformat()}-{caching.CACHE_VERSION}'
+        return f'{today}-{caching.CACHE_VERSION}'
 
 
 def _get_sitemap_index():
@@ -140,7 +141,7 @@ def _get_sitemap_index():
 
     sitemaps = []
 
-    now = datetime.utcnow().replace(tzinfo=UTC)
+    now = datetime.now(UTC)
     lastmod = now.isoformat()
 
     template = """<sitemap>

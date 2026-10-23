@@ -135,7 +135,7 @@ class User(Base):
             # An account must be validated before any other action is tried.
             raise AccountNotValidated()
 
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.UTC)
         nonce = binascii.hexlify(os.urandom(32)).decode('ascii')
         self.validation_nonce = purpose.value + '_' + nonce
         self.validation_nonce_expire = now + datetime.timedelta(days=days)

@@ -61,7 +61,7 @@ def _validate_dates(request, date_start, date_end):
 
     if isinstance(date_start, str):
         try:
-            date_start = datetime.strptime(date_start, '%Y-%m-%d').date()
+            date_start = datetime.strptime(date_start, '%Y-%m-%d').date()  # noqa: DTZ007 (date only)
         except ValueError:
             request.errors.add(
                 'body', 'date_start', 'invalid format, expecting YEAR-MONTH-DAY'
@@ -73,7 +73,7 @@ def _validate_dates(request, date_start, date_end):
 
     if isinstance(date_end, str):
         try:
-            date_end = datetime.strptime(date_end, '%Y-%m-%d').date()
+            date_end = datetime.strptime(date_end, '%Y-%m-%d').date()  # noqa: DTZ007 (date only)
         except ValueError:
             request.errors.add(
                 'body', 'date_end', 'invalid format, expecting YEAR-MONTH-DAY'
