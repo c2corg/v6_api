@@ -5,6 +5,7 @@ import jwt as pyjwt
 from pyramid.httpexceptions import HTTPForbidden
 from pyramid.interfaces import IAuthenticationPolicy
 from pyramid.security import Authenticated
+from sqlalchemy import and_
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.token import Token
@@ -75,7 +76,7 @@ def add_or_retrieve_token(value, expire, userid):
 
 def remove_token(token):
     now = datetime.datetime.now(datetime.UTC)
-    condition = Token.value == token and Token.expire > now
+    condition = and_(Token.value == token, Token.expire > now)
     result = DBSession.execute(Token.__table__.delete().where(condition))
     if result.rowcount == 0:
         log.debug(f'Failed to remove token {token}')
