@@ -101,7 +101,8 @@ def try_login(user, password, request):
 
 
 def log_validated_user_i_know_what_i_do(user, request):
-    """This method may only be called for validated users.
+    """Thi method may only be called for validated users.
+
     See the try_login function for a safe version.
     """
     assert user.email_validated

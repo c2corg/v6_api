@@ -31,7 +31,6 @@ class ChangesDocumentRest:
             `GET` `/document/changes[&limit=...][&token=...][&u=]`
 
         Parameters:
-
             `limit=...` (optional)
             How many entries should be returned (default: 30).
             The maximum is 50.

@@ -29,7 +29,9 @@ attributes = ['activities', 'categories']
 
 
 class UserProfile(_UserProfileMixin, Document):
-    """The user profile for each user
+    """The profile of a user.
+
+    The user profile for each user
     User profile documents are created automatically when creating a new user.
     """
 
@@ -60,7 +62,7 @@ class UserProfile(_UserProfileMixin, Document):
 
 
 class ArchiveUserProfile(_UserProfileMixin, ArchiveDocument):
-    """ """
+    """Archived version of an user profile."""
 
     __tablename__ = 'user_profiles_archives'
 

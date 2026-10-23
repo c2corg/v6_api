@@ -207,7 +207,7 @@ attributes = [
 
 
 class Route(_RouteMixin, Document):
-    """ """
+    """Current version of a route."""
 
     __tablename__ = 'routes'
 
@@ -243,7 +243,7 @@ class Route(_RouteMixin, Document):
 
 
 class ArchiveRoute(_RouteMixin, ArchiveDocument):
-    """ """
+    """Archived version of a route."""
 
     __tablename__ = 'routes_archives'
 
@@ -299,7 +299,7 @@ attributes_locales = [
 
 
 class RouteLocale(_RouteLocaleMixin, DocumentLocale):
-    """ """
+    """Current version of a route locale."""
 
     __tablename__ = 'routes_locales'
 
@@ -326,7 +326,7 @@ class RouteLocale(_RouteLocaleMixin, DocumentLocale):
 
 
 class ArchiveRouteLocale(_RouteLocaleMixin, ArchiveDocumentLocale):
-    """ """
+    """Archived version of a route locale."""
 
     __tablename__ = 'routes_locales_archives'
 

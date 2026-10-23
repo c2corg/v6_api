@@ -15,7 +15,9 @@ log = logging.getLogger('c2corg_api_syncer')
 
 
 class SyncWorker(ConsumerMixin):
-    """Worker that listens to messages in the Redis queue and then synchronizes
+    """Worker that syncs database changes to ElasticSearch.
+
+    Worker that listens to messages in the Redis queue and then synchronizes
     changes that have been made in the Postgres database with ElasticSearch.
 
     Based on this example:

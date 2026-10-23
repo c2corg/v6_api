@@ -82,11 +82,11 @@ validate_associations_update = functools.partial(
 class WaypointRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
-        """
-        Get a list of documents, optionally matching search filters.
-        If no search filters are given, the documents are directly queried
-        from the database. If not, ElasticSearch is used to find the documents
-        that match the filters.
+        """Get a list of documents, optionally matching search filters.
+
+        If no search filters are given, the documents are directly queried from the
+        database. If not, ElasticSearch is used to find the documents that match the
+        filters.
 
         Request:
             `GET`
@@ -257,7 +257,6 @@ class WaypointRest(DocumentRest):
             }
 
             Notes:
-
             - The version number of the document, of each provided locale and
               of the geometry has to be given. If the versions do not match
               the current ones, `409 Conflict` is returned.
@@ -332,7 +331,8 @@ def set_recent_outings(waypoint, lang):
 
 
 def set_linked_routes(waypoint, lang):
-    """
+    """Set the routes associated to a waypoint and to its children.
+
     Set associated routes for the given waypoint including associated routes
     of child and grandchild waypoints.
     Note that this function returns a dict and not a list!
@@ -373,10 +373,11 @@ def set_linked_routes(waypoint, lang):
 
 
 def _get_select_children(waypoint):
-    """
+    """Select the ids of a waypoint, its children and grand-children.
+
     Return a WITH query that selects the document ids of the given waypoint,
     the children and the grand-children of the waypoint.
-    See also: http://docs.sqlalchemy.org/en/latest/core/selectable.html#sqlalchemy.sql.expression.GenerativeSelect.cte
+    See also: http://docs.sqlalchemy.org/en/latest/core/selectable.html#sqlalchemy.sql.expression.GenerativeSelect.cte.
     """
     select_waypoint = DBSession.query(
         literal_column(str(waypoint.document_id)).label('document_id')
@@ -441,10 +442,13 @@ class ReachableWaypointRest(DocumentRest):
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def get(self):
-        """Returns a list of object {documents: Waypoint[], total: Integer} ->
+        """Return the reachable waypoints and their total.
+
+        Returns a list of object {documents: Waypoint[], total: Integer} ->
         documents: waypoints reachable within offset and limit
         total: number of documents returned by query,
-        without offset and limit"""
+        without offset and limit.
+        """
         validated = self.request.validated
 
         meta_params = {
@@ -502,7 +506,9 @@ def update_linked_routes(waypoint, update_types, user_id):
 
 
 def update_linked_route_titles(waypoint, update_types, user_id):
-    """When a waypoint is the main waypoint of a route, the field
+    """Update the route titles cached from their main waypoint.
+
+    When a waypoint is the main waypoint of a route, the field
     `title_prefix`, which caches the waypoint name, has to be updated.
     This method takes care of updating all routes, that the waypoint is
     "main waypoint" of.
@@ -567,11 +573,13 @@ def update_linked_routes_public_transportation_rating(waypoint, update_types):
 
 
 def build_reachable_waypoints_query(params, meta_params):
-    """build the query based on params and meta params.
+    """Build the reachable waypoints query from params and meta params.
+
+    Build the query based on params and meta params.
     this includes every filters on waypoints,
     as well as offset + limit, sort, bbox...
     returns a list of waypoints reachable
-    (can be accessible by public transports), filtered with params
+    (can be accessible by public transports), filtered with params.
     """
     all_filtered_waypoints_reachable_ids, total_hits = get_all_filtered_docs(
         params, meta_params, get_waypoints_reachable_ids(), WAYPOINT_TYPE
@@ -614,7 +622,7 @@ def build_reachable_waypoints_query(params, meta_params):
 
 
 def get_waypoints_reachable_ids():
-    """get all waypoints reachable ids"""
+    """Get all waypoints reachable ids."""
     # get all waypoints reachable (join with waypoint stop area)
     all_routes_reachable = (
         DBSession.query(Waypoint)

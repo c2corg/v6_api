@@ -17,7 +17,9 @@ log = logging.getLogger(__name__)
 
 
 class CacheVersion(Base):
-    """This table contains a version number for each document that reflects
+    """Cache version of each document and its associated documents.
+
+    This table contains a version number for each document that reflects
     the state of the document and all its associated documents.
     When the document or one of its associated documents is updated, the
     version of the document is incremented, so that outdated documents are not
@@ -54,7 +56,9 @@ def update_cache_version_full(document_id, type):
 
 
 def update_cache_version_direct(document_id):
-    """Update the cache version for the document with the given id
+    """Update the cache version of a document, not of its dependencies.
+
+    Update the cache version for the document with the given id
     without updating any dependencies.
     """
     DBSession.execute(
@@ -64,7 +68,9 @@ def update_cache_version_direct(document_id):
 
 
 def update_cache_version_for_area(area):
-    """Invalidate the cache keys of all documents that are currently
+    """Invalidate the cache keys of the documents in an area.
+
+    Invalidate the cache keys of all documents that are currently
     associated to the given area.
     Note that the cache key of the area itself is not changed when calling this
     function.
@@ -76,7 +82,9 @@ def update_cache_version_for_area(area):
 
 
 def update_cache_version_for_map(topo_map):
-    """Invalidate the cache keys of all documents that are currently
+    """Invalidate the cache keys of the documents on a map.
+
+    Invalidate the cache keys of all documents that are currently
     associated to the given map.
     Note that the cache key of the map itself is not changed when calling this
     function.
@@ -168,7 +176,9 @@ def _format_cache_key(document_id, lang, version, doc_type=None, custom_cache_ke
 
 
 def get_cache_key(document_id, lang, document_type, custom_cache_key=None):
-    """Returns an identifier which reflects the version of a document and
+    """Return the cache key (and ETag) of a document.
+
+    Returns an identifier which reflects the version of a document and
     all its associated documents. This identifier is used as cache key
     and as ETag value.
     """

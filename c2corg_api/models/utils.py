@@ -11,9 +11,7 @@ from sqlalchemy.sql.functions import func
 
 
 def copy_attributes(obj_from, obj_to, attributes):
-    """
-    Copies the given attributes from `obj_from` to `obj_to` (shallow copy).
-    """
+    """Copy the given attributes from `obj_from` to `obj_to` (shallow copy)."""
     for attribute in attributes:
         if hasattr(obj_from, attribute):
             current_val = getattr(obj_to, attribute)
@@ -31,9 +29,10 @@ def copy_attributes(obj_from, obj_to, attributes):
 
 
 class ArrayOfEnum(postgresql.ARRAY):
-    """
+    """SQLAlchemy type for an array of enums.
+
     SQLAlchemy type for an array of enums.
-    http://docs.sqlalchemy.org/en/latest/dialects/postgresql.html#postgresql-array-of-enum
+    http://docs.sqlalchemy.org/en/latest/dialects/postgresql.html#postgresql-array-of-enum.
     """
 
     def bind_expression(self, bindvalue):
@@ -64,8 +63,10 @@ def extend_dict(d1, d2):
 
 
 def get_mid_point(wkb_track):
-    """Get the point in the middle of a track. If the track is a
-    MultiLineString the point in the middle of the first line is taken.
+    """Get the point in the middle of a track.
+
+    If the track is a MultiLineString the point in the middle of the first line is
+    taken.
     """
     track = wkb_to_shape(wkb_track)
 
@@ -80,7 +81,9 @@ def get_mid_point(wkb_track):
 
 
 def wkb_to_shape(wkb_element):
-    """Create a 2D Shapely shape from a WKB value. 3D and 4D geometries
+    """Create a 2D Shapely shape from a WKB value.
+
+    Create a 2D Shapely shape from a WKB value. 3D and 4D geometries
     are turned into 2D geometries.
     """
     assert isinstance(wkb_element, WKBElement)
@@ -113,20 +116,25 @@ def _force_2d_coords(coords):
 
 
 def windowed_query(q, column, windowsize):
-    """ "Break a Query into windows on a given column.
-    Source: https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WindowedRangeQuery
+    """Break a Query into windows on a given column.
+
+    "Break a Query into windows on a given column.
+
+    Source:
+    https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WindowedRangeQuery.
 
     If the query does not use eager loading `yield_per` can be used instead for
     native streaming.
     """
-
     for whereclause in column_windows(q.session, column, windowsize):
         for row in q.filter(whereclause).order_by(column):
             yield row
 
 
 def column_windows(session, column, windowsize):
-    """Return a series of WHERE clauses against
+    """Return WHERE clauses that break a column into windows.
+
+    Return a series of WHERE clauses against
     a given column that break it into windows.
 
     Result is an iterable of tuples, consisting of

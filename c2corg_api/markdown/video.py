@@ -1,6 +1,4 @@
-"""
-c2corg video Extension for Python-Markdown
-==============================================
+"""c2corg video extension for Python-Markdown.
 
 Converts video tags to advanced HTML video tags.
 """

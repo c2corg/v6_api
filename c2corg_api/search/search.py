@@ -47,7 +47,9 @@ def search_for_types(search_types, search_term, limit, lang):
 
 
 def do_multi_search_for_types(search_types, search_term, limit, lang):
-    """Executes a multi-search for all document types in a single request
+    """Search all document types in a single multi-search request.
+
+    Executes a multi-search for all document types in a single request
     and returns a list of tuples (document_ids, total) containing the results
     for each type.
     """

@@ -1,6 +1,4 @@
-"""
-c2corg p Extension for Python-Markdown
-==============================================
+"""c2corg p extension for Python-Markdown.
 
 Converts tags [p] to div with clear:both
 """

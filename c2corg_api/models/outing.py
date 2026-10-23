@@ -143,7 +143,7 @@ attributes = [
 
 
 class Outing(_OutingMixin, Document):
-    """ """
+    """Current version of an outing."""
 
     __tablename__ = 'outings'
 
@@ -169,7 +169,7 @@ class Outing(_OutingMixin, Document):
 
 
 class ArchiveOuting(_OutingMixin, ArchiveDocument):
-    """ """
+    """Archived version of an outing."""
 
     __tablename__ = 'outings_archives'
 
@@ -221,7 +221,7 @@ attributes_locales = [
 
 
 class OutingLocale(_OutingLocaleMixin, DocumentLocale):
-    """ """
+    """Current version of an outing locale."""
 
     __tablename__ = 'outings_locales'
 
@@ -240,7 +240,7 @@ class OutingLocale(_OutingLocaleMixin, DocumentLocale):
 
 
 class ArchiveOutingLocale(_OutingLocaleMixin, ArchiveDocumentLocale):
-    """ """
+    """Archived version of an outing locale."""
 
     __tablename__ = 'outings_locales_archives'
 

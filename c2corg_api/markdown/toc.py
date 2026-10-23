@@ -1,6 +1,4 @@
-"""
-Table of Contents Extension for Python-Markdown
-===============================================
+"""Table of Contents extension for Python-Markdown.
 
 See <https://pythonhosted.org/Markdown/extensions/toc.html>
 for documentation.
@@ -33,7 +31,6 @@ def not_emphasis(elt):
 
 def get_name(el):
     """Get title name."""
-
     result = []
     for item in el.iter():
         if not_emphasis(item):

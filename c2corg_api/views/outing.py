@@ -190,7 +190,9 @@ class OutingInfoRest(DocumentInfoRest):
 
 
 def set_default_geometry(linked_routes, outing, user_id):
-    """When creating a new outing, set the default geometry to the middle point
+    """Set the default geometry of a new outing.
+
+    When creating a new outing, set the default geometry to the middle point
     of a given track, if not to the centroid of the convex hull
     of all associated routes.
     """
@@ -207,10 +209,11 @@ def set_default_geometry(linked_routes, outing, user_id):
 
 
 def update_default_geometry(outing, outing_in):
-    """When updating an outing, set the default geometry to the middle point
-    of a new track if proovided
-    """
+    """Update the default geometry of an outing.
 
+    When updating an outing, set the default geometry to the middle point
+    of a new track if proovided.
+    """
     geometry_in = outing_in.geometry
 
     if geometry_in is not None and geometry_in.geom_detail is not None:

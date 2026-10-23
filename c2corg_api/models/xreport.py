@@ -117,7 +117,7 @@ attributes_without_personal = [
 
 
 class Xreport(_XreportMixin, Document):
-    """ """
+    """Current version of an incident report."""
 
     __tablename__ = 'xreports'
 
@@ -142,7 +142,7 @@ class Xreport(_XreportMixin, Document):
 
 
 class ArchiveXreport(_XreportMixin, ArchiveDocument):
-    """ """
+    """Archived version of an incident report."""
 
     __tablename__ = 'xreports_archives'
 
@@ -221,7 +221,7 @@ attributes_locales = [
 
 
 class XreportLocale(_XreportLocaleMixin, DocumentLocale):
-    """ """
+    """Current version of an incident report locale."""
 
     __tablename__ = 'xreports_locales'
 
@@ -245,7 +245,7 @@ class XreportLocale(_XreportLocaleMixin, DocumentLocale):
 
 
 class ArchiveXreportLocale(_XreportLocaleMixin, ArchiveDocumentLocale):
-    """ """
+    """Archived version of an incident report locale."""
 
     __tablename__ = 'xreports_locales_archives'
 

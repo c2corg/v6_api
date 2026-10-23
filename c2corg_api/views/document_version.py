@@ -106,7 +106,8 @@ def serialize_version(version):
 
 
 def get_neighbour_version_ids(version_id, document_id, lang):
-    """
+    """Get the previous and next version of a document version.
+
     Get the previous and next version for a version of a document with a
     specific language.
     """

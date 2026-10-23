@@ -1,6 +1,4 @@
-"""
-c2corg wikiLinks Extension for Python-Markdown
-==============================================
+"""c2corg wikiLinks extension for Python-Markdown.
 
 Converts tags such as [[document_type/document_id|label]]
 to <a href="/document_type/document_id">label</a>

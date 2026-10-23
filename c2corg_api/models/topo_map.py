@@ -28,7 +28,7 @@ attributes = ['editor', 'scale', 'code']
 
 
 class TopoMap(_MapMixin, Document):
-    """ """
+    """Current version of a map."""
 
     __tablename__ = 'maps'
 
@@ -54,7 +54,7 @@ class TopoMap(_MapMixin, Document):
 
 
 class ArchiveTopoMap(_MapMixin, ArchiveDocument):
-    """ """
+    """Archived version of a map."""
 
     __tablename__ = 'maps_archives'
 

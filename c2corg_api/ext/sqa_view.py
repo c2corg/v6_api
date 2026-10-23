@@ -8,9 +8,9 @@ from sqlalchemy.sql.schema import Column, MetaData, Table
 
 
 def view(name, schema, metadata, selectable):
-    """
-    Create a view for the given select. A table is returned which can be
-    used to query the view.
+    """Create a view for the given select.
+
+    A table is returned which can be used to query the view.
     """
     # a temporary MetaData object is used to avoid that this table is actually
     # created

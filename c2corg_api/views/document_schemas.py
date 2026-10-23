@@ -94,26 +94,34 @@ class GetDocumentsConfig:
         return listing_fields
 
     def get_load_only_fields(self):
-        """Return the fields for a document type that are needed to query
+        """Return the document fields needed by the listing views.
+
+        Return the fields for a document type that are needed to query
         documents for the listing views.
         """
         return self.fields_document
 
     def get_load_only_fields_locales(self):
-        """Return the locales fields for a document type that are needed to
+        """Return the locale fields needed by the listing views.
+
+        Return the locales fields for a document type that are needed to
         query documents for the listing views.
         """
         return self.fields_locales
 
     def get_load_only_fields_geometry(self):
-        """Return the geometry fields for a document type that are needed to
+        """Return the geometry fields needed by the listing views.
+
+        Return the geometry fields for a document type that are needed to
         query documents for the listing views.
         """
         return self.fields_geometry
 
 
 def make_schema_adaptor(adapt_schema_for_type, type_field, field_list_type):
-    """Returns a function which adapts a base schema to a specific document
+    """Return a function adapting a base schema to a document type.
+
+    Returns a function which adapts a base schema to a specific document
     type, e.g. it returns a function which turns the base schema for waypoints
     into a schema which contains only the fields for the waypoint type
     "summit".
@@ -126,7 +134,7 @@ def make_schema_adaptor(adapt_schema_for_type, type_field, field_list_type):
 
 
 def get_all_fields(fields, activities, field_list_type):
-    """Returns all fields needed for the given list of activities."""
+    """Return all fields needed for the given list of activities."""
     fields_list = [
         fields.get(activity).get(field_list_type)
         for activity in activities
@@ -187,6 +195,7 @@ image_documents_config = GetDocumentsConfig(
 
 def adapt_outing_schema_for_activities(activities, field_list_type):
     """Get the schema for a set of activities.
+
     `field_list_type` should be either "fields" or "listing".
     """
     if not activities:
@@ -234,6 +243,7 @@ xreport_documents_config = GetDocumentsConfig(
 
 def adapt_route_schema_for_activities(activities, field_list_type):
     """Get the schema for a set of activities.
+
     `field_list_type` should be either "fields" or "listing".
     """
     if not activities:
@@ -291,6 +301,7 @@ user_profile_documents_config = GetDocumentsConfig(
 @cache
 def adapt_waypoint_schema_for_type(waypoint_type, field_list_type):
     """Get the schema for a waypoint type.
+
     `field_list_type` should be either "fields" or "listing".
     """
     fields = fields_waypoint.get(waypoint_type, {}).get(field_list_type, [])

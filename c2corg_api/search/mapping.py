@@ -41,8 +41,9 @@ def default_title_field(lang: None):
 
 
 class SearchDocument(DocType):
-    """The base ElasticSearch mapping for documents. Each document type has
-    its own specific mapping.
+    """The base ElasticSearch mapping for documents.
+
+    Each document type has its own specific mapping.
 
     We are using the "one language per field" strategy, for example for the
     title field we have a field for each language: title_en, title_fr, ...

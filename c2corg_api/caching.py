@@ -98,8 +98,9 @@ def initialize_cache_status(refresh_period):
 
 
 def get_or_create(cache, key, creator):
-    """Try to get the value for the given key from the cache. In case of
-    errors fallback to the creator function (e.g. load from the database).
+    """Try to get the value for the given key from the cache.
+
+    In case of errors fallback to the creator function (e.g. load from the database).
     """
     if cache_status.is_down():
         log.warning('Not getting value from cache because it seems to be down')
@@ -118,8 +119,9 @@ def get_or_create(cache, key, creator):
 
 
 def get_or_create_multi(cache, keys, creator, should_cache_fn=None):
-    """Try to get the values for the given keys from the cache. In case of
-    errors fallback to the creator function (e.g. load from the database).
+    """Try to get the values for the given keys from the cache.
+
+    In case of errors fallback to the creator function (e.g. load from the database).
     """
     if cache_status.is_down():
         log.warning('Not getting values from cache since it seems to be down')
@@ -143,8 +145,9 @@ def get_or_create_multi(cache, keys, creator, should_cache_fn=None):
 
 
 def get(cache, key):
-    """Try to get the value for the given key from the cache. In case of
-    errors, return NO_VALUE.
+    """Try to get the value for the given key from the cache.
+
+    In case of errors, return NO_VALUE.
     """
     if cache_status.is_down():
         log.warning('Not getting value from cache because it seems to be down')
@@ -161,8 +164,9 @@ def get(cache, key):
 
 
 def set(cache, key, value):
-    """Try to set the value with the given key in the cache. In case of
-    errors, log the error and continue.
+    """Try to set the value with the given key in the cache.
+
+    In case of errors, log the error and continue.
     """
     if cache_status.is_down():
         log.warning('Not setting value in cache because it seems to be down')
@@ -177,16 +181,16 @@ def set(cache, key, value):
 
 
 class CreatorException(Exception):
-    """An exception happening during the execution of a cache `creator`
-    function.
-    """
+    """An exception happening during the execution of a cache `creator` function."""
 
     def __init__(self, exc):
         self.exc = exc
 
 
 def creator_wrapper(creator):
-    """A wrapper around `creator` functions. The purpose of this wrapper is
+    """Wrap a `creator` function to tell its errors from cache errors.
+
+    A wrapper around `creator` functions. The purpose of this wrapper is
     to distinguish exceptions caused in creator functions from exceptions
     while trying to read a value from the cache.
     """
@@ -201,7 +205,9 @@ def creator_wrapper(creator):
 
 
 class CacheStatus:
-    """To avoid that requests are made to the cache if it is down, the status
+    """Track whether the cache is up, to skip it while it is down.
+
+    To avoid that requests are made to the cache if it is down, the status
     of the last requests is stored. If a request in the 30 seconds failed,
     no new request will be made.
     """

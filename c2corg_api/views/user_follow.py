@@ -40,8 +40,9 @@ class UserFollowRest(ACLDefault):
     )
     def post(self):
         """Follow the given user.
-        Creates a follower relation, so that the authenticated user is
-        following the given user.
+
+        Creates a follower relation, so that the authenticated user is following the
+        given user.
 
 
         Request:
@@ -49,7 +50,6 @@ class UserFollowRest(ACLDefault):
 
         Request body:
             {'user_id': @user_id@}
-
         """
         followed_user_id = self.request.validated['user_id']
         follower_user_id = self.request.authenticated_userid

@@ -87,7 +87,7 @@ attributes = [
 
 
 class Image(_ImageMixin, Document):
-    """ """
+    """Current version of an image."""
 
     __tablename__ = 'images'
 
@@ -113,7 +113,7 @@ class Image(_ImageMixin, Document):
 
 
 class ArchiveImage(_ImageMixin, ArchiveDocument):
-    """ """
+    """Archived version of an image."""
 
     __tablename__ = 'images_archives'
 

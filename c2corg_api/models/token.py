@@ -4,9 +4,7 @@ from c2corg_api.models import Base, users_schema
 
 
 class Token(Base):
-    """
-    Class containing active authentication tokens.
-    """
+    """Class containing active authentication tokens."""
 
     __tablename__ = 'token'
     __table_args__ = {'schema': users_schema}

@@ -37,8 +37,9 @@ validate_page = create_int_validator('i')
 class SitemapRest(ACLDefault):
     @view()
     def collection_get(self):
-        """Returns the information needed to generate a sitemap index file.
-        See: http://www.sitemaps.org/protocol.html
+        """Return the information needed to generate a sitemap index file.
+
+        See: http://www.sitemaps.org/protocol.html.
 
         The response consists of a list of URLs to request the information
         needed to generate the sitemap linked from the sitemap index.
@@ -66,7 +67,9 @@ class SitemapRest(ACLDefault):
 
     @view(validators=[validate_page, validate_document_type])
     def get(self):
-        """Returns the information needed to generate a sitemap for a given
+        """Return the information to build a sitemap page.
+
+        Returns the information needed to generate a sitemap for a given
         type and sitemap page number.
         """
         doc_type = self.request.validated['doc_type']

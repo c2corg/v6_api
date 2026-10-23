@@ -15,8 +15,7 @@ class CookerRest:
 
     @view()
     def post(self):
-        """
-        This service is a stateless service that returns HTML values.
+        """Thi service is a stateless service that returns HTML values.
 
         * Input and output are dictionaries
         * keys are keep unmodified
