@@ -564,6 +564,41 @@ class UserLoginRest(ACLDefault):
             return None
 
 
+class DiscourseRedirectSchema(colander.MappingSchema):
+    """Signed payload Discourse sent to the UI's `/auth-sso` page."""
+
+    sso = colander.SchemaNode(colander.String())
+    sig = colander.SchemaNode(colander.String())
+
+
+discourse_redirect_schema = DiscourseRedirectSchema()
+
+
+@resource(path='/users/discourse-redirect', cors_policy=cors_policy)
+class UserDiscourseRedirectRest(ACLDefault):
+    """Answer a Discourse SSO handshake for an already logged-in user."""
+
+    # The browser asks the forum for a nonce (`<forum>/session/sso`), gets
+    # sent to the UI's `/auth-sso` page with the signed `sso`/`sig` payload,
+    # and the UI exchanges it here for the signed `sso_login` URL to send the
+    # browser to. Discourse binds the nonce to the browser session that asked
+    # for it (`discourse_connect_csrf_protection`), so a nonce requested
+    # server-side (see `redirect_without_nonce`) can't open a forum session
+    # in the browser.
+
+    @restricted_json_view(
+        schema=discourse_redirect_schema, validators=[colander_body_validator]
+    )
+    def post(self):
+        """Return the signed `sso_login` URL to send the browser to."""
+        request = self.request
+        user = DBSession.get(User, request.authenticated_userid)
+        client = get_discourse_client(request.registry.settings)
+        sso = request.validated['sso']
+        sig = request.validated['sig']
+        return {'redirect': client.redirect(user, sso, sig)}
+
+
 @resource(path='/users/renew', cors_policy=cors_policy)
 class UserRenewRest(ACLDefault):
     @restricted_view(renderer='json')
