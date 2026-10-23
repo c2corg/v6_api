@@ -17,7 +17,7 @@ from c2corg_api.views.document import DocumentRest
 class TestAssociationRest(BaseTestRest):
     prefix = '/associations'
 
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestRest.setUp(self)
         self._add_test_data()
 

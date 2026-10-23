@@ -10,7 +10,7 @@ from c2corg_api.views.validation import parse_datetime, validate_associations_in
 
 
 class TestValidation(BaseTestCase):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestCase.setUp(self)
 
         self.waypoint1 = Waypoint(waypoint_type='summit')

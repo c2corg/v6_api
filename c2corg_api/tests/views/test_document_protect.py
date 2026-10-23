@@ -5,7 +5,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class BaseProtectTest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         contributor_id = self.global_userids['contributor']
 
@@ -48,7 +48,7 @@ class BaseProtectTest(BaseTestRest):
 
 
 class TestDocumentProtectRest(BaseProtectTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/documents/protect'
 
@@ -85,7 +85,7 @@ class TestDocumentProtectRest(BaseProtectTest):
 
 
 class TestDocumentUnprotectRest(BaseProtectTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/documents/unprotect'
 

@@ -11,7 +11,7 @@ from c2corg_api.tests import BaseTestCase
 
 
 class TestTopoMapAssociation(BaseTestCase):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestCase.setUp(self)
 
         self.map1 = TopoMap(

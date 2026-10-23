@@ -35,7 +35,7 @@ from c2corg_api.views.route import (
 
 
 class TestRouteRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/routes', ROUTE_TYPE, Route, ArchiveRoute, ArchiveRouteLocale
         )

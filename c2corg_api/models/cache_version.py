@@ -128,7 +128,7 @@ def update_cache_version_associations(
         # if an association between waypoint and route was removed/added,
         # the waypoint parents and grand-parents have to be updated
         DBSession.execute(
-            text('SELECT guidebook.update_cache_version_of_waypoints(:waypoint_ids)'),  # noqa: E501
+            text('SELECT guidebook.update_cache_version_of_waypoints(:waypoint_ids)'),
             {'waypoint_ids': list(waypoints_to_update)},
         )
 
@@ -137,7 +137,7 @@ def update_cache_version_associations(
         # waypoints (and parents and grand-parents) associated to the route
         # have to be updated
         DBSession.execute(
-            text('SELECT guidebook.update_cache_version_of_routes(:route_ids)'),  # noqa: E501
+            text('SELECT guidebook.update_cache_version_of_routes(:route_ids)'),
             {'route_ids': list(routes_to_update)},
         )
 

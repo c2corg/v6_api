@@ -10,7 +10,7 @@ def has_tagged(user_id, document_id):
 
 
 class BaseDocumentTagTest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
 
         self.contributor = self.session.get(User, self.global_userids['contributor'])
@@ -41,7 +41,7 @@ class BaseDocumentTagTest(BaseTestRest):
 
 
 class TestDocumentTagRest(BaseDocumentTagTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/tags/add'
 
@@ -74,7 +74,7 @@ class TestDocumentTagRest(BaseDocumentTagTest):
 
 
 class TestDocumentUntagRest(BaseDocumentTagTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/tags/remove'
 
@@ -122,7 +122,7 @@ class TestDocumentUntagRest(BaseDocumentTagTest):
 
 
 class TestDocumentTaggedRest(BaseDocumentTagTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/tags/has'
 

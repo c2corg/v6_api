@@ -2,7 +2,7 @@ from c2corg_api.tests.views import BaseTestRest
 
 
 class TestHealthRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
 
     def test_get(self):

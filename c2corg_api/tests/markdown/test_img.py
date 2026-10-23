@@ -31,7 +31,7 @@ class TestImageUrl(unittest.TestCase):
 
 
 class TestImageTagUrl(unittest.TestCase):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.resolver = make_image_url_resolver(BASE_URL, {1: 'one.jpg', 2: 'two.svg'})
 
     def test_known_image(self):

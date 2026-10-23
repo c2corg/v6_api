@@ -65,7 +65,7 @@ class BaseTestRest(BaseTestCase):
                 return
         self.fail('no error ({}, {}) in {}'.format(name, description, errors))
 
-    def get_error(self, errors, name):  # noqa
+    def get_error(self, errors, name):
         for error in errors:
             if name == error.get('name'):
                 return error

@@ -8,7 +8,7 @@ from c2corg_api.models.utils import copy_attributes
 
 # don't remove this import
 # pylint: disable=unused-import
-from c2corg_api.models.waypoint import Waypoint  # noqa: F401, E501
+from c2corg_api.models.waypoint import Waypoint  # noqa: F401
 
 
 class _WaypointStopareaMixin:

@@ -53,7 +53,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class TestDocumentDeleteRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/documents/delete/'
 

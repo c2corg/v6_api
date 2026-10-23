@@ -47,7 +47,7 @@ from c2corg_api.views.waypoint import waypoint_documents_config
 
 
 class TestWaypointRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/waypoints',
             WAYPOINT_TYPE,
@@ -844,7 +844,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 ],
                 'geometry': {
                     'version': self.waypoint.geometry.version,
-                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}',  # noqa
+                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}',
                 },
                 'associations': {
                     'waypoint_children': [{'document_id': self.waypoint2.document_id}],
@@ -1306,7 +1306,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 ],
                 'geometry': {
                     'version': self.waypoint.geometry.version,
-                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}',  # noqa
+                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}',
                 },
                 'associations': {
                     'waypoint_children': [
@@ -1356,7 +1356,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 ],
                 'geometry': {
                     'version': self.waypoint.geometry.version,
-                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}',  # noqa
+                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}',
                 },
                 'associations': {
                     'waypoint_children': [
@@ -1576,7 +1576,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'public_transportation_rating': 'good service',
                 'geometry': {
                     'version': self.waypoint6.geometry.version,
-                    'geom': '{"type": "Point", "coordinates": [657403, 5691411]}',  # noqa
+                    'geom': '{"type": "Point", "coordinates": [657403, 5691411]}',
                 },
                 'associations': {'routes': [{'document_id': self.route1.document_id}]},
             },

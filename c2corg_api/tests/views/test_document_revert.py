@@ -11,7 +11,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class TestDocumentRevertRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/documents/revert'
         self._add_test_data()

@@ -11,7 +11,7 @@ from c2corg_api.tests.views import BaseTestRest
 
 
 class TestSearchRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/search'
 

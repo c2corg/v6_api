@@ -44,7 +44,7 @@ forum_username_tests = {
 
 
 class BaseUserTestRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.original_discourse_client = get_discourse_client(self.settings)
         self._prefix = '/users'
         self._model = User

@@ -11,7 +11,7 @@ from c2corg_api.tests import BaseTestCase
 
 
 class TestAssociation(BaseTestCase):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestCase.setUp(self)
 
         self.waypoint1 = Waypoint(waypoint_type='summit')

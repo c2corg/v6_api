@@ -28,7 +28,7 @@ or post a message on
 <a href="https://forum.camptocamp.org/c/site-et-association/v6-suggestions-bugs-et-problemes">
 forum</a>.
 </div>
-"""  # noqa: E501
+"""
 
 # RLock because this lock can be released
 # only by the thread who acquires it.

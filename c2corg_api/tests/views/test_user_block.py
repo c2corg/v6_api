@@ -9,7 +9,7 @@ from c2corg_api.tests.views import BaseTestRest
 
 
 class BaseBlockTest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
 
         self.contributor = self.session.get(User, self.global_userids['contributor'])
@@ -48,7 +48,7 @@ class BaseBlockTest(BaseTestRest):
 
 
 class TestUserBlockRest(BaseBlockTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/users/block'
 
@@ -106,7 +106,7 @@ class TestUserBlockRest(BaseBlockTest):
 
 
 class TestUserUnblockRest(BaseBlockTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/users/unblock'
 
@@ -164,7 +164,7 @@ class TestUserUnblockRest(BaseBlockTest):
 
 
 class TestUserBlockedRest(BaseBlockTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/users/blocked'
 
@@ -213,7 +213,7 @@ class TestUserBlockedRest(BaseBlockTest):
 
 
 class TestUserBlockedAllRest(BaseBlockTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/users/blocked'
 

@@ -19,7 +19,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class TestUserProfileRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/profiles',
             USERPROFILE_TYPE,
@@ -176,7 +176,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 ],
                 'geometry': {
                     'version': self.profile1.geometry.version,
-                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}',  # noqa
+                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}',
                 },
             },
         }
@@ -271,7 +271,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 ],
                 'geometry': {
                     'version': self.profile1.geometry.version,
-                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}',  # noqa
+                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}',
                 },
             },
         }

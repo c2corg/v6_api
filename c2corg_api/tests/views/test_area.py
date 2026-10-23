@@ -21,7 +21,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class TestAreaRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/areas', AREA_TYPE, Area, ArchiveArea, ArchiveDocumentLocale
         )

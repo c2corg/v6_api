@@ -84,12 +84,12 @@ class C2CTocTreeprocessor(TocTreeprocessor):
                     innertext = unescape(stashedHTML2text(text, self.md))
                     el.attrib['id'] = unique(
                         self.slugify(innertext, self.sep), used_ids
-                    )  # noqa: E501
+                    )
 
                 if (
                     int(el.tag[-1]) >= self.toc_top
                     and int(el.tag[-1]) <= self.toc_bottom
-                ):  # noqa: E501
+                ):
                     toc_tokens.append(
                         {
                             'level': int(el.tag[-1]),

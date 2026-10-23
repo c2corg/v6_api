@@ -14,7 +14,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class TestDocumentMergeRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/documents/merge'
 

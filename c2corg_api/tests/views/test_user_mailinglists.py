@@ -5,7 +5,7 @@ from c2corg_api.tests.views import BaseTestRest
 
 
 class TestUserMailinglistsRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/users/mailinglists'
 

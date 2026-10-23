@@ -97,7 +97,8 @@ quote-style = "single"
 # Same checks as the former flake8 + pep8-naming setup. pycodestyle's
 # whitespace and indentation rules (E1, E2, E3) are preview rules in ruff.
 preview = true
-select = ["E", "W", "F", "I", "N", "UP"]
+# RUF100: report `# noqa` comments that no longer silence anything.
+select = ["E", "W", "F", "I", "N", "UP", "RUF100"]
 ignore = [
     "E226", "E241", "E242",  # in pycodestyle's default ignore list
     "N818",  # off by default in pep8-naming

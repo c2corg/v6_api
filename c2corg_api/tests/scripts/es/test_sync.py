@@ -25,7 +25,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class SyncTest(BaseTestCase):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestCase.setUp(self)
         self._add_test_data()
 
