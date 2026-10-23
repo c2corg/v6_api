@@ -183,57 +183,57 @@ class FillIndexTest(BaseTestCase):
         fill_index(self.session)
 
         waypoint1 = SearchWaypoint.get(id=71171)
-        self.assertIsNotNone(waypoint1)
-        self.assertEqual(waypoint1.title_en, 'Mont Granier')
-        self.assertEqual(waypoint1.title_fr, 'Mont Granier')
+        assert waypoint1 is not None
+        assert waypoint1.title_en == 'Mont Granier'
+        assert waypoint1.title_fr == 'Mont Granier'
         # self.assertEqual(waypoint1.summary_fr, 'Le Mont  Granier ')
-        self.assertEqual(waypoint1.doc_type, 'w')
-        self.assertEqual(waypoint1.quality, 2)
-        self.assertEqual(waypoint1.access_time, 3)
+        assert waypoint1.doc_type == 'w'
+        assert waypoint1.quality == 2
+        assert waypoint1.access_time == 3
         self.assertAlmostEqual(waypoint1.geom[0], 5.71288994)
         self.assertAlmostEqual(waypoint1.geom[1], 45.64476395)
 
         waypoint2 = SearchWaypoint.get(id=71172)
-        self.assertIsNotNone(waypoint2)
-        self.assertEqual(waypoint2.title_en, 'Mont Blanc')
-        self.assertIsNone(waypoint2.title_fr)
-        self.assertEqual(waypoint2.doc_type, 'w')
+        assert waypoint2 is not None
+        assert waypoint2.title_en == 'Mont Blanc'
+        assert waypoint2.title_fr is None
+        assert waypoint2.doc_type == 'w'
 
         route = SearchRoute.get(id=71173)
-        self.assertIsNotNone(route)
-        self.assertEqual(route.title_en, 'Mont Blanc : Face N')
-        self.assertIsNone(route.title_fr)
-        self.assertEqual(route.doc_type, 'r')
-        self.assertEqual(route.durations, [0])
+        assert route is not None
+        assert route.title_en == 'Mont Blanc : Face N'
+        assert route.title_fr is None
+        assert route.doc_type == 'r'
+        assert route.durations == [0]
 
         outing = SearchOuting.get(id=71175)
-        self.assertIsNotNone(outing)
-        self.assertEqual(outing.title_en, 'Mont Blanc : Face N !')
-        self.assertIsNone(outing.title_fr)
-        self.assertEqual(outing.doc_type, 'o')
-        self.assertEqual(outing.frequentation, 3)
+        assert outing is not None
+        assert outing.title_en == 'Mont Blanc : Face N !'
+        assert outing.title_fr is None
+        assert outing.doc_type == 'o'
+        assert outing.frequentation == 3
 
         article = SearchArticle.get(id=71176)
-        self.assertIsNotNone(article)
-        self.assertEqual(article.title_en, "Lac d'Annecy")
-        self.assertEqual(article.title_fr, "Lac d'Annecy")
-        self.assertEqual(article.doc_type, 'c')
+        assert article is not None
+        assert article.title_en == "Lac d'Annecy"
+        assert article.title_fr == "Lac d'Annecy"
+        assert article.doc_type == 'c'
 
         book = SearchBook.get(id=71177)
-        self.assertIsNotNone(book)
-        self.assertEqual(book.title_en, 'Escalades au Thaurac')
-        self.assertEqual(book.title_fr, 'Escalades au Thaurac')
-        self.assertEqual(book.doc_type, 'b')
-        self.assertEqual(book.book_types, ['biography'])
+        assert book is not None
+        assert book.title_en == 'Escalades au Thaurac'
+        assert book.title_fr == 'Escalades au Thaurac'
+        assert book.doc_type == 'b'
+        assert book.book_types == ['biography']
 
         xreport = SearchXreport.get(id=71178)
-        self.assertIsNotNone(xreport)
-        self.assertEqual(xreport.title_en, 'Death in the mountains')
-        self.assertEqual(xreport.doc_type, 'x')
+        assert xreport is not None
+        assert xreport.title_en == 'Death in the mountains'
+        assert xreport.doc_type == 'x'
 
         # merged document is ignored
-        self.assertIsNone(SearchWaypoint.get(id=71174, ignore=404))
+        assert SearchWaypoint.get(id=71174, ignore=404) is None
 
         # check that the sync. status was updated
         last_update, _ = es_sync.get_status(self.session)
-        self.assertIsNotNone(last_update)
+        assert last_update is not None

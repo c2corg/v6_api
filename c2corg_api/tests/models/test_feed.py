@@ -49,7 +49,7 @@ class TestDocumentChange(BaseTestCase):
             self.session.add(change)
             self.session.flush()
         except Exception as exc:
-            self.assertTrue('Invalid user id: -12345678' in exc.orig.pgerror)
+            assert 'Invalid user id: -12345678' in exc.orig.pgerror
         else:
             self.fail('invalid user id not detected')
 
@@ -68,7 +68,7 @@ class TestDocumentChange(BaseTestCase):
             self.session.add(change)
             self.session.flush()
         except Exception as exc:
-            self.assertTrue('Invalid area id: -123456' in exc.orig.pgerror)
+            assert 'Invalid area id: -123456' in exc.orig.pgerror
         else:
             self.fail('invalid area id not detected')
 
@@ -92,7 +92,7 @@ class TestDocumentChange(BaseTestCase):
         try:
             self.session.flush()
         except Exception as exc:
-            self.assertTrue('Invalid user id: -12345678' in exc.orig.pgerror)
+            assert 'Invalid user id: -12345678' in exc.orig.pgerror
         else:
             self.fail('invalid user id not detected')
 
@@ -145,7 +145,7 @@ class TestDocumentChange(BaseTestCase):
             self.session.delete(user)
             self.session.flush()
         except Exception as exc:
-            self.assertTrue('still references user id' in exc.orig.pgerror)
+            assert 'still references user id' in exc.orig.pgerror
         else:
             self.fail('user is still referenced in change')
 
@@ -179,6 +179,6 @@ class TestDocumentChange(BaseTestCase):
             self.session.delete(self.area1)
             self.session.flush()
         except Exception as exc:
-            self.assertTrue('still references area id' in exc.orig.pgerror)
+            assert 'still references area id' in exc.orig.pgerror
         else:
             self.fail('area is still referenced in change')

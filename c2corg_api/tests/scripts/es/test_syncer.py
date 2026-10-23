@@ -1,3 +1,4 @@
+import pytest
 import transaction
 from elasticsearch.exceptions import NotFoundError
 
@@ -52,8 +53,8 @@ class SyncWorkerTest(BaseTestCase):
 
         index = elasticsearch_config['index']
         doc = SearchWaypoint.get(id=document_id, index=index)
-        self.assertEqual(doc['title_fr'], 'Mont Granier')
-        self.assertEqual(doc['doc_type'], 'w')
+        assert doc['title_fr'] == 'Mont Granier'
+        assert doc['doc_type'] == 'w'
 
         # simulate removing a document
         self.session.add(ESDeletedDocument(document_id=document_id, type=WAYPOINT_TYPE))
@@ -64,5 +65,5 @@ class SyncWorkerTest(BaseTestCase):
         t.commit()
 
         next(syncer.consume(limit=1))
-        with self.assertRaises(NotFoundError):
+        with pytest.raises(NotFoundError):
             SearchWaypoint.get(id=document_id, index=index)

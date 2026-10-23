@@ -4,6 +4,7 @@ from datetime import datetime, time
 from unittest import mock
 from unittest.mock import call
 
+import pytest
 import requests
 from dotenv import load_dotenv
 from pyramid.httpexceptions import (
@@ -1138,11 +1139,9 @@ class TestNavitiaRestParams(BaseTestCase):
             )
 
             # Ensure no result was written
-            self.assertFalse(
-                any(
-                    call[0][0] == f'job:{job_id}:result'
-                    for call in mock_redis.set.call_args_list
-                )
+            assert not any(
+                call[0][0] == f'job:{job_id}:result'
+                for call in mock_redis.set.call_args_list
             )
 
     def test_compute_journey_reachable_waypoints(self):
@@ -1333,20 +1332,20 @@ class TestNavitiaRestParams(BaseTestCase):
         mock_response.json.return_value = {'data': 'some_data'}
 
         result = handle_navitia_response(mock_response)
-        self.assertEqual(result, {'data': 'some_data'})
+        assert result == {'data': 'some_data'}
 
     def test_handle_navitia_response_401(self):
         mock_response = mock.Mock()
         mock_response.status_code = 401
 
-        with self.assertRaises(HTTPUnauthorized):
+        with pytest.raises(HTTPUnauthorized):
             handle_navitia_response(mock_response)
 
     def test_handle_navitia_response_400(self):
         mock_response = mock.Mock()
         mock_response.status_code = 400
 
-        with self.assertRaises(HTTPBadRequest):
+        with pytest.raises(HTTPBadRequest):
             handle_navitia_response(mock_response)
 
     def test_handle_navitia_response_404_no_journey(self):
@@ -1354,14 +1353,14 @@ class TestNavitiaRestParams(BaseTestCase):
         mock_response.status_code = 404
         mock_response.json.return_value = {'error': {'id': 'no_solution'}}
 
-        with self.assertRaises(HTTPNotFound):
+        with pytest.raises(HTTPNotFound):
             handle_navitia_response(mock_response)
 
     def test_handle_navitia_response_404_other_error(self):
         mock_response = mock.Mock()
         mock_response.status_code = 404
         mock_response.json.return_value = {'error': {'id': 'unknown_object'}}
-        with self.assertRaises(HTTPNotFound):
+        with pytest.raises(HTTPNotFound):
             handle_navitia_response(mock_response)
 
     def test_handle_navitia_response_other_error(self):
@@ -1369,7 +1368,7 @@ class TestNavitiaRestParams(BaseTestCase):
         mock_response.status_code = 500
         mock_response.ok = False
 
-        with self.assertRaises(HTTPInternalServerError):
+        with pytest.raises(HTTPInternalServerError):
             handle_navitia_response(mock_response)
 
     def test_navitia_get_normal_operation(self):
@@ -1381,13 +1380,13 @@ class TestNavitiaRestParams(BaseTestCase):
             mock_get.return_value = mock_response
 
             result = navitia_get(BASE_URL)
-            self.assertEqual(result, {'data': 'some_data'})
+            assert result == {'data': 'some_data'}
 
     def test_navitia_get_timeout(self):
         with mock.patch('requests.get') as mock_get:
             mock_get.side_effect = requests.exceptions.Timeout
 
-            with self.assertRaises(HTTPInternalServerError):
+            with pytest.raises(HTTPInternalServerError):
                 navitia_get(BASE_URL)
 
     def test_navitia_get_other_request_exception(self):
@@ -1396,7 +1395,7 @@ class TestNavitiaRestParams(BaseTestCase):
                 'An error occurred'
             )
 
-            with self.assertRaises(HTTPInternalServerError):
+            with pytest.raises(HTTPInternalServerError):
                 navitia_get(BASE_URL)
 
     def test_navitia_extract_meta_params_no_lang(self):
@@ -1523,7 +1522,7 @@ class TestNavitiaRestParams(BaseTestCase):
 
         result = is_wp_in_isochrone(mock_wp, isochrone_geom)
 
-        self.assertTrue(result)
+        assert result
 
     def test_is_wp_not_in_isochrone(self):
         mock_wp = mock.Mock()
@@ -1536,7 +1535,7 @@ class TestNavitiaRestParams(BaseTestCase):
 
         result = is_wp_in_isochrone(mock_wp, isochrone_geom)
 
-        self.assertFalse(result)
+        assert not result
 
     def test_get_navitia_isochrone(self):
         mock_isochrone_params = mock.Mock()
@@ -1560,7 +1559,7 @@ class TestNavitiaRestParams(BaseTestCase):
         # lon, lat
         mock_isochrone_params.get.return_value = '5;45'
         with mock.patch.dict(os.environ, {}, clear=True):
-            with self.assertRaises(HTTPInternalServerError):
+            with pytest.raises(HTTPInternalServerError):
                 get_navitia_isochrone(mock_isochrone_params)
 
     def test_get_navitia_isochrone_no_source_coverage(self):
@@ -1571,7 +1570,7 @@ class TestNavitiaRestParams(BaseTestCase):
             mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
         ):
             mock_get_coverage.return_value = None
-            with self.assertRaises(HTTPInternalServerError):
+            with pytest.raises(HTTPInternalServerError):
                 get_navitia_isochrone(mock_isochrone_params)
 
     def test_is_wp_journey_reachable(self):
@@ -1620,7 +1619,7 @@ class TestNavitiaRestParams(BaseTestCase):
         }
 
         with mock.patch.dict(os.environ, {}, clear=True):
-            with self.assertRaises(HTTPInternalServerError):
+            with pytest.raises(HTTPInternalServerError):
                 is_wp_journey_reachable(mock_wp, mock_journey_params)
 
     def test_is_wp_journey_reachable_no_destination_coverage(self):

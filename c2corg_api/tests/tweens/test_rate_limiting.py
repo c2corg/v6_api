@@ -76,19 +76,18 @@ class RateLimitingTest(BaseTestRest):
         )
 
         # Check contributor has no rate limiting data yet
-        self.assertIsNone(self.user.ratelimit_remaining)
-        self.assertIsNone(self.user.ratelimit_reset)
+        assert self.user.ratelimit_remaining is None
+        assert self.user.ratelimit_reset is None
 
         self._create_document()
 
         # Check rating limiting data are now available
         self.session.refresh(self.user)
-        self.assertEqual(self.user.ratelimit_remaining, limit - 1)
+        assert self.user.ratelimit_remaining == limit - 1
 
         expiration_date = self.user.ratelimit_reset
-        self.assertEqual(
-            expiration_date,
-            self.clock.now + datetime.timedelta(seconds=self.window_span),
+        assert expiration_date == self.clock.now + datetime.timedelta(
+            seconds=self.window_span
         )
 
         # Make as many requests as allowed according to the settings
@@ -96,15 +95,15 @@ class RateLimitingTest(BaseTestRest):
         for i in range(1, limit):
             self._update_document()
             self.session.refresh(self.user)
-            self.assertEqual(self.user.ratelimit_remaining, limit - 1 - i)
-            self.assertEqual(self.user.ratelimit_reset, expiration_date)
+            assert self.user.ratelimit_remaining == limit - 1 - i
+            assert self.user.ratelimit_reset == expiration_date
 
         # Counter "remaining" is now set to 0 => write requests should be
         # refused with error code 429 ("Too many requests")
-        self.assertEqual(self.user.ratelimit_remaining, 0)
+        assert self.user.ratelimit_remaining == 0
         self._update_document(status=429)
         self.session.refresh(self.user)
-        self.assertEqual(self.user.ratelimit_remaining, 0)
+        assert self.user.ratelimit_remaining == 0
 
         # GET requests are still allowed
         document_id = self.document['document_id']
@@ -114,14 +113,14 @@ class RateLimitingTest(BaseTestRest):
         self._wait()
         self._update_document()
         self.session.refresh(self.user)
-        self.assertEqual(self.user.ratelimit_remaining, limit - 1)
+        assert self.user.ratelimit_remaining == limit - 1
 
         # Deleting the document is also considered by rate limiting
         # (only tested for moderators to skip permission issues)
         if self.user.moderator:
             self._delete_document()
             self.session.refresh(self.user)
-            self.assertEqual(self.user.ratelimit_remaining, limit - 2)
+            assert self.user.ratelimit_remaining == limit - 2
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_blocked(self, _send_email):
@@ -131,23 +130,23 @@ class RateLimitingTest(BaseTestRest):
         self.session.refresh(self.user)
 
         for n in range(0, self.max_times + 1):
-            self.assertFalse(self.user.blocked)
+            assert not self.user.blocked
             self._wait()
             for i in range(0, self.limit):
                 self._update_document()
                 self.session.refresh(self.user)
-                self.assertEqual(self.user.ratelimit_remaining, self.limit - 1 - i)
+                assert self.user.ratelimit_remaining == self.limit - 1 - i
             self._update_document(status=429)
             self.session.refresh(self.user)
-            self.assertEqual(self.user.ratelimit_times, n + 1)
+            assert self.user.ratelimit_times == n + 1
 
         # User has reached their max number of allowed rate limited windows
         # thus is now blocked:
-        self.assertTrue(self.user.blocked)
-        self.assertEqual(self.user.ratelimit_times, self.max_times + 1)
+        assert self.user.blocked
+        assert self.user.ratelimit_times == self.max_times + 1
         # Two emails have been set for each rate limited windows, and one
         # after the user has been blocked
-        self.assertEqual(_send_email.call_count, 3)
+        assert _send_email.call_count == 3
         user_profile = f'{self.settings["ui.url"]}/profiles/{self.user.id}'
         _send_email.assert_called_with(
             'fixme@camptocamp.org',

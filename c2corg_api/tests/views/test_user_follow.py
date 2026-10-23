@@ -39,7 +39,7 @@ class TestUserFollowRest(BaseFollowTest):
         headers = self.add_authorization_header(username='contributor')
         self.app_post_json(self._prefix, request_body, status=200, headers=headers)
 
-        self.assertTrue(self.is_following(self.moderator.id, self.contributor.id))
+        assert self.is_following(self.moderator.id, self.contributor.id)
 
     def test_follow_already_followed_user(self):
         """Test that following an already followed user does not raise an
@@ -50,7 +50,7 @@ class TestUserFollowRest(BaseFollowTest):
         headers = self.add_authorization_header(username='contributor')
         self.app_post_json(self._prefix, request_body, status=200, headers=headers)
 
-        self.assertTrue(self.is_following(self.contributor2.id, self.contributor.id))
+        assert self.is_following(self.contributor2.id, self.contributor.id)
 
     def test_follow_invalid_user_id(self):
         request_body = {'user_id': -1}
@@ -61,9 +61,9 @@ class TestUserFollowRest(BaseFollowTest):
         )
 
         body = response.json
-        self.assertEqual(body.get('status'), 'error')
+        assert body.get('status') == 'error'
         errors = body.get('errors')
-        self.assertIsNotNone(self.get_error(errors, 'user_id'))
+        assert self.get_error(errors, 'user_id') is not None
 
 
 class TestUserUnfollowRest(BaseFollowTest):
@@ -80,7 +80,7 @@ class TestUserUnfollowRest(BaseFollowTest):
         headers = self.add_authorization_header(username='contributor')
         self.app_post_json(self._prefix, request_body, status=200, headers=headers)
 
-        self.assertFalse(self.is_following(self.moderator.id, self.contributor.id))
+        assert not self.is_following(self.moderator.id, self.contributor.id)
 
     def test_unfollow_not_followed_user(self):
         """Test that unfollowing a not followed user does not raise an error."""
@@ -89,7 +89,7 @@ class TestUserUnfollowRest(BaseFollowTest):
         headers = self.add_authorization_header(username='contributor')
         self.app_post_json(self._prefix, request_body, status=200, headers=headers)
 
-        self.assertFalse(self.is_following(self.moderator.id, self.contributor.id))
+        assert not self.is_following(self.moderator.id, self.contributor.id)
 
     def test_follow_invalid_user_id(self):
         request_body = {'user_id': -1}
@@ -100,9 +100,9 @@ class TestUserUnfollowRest(BaseFollowTest):
         )
 
         body = response.json
-        self.assertEqual(body.get('status'), 'error')
+        assert body.get('status') == 'error'
         errors = body.get('errors')
-        self.assertIsNotNone(self.get_error(errors, 'user_id'))
+        assert self.get_error(errors, 'user_id') is not None
 
 
 class TestUserFollowingUserRest(BaseFollowTest):
@@ -122,7 +122,7 @@ class TestUserFollowingUserRest(BaseFollowTest):
         )
         body = response.json
 
-        self.assertTrue(body['is_following'])
+        assert body['is_following']
 
     def test_following_not(self):
         headers = self.add_authorization_header(username='contributor')
@@ -131,7 +131,7 @@ class TestUserFollowingUserRest(BaseFollowTest):
         )
         body = response.json
 
-        self.assertFalse(body['is_following'])
+        assert not body['is_following']
 
     def test_following_invalid_user_id(self):
         headers = self.add_authorization_header(username='contributor')
@@ -140,9 +140,9 @@ class TestUserFollowingUserRest(BaseFollowTest):
         )
 
         body = response.json
-        self.assertEqual(body.get('status'), 'error')
+        assert body.get('status') == 'error'
         errors = body.get('errors')
-        self.assertIsNotNone(self.get_error(errors, 'id'))
+        assert self.get_error(errors, 'id') is not None
 
     def test_following_wrong_user_id(self):
         headers = self.add_authorization_header(username='contributor')
@@ -151,7 +151,7 @@ class TestUserFollowingUserRest(BaseFollowTest):
         )
         body = response.json
 
-        self.assertFalse(body['is_following'])
+        assert not body['is_following']
 
 
 class TestUserFollowingRest(BaseFollowTest):
@@ -168,8 +168,8 @@ class TestUserFollowingRest(BaseFollowTest):
         body = response.json
 
         following_users = body['following']
-        self.assertEqual(1, len(following_users))
-        self.assertEqual(self.contributor2.id, following_users[0]['document_id'])
+        assert 1 == len(following_users)
+        assert self.contributor2.id == following_users[0]['document_id']
 
     def test_following_empty(self):
         headers = self.add_authorization_header(username='contributor2')
@@ -177,4 +177,4 @@ class TestUserFollowingRest(BaseFollowTest):
         body = response.json
 
         following_users = body['following']
-        self.assertEqual(0, len(following_users))
+        assert 0 == len(following_users)

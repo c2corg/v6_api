@@ -28,7 +28,7 @@ class TestArticleRest(BaseDocumentTestRest):
     def test_get_collection(self):
         body = self.get_collection()
         doc = body['documents'][0]
-        self.assertNotIn('geometry', doc)
+        assert 'geometry' not in doc
 
     def test_get_collection_paginated(self):
         self.app.get('/articles?offset=invalid', status=400)
@@ -76,25 +76,25 @@ class TestArticleRest(BaseDocumentTestRest):
 
     def test_get(self):
         body = self.get(self.article1)
-        self.assertNotIn('article', body)
-        self.assertNotIn('geometry', body)
-        self.assertIsNone(body.get('geometry'))
+        assert 'article' not in body
+        assert 'geometry' not in body
+        assert body.get('geometry') is None
 
-        self.assertIn('author', body)
+        assert 'author' in body
         author = body.get('author')
-        self.assertEqual(self.global_userids['contributor'], author.get('user_id'))
+        assert self.global_userids['contributor'] == author.get('user_id')
 
         associations = body['associations']
-        self.assertIn('articles', associations)
-        self.assertIn('books', associations)
-        self.assertIn('images', associations)
-        self.assertIn('waypoints', associations)
-        self.assertIn('routes', associations)
-        self.assertIn('xreports', associations)
-        self.assertIn('users', associations)
+        assert 'articles' in associations
+        assert 'books' in associations
+        assert 'images' in associations
+        assert 'waypoints' in associations
+        assert 'routes' in associations
+        assert 'xreports' in associations
+        assert 'users' in associations
 
         linked_articles = associations.get('articles')
-        self.assertEqual(len(linked_articles), 2)
+        assert len(linked_articles) == 2
 
     def test_get_cooked(self):
         self.get_cooked(self.article1)
@@ -124,7 +124,7 @@ class TestArticleRest(BaseDocumentTestRest):
         # check that the ETag header is set
         headers = response.headers
         etag = headers.get('ETag')
-        self.assertIsNotNone(etag)
+        assert etag is not None
 
         # then request the document again with the etag
         headers = {'If-None-Match': etag}
@@ -141,13 +141,13 @@ class TestArticleRest(BaseDocumentTestRest):
         )
 
         cache_value = cache_document_version.get(cache_key)
-        self.assertEqual(cache_value, NO_VALUE)
+        assert cache_value == NO_VALUE
 
         # check that the response is cached
         self.app.get(url, status=200)
 
         cache_value = cache_document_version.get(cache_key)
-        self.assertNotEqual(cache_value, NO_VALUE)
+        assert cache_value != NO_VALUE
 
         # check that values are returned from the cache
         fake_cache_value = {'document': 'fake doc'}
@@ -155,18 +155,18 @@ class TestArticleRest(BaseDocumentTestRest):
 
         response = self.app.get(url, status=200)
         body = response.json
-        self.assertEqual(body, fake_cache_value)
+        assert body == fake_cache_value
 
     def test_get_caching(self):
         self.get_caching(self.article1)
 
     def test_get_info(self):
         body, locale = self.get_info(self.article1, 'en')
-        self.assertEqual(locale.get('lang'), 'en')
+        assert locale.get('lang') == 'en'
 
     def test_get_info_best_lang(self):
         body, locale = self.get_info(self.article1, 'es')
-        self.assertEqual(locale.get('lang'), 'fr')
+        assert locale.get('lang') == 'fr'
 
     def test_get_info_404(self):
         self.get_info_404()
@@ -174,7 +174,7 @@ class TestArticleRest(BaseDocumentTestRest):
     def test_post_error(self):
         body = self.post_error({}, user='moderator')
         errors = body.get('errors')
-        self.assertEqual(len(errors), 2)
+        assert len(errors) == 2
         self.assertCorniceRequired(errors[0], 'locales')
 
     def test_post_missing_title(self):
@@ -250,22 +250,22 @@ class TestArticleRest(BaseDocumentTestRest):
         version = doc.versions[0]
 
         archive_article = version.document_archive
-        self.assertEqual(archive_article.categories, ['site_info'])
-        self.assertEqual(archive_article.activities, ['hiking'])
-        self.assertEqual(archive_article.article_type, 'collab')
+        assert archive_article.categories == ['site_info']
+        assert archive_article.activities == ['hiking']
+        assert archive_article.article_type == 'collab'
 
         archive_locale = version.document_locales_archive
-        self.assertEqual(archive_locale.lang, 'en')
-        self.assertEqual(archive_locale.title, "Lac d'Annecy")
+        assert archive_locale.lang == 'en'
+        assert archive_locale.title == "Lac d'Annecy"
 
         # check if geometry is not stored in database afterwards
-        self.assertIsNone(doc.geometry)
+        assert doc.geometry is None
 
         # check that a link to the associated waypoint is created
         association_wp = self.session.get(
             Association, (self.waypoint2.document_id, doc.document_id)
         )
-        self.assertIsNotNone(association_wp)
+        assert association_wp is not None
 
         association_wp_log = (
             self.session.query(AssociationLog)
@@ -273,13 +273,13 @@ class TestArticleRest(BaseDocumentTestRest):
             .filter(AssociationLog.child_document_id == doc.document_id)
             .first()
         )
-        self.assertIsNotNone(association_wp_log)
+        assert association_wp_log is not None
 
         # check that a link to the associated article is created
         association_main_art = self.session.get(
             Association, (doc.document_id, self.article2.document_id)
         )
-        self.assertIsNotNone(association_main_art)
+        assert association_main_art is not None
 
         association_main_art_log = (
             self.session.query(AssociationLog)
@@ -287,7 +287,7 @@ class TestArticleRest(BaseDocumentTestRest):
             .filter(AssociationLog.child_document_id == self.article2.document_id)
             .first()
         )
-        self.assertIsNotNone(association_main_art_log)
+        assert association_main_art_log is not None
 
     def test_put_wrong_document_id(self):
         body = {
@@ -393,33 +393,33 @@ class TestArticleRest(BaseDocumentTestRest):
             body, self.article1, user='moderator', cache_version=3
         )
 
-        self.assertEqual(article1.activities, ['hiking'])
+        assert article1.activities == ['hiking']
         locale_en = article1.get_locale('en')
-        self.assertEqual(locale_en.title, 'New title')
+        assert locale_en.title == 'New title'
 
         # version with lang 'en'
         versions = article1.versions
         version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
-        self.assertEqual(archive_locale.title, 'New title')
+        assert archive_locale.title == 'New title'
 
         archive_document_en = version_en.document_archive
-        self.assertEqual(archive_document_en.categories, ['site_info'])
-        self.assertEqual(archive_document_en.activities, ['hiking'])
-        self.assertEqual(archive_document_en.article_type, 'personal')
+        assert archive_document_en.categories == ['site_info']
+        assert archive_document_en.activities == ['hiking']
+        assert archive_document_en.article_type == 'personal'
 
         # version with lang 'fr'
         version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
-        self.assertEqual(archive_locale.title, "Lac d'Annecy")
+        assert archive_locale.title == "Lac d'Annecy"
 
         # check if geometry is not stored in database afterwards
-        self.assertIsNone(article1.geometry)
+        assert article1.geometry is None
         # check that a link to the associated waypoint is created
         association_wp = self.session.get(
             Association, (self.waypoint2.document_id, article1.document_id)
         )
-        self.assertIsNotNone(association_wp)
+        assert association_wp is not None
 
         association_wp_log = (
             self.session.query(AssociationLog)
@@ -427,13 +427,13 @@ class TestArticleRest(BaseDocumentTestRest):
             .filter(AssociationLog.child_document_id == article1.document_id)
             .first()
         )
-        self.assertIsNotNone(association_wp_log)
+        assert association_wp_log is not None
 
         # check that a link to the associated article is created
         association_main_art = self.session.get(
             Association, (article1.document_id, self.article2.document_id)
         )
-        self.assertIsNotNone(association_main_art)
+        assert association_main_art is not None
 
         association_main_art_log = (
             self.session.query(AssociationLog)
@@ -441,7 +441,7 @@ class TestArticleRest(BaseDocumentTestRest):
             .filter(AssociationLog.child_document_id == self.article2.document_id)
             .first()
         )
-        self.assertIsNotNone(association_main_art_log)
+        assert association_main_art_log is not None
 
     def test_put_success_figures_only(self):
         body = {
@@ -466,7 +466,7 @@ class TestArticleRest(BaseDocumentTestRest):
             body, self.article1, user='moderator'
         )
 
-        self.assertEqual(article1.activities, ['hiking'])
+        assert article1.activities == ['hiking']
 
     def test_put_success_lang_only(self):
         body = {
@@ -491,7 +491,7 @@ class TestArticleRest(BaseDocumentTestRest):
             body, self.article1, user='moderator'
         )
 
-        self.assertEqual(article1.get_locale('en').title, 'New title')
+        assert article1.get_locale('en').title == 'New title'
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale."""
@@ -511,7 +511,7 @@ class TestArticleRest(BaseDocumentTestRest):
             body, self.article1, user='moderator'
         )
 
-        self.assertEqual(article1.get_locale('es').title, "Lac d'Annecy")
+        assert article1.get_locale('es').title == "Lac d'Annecy"
 
     def test_put_change_collab_to_personal_as_non_author(self):
         body = {
@@ -543,9 +543,9 @@ class TestArticleRest(BaseDocumentTestRest):
         )
 
         body = response.json
-        self.assertEqual(body['status'], 'error')
-        self.assertEqual(len(body['errors']), 1)
-        self.assertEqual(body['errors'][0]['name'], 'Bad Request')
+        assert body['status'] == 'error'
+        assert len(body['errors']) == 1
+        assert body['errors'][0]['name'] == 'Bad Request'
 
     def test_put_as_author(self):
         body = {
@@ -576,12 +576,12 @@ class TestArticleRest(BaseDocumentTestRest):
         versions = article4.versions
         version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
-        self.assertEqual(archive_locale.title, 'Another final EN title')
+        assert archive_locale.title == 'Another final EN title'
 
         archive_document_en = version_en.document_archive
-        self.assertEqual(archive_document_en.activities, ['paragliding'])
-        self.assertEqual(archive_document_en.categories, ['technical'])
-        self.assertEqual(archive_document_en.article_type, 'personal')
+        assert archive_document_en.activities == ['paragliding']
+        assert archive_document_en.categories == ['technical']
+        assert archive_document_en.article_type == 'personal'
 
     def test_put_as_non_author(self):
         body = {
@@ -613,9 +613,9 @@ class TestArticleRest(BaseDocumentTestRest):
         )
 
         body = response.json
-        self.assertEqual(body['status'], 'error')
-        self.assertEqual(len(body['errors']), 1)
-        self.assertEqual(body['errors'][0]['name'], 'Forbidden')
+        assert body['status'] == 'error'
+        assert len(body['errors']) == 1
+        assert body['errors'][0]['name'] == 'Forbidden'
 
     def test_get_associations_history(self):
         self._get_association_logs(self.article1)

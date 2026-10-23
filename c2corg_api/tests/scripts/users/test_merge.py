@@ -45,47 +45,47 @@ class MergeUsersTest(BaseTestCase):
         target_id = self.global_userids['contributor2']
 
         # Check data before merging
-        self.assertEqual(self._count_area_associations(source_id), 1)
+        assert self._count_area_associations(source_id) == 1
 
-        self.assertEqual(self._count_associations(source_id), 2)
-        self.assertEqual(self._count_associations(target_id), 1)
+        assert self._count_associations(source_id) == 2
+        assert self._count_associations(target_id) == 1
 
-        self.assertEqual(self._count_feed_entries(source_id), 4)
-        self.assertEqual(self._count_feed_entries(target_id), 0)
-        self.assertEqual(self._count_associated_feed_entries(source_id), 4)
-        self.assertEqual(self._count_associated_feed_entries(target_id), 0)
+        assert self._count_feed_entries(source_id) == 4
+        assert self._count_feed_entries(target_id) == 0
+        assert self._count_associated_feed_entries(source_id) == 4
+        assert self._count_associated_feed_entries(target_id) == 0
 
-        self.assertEqual(self._count_metadata_entries(source_id), 5)
-        self.assertEqual(self._count_metadata_entries(target_id), 0)
+        assert self._count_metadata_entries(source_id) == 5
+        assert self._count_metadata_entries(target_id) == 0
 
-        self.assertTrue(self._is_registered_to_ml(self.contributor))
-        self.assertFalse(self._is_registered_to_ml(self.contributor2))
+        assert self._is_registered_to_ml(self.contributor)
+        assert not self._is_registered_to_ml(self.contributor2)
 
-        self.assertEqual(1, self._count_tags(source_id))
-        self.assertEqual(1, self._count_tag_logs(source_id))
-        self.assertEqual(0, self._count_tags(target_id))
-        self.assertEqual(0, self._count_tag_logs(target_id))
+        assert 1 == self._count_tags(source_id)
+        assert 1 == self._count_tag_logs(source_id)
+        assert 0 == self._count_tags(target_id)
+        assert 0 == self._count_tag_logs(target_id)
 
         # Actually do the merge
         merge_user_accounts(source_id, target_id, self.queue_config)
 
         # Check data after merging
-        self.assertEqual(self._count_area_associations(source_id), 0)
+        assert self._count_area_associations(source_id) == 0
 
-        self.assertEqual(self._count_associations(source_id), 0)
-        self.assertEqual(self._count_associations(target_id), 2)
-        self.assertEqual(self._count_association_logs(source_id), 0)
+        assert self._count_associations(source_id) == 0
+        assert self._count_associations(target_id) == 2
+        assert self._count_association_logs(source_id) == 0
 
-        self.assertEqual(self._count_feed_entries(source_id), 0)
-        self.assertEqual(self._count_feed_entries(target_id), 4)
-        self.assertEqual(self._count_associated_feed_entries(source_id), 0)
-        self.assertEqual(self._count_associated_feed_entries(target_id), 4)
+        assert self._count_feed_entries(source_id) == 0
+        assert self._count_feed_entries(target_id) == 4
+        assert self._count_associated_feed_entries(source_id) == 0
+        assert self._count_associated_feed_entries(target_id) == 4
 
-        self.assertEqual(self._count_metadata_entries(source_id), 0)
-        self.assertEqual(self._count_metadata_entries(target_id), 4)
+        assert self._count_metadata_entries(source_id) == 0
+        assert self._count_metadata_entries(target_id) == 4
 
-        self.assertFalse(self._is_registered_to_ml(self.contributor))
-        self.assertFalse(self._is_registered_to_ml(self.contributor2))
+        assert not self._is_registered_to_ml(self.contributor)
+        assert not self._is_registered_to_ml(self.contributor2)
 
         # Check that the profile document and archives have been deleted
         count = (
@@ -93,25 +93,25 @@ class MergeUsersTest(BaseTestCase):
             .filter(UserProfile.document_id == source_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
         count = (
             self.session.query(Document)
             .filter(Document.document_id == source_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
         count = (
             self.session.query(DocumentLocale)
             .filter(DocumentLocale.document_id == source_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
         count = (
             self.session.query(DocumentGeometry)
             .filter(DocumentGeometry.document_id == source_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
 
         # Check the archives have been cleared too
         count = (
@@ -119,42 +119,42 @@ class MergeUsersTest(BaseTestCase):
             .filter(ArchiveUserProfile.document_id == source_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
         count = (
             self.session.query(ArchiveDocument)
             .filter(ArchiveDocument.document_id == source_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
         count = (
             self.session.query(ArchiveDocumentLocale)
             .filter(ArchiveDocumentLocale.document_id == source_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
         count = (
             self.session.query(ArchiveDocumentGeometry)
             .filter(ArchiveDocumentGeometry.document_id == source_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
 
         # Check that user account has been removed
         count = self.session.query(User).filter(User.id == source_id).count()
-        self.assertEqual(0, count)
+        assert 0 == count
         count = self.session.query(Token).filter(Token.userid == source_id).count()
         count = (
             self.session.query(SsoExternalId)
             .filter(SsoExternalId.user_id == source_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
 
         # Check tags have been transfered to the target user
-        self.assertEqual(0, self._count_tags(source_id))
-        self.assertEqual(0, self._count_tag_logs(source_id))
-        self.assertEqual(1, self._count_tags(target_id))
-        self.assertEqual(1, self._count_tag_logs(target_id))
+        assert 0 == self._count_tags(source_id)
+        assert 0 == self._count_tag_logs(source_id)
+        assert 1 == self._count_tags(target_id)
+        assert 1 == self._count_tag_logs(target_id)
 
     def _count_tags(self, user_id):
         return (

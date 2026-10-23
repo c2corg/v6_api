@@ -20,8 +20,8 @@ class TestCookerRest(BaseTestRest):
         htmls = response.json
 
         # lang is not a markdown field, it must be untouched
-        self.assertEqual(markdowns['lang'], htmls['lang'])
-        self.assertNotEqual(markdowns['description'], htmls['description'])
+        assert markdowns['lang'] == htmls['lang']
+        assert markdowns['description'] != htmls['description']
 
     def _add_image(self, filename, **kwargs):
         image = Image(
@@ -45,23 +45,21 @@ class TestCookerRest(BaseTestRest):
         image = self._add_image('image.jpg')
         html = self._cook(f'[img={image.document_id}/]')
 
-        self.assertIn(f'c2c:url="{self.image_url}imageMI.jpg"', html)
-        self.assertIn(
-            f'c2c:url-proxy="/images/proxy/{image.document_id}?size=MI"', html
-        )
+        assert f'c2c:url="{self.image_url}imageMI.jpg"' in html
+        assert f'c2c:url-proxy="/images/proxy/{image.document_id}?size=MI"' in html
 
     def test_image_unknown(self):
         html = self._cook('[img=999999/]')
 
-        self.assertNotIn('c2c:url=', html)
-        self.assertIn('c2c:url-proxy="/images/proxy/999999?size=MI"', html)
+        assert 'c2c:url=' not in html
+        assert 'c2c:url-proxy="/images/proxy/999999?size=MI"' in html
 
     def test_image_id_out_of_range(self):
         # larger than a postgres integer, must not break the query
         html = self._cook('[img=99999999999999999999/]')
 
-        self.assertNotIn('c2c:url=', html)
-        self.assertIn('c2c:url-proxy=', html)
+        assert 'c2c:url=' not in html
+        assert 'c2c:url-proxy=' in html
 
     def test_image_redirected(self):
         # the files of a merged image are deleted, use the target ones
@@ -69,10 +67,8 @@ class TestCookerRest(BaseTestRest):
         merged = self._add_image('merged.jpg', redirects_to=image.document_id)
         html = self._cook(f'[img={merged.document_id}/]')
 
-        self.assertIn(f'c2c:url="{self.image_url}imageMI.jpg"', html)
-        self.assertIn(
-            f'c2c:url-proxy="/images/proxy/{merged.document_id}?size=MI"', html
-        )
+        assert f'c2c:url="{self.image_url}imageMI.jpg"' in html
+        assert f'c2c:url-proxy="/images/proxy/{merged.document_id}?size=MI"' in html
 
     def test_not_an_image(self):
         article = Article(
@@ -82,7 +78,7 @@ class TestCookerRest(BaseTestRest):
         self.session.flush()
         html = self._cook(f'[img={article.document_id}/]')
 
-        self.assertNotIn('c2c:url=', html)
+        assert 'c2c:url=' not in html
 
     def test_image_sizes_and_svg(self):
         jpg = self._add_image('image.jpg')
@@ -93,15 +89,12 @@ class TestCookerRest(BaseTestRest):
         )
 
         urls = re.findall(r'c2c:url="([^"]*)"', html)
-        self.assertEqual(
-            [
-                self.image_url + 'imageBI.jpg',
-                self.image_url + 'image.jpg',
-                self.image_url + 'imageSI.jpg',
-                self.image_url + 'image.svg',
-            ],
-            urls,
-        )
+        assert [
+            self.image_url + 'imageBI.jpg',
+            self.image_url + 'image.jpg',
+            self.image_url + 'imageSI.jpg',
+            self.image_url + 'image.svg',
+        ] == urls
 
     def test_image_url_same_as_proxy(self):
         jpg = self._add_image('image.jpg')
@@ -114,10 +107,10 @@ class TestCookerRest(BaseTestRest):
         )
 
         imgs = re.findall(r'c2c:url="([^"]*)" c2c:url-proxy="([^"]*)"', html)
-        self.assertEqual(5, len(imgs))
+        assert 5 == len(imgs)
         for url, proxy_url in imgs:
             response = self.app.get(proxy_url, status=302)
-            self.assertEqual(url, response.headers['Location'])
+            assert url == response.headers['Location']
 
     def test_images_resolved_with_one_query(self):
         images = [self._add_image(f'image{i}.jpg') for i in range(5)]
@@ -139,9 +132,9 @@ class TestCookerRest(BaseTestRest):
         finally:
             event.remove(self.connection, 'before_cursor_execute', count)
 
-        self.assertEqual(1, len(statements), statements)
-        self.assertEqual(3, htmls['description'].count('c2c:url='))
-        self.assertEqual(3, htmls['summary'].count('c2c:url='))
+        assert 1 == len(statements), statements
+        assert 3 == htmls['description'].count('c2c:url=')
+        assert 3 == htmls['summary'].count('c2c:url=')
 
     def test_no_query_without_images(self):
         statements = []
@@ -155,7 +148,7 @@ class TestCookerRest(BaseTestRest):
         finally:
             event.remove(self.connection, 'before_cursor_execute', count)
 
-        self.assertEqual([], statements)
+        assert [] == statements
 
     def test_get_cooked_document(self):
         image = self._add_image('image.jpg')
@@ -175,6 +168,6 @@ class TestCookerRest(BaseTestRest):
         response = self.app.get(f'/articles/{article.document_id}?cook=en', status=200)
         html = response.json['cooked']['description']
 
-        self.assertEqual(1, html.count('c2c:url='))
-        self.assertIn(f'c2c:url="{self.image_url}imageMI.jpg"', html)
-        self.assertIn('c2c:url-proxy="/images/proxy/999999?size=MI"', html)
+        assert 1 == html.count('c2c:url=')
+        assert f'c2c:url="{self.image_url}imageMI.jpg"' in html
+        assert 'c2c:url-proxy="/images/proxy/999999?size=MI"' in html

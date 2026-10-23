@@ -42,7 +42,7 @@ class TestFormat(unittest.TestCase):
 
     def test_exception(self):
         result = c2c_markdown.parse_code('!! Hello')
-        self.assertEqual(result, c2c_markdown._PARSER_EXCEPTION_MESSAGE)
+        assert result == c2c_markdown._PARSER_EXCEPTION_MESSAGE
 
     def tearDown(self):
         c2c_markdown._get_markdown_parser = self.real_get_markdown_parser

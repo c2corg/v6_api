@@ -602,9 +602,9 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # Check that only one document has been deleted
         count = self.session.query(clazz).count()
-        self.assertEqual(initial_count - count, expected_deleted_docs_count)
+        assert initial_count - count == expected_deleted_docs_count
         count = self.session.query(Document).count()
-        self.assertEqual(initial_doc_count - count, expected_deleted_docs_count)
+        assert initial_doc_count - count == expected_deleted_docs_count
 
         # Check that the document versions table is cleared
         count = (
@@ -612,38 +612,38 @@ class TestDocumentDeleteRest(BaseTestRest):
             .filter(DocumentVersion.document_id == document_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
 
         # Check that entries have been removed in the main tables
         count = (
             self.session.query(clazz).filter(clazz.document_id == document_id).count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
         count = (
             self.session.query(Document)
             .filter(Document.document_id == document_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
         if clazz_locale:
             count = (
                 self.session.query(clazz_locale)
                 .filter(clazz_locale.document_id == document_id)
                 .count()
             )
-            self.assertEqual(0, count)
+            assert 0 == count
         count = (
             self.session.query(DocumentLocale)
             .filter(DocumentLocale.document_id == document_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
         count = (
             self.session.query(DocumentGeometry)
             .filter(DocumentGeometry.document_id == document_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
 
         # Check the archives have been cleared too
         count = (
@@ -651,32 +651,32 @@ class TestDocumentDeleteRest(BaseTestRest):
             .filter(archive_clazz.document_id == document_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
         count = (
             self.session.query(ArchiveDocument)
             .filter(ArchiveDocument.document_id == document_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
         if archive_clazz_locale:
             count = (
                 self.session.query(archive_clazz_locale)
                 .filter(archive_clazz_locale.document_id == document_id)
                 .count()
             )
-            self.assertEqual(0, count)
+            assert 0 == count
         count = (
             self.session.query(ArchiveDocumentLocale)
             .filter(ArchiveDocumentLocale.document_id == document_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
         count = (
             self.session.query(ArchiveDocumentGeometry)
             .filter(ArchiveDocumentGeometry.document_id == document_id)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
 
         # check associations have been cleared
         association_count = (
@@ -689,7 +689,7 @@ class TestDocumentDeleteRest(BaseTestRest):
             )
             .count()
         )
-        self.assertEqual(0, association_count)
+        assert 0 == association_count
         association_log_count = (
             self.session.query(AssociationLog)
             .filter(
@@ -700,19 +700,19 @@ class TestDocumentDeleteRest(BaseTestRest):
             )
             .count()
         )
-        self.assertEqual(0, association_log_count)
+        assert 0 == association_log_count
         association_count = (
             self.session.query(TopoMapAssociation)
             .filter(TopoMapAssociation.document_id == document_id)
             .count()
         )
-        self.assertEqual(0, association_count)
+        assert 0 == association_count
         association_count = (
             self.session.query(AreaAssociation)
             .filter(AreaAssociation.document_id == document_id)
             .count()
         )
-        self.assertEqual(0, association_count)
+        assert 0 == association_count
 
         # Check the feed has been cleared
         feed_count = (
@@ -720,7 +720,7 @@ class TestDocumentDeleteRest(BaseTestRest):
             .filter(DocumentChange.document_id == document_id)
             .count()
         )
-        self.assertEqual(0, feed_count)
+        assert 0 == feed_count
 
     def test_delete_waypoint(self):
         self._test_delete(
@@ -768,8 +768,8 @@ class TestDocumentDeleteRest(BaseTestRest):
 
     def test_delete_route_with_tags(self):
         nb_tags, nb_logs = self._count_tags(self.route3.document_id)
-        self.assertEqual(nb_tags, 1)
-        self.assertEqual(nb_logs, 1)
+        assert nb_tags == 1
+        assert nb_logs == 1
 
         self._test_delete(
             self.route3.document_id,
@@ -781,8 +781,8 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # Check related tags have been removed
         nb_tags, nb_logs = self._count_tags(self.route3.document_id)
-        self.assertEqual(nb_tags, 0)
-        self.assertEqual(nb_logs, 0)
+        assert nb_tags == 0
+        assert nb_logs == 0
 
     def test_delete_outing(self):
         # outing1b redirects to outing1 => 2 documents to delete
@@ -879,12 +879,10 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         with HTTMock(image_service_mock):
             self._test_delete(self.image1.document_id, Image, None, ArchiveImage, None)
-            self.assertEqual(call['times'], 1)
-            self.assertIn('filenames=image1.1.jpg', call['request.body'])
-            self.assertIn('filenames=image1.jpg', call['request.body'])
-            self.assertEqual(
-                call['request.url'], self.settings['image_backend.url'] + '/delete'
-            )
+            assert call['times'] == 1
+            assert 'filenames=image1.1.jpg' in call['request.body']
+            assert 'filenames=image1.jpg' in call['request.body']
+            assert call['request.url'] == self.settings['image_backend.url'] + '/delete'
             self.check_cache_version(self.waypoint3.document_id, 2)
             self.check_cache_version(self.route3.document_id, 2)
             self.check_cache_version(self.outing1.document_id, 2)
@@ -904,12 +902,10 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         with HTTMock(image_service_mock):
             self._test_delete(self.image1.document_id, Image, None, ArchiveImage, None)
-            self.assertEqual(call['times'], 1)
-            self.assertIn('filenames=image1.1.jpg', call['request.body'])
-            self.assertIn('filenames=image1.jpg', call['request.body'])
-            self.assertEqual(
-                call['request.url'], self.settings['image_backend.url'] + '/delete'
-            )
+            assert call['times'] == 1
+            assert 'filenames=image1.1.jpg' in call['request.body']
+            assert 'filenames=image1.jpg' in call['request.body']
+            assert call['request.url'] == self.settings['image_backend.url'] + '/delete'
             self.check_cache_version(self.waypoint3.document_id, 2)
             self.check_cache_version(self.route3.document_id, 2)
             self.check_cache_version(self.outing1.document_id, 2)
@@ -1031,7 +1027,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         final_available_langs = get_available_langs(document_id)
         # if the document had only one locale, it is deleted and
         # get_available_langs() returns None
-        self.assertEqual(not final_available_langs, not available_langs)
+        assert (not final_available_langs) == (not available_langs)
         if available_langs:
             self.assertCountEqual(final_available_langs, available_langs)
 
@@ -1042,7 +1038,7 @@ class TestDocumentDeleteRest(BaseTestRest):
             .filter(ArchiveDocumentLocale.lang == lang)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
 
         # but not other locale archives
         other_locale_archives_count = (
@@ -1051,9 +1047,7 @@ class TestDocumentDeleteRest(BaseTestRest):
             .filter(ArchiveDocumentLocale.lang != lang)
             .count()
         )
-        self.assertEqual(
-            other_locale_archives_count, initial_other_locale_archives_count
-        )
+        assert other_locale_archives_count == initial_other_locale_archives_count
 
         # Check that the document versions table is cleared
         count = (
@@ -1062,7 +1056,7 @@ class TestDocumentDeleteRest(BaseTestRest):
             .filter(DocumentVersion.lang == lang)
             .count()
         )
-        self.assertEqual(0, count)
+        assert 0 == count
 
         # but not for other locales
         other_locale_versions_count = (
@@ -1071,9 +1065,7 @@ class TestDocumentDeleteRest(BaseTestRest):
             .filter(DocumentVersion.lang != lang)
             .count()
         )
-        self.assertEqual(
-            other_locale_versions_count, initial_other_locale_versions_count
-        )
+        assert other_locale_versions_count == initial_other_locale_versions_count
 
         # Check the feed has been updated
         feed_items_langs = (
@@ -1082,7 +1074,7 @@ class TestDocumentDeleteRest(BaseTestRest):
             .all()
         )
         for langs in feed_items_langs:
-            self.assertNotIn(lang, langs)
+            assert lang not in langs
 
     def test_delete_locale_waypoint(self):
         self._test_delete_locale(self.waypoint3.document_id, 'fr')
@@ -1097,43 +1089,43 @@ class TestDocumentDeleteRest(BaseTestRest):
             .filter(Document.document_id == document_id)
             .count()
         )
-        self.assertEqual(count, 0)
+        assert count == 0
         count = (
             self.session.query(ArchiveDocument)
             .filter(ArchiveDocument.document_id == document_id)
             .count()
         )
-        self.assertEqual(count, 0)
+        assert count == 0
         count = (
             self.session.query(DocumentLocale)
             .filter(DocumentLocale.document_id == document_id)
             .count()
         )
-        self.assertEqual(count, 0)
+        assert count == 0
         count = (
             self.session.query(ArchiveDocumentLocale)
             .filter(ArchiveDocumentLocale.document_id == document_id)
             .count()
         )
-        self.assertEqual(count, 0)
+        assert count == 0
         count = (
             self.session.query(DocumentGeometry)
             .filter(DocumentGeometry.document_id == document_id)
             .count()
         )
-        self.assertEqual(count, 0)
+        assert count == 0
         count = (
             self.session.query(ArchiveDocumentGeometry)
             .filter(ArchiveDocumentGeometry.document_id == document_id)
             .count()
         )
-        self.assertEqual(count, 0)
+        assert count == 0
         count = (
             self.session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == document_id)
             .count()
         )
-        self.assertEqual(count, 0)
+        assert count == 0
         count = (
             self.session.query(Association)
             .filter(
@@ -1144,4 +1136,4 @@ class TestDocumentDeleteRest(BaseTestRest):
             )
             .count()
         )
-        self.assertEqual(count, 0)
+        assert count == 0
