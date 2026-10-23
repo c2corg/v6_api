@@ -88,7 +88,7 @@ class TestForumTopicRest(BaseTestRest):
             status=400,
         )
         errors = json.get('errors')
-        self.assertEqual('Document not found', errors[0].get('description'))
+        assert 'Document not found' == errors[0].get('description')
 
     def test_post_topic_exists(self):
         json = self.post_json_with_contributor(
@@ -97,8 +97,8 @@ class TestForumTopicRest(BaseTestRest):
             status=400,
         )
         errors = json.get('errors')
-        self.assertEqual('Topic already exists', errors[0].get('description'))
-        self.assertEqual(1, errors[0].get('topic_id'))
+        assert 'Topic already exists' == errors[0].get('description')
+        assert 1 == errors[0].get('topic_id')
 
     @patch(
         'pydiscourse.client.DiscourseClient.create_post', side_effect=ConnectionError()
@@ -121,12 +121,12 @@ class TestForumTopicRest(BaseTestRest):
             status=200,
         )
         self.session.expire(self.locale_en)
-        self.assertEqual(10, self.locale_en.topic_id)
-        self.assertEqual(version, self.locale_en.version)
-        self.assertEqual(10, json.get('topic_id'))
+        assert 10 == self.locale_en.topic_id
+        assert version == self.locale_en.version
+        assert 10 == json.get('topic_id')
 
         cache_version = self.session.get(CacheVersion, self.waypoint.document_id)
-        self.assertEqual(cache_version.version, 2)
+        assert cache_version.version == 2
 
     @patch(
         'pydiscourse.client.DiscourseClient.create_post', return_value={'topic_id': 10}

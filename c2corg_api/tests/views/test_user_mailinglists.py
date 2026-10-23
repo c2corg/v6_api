@@ -33,13 +33,13 @@ class TestUserMailinglistsRest(BaseTestRest):
         response = self.app.get(self._prefix, status=200, headers=headers)
         body = response.json
 
-        self.assertEqual(len(body), len(mailinglists))
+        assert len(body) == len(mailinglists)
         for ml in mailinglists:
-            self.assertIn(ml, body)
+            assert ml in body
             if ml in ['meteofrance-74', 'avalanche.en']:
-                self.assertTrue(body[ml])
+                assert body[ml]
             else:
-                self.assertFalse(body[ml])
+                assert not body[ml]
 
     def test_post_mailinglists_unauthenticated(self):
         self.app_post_json(self._prefix, {}, status=403)
@@ -53,10 +53,10 @@ class TestUserMailinglistsRest(BaseTestRest):
         )
 
         body = response.json
-        self.assertEqual(body.get('status'), 'error')
+        assert body.get('status') == 'error'
         errors = body.get('errors')
-        self.assertIsNotNone(self.get_error(errors, 'wrong_mailinglist_name'))
-        self.assertIsNotNone(self.get_error(errors, 'avalanche'))
+        assert self.get_error(errors, 'wrong_mailinglist_name') is not None
+        assert self.get_error(errors, 'avalanche') is not None
 
     def test_post_mailinglists(self):
         request_body = {'meteofrance-66': True, 'meteofrance-74': False}
@@ -70,7 +70,7 @@ class TestUserMailinglistsRest(BaseTestRest):
             .all()
         )
         subscribed_mailinglists = [list[0] for list in mls]
-        self.assertEqual(len(subscribed_mailinglists), 2)
-        self.assertIn('meteofrance-66', subscribed_mailinglists)
-        self.assertIn('avalanche.en', subscribed_mailinglists)
-        self.assertNotIn('meteofrance-74', subscribed_mailinglists)
+        assert len(subscribed_mailinglists) == 2
+        assert 'meteofrance-66' in subscribed_mailinglists
+        assert 'avalanche.en' in subscribed_mailinglists
+        assert 'meteofrance-74' not in subscribed_mailinglists

@@ -20,22 +20,22 @@ class TestRoute(BaseTestCase):
 
         route_archive = route.to_archive()
 
-        self.assertIsNone(route_archive.id)
-        self.assertEqual(route_archive.document_id, route.document_id)
-        self.assertEqual(route_archive.activities, route.activities)
-        self.assertEqual(route_archive.elevation_max, route.elevation_max)
+        assert route_archive.id is None
+        assert route_archive.document_id == route.document_id
+        assert route_archive.activities == route.activities
+        assert route_archive.elevation_max == route.elevation_max
 
         archive_locals = route.get_archive_locales()
 
-        self.assertEqual(len(archive_locals), 2)
+        assert len(archive_locals) == 2
         locale = route.locales[0]
         locale_archive = archive_locals[0]
-        self.assertIsNot(locale_archive, locale)
-        self.assertIsNone(locale_archive.id)
-        self.assertEqual(locale_archive.lang, locale.lang)
-        self.assertEqual(locale_archive.title, locale.title)
-        self.assertEqual(locale_archive.description, locale.description)
-        self.assertEqual(locale_archive.gear, locale.gear)
+        assert locale_archive is not locale
+        assert locale_archive.id is None
+        assert locale_archive.lang == locale.lang
+        assert locale_archive.title == locale.title
+        assert locale_archive.description == locale.description
+        assert locale_archive.gear == locale.gear
 
     def test_geometry_update(self):
         """Check that geometries are only compared in 2D when updating a
@@ -67,7 +67,7 @@ class TestRoute(BaseTestCase):
             geometry=DocumentGeometry(geom=None, geom_detail=geom2),
         )
         route_db.update(route_in)
-        self.assertIs(route_db.geometry.geom_detail, geom1)
+        assert route_db.geometry.geom_detail is geom1
 
         geom3 = wkbelement_from_geojson(
             json.loads(
@@ -82,8 +82,8 @@ class TestRoute(BaseTestCase):
             geometry=DocumentGeometry(geom=None, geom_detail=geom3),
         )
         route_db.update(route_in)
-        self.assertIsNot(route_db.geometry.geom_detail, geom1)
-        self.assertIs(route_db.geometry.geom_detail, geom3)
+        assert route_db.geometry.geom_detail is not geom1
+        assert route_db.geometry.geom_detail is geom3
 
     def test_simplify(self):
         geom = wkbelement_from_geojson(
@@ -104,7 +104,7 @@ class TestRoute(BaseTestCase):
         simplified_geom = route.geometry
         self.session.refresh(simplified_geom)
         geojson = json.loads(geojson_from_wkbelement(simplified_geom.geom_detail))
-        self.assertEqual(len(geojson['coordinates']), 2)
+        assert len(geojson['coordinates']) == 2
 
         # check that the line was simplified after an update
         route.geometry.geom_detail = wkbelement_from_geojson(
@@ -119,5 +119,5 @@ class TestRoute(BaseTestCase):
         simplified_geom = route.geometry
         self.session.refresh(simplified_geom)
         geojson = json.loads(geojson_from_wkbelement(simplified_geom.geom_detail))
-        self.assertEqual(len(geojson['coordinates']), 2)
+        assert len(geojson['coordinates']) == 2
         self.assertCoodinateEquals([635901, 5723600], geojson['coordinates'][0])

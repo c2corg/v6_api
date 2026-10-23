@@ -9,3 +9,6 @@ ff5662901ab4d7f24c60c58ee83f42d619b2580d
 
 # style: use f-strings instead of % and str.format
 5215f479a2c0098646af386931cc8904f7253f15
+
+# test: use plain assert instead of unittest assertion methods
+165200cab5128e4c3f598f9455447edd6296fafe

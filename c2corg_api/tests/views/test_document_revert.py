@@ -105,13 +105,13 @@ class TestDocumentRevertRest(BaseTestRest):
 
         response = self.app.get('/waypoints/' + str(document_id), status=200)
         body = response.json
-        self.assertEqual(body['elevation'], 4810)
+        assert body['elevation'] == 4810
         geom = loads(body['geometry']['geom'])
-        self.assertEqual(geom['coordinates'][0], 635957)
-        self.assertEqual(geom['coordinates'][1], 5723605)
+        assert geom['coordinates'][0] == 635957
+        assert geom['coordinates'][1] == 5723605
         for locale in body['locales']:
             if locale['lang'] == lang:
-                self.assertEqual(locale['summary'], 'The highest point in Europe')
+                assert locale['summary'] == 'The highest point in Europe'
 
         # check a new version has been created
         count = (
@@ -120,7 +120,7 @@ class TestDocumentRevertRest(BaseTestRest):
             .filter(DocumentVersion.lang == lang)
             .count()
         )
-        self.assertEqual(count, initial_count + 1)
+        assert count == initial_count + 1
 
     def test_revert_route(self):
         route_id = self.route1.document_id
@@ -145,12 +145,12 @@ class TestDocumentRevertRest(BaseTestRest):
 
         response = self.app.get('/routes/' + str(route_id), status=200)
         body = response.json
-        self.assertEqual(body['elevation_max'], 1500)
-        self.assertEqual(body['activities'], ['skitouring'])
+        assert body['elevation_max'] == 1500
+        assert body['activities'] == ['skitouring']
         for locale in body['locales']:
             if locale['lang'] == route_lang:
-                self.assertEqual(locale['title'], 'Mont Blanc du ciel')
-                self.assertEqual(locale['title_prefix'], 'Mount Everest')
+                assert locale['title'] == 'Mont Blanc du ciel'
+                assert locale['title_prefix'] == 'Mount Everest'
 
         # Now revert the main waypoint as well and check the title prefix
         # of the route has been updated:
@@ -178,8 +178,8 @@ class TestDocumentRevertRest(BaseTestRest):
         body = response.json
         for locale in body['locales']:
             if locale['lang'] == route_lang:
-                self.assertEqual(locale['title'], 'Mont Blanc du ciel')
-                self.assertEqual(locale['title_prefix'], 'Mont Blanc')
+                assert locale['title'] == 'Mont Blanc du ciel'
+                assert locale['title_prefix'] == 'Mont Blanc'
 
     def _add_test_data(self):
         contributor_id = self.global_userids['contributor']

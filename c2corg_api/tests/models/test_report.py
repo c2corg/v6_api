@@ -34,24 +34,24 @@ class TestXreport(BaseTestCase):
 
         xreport_archive = xreport.to_archive()
 
-        self.assertIsNone(xreport_archive.id)
-        self.assertEqual(xreport_archive.document_id, xreport.document_id)
-        self.assertEqual(xreport_archive.event_activity, xreport.event_activity)
-        self.assertEqual(xreport_archive.event_type, xreport.event_type)
-        self.assertEqual(xreport_archive.nb_participants, xreport.nb_participants)
-        self.assertEqual(xreport_archive.elevation, xreport.elevation)
+        assert xreport_archive.id is None
+        assert xreport_archive.document_id == xreport.document_id
+        assert xreport_archive.event_activity == xreport.event_activity
+        assert xreport_archive.event_type == xreport.event_type
+        assert xreport_archive.nb_participants == xreport.nb_participants
+        assert xreport_archive.elevation == xreport.elevation
 
-        self.assertIsNotNone(xreport_archive.event_activity)
-        self.assertIsNotNone(xreport_archive.event_type)
-        self.assertIsNotNone(xreport_archive.nb_participants)
+        assert xreport_archive.event_activity is not None
+        assert xreport_archive.event_type is not None
+        assert xreport_archive.nb_participants is not None
 
         archive_locals = xreport.get_archive_locales()
 
-        self.assertEqual(len(archive_locals), 2)
+        assert len(archive_locals) == 2
         locale = xreport.locales[0]
         locale_archive = archive_locals[0]
-        self.assertIsNot(locale_archive, locale)
-        self.assertIsNone(locale_archive.id)
-        self.assertEqual(locale_archive.lang, locale.lang)
-        self.assertEqual(locale_archive.title, locale.title)
-        self.assertEqual(locale_archive.description, locale.description)
+        assert locale_archive is not locale
+        assert locale_archive.id is None
+        assert locale_archive.lang == locale.lang
+        assert locale_archive.title == locale.title
+        assert locale_archive.description == locale.description

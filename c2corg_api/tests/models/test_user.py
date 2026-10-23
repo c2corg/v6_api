@@ -13,11 +13,11 @@ class TestPasswordUtil(unittest.TestCase):
     long_password = 'Élève 日本 ' * 5 + 'x' * 5
 
     def test_long_password(self):
-        self.assertGreater(len(self.long_password.encode('utf-8')), 72)
+        assert len(self.long_password.encode('utf-8')) > 72
         encrypted = PasswordUtil.encrypt_password(self.long_password)
 
-        self.assertTrue(PasswordUtil.is_password_valid(self.long_password, encrypted))
-        self.assertFalse(PasswordUtil.is_password_valid('wrong password', encrypted))
+        assert PasswordUtil.is_password_valid(self.long_password, encrypted)
+        assert not PasswordUtil.is_password_valid('wrong password', encrypted)
 
     def test_hash_made_by_truncating_bcrypt_still_valid(self):
         # bcrypt < 5 hashed only the first 72 bytes: hashes stored that way
@@ -26,16 +26,16 @@ class TestPasswordUtil(unittest.TestCase):
             self.long_password.encode('utf-8')[:72], bcrypt.gensalt()
         )
 
-        self.assertTrue(PasswordUtil.is_password_valid(self.long_password, legacy))
-        self.assertTrue(
-            PasswordUtil.is_password_valid(self.long_password, legacy.decode('utf-8'))
+        assert PasswordUtil.is_password_valid(self.long_password, legacy)
+        assert PasswordUtil.is_password_valid(
+            self.long_password, legacy.decode('utf-8')
         )
 
     def test_bytes_and_str_inputs(self):
         encrypted = PasswordUtil.encrypt_password(b'super pass')
 
-        self.assertTrue(PasswordUtil.is_password_valid('super pass', encrypted))
-        self.assertTrue(PasswordUtil.is_password_valid(b'super pass', encrypted))
+        assert PasswordUtil.is_password_valid('super pass', encrypted)
+        assert PasswordUtil.is_password_valid(b'super pass', encrypted)
 
 
 class Testuser(BaseTestCase):
@@ -47,8 +47,8 @@ class Testuser(BaseTestCase):
             password='foobar',
         )
 
-        self.assertFalse(tony.validate_password('foobare'))
-        self.assertTrue(tony.validate_password('foobar'))
+        assert not tony.validate_password('foobare')
+        assert tony.validate_password('foobar')
 
     def test_update_nonce(self):
         tony = User(email_validated=False)
@@ -81,10 +81,10 @@ class Testuser(BaseTestCase):
         self.session.flush()
         self.session.refresh(user)
 
-        self.assertIsNotNone(user.last_modified)
+        assert user.last_modified is not None
 
         user.name = 'changed'
         self.session.flush()
         self.session.refresh(user)
 
-        self.assertIsNotNone(user.last_modified)
+        assert user.last_modified is not None

@@ -35,7 +35,7 @@ class TestUtils(unittest.TestCase, AssertionsMixin):
             json.loads('{"type": "Point", "coordinates": [1.0, 2.0, 3.0, 4.0]}'), 3857
         )
         point = wkb_to_shape(wkb)
-        self.assertFalse(point.has_z)
+        assert not point.has_z
         self.assertAlmostEqual(point.x, 1.0)
         self.assertAlmostEqual(point.y, 2.0)
 
@@ -48,10 +48,10 @@ class TestUtils(unittest.TestCase, AssertionsMixin):
             3857,
         )
         line = wkb_to_shape(wkb)
-        self.assertFalse(line.has_z)
+        assert not line.has_z
 
-        self.assertEqual(len(line.coords), 2)
-        self.assertEqual(len(line.coords[0]), 2)
+        assert len(line.coords) == 2
+        assert len(line.coords[0]) == 2
         self.assertCoodinateEquals(line.coords[0], [635956.0, 5723604.0])
         self.assertCoodinateEquals(line.coords[1], [635966.0, 5723644.0])
 
@@ -64,11 +64,11 @@ class TestUtils(unittest.TestCase, AssertionsMixin):
             3857,
         )
         line = wkb_to_shape(wkb)
-        self.assertFalse(line.has_z)
+        assert not line.has_z
 
-        self.assertEqual(len(line.geoms), 1)
-        self.assertEqual(len(line.geoms[0].coords), 2)
-        self.assertEqual(len(line.geoms[0].coords[0]), 2)
+        assert len(line.geoms) == 1
+        assert len(line.geoms[0].coords) == 2
+        assert len(line.geoms[0].coords[0]) == 2
         self.assertCoodinateEquals(line.geoms[0].coords[0], [635956.0, 5723604.0])
         self.assertCoodinateEquals(line.geoms[0].coords[1], [635966.0, 5723644.0])
 
@@ -82,10 +82,10 @@ class TestUtils(unittest.TestCase, AssertionsMixin):
             3857,
         )
         polygon = wkb_to_shape(wkb)
-        self.assertFalse(polygon.has_z)
+        assert not polygon.has_z
 
-        self.assertEqual(len(polygon.exterior.coords), 5)
-        self.assertEqual(len(polygon.exterior.coords[0]), 2)
+        assert len(polygon.exterior.coords) == 5
+        assert len(polygon.exterior.coords[0]) == 2
 
     def test_wkb_to_shape_multipolygon(self):
         wkb = wkbelement_from_geojson(
@@ -97,16 +97,16 @@ class TestUtils(unittest.TestCase, AssertionsMixin):
             3857,
         )
         multi_polygon = wkb_to_shape(wkb)
-        self.assertFalse(multi_polygon.has_z)
+        assert not multi_polygon.has_z
 
-        self.assertEqual(len(multi_polygon.geoms[0].exterior.coords), 5)
-        self.assertEqual(len(multi_polygon.geoms[0].exterior.coords[0]), 2)
+        assert len(multi_polygon.geoms[0].exterior.coords) == 5
+        assert len(multi_polygon.geoms[0].exterior.coords[0]) == 2
 
     def get_child_node(self, node, name):
         return next((child for child in node.children if child.name == name), None)
 
     def assertHasField(self, node, name):  # noqa
-        self.assertIsNotNone(self.get_child_node(node, name))
+        assert self.get_child_node(node, name) is not None
 
     def assertHasNotField(self, node, name):  # noqa
-        self.assertIs(self.get_child_node(node, name), None)
+        assert self.get_child_node(node, name) is None

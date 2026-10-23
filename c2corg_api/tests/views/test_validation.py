@@ -44,7 +44,7 @@ class TestValidation(BaseTestCase):
         errors = Errors()
         associations = validate_associations_in(associations_in, OUTING_TYPE, errors)
 
-        self.assertEqual(len(errors), 0)
+        assert len(errors) == 0
 
         expected_associations = {
             'users': [
@@ -55,7 +55,7 @@ class TestValidation(BaseTestCase):
                 {'document_id': self.route2.document_id, 'is_parent': True},
             ],
         }
-        self.assertEqual(associations, expected_associations)
+        assert associations == expected_associations
 
     def test_validate_associations_waypoint(self):
         associations_in = {
@@ -69,7 +69,7 @@ class TestValidation(BaseTestCase):
         errors = Errors()
         associations = validate_associations_in(associations_in, WAYPOINT_TYPE, errors)
 
-        self.assertEqual(len(errors), 0)
+        assert len(errors) == 0
 
         expected_associations = {
             'waypoints': [
@@ -79,7 +79,7 @@ class TestValidation(BaseTestCase):
                 {'document_id': self.waypoint2.document_id, 'is_parent': False}
             ],
         }
-        self.assertEqual(associations, expected_associations)
+        assert associations == expected_associations
 
     def test_validate_associations_route(self):
         associations_in = {
@@ -93,7 +93,7 @@ class TestValidation(BaseTestCase):
         errors = Errors()
         associations = validate_associations_in(associations_in, ROUTE_TYPE, errors)
 
-        self.assertEqual(len(errors), 0)
+        assert len(errors) == 0
 
         expected_associations = {
             'routes': [
@@ -104,7 +104,7 @@ class TestValidation(BaseTestCase):
                 {'document_id': self.waypoint1.document_id, 'is_parent': True}
             ],
         }
-        self.assertEqual(associations, expected_associations)
+        assert associations == expected_associations
 
     def test_validate_associations_invalid_type(self):
         associations_in = {
@@ -117,7 +117,7 @@ class TestValidation(BaseTestCase):
         associations = validate_associations_in(associations_in, WAYPOINT_TYPE, errors)
 
         # users are ignored for waypoints
-        self.assertEqual(associations, {})
+        assert associations == {}
 
     def test_validate_associations_invalid_document_id(self):
         associations_in = {'waypoints': [{'document_id': -99999}]}
@@ -125,12 +125,12 @@ class TestValidation(BaseTestCase):
         errors = Errors()
         associations = validate_associations_in(associations_in, WAYPOINT_TYPE, errors)
 
-        self.assertIsNone(associations)
-        self.assertEqual(len(errors), 1)
+        assert associations is None
+        assert len(errors) == 1
         error = errors[0]
-        self.assertEqual(error['name'], 'associations.waypoints')
-        self.assertEqual(
-            error['description'], 'document "-99999" does not exist or is redirected'
+        assert error['name'] == 'associations.waypoints'
+        assert (
+            error['description'] == 'document "-99999" does not exist or is redirected'
         )
 
     def test_validate_associations_invalid_document_type(self):
@@ -139,23 +139,21 @@ class TestValidation(BaseTestCase):
         errors = Errors()
         associations = validate_associations_in(associations_in, ROUTE_TYPE, errors)
 
-        self.assertIsNone(associations)
-        self.assertEqual(len(errors), 1)
+        assert associations is None
+        assert len(errors) == 1
         error = errors[0]
-        self.assertEqual(error['name'], 'associations.routes')
-        self.assertEqual(
-            error['description'],
-            'document "' + str(self.waypoint1.document_id) + '" is not of type "r"',
+        assert error['name'] == 'associations.routes'
+        assert (
+            error['description']
+            == 'document "' + str(self.waypoint1.document_id) + '" is not of type "r"'
         )
 
     def test_parse_datetime(self):
-        self.assertEqual(parse_datetime(None), None)
-        self.assertEqual(
-            parse_datetime('2016-11-28T23:57:30.090459+01:00'),
-            datetime_parser.parse('2016-11-28T23:57:30.090459+01:00'),
-        )
+        assert parse_datetime(None) is None
+        assert parse_datetime(
+            '2016-11-28T23:57:30.090459+01:00'
+        ) == datetime_parser.parse('2016-11-28T23:57:30.090459+01:00')
 
-        self.assertEqual(
-            parse_datetime('2016-11-28T23%3A57%3A30.090459%2B01%3A00'),
-            datetime_parser.parse('2016-11-28T23:57:30.090459+01:00'),
-        )
+        assert parse_datetime(
+            '2016-11-28T23%3A57%3A30.090459%2B01%3A00'
+        ) == datetime_parser.parse('2016-11-28T23:57:30.090459+01:00')

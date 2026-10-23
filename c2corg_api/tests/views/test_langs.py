@@ -79,19 +79,19 @@ class TestLangs(BaseTestRest):
     def test_get_collection(self):
         for lang in default_langs:
             body = self.app.get(f'/outings?l={lang}', status=200).json
-            self.assertNotEqual(body['total'], 0)
+            assert body['total'] != 0
 
     def test_search(self):
         for lang in default_langs:
             response = self.app.get(f'/search?q=Title&pl={lang}', status=200)
             body = response.json
-            self.assertNotEqual(body['articles']['total'], 0)
+            assert body['articles']['total'] != 0
 
     def test_feed(self):
         for lang in default_langs:
             response = self.app.get(f'/feed?pl={lang}', status=200)
             body = response.json
-            self.assertNotEqual(len(body['feed']), 0)
+            assert len(body['feed']) != 0
 
     def test_create(self):
         for lang in default_langs:
@@ -120,7 +120,7 @@ class TestLangs(BaseTestRest):
 
             json = self.get_with_auth('/users/preferences').json
 
-            self.assertEqual([lang], json['langs'])
+            assert [lang] == json['langs']
 
             user = self.session.get(User, user_id)
             user.ratelimit_times = 0
@@ -136,4 +136,4 @@ class TestLangs(BaseTestRest):
             self.session.expunge(user)
 
             user = self.session.get(User, user_id)
-            self.assertEqual(user.lang, lang)
+            assert user.lang == lang
