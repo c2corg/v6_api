@@ -2,7 +2,6 @@ import datetime
 import logging
 from smtplib import SMTPAuthenticationError
 
-import pytz
 from pyramid.httpexceptions import HTTPBadRequest, HTTPTooManyRequests
 
 from c2corg_api.caching import cache_document_detail
@@ -144,7 +143,7 @@ def rate_limiting_tween_factory(handler, registry):
         if user is None:
             return http_error_handler(HTTPBadRequest('Unknown user'), request)
 
-        now = datetime.datetime.now(pytz.utc)
+        now = datetime.datetime.now(datetime.UTC)
         if user.ratelimit_reset is None or user.ratelimit_reset < now:
             # No window exists or it is expired: create a new one.
             span = int(registry.settings.get('rate_limiting.window_span'))

@@ -2,8 +2,6 @@ import datetime
 import time
 from unittest.mock import patch
 
-import pytz
-
 from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
 
@@ -55,7 +53,7 @@ class RateLimitingTest(BaseTestRest):
 
         expiration_date = self.user.ratelimit_reset
         delta = (
-            datetime.datetime.now(pytz.utc)
+            datetime.datetime.now(datetime.UTC)
             + datetime.timedelta(seconds=self.window_span)
             - self.user.ratelimit_reset
         )
