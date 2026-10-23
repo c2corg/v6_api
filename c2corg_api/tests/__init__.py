@@ -11,12 +11,10 @@ import transaction
 from alembic.command import downgrade
 from alembic.config import Config
 from dotenv import load_dotenv
-from pyramid import testing
 from pyramid.paster import get_appsettings
 from sqlalchemy import engine_from_config
 
 from c2corg_api import caching as caching_common
-from c2corg_api.emails.email_service import EmailService
 from c2corg_api.models import DBSession, sessionmaker
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.sso import SsoExternalId, SsoKey
@@ -256,48 +254,33 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
     http://www.sontek.net/blog/2011/12/01/writing_tests_for_pyramid_and_sqlalchemy.html
     """
 
-    def __init__(self, *args, **kwargs):
+    @pytest.fixture(autouse=True)
+    def _base_fixtures(
+        self,
+        client,
+        db_connection,
+        pyramid_config,
+        email_service,
+        queue_config,
+        app_state,
+    ):
+        """Expose the pytest fixtures to the unittest-style tests."""
+        # The fixtures are defined in conftest.py; this runs before setUp,
+        # so subclasses calling `super().setUp()` find everything set up.
         self.global_userids = global_userids
         self.global_tokens = global_tokens
         self.global_passwords = global_passwords
         self.settings = settings
-        unittest.TestCase.__init__(self, *args, **kwargs)
-
-    def get_email_box_length(self):
-        return len(self.mailer.outbox)
-
-    def get_last_email(self):
-        outbox_count = self.get_email_box_length()
-        return self.mailer.outbox[outbox_count - 1]
-
-    @pytest.fixture(autouse=True)
-    def _base_fixtures(self, client, db_connection):
-        """Expose the pytest fixtures to the unittest-style tests."""
-        # The fixtures are defined in conftest.py; this runs before setUp.
         self.app = client
         self.connection = db_connection
         # the session used in the test code, bound to the test's connection
         # (the views use DBSession, bound to the same connection)
         self.session = sessionmaker()(bind=db_connection)
+        self.config = pyramid_config
+        self.email_service = email_service
+        self.queue_config = queue_config
         yield
         self.session.close()
-
-    def setUp(self):
-        registry = self.app.app.registry
-        self.email_service = EmailService(settings)
-        EmailService.instance = None
-
-        self.config = testing.setUp()
-
-        self.queue_config = registry.queue_config
-        reset_queue(self.queue_config)
-        reset_cache_key()
-        registry.feed_admin_user_account_id = None
-
-    def tearDown(self):
-        # the database transaction is rolled back by the db_connection
-        # fixture, after this
-        testing.tearDown()
 
     def app_post_json(self, *args, **kwargs):
         return self.app_send_json('post', *args, **kwargs)
