@@ -97,8 +97,9 @@ quote-style = "single"
 # Same checks as the former flake8 + pep8-naming setup. pycodestyle's
 # whitespace and indentation rules (E1, E2, E3) are preview rules in ruff.
 preview = true
+# B: flake8-bugbear (likely bugs and design problems).
 # RUF100: report `# noqa` comments that no longer silence anything.
-select = ["E", "W", "F", "I", "N", "UP", "RUF100"]
+select = ["E", "W", "F", "I", "N", "UP", "B", "RUF100"]
 ignore = [
     "E226", "E241", "E242",  # in pycodestyle's default ignore list
     "N818",  # off by default in pep8-naming
@@ -109,6 +110,14 @@ ignore = [
     "UP030", "UP031", "UP032",
     # unsafe fix (yield in a for loop -> yield from)
     "UP028",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"c2corg_api/tests/**" = [
+    "B006",  # helper defaults like `body={}` are never mutated
+    "B017",  # `assertRaises(Exception)` is what the email test means
+    "B018",  # a bare `response.json` checks that the body is JSON
+    "B023",  # fake generators defined and used within one loop iteration
 ]
 
 [tool.ruff.lint.isort]

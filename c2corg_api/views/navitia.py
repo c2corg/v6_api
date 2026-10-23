@@ -594,7 +594,7 @@ def is_wp_journey_reachable(waypoint, journey_params):
         if str(e) == 'no_solution':
             return False
         else:
-            raise HTTPInternalServerError(e)
+            raise HTTPInternalServerError(e) from e
 
 
 def get_navitia_isochrone(isochrone_params):
@@ -772,14 +772,14 @@ def navitia_get(url, *, params=None, headers=None, timeout=30):
         )
         return handle_navitia_response(response)
 
-    except requests.exceptions.Timeout:
-        raise HTTPInternalServerError('Timeout when calling the Navitia API')
+    except requests.exceptions.Timeout as e:
+        raise HTTPInternalServerError('Timeout when calling the Navitia API') from e
 
     except requests.exceptions.RequestException as e:
-        raise HTTPInternalServerError(str(e))
+        raise HTTPInternalServerError(str(e)) from e
 
     except Exception as e:
-        raise HTTPInternalServerError(str(e))
+        raise HTTPInternalServerError(str(e)) from e
 
 
 def redis_client():

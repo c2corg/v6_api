@@ -616,9 +616,7 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # Check that entries have been removed in the main tables
         count = (
-            self.session.query(clazz)
-            .filter(getattr(clazz, 'document_id') == document_id)
-            .count()
+            self.session.query(clazz).filter(clazz.document_id == document_id).count()
         )
         self.assertEqual(0, count)
         count = (
@@ -630,7 +628,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         if clazz_locale:
             count = (
                 self.session.query(clazz_locale)
-                .filter(getattr(clazz_locale, 'document_id') == document_id)
+                .filter(clazz_locale.document_id == document_id)
                 .count()
             )
             self.assertEqual(0, count)
@@ -650,7 +648,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         # Check the archives have been cleared too
         count = (
             self.session.query(archive_clazz)
-            .filter(getattr(archive_clazz, 'document_id') == document_id)
+            .filter(archive_clazz.document_id == document_id)
             .count()
         )
         self.assertEqual(0, count)
@@ -663,7 +661,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         if archive_clazz_locale:
             count = (
                 self.session.query(archive_clazz_locale)
-                .filter(getattr(archive_clazz_locale, 'document_id') == document_id)
+                .filter(archive_clazz_locale.document_id == document_id)
                 .count()
             )
             self.assertEqual(0, count)

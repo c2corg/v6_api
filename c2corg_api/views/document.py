@@ -350,8 +350,8 @@ class DocumentRest(ACLDefault):
         if not lang:
             document_query = (
                 DBSession.query(clazz)
-                .filter(getattr(clazz, 'document_id') == id)
-                .options(joinedload(getattr(clazz, 'geometry')))
+                .filter(clazz.document_id == id)
+                .options(joinedload(clazz.geometry))
             )
             document_query = add_load_for_locales(document_query, clazz, clazz_locale)
             document_query = add_load_for_profiles(document_query, clazz)
@@ -362,7 +362,7 @@ class DocumentRest(ACLDefault):
                 if clazz_locale
                 else DocumentLocale
             )
-            locales_attr = getattr(clazz, 'locales')
+            locales_attr = clazz.locales
             locales_type_eager = (
                 locales_attr.of_type(clazz_locale) if clazz_locale else locales_attr
             )
@@ -370,9 +370,9 @@ class DocumentRest(ACLDefault):
             document_query = (
                 DBSession.query(clazz)
                 .join(locales_type)
-                .filter(getattr(clazz, 'document_id') == id)
+                .filter(clazz.document_id == id)
                 .filter(DocumentLocale.lang == lang)
-                .options(joinedload(getattr(clazz, 'geometry')))
+                .options(joinedload(clazz.geometry))
                 .options(contains_eager(locales_type_eager, alias=locales_type))
             )
             document_query = add_load_for_profiles(document_query, clazz)
@@ -383,8 +383,8 @@ class DocumentRest(ACLDefault):
                 # document without locales
                 document_query = (
                     DBSession.query(clazz)
-                    .filter(getattr(clazz, 'document_id') == id)
-                    .options(joinedload(getattr(clazz, 'geometry')))
+                    .filter(clazz.document_id == id)
+                    .options(joinedload(clazz.geometry))
                 )
                 document_query = add_load_for_profiles(document_query, clazz)
                 document = document_query.first()
@@ -411,8 +411,8 @@ class DocumentRest(ACLDefault):
 
         document_query = (
             DBSession.query(clazz)
-            .filter(getattr(clazz, 'document_id') == document_id)
-            .options(joinedload(getattr(clazz, 'geometry')))
+            .filter(clazz.document_id == document_id)
+            .options(joinedload(clazz.geometry))
         )
         document_query = add_load_for_locales(document_query, clazz, clazz_locale)
         document_query = add_load_for_profiles(document_query, clazz)
@@ -450,8 +450,8 @@ class DocumentRest(ACLDefault):
 
         try:
             DBSession.flush()
-        except StaleDataError:
-            raise HTTPConflict('concurrent modification')
+        except StaleDataError as e:
+            raise HTTPConflict('concurrent modification') from e
 
         # when flushing the session, SQLAlchemy automatically updates the
         # version numbers in case attributes have changed. by comparing with

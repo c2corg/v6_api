@@ -463,7 +463,7 @@ class ReachableWaypointRest(DocumentRest):
             )
 
         areas_id = set()
-        for wp, areas in results:
+        for _wp, areas in results:
             if areas is None:
                 continue
             for area in areas:

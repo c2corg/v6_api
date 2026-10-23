@@ -51,7 +51,7 @@ class DocumentInfoRest:
             if is_route
             else DocumentLocale
         )
-        locales_attr = getattr(clazz, 'locales')
+        locales_attr = clazz.locales
         locales_type_eager = (
             locales_attr.of_type(RouteLocale) if is_route else locales_attr
         )
@@ -74,7 +74,7 @@ class DocumentInfoRest:
                 )
             )
             .join(locales_type)
-            .filter(getattr(clazz, 'document_id') == document_id)
+            .filter(clazz.document_id == document_id)
             .filter(DocumentLocale.lang == lang)
             .options(
                 contains_eager(locales_type_eager, alias=locales_type).load_only(
@@ -98,7 +98,7 @@ class DocumentInfoRest:
                         Document.protected,
                     )
                 )
-                .filter(getattr(clazz, 'document_id') == document_id)
+                .filter(clazz.document_id == document_id)
                 .options(joinedload(locales_type_eager).load_only(*locales_load_only))
             )
             document_query = add_load_for_profiles(document_query, clazz)

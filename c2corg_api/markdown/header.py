@@ -65,5 +65,5 @@ class C2CHeaderExtension(Extension):
         )
 
 
-def makeExtension(configs=[]):  # noqa: N802
-    return C2CHeaderExtension(configs=configs)
+def makeExtension(*args, **kwargs):  # noqa: N802
+    return C2CHeaderExtension(*args, **kwargs)

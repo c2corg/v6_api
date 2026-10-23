@@ -29,11 +29,11 @@ def get_documents_for_ids(document_ids, lang, documents_config, total=None):
 def get_documents(documents_config, meta_params, search_documents):
     lang = meta_params['lang']
     base_query = DBSession.query(documents_config.clazz).filter(
-        getattr(documents_config.clazz, 'redirects_to').is_(None)
+        documents_config.clazz.redirects_to.is_(None)
     )
-    base_total_query = DBSession.query(
-        getattr(documents_config.clazz, 'document_id')
-    ).filter(getattr(documents_config.clazz, 'redirects_to').is_(None))
+    base_total_query = DBSession.query(documents_config.clazz.document_id).filter(
+        documents_config.clazz.redirects_to.is_(None)
+    )
 
     base_total_query = add_profile_filter(base_total_query, documents_config.clazz)
     base_query = add_load_for_profiles(base_query, documents_config.clazz)
@@ -100,7 +100,7 @@ def _get_documents_from_ids(document_ids, base_query, documents_config, lang):
         # only load the geometry if the fields list contains other columns than
         # 'version'
         base_query = base_query.options(
-            joinedload(getattr(documents_config.clazz, 'geometry')).load_only(
+            joinedload(documents_config.clazz.geometry).load_only(
                 *[
                     getattr(DocumentGeometry, field)
                     for field in documents_config.get_load_only_fields_geometry()
@@ -110,7 +110,7 @@ def _get_documents_from_ids(document_ids, base_query, documents_config, lang):
 
     if documents_config.include_areas:
         base_query = base_query.options(
-            joinedload(getattr(documents_config.clazz, '_areas'))
+            joinedload(documents_config.clazz._areas)
             .load_only(
                 Area.document_id,
                 Area.area_type,
@@ -190,10 +190,10 @@ def add_profile_filter(document_query, clazz):
 
 def add_load_for_locales(base_query, clazz, clazz_locale, load_only_fields=None):
     if clazz_locale:
-        locales_load = subqueryload(getattr(clazz, 'locales').of_type(clazz_locale))
+        locales_load = subqueryload(clazz.locales.of_type(clazz_locale))
         locale_clazz = clazz_locale
     else:
-        locales_load = subqueryload(getattr(clazz, 'locales'))
+        locales_load = subqueryload(clazz.locales)
         locale_clazz = DocumentLocale
 
     if load_only_fields:

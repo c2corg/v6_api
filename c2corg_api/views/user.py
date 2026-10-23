@@ -270,9 +270,9 @@ class UserRegistrationRest(ACLDefault):
         DBSession.add(user)
         try:
             DBSession.flush()
-        except Exception:
+        except Exception as e:
             log.warning('Error persisting user', exc_info=True)
-            raise HTTPInternalServerError('Error persisting user')
+            raise HTTPInternalServerError('Error persisting user') from e
 
         # also create a version for the profile
         DocumentRest.create_new_version(user.profile, user.id)
@@ -345,9 +345,9 @@ class UserValidateNewPasswordRest(ACLDefault):
             user.clear_validation_nonce()
             try:
                 DBSession.flush()
-            except Exception:
+            except Exception as e:
                 log.warning('Error persisting user', exc_info=True)
-                raise HTTPInternalServerError('Error persisting user')
+                raise HTTPInternalServerError('Error persisting user') from e
 
             return response
         else:
@@ -389,9 +389,9 @@ class UserRequestChangePasswordRest(ACLDefault):
 
         try:
             DBSession.flush()
-        except Exception:
+        except Exception as e:
             log.warning('Error persisting user', exc_info=True)
-            raise HTTPInternalServerError('Error persisting user')
+            raise HTTPInternalServerError('Error persisting user') from e
 
         email_service = get_email_service(request)
         nonce = user.validation_nonce
@@ -427,16 +427,16 @@ class UserNonceValidationRest(ACLDefault):
                 client = get_discourse_client(settings)
                 r = client.redirect_without_nonce(user)
                 response['redirect_internal'] = r
-            except Exception:
+            except Exception as e:
                 # Any error with discourse must prevent login and validation
                 log.error('Error logging into discourse for %d', user.id, exc_info=True)
-                raise HTTPInternalServerError('Error with Discourse')
+                raise HTTPInternalServerError('Error with Discourse') from e
 
             try:
                 DBSession.flush()
-            except Exception:
+            except Exception as e:
                 log.warning('Error persisting user', exc_info=True)
-                raise HTTPInternalServerError('Error persisting user')
+                raise HTTPInternalServerError('Error persisting user') from e
 
             return response
         else:
@@ -459,15 +459,15 @@ class UserChangeEmailNonceValidationRest(ACLDefault):
         try:
             client = get_discourse_client(request.registry.settings)
             client.sync_sso(user)
-        except Exception:
+        except Exception as e:
             log.error('Error syncing email with discourse', exc_info=True)
-            raise HTTPInternalServerError('Error with Discourse')
+            raise HTTPInternalServerError('Error with Discourse') from e
 
         try:
             DBSession.flush()
-        except Exception:
+        except Exception as e:
             log.warning('Error persisting user', exc_info=True)
-            raise HTTPInternalServerError('Error persisting user')
+            raise HTTPInternalServerError('Error persisting user') from e
 
         # no login since user is supposed to be already logged in
 
@@ -535,9 +535,9 @@ class UserLoginRest(ACLDefault):
                         .values(tos_validated=datetime.datetime.utcnow())
                     )
                     DBSession.flush()
-                except Exception:
+                except Exception as e:
                     log.warning('Error persisting user', exc_info=True)
-                    raise HTTPInternalServerError('Error persisting user')
+                    raise HTTPInternalServerError('Error persisting user') from e
 
             response = token_to_response(user, token, request)
             if 'discourse' in request.json:

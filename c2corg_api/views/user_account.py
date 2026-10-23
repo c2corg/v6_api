@@ -173,15 +173,15 @@ class UserAccountRest(ACLDefault):
             try:
                 client = get_discourse_client(request.registry.settings)
                 client.sync_sso(user)
-            except Exception:
+            except Exception as e:
                 log.error('Error syncing with discourse', exc_info=True)
-                raise HTTPInternalServerError('Error with Discourse')
+                raise HTTPInternalServerError('Error with Discourse') from e
 
         try:
             DBSession.flush()
-        except Exception:
+        except Exception as e:
             log.warning('Error persisting user', exc_info=True)
-            raise HTTPInternalServerError('Error persisting user')
+            raise HTTPInternalServerError('Error persisting user') from e
 
         if email_link:
             email_service.send_change_email_confirmation(user, link)

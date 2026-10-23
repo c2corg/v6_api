@@ -47,8 +47,8 @@ def validate_waypoint_id(request, *args, **kwargs):
     """Check if waypoint_stoparea_id is valid."""
     try:
         request.matchdict['waypoint_id'] = int(request.matchdict['waypoint_id'])
-    except KeyError, ValueError:
-        raise HTTPBadRequest(json_body={'error': 'Invalid waypoint_id'})
+    except (KeyError, ValueError) as e:
+        raise HTTPBadRequest(json_body={'error': 'Invalid waypoint_id'}) from e
 
 
 @resource(path='/waypoints/{waypoint_id}/stopareas', cors_policy=cors_policy)

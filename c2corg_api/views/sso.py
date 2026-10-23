@@ -222,7 +222,7 @@ def call_discourse(method, *args, **kwargs):
         return method.__call__(*args, **kwargs)
     except Exception as e:
         log.error('Error with Discourse: {}'.format(str(e)), exc_info=True)
-        raise HTTPInternalServerError('Error with Discourse')
+        raise HTTPInternalServerError('Error with Discourse') from e
 
 
 def generate_token():

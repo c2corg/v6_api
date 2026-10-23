@@ -416,7 +416,7 @@ def _get_models(document_type):
         return Coverage, None, ArchiveDocument, None
     if document_type == XREPORT_TYPE:
         return Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale
-    assert False
+    raise AssertionError('unexpected document type {}'.format(document_type))
 
 
 def remove_from_cache(document_id):
@@ -488,7 +488,7 @@ def _remove_archive_locale(archive_clazz_locale, document_id, lang=None):
         archive_document_locale_ids = query.scalar_subquery()
         DBSession.execute(
             archive_clazz_locale.__table__.delete().where(
-                getattr(archive_clazz_locale, 'id').in_(archive_document_locale_ids)
+                archive_clazz_locale.id.in_(archive_document_locale_ids)
             )
         )
 
@@ -517,7 +517,7 @@ def _remove_locale(clazz_locale, document_id, lang=None):
     if clazz_locale:
         DBSession.execute(
             clazz_locale.__table__.delete().where(
-                getattr(clazz_locale, 'id').in_(document_locale_ids)
+                clazz_locale.id.in_(document_locale_ids)
             )
         )
 
@@ -549,7 +549,7 @@ def _remove_archive(archive_clazz, document_id):
     )
     DBSession.execute(
         archive_clazz.__table__.delete().where(
-            getattr(archive_clazz, 'id').in_(archive_document_ids)
+            archive_clazz.id.in_(archive_document_ids)
         )
     )
 
@@ -559,7 +559,7 @@ def _remove_archive(archive_clazz, document_id):
 
 
 def _remove_figures(clazz, document_id):
-    DBSession.query(clazz).filter(getattr(clazz, 'document_id') == document_id).delete()
+    DBSession.query(clazz).filter(clazz.document_id == document_id).delete()
 
 
 def _remove_document(document_id):
