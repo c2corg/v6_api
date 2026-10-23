@@ -30,8 +30,8 @@ BBCODE_TAGS = [
     'quote',
 ]
 BBCODE_REGEX = (
-    [r'\[{0}\]'.format(tag) for tag in BBCODE_TAGS]
-    + [r'\[\/{0}\]'.format(tag) for tag in BBCODE_TAGS]
+    [rf'\[{tag}\]' for tag in BBCODE_TAGS]
+    + [rf'\[\/{tag}\]' for tag in BBCODE_TAGS]
     + [
         r'\[url([^\[\]]*?)\]',
         r'\[email([^\[\]]*?)\]',

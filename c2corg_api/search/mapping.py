@@ -35,7 +35,7 @@ def default_title_field(lang: None):
             fields={
                 'ngram': String(analyzer='index_ngram', search_analyzer='search_ngram'),
                 'raw': String(analyzer='index_raw', search_analyzer='search_raw'),
-                'contentheavy': String(analyzer='{0}_heavy'.format(lang)),
+                'contentheavy': String(analyzer=f'{lang}_heavy'),
             },
         )
 

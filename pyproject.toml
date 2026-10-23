@@ -104,10 +104,6 @@ ignore = [
     "E226", "E241", "E242",  # in pycodestyle's default ignore list
     "N818",  # off by default in pep8-naming
     "N999",  # ruff-only: module names like scripts/redis-flushdb.py
-    # String formatting (f-strings, "%" and "{0}".format) is left to a later
-    # PR reviewed by hand: those fixes are unsafe (e.g. "%" with a tuple)
-    # or produce lines too long to keep the change mechanical.
-    "UP030", "UP031", "UP032",
     # unsafe fix (yield in a for loop -> yield from)
     "UP028",
 ]

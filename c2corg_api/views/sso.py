@@ -64,9 +64,7 @@ def sso_sync_validator(request, **kwargs):
         .one_or_none()
     )
     if sso_key is None:
-        log.warning(
-            'Attempt to use sso_sync with bad key from {}'.format(request.client_addr)
-        )
+        log.warning(f'Attempt to use sso_sync with bad key from {request.client_addr}')
         request.errors.status = 403
         request.errors.add('body', 'sso_key', 'Invalid')
         return
@@ -221,7 +219,7 @@ def call_discourse(method, *args, **kwargs):
     try:
         return method.__call__(*args, **kwargs)
     except Exception as e:
-        log.error('Error with Discourse: {}'.format(str(e)), exc_info=True)
+        log.error(f'Error with Discourse: {e!s}', exc_info=True)
         raise HTTPInternalServerError('Error with Discourse') from e
 
 
@@ -256,9 +254,7 @@ def validate_token(request, **kwargs):
     )
     if sso_external_id is None:
         log.warning(
-            'Attempt to use sso_login with bad token from {}'.format(
-                request.client_addr
-            )
+            f'Attempt to use sso_login with bad token from {request.client_addr}'
         )
         request.errors.status = 403
         request.errors.add('body', 'token', 'Invalid')

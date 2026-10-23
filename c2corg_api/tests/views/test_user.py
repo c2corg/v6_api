@@ -178,11 +178,11 @@ class TestUserRest(BaseUserTestRest):
         for forum_username, value in forum_username_tests.items():
             i += 1
             request_body = {
-                'username': 'test{}'.format(i),
+                'username': f'test{i}',
                 'forum_username': forum_username,
-                'name': 'Max Mustermann{}'.format(i),
+                'name': f'Max Mustermann{i}',
                 'password': 'Super$ecret1',
-                'email': 'some_user{}@camptocamp.org'.format(i),
+                'email': f'some_user{i}@camptocamp.org',
             }
             if value is False:
                 self.app_post_json(url, request_body, status=200).json
@@ -308,7 +308,7 @@ class TestUserRest(BaseUserTestRest):
         self.assertEqual(user.lang, 'fr')
         # Simulate confirmation email validation
         nonce = self.extract_nonce(_send_email, 'validate_register_email')
-        url_api_validation = '/users/validate_register_email/%s' % nonce
+        url_api_validation = f'/users/validate_register_email/{nonce}'
         self.app_post_json(url_api_validation, {}, status=200)
 
         # Need to expunge the profile and user so that the latest
@@ -368,7 +368,7 @@ class TestUserRest(BaseUserTestRest):
 
         # Simulate confirmation email validation
         nonce = self.extract_nonce(_send_email, 'validate_register_email')
-        url_api_validation = '/users/validate_register_email/%s' % nonce
+        url_api_validation = f'/users/validate_register_email/{nonce}'
         self.app_post_json(url_api_validation, {}, status=200)
 
         # check that the profile is inserted in the index after confirmation
@@ -398,7 +398,7 @@ class TestUserRest(BaseUserTestRest):
 
         # Simulate confirmation email validation
         nonce = self.extract_nonce(_send_email, 'validate_register_email')
-        url_api_validation = '/users/validate_register_email/%s' % nonce
+        url_api_validation = f'/users/validate_register_email/{nonce}'
 
         self.app_post_json(url_api_validation, {}, status=500)
 
@@ -422,7 +422,7 @@ class TestUserRest(BaseUserTestRest):
 
         # Simulate confirmation email validation
         nonce = self.extract_nonce(_send_email, 'change_password')
-        url_api_validation = '/users/validate_new_password/%s' % nonce
+        url_api_validation = f'/users/validate_new_password/{nonce}'
 
         self.app_post_json(
             url_api_validation,
@@ -452,7 +452,7 @@ class TestUserRest(BaseUserTestRest):
 
         # Simulate confirmation email validation
         nonce = self.extract_nonce(_send_email, 'change_password')
-        url_api_validation = '/users/validate_new_password/%s' % nonce
+        url_api_validation = f'/users/validate_new_password/{nonce}'
 
         # Succeed anyway since only the password has changed
         self.app_post_json(
@@ -723,7 +723,7 @@ class TestUserRest(BaseUserTestRest):
         expected = days * 24 * 3600 + now  # 14 days from now
         if abs(expected - expire) > seconds_delta:
             raise self.failureException(
-                '%r == %r within %r seconds' % (expected, expire, seconds_delta)
+                f'{expected!r} == {expire!r} within {seconds_delta!r} seconds'
             )
 
     def test_login_logout_success(self):

@@ -216,7 +216,7 @@ class TestSearchRest(BaseTestRest):
             routes = body['routes']
             self.assertTrue(
                 routes['total'] > 0,
-                'expected a match for {0!r}, got {1!r}'.format(term, routes),
+                f'expected a match for {term!r}, got {routes!r}',
             )
 
     def test_search_hyphenated_compound_word(self):
@@ -249,7 +249,7 @@ class TestSearchRest(BaseTestRest):
         routes = body['routes']
         self.assertTrue(
             routes['total'] > 0,
-            'expected a match for "Aretes de Gerbier", got {0!r}'.format(routes),
+            f'expected a match for "Aretes de Gerbier", got {routes!r}',
         )
         titles = [doc['locales'][0]['title'] for doc in routes['documents']]
         self.assertNotIn('Pic de Gerri : arête Noris - Gerri', titles)

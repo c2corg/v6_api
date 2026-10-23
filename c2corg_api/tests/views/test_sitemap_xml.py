@@ -70,13 +70,11 @@ class TestSitemapXml(BaseTestRest):
         self.assertEqual(len(urlset), 3)
         url = urlset[0]
 
-        self.assertEqual(url[0].tag, '{}loc'.format(self.schema_url))
-        self.assertEqual(url[1].tag, '{}lastmod'.format(self.schema_url))
+        self.assertEqual(url[0].tag, f'{self.schema_url}loc')
+        self.assertEqual(url[1].tag, f'{self.schema_url}lastmod')
         self.assertEqual(
             url[0].text,
-            '{}/waypoints/{}/fr/dent-de-crolles'.format(
-                self.ui_url, self.waypoint1.document_id
-            ),
+            f'{self.ui_url}/waypoints/{self.waypoint1.document_id}/fr/dent-de-crolles',
         )
 
     def test_get_waypoint_sitemap_no_pages(self):
@@ -89,11 +87,9 @@ class TestSitemapXml(BaseTestRest):
         self.assertEqual(len(urlset), 1)
         url = urlset[0]
 
-        self.assertEqual(url[0].tag, '{}loc'.format(self.schema_url))
-        self.assertEqual(url[1].tag, '{}lastmod'.format(self.schema_url))
+        self.assertEqual(url[0].tag, f'{self.schema_url}loc')
+        self.assertEqual(url[1].tag, f'{self.schema_url}lastmod')
         self.assertEqual(
             url[0].text,
-            '{}/routes/{}/fr/mont-blanc-mont-blanc-du-ciel'.format(
-                self.ui_url, self.route.document_id
-            ),
+            f'{self.ui_url}/routes/{self.route.document_id}/fr/mont-blanc-mont-blanc-du-ciel',
         )

@@ -177,7 +177,7 @@ class TestUserBlockedRest(BaseBlockTest):
     def test_blocked(self):
         headers = self.add_authorization_header(username='moderator')
         response = self.app.get(
-            self._prefix + '/{}'.format(self.contributor2.id),
+            self._prefix + f'/{self.contributor2.id}',
             status=200,
             headers=headers,
         )
@@ -188,7 +188,7 @@ class TestUserBlockedRest(BaseBlockTest):
     def test_blocked_not(self):
         headers = self.add_authorization_header(username='moderator')
         response = self.app.get(
-            self._prefix + '/{}'.format(self.contributor.id),
+            self._prefix + f'/{self.contributor.id}',
             status=200,
             headers=headers,
         )

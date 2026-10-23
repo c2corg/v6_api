@@ -157,9 +157,7 @@ def publish_image_in_backend(request, filename):
 
     if response.status_code != 200:
         raise HTTPInternalServerError(
-            'Image backend returns : {} {}'.format(
-                response.status_code, response.reason
-            )
+            f'Image backend returns : {response.status_code} {response.reason}'
         )
 
 
@@ -191,9 +189,7 @@ def delete_all_files_for_image(document_id, request):
 
         if response.status_code != 200:
             raise HTTPInternalServerError(
-                'Deleting image files failed: {} {}'.format(
-                    response.status_code, response.reason
-                )
+                f'Deleting image files failed: {response.status_code} {response.reason}'
             )
 
     run_on_successful_transaction(send_delete_request)
@@ -238,7 +234,7 @@ class ImageRest(DocumentRest):
             image_id = self.request.validated['id']
             image = DBSession.get(Image, image_id)
             if image is None:
-                raise HTTPNotFound('No image found for id {}'.format(image_id))
+                raise HTTPNotFound(f'No image found for id {image_id}')
             new_image_type = self.request.validated['document']['image_type']
             if new_image_type == 'copyright':
                 if new_image_type != image.image_type:
@@ -327,14 +323,14 @@ class ImageProxyRest(ACLDefault):
             raise HTTPNotFound()
         image_url = self.request.registry.settings['image_url']
         if size is None:
-            location = '{}{}'.format(image_url, filename)
+            location = f'{image_url}{filename}'
         else:
             base, ext = os.path.splitext(filename)
             if extension is None:
                 ext = '.jpg' if ext == '.svg' else ext
             else:
                 ext = '.' + extension
-            location = '{}{}{}{}'.format(image_url, base, size, ext)
+            location = f'{image_url}{base}{size}{ext}'
         return HTTPFound(location, headers={'Cache-Control': PROXY_CACHE_CONTROL})
 
 

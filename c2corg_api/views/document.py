@@ -655,9 +655,7 @@ class DocumentRest(ACLDefault):
             locale = document.get_locale(locale_in.lang)
             if locale:
                 if locale.version != locale_in.version:
-                    raise HTTPConflict(
-                        "version of locale '%s' has changed" % locale.lang
-                    )
+                    raise HTTPConflict(f"version of locale '{locale.lang}' has changed")
         if document.geometry and document_in.geometry:
             if document.geometry.version != document_in.geometry.version:
                 raise HTTPConflict('version of geometry has changed')
@@ -683,7 +681,7 @@ def validate_document_for_type(
         document_type = document_type[0]
 
     if document_type not in valid_type_values:
-        request.errors.add('body', type_field, 'invalid value: %s' % document_type)
+        request.errors.add('body', type_field, f'invalid value: {document_type}')
         return
 
     fields_req = fields.get(document_type)['required']

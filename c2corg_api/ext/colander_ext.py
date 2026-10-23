@@ -47,7 +47,7 @@ class Geometry(SchemaType):
         if isinstance(appstruct, WKBElement):
             return geojson_from_wkbelement(appstruct)
 
-        raise Invalid(node, 'Unexpected value: %r' % appstruct)
+        raise Invalid(node, f'Unexpected value: {appstruct!r}')
 
     def deserialize(self, node, cstruct):
         """
@@ -62,21 +62,20 @@ class Geometry(SchemaType):
         except Invalid as exc:
             raise exc
         except Exception as e:
-            raise Invalid(node, 'Invalid geometry: %s' % cstruct) from e
+            raise Invalid(node, f'Invalid geometry: {cstruct}') from e
         if not isinstance(data, geojson.GeoJSON):
-            raise Invalid(node, 'Invalid geometry: %s' % cstruct)
+            raise Invalid(node, f'Invalid geometry: {cstruct}')
         geom_type = data['type'].upper()
         allowed_types = self.geometry_types
         if geom_type in allowed_types:
             if not is_valid_geometry(data):
-                raise Invalid(node, 'Invalid geometry: %s' % cstruct)
+                raise Invalid(node, f'Invalid geometry: {cstruct}')
             else:
                 return wkbelement_from_geojson(data, self.srid)
         else:
             raise Invalid(
                 node,
-                'Invalid geometry type. Expected: %s. Got: %s.'
-                % (allowed_types, geom_type),
+                f'Invalid geometry type. Expected: {allowed_types}. Got: {geom_type}.',
             )
 
     def cstruct_children(self, node, cstruct):

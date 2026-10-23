@@ -125,11 +125,9 @@ class SitemapXml(ACLDefault):
 
 def _get_cache_key(doc_type=None, i=None):
     if doc_type:
-        return '{}-{}-{}-{}'.format(
-            doc_type, i, date.today().isoformat(), caching.CACHE_VERSION
-        )
+        return f'{doc_type}-{i}-{date.today().isoformat()}-{caching.CACHE_VERSION}'
     else:
-        return '{}-{}'.format(date.today().isoformat(), caching.CACHE_VERSION)
+        return f'{date.today().isoformat()}-{caching.CACHE_VERSION}'
 
 
 def _get_sitemap_index():
@@ -227,7 +225,7 @@ def _format_page(ui_entry_point, doc_id, lang, title, last_updated, title_prefix
     }
 
     if title_prefix:
-        page['title'] = slugify('{} {}'.format(title_prefix, title))
+        page['title'] = slugify(f'{title_prefix} {title}')
     else:
         page['title'] = slugify(title)
 

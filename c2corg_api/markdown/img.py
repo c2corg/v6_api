@@ -108,7 +108,7 @@ class C2CImageBlock(BlockProcessor):
 
         img = ElementTree.Element('img')
 
-        img_url = '/images/proxy/%s' % (img_id,)
+        img_url = f'/images/proxy/{img_id}'
 
         if img_size:
             img_url += '?size=' + img_size

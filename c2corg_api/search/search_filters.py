@@ -62,7 +62,7 @@ def build_query(url_params, meta_params, doc_type):
         else:
             search = search.sort({'id': {'order': 'desc'}})
 
-    log.debug('Search filter: {}'.format(search.to_dict()))
+    log.debug(f'Search filter: {search.to_dict()}')
 
     return search
 

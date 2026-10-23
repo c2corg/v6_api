@@ -313,7 +313,7 @@ class TestDocumentMergeRest(BaseTestRest):
         )
         self.assertIsNotNone(new_source_version)
         self.assertEqual(
-            'merged with {}'.format(self.waypoint2.document_id),
+            f'merged with {self.waypoint2.document_id}',
             new_source_version.history_metadata.comment,
         )
 

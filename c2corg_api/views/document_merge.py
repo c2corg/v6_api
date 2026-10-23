@@ -72,13 +72,13 @@ def validate_documents(request, **kwargs):
             request.errors.add(
                 'body',
                 'source_document_id',
-                'document {0} does not exist'.format(source_document_id),
+                f'document {source_document_id} does not exist',
             )
         if not target_info:
             request.errors.add(
                 'body',
                 'target_document_id',
-                'document {0} does not exist'.format(target_document_id),
+                f'document {target_document_id} does not exist',
             )
         return
 
@@ -91,13 +91,13 @@ def validate_documents(request, **kwargs):
             request.errors.add(
                 'body',
                 'source_document_id',
-                'document {0} is already redirected'.format(source_document_id),
+                f'document {source_document_id} is already redirected',
             )
         if target_redirects_to:
             request.errors.add(
                 'body',
                 'target_document_id',
-                'document {0} is also redirected'.format(target_document_id),
+                f'document {target_document_id} is also redirected',
             )
         return
 
@@ -161,7 +161,7 @@ class MergeDocumentRest(ACLDefault):
         DocumentRest.update_version(
             source_doc,
             self.request.authenticated_userid,
-            'merged with {}'.format(target_document_id),
+            f'merged with {target_document_id}',
             [UpdateType.FIGURES],
             [],
         )

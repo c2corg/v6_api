@@ -83,7 +83,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
     def test_get_stopareas_by_waypoint(self):
         """Test getting stopareas for a waypoint."""
         response = self.app.get(
-            '/waypoints/{}/stopareas'.format(self.waypoint1.document_id), status=200
+            f'/waypoints/{self.waypoint1.document_id}/stopareas', status=200
         )
         result = response.json
 
@@ -118,7 +118,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
     def test_get_is_reachable_true(self):
         """Test checking if a waypoint is reachable (has stopareas)."""
         response = self.app.get(
-            '/waypoints/{}/isReachable'.format(self.waypoint1.document_id), status=200
+            f'/waypoints/{self.waypoint1.document_id}/isReachable', status=200
         )
         result = response.json
 
@@ -127,7 +127,7 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
     def test_get_is_reachable_false(self):
         """Test checking if a waypoint is not reachable (no stopareas)."""
         response = self.app.get(
-            '/waypoints/{}/isReachable'.format(self.waypoint2.document_id), status=200
+            f'/waypoints/{self.waypoint2.document_id}/isReachable', status=200
         )
         result = response.json
 

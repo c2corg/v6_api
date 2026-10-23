@@ -115,8 +115,9 @@ class TestArticleRest(BaseDocumentTestRest):
         self.get_version(self.article1, self.article1_version)
 
     def test_get_version_etag(self):
-        url = '{0}/{1}/en/{2}'.format(
-            self._prefix, str(self.article1.document_id), str(self.article1_version.id)
+        url = (
+            f'{self._prefix}/{self.article1.document_id!s}/en'
+            f'/{self.article1_version.id!s}'
         )
         response = self.app.get(url, status=200)
 
@@ -130,10 +131,11 @@ class TestArticleRest(BaseDocumentTestRest):
         self.app.get(url, status=304, headers=headers)
 
     def test_get_version_caching(self):
-        url = '{0}/{1}/en/{2}'.format(
-            self._prefix, str(self.article1.document_id), str(self.article1_version.id)
+        url = (
+            f'{self._prefix}/{self.article1.document_id!s}/en'
+            f'/{self.article1_version.id!s}'
         )
-        cache_key = '{0}-{1}'.format(
+        cache_key = '{}-{}'.format(
             get_cache_key(self.article1.document_id, 'en', ARTICLE_TYPE),
             self.article1_version.id,
         )

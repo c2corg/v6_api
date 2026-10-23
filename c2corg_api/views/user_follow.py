@@ -89,9 +89,8 @@ class UserUnfollowRest(ACLDefault):
             DBSession.delete(follower_relation)
         else:
             log.warning(
-                'tried to delete not existing follower relation ({0}, {1})'.format(
-                    followed_user_id, follower_user_id
-                )
+                f'tried to delete not existing follower relation ({followed_user_id}, '
+                f'{follower_user_id})'
             )
 
         return {}

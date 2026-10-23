@@ -62,9 +62,8 @@ def do_multi_search_for_types(search_types, search_term, limit, lang):
             .extra(from_=0, size=limit)
         )
         log.debug(
-            'Search filter for type {}: {}'.format(
-                get_documents_config.document_type, search.to_dict()
-            )
+            f'Search filter for type {get_documents_config.document_type}: '
+            f'{search.to_dict()}'
         )
         multi_search = multi_search.add(search)
 

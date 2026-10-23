@@ -51,7 +51,7 @@ def validate_navitia_params(request, **kwargs):
 
     for param in required_params:
         if param not in request.params:
-            request.errors.add('querystring', param, 'Parameter %s required' % param)
+            request.errors.add('querystring', param, f'Parameter {param} required')
 
 
 @resource(path='/navitia/journeys', cors_policy=cors_policy)
@@ -130,7 +130,7 @@ def validate_journey_reachable_params(request, **kwargs):
 
     for param in required_params:
         if param not in request.params:
-            request.errors.add('querystring', param, 'Parameter %s required' % param)
+            request.errors.add('querystring', param, f'Parameter {param} required')
 
 
 @resource(path='/navitia/journeyreachableroutes/start', cors_policy=cors_policy)
@@ -269,7 +269,7 @@ def compute_journey_reachable_routes(job_id, request):
 
         total = len(wp_objects)
         log.info('Number of NAVITIA journey queries : %d', total)
-        r.set('job:%s:total' % job_id, total)
+        r.set(f'job:{job_id}:total', total)
 
         count = found = not_found = 0
         navitia_wp_map = {}
@@ -302,14 +302,14 @@ def compute_journey_reachable_routes(job_id, request):
             routes.append(to_json_dict(route, schema_route, True))
 
         r.set(
-            'job:%s:result' % job_id,
+            f'job:{job_id}:result',
             json.dumps({'documents': routes, 'total': len(routes)}),
         )
-        r.set('job:%s:status' % job_id, 'done')
+        r.set(f'job:{job_id}:status', 'done')
     except Exception as exc:
         log.exception(str(exc))
-        r.set('job:%s:status' % job_id, 'error')
-        r.set('job:%s:error' % job_id, str(exc))
+        r.set(f'job:{job_id}:status', 'error')
+        r.set(f'job:{job_id}:error', str(exc))
     finally:
         _end_thread_db_session()
 
@@ -353,14 +353,14 @@ def compute_journey_reachable_waypoints(job_id, request):
 
         total = len(results)
         log.info('Number of NAVITIA journey queries : %d', total)
-        r.set('job:%s:total' % job_id, total)
+        r.set(f'job:{job_id}:total', total)
 
         count = found = not_found = 0
         waypoints = []
 
         for waypoint, areas in results:
             count += 1
-            r.publish('job:%s:events' % job_id, 'not_found:%d' % not_found)
+            r.publish(f'job:{job_id}:events', f'not_found:{not_found}')
             reachable = is_wp_journey_reachable(
                 to_json_dict(waypoint, schema_waypoint), journey_params
             )
@@ -378,14 +378,14 @@ def compute_journey_reachable_waypoints(job_id, request):
             _store_job_progress(r, job_id, count, found, not_found)
 
         r.set(
-            'job:%s:result' % job_id,
+            f'job:{job_id}:result',
             json.dumps({'documents': waypoints, 'total': len(waypoints)}),
         )
-        r.set('job:%s:status' % job_id, 'done')
+        r.set(f'job:{job_id}:status', 'done')
     except Exception as exc:
         log.exception('Error computing reachable waypoints')
-        r.set('job:%s:status' % job_id, 'error')
-        r.set('job:%s:error' % job_id, str(exc))
+        r.set(f'job:{job_id}:status', 'error')
+        r.set(f'job:{job_id}:error', str(exc))
     finally:
         _end_thread_db_session()
 
@@ -397,7 +397,7 @@ def validate_isochrone_reachable_params(request, **kwargs):
 
     for param in required_params:
         if param not in request.params:
-            request.errors.add('querystring', param, 'Parameter %s required' % param)
+            request.errors.add('querystring', param, f'Parameter {param} required')
 
 
 @resource(path='/navitia/isochronesreachableroutes', cors_policy=cors_policy)
@@ -554,12 +554,10 @@ def is_wp_journey_reachable(waypoint, journey_params):
     geom = shape(json.loads(waypoint.get('geometry').get('geom')))
 
     src_epsg = 3857
-    transformer = Transformer.from_crs(
-        'EPSG:%d' % src_epsg, 'EPSG:4326', always_xy=True
-    )
+    transformer = Transformer.from_crs(f'EPSG:{src_epsg}', 'EPSG:4326', always_xy=True)
     lon, lat = transformer.transform(geom.x, geom.y)
 
-    journey_params['to'] = '%s;%s' % (lon, lat)
+    journey_params['to'] = f'{lon};{lat}'
 
     destination_coverage = get_coverage(lon, lat)
 
@@ -568,7 +566,7 @@ def is_wp_journey_reachable(waypoint, journey_params):
         raise HTTPInternalServerError('Navitia API config is missing')
 
     if destination_coverage:
-        url = BASE_URL + '/coverage/%s/journeys' % destination_coverage
+        url = BASE_URL + f'/coverage/{destination_coverage}/journeys'
     else:
         url = BASE_URL + '/journeys'
 
@@ -614,7 +612,7 @@ def get_navitia_isochrone(isochrone_params):
         raise HTTPInternalServerError('Coverage not found for source')
 
     return navitia_get(
-        BASE_URL + '/coverage/%s/isochrones' % source_coverage,
+        BASE_URL + f'/coverage/{source_coverage}/isochrones',
         params=isochrone_params,
         headers={'Authorization': api_key},
     )
@@ -628,9 +626,7 @@ def is_wp_in_isochrone(waypoint, isochrone_geom):
     geom = shape(json.loads(waypoint.get('geometry').get('geom')))
 
     src_epsg = 3857
-    transformer = Transformer.from_crs(
-        'EPSG:%d' % src_epsg, 'EPSG:4326', always_xy=True
-    )
+    transformer = Transformer.from_crs(f'EPSG:{src_epsg}', 'EPSG:4326', always_xy=True)
     lon, lat = transformer.transform(geom.x, geom.y)
     pt = Point(lon, lat)
 
@@ -793,8 +789,8 @@ def start_job_background(target, request):
     request is the request to pass to the function"""
     job_id = str(uuid.uuid4())
     r = redis_client()
-    r.set('job:%s:progress' % job_id, 0)
-    r.set('job:%s:status' % job_id, 'running')
+    r.set(f'job:{job_id}:progress', 0)
+    r.set(f'job:{job_id}:status', 'running')
     threading.Thread(target=target, args=(job_id, request), daemon=True).start()
     return {'job_id': job_id}
 
@@ -825,7 +821,7 @@ def _end_thread_db_session():
 
 def get_job_status(r, job_id):
     """returns the ongoing job status"""
-    status = r.get('job:%s:status' % job_id)
+    status = r.get(f'job:{job_id}:status')
     if status is None:
         return None, {'error': 'unknown_job_id'}
     status = status.decode()
@@ -834,20 +830,20 @@ def get_job_status(r, job_id):
 
 def read_result_from_redis(r, job_id):
     """returns the result from redis"""
-    status = r.get('job:%s:status' % job_id)
+    status = r.get(f'job:{job_id}:status')
     if status is None:
         return {'error': 'unknown_job_id'}
     status = status.decode()
     if status == 'running':
         return {'status': 'running'}
     if status == 'error':
-        error_msg = r.get('job:%s:error' % job_id)
+        error_msg = r.get(f'job:{job_id}:error')
         return {
             'status': 'error',
             'message': error_msg.decode() if error_msg else 'unknown error',
         }
     if status == 'done':
-        data = r.get('job:%s:result' % job_id)
+        data = r.get(f'job:{job_id}:result')
         if not data:
             return {'status': 'error', 'message': 'missing_result'}
         return {'status': 'done', 'result': json.loads(data)}
@@ -857,10 +853,10 @@ def read_result_from_redis(r, job_id):
 def progress_stream(r, job_id, poll_interval=0.5):
     """yield the job progress"""
     while True:
-        raw_progress = r.get('job:%s:progress' % job_id)
-        raw_found = r.get('job:%s:found' % job_id)
-        raw_not_found = r.get('job:%s:not_found' % job_id)
-        raw_total = r.get('job:%s:total' % job_id)
+        raw_progress = r.get(f'job:{job_id}:progress')
+        raw_found = r.get(f'job:{job_id}:found')
+        raw_not_found = r.get(f'job:{job_id}:not_found')
+        raw_total = r.get(f'job:{job_id}:total')
 
         progress = int(raw_progress) if raw_progress is not None else 0
         found = int(raw_found) if raw_found is not None else 0
@@ -873,16 +869,16 @@ def progress_stream(r, job_id, poll_interval=0.5):
             'found': found,
             'not_found': not_found,
         }
-        yield ('data: %s\n\n' % json.dumps(payload)).encode('utf-8')
+        yield (f'data: {json.dumps(payload)}\n\n').encode()
 
-        status = r.get('job:%s:status' % job_id)
+        status = r.get(f'job:{job_id}:status')
         if status and status.decode() == 'done':
             yield b'event: done\ndata: done\n\n'
             break
         elif status and status.decode() == 'error':
-            payload = r.get('job:%s:error' % job_id)
+            payload = r.get(f'job:{job_id}:error')
             json_payload = json.dumps(ast.literal_eval(payload.decode()))
-            yield ('event: error\ndata: %s\n\n' % json_payload).encode('utf-8')
+            yield (f'event: error\ndata: {json_payload}\n\n').encode()
             break
 
         time.sleep(poll_interval)
@@ -895,9 +891,9 @@ def _store_job_progress(r, job_id, count, found, not_found):
     found : the number of successful queries
     not_found: the number of unsuccessful queries
     """
-    r.set('job:%s:progress' % job_id, count)
-    r.set('job:%s:found' % job_id, found)
-    r.set('job:%s:not_found' % job_id, not_found)
-    r.publish('job:%s:events' % job_id, 'progress:%d' % count)
-    r.publish('job:%s:events' % job_id, 'found:%d' % found)
-    r.publish('job:%s:events' % job_id, 'not_found:%d' % not_found)
+    r.set(f'job:{job_id}:progress', count)
+    r.set(f'job:{job_id}:found', found)
+    r.set(f'job:{job_id}:not_found', not_found)
+    r.publish(f'job:{job_id}:events', f'progress:{count}')
+    r.publish(f'job:{job_id}:events', f'found:{found}')
+    r.publish(f'job:{job_id}:events', f'not_found:{not_found}')

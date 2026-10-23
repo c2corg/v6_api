@@ -75,9 +75,7 @@ def validate_version(request, **kwargs):
         )
     ).scalar()
     if not version_exists:
-        raise HTTPBadRequest(
-            'Unknown version {}/{}/{}'.format(document_id, lang, version_id)
-        )
+        raise HTTPBadRequest(f'Unknown version {document_id}/{lang}/{version_id}')
 
     # check the version to revert to is not the latest one
     (last_version_id,) = (
@@ -92,9 +90,7 @@ def validate_version(request, **kwargs):
     )
     if version_id == last_version_id:
         raise HTTPBadRequest(
-            'Version {}/{}/{} is already the latest one'.format(
-                document_id, lang, version_id
-            )
+            f'Version {document_id}/{lang}/{version_id} is already the latest one'
         )
 
 
@@ -146,7 +142,7 @@ class DocumentRevertRest(ACLDefault):
             if document.geometry:
                 document.geometry.version = old_versions['geometry']
 
-        self.request.validated['message'] = 'Revert to version {}'.format(version_id)
+        self.request.validated['message'] = f'Revert to version {version_id}'
 
         update_types = DocumentRest.update_document(
             document,
@@ -203,7 +199,7 @@ class DocumentRevertRest(ACLDefault):
             )
         if document_type == AREA_TYPE:
             return Area, None, ArchiveArea, ArchiveDocumentLocale, document_type
-        raise AssertionError('unexpected document type {}'.format(document_type))
+        raise AssertionError(f'unexpected document type {document_type}')
 
     def _get_archive_document(
         self, document_id, lang, version_id, archive_clazz, archive_locale_clazz

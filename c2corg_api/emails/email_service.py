@@ -16,9 +16,9 @@ log = logging.getLogger(__name__)
 
 @cache
 def _get_file_content(lang, key):
-    filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % (lang, key)
+    filepath = os.path.dirname(__file__) + f'/i18n/{lang}/{key}'
     if not os.path.isfile(filepath):
-        filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % ('fr', key)
+        filepath = os.path.dirname(__file__) + '/i18n/{}/{}'.format('fr', key)
     with open(filepath) as f:
         content = f.read().rstrip()  # No trailing new line in subject!
     return content
@@ -34,7 +34,7 @@ class EmailLocalizator:
         try:
             return _get_file_content(lang, key)
         except Exception:
-            log.exception('The %s translation for %s could not be read' % (lang, key))
+            log.exception(f'The {lang} translation for {key} could not be read')
             return _get_file_content('fr', key)
 
 
@@ -48,13 +48,13 @@ class EmailService:
         self.mail_from = settings['mail.from']
         host = settings['mail.host']
         port = settings['mail.port']
-        self.mail_server = '%s:%s' % (host, port)
+        self.mail_server = f'{host}:{port}'
         self.settings = settings
         localizator = EmailLocalizator()
         self._ = lambda lang, key: localizator.get_translation(lang, key)
 
     def _send_email(self, to_address, subject=None, body=None):
-        log.debug('Sending email to %s through %s' % (to_address, self.mail_server))
+        log.debug(f'Sending email to {to_address} through {self.mail_server}')
 
         msg = MIMEMultipart()
         msg['From'] = self.mail_from

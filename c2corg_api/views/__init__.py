@@ -112,7 +112,7 @@ def http_error_handler(exc, request):
 
 @view_config(context=Exception)
 def catch_all_error_handler(exc, request):
-    log.exception('Unexpected error: {}'.format(exc))
+    log.exception(f'Unexpected error: {exc}')
 
     show_debugger_for_errors = request.registry.settings.get(
         'show_debugger_for_errors', ''
@@ -296,9 +296,8 @@ def set_default_geom_from_associations(doc, linked_docs, update_always=False):
                 doc.geometry = DocumentGeometry(geom=default_geom)
         else:
             log.warning(
-                'Creating or updating document {} without default geometry'.format(
-                    doc.document_id
-                )
+                f'Creating or updating document {doc.document_id} '
+                'without default geometry'
             )
 
 
@@ -349,7 +348,7 @@ def etag_cache(request, key):
     https://github.com/Pylons/pylons/blob/799c310/pylons/controllers/util.py#L148
     """
     # we are always using a weak ETag validator
-    etag = 'W/"%s"' % key
+    etag = f'W/"{key}"'
     etag_matcher = request.if_none_match
 
     if str(key) in etag_matcher:

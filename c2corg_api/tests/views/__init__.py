@@ -63,13 +63,13 @@ class BaseTestRest(BaseTestCase):
         for error in errors:
             if description == error.get('description') and name == error.get('name'):
                 return
-        self.fail('no error ({}, {}) in {}'.format(name, description, errors))
+        self.fail(f'no error ({name}, {description}) in {errors}')
 
     def get_error(self, errors, name):
         for error in errors:
             if name == error.get('name'):
                 return error
-        self.fail('no error for {0}'.format(name))
+        self.fail(f'no error for {name}')
 
     def post_json_with_token(self, url, token, body={}, status=200):
         headers = self.add_authorization_header(token=token)
@@ -244,7 +244,7 @@ class BaseDocumentTestRest(BaseTestRest):
     def get_caching(self, reference, user=None):
         headers = {} if not user else self.add_authorization_header(username=user)
 
-        url = '{0}/{1}'.format(self._prefix, str(reference.document_id))
+        url = f'{self._prefix}/{reference.document_id!s}'
         cache_key = get_cache_key(
             reference.document_id, None, document_type=self._doc_type
         )
@@ -269,15 +269,13 @@ class BaseDocumentTestRest(BaseTestRest):
 
         # check that cache handles document types
         prefix = '/routes' if self._prefix != '/routes' else '/waypoint'
-        url = '{0}/{1}'.format(prefix, str(reference.document_id))
+        url = f'{prefix}/{reference.document_id!s}'
         self.app.get(url, headers=headers, status=404)
 
     def get_version(self, reference, reference_version, user=None):
         headers = {} if not user else self.add_authorization_header(username=user)
         response = self.app.get(
-            '{0}/{1}/en/{2}'.format(
-                self._prefix, str(reference.document_id), str(reference_version.id)
-            ),
+            f'{self._prefix}/{reference.document_id!s}/en/{reference_version.id!s}',
             headers=headers,
             status=200,
         )
@@ -305,7 +303,7 @@ class BaseDocumentTestRest(BaseTestRest):
 
     def get_info(self, reference, lang):
         response = self.app.get(
-            '{0}/{1}/{2}/info'.format(self._prefix, str(reference.document_id), lang),
+            f'{self._prefix}/{reference.document_id!s}/{lang}/info',
             status=200,
         )
         self.assertEqual(response.content_type, 'application/json')
@@ -1120,7 +1118,7 @@ class BaseDocumentTestRest(BaseTestRest):
         return (body, document)
 
     def _get_association_logs(self, document):
-        url = '/associations-history?d={}'.format(document.document_id)
+        url = f'/associations-history?d={document.document_id}'
 
         resp = self.app.get(url, status=200)
         self.assertIsInstance(resp.json['count'], int)

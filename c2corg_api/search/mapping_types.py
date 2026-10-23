@@ -69,9 +69,8 @@ class QueryableMixin:
                     or field._query_name in reserved_query_fields
                 ):
                     raise ReferenceError(
-                        'Query field name `{}` is already used for {}'.format(
-                            field._query_name, search_model
-                        )
+                        f'Query field name `{field._query_name}` is already used for '
+                        f'{search_model}'
                     )
                 queryable_fields[field._query_name] = field
         return queryable_fields

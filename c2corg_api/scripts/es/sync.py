@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 
 def sync_es(session, batch_size=1000):
     last_update, date_now = es_sync.get_status(session)
-    log.info('Last update time: {}'.format(last_update))
+    log.info(f'Last update time: {last_update}')
 
     if not last_update:
         raise Exception(
@@ -46,13 +46,13 @@ def sync_es(session, batch_size=1000):
         + get_deleted_locale_documents(session, last_update)
         + get_tagged_documents(session, last_update)
     )
-    log.info('Number of changed documents: {}'.format(len(changed_documents)))
+    log.info(f'Number of changed documents: {len(changed_documents)}')
     if changed_documents:
         sync_documents(session, changed_documents, batch_size)
 
     # get list of documents deleted since the last update
     deleted_documents = get_deleted_documents(session, last_update)
-    log.info('Number of deleted documents: {}'.format(len(deleted_documents)))
+    log.info(f'Number of deleted documents: {len(deleted_documents)}')
     if deleted_documents:
         sync_deleted_documents(session, deleted_documents, batch_size)
 
@@ -314,7 +314,7 @@ def sync_documents(session, changed_documents, batch_size):
         for doc_type, document_ids in docs_per_type.items():
             if doc_type not in search_documents:
                 # some document types (e.g. coverages) are not indexed
-                logging.warning('Document type {} is not indexed'.format(doc_type))
+                logging.warning(f'Document type {doc_type} is not indexed')
                 continue
             if document_ids:
                 docs = get_documents(session, doc_type, batch_size, document_ids)
@@ -338,7 +338,7 @@ def sync_deleted_documents(session, deleted_documents, batch_size):
                 }
             )
             n += 1
-    log.info('Removed {} document(s)'.format(n))
+    log.info(f'Removed {n} document(s)')
 
 
 def add_dependent_documents(session, docs_per_type):
@@ -421,7 +421,7 @@ def create_search_documents(doc_type, documents, batch):
     for doc in documents:
         batch.add(to_search_document(doc, index))
         n += 1
-    log.info('Sent {} document(s) of type {}'.format(n, doc_type))
+    log.info(f'Sent {n} document(s) of type {doc_type}')
 
 
 # association types that require an update

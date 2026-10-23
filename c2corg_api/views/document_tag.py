@@ -49,7 +49,7 @@ def validate_document(request, **kwargs):
 
     if not document_exists:
         request.errors.add(
-            'body', 'document_id', 'document {0} does not exist'.format(document_id)
+            'body', 'document_id', f'document {document_id} does not exist'
         )
 
 
@@ -131,9 +131,7 @@ class DocumentUntagRest(ACLDefault):
             )
         else:
             log.warning(
-                'tried to delete not existing tag relation ({0}, {1})'.format(
-                    user_id, document_id
-                )
+                f'tried to delete not existing tag relation ({user_id}, {document_id})'
             )
             raise HTTPBadRequest('This document has no such tag.')
 

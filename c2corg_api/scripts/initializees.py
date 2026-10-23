@@ -24,10 +24,7 @@ from c2corg_api.search.mappings.xreport_mapping import SearchXreport
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print(
-        'usage: %s <config_uri> [var=value]\n'
-        '(example: "%s development.ini")' % (cmd, cmd)
-    )
+    print(f'usage: {cmd} <config_uri> [var=value]\n(example: "{cmd} development.ini")')
     sys.exit(1)
 
 
@@ -48,16 +45,16 @@ def setup_es():
     index_name = elasticsearch_config['index']
 
     info = client.info()
-    print('ElasticSearch version: {0}'.format(info['version']['number']))
+    print('ElasticSearch version: {}'.format(info['version']['number']))
 
     if client.indices.exists(index_name):
         print(
-            'Index "{0}" already exists. To re-create the index, manually '
-            'delete the index and run this script again.'.format(index_name)
+            f'Index "{index_name}" already exists. To re-create the index, manually '
+            'delete the index and run this script again.'
         )
         print('To delete the index run:')
         print(
-            "curl -XDELETE 'http://{0}:{1}/{2}/'".format(
+            "curl -XDELETE 'http://{}:{}/{}/'".format(
                 elasticsearch_config['host'], elasticsearch_config['port'], index_name
             )
         )
@@ -79,7 +76,7 @@ def setup_es():
 
     index.create()
 
-    print('Index "{0}" created'.format(index_name))
+    print(f'Index "{index_name}" created')
 
 
 def drop_index(silent=True):

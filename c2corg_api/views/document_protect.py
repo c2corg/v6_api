@@ -23,7 +23,7 @@ def _get_document(document_id):
     document = DBSession.get(Document, document_id)
 
     if not document:
-        raise HTTPBadRequest('Unknown document {}'.format(document_id))
+        raise HTTPBadRequest(f'Unknown document {document_id}')
 
     return document
 

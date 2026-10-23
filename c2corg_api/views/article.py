@@ -87,7 +87,7 @@ class ArticleRest(DocumentRest):
             article_id = self.request.validated['id']
             article = DBSession.get(Article, article_id)
             if article is None:
-                raise HTTPNotFound('No article found for id {}'.format(article_id))
+                raise HTTPNotFound(f'No article found for id {article_id}')
             if article.article_type == 'collab':
                 article_type = self.request.validated['document']['article_type']
                 if article_type != article.article_type:

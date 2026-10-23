@@ -132,7 +132,7 @@ class TestDocumentTaggedRest(BaseDocumentTagTest):
     def test_has_tagged(self):
         headers = self.add_authorization_header(username='contributor2')
         response = self.app.get(
-            '{}/{}'.format(self._prefix, self.route2.document_id),
+            f'{self._prefix}/{self.route2.document_id}',
             status=200,
             headers=headers,
         )
@@ -143,7 +143,7 @@ class TestDocumentTaggedRest(BaseDocumentTagTest):
     def test_has_tagged_not(self):
         headers = self.add_authorization_header(username='contributor')
         response = self.app.get(
-            '{}/{}'.format(self._prefix, self.route1.document_id),
+            f'{self._prefix}/{self.route1.document_id}',
             status=200,
             headers=headers,
         )
