@@ -638,6 +638,46 @@ class TestUserRest(BaseUserTestRest):
         with self.assertRaises(HTTPBadRequest):
             self.discourse_client.redirect(moderator, sso, sig)
 
+    def test_discourse_redirect_success(self):
+        self.set_discourse_not_mocked()
+        self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
+        return_sso_url = 'https://forum-test.example.org/session/sso_login'
+        self.discourse_client.allowed_sso_hosts = {'forum-test.example.org'}
+
+        sso, sig = self._build_signed_sso_payload(return_sso_url)
+
+        moderator = self.session.query(User).filter(User.username == 'moderator').one()
+        expected = self.discourse_client.redirect(moderator, sso, sig)
+
+        body = self.post_json_with_token(
+            '/users/discourse-redirect',
+            self.global_tokens['moderator'],
+            {'sso': sso, 'sig': sig},
+            status=200,
+        )
+        self.assertEqual(body['redirect'], expected)
+
+    def test_discourse_redirect_bad_signature(self):
+        self.set_discourse_not_mocked()
+        self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
+        self.discourse_client.allowed_sso_hosts = {'forum-test.example.org'}
+
+        sso, _ = self._build_signed_sso_payload(
+            'https://forum-test.example.org/session/sso_login'
+        )
+
+        self.post_json_with_token(
+            '/users/discourse-redirect',
+            self.global_tokens['moderator'],
+            {'sso': sso, 'sig': 'not-the-right-signature'},
+            status=400,
+        )
+
+    def test_discourse_redirect_unauthenticated(self):
+        self.app_post_json(
+            '/users/discourse-redirect', {'sso': 'x', 'sig': 'y'}, status=403
+        )
+
     def _build_signed_sso_payload(self, return_sso_url):
         payload = urlencode(
             {
