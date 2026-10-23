@@ -118,7 +118,8 @@ class TestWaypoint(BaseTestCase):
 
         # then try to update the waypoint again with the old version
         waypoint1.elevation = 2345
-        self.assertRaises(StaleDataError, self.session.merge, waypoint1)
+        with pytest.raises(StaleDataError):
+            self.session.merge(waypoint1)
 
     def test_geometry_update_optimization_4326(self):
         lat = 46.0
@@ -352,8 +353,8 @@ class TestWaypoint(BaseTestCase):
         )
 
         lon_lat_geojson = json.loads(waypoint.geometry.lon_lat)
-        self.assertAlmostEqual(lon_lat_geojson['coordinates'][0], 5.7128906, places=6)
-        self.assertAlmostEqual(lon_lat_geojson['coordinates'][1], 45.644768, places=6)
+        assert lon_lat_geojson['coordinates'][0] == pytest.approx(5.7128906, abs=5e-7)
+        assert lon_lat_geojson['coordinates'][1] == pytest.approx(45.644768, abs=5e-7)
 
     def test_get_geometry_lon_lat_none(self):
         waypoint = self._get_waypoint()

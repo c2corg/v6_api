@@ -1,6 +1,8 @@
 import json
 import unittest
 
+import pytest
+
 from c2corg_api.ext.colander_ext import wkbelement_from_geojson
 from c2corg_api.models.common.fields_waypoint import fields_waypoint
 from c2corg_api.models.schema_utils import restrict_schema
@@ -36,8 +38,8 @@ class TestUtils(unittest.TestCase, AssertionsMixin):
         )
         point = wkb_to_shape(wkb)
         assert not point.has_z
-        self.assertAlmostEqual(point.x, 1.0)
-        self.assertAlmostEqual(point.y, 2.0)
+        assert point.x == pytest.approx(1.0, abs=5e-8)
+        assert point.y == pytest.approx(2.0, abs=5e-8)
 
     def test_wkb_to_shape_linestring(self):
         wkb = wkbelement_from_geojson(

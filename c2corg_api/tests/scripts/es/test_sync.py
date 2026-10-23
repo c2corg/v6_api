@@ -1,6 +1,8 @@
 import datetime
 from unittest.mock import patch
 
+import pytest
+
 from c2corg_api.models import es_sync
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry
@@ -167,8 +169,8 @@ class SyncTest(BaseTestCase):
         assert redirected_doc['_op_type'] == 'delete'
 
         waypoint1_doc = self._get_by_id(search_documents, self.waypoint1.document_id)
-        self.assertAlmostEqual(waypoint1_doc['geom'][0], 5.71288995)
-        self.assertAlmostEqual(waypoint1_doc['geom'][1], 45.64476395)
+        assert waypoint1_doc['geom'][0] == pytest.approx(5.71288995, abs=5e-8)
+        assert waypoint1_doc['geom'][1] == pytest.approx(45.64476395, abs=5e-8)
 
         route_doc = self._get_by_id(search_documents, self.route1.document_id)
         assert route_doc['title_en'] == 'Mont Blanc : Face N'

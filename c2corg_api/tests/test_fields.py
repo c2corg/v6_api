@@ -1,5 +1,7 @@
 import unittest
 
+import pytest
+
 from c2corg_api.models.article import Article
 from c2corg_api.models.book import Book
 from c2corg_api.models.common.attributes import activities, waypoint_types
@@ -82,7 +84,7 @@ class TestFields(unittest.TestCase):
                 elif field_parts[0] == 'geometry':
                     sub_model = DocumentGeometry
                 else:
-                    self.fail(f'{field_parts[0]} not expected')
+                    pytest.fail(f'{field_parts[0]} not expected')
                 assert hasattr(sub_model, field_parts[1]), (
                     f'{field_parts[1]} not in {sub_model}'
                 )

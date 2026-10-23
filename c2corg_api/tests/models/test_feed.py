@@ -1,3 +1,5 @@
+import pytest
+
 from c2corg_api.models.area import Area
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.feed import DocumentChange
@@ -51,7 +53,7 @@ class TestDocumentChange(BaseTestCase):
         except Exception as exc:
             assert 'Invalid user id: -12345678' in exc.orig.pgerror
         else:
-            self.fail('invalid user id not detected')
+            pytest.fail('invalid user id not detected')
 
     def test_check_area_ids_on_create_invalid(self):
         """try to create a "change" with an invalid area id"""
@@ -70,7 +72,7 @@ class TestDocumentChange(BaseTestCase):
         except Exception as exc:
             assert 'Invalid area id: -123456' in exc.orig.pgerror
         else:
-            self.fail('invalid area id not detected')
+            pytest.fail('invalid area id not detected')
 
     def test_check_user_ids_on_update_invalid(self):
         """try to update a "change" with an invalid user id"""
@@ -94,7 +96,7 @@ class TestDocumentChange(BaseTestCase):
         except Exception as exc:
             assert 'Invalid user id: -12345678' in exc.orig.pgerror
         else:
-            self.fail('invalid user id not detected')
+            pytest.fail('invalid user id not detected')
 
     def test_check_changes_on_user_deletion_ok(self):
         """try to delete a user that is not referenced in a "change" """
@@ -147,7 +149,7 @@ class TestDocumentChange(BaseTestCase):
         except Exception as exc:
             assert 'still references user id' in exc.orig.pgerror
         else:
-            self.fail('user is still referenced in change')
+            pytest.fail('user is still referenced in change')
 
     def test_check_changes_on_area_deletion_ok(self):
         """try to delete an area that is not referenced in a "change" """
@@ -181,4 +183,4 @@ class TestDocumentChange(BaseTestCase):
         except Exception as exc:
             assert 'still references area id' in exc.orig.pgerror
         else:
-            self.fail('area is still referenced in change')
+            pytest.fail('area is still referenced in change')
