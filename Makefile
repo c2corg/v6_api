@@ -29,6 +29,7 @@ help:
 	@echo "- test					Run the unit tests"
 	@echo "- format				Format the Python code with ruff (and apply safe lint fixes)"
 	@echo "- lint					Check the Python code with ruff (lint and formatting)"
+	@echo "- audit				Check the locked dependencies for known vulnerabilities"
 	@echo
 	@echo "Secondary targets:"
 	@echo
@@ -71,6 +72,22 @@ lint:
 		ruff check $(SRC_DIRS)
 		ruff format --check $(SRC_DIRS)
 		@echo "Wonderful, python style is Ok!"
+
+# Known vulnerabilities that cannot be fixed yet. Re-check each one when the
+# reason goes away:
+# - urllib3 1.26: elasticsearch 2.4.1 requires urllib3<2 (goes away with the
+#   Elasticsearch 8 migration). The API only talks to trusted hosts with it.
+# - setuptools < 83: held below 81 because Pyramid 1.10 needs pkg_resources
+#   (goes away with FastAPI). The issue only affects building sdists on macOS.
+AUDIT_IGNORE = \
+		PYSEC-2026-141 PYSEC-2026-1994 PYSEC-2026-1996 PYSEC-2026-1998 \
+		PYSEC-2026-1999 PYSEC-2026-4175 PYSEC-2026-4177 \
+		PYSEC-2026-3447
+
+.PHONY: audit
+audit:
+		uv audit --frozen --preview-features audit-command \
+			$(foreach id,$(AUDIT_IGNORE),--ignore $(id))
 
 test:
 		pytest
