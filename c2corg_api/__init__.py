@@ -617,7 +617,7 @@ def _validate_and_convert_duration(min_duration, route_id):
         if min_duration is None:
             min_duration_str = 'None'
         else:
-            min_duration_str = '%0.2f', min_duration
+            min_duration_str = '%0.2f' % min_duration
         log.info(
             'Route %d: Calculated duration (min_duration=%s) is out of bounds \
             (min=%fh, max=%fh) or NULL. Setting duration to NULL.'
