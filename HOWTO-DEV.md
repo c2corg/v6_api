@@ -201,6 +201,12 @@ make format   # ruff format + ruff check --fix (also sorts imports)
 make lint     # ruff check + ruff format --check
 ```
 
+- Check the locked dependencies for known vulnerabilities (CI runs it too). Advisories that can't be fixed yet are listed in `AUDIT_IGNORE` in the Makefile, each with its reason:
+
+```shell
+make audit    # uv audit
+```
+
 - A git pre-commit hook runs ruff before each commit. `make install` and the devcontainer install it; otherwise run once per clone:
 
 ```shell
