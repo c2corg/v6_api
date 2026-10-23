@@ -535,6 +535,12 @@ class DocumentRest(ACLDefault):
         assert user_id
         assert update_types
 
+        # flush pending changes first: it updates the version numbers that
+        # the archives below copy. Callers that change the document without
+        # flushing (protect, merge) used to get this flush as a side effect
+        # of a query run by the permission checks.
+        DBSession.flush()
+
         meta_data = HistoryMetaData(comment=comment, user_id=user_id)
         archive = DocumentRest._get_document_archive(document, update_types)
         geometry_archive = DocumentRest._get_geometry_archive(document, update_types)
