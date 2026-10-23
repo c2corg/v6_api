@@ -106,9 +106,9 @@ def get_text_query_on_title(search_term, search_lang=None):
     # first without excluding the other languages.
     for lang in default_langs:
         if not mots:
-            field = 'title_{0}.ngram'.format(lang)
+            field = f'title_{lang}.ngram'
         else:
-            field = 'title_{0}.contentheavy'.format(lang)
+            field = f'title_{lang}.contentheavy'
         if search_lang and lang == search_lang:
             field += '^3'
         fields.append(field)

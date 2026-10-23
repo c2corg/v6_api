@@ -1070,7 +1070,7 @@ class TestRouteRest(BaseDocumentTestRest):
         id = self.route.document_id
         langs = ['fr', 'en']
         for lang in langs:
-            body = self.app.get('/document/%d/history/%s' % (id, lang))
+            body = self.app.get(f'/document/{id}/history/{lang}')
             username = 'contributor'
             user_id = self.global_userids[username]
 
@@ -1087,7 +1087,7 @@ class TestRouteRest(BaseDocumentTestRest):
 
     def test_history_no_lang(self):
         id = self.route.document_id
-        self.app.get('/document/%d/history/es' % id, status=404)
+        self.app.get(f'/document/{id}/history/es', status=404)
 
     def test_history_no_doc(self):
         self.app.get('/document/99999/history/es', status=404)

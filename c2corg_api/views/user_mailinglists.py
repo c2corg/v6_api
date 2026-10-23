@@ -13,16 +13,12 @@ def validate_mailinglist_statuses(request, **kwargs):
     data = request.json_body
     for ml in data:
         if ml not in valid_mailinglists:
-            request.errors.add(
-                'body', ml, 'Mailing list `{0}` does not exist'.format(ml)
-            )
+            request.errors.add('body', ml, f'Mailing list `{ml}` does not exist')
         elif not isinstance(data[ml], bool):
             request.errors.add(
                 'body',
                 ml,
-                'Status `{0}` of mailing list `{1}` should be boolean'.format(
-                    data[ml], ml
-                ),
+                f'Status `{data[ml]}` of mailing list `{ml}` should be boolean',
             )
         else:
             mailinglists[ml] = data[ml]

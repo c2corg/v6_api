@@ -158,11 +158,11 @@ class TestWaypointRest(BaseDocumentTestRest):
         )
 
     def test_get_collection_big_offset(self):
-        url = '{}?offset=10000'.format(self._prefix)
+        url = f'{self._prefix}?offset=10000'
         response = self.app.get(url, status=400)
         self.assertErrorsContain(response.json, 'Bad Request')
 
-        url = '{}?offset=9970&limit=30'.format(self._prefix)
+        url = f'{self._prefix}?offset=9970&limit=30'
         self.app.get(url, status=200)
 
     def test_get(self):
@@ -266,8 +266,9 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.get_version(self.waypoint, self.waypoint_version)
 
     def test_get_version_etag(self):
-        url = '{0}/{1}/en/{2}'.format(
-            self._prefix, str(self.waypoint.document_id), str(self.waypoint_version.id)
+        url = (
+            f'{self._prefix}/{self.waypoint.document_id!s}/en'
+            f'/{self.waypoint_version.id!s}'
         )
         response = self.app.get(url, status=200)
 
@@ -281,10 +282,11 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.app.get(url, status=304, headers=headers)
 
     def test_get_version_caching(self):
-        url = '{0}/{1}/en/{2}'.format(
-            self._prefix, str(self.waypoint.document_id), str(self.waypoint_version.id)
+        url = (
+            f'{self._prefix}/{self.waypoint.document_id!s}/en'
+            f'/{self.waypoint_version.id!s}'
         )
-        cache_key = '{0}-{1}'.format(
+        cache_key = '{}-{}'.format(
             get_cache_key(self.waypoint.document_id, 'en', WAYPOINT_TYPE),
             self.waypoint_version.id,
         )
@@ -571,9 +573,8 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertError(
             body['errors'],
             'Bad Request',
-            'no rights to modify associations with article {}'.format(
-                self.article2.document_id
-            ),
+            'no rights to modify associations with article '
+            f'{self.article2.document_id}',
         )
 
     def test_post_invalid_association_with_redirected_doc(self):
@@ -605,9 +606,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertError(
             body['errors'],
             'associations.waypoints',
-            'document "{}" does not exist or is redirected'.format(
-                self.waypoint5.document_id
-            ),
+            f'document "{self.waypoint5.document_id}" does not exist or is redirected',
         )
 
     def test_post_success(self):
@@ -1330,9 +1329,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             body['errors'],
             'Bad Request',
             'no rights to modify associations between document '
-            'w ({}) and w ({})'.format(
-                self.waypoint.document_id, self.waypoint4.document_id
-            ),
+            f'w ({self.waypoint.document_id}) and w ({self.waypoint4.document_id})',
         )
 
     def test_put_add_new_association(self):
@@ -1397,7 +1394,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         id = self.waypoint.document_id
         langs = ['fr', 'en']
         for lang in langs:
-            body = self.app.get('/document/%d/history/%s' % (id, lang))
+            body = self.app.get(f'/document/{id}/history/{lang}')
             username = 'contributor'
             user_id = self.global_userids[username]
 
@@ -1415,7 +1412,7 @@ class TestWaypointRest(BaseDocumentTestRest):
     def test_history_etag(self):
         id = self.waypoint.document_id
 
-        response = self.app.get('/document/%d/history/%s' % (id, 'fr'))
+        response = self.app.get(f'/document/{id}/history/fr')
 
         # check that the ETag header is set
         headers = response.headers
@@ -1424,9 +1421,7 @@ class TestWaypointRest(BaseDocumentTestRest):
 
         # then request the document again with the etag
         headers = {'If-None-Match': etag}
-        self.app.get(
-            '/document/%d/history/%s' % (id, 'fr'), status=304, headers=headers
-        )
+        self.app.get(f'/document/{id}/history/fr', status=304, headers=headers)
 
     def test_history_caching(self):
         waypoint_id = self.waypoint.document_id
@@ -1436,7 +1431,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.assertEqual(cache_value, NO_VALUE)
 
         # check that the response is cached
-        self.app.get('/document/%d/history/%s' % (waypoint_id, 'fr'), status=200)
+        self.app.get(f'/document/{waypoint_id}/history/fr', status=200)
 
         cache_value = cache_document_history.get(cache_key)
         self.assertNotEqual(cache_value, NO_VALUE)
@@ -1445,9 +1440,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         fake_cache_value = {'title': 'fake title'}
         cache_document_history.set(cache_key, fake_cache_value)
 
-        response = self.app.get(
-            '/document/%d/history/%s' % (waypoint_id, 'fr'), status=200
-        )
+        response = self.app.get(f'/document/{waypoint_id}/history/fr', status=200)
         body = response.json
         self.assertEqual(body, fake_cache_value)
 

@@ -185,8 +185,9 @@ class TestXreportRest(BaseDocumentTestRest):
 
     def test_get_version_etag(self):
         auth_headers = self.add_authorization_header(username='contributor')
-        url = '{0}/{1}/en/{2}'.format(
-            self._prefix, str(self.xreport1.document_id), str(self.xreport1_version.id)
+        url = (
+            f'{self._prefix}/{self.xreport1.document_id!s}/en'
+            f'/{self.xreport1_version.id!s}'
         )
         response = self.app.get(url, headers=auth_headers, status=200)
 
@@ -206,10 +207,11 @@ class TestXreportRest(BaseDocumentTestRest):
 
     def test_get_version_caching(self):
         headers = self.add_authorization_header(username='contributor')
-        url = '{0}/{1}/en/{2}'.format(
-            self._prefix, str(self.xreport1.document_id), str(self.xreport1_version.id)
+        url = (
+            f'{self._prefix}/{self.xreport1.document_id!s}/en'
+            f'/{self.xreport1_version.id!s}'
         )
-        cache_key = '{0}-{1}'.format(
+        cache_key = '{}-{}'.format(
             get_cache_key(self.xreport1.document_id, 'en', XREPORT_TYPE),
             self.xreport1_version.id,
         )

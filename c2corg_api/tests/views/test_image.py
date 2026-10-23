@@ -450,9 +450,7 @@ class TestImageRest(BaseTestImage):
         self.assertError(
             body.get('errors'),
             'Bad Request',
-            'no rights to modify associations with outing {}'.format(
-                self.outing1.document_id
-            ),
+            f'no rights to modify associations with outing {self.outing1.document_id}',
         )
 
     def test_put_wrong_document_id(self):
@@ -701,9 +699,7 @@ class TestImageRest(BaseTestImage):
             body.get('errors'),
             'Bad Request',
             'no rights to modify associations between '
-            'document o ({}) and i ({})'.format(
-                self.outing1.document_id, self.image.document_id
-            ),
+            f'document o ({self.outing1.document_id}) and i ({self.image.document_id})',
         )
 
     def test_put_success_as_contributor2(self):
@@ -1151,44 +1147,38 @@ class TestImageProxyRest(BaseTestRest):
         self.session.flush()
 
     def test_get_not_exists(self):
-        self.app.get('/images/proxy/{}'.format(999), status=404)
+        self.app.get(f'/images/proxy/{999}', status=404)
 
     def test_bad_size(self):
         resp = self.app.get(
-            '/images/proxy/{}?size=badsize'.format(self.image.document_id), status=400
+            f'/images/proxy/{self.image.document_id}?size=badsize', status=400
         )
         errors = resp.json.get('errors')
         self.assertEqual('invalid size', errors[0].get('description'))
 
     def test_success_without_size(self):
-        resp = self.app.get(
-            '/images/proxy/{}'.format(self.image.document_id), status=302
-        )
+        resp = self.app.get(f'/images/proxy/{self.image.document_id}', status=302)
         self.assertIn('image.jpg', resp.headers['Location'])
 
     def test_success_with_size(self):
         resp = self.app.get(
-            '/images/proxy/{}?size=BI'.format(self.image.document_id), status=302
+            f'/images/proxy/{self.image.document_id}?size=BI', status=302
         )
         self.assertIn('imageBI.jpg', resp.headers['Location'])
 
     def test_svg_without_size(self):
-        resp = self.app.get(
-            '/images/proxy/{}'.format(self.image2.document_id), status=302
-        )
+        resp = self.app.get(f'/images/proxy/{self.image2.document_id}', status=302)
         self.assertIn('image.svg', resp.headers['Location'])
 
     def test_svg_with_size(self):
         resp = self.app.get(
-            '/images/proxy/{}?size=BI'.format(self.image2.document_id), status=302
+            f'/images/proxy/{self.image2.document_id}?size=BI', status=302
         )
         self.assertIn('imageBI.jpg', resp.headers['Location'])
 
     def test_bad_extension(self):
         resp = self.app.get(
-            '/images/proxy/{}?size=BI&extension=badextension'.format(
-                self.image.document_id
-            ),
+            f'/images/proxy/{self.image.document_id}?size=BI&extension=badextension',
             status=400,
         )
         errors = resp.json.get('errors')
@@ -1196,14 +1186,14 @@ class TestImageProxyRest(BaseTestRest):
 
     def test_format_without_size(self):
         resp = self.app.get(
-            '/images/proxy/{}?extension=webp'.format(self.image.document_id), status=400
+            f'/images/proxy/{self.image.document_id}?extension=webp', status=400
         )
         errors = resp.json.get('errors')
         self.assertEqual('invalid extension', errors[0].get('description'))
 
     def test_format_with_size(self):
         resp = self.app.get(
-            '/images/proxy/{}?size=BI&extension=avif'.format(self.image.document_id),
+            f'/images/proxy/{self.image.document_id}?size=BI&extension=avif',
             status=302,
         )
         self.assertIn('imageBI.avif', resp.headers['Location'])
@@ -1220,9 +1210,7 @@ class TestImageProxyRest(BaseTestRest):
         self.session.add(merged)
         self.session.flush()
 
-        resp = self.app.get(
-            '/images/proxy/{}?size=BI'.format(merged.document_id), status=302
-        )
+        resp = self.app.get(f'/images/proxy/{merged.document_id}?size=BI', status=302)
         self.assertIn('imageBI.jpg', resp.headers['Location'])
 
     def test_not_an_image(self):
@@ -1232,15 +1220,13 @@ class TestImageProxyRest(BaseTestRest):
         self.session.add(article)
         self.session.flush()
 
-        self.app.get('/images/proxy/{}'.format(article.document_id), status=404)
+        self.app.get(f'/images/proxy/{article.document_id}', status=404)
 
     def test_redirect_is_cacheable(self):
-        resp = self.app.get(
-            '/images/proxy/{}'.format(self.image.document_id), status=302
-        )
+        resp = self.app.get(f'/images/proxy/{self.image.document_id}', status=302)
         self.assertEqual('public, max-age=86400', resp.headers['Cache-Control'])
 
         resp = self.app.get(
-            '/images/proxy/{}?size=MI'.format(self.image.document_id), status=302
+            f'/images/proxy/{self.image.document_id}?size=MI', status=302
         )
         self.assertEqual('public, max-age=86400', resp.headers['Cache-Control'])

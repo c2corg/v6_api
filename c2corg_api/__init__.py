@@ -209,7 +209,7 @@ def process_new_waypoint(mapper, connection, geometry):
     lon, lat = lon_lat.strip().split(',')
 
     # Navitia request - get more stop areas to filter
-    places_url = 'https://api.navitia.io/v1/coord/%s;%s/places_nearby' % (lon, lat)
+    places_url = f'https://api.navitia.io/v1/coord/{lon};{lat}/places_nearby'
     places_params = {
         'type[]': 'stop_area',
         'count': max_stop_area_fetched,  # Plus d'arrêts récupérés
@@ -292,7 +292,7 @@ def process_new_waypoint(mapper, connection, geometry):
         # Get the travel time by walking - use same parameters as bash script
         journey_url = 'https://api.navitia.io/v1/journeys'
         journey_params = {
-            'to': '%s;%s' % (lon, lat),
+            'to': f'{lon};{lat}',
             'walking_speed': walking_speed,
             'max_walking_direct_path_duration': max_duration,
             'direct_path_mode[]': 'walking',
@@ -367,7 +367,7 @@ def process_new_waypoint(mapper, connection, geometry):
                     {
                         'stop_id': stop_id,
                         'stop_name': stop_name,
-                        'line': '%s %s - %s' % (mode, line_name, line_full_name),
+                        'line': f'{mode} {line_name} - {line_full_name}',
                         'operator': operator_name,
                         'lon_stop': lon_stop,
                         'lat_stop': lat_stop,
@@ -538,8 +538,12 @@ def _calculate_climbing_duration(
 
     log.info(
         'Calculated climbing route duration for route \
-        %d (activity %s): %.2f hours (t_diff=%.2f, t_app=%.2f)'
-        % (route_id, activity, dm, t_diff, t_app)
+        %d (activity %s): %.2f hours (t_diff=%.2f, t_app=%.2f)',
+        route_id,
+        activity,
+        dm,
+        t_diff,
+        t_app,
     )
     return dm
 
@@ -597,9 +601,8 @@ def _calculate_standard_duration(
         dm = (dv / 2) + dh
 
     log.info(
-        'Calculated standard route duration for route %s \
-        (activity %s): %.2f hours'
-        % (route_id, activity, dm)
+        f'Calculated standard route duration for route {route_id} \
+        (activity {activity}): {dm:.2f} hours'
     )
     return dm
 
@@ -617,11 +620,14 @@ def _validate_and_convert_duration(min_duration, route_id):
         if min_duration is None:
             min_duration_str = 'None'
         else:
-            min_duration_str = '%0.2f', min_duration
+            min_duration_str = f'{min_duration:0.2f}'
         log.info(
             'Route %d: Calculated duration (min_duration=%s) is out of bounds \
-            (min=%fh, max=%fh) or NULL. Setting duration to NULL.'
-            % (route_id, min_duration_str, min_duration_hours, max_duration_hours)
+            (min=%fh, max=%fh) or NULL. Setting duration to NULL.',
+            route_id,
+            min_duration_str,
+            min_duration_hours,
+            max_duration_hours,
         )
         return None
 

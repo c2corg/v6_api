@@ -416,7 +416,7 @@ def _get_models(document_type):
         return Coverage, None, ArchiveDocument, None
     if document_type == XREPORT_TYPE:
         return Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale
-    raise AssertionError('unexpected document type {}'.format(document_type))
+    raise AssertionError(f'unexpected document type {document_type}')
 
 
 def remove_from_cache(document_id):

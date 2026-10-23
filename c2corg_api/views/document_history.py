@@ -31,7 +31,7 @@ class HistoryDocumentRest:
         cache_key = get_cache_key(document_id, lang, document_type=DOCUMENT_TYPE)
 
         if not cache_key:
-            raise HTTPNotFound('no version for document {0}'.format(document_id))
+            raise HTTPNotFound(f'no version for document {document_id}')
         else:
             # set and check the etag: if the etag value provided in the
             # request equals the current etag, return 'NotModified'
@@ -55,7 +55,7 @@ class HistoryDocumentRest:
         )
 
         if not title:
-            raise HTTPNotFound('no locale document for "{0}"'.format(lang))
+            raise HTTPNotFound(f'no locale document for "{lang}"')
 
         versions = (
             DBSession.query(DocumentVersion)

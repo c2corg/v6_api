@@ -17,7 +17,7 @@ class SearchUser(SearchDocument):
             return search_document
 
         for locale in document.locales:
-            search_document['title_' + locale.lang] = '{0} {1}'.format(
+            search_document['title_' + locale.lang] = '{} {}'.format(
                 document.name or '', document.forum_username or ''
             )
 

@@ -242,7 +242,7 @@ class AssertionsMixin:
             self.assertAlmostEqual(
                 coord1[i],
                 coord2[i],
-                msg='{} does not almost equal {}'.format(coord1[i], coord2[i]),
+                msg=f'{coord1[i]} does not almost equal {coord2[i]}',
             )
 
 
@@ -316,7 +316,7 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
         res = getattr(self.app, action + '_json')(*args, **kwargs)
         if status != '*' and res.status_code != status:
             errors = res.body if res.status_code == 400 else ''
-            self.fail('Bad response: %s (not %d) : %s' % (res.status, status, errors))
+            self.fail(f'Bad response: {res.status} (not {status}) : {errors}')
         return res
 
 
@@ -328,7 +328,7 @@ def reset_queue(queue_config):
 
 def reset_cache_key():
     cache_version = settings['cache_version']
-    caching_common.CACHE_VERSION = '{0}-{1}-{2}'.format(
-        cache_version, int(time.time()), randint(0, 10**9)
+    caching_common.CACHE_VERSION = (
+        f'{cache_version}-{int(time.time())}-{randint(0, 10**9)}'
     )
     caching_common.cache_status = caching_common.CacheStatus()

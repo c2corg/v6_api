@@ -82,11 +82,9 @@ class SitemapRest(ACLDefault):
 
 def _get_cache_key(doc_type=None, i=None):
     if doc_type:
-        return '{}-{}-{}-{}'.format(
-            doc_type, i, date.today().isoformat(), caching.CACHE_VERSION
-        )
+        return f'{doc_type}-{i}-{date.today().isoformat()}-{caching.CACHE_VERSION}'
     else:
-        return '{}-{}'.format(date.today().isoformat(), caching.CACHE_VERSION)
+        return f'{date.today().isoformat()}-{caching.CACHE_VERSION}'
 
 
 def _get_sitemap_index():
@@ -102,7 +100,7 @@ def _get_sitemap_index():
     for doc_type, count in document_locales_per_type:
         num_sitemaps = ceil(count / PAGES_PER_SITEMAP)
         sitemaps_for_type = [
-            {'url': '/sitemaps/{}/{}'.format(doc_type, i), 'doc_type': doc_type, 'i': i}
+            {'url': f'/sitemaps/{doc_type}/{i}', 'doc_type': doc_type, 'i': i}
             for i in range(0, num_sitemaps)
         ]
         sitemaps.extend(sitemaps_for_type)

@@ -38,7 +38,7 @@ class DocumentInfoRest:
         )
 
         if not cache_key:
-            raise HTTPNotFound('no version for document {0}'.format(document_id))
+            raise HTTPNotFound(f'no version for document {document_id}')
         else:
             etag_cache(self.request, cache_key)
 

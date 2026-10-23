@@ -146,9 +146,7 @@ class TestAssociationRest(BaseTestRest):
         self.assertError(
             body['errors'],
             'associations.outings',
-            'no rights to modify associations with outing {}'.format(
-                self.outing.document_id
-            ),
+            f'no rights to modify associations with outing {self.outing.document_id}',
         )
 
     def test_add_association_wc_article_collab(self):
@@ -184,9 +182,8 @@ class TestAssociationRest(BaseTestRest):
         self.assertError(
             body['errors'],
             'associations.articles',
-            'no rights to modify associations with article {}'.format(
-                self.article1.document_id
-            ),
+            'no rights to modify associations with article '
+            f'{self.article1.document_id}',
         )
 
     def test_add_association_wc_article_personal_authorized(self):
@@ -222,9 +219,8 @@ class TestAssociationRest(BaseTestRest):
         self.assertError(
             body['errors'],
             'associations.articles',
-            'no rights to modify associations with article {}'.format(
-                self.article2.document_id
-            ),
+            'no rights to modify associations with article '
+            f'{self.article2.document_id}',
         )
 
     def test_add_association_wi_image_personal_unauthorized(self):
@@ -247,9 +243,7 @@ class TestAssociationRest(BaseTestRest):
         self.assertError(
             body['errors'],
             'associations.images',
-            'no rights to modify associations with image {}'.format(
-                self.image1.document_id
-            ),
+            f'no rights to modify associations with image {self.image1.document_id}',
         )
 
     def test_add_association_wi_image_personal_authorized(self):
@@ -285,9 +279,7 @@ class TestAssociationRest(BaseTestRest):
         self.assertError(
             body['errors'],
             'associations.xreports',
-            'no rights to modify associations with xreport {}'.format(
-                self.report1.document_id
-            ),
+            f'no rights to modify associations with xreport {self.report1.document_id}',
         )
 
     def test_add_association_wx_xreport_authorized(self):
@@ -323,16 +315,13 @@ class TestAssociationRest(BaseTestRest):
         self.assertError(
             body['errors'],
             'associations.xreports',
-            'no rights to modify associations with xreport {}'.format(
-                self.report1.document_id
-            ),
+            f'no rights to modify associations with xreport {self.report1.document_id}',
         )
         self.assertError(
             body['errors'],
             'associations.articles',
-            'no rights to modify associations with article {}'.format(
-                self.article1.document_id
-            ),
+            'no rights to modify associations with article '
+            f'{self.article1.document_id}',
         )
 
     def test_add_association_duplicate(self):
@@ -519,9 +508,7 @@ class TestAssociationRest(BaseTestRest):
             body['errors'],
             'Bad Request',
             'no rights to modify associations between document '
-            'w ({}) and w ({})'.format(
-                self.waypoint1.document_id, self.waypoint2.document_id
-            ),
+            f'w ({self.waypoint1.document_id}) and w ({self.waypoint2.document_id})',
         )
 
     def test_delete_association_fuzzy(self):
@@ -645,9 +632,7 @@ class TestAssociationRest(BaseTestRest):
             body['errors'],
             'Bad Request',
             'no rights to modify associations between document '
-            'w ({}) and c ({})'.format(
-                self.waypoint1.document_id, self.article1.document_id
-            ),
+            f'w ({self.waypoint1.document_id}) and c ({self.article1.document_id})',
         )
 
         # but the original user can delete it

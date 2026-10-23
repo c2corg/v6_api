@@ -68,7 +68,7 @@ class BaseMaskTest(BaseTestRest):
     def _get_version(self, prefix, document_id, lang, version_id, user=None):
         headers = {} if not user else self.add_authorization_header(username=user)
         response = self.app.get(
-            '/{}/{}/{}/{}'.format(prefix, document_id, lang, version_id),
+            f'/{prefix}/{document_id}/{lang}/{version_id}',
             headers=headers,
             status=200,
         )
@@ -116,7 +116,7 @@ class TestVersionMaskRest(BaseMaskTest):
         self.assertErrorsContain(
             response.json,
             'Bad Request',
-            'Unknown version {}/{}/{}'.format(document_id, lang, version_id),
+            f'Unknown version {document_id}/{lang}/{version_id}',
         )
 
     def test_mask_latest_version(self):
@@ -146,9 +146,7 @@ class TestVersionMaskRest(BaseMaskTest):
         self.assertErrorsContain(
             response.json,
             'Bad Request',
-            'Version {}/{}/{} is the latest one'.format(
-                document_id, lang, latest_version_id
-            ),
+            f'Version {document_id}/{lang}/{latest_version_id} is the latest one',
         )
 
     def test_mask(self):

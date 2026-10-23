@@ -89,9 +89,7 @@ def main(argv=sys.argv):
             session.add_all(versions)
             session.flush()
 
-    print(
-        'Created %d users with base username `%s`' % (NB_USERS_TO_CREATE, BASE_USERNAME)
-    )
+    print(f'Created {NB_USERS_TO_CREATE} users with base username `{BASE_USERNAME}`')
 
 
 if __name__ == '__main__':

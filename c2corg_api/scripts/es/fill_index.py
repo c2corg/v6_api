@@ -26,10 +26,7 @@ from c2corg_api.search import (
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print(
-        'usage: %s <config_uri> [var=value]\n'
-        '(example: "%s development.ini")' % (cmd, cmd)
-    )
+    print(f'usage: {cmd} <config_uri> [var=value]\n(example: "{cmd} development.ini")')
     sys.exit(1)
 
 
@@ -68,7 +65,7 @@ def fill_index(session, batch_size=1000):
             status['last_progress_update'] is None
             or status['last_progress_update'] + timedelta(seconds=1) < datetime.now()
         ):
-            print('{0} of {1}'.format(count, total_count))
+            print(f'{count} of {total_count}')
             status['last_progress_update'] = datetime.now()
 
     batch = ElasticBatch(client, batch_size)
@@ -77,10 +74,10 @@ def fill_index(session, batch_size=1000):
         for doc_type in document_types:
             if doc_type not in search_documents:
                 # some document types (e.g. coverages) are not indexed
-                logging.warning('Document type {} is not indexed'.format(doc_type))
+                logging.warning(f'Document type {doc_type} is not indexed')
                 continue
 
-            logging.info('Importing document type {}'.format(doc_type))
+            logging.info(f'Importing document type {doc_type}')
             to_search_document = search_documents[doc_type].to_search_document
 
             for doc in sync.get_documents(
@@ -94,7 +91,7 @@ def fill_index(session, batch_size=1000):
     es_sync.mark_as_updated(session, date_now)
 
     duration = datetime.now() - status['start_time']
-    print('Done (duration: {0})'.format(duration))
+    print(f'Done (duration: {duration})')
 
 
 if __name__ == '__main__':

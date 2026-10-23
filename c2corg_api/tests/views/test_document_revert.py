@@ -45,7 +45,7 @@ class TestDocumentRevertRest(BaseTestRest):
         self.assertErrorsContain(
             response.json,
             'Bad Request',
-            'Unknown version {}/{}/{}'.format(document_id, lang, version_id),
+            f'Unknown version {document_id}/{lang}/{version_id}',
         )
 
     def test_revert_latest_version_id(self):
@@ -72,9 +72,7 @@ class TestDocumentRevertRest(BaseTestRest):
         self.assertErrorsContain(
             response.json,
             'Bad Request',
-            'Version {}/{}/{} is already the latest one'.format(
-                document_id, lang, version_id
-            ),
+            f'Version {document_id}/{lang}/{version_id} is already the latest one',
         )
 
     def test_revert_waypoint(self):

@@ -31,10 +31,10 @@ class DocumentVersionRest(ACLDefault):
         base_cache_key = get_cache_key(document_id, lang, document_type=document_type)
 
         if not base_cache_key:
-            raise HTTPNotFound('no version for document {0}'.format(document_id))
+            raise HTTPNotFound(f'no version for document {document_id}')
         else:
             # version caching is distinct for moderators
-            cache_key = '{0}-{1}{2}'.format(
+            cache_key = '{}-{}{}'.format(
                 base_cache_key,
                 version_id,
                 '-mod' if self.request.has_permission('moderator') else '',

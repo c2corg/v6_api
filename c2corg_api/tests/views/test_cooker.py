@@ -43,11 +43,11 @@ class TestCookerRest(BaseTestRest):
 
     def test_image_known(self):
         image = self._add_image('image.jpg')
-        html = self._cook('[img={}/]'.format(image.document_id))
+        html = self._cook(f'[img={image.document_id}/]')
 
-        self.assertIn('c2c:url="{}imageMI.jpg"'.format(self.image_url), html)
+        self.assertIn(f'c2c:url="{self.image_url}imageMI.jpg"', html)
         self.assertIn(
-            'c2c:url-proxy="/images/proxy/{}?size=MI"'.format(image.document_id), html
+            f'c2c:url-proxy="/images/proxy/{image.document_id}?size=MI"', html
         )
 
     def test_image_unknown(self):
@@ -67,11 +67,11 @@ class TestCookerRest(BaseTestRest):
         # the files of a merged image are deleted, use the target ones
         image = self._add_image('image.jpg')
         merged = self._add_image('merged.jpg', redirects_to=image.document_id)
-        html = self._cook('[img={}/]'.format(merged.document_id))
+        html = self._cook(f'[img={merged.document_id}/]')
 
-        self.assertIn('c2c:url="{}imageMI.jpg"'.format(self.image_url), html)
+        self.assertIn(f'c2c:url="{self.image_url}imageMI.jpg"', html)
         self.assertIn(
-            'c2c:url-proxy="/images/proxy/{}?size=MI"'.format(merged.document_id), html
+            f'c2c:url-proxy="/images/proxy/{merged.document_id}?size=MI"', html
         )
 
     def test_not_an_image(self):
@@ -80,7 +80,7 @@ class TestCookerRest(BaseTestRest):
         )
         self.session.add(article)
         self.session.flush()
-        html = self._cook('[img={}/]'.format(article.document_id))
+        html = self._cook(f'[img={article.document_id}/]')
 
         self.assertNotIn('c2c:url=', html)
 
@@ -88,9 +88,8 @@ class TestCookerRest(BaseTestRest):
         jpg = self._add_image('image.jpg')
         svg = self._add_image('image.svg')
         html = self._cook(
-            '[img={0} big/]\n[img={0} orig/]\n[img={1} small/]\n[img={1} orig/]'.format(
-                jpg.document_id, svg.document_id
-            )
+            f'[img={jpg.document_id} big/]\n[img={jpg.document_id} '
+            f'orig/]\n[img={svg.document_id} small/]\n[img={svg.document_id} orig/]'
         )
 
         urls = re.findall(r'c2c:url="([^"]*)"', html)
@@ -109,10 +108,9 @@ class TestCookerRest(BaseTestRest):
         svg = self._add_image('image.svg')
         merged = self._add_image('merged.jpg', redirects_to=jpg.document_id)
         html = self._cook(
-            '[img={0}/]\n[img={0} orig/]\n[img={1} big/]\n'
-            '[img={1} orig/]\n[img={2}/]'.format(
-                jpg.document_id, svg.document_id, merged.document_id
-            )
+            f'[img={jpg.document_id}/]\n[img={jpg.document_id} '
+            f'orig/]\n[img={svg.document_id} big/]\n'
+            f'[img={svg.document_id} orig/]\n[img={merged.document_id}/]'
         )
 
         imgs = re.findall(r'c2c:url="([^"]*)" c2c:url-proxy="([^"]*)"', html)
@@ -122,13 +120,11 @@ class TestCookerRest(BaseTestRest):
             self.assertEqual(url, response.headers['Location'])
 
     def test_images_resolved_with_one_query(self):
-        images = [self._add_image('image{}.jpg'.format(i)) for i in range(5)]
+        images = [self._add_image(f'image{i}.jpg') for i in range(5)]
         markdowns = {
             'lang': 'fr',
-            'description': '\n'.join(
-                '[img={}/]'.format(i.document_id) for i in images[:3]
-            ),
-            'summary': '\n'.join('[img={}/]'.format(i.document_id) for i in images[2:]),
+            'description': '\n'.join(f'[img={i.document_id}/]' for i in images[:3]),
+            'summary': '\n'.join(f'[img={i.document_id}/]' for i in images[2:]),
         }
 
         statements = []
@@ -170,17 +166,15 @@ class TestCookerRest(BaseTestRest):
             DocumentLocale(
                 lang='en',
                 title='Article',
-                description='[img={}/]\n\n[img=999999/]'.format(image.document_id),
+                description=f'[img={image.document_id}/]\n\n[img=999999/]',
             )
         )
         self.session.add(article)
         self.session.flush()
 
-        response = self.app.get(
-            '/articles/{}?cook=en'.format(article.document_id), status=200
-        )
+        response = self.app.get(f'/articles/{article.document_id}?cook=en', status=200)
         html = response.json['cooked']['description']
 
         self.assertEqual(1, html.count('c2c:url='))
-        self.assertIn('c2c:url="{}imageMI.jpg"'.format(self.image_url), html)
+        self.assertIn(f'c2c:url="{self.image_url}imageMI.jpg"', html)
         self.assertIn('c2c:url-proxy="/images/proxy/999999?size=MI"', html)

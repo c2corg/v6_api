@@ -116,9 +116,7 @@ class TestBookRest(BaseDocumentTestRest):
         self.get_version(self.book1, self.book1_version)
 
     def test_get_version_etag(self):
-        url = '{0}/{1}/en/{2}'.format(
-            self._prefix, str(self.book1.document_id), str(self.book1_version.id)
-        )
+        url = f'{self._prefix}/{self.book1.document_id!s}/en/{self.book1_version.id!s}'
         response = self.app.get(url, status=200)
 
         # check that the ETag header is set
@@ -131,10 +129,8 @@ class TestBookRest(BaseDocumentTestRest):
         self.app.get(url, status=304, headers=headers)
 
     def test_get_version_caching(self):
-        url = '{0}/{1}/en/{2}'.format(
-            self._prefix, str(self.book1.document_id), str(self.book1_version.id)
-        )
-        cache_key = '{0}-{1}'.format(
+        url = f'{self._prefix}/{self.book1.document_id!s}/en/{self.book1_version.id!s}'
+        cache_key = '{}-{}'.format(
             get_cache_key(self.book1.document_id, 'en', BOOK_TYPE),
             self.book1_version.id,
         )

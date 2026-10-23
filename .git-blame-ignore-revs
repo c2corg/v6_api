@@ -6,3 +6,6 @@ a00091106132eff0ab8490e8c483ecac5e9e3b3a
 
 # style: sort imports with ruff
 ff5662901ab4d7f24c60c58ee83f42d619b2580d
+
+# style: use f-strings instead of % and str.format
+5215f479a2c0098646af386931cc8904f7253f15

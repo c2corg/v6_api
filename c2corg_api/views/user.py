@@ -46,9 +46,9 @@ VALIDATION_EXPIRE_DAYS = 3
 MINIMUM_PASSWORD_LENGTH = 10
 
 PASSWORD_STRENGTH_ERROR = (
-    'Password must be at least {0} characters long and contain a '
-    'lowercase letter, an uppercase letter, a digit and a special '
-    'character'.format(MINIMUM_PASSWORD_LENGTH)
+    f'Password must be at least {MINIMUM_PASSWORD_LENGTH} characters long and '
+    'contain a lowercase letter, an uppercase letter, a digit and a special '
+    'character'
 )
 
 

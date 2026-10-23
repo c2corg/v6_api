@@ -92,8 +92,8 @@ class HealthRest(ACLDefault):
         if isfile(maintenance_file):
             maintenance_mode = True
             log.warning(
-                'service is in maintenance mode, remove %s to reenable.'
-                % maintenance_file
+                'service is in maintenance mode, '
+                f'remove {maintenance_file} to reenable.'
             )
             self.request.response.status_code = 404
 

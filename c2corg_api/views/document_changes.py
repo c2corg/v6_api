@@ -116,7 +116,7 @@ def load_feed(doc_ids, limit, user_id=None):
         return {'feed': []}
 
     last_change = doc_changes[-1]
-    pagination_token = '{}'.format(last_change.history_metadata_id)
+    pagination_token = f'{last_change.history_metadata_id}'
 
     return {
         'pagination_token': pagination_token,

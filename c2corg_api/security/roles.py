@@ -81,7 +81,7 @@ def remove_token(token):
     condition = Token.value == token and Token.expire > now
     result = DBSession.execute(Token.__table__.delete().where(condition))
     if result.rowcount == 0:
-        log.debug('Failed to remove token %s' % token)
+        log.debug(f'Failed to remove token {token}')
     DBSession.flush()
 
 

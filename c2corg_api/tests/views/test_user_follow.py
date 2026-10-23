@@ -116,7 +116,7 @@ class TestUserFollowingUserRest(BaseFollowTest):
     def test_following(self):
         headers = self.add_authorization_header(username='contributor')
         response = self.app.get(
-            self._prefix + '/{}'.format(self.contributor2.id),
+            self._prefix + f'/{self.contributor2.id}',
             status=200,
             headers=headers,
         )
@@ -127,7 +127,7 @@ class TestUserFollowingUserRest(BaseFollowTest):
     def test_following_not(self):
         headers = self.add_authorization_header(username='contributor')
         response = self.app.get(
-            self._prefix + '/{}'.format(self.moderator.id), status=200, headers=headers
+            self._prefix + f'/{self.moderator.id}', status=200, headers=headers
         )
         body = response.json
 

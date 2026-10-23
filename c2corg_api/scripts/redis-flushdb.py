@@ -19,10 +19,7 @@ log = logging.getLogger('c2corg_api.redis_flushdb')
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print(
-        'usage: %s <config_uri> [var=value]\n'
-        '(example: "%s development.ini")' % (cmd, cmd)
-    )
+    print(f'usage: {cmd} <config_uri> [var=value]\n(example: "{cmd} development.ini")')
     sys.exit(1)
 
 
@@ -35,8 +32,8 @@ def main(argv=sys.argv):
     settings = get_appsettings(config_uri, options=options)
     logging.getLogger('c2corg_api').setLevel(logging.INFO)
 
-    redis_url = '{0}?db={1}'.format(settings['redis.url'], settings['redis.db_cache'])
-    log.info('Cache Redis: {0}'.format(redis_url))
+    redis_url = '{}?db={}'.format(settings['redis.url'], settings['redis.db_cache'])
+    log.info(f'Cache Redis: {redis_url}')
 
     # we don't really need a connection pool here, but the `from_url`
     # function is convenient

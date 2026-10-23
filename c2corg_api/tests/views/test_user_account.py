@@ -59,7 +59,7 @@ class TestUserAccountRest(BaseUserTestRest):
 
         # Simulate confirmation email validation
         nonce = self.extract_nonce(_send_email, 'validate_change_email')
-        url_api_validation = '/users/validate_change_email/%s' % nonce
+        url_api_validation = f'/users/validate_change_email/{nonce}'
         self.app_post_json(url_api_validation, {}, status=200)
 
         self.session.expunge(user)

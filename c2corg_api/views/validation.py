@@ -149,9 +149,7 @@ def check_duplicate_locales(document, request):
         for locale in locales:
             lang = locale.get('lang')
             if lang in langs:
-                request.errors.add(
-                    'body', 'locales', 'lang "%s" is given twice' % (lang)
-                )
+                request.errors.add('body', 'locales', f'lang "{lang}" is given twice')
                 return
             langs.add(lang)
 
@@ -230,7 +228,7 @@ def validate_body_user_id(request, **kwargs):
     user_exists = DBSession.query(user_exists_query).scalar()
 
     if not user_exists:
-        request.errors.add('body', 'user_id', 'user {0} does not exist'.format(user_id))
+        request.errors.add('body', 'user_id', f'user {user_id} does not exist')
 
 
 def validate_token(request, **kwargs):
@@ -350,7 +348,7 @@ def validate_outing_association(
         outing_id = child_document_id
 
     if not has_permission_for_outing(request, outing_id):
-        msg = 'no rights to modify associations with outing {}'.format(outing_id)
+        msg = f'no rights to modify associations with outing {outing_id}'
         if raise_exc:
             raise HTTPBadRequest(msg)
         else:
@@ -443,13 +441,11 @@ def validate_personal_association(
             and not has_been_created_by(document_id, request.authenticated_userid)
             and not is_associated_user(document_id, request.authenticated_userid)
         ):
-            msg = 'no rights to modify associations with {} {}'.format(
-                label, document_id
-            )
+            msg = f'no rights to modify associations with {label} {document_id}'
             if raise_exc:
                 raise HTTPBadRequest(msg)
             else:
-                request.errors.add('body', 'associations.{}s'.format(label), msg)
+                request.errors.add('body', f'associations.{label}s', msg)
 
 
 def has_permission_for_outing(request, outing_id):
@@ -510,12 +506,8 @@ def check_permission_for_association_removal(request, association):
     if not valid_parent and not valid_child:
         raise HTTPBadRequest(
             'no rights to modify associations between document '
-            '{} ({}) and {} ({})'.format(
-                association.parent_document_type,
-                association.parent_document_id,
-                association.child_document_type,
-                association.child_document_id,
-            )
+            f'{association.parent_document_type} ({association.parent_document_id}) '
+            f'and {association.child_document_type} ({association.child_document_id})'
         )
 
 
@@ -703,18 +695,14 @@ def _check_for_valid_documents_ids(associations, errors):
                 errors.add(
                     'body',
                     'associations.' + document_key,
-                    'document "{0:n}" does not exist or is redirected'.format(
-                        document_id
-                    ),
+                    f'document "{document_id:n}" does not exist or is redirected',
                 )
                 continue
             if doc_type != type_for_document_id[str(document_id)]:
                 errors.add(
                     'body',
                     'associations.' + document_key,
-                    'document "{0:n}" is not of type "{1}"'.format(
-                        document_id, doc_type
-                    ),
+                    f'document "{document_id:n}" is not of type "{doc_type}"',
                 )
 
 

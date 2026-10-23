@@ -107,7 +107,7 @@ class MappingTest(BaseTestCase):
                 if hasattr(mapping_field, '_enum_range'):
                     self.assertFalse(
                         mapping_field._enum_range,
-                        'Field {0} should be listed as ENUM_RANGE_FIELDS'.format(field),
+                        f'Field {field} should be listed as ENUM_RANGE_FIELDS',
                     )
 
         enum_range_fields = (

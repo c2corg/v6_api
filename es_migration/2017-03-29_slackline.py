@@ -14,10 +14,7 @@ from c2corg_api.search.mappings.route_mapping import SearchRoute
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print(
-        'usage: %s <config_uri> [var=value]\n'
-        '(example: "%s development.ini")' % (cmd, cmd)
-    )
+    print(f'usage: {cmd} <config_uri> [var=value]\n(example: "{cmd} development.ini")')
     sys.exit(1)
 
 
@@ -40,10 +37,10 @@ def migrate():
     field_name = 'slackline_type'
 
     info = client.info()
-    print('ElasticSearch version: {0}'.format(info['version']['number']))
+    print('ElasticSearch version: {}'.format(info['version']['number']))
 
     if not client.indices.exists(index_name):
-        print('Index "{0}" does not exists!'.format(index_name))
+        print(f'Index "{index_name}" does not exists!')
         sys.exit(0)
 
     index = Index(index_name)
@@ -52,7 +49,7 @@ def migrate():
     )
 
     if field_mapping:
-        print('Field "{0}" already exists'.format(field_name))
+        print(f'Field "{field_name}" already exists')
         sys.exit(0)
 
     # see:
@@ -65,7 +62,7 @@ def migrate():
         },
     )
 
-    print('Field "{0}" created'.format(field_name))
+    print(f'Field "{field_name}" created')
 
 
 if __name__ == '__main__':

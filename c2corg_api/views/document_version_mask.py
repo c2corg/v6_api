@@ -38,9 +38,7 @@ def validate_version(request, **kwargs):
         )
     ).scalar()
     if not version_exists:
-        raise HTTPBadRequest(
-            'Unknown version {}/{}/{}'.format(document_id, lang, version_id)
-        )
+        raise HTTPBadRequest(f'Unknown version {document_id}/{lang}/{version_id}')
 
     # check the version to mask/unmask is not the latest one
     (latest_version_id,) = (
@@ -55,7 +53,7 @@ def validate_version(request, **kwargs):
     )
     if version_id == latest_version_id:
         raise HTTPBadRequest(
-            'Version {}/{}/{} is the latest one'.format(document_id, lang, version_id)
+            f'Version {document_id}/{lang}/{version_id} is the latest one'
         )
 
 
@@ -67,12 +65,10 @@ def _get_version(request):
     version = DBSession.get(DocumentVersion, version_id)
 
     if not version:
-        raise HTTPBadRequest('Unknown version_id {}'.format(version_id))
+        raise HTTPBadRequest(f'Unknown version_id {version_id}')
 
     if version.document_id != document_id or version.lang != lang:
-        raise HTTPBadRequest(
-            'Unknown version {}/{}/{}'.format(document_id, lang, version_id)
-        )
+        raise HTTPBadRequest(f'Unknown version {document_id}/{lang}/{version_id}')
 
     return version
 

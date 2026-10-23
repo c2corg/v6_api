@@ -134,8 +134,8 @@ class TestForumTopicRest(BaseTestRest):
     def test_post_without_title(self, create_post_mock):
         """Test topic link content for documents without title"""
         locale = self.image_locale_en
-        referer = 'https://www.camptocamp.org/images/{}/{}'.format(
-            locale.document_id, locale.lang
+        referer = (
+            f'https://www.camptocamp.org/images/{locale.document_id}/{locale.lang}'
         )
         self.post_json_with_contributor(
             '/forum/topics',
@@ -145,9 +145,9 @@ class TestForumTopicRest(BaseTestRest):
         )
         create_post_mock.assert_called_with(
             '<a href="{}">{}</a>'.format(
-                referer, '/images/{}/{}'.format(locale.document_id, locale.lang)
+                referer, f'/images/{locale.document_id}/{locale.lang}'
             ),
-            title='{}_{}'.format(locale.document_id, locale.lang),
+            title=f'{locale.document_id}_{locale.lang}',
             category_id='Commentaires',
         )
 

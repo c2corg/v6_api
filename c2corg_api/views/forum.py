@@ -38,9 +38,7 @@ def validate_topic_create(request, **kwargs):
         .one_or_none()
     )
     if locale is None:
-        request.errors.add(
-            'body', '{}/{}'.format(document_id, lang), 'Document not found'
-        )
+        request.errors.add('body', f'{document_id}/{lang}', 'Document not found')
         return
     request.validated['locale'] = locale
 
@@ -50,16 +48,14 @@ def validate_topic_create(request, **kwargs):
         .one_or_none()
     )
     if document is None:
-        request.errors.add(
-            'body', '{}/{}'.format(document_id, lang), 'Document not found'
-        )
+        request.errors.add('body', f'{document_id}/{lang}', 'Document not found')
         return
     request.validated['document'] = document
 
     if locale.topic_id is not None:
         request.errors.add(
             'body',
-            '{}_{}'.format(document_id, lang),
+            f'{document_id}_{lang}',
             'Topic already exists',
             topic_id=locale.topic_id,
         )
@@ -82,12 +78,11 @@ class ForumTopicRest(ACLDefault):
         document = self.request.validated['document']
         document_type = association_keys_for_types[document.type]
 
-        document_path = '/{}/{}/{}'.format(
-            document_type, locale.document_id, locale.lang
-        )
+        document_path = f'/{document_type}/{locale.document_id}/{locale.lang}'
 
-        content = '<a href="https://www.camptocamp.org{}">{}</a>'.format(
-            document_path, locale.title or document_path
+        content = (
+            f'<a href="https://www.camptocamp.org{document_path}">'
+            f'{locale.title or document_path}</a>'
         )
 
         category = settings['discourse.category']
@@ -99,12 +94,12 @@ class ForumTopicRest(ACLDefault):
 
         client = get_discourse_client(settings)
         try:
-            title = '{}_{}'.format(locale.document_id, locale.lang)
+            title = f'{locale.document_id}_{locale.lang}'
             response = client.client.create_post(
                 content, title=title, category_id=category
             )
         except Exception as e:
-            log.error('Error with Discourse: {}'.format(str(e)), exc_info=True)
+            log.error(f'Error with Discourse: {e!s}', exc_info=True)
             raise HTTPInternalServerError('Error with Discourse') from e
 
         if 'topic_id' in response:
@@ -120,9 +115,7 @@ class ForumTopicRest(ACLDefault):
                     self.invite_participants(client, locale, topic_id)
                 except Exception:
                     log.error(
-                        'Inviting participants of outing {} failed'.format(
-                            locale.document_id
-                        ),
+                        f'Inviting participants of outing {locale.document_id} failed',
                         exc_info=True,
                     )
 
@@ -141,8 +134,6 @@ class ForumTopicRest(ACLDefault):
                 client.invite_user_to_topic(forum_username, topic_id)
             except Exception:
                 log.error(
-                    'Inviting forum user {} in topic {} failed'.format(
-                        forum_username, topic_id
-                    ),
+                    f'Inviting forum user {forum_username} in topic {topic_id} failed',
                     exc_info=True,
                 )

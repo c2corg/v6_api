@@ -145,26 +145,24 @@ def update_cache_version_associations(
 def _format_cache_key(document_id, lang, version, doc_type=None, custom_cache_key=None):
     if not version:
         # no version for this document id, the document should not exist
-        log.debug('no version for document id {0}'.format(document_id))
+        log.debug(f'no version for document id {document_id}')
         return None
 
     cache_key = None
     if not lang:
-        cache_key = '{0}-{1}-{2}'.format(document_id, version, caching.CACHE_VERSION)
+        cache_key = f'{document_id}-{version}-{caching.CACHE_VERSION}'
     else:
-        cache_key = '{0}-{1}-{2}-{3}'.format(
-            document_id, lang, version, caching.CACHE_VERSION
-        )
+        cache_key = f'{document_id}-{lang}-{version}-{caching.CACHE_VERSION}'
 
     if doc_type:
-        cache_key = '{0}-{1}'.format(cache_key, doc_type)
+        cache_key = f'{cache_key}-{doc_type}'
 
     # custom_cache_key is used for xreports to distinguish between the cache
     # values for users that are allowed to see the full xreport with personal
     # data (moderators and the creator of the xreport) and a public version for
     # all other users.
     if custom_cache_key:
-        cache_key = '{0}-{1}'.format(cache_key, custom_cache_key)
+        cache_key = f'{cache_key}-{custom_cache_key}'
 
     return cache_key
 

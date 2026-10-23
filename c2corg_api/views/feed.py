@@ -330,8 +330,9 @@ def load_feed(changes, lang):
         return {'feed': []}
 
     last_change = changes[-1]
-    pagination_token = '{},{}'.format(
-        last_change.change_id, urllib_parse.quote_plus(last_change.time.isoformat())
+    pagination_token = (
+        f'{last_change.change_id}'
+        f',{urllib_parse.quote_plus(last_change.time.isoformat())}'
     )
 
     return {

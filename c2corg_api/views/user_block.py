@@ -25,7 +25,7 @@ def _get_user(user_id):
     user = DBSession.get(User, user_id)
 
     if not user:
-        raise HTTPBadRequest('Unknown user {}'.format(user_id))
+        raise HTTPBadRequest(f'Unknown user {user_id}')
 
     return user
 

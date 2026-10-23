@@ -79,7 +79,7 @@ class APIDiscourseClient:
         """Invite a forum user, by username, to a topic."""
         # pydiscourse only invites by e-mail (invite_user_to_topic); the
         # c2corg fork used to add this call by username.
-        return self.client._post('/t/{0}/invite.json'.format(topic_id), user=username)
+        return self.client._post(f'/t/{topic_id}/invite.json', user=username)
 
     # Below this: SSO provider
     def decode_payload(self, payload):
@@ -98,7 +98,7 @@ class APIDiscourseClient:
             raise HTTPBadRequest('discourse login failed')
 
     def request_nonce(self):
-        url = '%s/session/sso' % self.discourse_base_url
+        url = f'{self.discourse_base_url}/session/sso'
         try:
             r = requests.get(url, allow_redirects=False, timeout=self.timeout)
             assert r.status_code == 302
@@ -132,7 +132,7 @@ class APIDiscourseClient:
         r_payload = b64encode(urllib.parse.urlencode(params).encode('utf-8'))
         h = hmac.new(key, r_payload, digestmod=hashlib.sha256)
         qs = urllib.parse.urlencode({'sso': r_payload, 'sig': h.hexdigest()})
-        return '%s?%s' % (return_sso_url, qs)
+        return f'{return_sso_url}?{qs}'
 
     def get_nonce_from_sso(self, sso, sig):
         payload = urllib.parse.unquote(sso)
@@ -171,7 +171,7 @@ class APIDiscourseClient:
     def redirect_without_nonce(self, user):
         nonce = self.request_nonce()
         return self.create_response_payload(
-            user, nonce, '%s/session/sso_login' % self.discourse_public_url
+            user, nonce, f'{self.discourse_public_url}/session/sso_login'
         )
 
 

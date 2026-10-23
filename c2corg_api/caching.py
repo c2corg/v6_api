@@ -21,7 +21,7 @@ cache_status = None
 def create_region(name):
     return make_region(
         # prefix all keys (e.g. returns 'c2corg_main:detail:38575-1')
-        key_mangler=lambda key: '{0}:{1}:{2}'.format(KEY_PREFIX, name, key)
+        key_mangler=lambda key: f'{KEY_PREFIX}:{name}:{key}'
     )
 
 
@@ -56,13 +56,13 @@ def configure_caches(settings):
     # server reloads when the code changes)
     cache_version = settings['cache_version']
     if settings['cache_version_timestamp'] == 'True':
-        cache_version = '{0}-{1}'.format(cache_version, int(time.time()))
+        cache_version = f'{cache_version}-{int(time.time())}'
     CACHE_VERSION = cache_version
 
-    log.debug('Cache version {0}'.format(CACHE_VERSION))
+    log.debug(f'Cache version {CACHE_VERSION}')
 
-    redis_url = '{0}?db={1}'.format(settings['redis.url'], settings['redis.db_cache'])
-    log.debug('Cache Redis: {0}'.format(redis_url))
+    redis_url = '{}?db={}'.format(settings['redis.url'], settings['redis.db_cache'])
+    log.debug(f'Cache Redis: {redis_url}')
 
     redis_pool = BlockingConnectionPool.from_url(
         redis_url,

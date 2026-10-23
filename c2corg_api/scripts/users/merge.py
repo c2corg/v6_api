@@ -42,8 +42,8 @@ from c2corg_api.views.document_merge import _and_in, transfer_associations
 def usage(argv):
     cmd = os.path.basename(argv[0])
     exit(
-        'usage: {} <source_user_id> <target_user_id>\n'
-        '(example: {} 123456 811780")'.format(cmd, cmd)
+        f'usage: {cmd} <source_user_id> <target_user_id>\n'
+        f'(example: {cmd} 123456 811780")'
     )
 
 
@@ -82,41 +82,36 @@ def main(argv=sys.argv):
 
     source_user = DBSession.get(User, source_user_id)
     if not source_user:
-        exit('ERROR: source user account (id {}) does not exist'.format(source_user_id))
+        exit(f'ERROR: source user account (id {source_user_id}) does not exist')
 
     target_user = DBSession.get(User, target_user_id)
     if not target_user:
-        exit('ERROR: target user account (id {}) does not exist'.format(target_user_id))
+        exit(f'ERROR: target user account (id {target_user_id}) does not exist')
 
     if not args.force:
         sys.stdout.write(
             '\n'
             'Are you sure you want to merge the following accounts? [y/N]\n'
-            'source: id {}: {}/{}\n'
-            'target: id {}: {}/{}\n'.format(
-                source_user.id,
-                source_user.name,
-                source_user.forum_username,
-                target_user.id,
-                target_user.name,
-                target_user.forum_username,
-            )
+            f'source: id {source_user.id}: '
+            f'{source_user.name}/{source_user.forum_username}\n'
+            f'target: id {target_user.id}: '
+            f'{target_user.name}/{target_user.forum_username}\n'
         )
         if input().lower()[:1] != 'y':
             exit('ABORTED: User accounts merging has been aborted')
 
     print(
-        'Merging user account {} to user account {} in progress.\n'
-        'Please wait...'.format(source_user_id, target_user_id)
+        f'Merging user account {source_user_id} to user account {target_user_id}'
+        ' in progress.\n'
+        'Please wait...'
     )
 
     with transaction.manager:
         merge_user_accounts(source_user_id, target_user_id, queue_config)
 
     print(
-        'SUCCESS: User account {} has been merged to user account {}'.format(
-            source_user_id, target_user_id
-        )
+        f'SUCCESS: User account {source_user_id} has been merged to user account '
+        f'{target_user_id}'
     )
 
 
