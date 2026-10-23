@@ -1,14 +1,48 @@
 import datetime
-import time
+import types
 from unittest.mock import patch
 
 from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
 
 
+class _Clock:
+    """A clock that only moves when the test says so."""
+
+    def __init__(self):
+        self.now = datetime.datetime.now(datetime.UTC)
+
+    def advance(self, seconds):
+        self.now += datetime.timedelta(seconds=seconds)
+
+    def datetime_module(self):
+        # stands in for the `datetime` module imported by the tween: only
+        # `datetime.now()` is redirected to this clock
+        clock = self
+
+        class _Datetime(datetime.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return clock.now.astimezone(tz)
+
+        return types.SimpleNamespace(
+            datetime=_Datetime, timedelta=datetime.timedelta, UTC=datetime.UTC
+        )
+
+
 class RateLimitingTest(BaseTestRest):
     def setUp(self):  # noqa
         BaseTestRest.setUp(self)
+
+        # The rate limiting window is a few seconds long in the tests: with
+        # the real clock it could expire in the middle of a test on a slow
+        # run, so the tween reads the time from a clock the test controls.
+        self.clock = _Clock()
+        clock_patch = patch(
+            'c2corg_api.tweens.rate_limiting.datetime', self.clock.datetime_module()
+        )
+        clock_patch.start()
+        self.addCleanup(clock_patch.stop)
         self._prefix = '/waypoints'
 
         self.username = None
@@ -52,12 +86,10 @@ class RateLimitingTest(BaseTestRest):
         self.assertEqual(self.user.ratelimit_remaining, limit - 1)
 
         expiration_date = self.user.ratelimit_reset
-        delta = (
-            datetime.datetime.now(datetime.UTC)
-            + datetime.timedelta(seconds=self.window_span)
-            - self.user.ratelimit_reset
+        self.assertEqual(
+            expiration_date,
+            self.clock.now + datetime.timedelta(seconds=self.window_span),
         )
-        self.assertLessEqual(delta.total_seconds(), 2)
 
         # Make as many requests as allowed according to the settings
         # (already 1 request as been consumed when creating the document)
@@ -182,9 +214,8 @@ class RateLimitingTest(BaseTestRest):
         )
 
     def _wait(self):
-        waiting_time = self.window_span + 1
-        print('Waiting %d secs the rate limiting window expires...' % waiting_time)
-        time.sleep(waiting_time)
+        # let the rate limiting window expire
+        self.clock.advance(self.window_span + 1)
 
     def _set_user(self, username):
         self.username = username
