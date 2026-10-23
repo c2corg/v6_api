@@ -50,7 +50,6 @@ dependencies = [
     "zope.sqlalchemy==4.1",
     "gunicorn==26.2.0",
     "python-dotenv==1.2.4",
-    "pytz==2026.5",
     # needs: https://github.com/stefanofontanelli/ColanderAlchemy/pull/90 + 91
     # and SQLAlchemy 2.0 support (branch sqlalchemy-2.0-support of the fork)
     "ColanderAlchemy @ git+https://github.com/c2corg/ColanderAlchemy.git@d2cc04a041d111deac307666e20fc24e47cc62e6",

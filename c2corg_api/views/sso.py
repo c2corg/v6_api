@@ -1,6 +1,6 @@
 import logging
 from base64 import b64encode
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from os import urandom
 from urllib.parse import urlencode
 
@@ -11,7 +11,6 @@ from pydiscourse.exceptions import DiscourseClientError
 from pyramid.httpexceptions import (
     HTTPInternalServerError,
 )
-from pytz import utc
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.common.attributes import default_langs
@@ -231,7 +230,7 @@ def generate_token():
 
 
 def localized_now():
-    return utc.localize(datetime.utcnow())
+    return datetime.now(UTC)
 
 
 def sso_expire_from_now():

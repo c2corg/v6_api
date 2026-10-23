@@ -13,7 +13,6 @@ from alembic.config import Config
 from dotenv import load_dotenv
 from pyramid import testing
 from pyramid.paster import get_appsettings
-from pytz import utc
 from sqlalchemy import engine_from_config
 
 from c2corg_api import caching as caching_common
@@ -181,7 +180,7 @@ def _add_global_test_data(session):
         external_id='1',
         user=contributor,
         token='token',
-        expire=utc.localize(datetime.datetime.utcnow()),
+        expire=datetime.datetime.now(datetime.UTC),
     )
     session.add(sso_external_id)
 
