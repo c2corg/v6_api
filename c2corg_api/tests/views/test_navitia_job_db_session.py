@@ -33,13 +33,13 @@ class TestNavitiaJobDbSession(BaseTestCase):
     # The jobs run in their own thread, outside of pyramid_tm: they must end
     # their transaction and remove their scoped session themselves.
 
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         # Use a real pool (not the test connection) to count connections.
         self.job_engine = get_engine()
         DBSession.configure(bind=self.job_engine)
 
-    def tearDown(self):  # noqa
+    def tearDown(self):
         DBSession.configure(bind=self.connection)
         self.job_engine.dispose()
         super().tearDown()

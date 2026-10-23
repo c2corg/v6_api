@@ -22,7 +22,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class TestCacheVersion(BaseTestCase):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestCase.setUp(self)
 
     def test_trigger_create_cache_version(self):

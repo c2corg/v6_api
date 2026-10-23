@@ -225,7 +225,7 @@ class BaseTestImage(BaseDocumentTestRest):
 
 
 class TestImageRest(BaseTestImage):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/images', IMAGE_TYPE, Image, ArchiveImage, ArchiveDocumentLocale
         )
@@ -971,7 +971,7 @@ class TestImageRest(BaseTestImage):
 
 
 class TestImageListRest(BaseTestImage):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/images', IMAGE_TYPE, Image, ArchiveImage, ArchiveDocumentLocale
         )
@@ -1129,7 +1129,7 @@ class TestImageListRest(BaseTestImage):
 
 
 class TestImageProxyRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestRest.setUp(self)
         self._add_test_data()
 

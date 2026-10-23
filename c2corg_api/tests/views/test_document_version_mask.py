@@ -9,7 +9,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class BaseMaskTest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
 
         self.contributor = self.session.get(User, self.global_userids['contributor'])
@@ -83,7 +83,7 @@ class BaseMaskTest(BaseTestRest):
 
 
 class TestVersionMaskRest(BaseMaskTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/versions/mask'
 
@@ -225,7 +225,7 @@ class TestVersionMaskRest(BaseMaskTest):
 
 
 class TestVersionUnmaskRest(BaseMaskTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/versions/unmask'
 

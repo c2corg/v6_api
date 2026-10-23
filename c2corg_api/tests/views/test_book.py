@@ -22,7 +22,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class TestBookRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/books', BOOK_TYPE, Book, ArchiveBook, ArchiveDocumentLocale
         )

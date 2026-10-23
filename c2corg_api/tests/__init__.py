@@ -282,7 +282,7 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
         yield
         self.session.close()
 
-    def setUp(self):  # noqa
+    def setUp(self):
         registry = self.app.app.registry
         self.email_service = EmailService(settings)
         EmailService.instance = None
@@ -294,7 +294,7 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
         reset_cache_key()
         registry.feed_admin_user_account_id = None
 
-    def tearDown(self):  # noqa
+    def tearDown(self):
         # the database transaction is rolled back by the db_connection
         # fixture, after this
         testing.tearDown()

@@ -3,7 +3,7 @@ from c2corg_api.tests.views import BaseDocumentTestRest
 
 
 class TestStopareaRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model('/stopareas', 'sa', Stoparea, None, None)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
@@ -49,7 +49,7 @@ class TestStopareaRest(BaseDocumentTestRest):
 
 
 class TestStopareaInfoRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model('/stopareas', 'sa', Stoparea, None, None)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()

@@ -27,7 +27,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class TestXreportRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/xreports', XREPORT_TYPE, Xreport, ArchiveXreport, ArchiveXreportLocale
         )

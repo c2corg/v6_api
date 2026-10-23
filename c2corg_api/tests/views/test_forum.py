@@ -77,7 +77,7 @@ class TestForumTopicRest(BaseTestRest):
 
         self.session.flush()
 
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestRest.setUp(self)
         self._add_test_data()
 

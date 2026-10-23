@@ -36,7 +36,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class MergeUsersTest(BaseTestCase):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestCase.setUp(self)
         self._add_test_data()
 
@@ -310,7 +310,7 @@ class MergeUsersTest(BaseTestCase):
             elevation_max=1500,
             locales=[OutingLocale(lang='en', title='foo')],
             geometry=DocumentGeometry(
-                geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)'  # noqa
+                geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)'
             ),
         )
         self.session.add(self.outing1)
@@ -325,7 +325,7 @@ class MergeUsersTest(BaseTestCase):
             elevation_max=1500,
             locales=[OutingLocale(lang='en', title='foo')],
             geometry=DocumentGeometry(
-                geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)'  # noqa
+                geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)'
             ),
         )
         self.session.add(self.outing2)

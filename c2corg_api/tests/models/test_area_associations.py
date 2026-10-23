@@ -11,7 +11,7 @@ from c2corg_api.tests import BaseTestCase
 
 
 class TestAreaAssociation(BaseTestCase):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestCase.setUp(self)
 
         self.area1 = Area(

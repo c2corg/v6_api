@@ -359,7 +359,7 @@ class DocumentGeometry(Base, _DocumentGeometryMixin):
         g2, proj2 = self.get_shape(other_geom)
 
         # https://github.com/Toblerity/Shapely/blob/
-        # 8df2b1b718c89e7d644b246ab07ad3670d25aa6a/shapely/geometry/base.py#L673  # noqa: E501
+        # 8df2b1b718c89e7d644b246ab07ad3670d25aa6a/shapely/geometry/base.py#L673
         decimals = None
         if proj1 != proj2:
             # Should never occur

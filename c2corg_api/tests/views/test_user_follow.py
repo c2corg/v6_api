@@ -5,7 +5,7 @@ from c2corg_api.views.user_follow import get_follower_relation
 
 
 class BaseFollowTest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
 
         self.contributor = self.session.get(User, self.global_userids['contributor'])
@@ -26,7 +26,7 @@ class BaseFollowTest(BaseTestRest):
 
 
 class TestUserFollowRest(BaseFollowTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/users/follow'
 
@@ -67,7 +67,7 @@ class TestUserFollowRest(BaseFollowTest):
 
 
 class TestUserUnfollowRest(BaseFollowTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/users/unfollow'
 
@@ -106,7 +106,7 @@ class TestUserUnfollowRest(BaseFollowTest):
 
 
 class TestUserFollowingUserRest(BaseFollowTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/users/following-user'
 
@@ -155,7 +155,7 @@ class TestUserFollowingUserRest(BaseFollowTest):
 
 
 class TestUserFollowingRest(BaseFollowTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/users/following'
 

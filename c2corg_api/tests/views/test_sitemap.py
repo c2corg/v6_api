@@ -4,7 +4,7 @@ from c2corg_api.tests.views import BaseTestRest
 
 
 class TestSitemapRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/sitemaps'
 

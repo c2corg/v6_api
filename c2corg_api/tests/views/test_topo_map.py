@@ -18,7 +18,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class TestTopoMapRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/maps', MAP_TYPE, TopoMap, ArchiveTopoMap, ArchiveDocumentLocale
         )

@@ -8,7 +8,7 @@ from c2corg_api.tests import BaseTestCase
 
 
 class TestDocumentChange(BaseTestCase):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestCase.setUp(self)
         self.user1 = self.session.get(User, self.global_userids['contributor'])
         self.user2 = self.session.get(User, self.global_userids['contributor2'])

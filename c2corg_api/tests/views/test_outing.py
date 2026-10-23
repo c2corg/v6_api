@@ -28,7 +28,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class TestOutingRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/outings', OUTING_TYPE, Outing, ArchiveOuting, ArchiveOutingLocale
         )
@@ -1392,7 +1392,7 @@ class TestOutingRest(BaseDocumentTestRest):
             height_diff_down=800,
             durations='1',
             geometry=DocumentGeometry(
-                geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',  # noqa
+                geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
                 geom='SRID=3857;POINT(635961 5723624)',
             ),
         )

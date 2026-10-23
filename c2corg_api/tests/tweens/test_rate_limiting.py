@@ -7,7 +7,7 @@ from c2corg_api.tests.views import BaseTestRest
 
 
 class RateLimitingTest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestRest.setUp(self)
         self._prefix = '/waypoints'
 
