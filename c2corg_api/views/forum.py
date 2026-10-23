@@ -105,7 +105,7 @@ class ForumTopicRest(ACLDefault):
             )
         except Exception as e:
             log.error('Error with Discourse: {}'.format(str(e)), exc_info=True)
-            raise HTTPInternalServerError('Error with Discourse')
+            raise HTTPInternalServerError('Error with Discourse') from e
 
         if 'topic_id' in response:
             topic_id = response['topic_id']

@@ -32,7 +32,7 @@ class Geometry(SchemaType):
         The SRID of the geometry should also match the column definition.
     """
 
-    def __init__(self, geometry_types=['GEOMETRY'], srid=-1, map_srid=-1):
+    def __init__(self, geometry_types=('GEOMETRY',), srid=-1, map_srid=-1):
         self.geometry_types = [t.upper() for t in geometry_types]
         self.srid = int(srid)
 
@@ -61,8 +61,8 @@ class Geometry(SchemaType):
             data = geojson.loads(cstruct)
         except Invalid as exc:
             raise exc
-        except Exception:
-            raise Invalid(node, 'Invalid geometry: %s' % cstruct)
+        except Exception as e:
+            raise Invalid(node, 'Invalid geometry: %s' % cstruct) from e
         if not isinstance(data, geojson.GeoJSON):
             raise Invalid(node, 'Invalid geometry: %s' % cstruct)
         geom_type = data['type'].upper()

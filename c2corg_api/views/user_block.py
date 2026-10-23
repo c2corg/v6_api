@@ -55,11 +55,13 @@ class UserBlockRest(ACLDefault):
             client = get_discourse_client(self.request.registry.settings)
             block_duration = 99999  # 99999 days = 273 years
             client.suspend(user.id, block_duration, 'account blocked by moderator')
-        except Exception:
+        except Exception as e:
             log.error(
                 'Suspending account in Discourse failed: %d', user.id, exc_info=True
             )
-            raise HTTPInternalServerError('Suspending account in Discourse failed')
+            raise HTTPInternalServerError(
+                'Suspending account in Discourse failed'
+            ) from e
 
         return {}
 
@@ -91,11 +93,13 @@ class UserUnblockRest(ACLDefault):
         try:
             client = get_discourse_client(self.request.registry.settings)
             client.unsuspend(user.id)
-        except Exception:
+        except Exception as e:
             log.error(
                 'Unsuspending account in Discourse failed: %d', user.id, exc_info=True
             )
-            raise HTTPInternalServerError('Unsuspending account in Discourse failed')
+            raise HTTPInternalServerError(
+                'Unsuspending account in Discourse failed'
+            ) from e
 
         return {}
 

@@ -30,11 +30,13 @@ def search_for_types(search_types, search_term, limit, lang):
 
     # load the documents using the document ids returned from the search
     results = {}
-    for search_type, result_for_type in zip(search_types, results_for_type):
+    for search_type, result_for_type in zip(
+        search_types, results_for_type, strict=True
+    ):
         (key, get_documents_config) = search_type
         (document_ids, total) = result_for_type
 
-        def search_documents(_, __):
+        def search_documents(_, __, document_ids=document_ids, total=total):
             return document_ids, total
 
         results[key] = get_documents(

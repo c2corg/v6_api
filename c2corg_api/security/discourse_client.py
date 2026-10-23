@@ -102,9 +102,9 @@ class APIDiscourseClient:
         try:
             r = requests.get(url, allow_redirects=False, timeout=self.timeout)
             assert r.status_code == 302
-        except Exception:
+        except Exception as e:
             log.error('Could not request nonce', exc_info=True)
-            raise Exception('Could not request nonce')
+            raise Exception('Could not request nonce') from e
 
         location = r.headers['Location']
         parsed = urllib.parse.urlparse(location)
@@ -140,7 +140,7 @@ class APIDiscourseClient:
             decoded = self.decode_payload(payload)
         except Exception as e:
             log.error('Failed to decode payload', e)
-            raise HTTPBadRequest('discourse login failed')
+            raise HTTPBadRequest('discourse login failed') from e
 
         self.check_signature(payload, sig)
 

@@ -110,7 +110,7 @@ def get_or_create(cache, key, creator):
         cache_status.request_success()
         return value
     except CreatorException as creator_exception:
-        raise creator_exception.exc
+        raise creator_exception.exc from None
     except Exception:
         log.error('Getting value from cache failed', exc_info=True)
         cache_status.request_failure()
@@ -135,7 +135,7 @@ def get_or_create_multi(cache, keys, creator, should_cache_fn=None):
         cache_status.request_success()
         return values
     except CreatorException as creator_exception:
-        raise creator_exception.exc
+        raise creator_exception.exc from None
     except Exception:
         log.error('Getting values from cache failed', exc_info=True)
         cache_status.request_failure()
@@ -195,7 +195,7 @@ def creator_wrapper(creator):
         try:
             return creator(*args, **kwargs)
         except Exception as exc:
-            raise CreatorException(exc)
+            raise CreatorException(exc) from exc
 
     return fn
 

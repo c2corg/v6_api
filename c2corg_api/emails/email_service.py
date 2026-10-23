@@ -14,27 +14,28 @@ import os
 log = logging.getLogger(__name__)
 
 
+@cache
+def _get_file_content(lang, key):
+    filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % (lang, key)
+    if not os.path.isfile(filepath):
+        filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % ('fr', key)
+    with open(filepath) as f:
+        content = f.read().rstrip()  # No trailing new line in subject!
+    return content
+
+
 class EmailLocalizator:
     def __init__(self):
         self.default_lang = 'fr'
-
-    @cache
-    def _get_file_content(self, lang, key):
-        filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % (lang, key)
-        if not os.path.isfile(filepath):
-            filepath = os.path.dirname(__file__) + '/i18n/%s/%s' % ('fr', key)
-        with open(filepath) as f:
-            content = f.read().rstrip()  # No trailing new line in subject!
-        return content
 
     def get_translation(self, lang, key):
         if lang not in default_langs:
             raise Exception('Bad language' + lang)
         try:
-            return self._get_file_content(lang, key)
+            return _get_file_content(lang, key)
         except Exception:
             log.exception('The %s translation for %s could not be read' % (lang, key))
-            return self._get_file_content('fr', key)
+            return _get_file_content('fr', key)
 
 
 # See https://docs.python.org/3/library/smtplib.html#smtplib.SMTP.sendmail

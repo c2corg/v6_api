@@ -963,7 +963,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         # check that a new archive_document was created
         archive_count = (
             self.session.query(self._model_archive)
-            .filter(getattr(self._model_archive, 'document_id') == document_id)
+            .filter(self._model_archive.document_id == document_id)
             .count()
         )
         self.assertEqual(archive_count, 2)
@@ -971,7 +971,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         # check that a new archive_document_locale was created
         archive_locale_count = (
             self.session.query(self._model_archive_locale)
-            .filter(document_id == getattr(self._model_archive_locale, 'document_id'))
+            .filter(document_id == self._model_archive_locale.document_id)
             .count()
         )
         self.assertEqual(archive_locale_count, 3)
@@ -1173,7 +1173,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         # check that a new archive_document was created
         archive_count = (
             self.session.query(self._model_archive)
-            .filter(getattr(self._model_archive, 'document_id') == document_id)
+            .filter(self._model_archive.document_id == document_id)
             .count()
         )
         self.assertEqual(archive_count, 1)
@@ -1181,7 +1181,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         # check that no new archive_document_locale was created
         archive_locale_count = (
             self.session.query(self._model_archive_locale)
-            .filter(document_id == getattr(self._model_archive_locale, 'document_id'))
+            .filter(document_id == self._model_archive_locale.document_id)
             .count()
         )
         self.assertEqual(archive_locale_count, 1)

@@ -164,7 +164,7 @@ class BaseDocumentTestRest(BaseTestRest):
             else:
                 nb_docs = (
                     self.session.query(self._model)
-                    .filter(getattr(self._model, 'redirects_to').is_(None))
+                    .filter(self._model.redirects_to.is_(None))
                     .count()
                 )
             self.assertEqual(len(documents), nb_docs)
@@ -765,7 +765,7 @@ class BaseDocumentTestRest(BaseTestRest):
         # check that a new archive_document was created
         archive_count = (
             self.session.query(self._model_archive)
-            .filter(getattr(self._model_archive, 'document_id') == document_id)
+            .filter(self._model_archive.document_id == document_id)
             .count()
         )
         self.assertEqual(archive_count, 2)
@@ -774,7 +774,7 @@ class BaseDocumentTestRest(BaseTestRest):
         # for 'en' not 'fr')
         archive_locale_count = (
             self.session.query(self._model_archive_locale)
-            .filter(document_id == getattr(self._model_archive_locale, 'document_id'))
+            .filter(document_id == self._model_archive_locale.document_id)
             .count()
         )
         self.assertEqual(archive_locale_count, 3)
@@ -866,7 +866,7 @@ class BaseDocumentTestRest(BaseTestRest):
         # check that a new archive_document was created
         archive_count = (
             self.session.query(self._model_archive)
-            .filter(getattr(self._model_archive, 'document_id') == document_id)
+            .filter(self._model_archive.document_id == document_id)
             .count()
         )
         self.assertEqual(archive_count, 2)
@@ -874,7 +874,7 @@ class BaseDocumentTestRest(BaseTestRest):
         # check that no new archive_document_locale was created
         archive_locale_count = (
             self.session.query(self._model_archive_locale)
-            .filter(document_id == getattr(self._model_archive_locale, 'document_id'))
+            .filter(document_id == self._model_archive_locale.document_id)
             .count()
         )
         self.assertEqual(archive_locale_count, 2)
@@ -962,7 +962,7 @@ class BaseDocumentTestRest(BaseTestRest):
         # check that no new archive_document was created
         archive_count = (
             self.session.query(self._model_archive)
-            .filter(getattr(self._model_archive, 'document_id') == document_id)
+            .filter(self._model_archive.document_id == document_id)
             .count()
         )
 
@@ -972,7 +972,7 @@ class BaseDocumentTestRest(BaseTestRest):
         # check that one new archive_document_locale was created
         archive_locale_count = (
             self.session.query(self._model_archive_locale)
-            .filter(document_id == getattr(self._model_archive_locale, 'document_id'))
+            .filter(document_id == self._model_archive_locale.document_id)
             .count()
         )
         self.assertEqual(archive_locale_count, 3)
@@ -1055,7 +1055,7 @@ class BaseDocumentTestRest(BaseTestRest):
         # check that no new archive_document was created
         archive_count = (
             self.session.query(self._model_archive)
-            .filter(getattr(self._model_archive, 'document_id') == document_id)
+            .filter(self._model_archive.document_id == document_id)
             .count()
         )
 
@@ -1065,7 +1065,7 @@ class BaseDocumentTestRest(BaseTestRest):
         # check that one new archive_document_locale was created
         archive_locale_count = (
             self.session.query(self._model_archive_locale)
-            .filter(document_id == getattr(self._model_archive_locale, 'document_id'))
+            .filter(document_id == self._model_archive_locale.document_id)
             .count()
         )
         self.assertEqual(archive_locale_count, 3)

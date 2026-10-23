@@ -203,7 +203,7 @@ class DocumentRevertRest(ACLDefault):
             )
         if document_type == AREA_TYPE:
             return Area, None, ArchiveArea, ArchiveDocumentLocale, document_type
-        assert False
+        raise AssertionError('unexpected document type {}'.format(document_type))
 
     def _get_archive_document(
         self, document_id, lang, version_id, archive_clazz, archive_locale_clazz
@@ -238,7 +238,7 @@ class DocumentRevertRest(ACLDefault):
             if clazz_locale
             else DocumentLocale
         )
-        locales_attr = getattr(clazz, 'locales')
+        locales_attr = clazz.locales
         locales_type_eager = (
             locales_attr.of_type(clazz_locale) if clazz_locale else locales_attr
         )
@@ -246,9 +246,9 @@ class DocumentRevertRest(ACLDefault):
         document_query = (
             DBSession.query(clazz)
             .join(locales_type)
-            .filter(getattr(clazz, 'document_id') == document_id)
+            .filter(clazz.document_id == document_id)
             .filter(DocumentLocale.lang == lang)
-            .options(joinedload(getattr(clazz, 'geometry')))
+            .options(joinedload(clazz.geometry))
             .options(contains_eager(locales_type_eager, alias=locales_type))
         )
         return document_query.first()

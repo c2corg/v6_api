@@ -279,7 +279,7 @@ class ReachableRouteRest(DocumentRest):
             )
 
         areas_id = set()
-        for route, areas in results:
+        for _route, areas in results:
             if areas is None:
                 continue
             for area in areas:
