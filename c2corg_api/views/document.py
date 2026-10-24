@@ -1,65 +1,64 @@
 import logging
+from functools import partial
 
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.caching import cache_document_detail, cache_document_cooked
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPForbidden,
+    HTTPNotFound,
+)
+from sqlalchemy.orm import contains_eager, joinedload, load_only, with_polymorphic
+from sqlalchemy.orm.exc import StaleDataError
+
+import c2corg_api.views.document_associations as doc_associations
+from c2corg_api.caching import (
+    cache_document_cooked,
+    cache_document_detail,
+    get_or_create,
+)
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, schema_listing_area
-from c2corg_api.models.coverage import COVERAGE_TYPE
-from c2corg_api.models.area_association import update_areas_for_document, get_areas
+from c2corg_api.models.area_association import get_areas, update_areas_for_document
 from c2corg_api.models.association import create_associations, synchronize_associations
 from c2corg_api.models.cache_version import (
+    get_cache_key,
     update_cache_version,
     update_cache_version_associations,
-    get_cache_key,
 )
+from c2corg_api.models.coverage import COVERAGE_TYPE
 from c2corg_api.models.document import (
-    Document,
-    UpdateType,
-    DocumentLocale,
-    ArchiveDocumentLocale,
     ArchiveDocument,
     ArchiveDocumentGeometry,
-    set_available_langs,
+    ArchiveDocumentLocale,
+    Document,
+    DocumentLocale,
+    UpdateType,
     get_available_langs,
+    set_available_langs,
 )
-from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
+from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.feed import (
     update_feed_document_create,
     update_feed_document_update,
 )
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.models.topo_map import schema_listing_topo_map, MAP_TYPE
-from c2corg_api.models.topo_map_association import update_maps_for_document, get_maps
+from c2corg_api.models.topo_map import MAP_TYPE, schema_listing_topo_map
+from c2corg_api.models.topo_map_association import get_maps, update_maps_for_document
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.views import etag_cache, set_best_locale
-from c2corg_api.views import to_json_dict
-import c2corg_api.views.document_associations as doc_associations
+from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import etag_cache, set_best_locale, to_json_dict
 from c2corg_api.views.document_listings import (
     add_load_for_locales,
     add_load_for_profiles,
     get_documents,
 )
 from c2corg_api.views.validation import (
-    check_required_fields,
-    check_duplicate_locales,
     association_permission_checker,
     association_permission_removal_checker,
+    check_duplicate_locales,
+    check_required_fields,
 )
-
-from functools import partial
-
-from c2corg_api.caching import get_or_create
-from pyramid.httpexceptions import (
-    HTTPNotFound,
-    HTTPConflict,
-    HTTPBadRequest,
-    HTTPForbidden,
-)
-from sqlalchemy.orm import joinedload, contains_eager, load_only
-from sqlalchemy.orm.exc import StaleDataError
-from sqlalchemy.orm import with_polymorphic
-
 
 log = logging.getLogger(__name__)
 
@@ -343,7 +342,9 @@ class DocumentRest(ACLDefault):
         return {}
 
     def _get_document(self, clazz, id, clazz_locale=None, lang=None):
-        """Get a document with either a single locale (if `lang is given)
+        """Get a document with one locale or with all locales.
+
+        Get a document with either a single locale (if `lang is given)
         or with all locales.
         If no document exists for the given id, a `HTTPNotFound` exception is
         raised.
@@ -351,8 +352,8 @@ class DocumentRest(ACLDefault):
         if not lang:
             document_query = (
                 DBSession.query(clazz)
-                .filter(getattr(clazz, 'document_id') == id)
-                .options(joinedload(getattr(clazz, 'geometry')))
+                .filter(clazz.document_id == id)
+                .options(joinedload(clazz.geometry))
             )
             document_query = add_load_for_locales(document_query, clazz, clazz_locale)
             document_query = add_load_for_profiles(document_query, clazz)
@@ -363,7 +364,7 @@ class DocumentRest(ACLDefault):
                 if clazz_locale
                 else DocumentLocale
             )
-            locales_attr = getattr(clazz, 'locales')
+            locales_attr = clazz.locales
             locales_type_eager = (
                 locales_attr.of_type(clazz_locale) if clazz_locale else locales_attr
             )
@@ -371,9 +372,9 @@ class DocumentRest(ACLDefault):
             document_query = (
                 DBSession.query(clazz)
                 .join(locales_type)
-                .filter(getattr(clazz, 'document_id') == id)
+                .filter(clazz.document_id == id)
                 .filter(DocumentLocale.lang == lang)
-                .options(joinedload(getattr(clazz, 'geometry')))
+                .options(joinedload(clazz.geometry))
                 .options(contains_eager(locales_type_eager, alias=locales_type))
             )
             document_query = add_load_for_profiles(document_query, clazz)
@@ -384,8 +385,8 @@ class DocumentRest(ACLDefault):
                 # document without locales
                 document_query = (
                     DBSession.query(clazz)
-                    .filter(getattr(clazz, 'document_id') == id)
-                    .options(joinedload(getattr(clazz, 'geometry')))
+                    .filter(clazz.document_id == id)
+                    .options(joinedload(clazz.geometry))
                 )
                 document_query = add_load_for_profiles(document_query, clazz)
                 document = document_query.first()
@@ -405,15 +406,16 @@ class DocumentRest(ACLDefault):
 
     @staticmethod
     def _get_document_for_cooking(clazz, document_id, lang, clazz_locale=None):
-        """Get a document with a single locale
-        this locale may not be the one requested, if this one doesn't exists
-        in this case, the lang returned is given by lang_priority
-        """
+        """Get a document with a single locale for cooking.
 
+        Get a document with a single locale
+        this locale may not be the one requested, if this one doesn't exists
+        in this case, the lang returned is given by lang_priority.
+        """
         document_query = (
             DBSession.query(clazz)
-            .filter(getattr(clazz, 'document_id') == document_id)
-            .options(joinedload(getattr(clazz, 'geometry')))
+            .filter(clazz.document_id == document_id)
+            .options(joinedload(clazz.geometry))
         )
         document_query = add_load_for_locales(document_query, clazz, clazz_locale)
         document_query = add_load_for_profiles(document_query, clazz)
@@ -451,8 +453,8 @@ class DocumentRest(ACLDefault):
 
         try:
             DBSession.flush()
-        except StaleDataError:
-            raise HTTPConflict('concurrent modification')
+        except StaleDataError as e:
+            raise HTTPConflict('concurrent modification') from e
 
         # when flushing the session, SQLAlchemy automatically updates the
         # version numbers in case attributes have changed. by comparing with
@@ -505,7 +507,8 @@ class DocumentRest(ACLDefault):
 
     @staticmethod
     def create_new_version(document, user_id, written_at=None):
-        assert user_id
+        if not user_id:
+            raise ValueError('a new version needs a user id')
         archive = document.to_archive()
         archive_locales = document.get_archive_locales()
         archive_geometry = document.get_archive_geometry()
@@ -533,8 +536,16 @@ class DocumentRest(ACLDefault):
 
     @staticmethod
     def update_version(document, user_id, comment, update_types, changed_langs):
-        assert user_id
-        assert update_types
+        if not user_id:
+            raise ValueError('a new version needs a user id')
+        if not update_types:
+            raise ValueError('a new version needs update types')
+
+        # flush pending changes first: it updates the version numbers that
+        # the archives below copy. Callers that change the document without
+        # flushing (protect, merge) used to get this flush as a side effect
+        # of a query run by the permission checks.
+        DBSession.flush()
 
         meta_data = HistoryMetaData(comment=comment, user_id=user_id)
         archive = DocumentRest._get_document_archive(document, update_types)
@@ -629,7 +640,9 @@ class DocumentRest(ACLDefault):
         return locale_archive
 
     def _check_document_id(self, id, document_id):
-        """Checks that the id given in the URL ("/waypoints/{id}") matches
+        """Check that the URL id matches the document_id of the body.
+
+        Checks that the id given in the URL ("/waypoints/{id}") matches
         the document_id given in the request body.
         """
         if id != document_id:
@@ -638,7 +651,9 @@ class DocumentRest(ACLDefault):
             )
 
     def _check_versions(self, document, document_in):
-        """Check that the passed-in document, geometry and all passed-in
+        """Check that the passed-in versions match the database.
+
+        Check that the passed-in document, geometry and all passed-in
         locales have the same version as the current document, geometry and
         locales in the database.
         If not (that is the document has changed), a `HTTPConflict` exception
@@ -650,9 +665,7 @@ class DocumentRest(ACLDefault):
             locale = document.get_locale(locale_in.lang)
             if locale:
                 if locale.version != locale_in.version:
-                    raise HTTPConflict(
-                        "version of locale '%s' has changed" % locale.lang
-                    )
+                    raise HTTPConflict(f"version of locale '{locale.lang}' has changed")
         if document.geometry and document_in.geometry:
             if document.geometry.version != document_in.geometry.version:
                 raise HTTPConflict('version of geometry has changed')
@@ -661,7 +674,7 @@ class DocumentRest(ACLDefault):
 def validate_document_for_type(
     document, request, fields, type_field, valid_type_values, updating
 ):
-    """Checks that all required fields are given."""
+    """Check that all required fields are given."""
     document_type = document.get(type_field)
 
     if not document_type:
@@ -678,7 +691,7 @@ def validate_document_for_type(
         document_type = document_type[0]
 
     if document_type not in valid_type_values:
-        request.errors.add('body', type_field, 'invalid value: %s' % document_type)
+        request.errors.add('body', type_field, f'invalid value: {document_type}')
         return
 
     fields_req = fields.get(document_type)['required']
@@ -686,13 +699,13 @@ def validate_document_for_type(
 
 
 def validate_document(document, request, fields, updating):
-    """Checks that all required fields are given."""
+    """Check that all required fields are given."""
     check_required_fields(document, fields, request, updating)
     check_duplicate_locales(document, request)
 
 
 def make_validator_create(fields, type_field=None, valid_type_values=None):
-    """Returns a validator function used for the creation of documents."""
+    """Return a validator function used for the creation of documents."""
     if type_field is None or valid_type_values is None:
 
         def f(request, **kwargs):
@@ -717,7 +730,7 @@ def make_validator_create(fields, type_field=None, valid_type_values=None):
 
 
 def make_validator_update(fields, type_field=None, valid_type_values=None):
-    """Returns a validator function used for updating documents."""
+    """Return a validator function used for updating documents."""
     if type_field is None or valid_type_values is None:
 
         def f(request, **kwargs):

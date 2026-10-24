@@ -1,25 +1,24 @@
 import json
 
+from shapely.geometry import Polygon, shape
+
+from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.document import (
+    ArchiveDocumentLocale,
+    DocumentGeometry,
+    DocumentLocale,
+)
 from c2corg_api.models.route import Route
-from c2corg_api.models.topo_map import ArchiveTopoMap, TopoMap, MAP_TYPE
+from c2corg_api.models.topo_map import MAP_TYPE, ArchiveTopoMap, TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.models.common.attributes import quality_types
-from shapely.geometry import shape, Polygon
-
-from c2corg_api.models.document import (
-    DocumentGeometry,
-    ArchiveDocumentLocale,
-    DocumentLocale,
-)
-from c2corg_api.views.document import DocumentRest
-
 from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.views.document import DocumentRest
 
 
 class TestTopoMapRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/maps', MAP_TYPE, TopoMap, ArchiveTopoMap, ArchiveDocumentLocale
         )
@@ -29,7 +28,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
     def test_get_collection(self):
         body = self.get_collection()
         doc = body['documents'][0]
-        self.assertNotIn('geometry', doc)
+        assert 'geometry' not in doc
 
     def test_get_collection_paginated(self):
         self.app.get('/maps?offset=invalid', status=400)
@@ -65,7 +64,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
     def test_get(self):
         body = self.get(self.map1)
         self._assert_geometry(body)
-        self.assertNotIn('maps', body)
+        assert 'maps' not in body
 
     def test_get_cooked(self):
         self.get_cooked(self.map1)
@@ -87,7 +86,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
 
     def test_get_info(self):
         body, locale = self.get_info(self.map1, 'en')
-        self.assertEqual(locale.get('lang'), 'en')
+        assert locale.get('lang') == 'en'
 
     def test_post_not_moderator(self):
         headers = self.add_authorization_header(username='contributor')
@@ -98,7 +97,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
     def test_post_error(self):
         body = self.post_error({}, user='moderator')
         errors = body.get('errors')
-        self.assertEqual(len(errors), 2)
+        assert len(errors) == 2
         self.assertCorniceRequired(errors[0], 'locales')
         self.assertCorniceRequired(errors[1], 'geometry')
 
@@ -147,23 +146,23 @@ class TestTopoMapRest(BaseDocumentTestRest):
             'locales': [{'lang': 'en', 'title': "Lac d'Annecy"}],
         }
         body, doc = self.post_success(body, user='moderator')
-        self.assertIsNotNone(body['geometry'].get('geom_detail'))
+        assert body['geometry'].get('geom_detail') is not None
 
         version = doc.versions[0]
 
         archive_map = version.document_archive
-        self.assertEqual(archive_map.editor, 'IGN')
-        self.assertEqual(archive_map.scale, '25000')
-        self.assertEqual(archive_map.code, '3432OT')
+        assert archive_map.editor == 'IGN'
+        assert archive_map.scale == '25000'
+        assert archive_map.code == '3432OT'
 
         archive_locale = version.document_locales_archive
-        self.assertEqual(archive_locale.lang, 'en')
-        self.assertEqual(archive_locale.title, "Lac d'Annecy")
+        assert archive_locale.lang == 'en'
+        assert archive_locale.title == "Lac d'Annecy"
 
         archive_geometry = version.document_geometry_archive
-        self.assertEqual(archive_geometry.version, doc.geometry.version)
-        self.assertIsNotNone(archive_geometry.geom_detail)
-        self.assertIsNotNone(archive_geometry.geom_detail)
+        assert archive_geometry.version == doc.geometry.version
+        assert archive_geometry.geom_detail is not None
+        assert archive_geometry.geom_detail is not None
 
         # check that a link for intersecting documents is created
         links = (
@@ -172,7 +171,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             .order_by(TopoMapAssociation.document_id)
             .all()
         )
-        self.assertEqual(len(links), 2)
+        assert len(links) == 2
         self.check_cache_version(self.waypoint1.document_id, 2)
         self.check_cache_version(self.route.document_id, 2)
 
@@ -274,27 +273,27 @@ class TestTopoMapRest(BaseDocumentTestRest):
         }
         (body, map1) = self.put_success_all(body, self.map1, user='moderator')
 
-        self.assertEqual(map1.code, '3433OT')
+        assert map1.code == '3433OT'
         locale_en = map1.get_locale('en')
-        self.assertEqual(locale_en.title, 'New title')
+        assert locale_en.title == 'New title'
 
         # version with lang 'en'
         versions = map1.versions
         version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
-        self.assertEqual(archive_locale.title, 'New title')
+        assert archive_locale.title == 'New title'
 
         archive_document_en = version_en.document_archive
-        self.assertEqual(archive_document_en.scale, '25000')
-        self.assertEqual(archive_document_en.code, '3433OT')
+        assert archive_document_en.scale == '25000'
+        assert archive_document_en.code == '3433OT'
 
         archive_geometry_en = version_en.document_geometry_archive
-        self.assertEqual(archive_geometry_en.version, 2)
+        assert archive_geometry_en.version == 2
 
         # version with lang 'fr'
         version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
-        self.assertEqual(archive_locale.title, "Lac d'Annecy")
+        assert archive_locale.title == "Lac d'Annecy"
 
         # check that the links to intersecting documents are updated
         links = (
@@ -302,7 +301,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
             .filter(TopoMapAssociation.topo_map_id == self.map1.document_id)
             .all()
         )
-        self.assertEqual(len(links), 2)
+        assert len(links) == 2
         self.check_cache_version(self.waypoint1.document_id, 2)
         self.check_cache_version(self.route.document_id, 2)
         # waypoint 2 is no longer associated, the cache key was incremented
@@ -329,7 +328,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         }
         (body, map1) = self.put_success_figures_only(body, self.map1, user='moderator')
 
-        self.assertEqual(map1.code, '3433OT')
+        assert map1.code == '3433OT'
 
     def test_put_success_lang_only(self):
         body = {
@@ -352,7 +351,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         }
         (body, map1) = self.put_success_lang_only(body, self.map1, user='moderator')
 
-        self.assertEqual(map1.get_locale('en').title, 'New title')
+        assert map1.get_locale('en').title == 'New title'
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale."""
@@ -370,17 +369,17 @@ class TestTopoMapRest(BaseDocumentTestRest):
         }
         (body, map1) = self.put_success_new_lang(body, self.map1, user='moderator')
 
-        self.assertEqual(map1.get_locale('es').title, "Lac d'Annecy")
+        assert map1.get_locale('es').title == "Lac d'Annecy"
 
     def _assert_geometry(self, body):
-        self.assertIsNotNone(body.get('geometry'))
+        assert body.get('geometry') is not None
         geometry = body.get('geometry')
-        self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom_detail'))
+        assert geometry.get('version') is not None
+        assert geometry.get('geom_detail') is not None
 
         geom = geometry.get('geom_detail')
         polygon = shape(json.loads(geom))
-        self.assertIsInstance(polygon, Polygon)
+        assert isinstance(polygon, Polygon)
 
     def _add_test_data(self):
         self.map1 = TopoMap(editor='IGN', scale='25000', code='3431OT')

@@ -1,26 +1,24 @@
-from c2corg_api.models.schema_utils import (
-    restrict_schema,
-    get_update_schema,
-    get_create_schema,
-)
-from c2corg_api.models.common.fields_xreport import fields_xreport
-from sqlalchemy import Column, Integer, Boolean, SmallInteger, ForeignKey, String, Date
-
 from colanderalchemy import SQLAlchemySchemaNode
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, SmallInteger, String
 
-from c2corg_api.models import schema, Base
-from c2corg_api.models.utils import copy_attributes
+from c2corg_api.models import Base, enums, schema
+from c2corg_api.models.common import document_types
+from c2corg_api.models.common.fields_xreport import fields_xreport
 from c2corg_api.models.document import (
     ArchiveDocument,
+    ArchiveDocumentLocale,
     Document,
+    DocumentLocale,
     get_geometry_schema_overrides,
     schema_attributes,
-    DocumentLocale,
-    ArchiveDocumentLocale,
     schema_locale_attributes,
 )
-from c2corg_api.models.common import document_types
-from c2corg_api.models import enums
+from c2corg_api.models.schema_utils import (
+    get_create_schema,
+    get_update_schema,
+    restrict_schema,
+)
+from c2corg_api.models.utils import copy_attributes
 
 XREPORT_TYPE = document_types.XREPORT_TYPE
 
@@ -119,7 +117,7 @@ attributes_without_personal = [
 
 
 class Xreport(_XreportMixin, Document):
-    """ """
+    """Current version of an incident report."""
 
     __tablename__ = 'xreports'
 
@@ -144,7 +142,7 @@ class Xreport(_XreportMixin, Document):
 
 
 class ArchiveXreport(_XreportMixin, ArchiveDocument):
-    """ """
+    """Archived version of an incident report."""
 
     __tablename__ = 'xreports_archives'
 
@@ -223,7 +221,7 @@ attributes_locales = [
 
 
 class XreportLocale(_XreportLocaleMixin, DocumentLocale):
-    """ """
+    """Current version of an incident report locale."""
 
     __tablename__ = 'xreports_locales'
 
@@ -247,7 +245,7 @@ class XreportLocale(_XreportLocaleMixin, DocumentLocale):
 
 
 class ArchiveXreportLocale(_XreportLocaleMixin, ArchiveDocumentLocale):
-    """ """
+    """Archived version of an incident report locale."""
 
     __tablename__ = 'xreports_locales_archives'
 

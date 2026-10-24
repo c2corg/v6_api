@@ -1,34 +1,35 @@
 import logging
 
-from c2corg_api.models import Base, schema, users_schema, enums, DBSession
-from c2corg_api.models.area import Area, AREA_TYPE
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql.array import ARRAY
+from sqlalchemy.orm import column_property, relationship
+from sqlalchemy.sql.elements import literal_column
+from sqlalchemy.sql.expression import cast, select, text
+from sqlalchemy.sql.functions import func
+from sqlalchemy.sql.schema import (
+    CheckConstraint,
+    Column,
+    ForeignKey,
+    Index,
+    PrimaryKeyConstraint,
+)
+from sqlalchemy.sql.sqltypes import Boolean, DateTime, Integer, String
+
+from c2corg_api.models import Base, DBSession, enums, schema, users_schema
+from c2corg_api.models.area import AREA_TYPE, Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.association import Association
 from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.document import Document, DocumentLocale, UpdateType
 from c2corg_api.models.enums import feed_change_type
-from c2corg_api.models.image import Image, IMAGE_TYPE
+from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.views.validation import association_keys
-from sqlalchemy.dialects import postgresql
-from sqlalchemy.dialects.postgresql.array import ARRAY
-from sqlalchemy.orm import relationship, column_property
-from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import select, text, cast
-from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import (
-    Column,
-    ForeignKey,
-    PrimaryKeyConstraint,
-    CheckConstraint,
-    Index,
-)
-from sqlalchemy.sql.sqltypes import Integer, String, DateTime, Boolean
 
 log = logging.getLogger(__name__)
 
@@ -104,7 +105,9 @@ User.is_following_users = column_property(
 
 
 class DocumentChange(Base):
-    """This table contains "changes" that are shown in the homepage feed and
+    """Changes shown in the homepage feed and the user profiles.
+
+    This table contains "changes" that are shown in the homepage feed and
     the user profile.
     For example if a user creates a document or uploads images, an entry is
     added to this table.
@@ -187,7 +190,7 @@ class DocumentChange(Base):
 
 
 def update_feed_document_create(document, user_id):
-    """Creates a new entry in the feed table when creating a new document."""
+    """Create a new entry in the feed table when creating a new document."""
     if document.redirects_to or document.type in NO_FEED_DOCUMENT_TYPES:
         return
 
@@ -225,7 +228,7 @@ def update_feed_document_create(document, user_id):
 
 
 def update_feed_document_update(document, user_id, update_types):
-    """Update the feed entry for a document:
+    """Update the feed entry for a document.
 
     - update `area_ids` if the geometry has changed.
     - update `activities` if figures have changed.
@@ -269,7 +272,7 @@ def update_participants_of_outing(outing_id, user_id):
     existing_change = get_existing_change(outing_id)
 
     if not existing_change:
-        log.warning('no feed change for document {}'.format(outing_id))
+        log.warning(f'no feed change for document {outing_id}')
         return
 
     participant_ids = _get_participants_of_outing(outing_id)
@@ -333,6 +336,7 @@ def update_feed_association_update(
     user_id,
 ):
     """Update the feed entries when associations have been created or deleted.
+
     Currently only associations between outings and users are considered.
     """
     if not (
@@ -343,12 +347,15 @@ def update_feed_association_update(
 
 
 def update_feed_images_upload(images, images_in, user_id):
-    """When uploading a set of images, create a feed entry for the document
+    """Create a feed entry for the document of uploaded images.
+
+    When uploading a set of images, create a feed entry for the document
     the images are linked to.
     """
     if not images or not images_in:
         return
-    assert len(images) == len(images_in)
+    if len(images) != len(images_in):
+        raise ValueError('images and images_in must have the same length')
 
     # get the document that the images were uploaded to
     document_id, document_type = get_linked_document(images_in)
@@ -365,7 +372,7 @@ def update_feed_images_upload(images, images_in, user_id):
     # load the feed entry for the images
     change = get_existing_change(document_id)
     if not change:
-        log.warning('no feed change for document {}'.format(document_id))
+        log.warning(f'no feed change for document {document_id}')
         return
 
     if change.user_id == user_id:
@@ -395,7 +402,9 @@ def update_feed_images_upload(images, images_in, user_id):
 
 
 def _update_images(change, image1_id, image2_id, image3_id, more_images):
-    """Set the new images on a feed entry by keeping the old images if
+    """Set the new images on a feed entry.
+
+    Set the new images on a feed entry by keeping the old images if
     there are not enough new ones.
     """
     existing_images = [
@@ -473,10 +482,9 @@ def update_langs_of_changes(document_id):
 
 
 def get_linked_document(images_in):
-    """Given a list of image inputs, return a linked document from the first
-    image.
-    """
-    assert images_in
+    """Given a list of image inputs, return a linked document from the first image."""
+    if not images_in:
+        raise ValueError('no image given')
 
     image_in = images_in[0]
     associations = image_in.get('associations')
@@ -496,7 +504,7 @@ def get_linked_document(images_in):
 
 
 def get_images(images, images_in, document_id, document_type):
-    """Returns the first 3 images that are associated to the given document."""
+    """Return the first 3 images that are associated to the given document."""
     image_count = len(images)
 
     # get all the images linked to the document

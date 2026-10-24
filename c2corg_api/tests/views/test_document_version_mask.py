@@ -1,14 +1,15 @@
+from sqlalchemy.sql.expression import and_
+
 from c2corg_api.models.document import UpdateType
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.document import DocumentRest
-from sqlalchemy.sql.expression import and_
 
 
 class BaseMaskTest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
 
         self.contributor = self.session.get(User, self.global_userids['contributor'])
@@ -37,7 +38,7 @@ class BaseMaskTest(BaseTestRest):
         version.masked = True
         self.session.flush()
 
-        self.assertTrue(self.is_masked(version_id))
+        assert self.is_masked(version_id)
 
     def is_masked(self, version_id):
         version = self.session.get(DocumentVersion, version_id)
@@ -67,22 +68,22 @@ class BaseMaskTest(BaseTestRest):
     def _get_version(self, prefix, document_id, lang, version_id, user=None):
         headers = {} if not user else self.add_authorization_header(username=user)
         response = self.app.get(
-            '/{}/{}/{}/{}'.format(prefix, document_id, lang, version_id),
+            f'/{prefix}/{document_id}/{lang}/{version_id}',
             headers=headers,
             status=200,
         )
-        self.assertEqual(response.content_type, 'application/json')
+        assert response.content_type == 'application/json'
 
         body = response.json
-        self.assertIn('document', body)
-        self.assertIn('version', body)
-        self.assertIn('masked', body['version'])
+        assert 'document' in body
+        assert 'version' in body
+        assert 'masked' in body['version']
 
         return body
 
 
 class TestVersionMaskRest(BaseMaskTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/versions/mask'
 
@@ -115,7 +116,7 @@ class TestVersionMaskRest(BaseMaskTest):
         self.assertErrorsContain(
             response.json,
             'Bad Request',
-            'Unknown version {}/{}/{}'.format(document_id, lang, version_id),
+            f'Unknown version {document_id}/{lang}/{version_id}',
         )
 
     def test_mask_latest_version(self):
@@ -145,9 +146,7 @@ class TestVersionMaskRest(BaseMaskTest):
         self.assertErrorsContain(
             response.json,
             'Bad Request',
-            'Version {}/{}/{} is the latest one'.format(
-                document_id, lang, latest_version_id
-            ),
+            f'Version {document_id}/{lang}/{latest_version_id} is the latest one',
         )
 
     def test_mask(self):
@@ -156,7 +155,7 @@ class TestVersionMaskRest(BaseMaskTest):
         self.app_post_json(self._prefix, request_body, status=200, headers=headers)
 
         version_id = request_body['version_id']
-        self.assertTrue(self.is_masked(version_id))
+        assert self.is_masked(version_id)
 
     def test_not_masked_version(self):
         request_body = self._get_first_version_params()
@@ -164,14 +163,14 @@ class TestVersionMaskRest(BaseMaskTest):
 
         # anonymous
         body = self._get_version('routes', document_id, lang, version_id)
-        self.assertFalse(body['version']['masked'])
-        self.assertEqual(body['document']['activities'], ['skitouring'])
+        assert not body['version']['masked']
+        assert body['document']['activities'] == ['skitouring']
 
         # authenticated
         body = self._get_version('routes', document_id, lang, version_id, 'contributor')
-        self.assertFalse(body['version']['masked'])
-        self.assertIsNotNone(body['document'])
-        self.assertEqual(body['document']['activities'], ['skitouring'])
+        assert not body['version']['masked']
+        assert body['document'] is not None
+        assert body['document']['activities'] == ['skitouring']
 
     def test_masked_version(self):
         request_body = self._get_first_version_params()
@@ -183,23 +182,23 @@ class TestVersionMaskRest(BaseMaskTest):
             '/document/{}/history/{}'.format(document_id, 'en'), status=200
         )
         for version in body.json['versions']:
-            self.assertEqual(version['masked'], version['version_id'] == version_id)
+            assert version['masked'] == (version['version_id'] == version_id)
 
         # anonymous
         body = self._get_version('routes', document_id, lang, version_id)
-        self.assertTrue(body['version']['masked'])
-        self.assertIsNone(body['document'])
+        assert body['version']['masked']
+        assert body['document'] is None
 
         # authenticated but not moderator
         body = self._get_version('routes', document_id, lang, version_id, 'contributor')
-        self.assertTrue(body['version']['masked'])
-        self.assertIsNone(body['document'])
+        assert body['version']['masked']
+        assert body['document'] is None
 
         # moderator
         body = self._get_version('routes', document_id, lang, version_id, 'moderator')
-        self.assertTrue(body['version']['masked'])
-        self.assertIsNotNone(body['document'])
-        self.assertEqual(body['document']['activities'], ['skitouring'])
+        assert body['version']['masked']
+        assert body['document'] is not None
+        assert body['document']['activities'] == ['skitouring']
 
     def test_updated_cache(self):
         request_body = self._get_first_version_params()
@@ -208,9 +207,9 @@ class TestVersionMaskRest(BaseMaskTest):
         body = self.app.get(
             '/document/{}/history/{}'.format(document_id, 'en'), status=200
         )
-        self.assertFalse(body.json['versions'][0]['masked'])
+        assert not body.json['versions'][0]['masked']
         body = self._get_version('routes', document_id, lang, version_id, 'contributor')
-        self.assertFalse(body['version']['masked'])
+        assert not body['version']['masked']
 
         headers = self.add_authorization_header(username='moderator')
         self.app_post_json(self._prefix, request_body, status=200, headers=headers)
@@ -218,13 +217,13 @@ class TestVersionMaskRest(BaseMaskTest):
         body = self.app.get(
             '/document/{}/history/{}'.format(document_id, 'en'), status=200
         )
-        self.assertTrue(body.json['versions'][0]['masked'])
+        assert body.json['versions'][0]['masked']
         body = self._get_version('routes', document_id, lang, version_id, 'contributor')
-        self.assertTrue(body['version']['masked'])
+        assert body['version']['masked']
 
 
 class TestVersionUnmaskRest(BaseMaskTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/versions/unmask'
 
@@ -241,12 +240,12 @@ class TestVersionUnmaskRest(BaseMaskTest):
         # first mask a version
         headers = self.add_authorization_header(username='moderator')
         self.app_post_json('/versions/mask', request_body, status=200, headers=headers)
-        self.assertTrue(self.is_masked(version_id))
+        assert self.is_masked(version_id)
 
         # then check it's possible to unmask it
         self.app_post_json(self._prefix, request_body, status=200, headers=headers)
-        self.assertFalse(self.is_masked(version_id))
+        assert not self.is_masked(version_id)
 
         body = self._get_version('routes', document_id, lang, version_id)
-        self.assertFalse(body['version']['masked'])
-        self.assertEqual(body['document']['activities'], ['skitouring'])
+        assert not body['version']['masked']
+        assert body['document']['activities'] == ['skitouring']

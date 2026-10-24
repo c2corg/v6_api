@@ -1,8 +1,8 @@
 from urllib.parse import quote
 
-from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.article import Article
 from c2corg_api.models.book import Book
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.fill_index import fill_index
@@ -11,7 +11,7 @@ from c2corg_api.tests.views import BaseTestRest
 
 
 class TestSearchRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/search'
 
@@ -183,26 +183,26 @@ class TestSearchRest(BaseTestRest):
         response = self.app.get(self._prefix + '?q=crolles', status=200)
         body = response.json
 
-        self.assertIn('waypoints', body)
-        self.assertIn('routes', body)
-        self.assertIn('maps', body)
-        self.assertIn('areas', body)
-        self.assertIn('articles', body)
-        self.assertIn('images', body)
-        self.assertIn('outings', body)
-        self.assertIn('books', body)
+        assert 'waypoints' in body
+        assert 'routes' in body
+        assert 'maps' in body
+        assert 'areas' in body
+        assert 'articles' in body
+        assert 'images' in body
+        assert 'outings' in body
+        assert 'books' in body
 
         waypoints = body['waypoints']
-        self.assertTrue(waypoints['total'] > 0)
+        assert waypoints['total'] > 0
         locales = waypoints['documents'][0]['locales']
-        self.assertEqual(len(locales), 2)
-        self.assertIn('type', waypoints['documents'][0])
+        assert len(locales) == 2
+        assert 'type' in waypoints['documents'][0]
 
         routes = body['routes']
-        self.assertEqual(0, routes['total'])
+        assert 0 == routes['total']
 
         # tests that user results are not included when not authenticated
-        self.assertNotIn('users', body)
+        assert 'users' not in body
 
     def test_search_by_accented_title_word(self):
         """Single-word queries must match titles containing that exact
@@ -214,10 +214,7 @@ class TestSearchRest(BaseTestRest):
             )
             body = response.json
             routes = body['routes']
-            self.assertTrue(
-                routes['total'] > 0,
-                'expected a match for {0!r}, got {1!r}'.format(term, routes),
-            )
+            assert routes['total'] > 0, f'expected a match for {term!r}, got {routes!r}'
 
     def test_search_hyphenated_compound_word(self):
         """A hyphenated query like "Mont-Blanc" must be treated as two
@@ -231,10 +228,10 @@ class TestSearchRest(BaseTestRest):
         )
         body = response.json
         waypoints = body['waypoints']
-        self.assertTrue(waypoints['total'] > 0)
+        assert waypoints['total'] > 0
         titles = [doc['locales'][0]['title'] for doc in waypoints['documents']]
-        self.assertIn('Mont Blanc', titles)
-        self.assertNotIn('Montaña Blanca', titles)
+        assert 'Mont Blanc' in titles
+        assert 'Montaña Blanca' not in titles
 
     def test_search_multiword_any_order(self):
         """Multi-word queries must match titles containing the same words
@@ -247,12 +244,11 @@ class TestSearchRest(BaseTestRest):
         )
         body = response.json
         routes = body['routes']
-        self.assertTrue(
-            routes['total'] > 0,
-            'expected a match for "Aretes de Gerbier", got {0!r}'.format(routes),
+        assert routes['total'] > 0, (
+            f'expected a match for "Aretes de Gerbier", got {routes!r}'
         )
         titles = [doc['locales'][0]['title'] for doc in routes['documents']]
-        self.assertNotIn('Pic de Gerri : arête Noris - Gerri', titles)
+        assert 'Pic de Gerri : arête Noris - Gerri' not in titles
 
     def test_search_by_article_title(self):
         response = self.app.get(
@@ -261,8 +257,8 @@ class TestSearchRest(BaseTestRest):
         body = response.json
         articles = body['articles']
 
-        self.assertEqual(len(articles), 2)
-        self.assertNotEqual(articles['total'], 0)
+        assert len(articles) == 2
+        assert articles['total'] != 0
 
     def test_search_by_book_title(self):
         response = self.app.get(
@@ -271,21 +267,21 @@ class TestSearchRest(BaseTestRest):
         body = response.json
         books = body['books']
 
-        self.assertEqual(len(books), 2)
-        self.assertNotEqual(books['total'], 0)
+        assert len(books) == 2
+        assert books['total'] != 0
 
     def test_search_lang(self):
         response = self.app.get(self._prefix + '?q=crolles&pl=fr', status=200)
         body = response.json
 
-        self.assertIn('waypoints', body)
-        self.assertIn('routes', body)
+        assert 'waypoints' in body
+        assert 'routes' in body
 
         waypoints = body['waypoints']
-        self.assertTrue(waypoints['total'] > 0)
+        assert waypoints['total'] > 0
 
         locales = waypoints['documents'][0]['locales']
-        self.assertEqual(len(locales), 1)
+        assert len(locales) == 1
 
     def test_search_lang_finds_other_language(self):
         """Documents that only exist in a language other than the
@@ -296,7 +292,7 @@ class TestSearchRest(BaseTestRest):
 
         # "Mont Blanc" waypoint only has an 'en' locale
         waypoints = body['waypoints']
-        self.assertTrue(waypoints['total'] > 0)
+        assert waypoints['total'] > 0
 
     def test_search_authenticated(self):
         """Tests that user results are included when authenticated."""
@@ -306,30 +302,30 @@ class TestSearchRest(BaseTestRest):
         )
         body = response.json
 
-        self.assertIn('users', body)
+        assert 'users' in body
         users = body['users']
-        self.assertIn('total', users)
+        assert 'total' in users
 
     def test_search_user_unauthenticated(self):
         """Tests that user results are not included when not authenticated."""
         response = self.app.get(self._prefix + '?q=alex&t=u', status=200)
         body = response.json
 
-        self.assertNotIn('users', body)
+        assert 'users' not in body
 
     def test_search_limit_types(self):
         response = self.app.get(self._prefix + '?q=crolles&t=w,r,c,b', status=200)
         body = response.json
 
-        self.assertIn('waypoints', body)
-        self.assertIn('routes', body)
-        self.assertIn('articles', body)
-        self.assertIn('books', body)
-        self.assertNotIn('maps', body)
-        self.assertNotIn('areas', body)
-        self.assertNotIn('images', body)
-        self.assertNotIn('outings', body)
-        self.assertNotIn('users', body)
+        assert 'waypoints' in body
+        assert 'routes' in body
+        assert 'articles' in body
+        assert 'books' in body
+        assert 'maps' not in body
+        assert 'areas' not in body
+        assert 'images' not in body
+        assert 'outings' not in body
+        assert 'users' not in body
 
     def test_search_by_document_id(self):
         response = self.app.get(
@@ -338,9 +334,9 @@ class TestSearchRest(BaseTestRest):
         body = response.json
 
         waypoints = body['waypoints']
-        self.assertEqual(len(waypoints['documents']), 1)
-        self.assertEqual(waypoints['total'], 1)
+        assert len(waypoints['documents']) == 1
+        assert waypoints['total'] == 1
 
         routes = body['routes']
-        self.assertEqual(len(routes['documents']), 0)
-        self.assertEqual(routes['total'], 0)
+        assert len(routes['documents']) == 0
+        assert routes['total'] == 0

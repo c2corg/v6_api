@@ -7,7 +7,7 @@ left untouched.
 """
 
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests as _real_requests
@@ -89,6 +89,46 @@ def client(wsgi_app):
     from webtest import TestApp
 
     return TestApp(wsgi_app)
+
+
+@pytest.fixture
+def pyramid_config():
+    """Set up a Pyramid testing configuration for the test."""
+    from pyramid import testing
+
+    config = testing.setUp()
+    yield config
+    testing.tearDown()
+
+
+@pytest.fixture
+def email_service():
+    """Return a new email service and reset the shared one."""
+    from c2corg_api.emails.email_service import EmailService
+    from c2corg_api.tests import settings
+
+    service = EmailService(settings)
+    EmailService.instance = None
+    return service
+
+
+@pytest.fixture
+def queue_config(client):
+    """Return the ES sync queue configuration, with the queue emptied."""
+    from c2corg_api.tests import reset_queue
+
+    config = client.app.registry.queue_config
+    reset_queue(config)
+    return config
+
+
+@pytest.fixture
+def app_state(client):
+    """Reset the application state that outlives a request."""
+    from c2corg_api.tests import reset_cache_key
+
+    reset_cache_key()
+    client.app.registry.feed_admin_user_account_id = None
 
 
 @pytest.fixture(autouse=True)

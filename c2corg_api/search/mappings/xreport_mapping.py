@@ -1,17 +1,16 @@
-from c2corg_api.models.xreport import XREPORT_TYPE, Xreport
-from c2corg_api.search.mapping import SearchDocument, BaseMeta
-from c2corg_api.search.mapping_types import (
-    QueryableMixin,
-    QEnumArray,
-    QInteger,
-    QDate,
-    QEnumRange,
-)
-
 from c2corg_api.models.common.sortable_search_attributes import (
-    sortable_severities,
     sortable_avalanche_levels,
     sortable_avalanche_slopes,
+    sortable_severities,
+)
+from c2corg_api.models.xreport import XREPORT_TYPE, Xreport
+from c2corg_api.search.mapping import BaseMeta, SearchDocument
+from c2corg_api.search.mapping_types import (
+    QDate,
+    QEnumArray,
+    QEnumRange,
+    QInteger,
+    QueryableMixin,
 )
 
 

@@ -1,4 +1,10 @@
-from c2corg_api.security.acl import ACLDefault
+from colander import Integer, MappingSchema, SchemaNode, required
+from cornice.resource import resource
+from cornice.validators import colander_body_validator
+from sqlalchemy import not_
+from sqlalchemy.sql.expression import and_, or_
+from sqlalchemy.sql.functions import func
+
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.cache_version import (
@@ -13,16 +19,11 @@ from c2corg_api.models.route import Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.image import delete_all_files_for_image
 from c2corg_api.views.waypoint import update_linked_route_titles
-from colander import MappingSchema, required, SchemaNode, Integer
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from sqlalchemy import not_
-from sqlalchemy.sql.expression import and_, or_
-from sqlalchemy.sql.functions import func
 
 
 class MergeSchema(MappingSchema):
@@ -31,7 +32,7 @@ class MergeSchema(MappingSchema):
 
 
 def validate_documents(request, **kwargs):
-    """Checks that
+    """Check that.
 
     - the documents exists.
     - the documents are of the same type.
@@ -71,13 +72,13 @@ def validate_documents(request, **kwargs):
             request.errors.add(
                 'body',
                 'source_document_id',
-                'document {0} does not exist'.format(source_document_id),
+                f'document {source_document_id} does not exist',
             )
         if not target_info:
             request.errors.add(
                 'body',
                 'target_document_id',
-                'document {0} does not exist'.format(target_document_id),
+                f'document {target_document_id} does not exist',
             )
         return
 
@@ -90,13 +91,13 @@ def validate_documents(request, **kwargs):
             request.errors.add(
                 'body',
                 'source_document_id',
-                'document {0} is already redirected'.format(source_document_id),
+                f'document {source_document_id} is already redirected',
             )
         if target_redirects_to:
             request.errors.add(
                 'body',
                 'target_document_id',
-                'document {0} is also redirected'.format(target_document_id),
+                f'document {target_document_id} is also redirected',
             )
         return
 
@@ -116,7 +117,7 @@ class MergeDocumentRest(ACLDefault):
         validators=[colander_body_validator, validate_documents],
     )
     def post(self):
-        """Merges a document into another document.
+        """Merge a document into another document.
 
         - Associations and tags of the source document are transferred to
           the target document.
@@ -139,7 +140,6 @@ class MergeDocumentRest(ACLDefault):
                 'source_document_id': @document_id@,
                 'target_document_id': @document_id@
             }
-
         """
         source_document_id = self.request.validated['source_document_id']
         target_document_id = self.request.validated['target_document_id']
@@ -160,7 +160,7 @@ class MergeDocumentRest(ACLDefault):
         DocumentRest.update_version(
             source_doc,
             self.request.authenticated_userid,
-            'merged with {}'.format(target_document_id),
+            f'merged with {target_document_id}',
             [UpdateType.FIGURES],
             [],
         )

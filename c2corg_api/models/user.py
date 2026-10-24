@@ -1,24 +1,20 @@
+import binascii
+import datetime
+import os
+from enum import Enum
+
 import bcrypt
-from c2corg_api.models.utils import ArrayOfEnum
-from c2corg_api.models.common.attributes import default_langs
-from c2corg_api.models.user_profile import UserProfile
-from sqlalchemy import Boolean, Column, Integer, DateTime, String
-
-from colanderalchemy import SQLAlchemySchemaNode
-
-from c2corg_api.models import Base, users_schema, schema, enums
-
 import colander
-from sqlalchemy.orm import relationship, backref
+from colanderalchemy import SQLAlchemySchemaNode
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import ForeignKey, Index
 
-from enum import Enum
-
-import os
-import binascii
-
-import datetime
+from c2corg_api.models import Base, enums, schema, users_schema
+from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.models.utils import ArrayOfEnum
 
 
 class AccountNotValidated(Exception):
@@ -33,9 +29,7 @@ BCRYPT_MAX_PASSWORD_BYTES = 72
 
 
 class PasswordUtil:
-    """
-    Utility class abstracting low-level password primitives.
-    """
+    """Utility class abstracting low-level password primitives."""
 
     @staticmethod
     def _bcrypt_input(password):
@@ -59,14 +53,12 @@ class PasswordUtil:
 
 class Purpose(Enum):
     registration = 'regemail'
-    new_password = 'newpass'
+    new_password = 'newpass'  # nosec B105 - nonce prefix, not a password
     change_email = 'chgemail'
 
 
 class User(Base):
-    """
-    Class containing the users' private and authentication data.
-    """
+    """Class containing the users' private and authentication data."""
 
     __tablename__ = 'user'
     __table_args__ = {'schema': users_schema}
@@ -134,15 +126,16 @@ class User(Base):
 
     def update_validation_nonce(self, purpose, days):
         """Generate and overwrite the nonce.
+
         A nonce is a random number which is used for authentication when doing
-        particular actions like changing password or validating an email. It
-        must have a short lifespan to avoid unused nonces to become a security
-        risk."""
+        particular actions like changing password or validating an email. It must have a
+        short lifespan to avoid unused nonces to become a security risk.
+        """
         if purpose != Purpose.registration and not self.email_validated:
             # An account must be validated before any other action is tried.
             raise AccountNotValidated()
 
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.UTC)
         nonce = binascii.hexlify(os.urandom(32)).decode('ascii')
         self.validation_nonce = purpose.value + '_' + nonce
         self.validation_nonce_expire = now + datetime.timedelta(days=days)

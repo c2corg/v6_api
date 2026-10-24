@@ -1,11 +1,11 @@
 import atexit
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.events import EVENT_JOB_ERROR
-
-from c2corg_api.jobs.purge_non_activated_accounts import purge_account
-from c2corg_api.jobs.purge_expired_tokens import purge_token
-
 import logging
+
+from apscheduler.events import EVENT_JOB_ERROR
+from apscheduler.schedulers.background import BackgroundScheduler
+
+from c2corg_api.jobs.purge_expired_tokens import purge_token
+from c2corg_api.jobs.purge_non_activated_accounts import purge_account
 
 log = logging.getLogger(__name__)
 

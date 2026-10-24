@@ -3,7 +3,9 @@ from c2corg_api.search.search_filters import build_query
 
 
 def get_search_documents(url_params, meta_params, doc_type):
-    """Returns a function that when called with a base-query returns all
+    """Return a function that searches with the URL parameters.
+
+    Returns a function that when called with a base-query returns all
     document ids that match the search filters given in the URL parameters.
     """
 
@@ -15,7 +17,9 @@ def get_search_documents(url_params, meta_params, doc_type):
 
 
 def search(url_params, meta_params, doc_type):
-    """Builds a query from the URL parameters and return a tuple
+    """Search with the URL parameters, return (document_ids, total).
+
+    Builds a query from the URL parameters and return a tuple
     (document_ids, total) received from ElasticSearch.
     """
     query = build_query(url_params, meta_params, doc_type)
@@ -29,7 +33,9 @@ def search(url_params, meta_params, doc_type):
 
 
 def search_with_ids(url_params, meta_params, doc_type, id_chunk=None):
-    """Builds a query from the URL parameters and a list of ids
+    """Search with the URL parameters and ids, return (document_ids, total).
+
+    Builds a query from the URL parameters and a list of ids
     and return a tuple (document_ids, total) received from ElasticSearch.
     """
     query = build_query(url_params, meta_params, doc_type)
@@ -59,7 +65,7 @@ def search_with_ids(url_params, meta_params, doc_type, id_chunk=None):
 
 
 def get_all_filtered_docs(params, meta_params, ids, doc_type):
-    """get all docs ids, taking into account ES filter in params"""
+    """Get all docs ids, taking into account ES filter in params."""
     filtered_doc_ids = []
     total_hits = 0
 
@@ -93,7 +99,9 @@ def chunk_ids(ids_set):
 
 
 def contains_search_params(url_params):
-    """Checks if the url query string contains other parameters than meta-data
+    """Check if the URL has parameters other than meta-data ones.
+
+    Checks if the url query string contains other parameters than meta-data
     parameters (like offset, limit, preferred language).
     """
     for param in url_params:

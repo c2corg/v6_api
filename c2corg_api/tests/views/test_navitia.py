@@ -1,46 +1,48 @@
-from unittest import mock
-from shapely.geometry import Polygon
 import json
-import requests
-from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound, HTTPUnauthorized
-from unittest.mock import call
-from c2corg_api.tests import BaseTestCase
-from c2corg_api.views import to_json_dict
-from c2corg_api.models.route import schema_route
 import os
 from datetime import datetime, time
-from c2corg_api.views.navitia import (
-    start_job_background,
-    _store_job_progress,
-    get_job_status,
-    redis_client,
-    read_result_from_redis,
-    progress_stream,
-    compute_journey_reachable_routes,
-    compute_journey_reachable_waypoints,
-    navitia_get,
-    handle_navitia_response,
-    extract_meta_params,
-    extract_journey_params,
-    extract_isochrone_params,
-    is_wp_in_isochrone,
-    get_navitia_isochrone,
-    is_wp_journey_reachable,
-    MAX_TRIP_DURATION,
-    MIN_TRIP_DURATION,
-    BASE_URL,
-)
+from unittest import mock
+from unittest.mock import call
 
-from c2corg_api.models.route import Route
-from c2corg_api.models.waypoint import Waypoint
+import pytest
+import requests
+from dotenv import load_dotenv
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPUnauthorized,
+)
+from shapely.geometry import Polygon
+
 from c2corg_api.models.area import Area
 from c2corg_api.models.document import DocumentGeometry
-from pyramid.httpexceptions import HTTPInternalServerError
-
-from c2corg_api.views.navitia import MAX_ROUTE_THRESHOLD
-
-
-from dotenv import load_dotenv
+from c2corg_api.models.route import Route, schema_route
+from c2corg_api.models.waypoint import Waypoint
+from c2corg_api.tests import BaseTestCase
+from c2corg_api.views import to_json_dict
+from c2corg_api.views.navitia import (
+    BASE_URL,
+    MAX_ROUTE_THRESHOLD,
+    MAX_TRIP_DURATION,
+    MIN_TRIP_DURATION,
+    _store_job_progress,
+    compute_journey_reachable_routes,
+    compute_journey_reachable_waypoints,
+    extract_isochrone_params,
+    extract_journey_params,
+    extract_meta_params,
+    get_job_status,
+    get_navitia_isochrone,
+    handle_navitia_response,
+    is_wp_in_isochrone,
+    is_wp_journey_reachable,
+    navitia_get,
+    progress_stream,
+    read_result_from_redis,
+    redis_client,
+    start_job_background,
+)
 
 # load .env into os.environ (call once)
 load_dotenv()
@@ -56,22 +58,22 @@ class TestNavitiaRestParams(BaseTestCase):
         with mock.patch.dict(os.environ, {'NAVITIA_API_KEY': NAVITIA_KEY}):
             # missing to
             self.app.get(
-                '/navitia/journeys?from=5.0;45.0&datetime=20260116T115100&datetime_represents=departure',  # noqa
+                '/navitia/journeys?from=5.0;45.0&datetime=20260116T115100&datetime_represents=departure',
                 status=400,
             )
             # missing from
             self.app.get(
-                '/navitia/journeys?to=5.0;45.0&datetime=20260116T115100&datetime_represents=departure',  # noqa
+                '/navitia/journeys?to=5.0;45.0&datetime=20260116T115100&datetime_represents=departure',
                 status=400,
             )
             # missing datetime
             self.app.get(
-                '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime_represents=departure',  # noqa
+                '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime_represents=departure',
                 status=400,
             )
             # missing datetime_represents
             self.app.get(
-                '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=20260116T115100',  # noqa
+                '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=20260116T115100',
                 status=400,
             )
 
@@ -81,12 +83,12 @@ class TestNavitiaRestParams(BaseTestCase):
             # are not considered as bad request but as 404 not found
             # invalid 'from'
             self.app.get(
-                '/navitia/journeys?from=invalid&to=5.1;45.1&datetime=20260116T115100&datetime_represents=departure',  # noqa
+                '/navitia/journeys?from=invalid&to=5.1;45.1&datetime=20260116T115100&datetime_represents=departure',
                 status=200,
             )
             # invalid 'to'
             self.app.get(
-                '/navitia/journeys?from=5.0;45.0&to=notcoords&datetime=20260116T115100&datetime_represents=departure',  # noqa
+                '/navitia/journeys?from=5.0;45.0&to=notcoords&datetime=20260116T115100&datetime_represents=departure',
                 status=200,
             )
 
@@ -96,7 +98,7 @@ class TestNavitiaRestParams(BaseTestCase):
             # should be status = 500 but
             # conftest mocks every call to return 200 OK.
             self.app.get(
-                '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=invalid&datetime_represents=departure',  # noqa
+                '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=invalid&datetime_represents=departure',
                 status=200,
             )
 
@@ -106,7 +108,7 @@ class TestNavitiaRestParams(BaseTestCase):
             # should be status = 500 but
             # conftest mocks every call to return 200 OK.
             self.app.get(
-                '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=20260116T115100&datetime_represents=invalid',  # noqa
+                '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=20260116T115100&datetime_represents=invalid',
                 status=200,
             )
 
@@ -114,7 +116,7 @@ class TestNavitiaRestParams(BaseTestCase):
         # ensure NAVITIA_API_KEY not set in env
         with mock.patch.dict(os.environ, {}, clear=True):
             self.app.get(
-                '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=20260116T115100&datetime_represents=departure',  # noqa
+                '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=20260116T115100&datetime_represents=departure',
                 status=500,
             )
 
@@ -375,17 +377,17 @@ class TestNavitiaRestParams(BaseTestCase):
     # /navitia/journeyreachableroutes endpoints (includes job handling)
     # /navitia/journeyreachableroutes/start endpoint
     # /navitia/journeyreachablewaypoints/start endpoint
-    def test_navitia_journeyreachabledocs_start(self):
+    def test_navitia_journeyreachabledocs_start(self, subtests):
         test_cases = [
             ('/navitia/journeyreachableroutes', compute_journey_reachable_routes),
             ('/navitia/journeyreachablewaypoints', compute_journey_reachable_waypoints),
         ]
 
         for base_url, func in test_cases:
-            with self.subTest(base_url=base_url, func=func):
+            with subtests.test(base_url=base_url, func=func):
                 with mock.patch(
                     'c2corg_api.views.navitia.start_job_background'
-                ) as mock_start:  # noqa
+                ) as mock_start:
                     mock_start.return_value = 'job-123'
 
                     # call with any parameters that
@@ -405,14 +407,14 @@ class TestNavitiaRestParams(BaseTestCase):
                     assert json.loads(response.body.decode()) == 'job-123'
                     mock_start.assert_called_once_with(func, mock.ANY)
 
-    def test_navitia_journeyreachabledocs_start_missing_params(self):
+    def test_navitia_journeyreachabledocs_start_missing_params(self, subtests):
         base_urls = [
             '/navitia/journeyreachableroutes',
             '/navitia/journeyreachablewaypoints',
         ]
 
         for base_url in base_urls:
-            with self.subTest(base_url=base_url):
+            with subtests.test(base_url=base_url):
                 # missing datetime
                 self.app.get(
                     base_url
@@ -450,14 +452,14 @@ class TestNavitiaRestParams(BaseTestCase):
 
     # /navitia/journeyreachableroutes/progress endpoint
     # /navitia/journeyreachablewaypoints/progress endpoint
-    def test_navitia_journeyreachabledocs_progress(self):
+    def test_navitia_journeyreachabledocs_progress(self, subtests):
         urls = [
             '/navitia/journeyreachableroutes/progress/job-123',
             '/navitia/journeyreachablewaypoints/progress/job-123',
         ]
 
         for url in urls:
-            with self.subTest(url=url):
+            with subtests.test(url=url):
                 fake_events = [
                     b'data: %s\n\n'
                     % json.dumps(
@@ -500,14 +502,14 @@ class TestNavitiaRestParams(BaseTestCase):
 
     # /navitia/journeyreachableroutes/result endpoint
     # /navitia/journeyreachablewaypoints/result endpoint
-    def test_navitia_journeyreachabledocs_result(self):
+    def test_navitia_journeyreachabledocs_result(self, subtests):
         urls = [
             '/navitia/journeyreachableroutes/result/job-123',
             '/navitia/journeyreachablewaypoints/result/job-123',
         ]
 
         for url in urls:
-            with self.subTest(url=url):
+            with subtests.test(url=url):
 
                 def fake_read_result(redis, job_id):
                     assert job_id == 'job-123'
@@ -539,24 +541,24 @@ class TestNavitiaRestParams(BaseTestCase):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.extract_meta_params'
-            ) as mock_extract_meta_params,  # noqa
+            ) as mock_extract_meta_params,
             mock.patch(
                 'c2corg_api.views.navitia.extract_isochrone_params'
-            ) as mock_extract_isochrone_params,  # noqa
+            ) as mock_extract_isochrone_params,
             mock.patch(
                 'c2corg_api.views.navitia.build_reachable_route_query_with_waypoints'
-            ) as mock_build_query,  # noqa
+            ) as mock_build_query,
             mock.patch(
                 'c2corg_api.views.navitia.collect_areas_from_results'
-            ) as mock_collect_areas,  # noqa
+            ) as mock_collect_areas,
             mock.patch(
                 'c2corg_api.views.navitia.collect_waypoints_from_results'
-            ) as mock_collect_wp,  # noqa
+            ) as mock_collect_wp,
             mock.patch(
                 'c2corg_api.views.navitia.get_navitia_isochrone'
-            ) as mock_get_iso,  # noqa
-            mock.patch('c2corg_api.views.navitia.is_wp_in_isochrone') as mock_is_in_iso,  # noqa
-            mock.patch('c2corg_api.views.navitia.to_json_dict') as mock_to_json,  # noqa
+            ) as mock_get_iso,
+            mock.patch('c2corg_api.views.navitia.is_wp_in_isochrone') as mock_is_in_iso,
+            mock.patch('c2corg_api.views.navitia.to_json_dict') as mock_to_json,
         ):
             # mock meta/isochrone params
             mock_extract_meta_params.return_value = {
@@ -622,7 +624,7 @@ class TestNavitiaRestParams(BaseTestCase):
             mock_to_json.side_effect = to_json_side_effect
 
             result = self.app.get(
-                '/navitia/isochronesreachableroutes?from=5.7357819%3B45.1875602&datetime=20260116T115100&datetime_represents=departure&boundary_duration=3600',  # noqa
+                '/navitia/isochronesreachableroutes?from=5.7357819%3B45.1875602&datetime=20260116T115100&datetime_represents=departure&boundary_duration=3600',
                 status=200,
             )
 
@@ -640,22 +642,22 @@ class TestNavitiaRestParams(BaseTestCase):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.extract_meta_params'
-            ) as mock_extract_meta_params,  # noqa
+            ) as mock_extract_meta_params,
             mock.patch(
                 'c2corg_api.views.navitia.extract_isochrone_params'
-            ) as mock_extract_isochrone_params,  # noqa
+            ) as mock_extract_isochrone_params,
             mock.patch(
                 'c2corg_api.views.navitia.build_reachable_route_query_with_waypoints'
-            ) as mock_build_query,  # noqa
+            ) as mock_build_query,
             mock.patch(
                 'c2corg_api.views.navitia.collect_areas_from_results'
-            ) as mock_collect_areas,  # noqa
+            ) as mock_collect_areas,
             mock.patch(
                 'c2corg_api.views.navitia.collect_waypoints_from_results'
-            ) as mock_collect_wp,  # noqa
+            ) as mock_collect_wp,
             mock.patch(
                 'c2corg_api.views.navitia.get_navitia_isochrone'
-            ) as mock_get_iso,  # noqa
+            ) as mock_get_iso,
         ):
             # mock meta/isochrone params
             mock_extract_meta_params.return_value = {
@@ -699,7 +701,7 @@ class TestNavitiaRestParams(BaseTestCase):
             mock_get_iso.return_value = {'isochrones': []}
 
             result = self.app.get(
-                '/navitia/isochronesreachableroutes?from=5.7357819%3B45.1875602&datetime=20260116T115100&datetime_represents=departure&boundary_duration=3600',  # noqa
+                '/navitia/isochronesreachableroutes?from=5.7357819%3B45.1875602&datetime=20260116T115100&datetime_represents=departure&boundary_duration=3600',
                 status=200,
             )
 
@@ -714,21 +716,21 @@ class TestNavitiaRestParams(BaseTestCase):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.extract_meta_params'
-            ) as mock_extract_meta_params,  # noqa
+            ) as mock_extract_meta_params,
             mock.patch(
                 'c2corg_api.views.navitia.extract_isochrone_params'
-            ) as mock_extract_isochrone_params,  # noqa
+            ) as mock_extract_isochrone_params,
             mock.patch(
                 'c2corg_api.views.navitia.build_reachable_waypoints_query'
-            ) as mock_build_query,  # noqa
+            ) as mock_build_query,
             mock.patch(
                 'c2corg_api.views.navitia.collect_areas_from_results'
-            ) as mock_collect_areas,  # noqa
+            ) as mock_collect_areas,
             mock.patch(
                 'c2corg_api.views.navitia.get_navitia_isochrone'
-            ) as mock_get_iso,  # noqa
-            mock.patch('c2corg_api.views.navitia.is_wp_in_isochrone') as mock_is_in_iso,  # noqa
-            mock.patch('c2corg_api.views.navitia.to_json_dict') as mock_to_json,  # noqa
+            ) as mock_get_iso,
+            mock.patch('c2corg_api.views.navitia.is_wp_in_isochrone') as mock_is_in_iso,
+            mock.patch('c2corg_api.views.navitia.to_json_dict') as mock_to_json,
         ):
             # mock meta/isochrone params
             mock_extract_meta_params.return_value = {
@@ -794,7 +796,7 @@ class TestNavitiaRestParams(BaseTestCase):
             mock_to_json.side_effect = to_json_side_effect
 
             result = self.app.get(
-                '/navitia/isochronesreachablewaypoints?from=5.7357819%3B45.1875602&datetime=20260116T115100&datetime_represents=departure&boundary_duration=3600',  # noqa
+                '/navitia/isochronesreachablewaypoints?from=5.7357819%3B45.1875602&datetime=20260116T115100&datetime_represents=departure&boundary_duration=3600',
                 status=200,
             )
 
@@ -812,19 +814,19 @@ class TestNavitiaRestParams(BaseTestCase):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.extract_meta_params'
-            ) as mock_extract_meta_params,  # noqa
+            ) as mock_extract_meta_params,
             mock.patch(
                 'c2corg_api.views.navitia.extract_isochrone_params'
-            ) as mock_extract_isochrone_params,  # noqa
+            ) as mock_extract_isochrone_params,
             mock.patch(
                 'c2corg_api.views.navitia.build_reachable_waypoints_query'
-            ) as mock_build_query,  # noqa
+            ) as mock_build_query,
             mock.patch(
                 'c2corg_api.views.navitia.collect_areas_from_results'
-            ) as mock_collect_areas,  # noqa
+            ) as mock_collect_areas,
             mock.patch(
                 'c2corg_api.views.navitia.get_navitia_isochrone'
-            ) as mock_get_iso,  # noqa
+            ) as mock_get_iso,
         ):
             # mock meta/isochrone params
             mock_extract_meta_params.return_value = {
@@ -868,7 +870,7 @@ class TestNavitiaRestParams(BaseTestCase):
             mock_get_iso.return_value = {'isochrones': []}
 
             result = self.app.get(
-                '/navitia/isochronesreachablewaypoints?from=5.7357819%3B45.1875602&datetime=20260116T115100&datetime_represents=departure&boundary_duration=3600',  # noqa
+                '/navitia/isochronesreachablewaypoints?from=5.7357819%3B45.1875602&datetime=20260116T115100&datetime_represents=departure&boundary_duration=3600',
                 status=200,
             )
 
@@ -885,23 +887,23 @@ class TestNavitiaRestParams(BaseTestCase):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.extract_meta_params'
-            ) as mock_extract_meta_params,  # noqa
+            ) as mock_extract_meta_params,
             mock.patch(
                 'c2corg_api.views.navitia.build_reachable_route_query_with_waypoints'
-            ) as mock_build_reachable_route_query_with_waypoints,  # noqa
+            ) as mock_build_reachable_route_query_with_waypoints,
             mock.patch(
                 'c2corg_api.views.navitia.collect_waypoints_from_results'
-            ) as mock_collect_wp,  # noqa
+            ) as mock_collect_wp,
             mock.patch(
                 'c2corg_api.views.navitia.collect_areas_from_results'
-            ) as mock_collect_areas,  # noqa
+            ) as mock_collect_areas,
             mock.patch(
                 'c2corg_api.views.navitia.extract_journey_params'
-            ) as mock_extract_journey_params,  # noqa
+            ) as mock_extract_journey_params,
             mock.patch(
                 'c2corg_api.views.navitia.is_wp_journey_reachable'
-            ) as mock_is_reachable,  # noqa
-            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,  # noqa
+            ) as mock_is_reachable,
+            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,
         ):
             # --- setup meta/journey params ---
             mock_extract_meta_params.return_value = {
@@ -994,23 +996,23 @@ class TestNavitiaRestParams(BaseTestCase):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.extract_meta_params'
-            ) as mock_extract_meta_params,  # noqa
+            ) as mock_extract_meta_params,
             mock.patch(
                 'c2corg_api.views.navitia.build_reachable_route_query_with_waypoints'
-            ) as mock_build_reachable_route_query_with_waypoints,  # noqa
+            ) as mock_build_reachable_route_query_with_waypoints,
             mock.patch(
                 'c2corg_api.views.navitia.collect_waypoints_from_results'
-            ) as mock_collect_wp,  # noqa
+            ) as mock_collect_wp,
             mock.patch(
                 'c2corg_api.views.navitia.collect_areas_from_results'
-            ) as mock_collect_areas,  # noqa
+            ) as mock_collect_areas,
             mock.patch(
                 'c2corg_api.views.navitia.extract_journey_params'
-            ) as mock_extract_journey_params,  # noqa
+            ) as mock_extract_journey_params,
             mock.patch(
                 'c2corg_api.views.navitia.is_wp_journey_reachable'
             ) as mock_is_reachable,  # noqa
-            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,  # noqa
+            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,
         ):
             # --- setup meta/journey params ---
             mock_extract_meta_params.return_value = {
@@ -1077,10 +1079,10 @@ class TestNavitiaRestParams(BaseTestCase):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.extract_meta_params'
-            ) as mock_extract_meta_params,  # noqa
+            ) as mock_extract_meta_params,
             mock.patch(
                 'c2corg_api.views.navitia.build_reachable_route_query_with_waypoints'
-            ) as mock_build_reachable_route_query_with_waypoints,  # noqa
+            ) as mock_build_reachable_route_query_with_waypoints,
             mock.patch(
                 'c2corg_api.views.navitia.collect_waypoints_from_results'
             ) as mock_collect_wp,  # noqa
@@ -1089,11 +1091,11 @@ class TestNavitiaRestParams(BaseTestCase):
             ) as mock_collect_areas,  # noqa
             mock.patch(
                 'c2corg_api.views.navitia.extract_journey_params'
-            ) as mock_extract_journey_params,  # noqa
+            ) as mock_extract_journey_params,
             mock.patch(
                 'c2corg_api.views.navitia.is_wp_journey_reachable'
             ) as mock_is_reachable,  # noqa
-            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,  # noqa
+            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,
         ):
             # --- setup meta/journey params ---
             mock_extract_meta_params.return_value = {
@@ -1137,11 +1139,9 @@ class TestNavitiaRestParams(BaseTestCase):
             )
 
             # Ensure no result was written
-            self.assertFalse(
-                any(
-                    call[0][0] == f'job:{job_id}:result'
-                    for call in mock_redis.set.call_args_list
-                )
+            assert not any(
+                call[0][0] == f'job:{job_id}:result'
+                for call in mock_redis.set.call_args_list
             )
 
     def test_compute_journey_reachable_waypoints(self):
@@ -1150,20 +1150,20 @@ class TestNavitiaRestParams(BaseTestCase):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.extract_meta_params'
-            ) as mock_extract_meta_params,  # noqa
+            ) as mock_extract_meta_params,
             mock.patch(
                 'c2corg_api.views.navitia.extract_journey_params'
-            ) as mock_extract_journey_params,  # noqa
+            ) as mock_extract_journey_params,
             mock.patch(
                 'c2corg_api.views.navitia.build_reachable_waypoints_query'
-            ) as mock_build_query,  # noqa
+            ) as mock_build_query,
             mock.patch(
                 'c2corg_api.views.navitia.collect_areas_from_results'
-            ) as mock_collect_areas,  # noqa
+            ) as mock_collect_areas,
             mock.patch(
                 'c2corg_api.views.navitia.is_wp_journey_reachable'
-            ) as mock_is_reachable,  # noqa
-            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,  # noqa
+            ) as mock_is_reachable,
+            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,
         ):
             # mock meta/journey params
             mock_extract_meta_params.return_value = {
@@ -1247,20 +1247,20 @@ class TestNavitiaRestParams(BaseTestCase):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.extract_meta_params'
-            ) as mock_extract_meta_params,  # noqa
+            ) as mock_extract_meta_params,
             mock.patch(
                 'c2corg_api.views.navitia.extract_journey_params'
-            ) as mock_extract_journey_params,  # noqa
+            ) as mock_extract_journey_params,
             mock.patch(
                 'c2corg_api.views.navitia.build_reachable_waypoints_query'
-            ) as mock_build_query,  # noqa
+            ) as mock_build_query,
             mock.patch(
                 'c2corg_api.views.navitia.collect_areas_from_results'
-            ) as mock_collect_areas,  # noqa
+            ) as mock_collect_areas,
             mock.patch(
                 'c2corg_api.views.navitia.is_wp_journey_reachable'
             ) as mock_is_reachable,  # noqa
-            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,  # noqa
+            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,
         ):
             mock_extract_meta_params.return_value = {
                 'offset': 0,
@@ -1299,7 +1299,7 @@ class TestNavitiaRestParams(BaseTestCase):
     def test_compute_journey_reachable_waypoints_missing_area(self):
         job_id = 'job-123'
 
-        with mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client:  # noqa
+        with mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client:
             mock_redis = mock_redis_client.return_value
             request = mock.Mock()
             # no areas
@@ -1314,7 +1314,7 @@ class TestNavitiaRestParams(BaseTestCase):
     def test_compute_journey_reachable_waypoints_multiple_areas(self):
         job_id = 'job-123'
 
-        with mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client:  # noqa
+        with mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client:
             mock_redis = mock_redis_client.return_value
             request = mock.Mock()
             request.GET = {'a': '1,2'}  # multiple areas
@@ -1332,20 +1332,20 @@ class TestNavitiaRestParams(BaseTestCase):
         mock_response.json.return_value = {'data': 'some_data'}
 
         result = handle_navitia_response(mock_response)
-        self.assertEqual(result, {'data': 'some_data'})
+        assert result == {'data': 'some_data'}
 
     def test_handle_navitia_response_401(self):
         mock_response = mock.Mock()
         mock_response.status_code = 401
 
-        with self.assertRaises(HTTPUnauthorized):
+        with pytest.raises(HTTPUnauthorized):
             handle_navitia_response(mock_response)
 
     def test_handle_navitia_response_400(self):
         mock_response = mock.Mock()
         mock_response.status_code = 400
 
-        with self.assertRaises(HTTPBadRequest):
+        with pytest.raises(HTTPBadRequest):
             handle_navitia_response(mock_response)
 
     def test_handle_navitia_response_404_no_journey(self):
@@ -1353,14 +1353,14 @@ class TestNavitiaRestParams(BaseTestCase):
         mock_response.status_code = 404
         mock_response.json.return_value = {'error': {'id': 'no_solution'}}
 
-        with self.assertRaises(HTTPNotFound):
+        with pytest.raises(HTTPNotFound):
             handle_navitia_response(mock_response)
 
     def test_handle_navitia_response_404_other_error(self):
         mock_response = mock.Mock()
         mock_response.status_code = 404
         mock_response.json.return_value = {'error': {'id': 'unknown_object'}}
-        with self.assertRaises(HTTPNotFound):
+        with pytest.raises(HTTPNotFound):
             handle_navitia_response(mock_response)
 
     def test_handle_navitia_response_other_error(self):
@@ -1368,7 +1368,7 @@ class TestNavitiaRestParams(BaseTestCase):
         mock_response.status_code = 500
         mock_response.ok = False
 
-        with self.assertRaises(HTTPInternalServerError):
+        with pytest.raises(HTTPInternalServerError):
             handle_navitia_response(mock_response)
 
     def test_navitia_get_normal_operation(self):
@@ -1380,13 +1380,13 @@ class TestNavitiaRestParams(BaseTestCase):
             mock_get.return_value = mock_response
 
             result = navitia_get(BASE_URL)
-            self.assertEqual(result, {'data': 'some_data'})
+            assert result == {'data': 'some_data'}
 
     def test_navitia_get_timeout(self):
         with mock.patch('requests.get') as mock_get:
             mock_get.side_effect = requests.exceptions.Timeout
 
-            with self.assertRaises(HTTPInternalServerError):
+            with pytest.raises(HTTPInternalServerError):
                 navitia_get(BASE_URL)
 
     def test_navitia_get_other_request_exception(self):
@@ -1395,7 +1395,7 @@ class TestNavitiaRestParams(BaseTestCase):
                 'An error occurred'
             )
 
-            with self.assertRaises(HTTPInternalServerError):
+            with pytest.raises(HTTPInternalServerError):
                 navitia_get(BASE_URL)
 
     def test_navitia_extract_meta_params_no_lang(self):
@@ -1479,7 +1479,7 @@ class TestNavitiaRestParams(BaseTestCase):
             'datetime': '20260116T115100',
             'boundary_duration': str(
                 int((MAX_TRIP_DURATION * 60 + MIN_TRIP_DURATION * 60) / 2)
-            ),  # noqa
+            ),
             'datetime_represents': 'departure',
         }
         result = extract_isochrone_params(mock_request)
@@ -1488,7 +1488,7 @@ class TestNavitiaRestParams(BaseTestCase):
             'datetime': '20260116T115100',
             'boundary_duration[]': int(
                 (MAX_TRIP_DURATION * 60 + MIN_TRIP_DURATION * 60) / 2
-            ),  # noqa
+            ),
             'datetime_represents': 'departure',
         }
 
@@ -1522,7 +1522,7 @@ class TestNavitiaRestParams(BaseTestCase):
 
         result = is_wp_in_isochrone(mock_wp, isochrone_geom)
 
-        self.assertTrue(result)
+        assert result
 
     def test_is_wp_not_in_isochrone(self):
         mock_wp = mock.Mock()
@@ -1535,15 +1535,15 @@ class TestNavitiaRestParams(BaseTestCase):
 
         result = is_wp_in_isochrone(mock_wp, isochrone_geom)
 
-        self.assertFalse(result)
+        assert not result
 
     def test_get_navitia_isochrone(self):
         mock_isochrone_params = mock.Mock()
         # lon, lat
         mock_isochrone_params.get.return_value = '5;45'
         with (
-            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,  # noqa
-            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,  # noqa
+            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
+            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,
         ):
             mock_get_coverage.return_value = 'fr-se'
             get_navitia_isochrone(mock_isochrone_params)
@@ -1559,7 +1559,7 @@ class TestNavitiaRestParams(BaseTestCase):
         # lon, lat
         mock_isochrone_params.get.return_value = '5;45'
         with mock.patch.dict(os.environ, {}, clear=True):
-            with self.assertRaises(HTTPInternalServerError):
+            with pytest.raises(HTTPInternalServerError):
                 get_navitia_isochrone(mock_isochrone_params)
 
     def test_get_navitia_isochrone_no_source_coverage(self):
@@ -1567,10 +1567,10 @@ class TestNavitiaRestParams(BaseTestCase):
         # lon, lat
         mock_isochrone_params.get.return_value = '5;45'
         with (
-            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,  # noqa
+            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
         ):
             mock_get_coverage.return_value = None
-            with self.assertRaises(HTTPInternalServerError):
+            with pytest.raises(HTTPInternalServerError):
                 get_navitia_isochrone(mock_isochrone_params)
 
     def test_is_wp_journey_reachable(self):
@@ -1590,8 +1590,8 @@ class TestNavitiaRestParams(BaseTestCase):
         }
 
         with (
-            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,  # noqa
-            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,  # noqa
+            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
+            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,
         ):
             mock_get_coverage.return_value = 'fr-se'
             is_wp_journey_reachable(mock_wp, mock_journey_params)
@@ -1619,7 +1619,7 @@ class TestNavitiaRestParams(BaseTestCase):
         }
 
         with mock.patch.dict(os.environ, {}, clear=True):
-            with self.assertRaises(HTTPInternalServerError):
+            with pytest.raises(HTTPInternalServerError):
                 is_wp_journey_reachable(mock_wp, mock_journey_params)
 
     def test_is_wp_journey_reachable_no_destination_coverage(self):
@@ -1639,8 +1639,8 @@ class TestNavitiaRestParams(BaseTestCase):
         }
 
         with (
-            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,  # noqa
-            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,  # noqa
+            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
+            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,
         ):
             mock_get_coverage.return_value = None
             is_wp_journey_reachable(mock_wp, mock_journey_params)

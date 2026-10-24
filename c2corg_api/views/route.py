@@ -1,78 +1,73 @@
-from itertools import combinations
-
 import functools
-from sqlalchemy import case
+from itertools import combinations
+from operator import and_
 
-from c2corg_api.models import DBSession
-from c2corg_api.models.association import Association
-from c2corg_api.models.document import DocumentLocale, DocumentGeometry
-from c2corg_api.models.outing import Outing
-from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views.document_associations import get_first_column
-from c2corg_api.views.document_info import DocumentInfoRest
-from c2corg_api.views.document_listings import get_documents_for_ids
-from c2corg_api.views.document_schemas import (
-    route_documents_config,
-    route_schema_adaptor,
-    outing_documents_config,
-)
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.models.utils import get_mid_point
-from c2corg_api.search.advanced_search import get_all_filtered_docs
 from cornice.resource import resource, view
 from cornice.validators import colander_body_validator
+from sqlalchemy import case, func, literal_column
+from sqlalchemy.orm import load_only
+from sqlalchemy.sql.expression import column, or_, text, union
 
-from c2corg_api.models.route import (
-    Route,
-    schema_route,
-    schema_update_route,
-    ArchiveRoute,
-    ArchiveRouteLocale,
-    RouteLocale,
-    ROUTE_TYPE,
-    schema_create_route,
-)
-from c2corg_api.views.document import (
-    DocumentRest,
-    make_validator_create,
-    make_validator_update,
-    NUM_RECENT_OUTINGS,
-)
-from c2corg_api.views import (
-    cors_policy,
-    restricted_json_view,
-    get_best_locale,
-    restricted_view,
-    set_default_geom_from_associations,
-)
-from c2corg_api.views.validation import (
-    validate_id,
-    validate_pagination,
-    validate_lang,
-    validate_version_id,
-    validate_lang_param,
-    validate_preferred_lang_param,
-    validate_associations,
-    validate_cook_param,
-)
-from c2corg_api.models.common.fields_route import fields_route
+from c2corg_api.models import DBSession
+from c2corg_api.models.area import Area, schema_listing_area
+from c2corg_api.models.area_association import AreaAssociation
+from c2corg_api.models.association import Association
 from c2corg_api.models.common.attributes import (
     activities,
     public_transportation_ratings,
 )
-from sqlalchemy.orm import load_only
-from sqlalchemy.sql.expression import text, or_, column, union
-
-from operator import and_
-from c2corg_api.models.area import Area
-from c2corg_api.models.area_association import AreaAssociation
-from c2corg_api.views import to_json_dict
-from c2corg_api.views.document import LIMIT_DEFAULT
+from c2corg_api.models.common.fields_route import fields_route
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
+from c2corg_api.models.outing import Outing
+from c2corg_api.models.route import (
+    ROUTE_TYPE,
+    ArchiveRoute,
+    ArchiveRouteLocale,
+    Route,
+    RouteLocale,
+    schema_create_route,
+    schema_route,
+    schema_update_route,
+)
+from c2corg_api.models.utils import get_mid_point
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
-from c2corg_api.models.area import schema_listing_area
-from sqlalchemy import func, literal_column
-
+from c2corg_api.search.advanced_search import get_all_filtered_docs
+from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import (
+    cors_policy,
+    get_best_locale,
+    restricted_json_view,
+    restricted_view,
+    set_default_geom_from_associations,
+    to_json_dict,
+)
+from c2corg_api.views.document import (
+    LIMIT_DEFAULT,
+    NUM_RECENT_OUTINGS,
+    DocumentRest,
+    make_validator_create,
+    make_validator_update,
+)
+from c2corg_api.views.document_associations import get_first_column
+from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_listings import get_documents_for_ids
+from c2corg_api.views.document_schemas import (
+    outing_documents_config,
+    route_documents_config,
+    route_schema_adaptor,
+)
+from c2corg_api.views.document_version import DocumentVersionRest
+from c2corg_api.views.validation import (
+    validate_associations,
+    validate_cook_param,
+    validate_id,
+    validate_lang,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+    validate_version_id,
+)
 
 validate_route_create = make_validator_create(fields_route, 'activities', activities)
 validate_route_update = make_validator_update(fields_route, 'activities', activities)
@@ -85,9 +80,7 @@ validate_associations_update = functools.partial(
 
 
 def validate_main_waypoint(is_on_create, request, **kwargs):
-    """Check that the document given as main waypoint is also listed as
-    association.
-    """
+    """Check that the document given as main waypoint is also listed as association."""
     doc = request.validated if is_on_create else request.validated.get('document', {})
     main_waypoint_id = doc.get('main_waypoint_id', None)
 
@@ -232,7 +225,7 @@ class RouteInfoRest(DocumentInfoRest):
 @resource(path='/routes/update_public_transportation_rating', cors_policy=cors_policy)
 class RoutePublicTransportationRatingRest(ACLDefault):
     """
-    Update all route public transportation rating
+    Update all route public transportation rating.
 
     Request:
         `GET` `/update_public_transportation_rating?waypoint_extrapolation=...`
@@ -260,11 +253,13 @@ class ReachableRouteRest(DocumentRest):
 
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def get(self):
-        """Returns a list of object {documents: Route[], total: Integer} ->
+        """Return the reachable routes and their total.
+
+        Returns a list of object {documents: Route[], total: Integer} ->
         documents: routes reachable within offset and limit
         total: number of documents returned by query,
-        without offset and limit"""
-
+        without offset and limit.
+        """
         validated = self.request.validated
 
         meta_params = {
@@ -284,7 +279,7 @@ class ReachableRouteRest(DocumentRest):
             )
 
         areas_id = set()
-        for route, areas in results:
+        for _route, areas in results:
             if areas is None:
                 continue
             for area in areas:
@@ -318,7 +313,9 @@ class ReachableRouteRest(DocumentRest):
 
 
 def set_default_geometry(linked_waypoints, route, user_id):
-    """When creating a new route, set the default geometry to the middle point
+    """Set the default geometry of a new route.
+
+    When creating a new route, set the default geometry to the middle point
     of a given track, if not to the geometry of the associated main waypoint
     (if a main waypoint is set), otherwise to the centroid of the convex hull
     of all associated waypoints.
@@ -378,7 +375,9 @@ def update_linked_attributes(route, update_types, user_id):
 
 
 def check_title_prefix(route, create=False):
-    """The field `main_waypoint_id` indicates the main waypoint of a
+    """Update the title prefix when the main waypoint changes.
+
+    The field `main_waypoint_id` indicates the main waypoint of a
     route. If given, the title of this waypoint is cached in
     RouteLocale.title_prefix. This method takes care of setting this field.
     """
@@ -402,7 +401,9 @@ def check_title_prefix(route, create=False):
 
 
 def set_route_title_prefix(route, waypoint_locales, waypoint_locales_index):
-    """Sets the `title_prefix` of all locales of the given route using the
+    """Set the `title_prefix` of all locales of the given route.
+
+    Sets the `title_prefix` of all locales of the given route using the
     provided waypoint locales.
     """
     if len(waypoint_locales) == 1:
@@ -416,14 +417,14 @@ def set_route_title_prefix(route, waypoint_locales, waypoint_locales_index):
 
 
 def set_title_prefix(route, title):
-    """Set the given title as `prefix_title` for all locales of the given
-    route.
-    """
+    """Set the given title as `prefix_title` for all locales of the given route."""
     set_title_prefix_for_ids([locale.id for locale in route.locales], title)
 
 
 def set_title_prefix_for_ids(ids, title):
-    """Set the given title as `prefix_title` for all route locales with
+    """Set the given title as `prefix_title` of the given route locales.
+
+    Set the given title as `prefix_title` for all route locales with
     the given ids.
     """
     DBSession.query(RouteLocale).filter(RouteLocale.id.in_(ids)).update(
@@ -432,11 +433,13 @@ def set_title_prefix_for_ids(ids, title):
 
 
 def update_all_pt_rating(waypoint_extrapolation=True):
-    """Update the public transportation rating of every routes
+    """Update the public transportation rating of every route.
+
+    Update the public transportation rating of every routes
     based on linked waypoints
     Warning: this is a very heavy request to run, check logs levels before use:
     - avoid debug/info level for python
-    - avoir all level for postgresql (prefer log_statement = 'ddl')
+    - avoir all level for postgresql (prefer log_statement = 'ddl').
     """
     route_type = text("'" + ROUTE_TYPE + "'")
     waypoint_type = text("'" + WAYPOINT_TYPE + "'")
@@ -474,11 +477,12 @@ def update_all_pt_rating(waypoint_extrapolation=True):
 
 
 def update_pt_rating(route, waypoint_extrapolation=True):
-    """Update public transportation rating
-    based on provided ending and starting waypoints
-    If none are provided, an extrapolation can be done
-    """
+    """Update the public transportation rating of a route.
 
+    Update public transportation rating
+    based on provided ending and starting waypoints
+    If none are provided, an extrapolation can be done.
+    """
     if waypoint_extrapolation:
         linked_access_waypoints = _get_linked_waypoints_pt_ratings(route)
         starting_waypoints, ending_waypoints = _find_starting_and_ending_points(
@@ -498,7 +502,7 @@ def update_pt_rating(route, waypoint_extrapolation=True):
 
 
 def _get_linked_waypoints_pt_ratings(route):
-    """Get all linked waypoints linked to a route"""
+    """Get all linked waypoints linked to a route."""
     waypoint_type = text("'" + WAYPOINT_TYPE + "'")
 
     linked_access_waypoints = (
@@ -530,7 +534,9 @@ def _get_linked_waypoints_pt_ratings(route):
 
 
 def _find_starting_and_ending_points(waypoints, route_types):
-    """Extrapolation of starting and ending waypoints
+    """Find the starting and ending waypoints of a route.
+
+    Extrapolation of starting and ending waypoints
     based on the followed rules:
     - for crossings : with the two most distant access waypoints
     Calculates the distance between all pairs of points
@@ -538,7 +544,7 @@ def _find_starting_and_ending_points(waypoints, route_types):
     and returns the pair with the maximum distance.
     - for loops : with all the access waypoints
     - for others route type :
-    only if a single access waypoint is linked to the route
+    only if a single access waypoint is linked to the route.
     """
     if route_types and bool(
         set(['loop', 'loop_hut', 'return_same_way']) & set(route_types)
@@ -574,10 +580,12 @@ def _find_starting_and_ending_points(waypoints, route_types):
 
 
 def _pt_rating(starting_waypoints, ending_waypoints, route_types):
-    """Take best public transportation rating value of each array
+    """Compute the public transportation rating of a route.
+
+    Take best public transportation rating value of each array
     (starting_waypoint and ending_waypoints)
     and keep the worst of the two values
-    If no waypoint is provided, assume default service (unknown)
+    If no waypoint is provided, assume default service (unknown).
     """
     #  If no starting point is provided
     if len(starting_waypoints) == 0:
@@ -632,11 +640,13 @@ def _pt_rating(starting_waypoints, ending_waypoints, route_types):
 
 
 def build_reachable_route_query(params, meta_params):
-    """build the query based on params and meta params.
+    """Build the reachable routes query from params and meta params.
+
+    Build the query based on params and meta params.
     this includes every filters on route,
     as well as offset + limit, sort, bbox...
     returns a list of routes reachable
-    (can be accessible by public transports), filtered with params
+    (can be accessible by public transports), filtered with params.
     """
     all_filtered_routes_reachable_ids, total_hits = get_all_filtered_docs(
         params, meta_params, get_routes_reachable_ids(), ROUTE_TYPE
@@ -694,13 +704,14 @@ def build_reachable_route_query(params, meta_params):
 
 
 def build_reachable_route_query_with_waypoints(params, meta_params):
-    """build the query based on params and meta params.
+    """Build the reachable routes query, with waypoints.
+
+    Build the query based on params and meta params.
     this includes every filters on route,
     as well as offset + limit, sort, bbox...
     returns a list of routes reachable
-    (accessible by common transports), filtered with params
+    (accessible by common transports), filtered with params.
     """
-
     all_filtered_routes_reachable_ids, total_hits = get_all_filtered_docs(
         params, meta_params, get_routes_reachable_ids(), ROUTE_TYPE
     )
@@ -767,7 +778,7 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
 
 
 def get_routes_reachable_ids():
-    """get all routes reachable ids"""
+    """Get all routes reachable ids."""
     # get all routes reachable (join with waypoint stop area)
     all_routes_reachable = (
         DBSession.query(Route)

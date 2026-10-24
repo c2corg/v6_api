@@ -29,6 +29,7 @@ help:
 	@echo "- test					Run the unit tests"
 	@echo "- format				Format the Python code with ruff (and apply safe lint fixes)"
 	@echo "- lint					Check the Python code with ruff (lint and formatting)"
+	@echo "- audit				Check the locked dependencies for known vulnerabilities"
 	@echo
 	@echo "Secondary targets:"
 	@echo
@@ -41,7 +42,7 @@ help:
 	@echo "- init-elastic"			Initialize the elasticsearch index
 	@echo "- flush-redis			Clear the Redis cache"
 	@echo
-	@echo "- install				Install the project dependencies"
+	@echo "- install				Install the project dependencies and the git pre-commit hook"
 	@echo "- loadenv				Replace the env vars in the .in templates"
 
 
@@ -72,6 +73,27 @@ lint:
 		ruff format --check $(SRC_DIRS)
 		@echo "Wonderful, python style is Ok!"
 
+# Known vulnerabilities that cannot be fixed yet. Re-check each one when the
+# reason goes away:
+# - urllib3 1.26: elasticsearch 2.4.1 requires urllib3<2 (goes away with the
+#   Elasticsearch 8 migration). The API only talks to trusted hosts with it.
+# - setuptools: held below 81 because Pyramid 1.10 needs pkg_resources (goes
+#   away with FastAPI). The issues only affect building sdists on macOS and
+#   installing legacy wheels on Windows.
+# - virtualenv 21.14.12 (dev only, via pre-commit): the fix (21.14.13,
+#   2026-10-22) is inside the 2-week cooldown; bump it after 2026-11-05. The
+#   issue needs a crafted `--prompt` passed to the bash activator.
+AUDIT_IGNORE = \
+		PYSEC-2026-141 PYSEC-2026-1994 PYSEC-2026-1996 PYSEC-2026-1998 \
+		PYSEC-2026-1999 PYSEC-2026-4175 PYSEC-2026-4177 \
+		PYSEC-2026-3447 GHSA-xmj3-9gf7-h52w \
+		GHSA-cx6f-vjhg-g3cc
+
+.PHONY: audit
+audit:
+		uv audit --frozen --preview-features audit-command \
+			$(foreach id,$(AUDIT_IGNORE),--ignore $(id))
+
 test:
 		pytest
 
@@ -87,6 +109,7 @@ init-elastic:
 
 install:
 		uv sync
+		uv run --frozen pre-commit install
 
 run-syncer:
 		python c2corg_api/scripts/es/syncer.py development.ini

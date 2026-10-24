@@ -1,25 +1,25 @@
 import functools
 import logging
+from datetime import UTC, datetime
+from math import ceil
 
-from c2corg_api import DBSession, caching
-from c2corg_api.caching import cache_sitemap_xml
-from c2corg_api.models.cache_version import CacheVersion
-from c2corg_api.models.document import Document, DocumentLocale
-from c2corg_api.models.route import ROUTE_TYPE, RouteLocale
-from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.views import cors_policy, etag_cache
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views.validation import create_int_validator, validate_document_type
-from c2corg_api.caching import get_or_create
 from cornice.renderer import JSONError
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPNotFound
 from pyramid.interfaces import IRendererFactory
 from pyramid.renderers import string_renderer_factory
-from sqlalchemy.sql.functions import func
-from math import ceil
-from datetime import date, datetime, UTC
 from slugify import slugify
+from sqlalchemy.sql.functions import func
+
+from c2corg_api import DBSession, caching
+from c2corg_api.caching import cache_sitemap_xml, get_or_create
+from c2corg_api.models.cache_version import CacheVersion
+from c2corg_api.models.document import Document, DocumentLocale
+from c2corg_api.models.route import ROUTE_TYPE, RouteLocale
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
+from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import cors_policy, etag_cache
+from c2corg_api.views.validation import create_int_validator, validate_document_type
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ validate_page = create_int_validator('i')
 
 
 def render_errors(request):
-    """Returns an HTTPError with the given status and message.
+    """Return an HTTPError with the given status and message.
 
     Patch :func:`pyramid.renderers.string_renderer_factory` to add
     a ``render_errors`` callable
@@ -73,8 +73,9 @@ string_renderer_factory.render_errors = render_errors
 class SitemapXml(ACLDefault):
     @view()
     def collection_get(self):
-        """Returns a sitemap index file.
-        See: http://www.sitemaps.org/protocol.html
+        """Return a sitemap index file.
+
+        See: http://www.sitemaps.org/protocol.html.
 
         The response consists of a list of URLs of sitemaps.
 
@@ -107,9 +108,7 @@ class SitemapXml(ACLDefault):
 
     @view(validators=[validate_page, validate_document_type])
     def get(self):
-        """Returns a sitemap file for a given
-        type and sitemap page number.
-        """
+        """Return a sitemap file for a given type and sitemap page number."""
         doc_type = self.request.validated['doc_type']
         i = self.request.validated['i']
 
@@ -124,12 +123,11 @@ class SitemapXml(ACLDefault):
 
 
 def _get_cache_key(doc_type=None, i=None):
+    today = datetime.now(UTC).date().isoformat()
     if doc_type:
-        return '{}-{}-{}-{}'.format(
-            doc_type, i, date.today().isoformat(), caching.CACHE_VERSION
-        )
+        return f'{doc_type}-{i}-{today}-{caching.CACHE_VERSION}'
     else:
-        return '{}-{}'.format(date.today().isoformat(), caching.CACHE_VERSION)
+        return f'{today}-{caching.CACHE_VERSION}'
 
 
 def _get_sitemap_index():
@@ -143,7 +141,7 @@ def _get_sitemap_index():
 
     sitemaps = []
 
-    now = datetime.utcnow().replace(tzinfo=UTC)
+    now = datetime.now(UTC)
     lastmod = now.isoformat()
 
     template = """<sitemap>
@@ -227,7 +225,7 @@ def _format_page(ui_entry_point, doc_id, lang, title, last_updated, title_prefix
     }
 
     if title_prefix:
-        page['title'] = slugify('{} {}'.format(title_prefix, title))
+        page['title'] = slugify(f'{title_prefix} {title}')
     else:
         page['title'] = slugify(title)
 

@@ -1,8 +1,9 @@
+import logging
+
 from elasticsearch import helpers
+from elasticsearch.helpers import BulkIndexError
 
 from c2corg_api.scripts.es.batch import Batch
-from elasticsearch.helpers import BulkIndexError
-import logging
 
 log = logging.getLogger(__name__)
 

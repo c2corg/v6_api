@@ -1,22 +1,23 @@
-from c2corg_api.models import schema, Base
+from colanderalchemy import SQLAlchemySchemaNode
+from sqlalchemy import Column, ForeignKey, Integer
+
+from c2corg_api.models import Base, schema
+from c2corg_api.models.common import document_types
+from c2corg_api.models.common.fields_area import fields_area
 from c2corg_api.models.document import (
     ArchiveDocument,
     Document,
     get_geometry_schema_overrides,
-    schema_document_locale,
     schema_attributes,
+    schema_document_locale,
 )
 from c2corg_api.models.enums import area_type
 from c2corg_api.models.schema_utils import (
-    restrict_schema,
-    get_update_schema,
     get_create_schema,
+    get_update_schema,
+    restrict_schema,
 )
 from c2corg_api.models.utils import copy_attributes
-from c2corg_api.models.common.fields_area import fields_area
-from colanderalchemy import SQLAlchemySchemaNode
-from sqlalchemy import Column, Integer, ForeignKey
-from c2corg_api.models.common import document_types
 
 AREA_TYPE = document_types.AREA_TYPE
 
@@ -29,7 +30,7 @@ attributes = ['area_type']
 
 
 class Area(_AreaMixin, Document):
-    """ """
+    """Current version of an area."""
 
     __tablename__ = 'areas'
 
@@ -55,7 +56,7 @@ class Area(_AreaMixin, Document):
 
 
 class ArchiveArea(_AreaMixin, ArchiveDocument):
-    """ """
+    """Archived version of an area."""
 
     __tablename__ = 'areas_archives'
 

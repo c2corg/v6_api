@@ -1,5 +1,12 @@
 import re
 
+from elasticsearch import Elasticsearch
+from elasticsearch_dsl import Search
+from elasticsearch_dsl.connections import connections
+from elasticsearch_dsl.query import Bool, MultiMatch
+from kombu import Exchange, Queue, pools
+from kombu.connection import Connection
+
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.book import BOOK_TYPE
@@ -21,12 +28,6 @@ from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.search.mappings.xreport_mapping import SearchXreport
-from elasticsearch import Elasticsearch
-from elasticsearch_dsl import Search
-from elasticsearch_dsl.connections import connections
-from elasticsearch_dsl.query import Bool, MultiMatch
-from kombu import Exchange, Queue, pools
-from kombu.connection import Connection
 
 # the maximum number of documents that can be returned for each document type
 SEARCH_LIMIT_MAX = 50
@@ -105,9 +106,9 @@ def get_text_query_on_title(search_term, search_lang=None):
     # first without excluding the other languages.
     for lang in default_langs:
         if not mots:
-            field = 'title_{0}.ngram'.format(lang)
+            field = f'title_{lang}.ngram'
         else:
-            field = 'title_{0}.contentheavy'.format(lang)
+            field = f'title_{lang}.contentheavy'
         if search_lang and lang == search_lang:
             field += '^3'
         fields.append(field)

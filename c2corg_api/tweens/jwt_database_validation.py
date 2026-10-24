@@ -1,8 +1,9 @@
 import logging
 
-from pyramid.httpexceptions import HTTPUnauthorized, HTTPError
-from c2corg_api.security.roles import is_valid_token, extract_token
-from c2corg_api.views import http_error_handler, catch_all_error_handler
+from pyramid.httpexceptions import HTTPError, HTTPUnauthorized
+
+from c2corg_api.security.roles import extract_token, is_valid_token
+from c2corg_api.views import catch_all_error_handler, http_error_handler
 
 log = logging.getLogger(__name__)
 

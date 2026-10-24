@@ -1,36 +1,35 @@
 import functools
+import urllib
+
+from colander import null
+from cornice.errors import Errors
+from dateutil import parser as datetime_parser
+from pyramid.httpexceptions import HTTPBadRequest
+from sqlalchemy.sql.expression import and_, exists
+from webob.descriptors import parse_int_safe
 
 from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area import AREA_TYPE
+from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.association import (
     Association,
-    updatable_associations,
     association_keys,
+    updatable_associations,
 )
 from c2corg_api.models.book import BOOK_TYPE
+from c2corg_api.models.common import document_types
+from c2corg_api.models.common.associations import valid_associations
+from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.document import Document
-from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.models.user import User
-from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
+from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
+from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.views.document_associations import get_first_column
-
-from c2corg_api.models.common.associations import valid_associations
-from c2corg_api.models.common.attributes import default_langs
-from c2corg_api.models.common import document_types
-from colander import null
-from cornice.errors import Errors
-from pyramid.httpexceptions import HTTPBadRequest
-from sqlalchemy.sql.expression import exists, and_
-from webob.descriptors import parse_int_safe
-from dateutil import parser as datetime_parser
-import urllib
-
 
 # Validation functions
 
@@ -53,7 +52,7 @@ validate_version_id = create_int_validator('version_id')
 
 
 def validate_lang_(lang, request):
-    """Checks if a given lang is one of the available langs."""
+    """Check if a given lang is one of the available langs."""
     if lang is not None:
         if lang in default_langs:
             request.validated['lang'] = lang
@@ -62,7 +61,7 @@ def validate_lang_(lang, request):
 
 
 def validate_cook_(cook, request):
-    """Checks if a given cooking lang is one of the available langs."""
+    """Check if a given cooking lang is one of the available langs."""
     if cook is not None:
         if cook in default_langs:
             request.validated['cook'] = cook
@@ -71,7 +70,9 @@ def validate_cook_(cook, request):
 
 
 def validate_lang(request, **kwargs):
-    """Checks if the language given in the url as match-parameter
+    """Check the language given in the URL path.
+
+    Checks if the language given in the url as match-parameter
     is correct (".../{lang}").
     """
     lang = request.matchdict['lang']
@@ -79,7 +80,9 @@ def validate_lang(request, **kwargs):
 
 
 def validate_document_type(request, **kwargs):
-    """Checks if the document type given in the url as match-parameter
+    """Check the document type given in the URL path.
+
+    Checks if the document type given in the url as match-parameter
     is correct (".../{doc_type}").
     """
     doc_type = request.matchdict['doc_type']
@@ -91,7 +94,9 @@ def validate_document_type(request, **kwargs):
 
 
 def validate_lang_param(request, **kwargs):
-    """Checks if the language given in the url as GET parameter
+    """Check the `l` language parameter of the URL.
+
+    Checks if the language given in the url as GET parameter
     is correct ("...?l=...").
     """
     lang = request.GET.get('l')
@@ -99,7 +104,9 @@ def validate_lang_param(request, **kwargs):
 
 
 def validate_cook_param(request, **kwargs):
-    """Checks if the cooking language given in the url as GET parameter
+    """Check the `cook` language parameter of the URL.
+
+    Checks if the cooking language given in the url as GET parameter
     is correct ("...?cook=...").
     """
     cook = request.GET.get('cook')
@@ -107,7 +114,9 @@ def validate_cook_param(request, **kwargs):
 
 
 def validate_preferred_lang_param(request, **kwargs):
-    """Checks if the preferred language given in the url as GET parameter
+    """Check the `pl` preferred language parameter of the URL.
+
+    Checks if the preferred language given in the url as GET parameter
     is correct ("...?pl=...").
     """
     lang = request.GET.get('pl')
@@ -119,8 +128,7 @@ def is_missing(val):
 
 
 def check_required_fields(document, fields, request, updating):
-    """Checks that the given fields are set on the document."""
-
+    """Check that the given fields are set on the document."""
     for field in fields:
         if '.' not in field:
             if updating and field in ['geometry', 'locales']:
@@ -150,15 +158,13 @@ def check_duplicate_locales(document, request):
         for locale in locales:
             lang = locale.get('lang')
             if lang in langs:
-                request.errors.add(
-                    'body', 'locales', 'lang "%s" is given twice' % (lang)
-                )
+                request.errors.add('body', 'locales', f'lang "{lang}" is given twice')
                 return
             langs.add(lang)
 
 
 def check_get_for_integer_property(request, key, required):
-    """Checks if the value associated to a given key is an integer."""
+    """Check if the value associated to a given key is an integer."""
     if not required and request.GET.get(key) is None:
         return
 
@@ -169,7 +175,8 @@ def check_get_for_integer_property(request, key, required):
 
 
 def validate_pagination(request, **kwargs):
-    """
+    """Check that the optional offset and limit are integers.
+
     Checks if a given optional offset is an integer and
     if a given optional limit is an integer.
     """
@@ -178,20 +185,20 @@ def validate_pagination(request, **kwargs):
 
 
 def validate_token_pagination(request, **kwargs):
-    """
-    Validate token pagination parameters (limit and token) for feed.
-    """
+    """Validate token pagination parameters (limit and token) for feed."""
     check_get_for_integer_property(request, 'limit', False)
     validate_token(request)
 
 
 def validate_zoom(request, **kwargs):
-    """Checks that a required `zoom=...` integer query parameter is given."""
+    """Check that a required `zoom=...` integer query parameter is given."""
     check_get_for_integer_property(request, 'zoom', True)
 
 
 def validate_bbox(request, **kwargs):
-    """Checks and parses a required `bbox=xmin,ymin,xmax,ymax` (EPSG:3857)
+    """Check and parse the required `bbox` query parameter.
+
+    Checks and parses a required `bbox=xmin,ymin,xmax,ymax` (EPSG:3857)
     query parameter into `request.validated['bbox']` as a 4-tuple of
     floats.
 
@@ -226,31 +233,23 @@ def validate_bbox(request, **kwargs):
 
 
 def validate_simple_token_pagination(request, **kwargs):
-    """
-    Validate token pagination parameters (limit and token) for changes feed.
-    """
+    """Validate token pagination parameters (limit and token) for changes feed."""
     check_get_for_integer_property(request, 'limit', False)
     validate_simple_token(request)
 
 
 def validate_user_id(request, **kwargs):
-    """
-    Checks for a required user id parameter.
-    """
+    """Check for a required user id parameter."""
     check_get_for_integer_property(request, 'u', True)
 
 
 def validate_user_id_not_required(request, **kwargs):
-    """
-    Checks for a non-required user id parameter.
-    """
+    """Check for a non-required user id parameter."""
     check_get_for_integer_property(request, 'u', False)
 
 
 def validate_document_id_not_required(request, **kwargs):
-    """
-    Checks for a non-required document id parameter.
-    """
+    """Check for a non-required document id parameter."""
     check_get_for_integer_property(request, 'd', False)
 
 
@@ -271,7 +270,7 @@ def validate_body_user_id(request, **kwargs):
     user_exists = DBSession.query(user_exists_query).scalar()
 
     if not user_exists:
-        request.errors.add('body', 'user_id', 'user {0} does not exist'.format(user_id))
+        request.errors.add('body', 'user_id', f'user {user_id} does not exist')
 
 
 def validate_token(request, **kwargs):
@@ -377,7 +376,9 @@ def validate_outing_association(
     child_document_type,
     raise_exc,
 ):
-    """If the given association is an association with an outing, this
+    """Check that the user may change the associations of an outing.
+
+    If the given association is an association with an outing, this
     function checks if the authenticated user is allowed to change the
     associations with the outing (either moderator or participant).
     """
@@ -391,7 +392,7 @@ def validate_outing_association(
         outing_id = child_document_id
 
     if not has_permission_for_outing(request, outing_id):
-        msg = 'no rights to modify associations with outing {}'.format(outing_id)
+        msg = f'no rights to modify associations with outing {outing_id}'
         if raise_exc:
             raise HTTPBadRequest(msg)
         else:
@@ -484,19 +485,17 @@ def validate_personal_association(
             and not has_been_created_by(document_id, request.authenticated_userid)
             and not is_associated_user(document_id, request.authenticated_userid)
         ):
-            msg = 'no rights to modify associations with {} {}'.format(
-                label, document_id
-            )
+            msg = f'no rights to modify associations with {label} {document_id}'
             if raise_exc:
                 raise HTTPBadRequest(msg)
             else:
-                request.errors.add('body', 'associations.{}s'.format(label), msg)
+                request.errors.add('body', f'associations.{label}s', msg)
 
 
 def has_permission_for_outing(request, outing_id):
-    """Check if the user with the given id has permission to change an
-    outing. That is only users that are currently assigned to the outing
-    can modify it.
+    """Check if the user with the given id has permission to change an outing.
+
+    That is only users that are currently assigned to the outing can modify it.
     """
     if request.has_permission('moderator'):
         # moderators can change everything
@@ -551,12 +550,8 @@ def check_permission_for_association_removal(request, association):
     if not valid_parent and not valid_child:
         raise HTTPBadRequest(
             'no rights to modify associations between document '
-            '{} ({}) and {} ({})'.format(
-                association.parent_document_type,
-                association.parent_document_id,
-                association.child_document_type,
-                association.child_document_id,
-            )
+            f'{association.parent_document_type} ({association.parent_document_id}) '
+            f'and {association.child_document_type} ({association.child_document_id})'
         )
 
 
@@ -584,8 +579,7 @@ def _check_permission_association_doc(request, doc_type, document_id):
 
 
 def validate_required_json_string(key, request):
-    """Checks if a given key is present in the request."""
-
+    """Check if a given key is present in the request."""
     value = None
     if key in request.json:
         value = request.json[key]
@@ -616,7 +610,7 @@ def validate_associations(document_type, is_on_create, request, **kwargs):
 
 
 def validate_associations_in(associations_in, document_type, errors):
-    """Validate the provided associations:
+    """Validate the provided associations.
 
         - Check that the linked documents exist.
         - Check that the linked documents have the right document type (e.g. a
@@ -709,14 +703,19 @@ def get_associated_user_ids(xreport_id):
 
 
 def is_associated_user(xreport_id, user_id):
-    """Required to check if an associated user is able to edit Xreport."""
+    """Check that an associated user may edit an Xreport.
+
+    Required to check if an associated user is able to edit Xreport.
+    """
     associated_user_ids = get_associated_user_ids(xreport_id)
     if user_id in associated_user_ids:
         return True
 
 
 def _check_for_valid_documents_ids(associations, errors):
-    """Check that the given documents do exists and that they are of the
+    """Check that the documents exist and have the right type.
+
+    Check that the given documents do exists and that they are of the
     correct type (e.g. a document listed as route association must really be
     a route).
     """
@@ -744,18 +743,14 @@ def _check_for_valid_documents_ids(associations, errors):
                 errors.add(
                     'body',
                     'associations.' + document_key,
-                    'document "{0:n}" does not exist or is redirected'.format(
-                        document_id
-                    ),
+                    f'document "{document_id:n}" does not exist or is redirected',
                 )
                 continue
             if doc_type != type_for_document_id[str(document_id)]:
                 errors.add(
                     'body',
                     'associations.' + document_key,
-                    'document "{0:n}" is not of type "{1}"'.format(
-                        document_id, doc_type
-                    ),
+                    f'document "{document_id:n}" is not of type "{doc_type}"',
                 )
 
 
@@ -767,7 +762,7 @@ def _get_linked_document_ids(associations):
 
 
 def _is_any_climbing_indoor_waypoint(associations_in):
-    """Check if there is any climbing indoor waypoints in the linked waypoints"""
+    """Check if there is any climbing indoor waypoints in the linked waypoints."""
     waypoints_id = [doc['document_id'] for doc in associations_in['waypoints']]
 
     # load the waypoint type for each linked waypoint

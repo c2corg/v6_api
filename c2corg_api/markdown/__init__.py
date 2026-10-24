@@ -1,22 +1,22 @@
-import markdown
-import bleach
-import bleach.css_sanitizer
-import secrets
 import logging
+import re
+import secrets
 from threading import RLock
 
-from .wikilinks import C2CWikiLinkExtension
-from .img import C2CImageExtension
-from .video import C2CVideoExtension
-from .ltag import C2CLTagExtension
-from .header import C2CHeaderExtension
-from .ptag import C2CPTagExtension
-from .alerts import AlertExtension
-from .toc import C2CTocExtension
-from .emojis import C2CEmojiExtension
-from .nbsp import C2CNbspExtension
+import markdown
+import nh3
 from markdown.extensions.nl2br import Nl2BrExtension
 
+from .alerts import AlertExtension
+from .emojis import C2CEmojiExtension
+from .header import C2CHeaderExtension
+from .img import C2CImageExtension
+from .ltag import C2CLTagExtension
+from .nbsp import C2CNbspExtension
+from .ptag import C2CPTagExtension
+from .toc import C2CTocExtension
+from .video import C2CVideoExtension
+from .wikilinks import C2CWikiLinkExtension
 
 logger = logging.getLogger('MARKDOWN')
 
@@ -28,7 +28,7 @@ or post a message on
 <a href="https://forum.camptocamp.org/c/site-et-association/v6-suggestions-bugs-et-problemes">
 forum</a>.
 </div>
-"""  # noqa: E501
+"""
 
 # RLock because this lock can be released
 # only by the thread who acquires it.
@@ -41,7 +41,7 @@ _img_url_secret_attribute = 'c2c:url-' + secrets.token_hex(32)
 
 """
 _***_secret_tag is used as a private key to replace critical HTML node and
-attributes. The key point is this : the parser will use them. bleach will
+attributes. The key point is this : the parser will use them. nh3 will
 remove all critical nodes. Then, a very end parser replace secret_tag by good
 HTML node/attribute
 
@@ -50,15 +50,107 @@ value of _iframe_secret_tag present into server memory.
 
 Same for the c2c:url attribute of embedded images, which clients may use as
 <img src>: only the [img=ID] parser can produce it, a c2c:url attribute written
-in raw HTML is removed by bleach.
+in raw HTML is removed by nh3.
 """
 
 
+# bleach's default allow-lists, which this sanitizer extends (kept as they
+# were with bleach 6.4 so that the output does not change)
+_DEFAULT_TAGS = frozenset(
+    {
+        'a',
+        'abbr',
+        'acronym',
+        'b',
+        'blockquote',
+        'code',
+        'em',
+        'i',
+        'li',
+        'ol',
+        'strong',
+        'ul',
+    }
+)
+_DEFAULT_ATTRIBUTES = {'a': ['href', 'title'], 'abbr': ['title'], 'acronym': ['title']}
+_URL_SCHEMES = frozenset({'http', 'https', 'mailto'})
+_CSS_PROPERTIES = frozenset(
+    {
+        'azimuth',
+        'background-color',
+        'border-bottom-color',
+        'border-collapse',
+        'border-color',
+        'border-left-color',
+        'border-right-color',
+        'border-top-color',
+        'clear',
+        'color',
+        'cursor',
+        'direction',
+        'display',
+        'elevation',
+        'float',
+        'font',
+        'font-family',
+        'font-size',
+        'font-style',
+        'font-variant',
+        'font-weight',
+        'height',
+        'letter-spacing',
+        'line-height',
+        'overflow',
+        'pause',
+        'pause-after',
+        'pause-before',
+        'pitch',
+        'pitch-range',
+        'richness',
+        'speak',
+        'speak-header',
+        'speak-numeral',
+        'speak-punctuation',
+        'speech-rate',
+        'stress',
+        'text-align',
+        'text-decoration',
+        'text-indent',
+        'unicode-bidi',
+        'vertical-align',
+        'voice-family',
+        'volume',
+        'white-space',
+        'width',
+    }
+)
+
+_allowed_tags = None
+
+# start of an HTML tag (`<name` or `</name`) and its name
+_TAG_START_RE = re.compile(r'<(/?)([A-Za-z][^\s/>]*)')
+
+
+def _escape_disallowed_tags(html):
+    """Escape the tags that the sanitizer would remove, so they show as text."""
+
+    # nh3 removes disallowed tags (bleach could escape them). Escaping their
+    # `<` first keeps what users typed visible, e.g. `<www.example.com>` or
+    # `<script>`. This only affects presentation: nh3 still sanitizes the
+    # result.
+    def escape(match):
+        if match.group(2).lower() in _allowed_tags:
+            return match.group(0)
+        return '&lt;' + match.group(1) + match.group(2)
+
+    return _TAG_START_RE.sub(escape, html)
+
+
 def _get_cleaner():
-    global _cleaner
+    global _cleaner, _allowed_tags
 
     if not _cleaner:
-        allowed_tags = bleach.sanitizer.ALLOWED_TAGS.union(
+        allowed_tags = _DEFAULT_TAGS.union(
             {
                 # headers
                 'h1',
@@ -96,7 +188,9 @@ def _get_cleaner():
             }
         )
 
-        allowed_attributes = dict(bleach.sanitizer.ALLOWED_ATTRIBUTES)
+        allowed_attributes = {
+            tag: list(attributes) for tag, attributes in _DEFAULT_ATTRIBUTES.items()
+        }
         allowed_extra_attributes = {
             'a': [
                 'c2c:role',
@@ -136,18 +230,20 @@ def _get_cleaner():
 
             allowed_attributes[key] += allowed_extra_attributes[key]
 
-        css_sanitizer = bleach.css_sanitizer.CSSSanitizer(
-            allowed_css_properties=list(bleach.css_sanitizer.ALLOWED_CSS_PROPERTIES)
-            + ['clear']
-        )
-
-        _cleaner = bleach.sanitizer.Cleaner(
-            tags=allowed_tags,
-            attributes=allowed_attributes,
-            css_sanitizer=css_sanitizer,
-            protocols=bleach.sanitizer.ALLOWED_PROTOCOLS,
-            strip=False,
+        _allowed_tags = allowed_tags
+        _cleaner = nh3.Cleaner(
+            tags=set(allowed_tags),
+            # no attribute is allowed on every tag (nh3 allows `lang` and
+            # `title` by default)
+            attributes={
+                '*': set(),
+                **{tag: set(attrs) for tag, attrs in allowed_attributes.items()},
+            },
+            filter_style_properties=set(_CSS_PROPERTIES),
+            url_schemes=set(_URL_SCHEMES),
             strip_comments=True,
+            # keep links as written (nh3 adds rel="noopener noreferrer")
+            link_rel=None,
         )
 
     return _cleaner
@@ -177,15 +273,14 @@ def _get_markdown_parser():
 
 
 def parse_code(text, image_url_resolver=None):
-    """
-    Get markdown, and returns HTML.
-    This function is thread-safe
+    """Get markdown, and returns HTML.
+
+    This function is thread-safe.
 
     `image_url_resolver` is an optional function
     `(document_id, size) -> url or None` giving the direct media URL of
     embedded images (see `img.make_image_url_resolver`).
     """
-
     # we need parsing to be thread safe because
     # L numbering, and Markdown() has internal global variables
 
@@ -206,7 +301,7 @@ def parse_code(text, image_url_resolver=None):
 
             # we keep clean function into thread safe part,
             # because we are not sure of this function
-            text = cleaner.clean(text=text)
+            text = cleaner.clean(_escape_disallowed_tags(text))
         except Exception as e:
             logger.exception('While parsing markdown', exc_info=e)
             text = _PARSER_EXCEPTION_MESSAGE

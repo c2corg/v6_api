@@ -1,18 +1,16 @@
-"""
-c2corg img Extension for Python-Markdown
-==============================================
+"""c2corg img extension for Python-Markdown.
 
 Converts tags like
 [img=<id>(<options>)(/)?](<caption>)?([/img])?
 to advanced HTML img tags.
 """
 
-from markdown.extensions import Extension
-from markdown.blockprocessors import BlockProcessor
-from xml.etree import ElementTree  # nosec
-
 import os
 import re
+from xml.etree import ElementTree  # nosec
+
+from markdown.blockprocessors import BlockProcessor
+from markdown.extensions import Extension
 
 # \w\W pattern is a trick for capturing all, including new spaces
 IMG_RE = r'(?:^|\n)\[img=(\d+)([a-z_ ]*)(/\]|\]([\w\W]*?)\[/img\])'
@@ -108,7 +106,7 @@ class C2CImageBlock(BlockProcessor):
 
         img = ElementTree.Element('img')
 
-        img_url = '/images/proxy/%s' % (img_id,)
+        img_url = f'/images/proxy/{img_id}'
 
         if img_size:
             img_url += '?size=' + img_size

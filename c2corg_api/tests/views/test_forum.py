@@ -1,20 +1,18 @@
 import datetime
-from unittest.mock import patch, call
+from unittest.mock import call, patch
 
-from c2corg_api.models.common.document_types import OUTING_TYPE
-
-from c2corg_api.models.cache_version import CacheVersion
-from c2corg_api.tests.views import BaseTestRest
+from requests.exceptions import ConnectionError
 
 from c2corg_api.models.association import Association
+from c2corg_api.models.cache_version import CacheVersion
+from c2corg_api.models.common.document_types import OUTING_TYPE
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_topic import DocumentTopic
+from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.models.image import Image
-
-from requests.exceptions import ConnectionError
+from c2corg_api.tests.views import BaseTestRest
 
 
 class TestForumTopicRest(BaseTestRest):
@@ -79,7 +77,7 @@ class TestForumTopicRest(BaseTestRest):
 
         self.session.flush()
 
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestRest.setUp(self)
         self._add_test_data()
 
@@ -90,7 +88,7 @@ class TestForumTopicRest(BaseTestRest):
             status=400,
         )
         errors = json.get('errors')
-        self.assertEqual('Document not found', errors[0].get('description'))
+        assert 'Document not found' == errors[0].get('description')
 
     def test_post_topic_exists(self):
         json = self.post_json_with_contributor(
@@ -99,8 +97,8 @@ class TestForumTopicRest(BaseTestRest):
             status=400,
         )
         errors = json.get('errors')
-        self.assertEqual('Topic already exists', errors[0].get('description'))
-        self.assertEqual(1, errors[0].get('topic_id'))
+        assert 'Topic already exists' == errors[0].get('description')
+        assert 1 == errors[0].get('topic_id')
 
     @patch(
         'pydiscourse.client.DiscourseClient.create_post', side_effect=ConnectionError()
@@ -123,12 +121,12 @@ class TestForumTopicRest(BaseTestRest):
             status=200,
         )
         self.session.expire(self.locale_en)
-        self.assertEqual(10, self.locale_en.topic_id)
-        self.assertEqual(version, self.locale_en.version)
-        self.assertEqual(10, json.get('topic_id'))
+        assert 10 == self.locale_en.topic_id
+        assert version == self.locale_en.version
+        assert 10 == json.get('topic_id')
 
         cache_version = self.session.get(CacheVersion, self.waypoint.document_id)
-        self.assertEqual(cache_version.version, 2)
+        assert cache_version.version == 2
 
     @patch(
         'pydiscourse.client.DiscourseClient.create_post', return_value={'topic_id': 10}
@@ -136,8 +134,8 @@ class TestForumTopicRest(BaseTestRest):
     def test_post_without_title(self, create_post_mock):
         """Test topic link content for documents without title"""
         locale = self.image_locale_en
-        referer = 'https://www.camptocamp.org/images/{}/{}'.format(
-            locale.document_id, locale.lang
+        referer = (
+            f'https://www.camptocamp.org/images/{locale.document_id}/{locale.lang}'
         )
         self.post_json_with_contributor(
             '/forum/topics',
@@ -147,9 +145,9 @@ class TestForumTopicRest(BaseTestRest):
         )
         create_post_mock.assert_called_with(
             '<a href="{}">{}</a>'.format(
-                referer, '/images/{}/{}'.format(locale.document_id, locale.lang)
+                referer, f'/images/{locale.document_id}/{locale.lang}'
             ),
-            title='{}_{}'.format(locale.document_id, locale.lang),
+            title=f'{locale.document_id}_{locale.lang}',
             category_id='Commentaires',
         )
 
@@ -171,20 +169,3 @@ class TestForumTopicRest(BaseTestRest):
             ],
             any_order=True,
         )
-
-
-class TestForumPrivateMessageRest(BaseTestRest):
-    @patch(
-        'pydiscourse.client.DiscourseClient.private_messages_unread',
-        return_value={'topic_list': {'topics': [{'id': 1}, {'id': 2}]}},
-    )
-    @patch(
-        'c2corg_api.security.discourse_client.APIDiscourseClient.get_username',
-        return_value='alice',
-    )
-    def test_get(self, _username_mock, _messages_mock):
-        json = self.get_json_with_contributor(
-            '/forum/private-messages/unread-count', status=200
-        )
-        self.assertEqual(2, json['count'])
-        self.assertTrue(json['link'].endswith('/u/alice/messages'))

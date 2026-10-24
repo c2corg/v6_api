@@ -1,8 +1,12 @@
-from c2corg_api.caching import cache_document_listing
+from sqlalchemy.orm import contains_eager, joinedload, load_only, subqueryload
+from sqlalchemy.sql.expression import and_
+from sqlalchemy.sql.functions import func
+
+from c2corg_api.caching import cache_document_listing, get_or_create_multi
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import Area, schema_listing_area
 from c2corg_api.models.association import Association
-from c2corg_api.models.cache_version import get_document_id, get_cache_keys
+from c2corg_api.models.cache_version import get_cache_keys, get_document_id
 from c2corg_api.models.document import (
     DocumentGeometry,
     DocumentLocale,
@@ -12,11 +16,7 @@ from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.views import to_json_dict, set_best_locale
-from c2corg_api.caching import get_or_create_multi
-from sqlalchemy.orm import joinedload, contains_eager, subqueryload, load_only
-from sqlalchemy.sql.expression import and_
-from sqlalchemy.sql.functions import func
+from c2corg_api.views import set_best_locale, to_json_dict
 
 
 def get_documents_for_ids(document_ids, lang, documents_config, total=None):
@@ -29,11 +29,11 @@ def get_documents_for_ids(document_ids, lang, documents_config, total=None):
 def get_documents(documents_config, meta_params, search_documents):
     lang = meta_params['lang']
     base_query = DBSession.query(documents_config.clazz).filter(
-        getattr(documents_config.clazz, 'redirects_to').is_(None)
+        documents_config.clazz.redirects_to.is_(None)
     )
-    base_total_query = DBSession.query(
-        getattr(documents_config.clazz, 'document_id')
-    ).filter(getattr(documents_config.clazz, 'redirects_to').is_(None))
+    base_total_query = DBSession.query(documents_config.clazz.document_id).filter(
+        documents_config.clazz.redirects_to.is_(None)
+    )
 
     base_total_query = add_profile_filter(base_total_query, documents_config.clazz)
     base_query = add_load_for_profiles(base_query, documents_config.clazz)
@@ -49,16 +49,19 @@ def get_documents(documents_config, meta_params, search_documents):
     cache_keys = get_cache_keys(document_ids, lang, documents_config.document_type)
 
     def get_documents_from_cache_keys(*cache_keys):
-        """This method is called from dogpile.cache with the cache keys
+        """Load the documents for the cache keys that are not cached yet.
+
+        This method is called from dogpile.cache with the cache keys
         for the documents that are not cached yet.
         """
         ids = [get_document_id(cache_key) for cache_key in cache_keys]
 
         docs = _get_documents_from_ids(ids, base_query, documents_config, lang)
 
-        assert len(cache_keys) == len(docs), (
-            'the number of returned documents must match ' + 'the number of keys'
-        )
+        if len(cache_keys) != len(docs):
+            raise RuntimeError(
+                'the number of returned documents must match the number of keys'
+            )
 
         return docs
 
@@ -78,8 +81,9 @@ def get_documents(documents_config, meta_params, search_documents):
 
 def _get_documents_from_ids(document_ids, base_query, documents_config, lang):
     """Load the documents for the ids and return them as json dict.
-    The returned list contains None values for documents that could not be
-    loaded, and the list has the same order has the document id list.
+
+    The returned list contains None values for documents that could not be loaded, and
+    the list has the same order has the document id list.
     """
     base_query = base_query.options(
         load_only(
@@ -100,7 +104,7 @@ def _get_documents_from_ids(document_ids, base_query, documents_config, lang):
         # only load the geometry if the fields list contains other columns than
         # 'version'
         base_query = base_query.options(
-            joinedload(getattr(documents_config.clazz, 'geometry')).load_only(
+            joinedload(documents_config.clazz.geometry).load_only(
                 *[
                     getattr(DocumentGeometry, field)
                     for field in documents_config.get_load_only_fields_geometry()
@@ -110,7 +114,7 @@ def _get_documents_from_ids(document_ids, base_query, documents_config, lang):
 
     if documents_config.include_areas:
         base_query = base_query.options(
-            joinedload(getattr(documents_config.clazz, '_areas'))
+            joinedload(documents_config.clazz._areas)
             .load_only(
                 Area.document_id,
                 Area.area_type,
@@ -158,9 +162,10 @@ def _get_documents_from_ids(document_ids, base_query, documents_config, lang):
 
 
 def _load_documents(document_ids, clazz, base_query):
-    """Load documents given a list of document ids. Note that the
-    returned list does not contain the documents in the same order as
-    the passed in document id list.
+    """Load documents given a list of document ids.
+
+    Note that the returned list does not contain the documents in the same order as the
+    passed in document id list.
     """
     if not document_ids:
         return []
@@ -190,10 +195,10 @@ def add_profile_filter(document_query, clazz):
 
 def add_load_for_locales(base_query, clazz, clazz_locale, load_only_fields=None):
     if clazz_locale:
-        locales_load = subqueryload(getattr(clazz, 'locales').of_type(clazz_locale))
+        locales_load = subqueryload(clazz.locales.of_type(clazz_locale))
         locale_clazz = clazz_locale
     else:
-        locales_load = subqueryload(getattr(clazz, 'locales'))
+        locales_load = subqueryload(clazz.locales)
         locale_clazz = DocumentLocale
 
     if load_only_fields:

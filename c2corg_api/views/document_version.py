@@ -1,16 +1,16 @@
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.caching import cache_document_version
-from c2corg_api.models import DBSession
-from c2corg_api.models.cache_version import get_cache_key
-from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
-from c2corg_api.models.user import User
-from c2corg_api.views import to_json_dict, etag_cache
-from c2corg_api.caching import get_or_create
 from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy import column
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import union
+
+from c2corg_api.caching import cache_document_version, get_or_create
+from c2corg_api.models import DBSession
+from c2corg_api.models.cache_version import get_cache_key
+from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
+from c2corg_api.models.user import User
+from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import etag_cache, to_json_dict
 
 
 class DocumentVersionRest(ACLDefault):
@@ -31,10 +31,10 @@ class DocumentVersionRest(ACLDefault):
         base_cache_key = get_cache_key(document_id, lang, document_type=document_type)
 
         if not base_cache_key:
-            raise HTTPNotFound('no version for document {0}'.format(document_id))
+            raise HTTPNotFound(f'no version for document {document_id}')
         else:
             # version caching is distinct for moderators
-            cache_key = '{0}-{1}{2}'.format(
+            cache_key = '{}-{}{}'.format(
                 base_cache_key,
                 version_id,
                 '-mod' if self.request.has_permission('moderator') else '',
@@ -106,7 +106,8 @@ def serialize_version(version):
 
 
 def get_neighbour_version_ids(version_id, document_id, lang):
-    """
+    """Get the previous and next version of a document version.
+
     Get the previous and next version for a version of a document with a
     specific language.
     """

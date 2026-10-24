@@ -1,21 +1,22 @@
-from c2corg_api.models import schema, Base, enums
+from colanderalchemy import SQLAlchemySchemaNode
+from sqlalchemy import Column, ForeignKey, Integer, SmallInteger, String
+from sqlalchemy.dialects.postgresql.array import ARRAY
+
+from c2corg_api.models import Base, enums, schema
+from c2corg_api.models.common import document_types
+from c2corg_api.models.common.fields_book import fields_book
 from c2corg_api.models.document import (
     ArchiveDocument,
     Document,
-    schema_document_locale,
     schema_attributes,
+    schema_document_locale,
 )
 from c2corg_api.models.schema_utils import (
+    get_create_schema,
     get_update_schema,
     restrict_schema,
-    get_create_schema,
 )
-from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
-from sqlalchemy.dialects.postgresql.array import ARRAY
-from c2corg_api.models.common.fields_book import fields_book
-from colanderalchemy import SQLAlchemySchemaNode
-from sqlalchemy import Column, Integer, String, SmallInteger, ForeignKey
-from c2corg_api.models.common import document_types
+from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
 BOOK_TYPE = document_types.BOOK_TYPE
 

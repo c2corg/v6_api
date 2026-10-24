@@ -1,17 +1,18 @@
-from datetime import datetime, timedelta, UTC
-from c2corg_api.models.user import User
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey
-from sqlalchemy.orm import relationship, backref
-from sqlalchemy.sql.expression import over, and_, asc
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import backref, relationship
+from sqlalchemy.sql.expression import and_, asc, over
 from sqlalchemy.sql.functions import func
 
 from c2corg_api.models import Base, DBSession, schema, users_schema
 from c2corg_api.models.document import (
-    Document,
     ArchiveDocument,
-    ArchiveDocumentLocale,
     ArchiveDocumentGeometry,
+    ArchiveDocumentLocale,
+    Document,
 )
+from c2corg_api.models.user import User
 
 
 class HistoryMetaData(Base):
@@ -119,7 +120,9 @@ def get_creators(document_ids):
 
 
 def has_been_created_by(document_id, user_id):
-    """Check if passed user_id is the id of the user that has created
+    """Check if the user created the first version of this document.
+
+    Check if passed user_id is the id of the user that has created
     the initial version of this document, whatever the language.
     """
     creators = get_creators([document_id])
@@ -129,9 +132,7 @@ def has_been_created_by(document_id, user_id):
 
 
 def is_less_than_24h_old(document_id):
-    """Check that the first version of this document was created less than
-    24h ago.
-    """
+    """Check that the first version of this document was created less than 24h ago."""
     written_at = (
         DBSession.query(HistoryMetaData.written_at.label('written_at'))
         .select_from(HistoryMetaData)

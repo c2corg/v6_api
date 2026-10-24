@@ -1,5 +1,5 @@
-from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
+from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.document_tag import get_tag_relation
@@ -10,7 +10,7 @@ def has_tagged(user_id, document_id):
 
 
 class BaseDocumentTagTest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
 
         self.contributor = self.session.get(User, self.global_userids['contributor'])
@@ -41,7 +41,7 @@ class BaseDocumentTagTest(BaseTestRest):
 
 
 class TestDocumentTagRest(BaseDocumentTagTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/tags/add'
 
@@ -55,7 +55,7 @@ class TestDocumentTagRest(BaseDocumentTagTest):
             self._prefix, request_body, status=200, username='contributor'
         )
 
-        self.assertTrue(has_tagged(self.contributor.id, self.route1.document_id))
+        assert has_tagged(self.contributor.id, self.route1.document_id)
 
         log = (
             self.session.query(DocumentTagLog)
@@ -64,7 +64,7 @@ class TestDocumentTagRest(BaseDocumentTagTest):
             .filter(DocumentTagLog.document_type == ROUTE_TYPE)
             .one()
         )
-        self.assertTrue(log.is_creation)
+        assert log.is_creation
 
         self.post_json_with_contributor(
             self._prefix, request_body, status=400, username='contributor'
@@ -74,7 +74,7 @@ class TestDocumentTagRest(BaseDocumentTagTest):
 
 
 class TestDocumentUntagRest(BaseDocumentTagTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/tags/remove'
 
@@ -84,13 +84,13 @@ class TestDocumentUntagRest(BaseDocumentTagTest):
     def test_untag(self):
         request_body = {'document_id': self.route2.document_id}
 
-        self.assertTrue(has_tagged(self.contributor2.id, self.route2.document_id))
+        assert has_tagged(self.contributor2.id, self.route2.document_id)
 
         self.post_json_with_contributor(
             self._prefix, request_body, status=200, username='contributor2'
         )
 
-        self.assertFalse(has_tagged(self.contributor2.id, self.route2.document_id))
+        assert not has_tagged(self.contributor2.id, self.route2.document_id)
 
         self.post_json_with_contributor(
             self._prefix, request_body, status=400, username='contributor2'
@@ -103,26 +103,26 @@ class TestDocumentUntagRest(BaseDocumentTagTest):
             .filter(DocumentTagLog.document_type == ROUTE_TYPE)
             .one()
         )
-        self.assertFalse(log.is_creation)
+        assert not log.is_creation
 
         self.assertNotifiedEs()
 
     def test_untag_not_tagged(self):
         request_body = {'document_id': self.route1.document_id}
 
-        self.assertFalse(has_tagged(self.contributor.id, self.route1.document_id))
+        assert not has_tagged(self.contributor.id, self.route1.document_id)
 
         self.post_json_with_contributor(
             self._prefix, request_body, status=400, username='contributor'
         )
 
-        self.assertFalse(has_tagged(self.contributor.id, self.route1.document_id))
+        assert not has_tagged(self.contributor.id, self.route1.document_id)
 
         self.assertNotNotifiedEs()
 
 
 class TestDocumentTaggedRest(BaseDocumentTagTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/tags/has'
 
@@ -132,21 +132,21 @@ class TestDocumentTaggedRest(BaseDocumentTagTest):
     def test_has_tagged(self):
         headers = self.add_authorization_header(username='contributor2')
         response = self.app.get(
-            '{}/{}'.format(self._prefix, self.route2.document_id),
+            f'{self._prefix}/{self.route2.document_id}',
             status=200,
             headers=headers,
         )
         body = response.json
 
-        self.assertTrue(body['todo'])
+        assert body['todo']
 
     def test_has_tagged_not(self):
         headers = self.add_authorization_header(username='contributor')
         response = self.app.get(
-            '{}/{}'.format(self._prefix, self.route1.document_id),
+            f'{self._prefix}/{self.route1.document_id}',
             status=200,
             headers=headers,
         )
         body = response.json
 
-        self.assertFalse(body['todo'])
+        assert not body['todo']

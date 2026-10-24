@@ -1,19 +1,20 @@
+from httmock import HTTMock, all_requests
+from sqlalchemy.sql.expression import or_
+
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale, UpdateType
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
-from c2corg_api.models.feed import update_feed_document_create, DocumentChange
+from c2corg_api.models.feed import DocumentChange, update_feed_document_create
 from c2corg_api.models.image import Image
-from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
+from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.document import DocumentRest
-from sqlalchemy.sql.expression import or_
-from httmock import all_requests, HTTMock
 
 
 class TestDocumentMergeRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/documents/merge'
 
@@ -274,7 +275,7 @@ class TestDocumentMergeRest(BaseTestRest):
             )
             .count()
         )
-        self.assertEqual(0, association_count)
+        assert 0 == association_count
         association_log_count = (
             self.session.query(AssociationLog)
             .filter(
@@ -285,23 +286,23 @@ class TestDocumentMergeRest(BaseTestRest):
             )
             .count()
         )
-        self.assertEqual(0, association_count)
-        self.assertEqual(0, association_log_count)
+        assert 0 == association_count
+        assert 0 == association_log_count
 
         association_route = self.session.get(
             Association, (self.waypoint2.document_id, self.route1.document_id)
         )
-        self.assertIsNotNone(association_route)
+        assert association_route is not None
 
         # check that main waypoints are transferred
         self.session.refresh(self.route1)
-        self.assertEqual(self.route1.main_waypoint_id, self.waypoint2.document_id)
+        assert self.route1.main_waypoint_id == self.waypoint2.document_id
         route_locale = self.route1.locales[0]
-        self.assertEqual('Mont Blanc', route_locale.title_prefix)
+        assert 'Mont Blanc' == route_locale.title_prefix
 
         # check that the redirection is set
         self.session.refresh(self.waypoint1)
-        self.assertEqual(self.waypoint1.redirects_to, self.waypoint2.document_id)
+        assert self.waypoint1.redirects_to == self.waypoint2.document_id
 
         # check that a new version was created for the source document
         new_source_version = (
@@ -310,10 +311,10 @@ class TestDocumentMergeRest(BaseTestRest):
             .order_by(DocumentVersion.id.desc())
             .first()
         )
-        self.assertIsNotNone(new_source_version)
-        self.assertEqual(
-            'merged with {}'.format(self.waypoint2.document_id),
-            new_source_version.history_metadata.comment,
+        assert new_source_version is not None
+        assert (
+            f'merged with {self.waypoint2.document_id}'
+            == new_source_version.history_metadata.comment
         )
 
         # check that the cache versions are updated
@@ -327,7 +328,7 @@ class TestDocumentMergeRest(BaseTestRest):
             .filter(DocumentChange.document_id == self.waypoint1.document_id)
             .count()
         )
-        self.assertEqual(0, feed_count)
+        assert 0 == feed_count
 
     def test_merge_image(self):
         call = {'times': 0}
@@ -347,12 +348,10 @@ class TestDocumentMergeRest(BaseTestRest):
                 },
                 200,
             )
-            self.assertEqual(call['times'], 1)
-            self.assertIn('filenames=image1.1.jpg', call['request.body'])
-            self.assertIn('filenames=image1.jpg', call['request.body'])
-            self.assertEqual(
-                call['request.url'], self.settings['image_backend.url'] + '/delete'
-            )
+            assert call['times'] == 1
+            assert 'filenames=image1.1.jpg' in call['request.body']
+            assert 'filenames=image1.jpg' in call['request.body']
+            assert call['request.url'] == self.settings['image_backend.url'] + '/delete'
 
     def test_merge_image_error_deleting_files(self):
         """Test that the merge request is also successful if the image files
@@ -375,12 +374,10 @@ class TestDocumentMergeRest(BaseTestRest):
                 },
                 200,
             )
-            self.assertEqual(call['times'], 1)
-            self.assertIn('filenames=image1.1.jpg', call['request.body'])
-            self.assertIn('filenames=image1.jpg', call['request.body'])
-            self.assertEqual(
-                call['request.url'], self.settings['image_backend.url'] + '/delete'
-            )
+            assert call['times'] == 1
+            assert 'filenames=image1.1.jpg' in call['request.body']
+            assert 'filenames=image1.jpg' in call['request.body']
+            assert call['request.url'] == self.settings['image_backend.url'] + '/delete'
 
     def test_tags(self):
         self._post(
@@ -397,10 +394,10 @@ class TestDocumentMergeRest(BaseTestRest):
             .filter(DocumentTag.document_id == self.route2.document_id)
             .count()
         )
-        self.assertEqual(count, 1)
+        assert count == 1
         count = (
             self.session.query(DocumentTagLog)
             .filter(DocumentTagLog.document_id == self.route2.document_id)
             .count()
         )
-        self.assertEqual(count, 1)
+        assert count == 1

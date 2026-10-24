@@ -1,34 +1,30 @@
-from c2corg_api.models.schema_utils import (
-    restrict_schema,
-    get_update_schema,
-    get_create_schema,
-)
+from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Boolean,
     Column,
+    ForeignKey,
     Integer,
     SmallInteger,
     String,
-    ForeignKey,
 )
 
-
-from colanderalchemy import SQLAlchemySchemaNode
-
-from c2corg_api.models import schema, Base
-from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
+from c2corg_api.models import Base, enums, schema
+from c2corg_api.models.common import document_types
 from c2corg_api.models.document import (
     ArchiveDocument,
+    ArchiveDocumentLocale,
     Document,
     DocumentLocale,
-    ArchiveDocumentLocale,
+    get_geometry_schema_overrides,
     schema_attributes,
     schema_locale_attributes,
-    get_geometry_schema_overrides,
 )
-from c2corg_api.models import enums
-from c2corg_api.models.common import document_types
-
+from c2corg_api.models.schema_utils import (
+    get_create_schema,
+    get_update_schema,
+    restrict_schema,
+)
+from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
 WAYPOINT_TYPE = document_types.WAYPOINT_TYPE
 
@@ -231,7 +227,7 @@ attributes = [
 
 
 class Waypoint(_WaypointMixin, Document):
-    """ """
+    """Current version of a waypoint."""
 
     __tablename__ = 'waypoints'
 
@@ -267,7 +263,7 @@ class Waypoint(_WaypointMixin, Document):
 
 
 class ArchiveWaypoint(_WaypointMixin, ArchiveDocument):
-    """ """
+    """Archived version of a waypoint."""
 
     __tablename__ = 'waypoints_archives'
 
@@ -302,7 +298,7 @@ attributes_locales = ['access', 'access_period', 'external_resources']
 
 
 class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
-    """ """
+    """Current version of a waypoint locale."""
 
     __tablename__ = 'waypoints_locales'
 
@@ -326,7 +322,7 @@ class WaypointLocale(_WaypointLocaleMixin, DocumentLocale):
 
 
 class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
-    """ """
+    """Archived version of a waypoint locale."""
 
     __tablename__ = 'waypoints_locales_archives'
 

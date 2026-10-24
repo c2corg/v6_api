@@ -1,6 +1,5 @@
 """Tests for the Discourse API client wrapper."""
 
-import unittest
 from unittest.mock import MagicMock, patch
 
 from c2corg_api.security.discourse_client import APIDiscourseClient
@@ -22,7 +21,7 @@ def _ok_response(body):
     return response
 
 
-class TestAPIDiscourseClient(unittest.TestCase):
+class TestAPIDiscourseClient:
     """Check the requests APIDiscourseClient sends to Discourse."""
 
     @patch('pydiscourse.client.requests.request')
@@ -35,17 +34,17 @@ class TestAPIDiscourseClient(unittest.TestCase):
         )
 
         client = APIDiscourseClient(SETTINGS)
-        self.assertEqual(client.get_userid(5), 42)
+        assert client.get_userid(5) == 42
 
         verb, url = request.call_args.args
         kwargs = request.call_args.kwargs
-        self.assertEqual(verb, 'GET')
-        self.assertEqual(url, 'http://discourse.test/users/by-external/5')
-        self.assertEqual(kwargs['headers']['Api-Key'], 'the-api-key')
-        self.assertEqual(kwargs['headers']['Api-Username'], 'system')
+        assert verb == 'GET'
+        assert url == 'http://discourse.test/users/by-external/5'
+        assert kwargs['headers']['Api-Key'] == 'the-api-key'
+        assert kwargs['headers']['Api-Username'] == 'system'
         params = kwargs.get('params') or {}
-        self.assertNotIn('api_key', params)
-        self.assertNotIn('api_username', params)
+        assert 'api_key' not in params
+        assert 'api_username' not in params
 
     @patch('pydiscourse.client.requests.request')
     def test_invite_user_to_topic(self, request):
@@ -55,6 +54,6 @@ class TestAPIDiscourseClient(unittest.TestCase):
         APIDiscourseClient(SETTINGS).invite_user_to_topic('contributor', 10)
 
         verb, url = request.call_args.args
-        self.assertEqual(verb, 'POST')
-        self.assertEqual(url, 'http://discourse.test/t/10/invite.json')
-        self.assertEqual(request.call_args.kwargs['data'], {'user': 'contributor'})
+        assert verb == 'POST'
+        assert url == 'http://discourse.test/t/10/invite.json'
+        assert request.call_args.kwargs['data'] == {'user': 'contributor'}

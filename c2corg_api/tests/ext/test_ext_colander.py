@@ -1,15 +1,18 @@
-from c2corg_api.ext.colander_ext import (
-    from_wkb,
-    wkbelement_from_geojson,
-    geojson_from_wkbelement,
-)
-from c2corg_api.models.document import DocumentGeometry, Document
-from c2corg_api.tests import BaseTestCase
-from colander import null, Invalid
+import json
+
+import pytest
+from colander import Invalid, null
 from geoalchemy2 import WKBElement
 from geoalchemy2.shape import from_shape
 from geomet import wkb as geomet_wkb
-import json
+
+from c2corg_api.ext.colander_ext import (
+    from_wkb,
+    geojson_from_wkbelement,
+    wkbelement_from_geojson,
+)
+from c2corg_api.models.document import Document, DocumentGeometry
+from c2corg_api.tests import BaseTestCase
 
 
 class TestGeometry(BaseTestCase):
@@ -18,7 +21,7 @@ class TestGeometry(BaseTestCase):
 
         geom_schema = Geometry()
 
-        self.assertEqual(null, geom_schema.serialize({}, null))
+        assert null == geom_schema.serialize({}, null)
 
     def test_serialize_wkb(self):
         from c2corg_api.ext.colander_ext import Geometry
@@ -28,9 +31,8 @@ class TestGeometry(BaseTestCase):
         from shapely.geometry.point import Point
 
         wkb = from_shape(Point(1.0, 2.0))
-        self.assertEqual(
-            {'type': 'Point', 'coordinates': [1.0, 2.0]},
-            json.loads(geom_schema.serialize({}, wkb)),
+        assert {'type': 'Point', 'coordinates': [1.0, 2.0]} == json.loads(
+            geom_schema.serialize({}, wkb)
         )
 
     def test_serialize_4d_wkb(self):
@@ -42,9 +44,8 @@ class TestGeometry(BaseTestCase):
             {'type': 'Point', 'coordinates': [1.0, 2.0, 3.0, 4.0]},
             big_endian=False,
         )
-        self.assertEqual(
-            {'type': 'Point', 'coordinates': [1.0, 2.0, 3.0, 4.0]},
-            json.loads(geom_schema.serialize({}, from_wkb(wkb))),
+        assert {'type': 'Point', 'coordinates': [1.0, 2.0, 3.0, 4.0]} == json.loads(
+            geom_schema.serialize({}, from_wkb(wkb))
         )
 
     def test_serialize_invalid(self):
@@ -52,15 +53,16 @@ class TestGeometry(BaseTestCase):
 
         geom_schema = Geometry()
 
-        self.assertRaises(Invalid, geom_schema.serialize, {}, 'Point(1 0)')
+        with pytest.raises(Invalid):
+            geom_schema.serialize({}, 'Point(1 0)')
 
     def test_deserialize_null(self):
         from c2corg_api.ext.colander_ext import Geometry
 
         geom_schema = Geometry()
 
-        self.assertEqual(null, geom_schema.deserialize({}, null))
-        self.assertEqual(null, geom_schema.deserialize({}, ''))
+        assert null == geom_schema.deserialize({}, null)
+        assert null == geom_schema.deserialize({}, '')
 
     def test_deserialize_valid_geojson(self):
         from c2corg_api.ext.colander_ext import Geometry
@@ -74,7 +76,7 @@ class TestGeometry(BaseTestCase):
         wkb = geom_schema.deserialize(
             {}, '{"type": "Point", "coordinates": [1.0, 2.0]}'
         )
-        self.assertEqual(expected_wkb.desc, wkb.desc)
+        assert expected_wkb.desc == wkb.desc
 
     def test_deserialize_4d(self):
         from c2corg_api.ext.colander_ext import Geometry
@@ -91,31 +93,25 @@ class TestGeometry(BaseTestCase):
         wkb = geom_schema.deserialize(
             {}, '{"type": "Point", "coordinates": [1.0, 2.0, 3.0, 4.0]}'
         )
-        self.assertEqual(expected_wkb.desc, wkb.desc)
+        assert expected_wkb.desc == wkb.desc
 
     def test_serialize_invalid_wrong_type(self):
         from c2corg_api.ext.colander_ext import Geometry
 
         geom_schema = Geometry()
 
-        self.assertRaises(
-            Invalid,
-            geom_schema.deserialize,
-            {},
-            '{"type": "InvalidType", "coordinates": [1.0, 2.0]}',
-        )
+        with pytest.raises(Invalid):
+            geom_schema.deserialize(
+                {}, '{"type": "InvalidType", "coordinates": [1.0, 2.0]}'
+            )
 
     def test_serialize_invalid_syntax(self):
         from c2corg_api.ext.colander_ext import Geometry
 
         geom_schema = Geometry()
 
-        self.assertRaises(
-            Invalid,
-            geom_schema.deserialize,
-            {},
-            '"type": "Point", "coordinates": [1.0, 2.0]}',
-        )
+        with pytest.raises(Invalid):
+            geom_schema.deserialize({}, '"type": "Point", "coordinates": [1.0, 2.0]}')
 
     def test_save_and_load(self):
         fake_doc = Document()
