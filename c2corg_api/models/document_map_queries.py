@@ -5,7 +5,9 @@ from c2corg_api.models.document import DocumentGeometry
 
 
 def get_tracks(model, document_ids, bbox_3857, limit):
-    """Returns up to `limit + 1` `(document_id, geom_detail)` rows for the
+    """Return the tracks of the given documents that intersect a bbox.
+
+    Returns up to `limit + 1` `(document_id, geom_detail)` rows for the
     documents of type `model` among `document_ids` whose track
     (`geometry.geom_detail`) intersects the given bbox. Callers should treat
     a result of length `limit + 1` as "too many results for this bbox"
@@ -31,7 +33,9 @@ def get_tracks(model, document_ids, bbox_3857, limit):
 
 
 def get_locales_for_documents(locale_model, document_ids):
-    """Returns all `locale_model` rows for the given document ids, so that
+    """Return all locales of the given documents.
+
+    Returns all `locale_model` rows for the given document ids, so that
     callers can pick the best-matching locale per document (see
     `c2corg_api.views.get_best_locale`).
     """

@@ -191,12 +191,14 @@ def validate_token_pagination(request, **kwargs):
 
 
 def validate_zoom(request, **kwargs):
-    """Checks that a required `zoom=...` integer query parameter is given."""
+    """Check that a required `zoom=...` integer query parameter is given."""
     check_get_for_integer_property(request, 'zoom', True)
 
 
 def validate_bbox(request, **kwargs):
-    """Checks and parses a required `bbox=xmin,ymin,xmax,ymax` (EPSG:3857)
+    """Check and parse the required `bbox` query parameter.
+
+    Checks and parses a required `bbox=xmin,ymin,xmax,ymax` (EPSG:3857)
     query parameter into `request.validated['bbox']` as a 4-tuple of
     floats.
 
