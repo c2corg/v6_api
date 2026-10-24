@@ -20,7 +20,7 @@ from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.tests import BaseTestCase
 
 
-class MappingTest(BaseTestCase):
+class TestMapping(BaseTestCase):
     def test_waypoint_mapping(self):
         self._test_mapping(SearchWaypoint, Waypoint)
 

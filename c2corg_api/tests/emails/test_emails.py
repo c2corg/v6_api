@@ -9,7 +9,7 @@ from c2corg_api.models.user import User
 from c2corg_api.tests import BaseTestCase
 
 
-class EmailTests(BaseTestCase):
+class TestEmails(BaseTestCase):
     @patch('c2corg_api.emails.email_service.smtplib.SMTP')
     def test_send_email(self, smtp):
         self.email_service._send_email('toto@localhost', subject='s', body='b')

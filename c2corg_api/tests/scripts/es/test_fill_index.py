@@ -20,7 +20,7 @@ from c2corg_api.search.mappings.xreport_mapping import SearchXreport
 from c2corg_api.tests import BaseTestCase
 
 
-class FillIndexTest(BaseTestCase):
+class TestFillIndex(BaseTestCase):
     def test_fill_index(self):
         """Tests that documents are inserted into the ElasticSearch index."""
         self.session.add(

@@ -13,7 +13,7 @@ from c2corg_api.tests import BaseTestCase
 from c2corg_api.views.document import DocumentRest
 
 
-class SyncWorkerTest(BaseTestCase):
+class TestSyncWorker(BaseTestCase):
     def test_process_task(self):
         """Tests that the syncer listens to messages and sends changes to
         ElasticSearch.

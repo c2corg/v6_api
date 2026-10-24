@@ -30,7 +30,7 @@ class _Clock:
         )
 
 
-class RateLimitingTest(BaseTestRest):
+class TestRateLimiting(BaseTestRest):
     def setUp(self):
         BaseTestRest.setUp(self)
 
@@ -42,7 +42,7 @@ class RateLimitingTest(BaseTestRest):
             'c2corg_api.tweens.rate_limiting.datetime', self.clock.datetime_module()
         )
         clock_patch.start()
-        self.addCleanup(clock_patch.stop)
+        self._clock_patch = clock_patch
         self._prefix = '/waypoints'
 
         self.username = None
@@ -53,6 +53,9 @@ class RateLimitingTest(BaseTestRest):
         self.limit_robot = int(self.settings['rate_limiting.limit_robot'])
         self.window_span = int(self.settings['rate_limiting.window_span'])
         self.max_times = int(self.settings['rate_limiting.max_times'])
+
+    def tearDown(self):
+        self._clock_patch.stop()
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_contributor(self, _send_email):

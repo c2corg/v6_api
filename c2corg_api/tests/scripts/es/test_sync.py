@@ -26,7 +26,7 @@ from c2corg_api.tests import BaseTestCase, global_userids
 from c2corg_api.views.document import DocumentRest
 
 
-class SyncTest(BaseTestCase):
+class TestSync(BaseTestCase):
     def setUp(self):
         BaseTestCase.setUp(self)
         self._add_test_data()

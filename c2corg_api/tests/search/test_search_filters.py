@@ -22,7 +22,7 @@ from c2corg_api.search.search_filters import (
 from c2corg_api.tests import BaseTestCase
 
 
-class AdvancedSearchTest(BaseTestCase):
+class TestAdvancedSearch(BaseTestCase):
     def test_build_query(self):
         params = {'q': 'search word', 'walt': '1500', 'a': '1234,4567', 'l': 'fr'}
         meta_params = {'limit': 10, 'offset': 0}
