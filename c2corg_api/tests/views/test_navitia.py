@@ -1989,7 +1989,7 @@ class TestNavitiaRestParams(BaseTestCase):
         assert transport['max_duration'] == 90
         assert transport['hiking_duration'] == 60
 
-    def test_parse_transport_params_invalid(self):
+    def test_parse_transport_params_invalid(self, subtests):
         invalid_params = [
             {'date': None},
             {'from': '5.1'},
@@ -2008,7 +2008,7 @@ class TestNavitiaRestParams(BaseTestCase):
                 for key, value in self._transport_params(**overrides).items()
                 if value is not None
             }
-            with self.assertRaises(ValueError, msg=str(overrides)):
+            with subtests.test(msg=str(overrides)), pytest.raises(ValueError):
                 parse_transport_params(params)
 
     def test_navitia_transportisochrones_invalid_params(self):
@@ -2810,6 +2810,12 @@ class TestReachableIdsByGeometry(BaseTestCase):
         )
         self.session.add(self.route)
         self.session.flush()
+        # calculate_route_duration (after_insert) sets calculated_duration
+        # to NULL for a hiking route without height differences: set it
+        # again with a bulk update, which does not run the mapper events
+        self.session.query(Route).filter(
+            Route.document_id == self.route.document_id
+        ).update({'calculated_duration': 0.5}, synchronize_session=False)
 
         self.session.add(
             Association.create(
