@@ -93,5 +93,5 @@ formatter = json
 format = %(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s
 
 [formatter_json]
-class = pythonjsonlogger.jsonlogger.JsonFormatter
+class = pythonjsonlogger.json.JsonFormatter
 format = %(message)%(levelname)%(name)%(asctime)%(funcName)%(lineno)%(pathname)%(stack_info)%(module)%(created)%(threadName)%(processName)%(getMessage)

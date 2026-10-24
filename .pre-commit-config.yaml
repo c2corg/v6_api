@@ -1,0 +1,19 @@
+# Runs ruff before each commit, using the version locked in uv.lock
+# (no second ruff pin to keep in sync). Enable once per clone with:
+#   uv run pre-commit install
+# (the devcontainer does it in .devcontainer/setup.sh)
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check --fix
+        entry: uv run --frozen ruff check --fix
+        language: system
+        types: [python]
+        files: ^(c2corg_api|es_migration)/
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --frozen ruff format
+        language: system
+        types: [python]
+        files: ^(c2corg_api|es_migration)/

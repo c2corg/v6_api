@@ -18,7 +18,7 @@ class NarrowNbspPattern(NbspPattern):
 class C2CNbspExtension(Extension):
     def extendMarkdown(self, md):  # noqa: N802
         """
-        patterns like
+        Patterns like.
 
             123 m
             coucou :

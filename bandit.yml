@@ -1,0 +1,6 @@
+# Bandit configuration, read by Codacy (Code patterns > Bandit > use a
+# configuration file).
+assert_used:
+  # pytest relies on plain `assert` in the tests
+  skips:
+    - '*/tests/*'

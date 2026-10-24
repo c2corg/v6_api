@@ -1,32 +1,32 @@
-import logging
-
 import collections.abc
 import datetime
+import logging
+import math
 
-from c2corg_api.ext.colander_ext import geojson_from_wkbelement
-from c2corg_api.models import DBSession
-from c2corg_api.models.document import DocumentGeometry
-from c2corg_api.models.document_history import get_creators
-from c2corg_api.models.user import AccountNotValidated
-from c2corg_api.models.common.attributes import langs_priority
 from colander import null
-from pyramid.httpexceptions import (
-    HTTPError,
-    HTTPNotFound,
-    HTTPForbidden,
-    HTTPNotModified,
-)
-from pyramid.view import view_config
-from pyramid.interfaces import IRendererFactory
 from cornice import Errors
 from cornice.renderer import JSONError
 from cornice.resource import view
 from geoalchemy2 import WKBElement
+from pyramid.httpexceptions import (
+    HTTPError,
+    HTTPForbidden,
+    HTTPNotFound,
+    HTTPNotModified,
+)
+from pyramid.interfaces import IRendererFactory
+from pyramid.view import view_config
 from sqlalchemy.inspection import inspect
 from sqlalchemy.sql.functions import func
+
+from c2corg_api.ext.colander_ext import geojson_from_wkbelement
+from c2corg_api.models import DBSession
+from c2corg_api.models.common.attributes import langs_priority
+from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document_history import get_creators
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
-
+from c2corg_api.models.user import AccountNotValidated
 from c2corg_api.views.markdown import cook
 
 log = logging.getLogger(__name__)
@@ -88,7 +88,9 @@ def configure_cors_policy(settings):
 @view_config(context=HTTPError)
 @view_config(context=HTTPForbidden)
 def http_error_handler(exc, request):
-    """In case of a HTTP error, return the error details as JSON, e.g.:
+    """Return the details of an HTTP error as JSON.
+
+    In case of a HTTP error, return the error details as JSON, e.g.:
 
     {
         "status": "error",
@@ -113,7 +115,7 @@ def http_error_handler(exc, request):
 
 @view_config(context=Exception)
 def catch_all_error_handler(exc, request):
-    log.exception('Unexpected error: {}'.format(exc))
+    log.exception(f'Unexpected error: {exc}')
 
     show_debugger_for_errors = request.registry.settings.get(
         'show_debugger_for_errors', ''
@@ -136,20 +138,29 @@ def account_error_handler(exc, request):
 
 
 def json_view(**kw):
-    """A Cornice view that expects 'application/json' as content-type."""
+    """Cornice view that expects 'application/json' as content-type.
+
+    A Cornice view that expects 'application/json' as content-type.
+    """
     kw['content_type'] = 'application/json'
     return view(**kw)
 
 
 def restricted_json_view(**kw):
-    """A Cornice view that handles restricted json resources."""
+    """Cornice view for restricted JSON resources.
+
+    A Cornice view that handles restricted json resources.
+    """
     if 'permission' not in kw:
         kw['permission'] = 'authenticated'
     return json_view(**kw)
 
 
 def restricted_view(**kw):
-    """A Cornice view that handles restricted resources."""
+    """Cornice view for restricted resources.
+
+    A Cornice view that handles restricted resources.
+    """
     if 'permission' not in kw:
         kw['permission'] = 'authenticated'
     return view(**kw)
@@ -206,12 +217,13 @@ def to_json_dict(
 
 
 def serialize(data):
-    """
+    """Serialize with Colander for JSON output.
+
     Colanders `serialize` method is not intended for JSON serialization (it
     turns everything into a string and keeps colander.null).
     https://github.com/tisdall/cornice/blob/c18b873/cornice/schemas.py
     Returns the most agnostic version of specified data.
-    (remove colander notions, datetimes in ISO, ...)
+    (remove colander notions, datetimes in ISO, ...).
     """
     if isinstance(data, str):
         return str(data)
@@ -225,14 +237,18 @@ def serialize(data):
         return geojson_from_wkbelement(data)
     if data is null:
         return None
+    if isinstance(data, float) and not math.isfinite(data):
+        # NaN/Infinity are not valid JSON
+        return None
 
     return data
 
 
 def set_best_locale(documents, preferred_lang, expunge=True):
-    """Sets the "best" locale on the given documents. The "best" locale is
-    the locale in the given "preferred language" if available. Otherwise
-    it is the "most relevant" translation according to `langs_priority`.
+    """Set the "best" locale on the given documents.
+
+    The "best" locale is the locale in the given "preferred language" if available.
+    Otherwise it is the "most relevant" translation according to `langs_priority`.
     """
     if preferred_lang is None:
         return
@@ -266,7 +282,9 @@ def get_best_locale(available_locales, preferred_lang):
 
 
 def set_creator(documents, field_name):
-    """Set the creator (the user who created the first version of a document)
+    """Set the creator on a list of documents.
+
+    Set the creator (the user who created the first version of a document)
     on a list of documents.
     """
     if not documents:
@@ -280,9 +298,7 @@ def set_creator(documents, field_name):
 
 
 def set_author(outings, lang):
-    """Set the author (the user who created an outing) on a list of
-    outings.
-    """
+    """Set the author (the user who created an outing) on a list of outings."""
     set_creator(outings, 'author')
 
 
@@ -297,9 +313,8 @@ def set_default_geom_from_associations(doc, linked_docs, update_always=False):
                 doc.geometry = DocumentGeometry(geom=default_geom)
         else:
             log.warning(
-                'Creating or updating document {} without default geometry'.format(
-                    doc.document_id
-                )
+                f'Creating or updating document {doc.document_id} '
+                'without default geometry'
             )
 
 
@@ -332,7 +347,9 @@ def _get_default_geom(linked_docs):
 
 
 def etag_cache(request, key):
-    """Use the HTTP Entity Tag cache for Browser side caching
+    """Use the HTTP Entity Tag cache for browser-side caching.
+
+    Use the HTTP Entity Tag cache for Browser side caching
     If a "If-None-Match" header is found, and equivalent to ``key``,
     then a ``304`` HTTP message will be returned with the ETag to tell
     the browser that it should use its current cache of the page.
@@ -350,7 +367,7 @@ def etag_cache(request, key):
     https://github.com/Pylons/pylons/blob/799c310/pylons/controllers/util.py#L148
     """
     # we are always using a weak ETag validator
-    etag = 'W/"%s"' % key
+    etag = f'W/"{key}"'
     etag_matcher = request.if_none_match
 
     if str(key) in etag_matcher:

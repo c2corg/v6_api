@@ -1,15 +1,16 @@
+import pytest
+
 from c2corg_api.models.area import Area
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.feed import DocumentChange
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
-
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.tests import BaseTestCase
 
 
 class TestDocumentChange(BaseTestCase):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestCase.setUp(self)
         self.user1 = self.session.get(User, self.global_userids['contributor'])
         self.user2 = self.session.get(User, self.global_userids['contributor2'])
@@ -50,9 +51,9 @@ class TestDocumentChange(BaseTestCase):
             self.session.add(change)
             self.session.flush()
         except Exception as exc:
-            self.assertTrue('Invalid user id: -12345678' in exc.orig.pgerror)
+            assert 'Invalid user id: -12345678' in exc.orig.pgerror
         else:
-            self.fail('invalid user id not detected')
+            pytest.fail('invalid user id not detected')
 
     def test_check_area_ids_on_create_invalid(self):
         """try to create a "change" with an invalid area id"""
@@ -69,9 +70,9 @@ class TestDocumentChange(BaseTestCase):
             self.session.add(change)
             self.session.flush()
         except Exception as exc:
-            self.assertTrue('Invalid area id: -123456' in exc.orig.pgerror)
+            assert 'Invalid area id: -123456' in exc.orig.pgerror
         else:
-            self.fail('invalid area id not detected')
+            pytest.fail('invalid area id not detected')
 
     def test_check_user_ids_on_update_invalid(self):
         """try to update a "change" with an invalid user id"""
@@ -93,9 +94,9 @@ class TestDocumentChange(BaseTestCase):
         try:
             self.session.flush()
         except Exception as exc:
-            self.assertTrue('Invalid user id: -12345678' in exc.orig.pgerror)
+            assert 'Invalid user id: -12345678' in exc.orig.pgerror
         else:
-            self.fail('invalid user id not detected')
+            pytest.fail('invalid user id not detected')
 
     def test_check_changes_on_user_deletion_ok(self):
         """try to delete a user that is not referenced in a "change" """
@@ -146,9 +147,9 @@ class TestDocumentChange(BaseTestCase):
             self.session.delete(user)
             self.session.flush()
         except Exception as exc:
-            self.assertTrue('still references user id' in exc.orig.pgerror)
+            assert 'still references user id' in exc.orig.pgerror
         else:
-            self.fail('user is still referenced in change')
+            pytest.fail('user is still referenced in change')
 
     def test_check_changes_on_area_deletion_ok(self):
         """try to delete an area that is not referenced in a "change" """
@@ -180,6 +181,6 @@ class TestDocumentChange(BaseTestCase):
             self.session.delete(self.area1)
             self.session.flush()
         except Exception as exc:
-            self.assertTrue('still references area id' in exc.orig.pgerror)
+            assert 'still references area id' in exc.orig.pgerror
         else:
-            self.fail('area is still referenced in change')
+            pytest.fail('area is still referenced in change')

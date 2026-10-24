@@ -4,6 +4,9 @@ set -e
 echo "==> Installing Python dependencies..."
 uv sync --frozen
 
+echo "==> Installing the git pre-commit hook (ruff)..."
+uv run --frozen pre-commit install
+
 echo "==> Copying env.local.sample to env.local (if not present)..."
 if [ ! -f config/env.local ]; then
   cp config/env.local.sample config/env.local

@@ -1,21 +1,22 @@
+from colanderalchemy import SQLAlchemySchemaNode
+from sqlalchemy import Column, ForeignKey, Integer
+
 from c2corg_api.models import schema
-from c2corg_api.models.enums import coverage_types
+from c2corg_api.models.common import document_types
+from c2corg_api.models.common.fields_coverage import fields_coverage
 from c2corg_api.models.document import (
-    schema_document_locale,
     Document,
     get_geometry_schema_overrides,
     schema_attributes,
+    schema_document_locale,
 )
+from c2corg_api.models.enums import coverage_types
 from c2corg_api.models.schema_utils import (
-    get_update_schema,
     get_create_schema,
+    get_update_schema,
     restrict_schema,
 )
 from c2corg_api.models.utils import copy_attributes
-from c2corg_api.models.common.fields_coverage import fields_coverage
-from colanderalchemy import SQLAlchemySchemaNode
-from sqlalchemy import Column, Integer, ForeignKey
-from c2corg_api.models.common import document_types
 
 COVERAGE_TYPE = document_types.COVERAGE_TYPE
 

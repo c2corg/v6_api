@@ -1,44 +1,43 @@
 import functools
 
+from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPForbidden
+
+from c2corg_api.models.common.fields_xreport import fields_xreport
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.xreport import (
-    Xreport,
-    schema_xreport,
-    schema_create_xreport,
-    schema_update_xreport,
     XREPORT_TYPE,
     ArchiveXreport,
     ArchiveXreportLocale,
+    Xreport,
     XreportLocale,
+    schema_create_xreport,
+    schema_update_xreport,
+    schema_xreport,
     schema_xreport_without_personal,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.models.common.fields_xreport import fields_xreport
-from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
+from c2corg_api.views import cors_policy, restricted_json_view, set_private_cache_header
 from c2corg_api.views import set_creator as set_creator_on_documents
-
-from c2corg_api.views.document_schemas import xreport_documents_config
 from c2corg_api.views.document import (
     DocumentRest,
     make_validator_create,
     make_validator_update,
 )
-from c2corg_api.views import cors_policy, restricted_json_view, set_private_cache_header
+from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import xreport_documents_config
+from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.validation import (
-    validate_id,
-    validate_pagination,
-    validate_lang_param,
-    validate_preferred_lang_param,
-    validate_associations,
-    validate_lang,
-    validate_version_id,
     is_associated_user,
+    validate_associations,
     validate_cook_param,
+    validate_id,
+    validate_lang,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+    validate_version_id,
 )
-
-from pyramid.httpexceptions import HTTPForbidden
 
 validate_xreport_create = make_validator_create(fields_xreport.get('required'))
 validate_xreport_update = make_validator_update(fields_xreport.get('required'))
@@ -105,7 +104,9 @@ class XreportRest(DocumentRest):
 
 
 def _has_permission(request, xreport_id):
-    """Check if the authenticated user has permission to view non-public
+    """Check if the user may see or change the non-public xreport data.
+
+    Check if the authenticated user has permission to view non-public
     information of the xreport or th change the xreport. That is only
     moderators and users that are currently assigned to the xreport
     can modify it.

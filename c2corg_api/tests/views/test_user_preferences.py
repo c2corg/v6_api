@@ -6,7 +6,7 @@ from c2corg_api.tests.views import BaseTestRest
 
 
 class TestUserFilterPreferencesRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/users/preferences'
 
@@ -38,15 +38,15 @@ class TestUserFilterPreferencesRest(BaseTestRest):
         response = self.app.get(self._prefix, status=200, headers=headers)
         body = response.json
 
-        self.assertEqual(['hiking'], body['activities'])
-        self.assertEqual(['fr'], body['langs'])
-        self.assertEqual(False, body['followed_only'])
+        assert ['hiking'] == body['activities']
+        assert ['fr'] == body['langs']
+        assert body['followed_only'] is False
         areas = body['areas']
-        self.assertEqual(1, len(areas))
-        self.assertEqual(self.area1.document_id, areas[0]['document_id'])
+        assert 1 == len(areas)
+        assert self.area1.document_id == areas[0]['document_id']
         locale = areas[0]['locales'][0]
         # not related to the langs pref above:
-        self.assertEqual('fr', locale['lang'])
+        assert 'fr' == locale['lang']
 
     def test_get_preferences_lang(self):
         """Get the preferences with parameter `lang`."""
@@ -56,7 +56,7 @@ class TestUserFilterPreferencesRest(BaseTestRest):
 
         areas = body['areas']
         locale = areas[0]['locales'][0]
-        self.assertEqual('de', locale['lang'])
+        assert 'de' == locale['lang']
 
     def test_post_preferences_unauthenticated(self):
         self.app_post_json(self._prefix, {}, status=403)
@@ -78,11 +78,11 @@ class TestUserFilterPreferencesRest(BaseTestRest):
         )
 
         body = response.json
-        self.assertEqual(body.get('status'), 'error')
+        assert body.get('status') == 'error'
         errors = body.get('errors')
 
-        self.assertIsNotNone(self.get_error(errors, 'activities.1'))
-        self.assertIsNotNone(self.get_error(errors, 'langs.1'))
+        assert self.get_error(errors, 'activities.1') is not None
+        assert self.get_error(errors, 'langs.1') is not None
         self.assertCorniceRequired(
             self.get_error(errors, 'areas.0.document_id'), 'areas.0.document_id'
         )
@@ -102,25 +102,25 @@ class TestUserFilterPreferencesRest(BaseTestRest):
         self.app_post_json(self._prefix, request_body, status=200, headers=headers)
 
         self.session.refresh(self.contributor)
-        self.assertTrue(self.contributor.feed_followed_only)
-        self.assertEqual(
-            ['hiking', 'skitouring'], self.contributor.feed_filter_activities
-        )
-        self.assertEqual(['fr', 'en'], self.contributor.feed_filter_langs)
+        assert self.contributor.feed_followed_only
+        assert ['hiking', 'skitouring'] == self.contributor.feed_filter_activities
+        assert ['fr', 'en'] == self.contributor.feed_filter_langs
 
-        self.assertIsNone(
+        assert (
             self.session.query(FilterArea)
             .filter(
                 FilterArea.user_id == self.contributor.id,
                 FilterArea.area_id == self.area1.document_id,
             )
             .first()
+            is None
         )
-        self.assertIsNotNone(
+        assert (
             self.session.query(FilterArea)
             .filter(
                 FilterArea.user_id == self.contributor.id,
                 FilterArea.area_id == self.area2.document_id,
             )
             .first()
+            is not None
         )

@@ -1,35 +1,35 @@
-from datetime import date, timedelta
 import json
+from datetime import date, timedelta
+
+import pytest
+from shapely.geometry import LineString, shape
+from shapely.geometry.point import Point
 
 from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association, AssociationLog
+from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import (
-    Outing,
+    OUTING_TYPE,
     ArchiveOuting,
     ArchiveOutingLocale,
+    Outing,
     OutingLocale,
-    OUTING_TYPE,
 )
+from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.models.common.attributes import quality_types
-from shapely.geometry import shape, LineString
-
-from c2corg_api.models.route import Route, RouteLocale
-from c2corg_api.models.document import DocumentGeometry, DocumentLocale
-from c2corg_api.models.document_topic import DocumentTopic
-from c2corg_api.views.document import DocumentRest
-
 from c2corg_api.tests.views import BaseDocumentTestRest
-from shapely.geometry.point import Point
+from c2corg_api.views.document import DocumentRest
 
 
 class TestOutingRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/outings', OUTING_TYPE, Outing, ArchiveOuting, ArchiveOutingLocale
         )
@@ -38,24 +38,23 @@ class TestOutingRest(BaseDocumentTestRest):
 
     def test_get_collection(self):
         body = self.get_collection()
-        self.assertEqual(len(body['documents']), 4)
+        assert len(body['documents']) == 4
         doc1 = body['documents'][0]
-        self.assertNotIn('frequentation', doc1)
-        self.assertIn('condition_rating', doc1)
+        assert 'frequentation' not in doc1
+        assert 'condition_rating' in doc1
 
         doc4 = body['documents'][3]
-        self.assertIn('author', doc4)
+        assert 'author' in doc4
         author = doc4['author']
-        self.assertNotIn('username', author)
-        self.assertEqual(author['name'], 'Contributor')
-        self.assertEqual(author['user_id'], self.global_userids['contributor'])
+        assert 'username' not in author
+        assert author['name'] == 'Contributor'
+        assert author['user_id'] == self.global_userids['contributor']
 
         for doc in body['documents']:
             # number of associated images
-            self.assertIn('img_count', doc)
-            self.assertEqual(
-                doc['img_count'],
-                1 if doc['document_id'] == self.outing.document_id else 0,
+            assert 'img_count' in doc
+            assert doc['img_count'] == (
+                1 if doc['document_id'] == self.outing.document_id else 0
             )
 
     def test_get_collection_for_route(self):
@@ -64,8 +63,8 @@ class TestOutingRest(BaseDocumentTestRest):
             self._prefix + '?r=' + str(self.route.document_id), status=200
         )
         documents = response.json['documents']
-        self.assertEqual(documents[0]['document_id'], self.outing.document_id)
-        self.assertEqual(response.json['total'], 1)
+        assert documents[0]['document_id'] == self.outing.document_id
+        assert response.json['total'] == 1
 
     def test_get_collection_has_geom(self):
         reset_search_index(self.session)
@@ -73,7 +72,7 @@ class TestOutingRest(BaseDocumentTestRest):
             self._prefix + '?r=' + str(self.route.document_id), status=200
         )
         documents = response.json['documents']
-        self.assertEqual(documents[0]['geometry']['has_geom_detail'], True)
+        assert documents[0]['geometry']['has_geom_detail'] is True
 
     def test_get_collection_for_waypoint(self):
         reset_search_index(self.session)
@@ -83,8 +82,8 @@ class TestOutingRest(BaseDocumentTestRest):
 
         documents = response.json['documents']
 
-        self.assertEqual(documents[0]['document_id'], self.outing.document_id)
-        self.assertEqual(response.json['total'], 1)
+        assert documents[0]['document_id'] == self.outing.document_id
+        assert response.json['total'] == 1
 
     def test_get_collection_for_user(self):
         reset_search_index(self.session)
@@ -94,8 +93,8 @@ class TestOutingRest(BaseDocumentTestRest):
 
         documents = response.json['documents']
 
-        self.assertEqual(documents[0]['document_id'], self.outing.document_id)
-        self.assertEqual(response.json['total'], 1)
+        assert documents[0]['document_id'] == self.outing.document_id
+        assert response.json['total'] == 1
 
     def test_get_collection_paginated(self):
         self.app.get('/outings?offset=invalid', status=400)
@@ -136,53 +135,49 @@ class TestOutingRest(BaseDocumentTestRest):
         )
 
         body = self.get_collection_search({'act': 'skitouring', 'limit': 2})
-        self.assertEqual(body.get('total'), 4)
-        self.assertEqual(len(body.get('documents')), 2)
+        assert body.get('total') == 4
+        assert len(body.get('documents')) == 2
 
         body = self.get_collection_search({'date': '2015-12-31,2016-01-02'})
-        self.assertEqual(body.get('total'), 1)
+        assert body.get('total') == 1
 
     def test_get(self):
         body = self.get(self.outing)
-        self.assertEqual(body.get('activities'), self.outing.activities)
+        assert body.get('activities') == self.outing.activities
         self._assert_geometry(body)
-        self.assertIn('frequentation', body)
-        self.assertNotIn('maps', body)
+        assert 'frequentation' in body
+        assert 'maps' not in body
 
-        self.assertIn('associations', body)
+        assert 'associations' in body
         associations = body.get('associations')
-        self.assertNotIn('waypoints', associations)
-        self.assertIn('routes', associations)
-        self.assertIn('xreports', associations)
-        self.assertIn('images', associations)
-        self.assertIn('users', associations)
-        self.assertIn('articles', associations)
+        assert 'waypoints' not in associations
+        assert 'routes' in associations
+        assert 'xreports' in associations
+        assert 'images' in associations
+        assert 'users' in associations
+        assert 'articles' in associations
 
         linked_articles = associations.get('articles')
-        self.assertEqual(len(linked_articles), 1)
-        self.assertEqual(
-            self.article1.document_id, linked_articles[0].get('document_id')
-        )
+        assert len(linked_articles) == 1
+        assert self.article1.document_id == linked_articles[0].get('document_id')
 
         linked_routes = associations.get('routes')
-        self.assertEqual(len(linked_routes), 1)
-        self.assertEqual(self.route.document_id, linked_routes[0].get('document_id'))
+        assert len(linked_routes) == 1
+        assert self.route.document_id == linked_routes[0].get('document_id')
 
         linked_users = associations.get('users')
-        self.assertEqual(len(linked_users), 1)
+        assert len(linked_users) == 1
         # TODO id -> document_id
-        self.assertEqual(
-            linked_users[0]['document_id'], self.global_userids['contributor']
-        )
+        assert linked_users[0]['document_id'] == self.global_userids['contributor']
 
         linked_images = associations.get('images')
-        self.assertEqual(len(linked_images), 1)
-        self.assertEqual(linked_images[0]['document_id'], self.image.document_id)
-        self.assertIn('geometry', linked_images[0])
-        self.assertIn('geom', linked_images[0].get('geometry'))
+        assert len(linked_images) == 1
+        assert linked_images[0]['document_id'] == self.image.document_id
+        assert 'geometry' in linked_images[0]
+        assert 'geom' in linked_images[0].get('geometry')
 
         locale_en = self.get_locale('en', body.get('locales'))
-        self.assertEqual(1, locale_en.get('topic_id'))
+        assert 1 == locale_en.get('topic_id')
 
     def test_get_edit(self):
         response = self.app.get(
@@ -190,14 +185,14 @@ class TestOutingRest(BaseDocumentTestRest):
         )
         body = response.json
 
-        self.assertNotIn('maps', body)
-        self.assertNotIn('areas', body)
-        self.assertIn('associations', body)
+        assert 'maps' not in body
+        assert 'areas' not in body
+        assert 'associations' in body
         associations = body['associations']
-        self.assertNotIn('waypoints', associations)
-        self.assertIn('routes', associations)
-        self.assertIn('users', associations)
-        self.assertNotIn('images', associations)
+        assert 'waypoints' not in associations
+        assert 'routes' in associations
+        assert 'users' in associations
+        assert 'images' not in associations
 
     def test_get_version(self):
         self.get_version(self.outing, self.outing_version)
@@ -211,7 +206,7 @@ class TestOutingRest(BaseDocumentTestRest):
             d.document_id
             for d in [self.outing3, self.outing4, self.outing2, self.outing]
         ]
-        self.assertEqual(response_ids, outing_ids)
+        assert response_ids == outing_ids
 
     def test_get_sort_desc(self):
         """Test descending sorting of results for elevation max keyword."""
@@ -222,7 +217,7 @@ class TestOutingRest(BaseDocumentTestRest):
             d.document_id
             for d in [self.outing2, self.outing, self.outing4, self.outing3]
         ]
-        self.assertEqual(response_ids, outing_ids)
+        assert response_ids == outing_ids
 
     def test_get_sort_multi(self):
         """Test multi-criteria sorting (elevation_max: desc,
@@ -236,7 +231,7 @@ class TestOutingRest(BaseDocumentTestRest):
             d.document_id
             for d in [self.outing2, self.outing, self.outing4, self.outing3]
         ]
-        self.assertEqual(response_ids, outing_ids)
+        assert response_ids == outing_ids
 
     def test_get_sort_numeric_enum(self):
         """Test sorting with two different criteria:
@@ -250,7 +245,7 @@ class TestOutingRest(BaseDocumentTestRest):
             d.document_id
             for d in [self.outing, self.outing4, self.outing3, self.outing2]
         ]
-        self.assertEqual(response_ids, outing_ids)
+        assert response_ids == outing_ids
 
     def test_get_sort_error(self):
         """Test failure of request (status 500) if an unknown
@@ -267,7 +262,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self.session.flush()
         body = self.get_version(self.outing, self.outing_version)
         locale = body['document']['locales'][0]
-        self.assertIn('title', locale)
+        assert 'title' in locale
 
     def test_get_cooked(self):
         self.get_cooked(self.outing)
@@ -289,11 +284,11 @@ class TestOutingRest(BaseDocumentTestRest):
 
     def test_get_info(self):
         body, locale = self.get_info(self.outing, 'en')
-        self.assertEqual(locale.get('lang'), 'en')
+        assert locale.get('lang') == 'en'
 
     def test_get_info_best_lang(self):
         body, locale = self.get_info(self.outing, 'es')
-        self.assertEqual(locale.get('lang'), 'fr')
+        assert locale.get('lang') == 'fr'
 
     def test_get_info_404(self):
         self.get_info_404()
@@ -301,7 +296,7 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
-        self.assertEqual(len(errors), 5)
+        assert len(errors) == 5
         self.assertCorniceRequired(self.get_error(errors, 'activities'), 'activities')
         self.assertCorniceRequired(self.get_error(errors, 'date_end'), 'date_end')
         self.assertCorniceRequired(self.get_error(errors, 'date_start'), 'date_start')
@@ -321,9 +316,9 @@ class TestOutingRest(BaseDocumentTestRest):
             }
         )
         errors = body.get('errors')
-        self.assertEqual(len(errors), 3)
+        assert len(errors) == 3
         error = self.get_error(errors, 'activities')
-        self.assertEqual(error.get('description'), 'Shorter than minimum length 1')
+        assert error.get('description') == 'Shorter than minimum length 1'
 
     def test_post_invalid_activity(self):
         body_post = {
@@ -348,9 +343,9 @@ class TestOutingRest(BaseDocumentTestRest):
         }
         body = self.post_error(body_post)
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0].get('description'), 'invalid value: cooking')
-        self.assertEqual(errors[0].get('name'), 'activities')
+        assert len(errors) == 1
+        assert errors[0].get('description') == 'invalid value: cooking'
+        assert errors[0].get('name') == 'activities'
 
     def test_post_missing_title(self):
         body_post = {
@@ -375,7 +370,7 @@ class TestOutingRest(BaseDocumentTestRest):
         }
         body = self.post_missing_title(body_post)
         errors = body.get('errors')
-        self.assertEqual(len(errors), 3)
+        assert len(errors) == 3
 
     def test_post_date_start_is_tomorrow(self):
         later = (date.today() + timedelta(days=2)).strftime('%Y-%m-%d')
@@ -406,9 +401,9 @@ class TestOutingRest(BaseDocumentTestRest):
         }
         body = self.post_error(body_post)
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['name'], 'date_start')
-        self.assertEqual(errors[0]['description'], 'can not be sometime in the future')
+        assert len(errors) == 1
+        assert errors[0]['name'] == 'date_start'
+        assert errors[0]['description'] == 'can not be sometime in the future'
 
     def test_post_date_end_is_tomorrow(self):
         later = (date.today() + timedelta(days=2)).strftime('%Y-%m-%d')
@@ -439,9 +434,9 @@ class TestOutingRest(BaseDocumentTestRest):
         }
         body = self.post_error(body_post)
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['name'], 'date_end')
-        self.assertEqual(errors[0]['description'], 'can not be sometime in the future')
+        assert len(errors) == 1
+        assert errors[0]['name'] == 'date_end'
+        assert errors[0]['description'] == 'can not be sometime in the future'
 
     def test_post_end_date_is_prior_start_date(self):
         today = date.today()
@@ -473,9 +468,9 @@ class TestOutingRest(BaseDocumentTestRest):
         }
         body = self.post_error(body_post)
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['name'], 'date_end')
-        self.assertEqual(errors[0]['description'], 'can not be prior the starting date')
+        assert len(errors) == 1
+        assert errors[0]['name'] == 'date_end'
+        assert errors[0]['description'] == 'can not be prior the starting date'
 
     def test_post_non_whitelisted_attribute(self):
         body = {
@@ -531,9 +526,9 @@ class TestOutingRest(BaseDocumentTestRest):
         )
 
         body = response.json
-        self.assertEqual(body.get('status'), 'error')
+        assert body.get('status') == 'error'
         errors = body.get('errors')
-        self.assertEqual(len(errors), 2)
+        assert len(errors) == 2
         self.assertError(errors, 'associations.users', 'at least one user required')
         self.assertError(errors, 'associations.routes', 'at least one route required')
 
@@ -564,9 +559,9 @@ class TestOutingRest(BaseDocumentTestRest):
         )
 
         body = response.json
-        self.assertEqual(body.get('status'), 'error')
+        assert body.get('status') == 'error'
         errors = body.get('errors')
-        self.assertEqual(len(errors), 4)
+        assert len(errors) == 4
 
         self.assertError(
             errors,
@@ -610,27 +605,27 @@ class TestOutingRest(BaseDocumentTestRest):
         body, doc = self.post_success(body)
         self._assert_geometry(body)
         self._assert_default_geometry(body)
-        self.assertEqual(doc.date_start, date(2016, 1, 1))
-        self.assertEqual(doc.date_end, date(2016, 1, 2))
+        assert doc.date_start == date(2016, 1, 1)
+        assert doc.date_end == date(2016, 1, 2)
 
         version = doc.versions[0]
 
         archive_outing = version.document_archive
-        self.assertEqual(archive_outing.activities, ['skitouring'])
-        self.assertEqual(archive_outing.elevation_max, 1500)
+        assert archive_outing.activities == ['skitouring']
+        assert archive_outing.elevation_max == 1500
 
         archive_locale = version.document_locales_archive
-        self.assertEqual(archive_locale.lang, 'en')
-        self.assertEqual(archive_locale.title, 'Some nice loop')
+        assert archive_locale.lang == 'en'
+        assert archive_locale.title == 'Some nice loop'
 
         archive_geometry = version.document_geometry_archive
-        self.assertEqual(archive_geometry.version, doc.geometry.version)
-        self.assertIsNotNone(archive_geometry.geom_detail)
+        assert archive_geometry.version == doc.geometry.version
+        assert archive_geometry.geom_detail is not None
 
         association_route = self.session.get(
             Association, (self.route.document_id, doc.document_id)
         )
-        self.assertIsNotNone(association_route)
+        assert association_route is not None
 
         association_route_log = (
             self.session.query(AssociationLog)
@@ -638,17 +633,17 @@ class TestOutingRest(BaseDocumentTestRest):
             .filter(AssociationLog.child_document_id == doc.document_id)
             .first()
         )
-        self.assertIsNotNone(association_route_log)
+        assert association_route_log is not None
 
         association_user = self.session.get(
             Association, (self.global_userids['contributor'], doc.document_id)
         )
-        self.assertIsNotNone(association_user)
+        assert association_user is not None
 
         association_user2 = self.session.get(
             Association, (self.global_userids['contributor2'], doc.document_id)
         )
-        self.assertIsNotNone(association_user2)
+        assert association_user2 is not None
 
         association_user_log = (
             self.session.query(AssociationLog)
@@ -658,17 +653,17 @@ class TestOutingRest(BaseDocumentTestRest):
             .filter(AssociationLog.child_document_id == doc.document_id)
             .first()
         )
-        self.assertIsNotNone(association_user_log)
+        assert association_user_log is not None
 
         # check that a change is created in the feed
         feed_change = self.get_feed_change(doc.document_id)
-        self.assertIsNotNone(feed_change)
-        self.assertEqual(feed_change.activities, ['skitouring'])
-        self.assertEqual(
-            feed_change.user_ids,
-            [self.global_userids['contributor'], self.global_userids['contributor2']],
-        )
-        self.assertEqual(feed_change.area_ids, [])
+        assert feed_change is not None
+        assert feed_change.activities == ['skitouring']
+        assert feed_change.user_ids == [
+            self.global_userids['contributor'],
+            self.global_userids['contributor2'],
+        ]
+        assert feed_change.area_ids == []
 
     def test_post_set_default_geom_from_route(self):
         body = {
@@ -930,50 +925,50 @@ class TestOutingRest(BaseDocumentTestRest):
         # default geom is updated with the new track
         self._assert_default_geometry(body, x=635966, y=5723629)
 
-        self.assertEqual(outing.elevation_max, 1600)
+        assert outing.elevation_max == 1600
         locale_en = outing.get_locale('en')
-        self.assertEqual(locale_en.description, '...')
-        self.assertEqual(locale_en.weather, 'mostly sunny')
+        assert locale_en.description == '...'
+        assert locale_en.weather == 'mostly sunny'
 
         # version with lang 'en'
         versions = outing.versions
         version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
-        self.assertEqual(archive_locale.title, 'Mont Blanc from the air')
-        self.assertEqual(archive_locale.weather, 'mostly sunny')
+        assert archive_locale.title == 'Mont Blanc from the air'
+        assert archive_locale.weather == 'mostly sunny'
 
         archive_document_en = version_en.document_archive
-        self.assertEqual(archive_document_en.activities, ['skitouring', 'hiking'])
-        self.assertEqual(archive_document_en.elevation_max, 1600)
+        assert archive_document_en.activities == ['skitouring', 'hiking']
+        assert archive_document_en.elevation_max == 1600
 
         archive_geometry_en = version_en.document_geometry_archive
-        self.assertEqual(archive_geometry_en.version, 2)
+        assert archive_geometry_en.version == 2
 
         # version with lang 'fr'
         version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
-        self.assertEqual(archive_locale.title, 'Mont Blanc du ciel')
-        self.assertEqual(archive_locale.weather, 'grand beau')
+        assert archive_locale.title == 'Mont Blanc du ciel'
+        assert archive_locale.weather == 'grand beau'
 
         # test that there are now 2 associated users
         association_user = self.session.get(
             Association, (self.global_userids['contributor'], outing.document_id)
         )
-        self.assertIsNotNone(association_user)
+        assert association_user is not None
         association_user2 = self.session.get(
             Association, (self.global_userids['contributor2'], outing.document_id)
         )
-        self.assertIsNotNone(association_user2)
+        assert association_user2 is not None
 
         # check that the feed change is updated
         feed_change = self.get_feed_change(outing.document_id)
-        self.assertIsNotNone(feed_change)
-        self.assertEqual(feed_change.activities, ['skitouring', 'hiking'])
-        self.assertEqual(feed_change.area_ids, [])
-        self.assertEqual(
-            feed_change.user_ids,
-            [self.global_userids['contributor'], self.global_userids['contributor2']],
-        )
+        assert feed_change is not None
+        assert feed_change.activities == ['skitouring', 'hiking']
+        assert feed_change.area_ids == []
+        assert feed_change.user_ids == [
+            self.global_userids['contributor'],
+            self.global_userids['contributor2'],
+        ]
 
     def test_put_success_figures_only(self):
         body = {
@@ -1008,7 +1003,7 @@ class TestOutingRest(BaseDocumentTestRest):
             body, self.outing, user='moderator'
         )
 
-        self.assertEqual(route.elevation_max, 1600)
+        assert route.elevation_max == 1600
 
     def test_put_update_default_geom(self):
         """Tests that the default geometry can be updated directly."""
@@ -1082,7 +1077,7 @@ class TestOutingRest(BaseDocumentTestRest):
         }
         (body, route) = self.put_success_lang_only(body, self.outing, user='moderator')
 
-        self.assertEqual(route.get_locale('en').weather, 'mostly sunny')
+        assert route.get_locale('en').weather == 'mostly sunny'
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale."""
@@ -1117,7 +1112,7 @@ class TestOutingRest(BaseDocumentTestRest):
         }
         (body, route) = self.put_success_new_lang(body, self.outing, user='moderator')
 
-        self.assertEqual(route.get_locale('es').weather, 'soleado')
+        assert route.get_locale('es').weather == 'soleado'
 
     def test_put_success_association_update(self):
         """Test updating a document by updating associations."""
@@ -1165,34 +1160,34 @@ class TestOutingRest(BaseDocumentTestRest):
             headers=headers,
             status=200,
         )
-        self.assertEqual(response.content_type, 'application/json')
+        assert response.content_type == 'application/json'
 
         body = response.json
         document_id = body.get('document_id')
         # document version does not change!
-        self.assertEqual(body.get('version'), self.outing.version)
-        self.assertEqual(body.get('document_id'), document_id)
+        assert body.get('version') == self.outing.version
+        assert body.get('document_id') == document_id
 
         # check that the document was updated correctly
         self.session.expire_all()
         document = self.session.get(self._model, document_id)
-        self.assertEqual(len(document.locales), 2)
+        assert len(document.locales) == 2
 
         # check that no new archive_document was created
         archive_count = (
             self.session.query(self._model_archive)
-            .filter(getattr(self._model_archive, 'document_id') == document_id)
+            .filter(self._model_archive.document_id == document_id)
             .count()
         )
-        self.assertEqual(archive_count, 1)
+        assert archive_count == 1
 
         # check that no new archive_document_locale was created
         archive_locale_count = (
             self.session.query(self._model_archive_locale)
-            .filter(document_id == getattr(self._model_archive_locale, 'document_id'))
+            .filter(document_id == self._model_archive_locale.document_id)
             .count()
         )
-        self.assertEqual(archive_locale_count, 2)
+        assert archive_locale_count == 2
 
         self.assertNotifiedEs()
 
@@ -1200,24 +1195,24 @@ class TestOutingRest(BaseDocumentTestRest):
         id = self.outing.document_id
         langs = ['fr', 'en']
         for lang in langs:
-            body = self.app.get('/document/%d/history/%s' % (id, lang))
+            body = self.app.get(f'/document/{id}/history/{lang}')
             username = 'contributor'
             user_id = self.global_userids[username]
 
             title = body.json['title']
             versions = body.json['versions']
-            self.assertEqual(len(versions), 1)
-            self.assertEqual(getattr(self, 'locale_' + lang).title, title)
+            assert len(versions) == 1
+            assert getattr(self, 'locale_' + lang).title == title
             for r in versions:
-                self.assertEqual(r['name'], 'Contributor')
-                self.assertNotIn('username', r)
-                self.assertEqual(r['user_id'], user_id)
-                self.assertIn('written_at', r)
-                self.assertIn('version_id', r)
+                assert r['name'] == 'Contributor'
+                assert 'username' not in r
+                assert r['user_id'] == user_id
+                assert 'written_at' in r
+                assert 'version_id' in r
 
     def test_history_no_lang(self):
         id = self.outing.document_id
-        self.app.get('/document/%d/history/es' % id, status=404)
+        self.app.get(f'/document/{id}/history/es', status=404)
 
     def test_history_no_doc(self):
         self.app.get('/document/99999/history/es', status=404)
@@ -1225,38 +1220,38 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_get_associations_history(self):
         logs = self._get_association_logs(self.outing)
 
-        self.assertEqual(len(logs), 4)
+        assert len(logs) == 4
 
         # Third association (starting from the youngest) is a user
         log = logs[2]
         parent = log['parent_document']
-        self.assertEqual(parent['type'], USERPROFILE_TYPE)
+        assert parent['type'] == USERPROFILE_TYPE
 
     def _assert_geometry(self, body):
-        self.assertIsNotNone(body.get('geometry'))
+        assert body.get('geometry') is not None
         geometry = body.get('geometry')
-        self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom_detail'))
+        assert geometry.get('version') is not None
+        assert geometry.get('geom_detail') is not None
 
         geom = geometry.get('geom_detail')
         line = shape(json.loads(geom))
-        self.assertIsInstance(line, LineString)
-        self.assertAlmostEqual(line.coords[0][0], 635956)
-        self.assertAlmostEqual(line.coords[0][1], 5723604)
-        self.assertAlmostEqual(line.coords[1][0], 635966)
-        self.assertAlmostEqual(line.coords[1][1], 5723644)
+        assert isinstance(line, LineString)
+        assert line.coords[0][0] == pytest.approx(635956, abs=5e-8)
+        assert line.coords[0][1] == pytest.approx(5723604, abs=5e-8)
+        assert line.coords[1][0] == pytest.approx(635966, abs=5e-8)
+        assert line.coords[1][1] == pytest.approx(5723644, abs=5e-8)
 
     def _assert_default_geometry(self, body, x=635961, y=5723624):
-        self.assertIsNotNone(body.get('geometry'))
+        assert body.get('geometry') is not None
         geometry = body.get('geometry')
-        self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom'))
+        assert geometry.get('version') is not None
+        assert geometry.get('geom') is not None
 
         geom = geometry.get('geom')
         point = shape(json.loads(geom))
-        self.assertIsInstance(point, Point)
-        self.assertAlmostEqual(point.x, x)
-        self.assertAlmostEqual(point.y, y)
+        assert isinstance(point, Point)
+        assert point.x == pytest.approx(x, abs=5e-8)
+        assert point.y == pytest.approx(y, abs=5e-8)
 
     def _add_test_data(self):
         self.outing = Outing(
@@ -1393,7 +1388,7 @@ class TestOutingRest(BaseDocumentTestRest):
             height_diff_down=800,
             durations='1',
             geometry=DocumentGeometry(
-                geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',  # noqa
+                geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
                 geom='SRID=3857;POINT(635961 5723624)',
             ),
         )

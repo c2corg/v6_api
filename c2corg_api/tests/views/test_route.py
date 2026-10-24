@@ -2,42 +2,42 @@ import datetime
 import json
 from unittest import mock
 
+import pytest
+from shapely.geometry import LineString, shape
+from shapely.geometry.point import Point
+
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.book import Book
+from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.outing import Outing, OutingLocale
+from c2corg_api.models.route import (
+    ROUTE_TYPE,
+    ArchiveRoute,
+    ArchiveRouteLocale,
+    Route,
+    RouteLocale,
+)
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.views.route import (
-    check_title_prefix,
-    _pt_rating,
-    _find_starting_and_ending_points,
-)
-from c2corg_api.models.common.attributes import quality_types
-from shapely.geometry import shape, LineString
-
-from c2corg_api.models.route import (
-    Route,
-    RouteLocale,
-    ArchiveRoute,
-    ArchiveRouteLocale,
-    ROUTE_TYPE,
-)
-from c2corg_api.models.document import DocumentGeometry, DocumentLocale
-from c2corg_api.models.document_topic import DocumentTopic
-from c2corg_api.views.document import DocumentRest
-
 from c2corg_api.tests.views import BaseDocumentTestRest
-from shapely.geometry.point import Point
+from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.route import (
+    _find_starting_and_ending_points,
+    _pt_rating,
+    check_title_prefix,
+)
 
 
 class TestRouteRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/routes', ROUTE_TYPE, Route, ArchiveRoute, ArchiveRouteLocale
         )
@@ -47,7 +47,7 @@ class TestRouteRest(BaseDocumentTestRest):
     def test_get_collection(self):
         body = self.get_collection()
         doc = body['documents'][0]
-        self.assertNotIn('height_diff_access', doc)
+        assert 'height_diff_access' not in doc
 
     def test_get_collection_paginated(self):
         self.app.get('/routes?offset=invalid', status=400)
@@ -80,27 +80,27 @@ class TestRouteRest(BaseDocumentTestRest):
 
         documents = response.json['documents']
 
-        self.assertEqual(response.json['total'], 1)
-        self.assertEqual(documents[0]['document_id'], self.route.document_id)
+        assert response.json['total'] == 1
+        assert documents[0]['document_id'] == self.route.document_id
 
     def test_get_collection_has_geom(self):
         body = self.get_collection()
         doc = body['documents'][3]
-        self.assertEqual(doc['geometry']['has_geom_detail'], True)
+        assert doc['geometry']['has_geom_detail'] is True
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
         body = self.get_collection_search({'act': 'skitouring'})
-        self.assertEqual(body.get('total'), 3)
-        self.assertEqual(len(body.get('documents')), 3)
+        assert body.get('total') == 3
+        assert len(body.get('documents')) == 3
 
         body = self.get_collection_search({'act': 'skitouring', 'limit': 2})
-        self.assertEqual(body.get('total'), 3)
-        self.assertEqual(len(body.get('documents')), 2)
+        assert body.get('total') == 3
+        assert len(body.get('documents')) == 2
 
         body = self.get_collection_search({'hdif': '700,900'})
-        self.assertEqual(body.get('total'), 2)
+        assert body.get('total') == 2
 
     def _transport_search(self, **params):
         search = {
@@ -125,12 +125,12 @@ class TestRouteRest(BaseDocumentTestRest):
             mock_ids.return_value = [self.route3.document_id]
             body = self.get_collection_search(self._transport_search())
 
-        self.assertEqual(body.get('total'), 1)
-        self.assertEqual(body['documents'][0]['document_id'], self.route3.document_id)
+        assert body.get('total') == 1
+        assert body['documents'][0]['document_id'] == self.route3.document_id
         # parsed (and normalized) search, for routes
         transport, document_type = mock_ids.call_args.args
-        self.assertEqual(transport['from'], '5.100;45.100')
-        self.assertEqual(document_type, 'route')
+        assert transport['from'] == '5.100;45.100'
+        assert document_type == 'route'
 
     def test_get_collection_transport_anded_with_filters(self):
         # the id-set must be ANDed with other ES filters, exactly like any
@@ -145,8 +145,8 @@ class TestRouteRest(BaseDocumentTestRest):
                 self._transport_search(act='rock_climbing')
             )
 
-        self.assertEqual(body.get('total'), 1)
-        self.assertEqual(body['documents'][0]['document_id'], self.route4.document_id)
+        assert body.get('total') == 1
+        assert body['documents'][0]['document_id'] == self.route4.document_id
 
     def test_get_collection_transport_nothing_reachable(self):
         # no route reachable: the search is empty, not unfiltered
@@ -158,8 +158,8 @@ class TestRouteRest(BaseDocumentTestRest):
             mock_ids.return_value = []
             body = self.get_collection_search(self._transport_search())
 
-        self.assertEqual(body.get('total'), 0)
-        self.assertEqual(body.get('documents'), [])
+        assert body.get('total') == 0
+        assert body.get('documents') == []
 
     def test_get_collection_transport_invalid(self):
         self.app.get(
@@ -169,85 +169,75 @@ class TestRouteRest(BaseDocumentTestRest):
 
     def test_get(self):
         body = self.get(self.route)
-        self.assertEqual(body.get('activities'), self.route.activities)
+        assert body.get('activities') == self.route.activities
         self._assert_geometry(body)
-        self.assertNotIn('climbing_outdoor_type', body)
-        self.assertIn('elevation_min', body)
-        self.assertEqual(body['glacier_gear'], 'no')
+        assert 'climbing_outdoor_type' not in body
+        assert 'elevation_min' in body
+        assert body['glacier_gear'] == 'no'
 
         locale_en = self.get_locale('en', body.get('locales'))
-        self.assertEqual('Main waypoint title', locale_en.get('title_prefix'))
-        self.assertEqual(1, locale_en.get('topic_id'))
+        assert 'Main waypoint title' == locale_en.get('title_prefix')
+        assert 1 == locale_en.get('topic_id')
 
-        self.assertIn('main_waypoint_id', body)
-        self.assertIn('associations', body)
+        assert 'main_waypoint_id' in body
+        assert 'associations' in body
         associations = body.get('associations')
-        self.assertIn('waypoints', associations)
-        self.assertIn('routes', associations)
-        self.assertIn('recent_outings', associations)
-        self.assertIn('images', associations)
-        self.assertIn('articles', associations)
-        self.assertIn('books', associations)
+        assert 'waypoints' in associations
+        assert 'routes' in associations
+        assert 'recent_outings' in associations
+        assert 'images' in associations
+        assert 'articles' in associations
+        assert 'books' in associations
 
         linked_waypoints = associations.get('waypoints')
-        self.assertEqual(2, len(linked_waypoints))
-        self.assertEqual(
-            self.waypoint.document_id, linked_waypoints[0].get('document_id')
-        )
-        self.assertEqual(
-            self.waypoint_tc.document_id, linked_waypoints[1].get('document_id')
-        )
+        assert 2 == len(linked_waypoints)
+        assert self.waypoint.document_id == linked_waypoints[0].get('document_id')
+        assert self.waypoint_tc.document_id == linked_waypoints[1].get('document_id')
         # check waypoint data in listing
-        self.assertEqual(
-            self.waypoint.locales[0].access_period,
-            linked_waypoints[0].get('locales')[0].get('access_period'),
+        assert self.waypoint.locales[0].access_period == linked_waypoints[0].get(
+            'locales'
+        )[0].get('access_period')
+        assert self.waypoint_tc.public_transportation_rating == linked_waypoints[1].get(
+            'public_transportation_rating'
         )
-        self.assertEqual(
-            self.waypoint_tc.public_transportation_rating,
-            linked_waypoints[1].get('public_transportation_rating'),
-        )
-        self.assertIn('geometry', linked_waypoints[0])
-        self.assertIn('geom', linked_waypoints[0].get('geometry'))
+        assert 'geometry' in linked_waypoints[0]
+        assert 'geom' in linked_waypoints[0].get('geometry')
 
         linked_routes = associations.get('routes')
-        self.assertEqual(1, len(linked_routes))
-        self.assertEqual(self.route4.document_id, linked_routes[0].get('document_id'))
+        assert 1 == len(linked_routes)
+        assert self.route4.document_id == linked_routes[0].get('document_id')
         # check route data in listing
-        self.assertEqual(
-            self.route4.climbing_outdoor_type,
-            linked_routes[0].get('climbing_outdoor_type'),
+        assert self.route4.climbing_outdoor_type == linked_routes[0].get(
+            'climbing_outdoor_type'
         )
         # TODO with geometry now
         # self.assertNotIn('geometry', linked_routes[0])
 
         linked_articles = associations.get('articles')
-        self.assertEqual(1, len(linked_articles))
-        self.assertEqual(
-            self.article1.document_id, linked_articles[0].get('document_id')
-        )
+        assert 1 == len(linked_articles)
+        assert self.article1.document_id == linked_articles[0].get('document_id')
 
         linked_books = associations.get('books')
-        self.assertEqual(1, len(linked_books))
-        self.assertEqual(self.book1.document_id, linked_books[0].get('document_id'))
+        assert 1 == len(linked_books)
+        assert self.book1.document_id == linked_books[0].get('document_id')
 
         recent_outings = associations.get('recent_outings')
-        self.assertEqual(1, recent_outings['total'])
+        assert 1 == recent_outings['total']
         # TODO documents are now in `documents` and not `outings`
-        self.assertEqual(1, len(recent_outings['documents']))
-        self.assertEqual(
-            self.outing1.document_id, recent_outings['documents'][0].get('document_id')
+        assert 1 == len(recent_outings['documents'])
+        assert self.outing1.document_id == recent_outings['documents'][0].get(
+            'document_id'
         )
         # check outing data in listing
-        self.assertEqual(
-            self.outing1.public_transport,
-            recent_outings['documents'][0].get('public_transport'),
+        assert self.outing1.public_transport == recent_outings['documents'][0].get(
+            'public_transport'
         )
-        self.assertIn('type', recent_outings['documents'][0])
+        assert 'type' in recent_outings['documents'][0]
 
-        self.assertIn('maps', body)
+        assert 'maps' in body
         topo_map = body.get('maps')[0]
-        self.assertEqual(topo_map.get('code'), '3232ET')
-        self.assertEqual(topo_map.get('locales')[0].get('title'), 'Belley')
+        assert topo_map.get('code') == '3232ET'
+        assert topo_map.get('locales')[0].get('title') == 'Belley'
 
     def test_get_version(self):
         self.get_version(self.route, self.route_version)
@@ -260,7 +250,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.session.flush()
         body = self.get_version(self.route, self.route_version)
         locale = body['document']['locales'][0]
-        self.assertIn('title', locale)
+        assert 'title' in locale
 
     def test_get_cooked(self):
         self.get_cooked(self.route)
@@ -271,10 +261,8 @@ class TestRouteRest(BaseDocumentTestRest):
     def test_get_lang(self):
         body = self.get_lang(self.route)
 
-        self.assertEqual('Mont Blanc from the air', body.get('locales')[0].get('title'))
-        self.assertEqual(
-            'Main waypoint title', body.get('locales')[0].get('title_prefix')
-        )
+        assert 'Mont Blanc from the air' == body.get('locales')[0].get('title')
+        assert 'Main waypoint title' == body.get('locales')[0].get('title_prefix')
 
     def test_get_new_lang(self):
         self.get_new_lang(self.route)
@@ -288,27 +276,27 @@ class TestRouteRest(BaseDocumentTestRest):
         )
         body = response.json
 
-        self.assertIn('maps', body)
-        self.assertNotIn('areas', body)
-        self.assertIn('associations', body)
+        assert 'maps' in body
+        assert 'areas' not in body
+        assert 'associations' in body
         associations = body['associations']
-        self.assertIn('waypoints', associations)
-        self.assertIn('routes', associations)
-        self.assertIn('xreports', associations)
-        self.assertNotIn('images', associations)
-        self.assertNotIn('users', associations)
+        assert 'waypoints' in associations
+        assert 'routes' in associations
+        assert 'xreports' in associations
+        assert 'images' not in associations
+        assert 'users' not in associations
 
     def test_get_caching(self):
         self.get_caching(self.route)
 
     def test_get_info(self):
         body, locale = self.get_info(self.route, 'en')
-        self.assertEqual(locale.get('lang'), 'en')
-        self.assertEqual(locale.get('title_prefix'), self.locale_en.title_prefix)
+        assert locale.get('lang') == 'en'
+        assert locale.get('title_prefix') == self.locale_en.title_prefix
 
     def test_get_info_best_lang(self):
         body, locale = self.get_info(self.route, 'es')
-        self.assertEqual(locale.get('lang'), 'fr')
+        assert locale.get('lang') == 'fr'
 
     def test_get_info_404(self):
         self.get_info_404()
@@ -316,7 +304,7 @@ class TestRouteRest(BaseDocumentTestRest):
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
-        self.assertEqual(len(errors), 2)
+        assert len(errors) == 2
         self.assertError(errors, 'activities', 'Required')
         self.assertError(
             errors, 'associations.waypoints', 'at least one waypoint required'
@@ -325,7 +313,7 @@ class TestRouteRest(BaseDocumentTestRest):
     def test_post_empty_activities_and_associations_error(self):
         body = self.post_error({'activities': []})
         errors = body.get('errors')
-        self.assertEqual(len(errors), 2)
+        assert len(errors) == 2
         self.assertError(errors, 'activities', 'Shorter than minimum length 1')
         self.assertError(
             errors, 'associations.waypoints', 'at least one waypoint required'
@@ -355,12 +343,12 @@ class TestRouteRest(BaseDocumentTestRest):
         }
         body = self.post_error(body_post)
         errors = body.get('errors')
-        self.assertEqual(len(errors), 3)
-        self.assertEqual(
-            errors[0].get('description'),
-            'climbing_indoor waypoint cannot be linked to a route',
+        assert len(errors) == 3
+        assert (
+            errors[0].get('description')
+            == 'climbing_indoor waypoint cannot be linked to a route'
         )
-        self.assertEqual(errors[0].get('name'), 'associations.climbing_indoor_waypoint')
+        assert errors[0].get('name') == 'associations.climbing_indoor_waypoint'
 
     def test_post_invalid_activity(self):
         body_post = {
@@ -381,9 +369,9 @@ class TestRouteRest(BaseDocumentTestRest):
         }
         body = self.post_error(body_post)
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0].get('description'), 'invalid value: cooking')
-        self.assertEqual(errors[0].get('name'), 'activities')
+        assert len(errors) == 1
+        assert errors[0].get('description') == 'invalid value: cooking'
+        assert errors[0].get('name') == 'activities'
 
     def test_post_missing_title(self):
         body_post = {
@@ -451,24 +439,24 @@ class TestRouteRest(BaseDocumentTestRest):
         version = doc.versions[0]
 
         archive_route = version.document_archive
-        self.assertEqual(archive_route.activities, ['hiking', 'skitouring'])
-        self.assertEqual(archive_route.elevation_max, 1500)
-        self.assertEqual(archive_route.durations, ['1'])
+        assert archive_route.activities == ['hiking', 'skitouring']
+        assert archive_route.elevation_max == 1500
+        assert archive_route.durations == ['1']
 
         archive_locale = version.document_locales_archive
-        self.assertEqual(archive_locale.lang, 'en')
-        self.assertEqual(archive_locale.title, 'Some nice loop')
+        assert archive_locale.lang == 'en'
+        assert archive_locale.title == 'Some nice loop'
 
         archive_geometry = version.document_geometry_archive
-        self.assertEqual(archive_geometry.version, doc.geometry.version)
-        self.assertIsNotNone(archive_geometry.geom_detail)
-        self.assertIsNotNone(archive_geometry.geom)
+        assert archive_geometry.version == doc.geometry.version
+        assert archive_geometry.geom_detail is not None
+        assert archive_geometry.geom is not None
 
-        self.assertEqual(doc.main_waypoint_id, self.waypoint.document_id)
-        self.assertEqual(body.get('main_waypoint_id'), self.waypoint.document_id)
-        self.assertEqual(archive_route.main_waypoint_id, self.waypoint.document_id)
+        assert doc.main_waypoint_id == self.waypoint.document_id
+        assert body.get('main_waypoint_id') == self.waypoint.document_id
+        assert archive_route.main_waypoint_id == self.waypoint.document_id
 
-        self.assertEqual(self.waypoint.locales[0].title, doc.locales[0].title_prefix)
+        assert self.waypoint.locales[0].title == doc.locales[0].title_prefix
 
         # check that a link for intersecting areas is created
         links = (
@@ -476,14 +464,14 @@ class TestRouteRest(BaseDocumentTestRest):
             .filter(AreaAssociation.document_id == doc.document_id)
             .all()
         )
-        self.assertEqual(len(links), 1)
-        self.assertEqual(links[0].area_id, self.area1.document_id)
+        assert len(links) == 1
+        assert links[0].area_id == self.area1.document_id
 
         # check that a link to the main waypoint is created
         association_main_wp = self.session.get(
             Association, (self.waypoint.document_id, doc.document_id)
         )
-        self.assertIsNotNone(association_main_wp)
+        assert association_main_wp is not None
 
         association_main_wp_log = (
             self.session.query(AssociationLog)
@@ -491,7 +479,7 @@ class TestRouteRest(BaseDocumentTestRest):
             .filter(AssociationLog.child_document_id == doc.document_id)
             .first()
         )
-        self.assertIsNotNone(association_main_wp_log)
+        assert association_main_wp_log is not None
 
     def test_post_success_3d(self):
         """Tests that routes with 3D tracks can be created and read."""
@@ -512,12 +500,12 @@ class TestRouteRest(BaseDocumentTestRest):
 
         geometry = body['geometry']
         geom = json.loads(geometry['geom'])
-        self.assertEqual(len(geom['coordinates']), 2)
+        assert len(geom['coordinates']) == 2
         self.assertCoodinateEquals(geom['coordinates'], [635961.0, 5723624.0])
 
         geom_detail = json.loads(geometry['geom_detail'])
-        self.assertEqual(len(geom_detail['coordinates']), 2)
-        self.assertEqual(len(geom_detail['coordinates'][0]), 3)
+        assert len(geom_detail['coordinates']) == 2
+        assert len(geom_detail['coordinates'][0]) == 3
         self.assertCoodinateEquals(
             geom_detail['coordinates'][0], [635956.0, 5723604.0, 1200.0]
         )
@@ -551,10 +539,9 @@ class TestRouteRest(BaseDocumentTestRest):
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
         errors = self.post_wrong_geom_type(body)
-        self.assertEqual(
-            errors[0]['description'],
-            'Invalid geometry type. Expected: '
-            "['LINESTRING', 'MULTILINESTRING']. Got: POINT.",
+        assert (
+            errors[0]['description'] == 'Invalid geometry type. Expected: '
+            "['LINESTRING', 'MULTILINESTRING']. Got: POINT."
         )
 
     def test_post_corrupted_geojson_geom(self):
@@ -583,11 +570,10 @@ class TestRouteRest(BaseDocumentTestRest):
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
         errors = self.post_wrong_geom_type(body)
-        self.assertEqual(
-            errors[0]['description'],
-            'Invalid geometry: {"type": '
+        assert (
+            errors[0]['description'] == 'Invalid geometry: {"type": '
             '"LineString", "coordinates": '
-            '[[[[[[635956, 5723604, 12345, 67890, 13579]]]]]]}',
+            '[[[[[[635956, 5723604, 12345, 67890, 13579]]]]]]}'
         )
 
         body = {
@@ -602,9 +588,9 @@ class TestRouteRest(BaseDocumentTestRest):
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
         errors = self.post_wrong_geom_type(body)
-        self.assertEqual(
-            errors[0]['description'],
-            'Invalid geometry: {"type": "Point", "coordinates": [NaN, NaN]}',
+        assert (
+            errors[0]['description']
+            == 'Invalid geometry: {"type": "Point", "coordinates": [NaN, NaN]}'
         )
 
     def test_post_success_3d_multiline(self):
@@ -626,13 +612,13 @@ class TestRouteRest(BaseDocumentTestRest):
 
         geometry = body['geometry']
         geom = json.loads(geometry['geom'])
-        self.assertEqual(len(geom['coordinates']), 2)
+        assert len(geom['coordinates']) == 2
         self.assertCoodinateEquals(geom['coordinates'], [635961.0, 5723624.0])
 
         geom_detail = json.loads(geometry['geom_detail'])
-        self.assertEqual(len(geom_detail['coordinates']), 1)
-        self.assertEqual(len(geom_detail['coordinates'][0]), 2)
-        self.assertEqual(len(geom_detail['coordinates'][0][0]), 3)
+        assert len(geom_detail['coordinates']) == 1
+        assert len(geom_detail['coordinates'][0]) == 2
+        assert len(geom_detail['coordinates'][0][0]) == 3
         self.assertCoodinateEquals(
             geom_detail['coordinates'][0][0], [635956.0, 5723604.0, 1200.0]
         )
@@ -660,12 +646,12 @@ class TestRouteRest(BaseDocumentTestRest):
 
         geometry = body['geometry']
         geom = json.loads(geometry['geom'])
-        self.assertEqual(len(geom['coordinates']), 2)
+        assert len(geom['coordinates']) == 2
         self.assertCoodinateEquals(geom['coordinates'], [635961.0, 5723624.0])
 
         geom_detail = json.loads(geometry['geom_detail'])
-        self.assertEqual(len(geom_detail['coordinates']), 2)
-        self.assertEqual(len(geom_detail['coordinates'][0]), 4)
+        assert len(geom_detail['coordinates']) == 2
+        assert len(geom_detail['coordinates'][0]) == 4
         self.assertCoodinateEquals(
             geom_detail['coordinates'][0], [635956.0, 5723604.0, 1200.0, 12345]
         )
@@ -693,8 +679,8 @@ class TestRouteRest(BaseDocumentTestRest):
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
         body, doc = self.post_success(body)
-        self.assertIsNotNone(doc.geometry.geom)
-        self.assertIsNotNone(doc.geometry.geom_detail)
+        assert doc.geometry.geom is not None
+        assert doc.geometry.geom_detail is not None
         self._assert_default_geometry(body)
 
     def test_post_default_geom_from_main_wp(self):
@@ -710,8 +696,8 @@ class TestRouteRest(BaseDocumentTestRest):
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
         body, doc = self.post_success(body)
-        self.assertIsNotNone(doc.geometry.geom)
-        self.assertIsNone(doc.geometry.geom_detail)
+        assert doc.geometry.geom is not None
+        assert doc.geometry.geom_detail is None
         self._assert_default_geometry(body, x=635956, y=5723604)
 
     def test_post_default_geom_from_associated_wps(self):
@@ -726,8 +712,8 @@ class TestRouteRest(BaseDocumentTestRest):
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
         body, doc = self.post_success(body, skip_validation=True)
-        self.assertIsNotNone(doc.geometry.geom)
-        self.assertIsNone(doc.geometry.geom_detail)
+        assert doc.geometry.geom is not None
+        assert doc.geometry.geom_detail is None
         self._assert_default_geometry(body, x=635956, y=5723604)
 
     def test_post_main_wp_without_association(self):
@@ -747,7 +733,7 @@ class TestRouteRest(BaseDocumentTestRest):
         }
         body = self.post_error(body_post)
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
+        assert len(errors) == 1
         self.assertError(
             errors, 'main_waypoint_id', 'no association to the main waypoint'
         )
@@ -901,30 +887,30 @@ class TestRouteRest(BaseDocumentTestRest):
         (body, route) = self.put_success_all(body, self.route)
         self._assert_default_geometry(body, x=635961, y=5723624)
 
-        self.assertEqual(route.elevation_max, 1600)
+        assert route.elevation_max == 1600
         locale_en = route.get_locale('en')
-        self.assertEqual(locale_en.description, '...')
-        self.assertEqual(locale_en.gear, 'none')
+        assert locale_en.description == '...'
+        assert locale_en.gear == 'none'
 
         # version with lang 'en'
         versions = route.versions
         version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
-        self.assertEqual(archive_locale.title, 'Mont Blanc from the air')
-        self.assertEqual(archive_locale.gear, 'none')
+        assert archive_locale.title == 'Mont Blanc from the air'
+        assert archive_locale.gear == 'none'
 
         archive_document_en = version_en.document_archive
-        self.assertEqual(archive_document_en.activities, ['skitouring'])
-        self.assertEqual(archive_document_en.elevation_max, 1600)
+        assert archive_document_en.activities == ['skitouring']
+        assert archive_document_en.elevation_max == 1600
 
         archive_geometry_en = version_en.document_geometry_archive
-        self.assertEqual(archive_geometry_en.version, 2)
+        assert archive_geometry_en.version == 2
 
         # version with lang 'fr'
         version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
-        self.assertEqual(archive_locale.title, 'Mont Blanc du ciel')
-        self.assertEqual(archive_locale.gear, 'paraglider')
+        assert archive_locale.title == 'Mont Blanc du ciel'
+        assert archive_locale.gear == 'paraglider'
 
     def test_put_success_figures_only(self):
         body = {
@@ -960,7 +946,7 @@ class TestRouteRest(BaseDocumentTestRest):
         }
         (body, route) = self.put_success_figures_only(body, self.route)
 
-        self.assertEqual(route.elevation_max, 1600)
+        assert route.elevation_max == 1600
 
     def test_put_success_new_track_with_default_geom(self):
         """Test that a provided default geometry (`geom`) is used instead of
@@ -1045,15 +1031,15 @@ class TestRouteRest(BaseDocumentTestRest):
         # but the route has a track)
         self._assert_default_geometry(body)
 
-        self.assertEqual(route.main_waypoint_id, self.waypoint2.document_id)
+        assert route.main_waypoint_id == self.waypoint2.document_id
         locale_en = route.get_locale('en')
-        self.assertEqual(locale_en.title_prefix, self.waypoint2.get_locale('en').title)
+        assert locale_en.title_prefix == self.waypoint2.get_locale('en').title
 
         # check that a link to the new main waypoint is created
         association_main_wp = self.session.get(
             Association, (self.waypoint2.document_id, route.document_id)
         )
-        self.assertIsNotNone(association_main_wp)
+        assert association_main_wp is not None
 
         association_main_wp_log = (
             self.session.query(AssociationLog)
@@ -1061,7 +1047,7 @@ class TestRouteRest(BaseDocumentTestRest):
             .filter(AssociationLog.child_document_id == route.document_id)
             .first()
         )
-        self.assertIsNotNone(association_main_wp_log)
+        assert association_main_wp_log is not None
 
     def test_put_success_lang_only(self):
         body = {
@@ -1096,7 +1082,7 @@ class TestRouteRest(BaseDocumentTestRest):
         }
         (body, route) = self.put_success_lang_only(body, self.route)
 
-        self.assertEqual(route.get_locale('en').gear, 'none')
+        assert route.get_locale('en').gear == 'none'
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale."""
@@ -1131,59 +1117,59 @@ class TestRouteRest(BaseDocumentTestRest):
         }
         (body, route) = self.put_success_new_lang(body, self.route)
 
-        self.assertEqual(route.get_locale('es').gear, 'si')
+        assert route.get_locale('es').gear == 'si'
 
     def test_history(self):
         id = self.route.document_id
         langs = ['fr', 'en']
         for lang in langs:
-            body = self.app.get('/document/%d/history/%s' % (id, lang))
+            body = self.app.get(f'/document/{id}/history/{lang}')
             username = 'contributor'
             user_id = self.global_userids[username]
 
             title = body.json['title']
             versions = body.json['versions']
-            self.assertEqual(len(versions), 1)
-            self.assertEqual(getattr(self, 'locale_' + lang).title, title)
+            assert len(versions) == 1
+            assert getattr(self, 'locale_' + lang).title == title
             for r in versions:
-                self.assertEqual(r['name'], 'Contributor')
-                self.assertNotIn('username', r)
-                self.assertEqual(r['user_id'], user_id)
-                self.assertIn('written_at', r)
-                self.assertIn('version_id', r)
+                assert r['name'] == 'Contributor'
+                assert 'username' not in r
+                assert r['user_id'] == user_id
+                assert 'written_at' in r
+                assert 'version_id' in r
 
     def test_history_no_lang(self):
         id = self.route.document_id
-        self.app.get('/document/%d/history/es' % id, status=404)
+        self.app.get(f'/document/{id}/history/es', status=404)
 
     def test_history_no_doc(self):
         self.app.get('/document/99999/history/es', status=404)
 
     def _assert_geometry(self, body):
-        self.assertIsNotNone(body.get('geometry'))
+        assert body.get('geometry') is not None
         geometry = body.get('geometry')
-        self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom_detail'))
+        assert geometry.get('version') is not None
+        assert geometry.get('geom_detail') is not None
 
         geom = geometry.get('geom_detail')
         line = shape(json.loads(geom))
-        self.assertIsInstance(line, LineString)
-        self.assertAlmostEqual(line.coords[0][0], 635956)
-        self.assertAlmostEqual(line.coords[0][1], 5723604)
-        self.assertAlmostEqual(line.coords[1][0], 635966)
-        self.assertAlmostEqual(line.coords[1][1], 5723644)
+        assert isinstance(line, LineString)
+        assert line.coords[0][0] == pytest.approx(635956, abs=5e-8)
+        assert line.coords[0][1] == pytest.approx(5723604, abs=5e-8)
+        assert line.coords[1][0] == pytest.approx(635966, abs=5e-8)
+        assert line.coords[1][1] == pytest.approx(5723644, abs=5e-8)
 
     def _assert_default_geometry(self, body, x=635961, y=5723624):
-        self.assertIsNotNone(body.get('geometry'))
+        assert body.get('geometry') is not None
         geometry = body.get('geometry')
-        self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom'))
+        assert geometry.get('version') is not None
+        assert geometry.get('geom') is not None
 
         geom = geometry.get('geom')
         point = shape(json.loads(geom))
-        self.assertIsInstance(point, Point)
-        self.assertAlmostEqual(point.x, x)
-        self.assertAlmostEqual(point.y, y)
+        assert isinstance(point, Point)
+        assert point.x == pytest.approx(x, abs=5e-8)
+        assert point.y == pytest.approx(y, abs=5e-8)
 
     def test_update_prefix_title(self):
         self.route.locales.append(
@@ -1202,14 +1188,14 @@ class TestRouteRest(BaseDocumentTestRest):
 
         route = self.session.get(Route, self.route.document_id)
         locale_en = route.get_locale('en')
-        self.assertEqual(locale_en.version, 1)
-        self.assertEqual(locale_en.title_prefix, self.waypoint.get_locale('en').title)
+        assert locale_en.version == 1
+        assert locale_en.title_prefix == self.waypoint.get_locale('en').title
         locale_fr = route.get_locale('fr')
-        self.assertEqual(locale_fr.version, 1)
-        self.assertEqual(locale_fr.title_prefix, self.waypoint.get_locale('fr').title)
+        assert locale_fr.version == 1
+        assert locale_fr.title_prefix == self.waypoint.get_locale('fr').title
         locale_es = route.get_locale('es')
-        self.assertEqual(locale_es.version, 1)
-        self.assertEqual(locale_es.title_prefix, self.waypoint.get_locale('fr').title)
+        assert locale_es.version == 1
+        assert locale_es.title_prefix == self.waypoint.get_locale('fr').title
 
     def test_get_associations_history(self):
         self._get_association_logs(self.route)
@@ -1510,9 +1496,9 @@ class TestRouteRest(BaseDocumentTestRest):
             Waypoint(document_id=2, public_transportation_rating='poor service')
         ]
         route_types = ['traverse']
-        self.assertEqual(
-            _pt_rating(starting_waypoints, ending_waypoints, route_types),
-            'poor service',
+        assert (
+            _pt_rating(starting_waypoints, ending_waypoints, route_types)
+            == 'poor service'
         )
 
         # Test case 2: Starting and ending waypoints with the same ratings
@@ -1523,9 +1509,9 @@ class TestRouteRest(BaseDocumentTestRest):
             Waypoint(document_id=2, public_transportation_rating='poor service')
         ]
         route_types = ['raid']
-        self.assertEqual(
-            _pt_rating(starting_waypoints, ending_waypoints, route_types),
-            'poor service',
+        assert (
+            _pt_rating(starting_waypoints, ending_waypoints, route_types)
+            == 'poor service'
         )
 
         # Test case 3: Starting and ending waypoints with missing ratings
@@ -1534,18 +1520,18 @@ class TestRouteRest(BaseDocumentTestRest):
         ]
         ending_waypoints = [Waypoint(document_id=2, public_transportation_rating=None)]
         route_types = ['traverse']
-        self.assertEqual(
-            _pt_rating(starting_waypoints, ending_waypoints, route_types),
-            'unknown service',
+        assert (
+            _pt_rating(starting_waypoints, ending_waypoints, route_types)
+            == 'unknown service'
         )
 
         # Test case 4: No waypoints provided
         starting_waypoints = []
         ending_waypoints = []
         route_types = []
-        self.assertEqual(
-            _pt_rating(starting_waypoints, ending_waypoints, route_types),
-            'unknown service',
+        assert (
+            _pt_rating(starting_waypoints, ending_waypoints, route_types)
+            == 'unknown service'
         )
 
         # Test case 5: Different route types with no service
@@ -1556,8 +1542,9 @@ class TestRouteRest(BaseDocumentTestRest):
             Waypoint(document_id=2, public_transportation_rating='no service')
         ]
         route_types = ['expedition']
-        self.assertEqual(
-            _pt_rating(starting_waypoints, ending_waypoints, route_types), 'no service'
+        assert (
+            _pt_rating(starting_waypoints, ending_waypoints, route_types)
+            == 'no service'
         )
 
         # Test case 6: Different route types with service
@@ -1568,9 +1555,9 @@ class TestRouteRest(BaseDocumentTestRest):
             Waypoint(document_id=2, public_transportation_rating='poor service')
         ]
         route_types = ['traverse']
-        self.assertEqual(
-            _pt_rating(starting_waypoints, ending_waypoints, route_types),
-            'poor service',
+        assert (
+            _pt_rating(starting_waypoints, ending_waypoints, route_types)
+            == 'poor service'
         )
 
         # Test case 7: Multiple starting and ending waypoints with ratings
@@ -1585,9 +1572,9 @@ class TestRouteRest(BaseDocumentTestRest):
             Waypoint(document_id=6, public_transportation_rating='good service'),
         ]
         route_types = ['traverse']
-        self.assertEqual(
-            _pt_rating(starting_waypoints, ending_waypoints, route_types),
-            'good service',
+        assert (
+            _pt_rating(starting_waypoints, ending_waypoints, route_types)
+            == 'good service'
         )
 
         # Test case 8: Multiple starting waypoints
@@ -1599,9 +1586,9 @@ class TestRouteRest(BaseDocumentTestRest):
         ]
         ending_waypoints = []
         route_types = ['traverse']
-        self.assertEqual(
-            _pt_rating(starting_waypoints, ending_waypoints, route_types),
-            'unknown service',
+        assert (
+            _pt_rating(starting_waypoints, ending_waypoints, route_types)
+            == 'unknown service'
         )
 
         # Test case 9: No starting waypoints
@@ -1613,9 +1600,9 @@ class TestRouteRest(BaseDocumentTestRest):
             Waypoint(document_id=6, public_transportation_rating='poor service'),
         ]
         route_types = ['traverse']
-        self.assertEqual(
-            _pt_rating(starting_waypoints, ending_waypoints, route_types),
-            'unknown service',
+        assert (
+            _pt_rating(starting_waypoints, ending_waypoints, route_types)
+            == 'unknown service'
         )
 
         # Test case 10: Multiple starting and ending waypoints with no ratings
@@ -1628,9 +1615,9 @@ class TestRouteRest(BaseDocumentTestRest):
             Waypoint(document_id=5, public_transportation_rating=None),
         ]
         route_types = ['traverse']
-        self.assertEqual(
-            _pt_rating(starting_waypoints, ending_waypoints, route_types),
-            'unknown service',
+        assert (
+            _pt_rating(starting_waypoints, ending_waypoints, route_types)
+            == 'unknown service'
         )
 
         # Test case 11: Multiple starting and ending waypoints,
@@ -1646,9 +1633,9 @@ class TestRouteRest(BaseDocumentTestRest):
             Waypoint(document_id=6, public_transportation_rating='no service'),
         ]
         route_types = ['traverse']
-        self.assertEqual(
-            _pt_rating(starting_waypoints, ending_waypoints, route_types),
-            'good service',
+        assert (
+            _pt_rating(starting_waypoints, ending_waypoints, route_types)
+            == 'good service'
         )
 
         # Test case 12: Multiple starting points
@@ -1659,9 +1646,9 @@ class TestRouteRest(BaseDocumentTestRest):
         ]
         ending_waypoints = []
         route_types = ['loop']
-        self.assertEqual(
-            _pt_rating(starting_waypoints, ending_waypoints, route_types),
-            'seasonal service',
+        assert (
+            _pt_rating(starting_waypoints, ending_waypoints, route_types)
+            == 'seasonal service'
         )
 
     def test_find_starting_and_ending_points(self):
@@ -1688,8 +1675,8 @@ class TestRouteRest(BaseDocumentTestRest):
         # Test case 1: crossings with multiple waypoints
         route_types = ['traverse']
         starts, ends = _find_starting_and_ending_points(waypoints, route_types)
-        self.assertEqual(starts[0].geometry.geom, expected_start)
-        self.assertEqual(ends[0].geometry.geom, 'SRID=3857;POINT(659950 5694854)')
+        assert starts[0].geometry.geom == expected_start
+        assert ends[0].geometry.geom == 'SRID=3857;POINT(659950 5694854)'
 
         # Test case 2: crossings with two waypoints
         route_types = ['raid']
@@ -1697,20 +1684,20 @@ class TestRouteRest(BaseDocumentTestRest):
             [waypoints[0], waypoints[1]], route_types
         )
 
-        self.assertEqual(starts[0].geometry.geom, expected_start)
-        self.assertEqual(ends[0].geometry.geom, 'SRID=3857;POINT(659800 5694854)')
+        assert starts[0].geometry.geom == expected_start
+        assert ends[0].geometry.geom == 'SRID=3857;POINT(659800 5694854)'
 
         # Test case 3: loops
         route_types = ['loop', 'traverse']
         starts, ends = _find_starting_and_ending_points(waypoints, route_types)
-        self.assertEqual(starts, waypoints)
-        self.assertEqual(ends, [])
+        assert starts == waypoints
+        assert ends == []
 
         # Test case 4: single access other cases
         route_types = ['some_other_route_type']
         starts, ends = _find_starting_and_ending_points([waypoints[0]], route_types)
-        self.assertEqual(starts[0].geometry.geom, expected_start)
-        self.assertEqual(ends, [])  # No end point expected
+        assert starts[0].geometry.geom == expected_start
+        assert ends == []  # No end point expected
 
         # Test case 5: multi waypoints other cases
         route_types = ['some_other_route_type']
@@ -1718,8 +1705,8 @@ class TestRouteRest(BaseDocumentTestRest):
             [waypoints[0], waypoints[1]], route_types
         )
         # No start or end points expected for multiple waypoints
-        self.assertEqual(start, [])
-        self.assertEqual(end, [])
+        assert start == []
+        assert end == []
 
     def test_update_all_routes(self):
         # Test case 1: collaborators cannot update all routes:
@@ -1732,7 +1719,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.app.get(prefix, headers=headers, status=200)
         self.session.flush()
         self.session.refresh(self.route)
-        self.assertEqual(self.route.public_transportation_rating, 'poor service')
+        assert self.route.public_transportation_rating == 'poor service'
 
         # Test case 3: Moderators can, without waypoints_extrapolation
         self.route.route_types = ['traverse']
@@ -1742,4 +1729,4 @@ class TestRouteRest(BaseDocumentTestRest):
         )
         self.session.flush()
         self.session.refresh(self.route)
-        self.assertEqual(self.route.public_transportation_rating, 'unknown service')
+        assert self.route.public_transportation_rating == 'unknown service'

@@ -1,5 +1,4 @@
 from c2corg_api.models.outing import Outing, OutingLocale
-
 from c2corg_api.tests import BaseTestCase
 
 
@@ -29,19 +28,19 @@ class TestOuting(BaseTestCase):
 
         outing_archive = outing.to_archive()
 
-        self.assertIsNone(outing_archive.id)
-        self.assertEqual(outing_archive.document_id, outing.document_id)
-        self.assertEqual(outing_archive.activities, outing.activities)
-        self.assertEqual(outing_archive.elevation_max, outing.elevation_max)
+        assert outing_archive.id is None
+        assert outing_archive.document_id == outing.document_id
+        assert outing_archive.activities == outing.activities
+        assert outing_archive.elevation_max == outing.elevation_max
 
         archive_locals = outing.get_archive_locales()
 
-        self.assertEqual(len(archive_locals), 2)
+        assert len(archive_locals) == 2
         locale = outing.locales[0]
         locale_archive = archive_locals[0]
-        self.assertIsNot(locale_archive, locale)
-        self.assertIsNone(locale_archive.id)
-        self.assertEqual(locale_archive.lang, locale.lang)
-        self.assertEqual(locale_archive.title, locale.title)
-        self.assertEqual(locale_archive.description, locale.description)
-        self.assertEqual(locale_archive.route_description, locale.route_description)
+        assert locale_archive is not locale
+        assert locale_archive.id is None
+        assert locale_archive.lang == locale.lang
+        assert locale_archive.title == locale.title
+        assert locale_archive.description == locale.description
+        assert locale_archive.route_description == locale.route_description

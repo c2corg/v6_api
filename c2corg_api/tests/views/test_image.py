@@ -1,31 +1,31 @@
 import datetime
 import json
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
+
+import pytest
+from shapely.geometry import Point, shape
 
 from c2corg_api.models.area import Area
 from c2corg_api.models.article import Article
-from c2corg_api.models.book import Book
 from c2corg_api.models.association import Association
+from c2corg_api.models.book import Book
 from c2corg_api.models.cache_version import CacheVersion
+from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.document import (
+    ArchiveDocumentLocale,
+    DocumentGeometry,
+    DocumentLocale,
+)
 from c2corg_api.models.document_history import DocumentVersion
-from c2corg_api.models.feed import update_feed_document_create, DocumentChange
-from c2corg_api.models.outing import OutingLocale, Outing, OUTING_TYPE
+from c2corg_api.models.document_topic import DocumentTopic
+from c2corg_api.models.feed import DocumentChange, update_feed_document_create
+from c2corg_api.models.image import IMAGE_TYPE, ArchiveImage, Image
+from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.models.common.attributes import quality_types
-from shapely.geometry import shape, Point
-
-from c2corg_api.models.image import Image, ArchiveImage, IMAGE_TYPE
-from c2corg_api.models.document import (
-    DocumentGeometry,
-    ArchiveDocumentLocale,
-    DocumentLocale,
-)
-from c2corg_api.models.document_topic import DocumentTopic
-from c2corg_api.views.document import DocumentRest
-
 from c2corg_api.tests.views import BaseDocumentTestRest, BaseTestRest
+from c2corg_api.views.document import DocumentRest
 
 
 class BaseTestImage(BaseDocumentTestRest):
@@ -194,39 +194,39 @@ class BaseTestImage(BaseDocumentTestRest):
         version = doc.versions[0]
 
         archive_image = version.document_archive
-        self.assertEqual(archive_image.activities, ['paragliding'])
-        self.assertEqual(archive_image.height, 1500)
+        assert archive_image.activities == ['paragliding']
+        assert archive_image.height == 1500
 
         archive_locale = version.document_locales_archive
-        self.assertEqual(archive_locale.lang, 'en')
-        self.assertEqual(archive_locale.title, 'Some nice loop')
+        assert archive_locale.lang == 'en'
+        assert archive_locale.title == 'Some nice loop'
 
         archive_geometry = version.document_geometry_archive
-        self.assertEqual(archive_geometry.version, doc.geometry.version)
-        self.assertIsNotNone(archive_geometry.geom)
+        assert archive_geometry.version == doc.geometry.version
+        assert archive_geometry.geom is not None
 
         if check_wp:
             # check that a link to the linked wp is created
             association_wp = self.session.get(
                 Association, (self.waypoint.document_id, doc.document_id)
             )
-            self.assertIsNotNone(association_wp)
+            assert association_wp is not None
 
     def _assert_geometry(self, body):
-        self.assertIsNotNone(body.get('geometry'))
+        assert body.get('geometry') is not None
         geometry = body.get('geometry')
-        self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom'))
+        assert geometry.get('version') is not None
+        assert geometry.get('geom') is not None
 
         geom = geometry.get('geom')
         point = shape(json.loads(geom))
-        self.assertIsInstance(point, Point)
-        self.assertAlmostEqual(point.x, 635956)
-        self.assertAlmostEqual(point.y, 5723604)
+        assert isinstance(point, Point)
+        assert point.x == pytest.approx(635956, abs=5e-8)
+        assert point.y == pytest.approx(5723604, abs=5e-8)
 
 
 class TestImageRest(BaseTestImage):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/images', IMAGE_TYPE, Image, ArchiveImage, ArchiveDocumentLocale
         )
@@ -236,8 +236,8 @@ class TestImageRest(BaseTestImage):
     def test_get_collection(self):
         body = self.get_collection()
         doc = body['documents'][0]
-        self.assertIn('filename', doc)
-        self.assertNotIn('file_size', doc)
+        assert 'filename' in doc
+        assert 'file_size' not in doc
 
     def test_get_collection_paginated(self):
         self.app.get('/images?offset=invalid', status=400)
@@ -284,43 +284,41 @@ class TestImageRest(BaseTestImage):
     def test_get(self):
         body = self.get(self.image)
         self._assert_geometry(body)
-        self.assertNotIn('maps', body)
+        assert 'maps' not in body
         locale_en = self.get_locale('en', body.get('locales'))
-        self.assertEqual(1, locale_en.get('topic_id'))
+        assert 1 == locale_en.get('topic_id')
 
-        self.assertIn('creator', body)
+        assert 'creator' in body
         creator = body.get('creator')
-        self.assertEqual(self.global_userids['contributor'], creator.get('user_id'))
+        assert self.global_userids['contributor'] == creator.get('user_id')
 
-        self.assertIn('associations', body)
+        assert 'associations' in body
         associations = body['associations']
-        self.assertIn('waypoints', associations)
-        self.assertIn('routes', associations)
-        self.assertIn('xreports', associations)
-        self.assertIn('images', associations)
-        self.assertIn('users', associations)
-        self.assertIn('articles', associations)
-        self.assertIn('books', associations)
-        self.assertIn('areas', associations)
-        self.assertIn('outings', associations)
+        assert 'waypoints' in associations
+        assert 'routes' in associations
+        assert 'xreports' in associations
+        assert 'images' in associations
+        assert 'users' in associations
+        assert 'articles' in associations
+        assert 'books' in associations
+        assert 'areas' in associations
+        assert 'outings' in associations
 
         linked_articles = associations.get('articles')
-        self.assertEqual(len(linked_articles), 1)
-        self.assertEqual(
-            self.article1.document_id, linked_articles[0].get('document_id')
-        )
+        assert len(linked_articles) == 1
+        assert self.article1.document_id == linked_articles[0].get('document_id')
 
         linked_areas = associations.get('areas')
-        self.assertEqual(len(linked_areas), 1)
-        self.assertEqual(self.area.document_id, linked_areas[0].get('document_id'))
+        assert len(linked_areas) == 1
+        assert self.area.document_id == linked_areas[0].get('document_id')
 
         linked_books = associations.get('books')
-        self.assertEqual(len(linked_books), 1)
-        self.assertEqual(self.book1.document_id, linked_books[0].get('document_id'))
+        assert len(linked_books) == 1
+        assert self.book1.document_id == linked_books[0].get('document_id')
 
         linked_outings = associations.get('outings')
-        self.assertEqual(len(linked_outings), 1)
-        self.assertEqual(self.outing1.document_id, linked_outings[0].get('document_id'))
+        assert len(linked_outings) == 1
+        assert self.outing1.document_id == linked_outings[0].get('document_id')
 
     def test_get_cooked(self):
         self.get_cooked(self.image)
@@ -343,20 +341,20 @@ class TestImageRest(BaseTestImage):
         )
         body = response.json
 
-        self.assertNotIn('maps', body)
-        self.assertNotIn('areas', body)
-        self.assertIn('associations', body)
+        assert 'maps' not in body
+        assert 'areas' not in body
+        assert 'associations' in body
         associations = body['associations']
-        self.assertIn('waypoints', associations)
-        self.assertIn('routes', associations)
-        self.assertIn('images', associations)
-        self.assertIn('users', associations)
-        self.assertIn('articles', associations)
+        assert 'waypoints' in associations
+        assert 'routes' in associations
+        assert 'images' in associations
+        assert 'users' in associations
+        assert 'articles' in associations
 
     def test_post_error(self):
         body = self.post_error({})
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
+        assert len(errors) == 1
         self.assertCorniceRequired(errors[0], 'filename')
 
     def test_get_caching(self):
@@ -364,7 +362,7 @@ class TestImageRest(BaseTestImage):
 
     def test_get_info(self):
         body, locale = self.get_info(self.image, 'en')
-        self.assertEqual(locale.get('lang'), 'en')
+        assert locale.get('lang') == 'en'
 
     def test_get_version(self):
         self.get_version(self.image, self.image_version)
@@ -375,7 +373,7 @@ class TestImageRest(BaseTestImage):
         del request_body['locales'][0]['title']
 
         body, doc = self.post_success(request_body)
-        self.assertEqual(doc.locales[0].title, '')
+        assert doc.locales[0].title == ''
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
     def test_post_missing_title_none(self, post_mock):
@@ -406,12 +404,39 @@ class TestImageRest(BaseTestImage):
         errors = body.get('errors')
         self.assertCorniceRequired(errors[0], 'filename')
 
+    @pytest.mark.parametrize('value', ['NaN', 'inf', float('nan')])
+    @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
+    def test_post_non_finite_exif(self, post_mock, value):
+        body_post = self._post_success_document()
+        body_post['fnumber'] = value
+        body_post['exposure_time'] = value
+        body_post['focal_length'] = 26
+
+        body, doc = self.post_success(body_post)
+        assert doc.fnumber is None
+        assert doc.exposure_time is None
+        assert doc.focal_length == 26
+
+    def test_get_nan_exif(self):
+        self.image.fnumber = float('nan')
+        self.image.exposure_time = float('inf')
+        self.session.flush()
+
+        response = self.app.get(
+            self._prefix + '/' + str(self.image.document_id), status=200
+        )
+        assert 'NaN' not in response.text
+        assert 'Infinity' not in response.text
+        body = response.json
+        assert body['fnumber'] is None
+        assert body['exposure_time'] is None
+
     def test_post_duplicated_filename(self):
         body_post = self._post_success_document()
         body_post['filename'] = 'image.jpg'
         body = self.post_error(body_post)
         errors = body.get('errors')
-        self.assertEqual(errors[0].get('description'), 'Unique')
+        assert errors[0].get('description') == 'Unique'
 
     @patch(
         'c2corg_api.views.image.requests.post',
@@ -422,7 +447,7 @@ class TestImageRest(BaseTestImage):
         r = self.app_post_json(
             self._prefix, self._post_success_document(), headers=headers, status=500
         )
-        self.assertIn('test error', r.text)
+        assert 'test error' in r.text
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
     def test_post_success(self, post_mock):
@@ -451,9 +476,7 @@ class TestImageRest(BaseTestImage):
         self.assertError(
             body.get('errors'),
             'Bad Request',
-            'no rights to modify associations with outing {}'.format(
-                self.outing1.document_id
-            ),
+            f'no rights to modify associations with outing {self.outing1.document_id}',
         )
 
     def test_put_wrong_document_id(self):
@@ -638,33 +661,33 @@ class TestImageRest(BaseTestImage):
         }
         (body, image) = self.put_success_all(body, self.image, cache_version=3)
 
-        self.assertEqual(image.height, 2000)
+        assert image.height == 2000
         locale_en = image.get_locale('en')
-        self.assertEqual(locale_en.description, 'New description')
+        assert locale_en.description == 'New description'
 
         # version with lang 'en'
         versions = image.versions
         version_en = self.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
-        self.assertEqual(archive_locale.title, 'Mont Blanc from the air')
+        assert archive_locale.title == 'Mont Blanc from the air'
 
         archive_document_en = version_en.document_archive
-        self.assertEqual(archive_document_en.activities, ['paragliding'])
-        self.assertEqual(archive_document_en.height, 2000)
+        assert archive_document_en.activities == ['paragliding']
+        assert archive_document_en.height == 2000
 
         archive_geometry_en = version_en.document_geometry_archive
-        self.assertEqual(archive_geometry_en.version, 2)
+        assert archive_geometry_en.version == 2
 
         # version with lang 'fr'
         version_fr = self.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
-        self.assertEqual(archive_locale.title, 'Mont Blanc du ciel')
+        assert archive_locale.title == 'Mont Blanc du ciel'
 
         # check that a link to the linked wp is created
         association_wp = self.session.get(
             Association, (self.waypoint.document_id, image.document_id)
         )
-        self.assertIsNotNone(association_wp)
+        assert association_wp is not None
 
     def test_put_no_permission_for_outing_association_removal(self):
         """Try to remove an association with an outing that the user has no
@@ -702,9 +725,7 @@ class TestImageRest(BaseTestImage):
             body.get('errors'),
             'Bad Request',
             'no rights to modify associations between '
-            'document o ({}) and i ({})'.format(
-                self.outing1.document_id, self.image.document_id
-            ),
+            f'document o ({self.outing1.document_id}) and i ({self.image.document_id})',
         )
 
     def test_put_success_as_contributor2(self):
@@ -757,7 +778,7 @@ class TestImageRest(BaseTestImage):
         }
         (body, image) = self.put_success_figures_only(body, self.image)
 
-        self.assertEqual(image.height, 2000)
+        assert image.height == 2000
 
     def test_put_success_lang_only(self):
         body = {
@@ -782,7 +803,7 @@ class TestImageRest(BaseTestImage):
         }
         (body, image) = self.put_success_lang_only(body, self.image)
 
-        self.assertEqual(image.get_locale('en').description, 'New description')
+        assert image.get_locale('en').description == 'New description'
 
     def test_put_success_new_lang(self):
         """Test updating a document by adding a new locale."""
@@ -807,7 +828,7 @@ class TestImageRest(BaseTestImage):
         }
         (body, image) = self.put_success_new_lang(body, self.image)
 
-        self.assertEqual(image.get_locale('es').description, '...')
+        assert image.get_locale('es').description == '...'
 
     def test_change_image_type_collaborative(self):
         """Test that a non-moderator user cannot change the image_type
@@ -972,7 +993,7 @@ class TestImageRest(BaseTestImage):
 
 
 class TestImageListRest(BaseTestImage):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/images', IMAGE_TYPE, Image, ArchiveImage, ArchiveDocumentLocale
         )
@@ -989,7 +1010,7 @@ class TestImageListRest(BaseTestImage):
 
         body = response.json
         images = body.get('images')
-        self.assertEqual(len(request_body['images']), len(images))
+        assert len(request_body['images']) == len(images)
         for image in images:
             (body, doc) = self._validate_document(image)
 
@@ -1002,11 +1023,11 @@ class TestImageListRest(BaseTestImage):
         self._validate_post_success(body, doc)
 
         feed_change = self.get_feed_change(self.waypoint.document_id)
-        self.assertIsNotNone(feed_change)
-        self.assertEqual(feed_change.change_type, 'updated')
-        self.assertEqual(feed_change.user_ids, [self.global_userids['contributor']])
-        self.assertIsNotNone(feed_change.image1_id)
-        self.assertIsNone(feed_change.image2_id)
+        assert feed_change is not None
+        assert feed_change.change_type == 'updated'
+        assert feed_change.user_ids == [self.global_userids['contributor']]
+        assert feed_change.image1_id is not None
+        assert feed_change.image2_id is None
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
     def test_post_multiple(self, post_mock):
@@ -1022,13 +1043,13 @@ class TestImageListRest(BaseTestImage):
         self._validate_post_success(body, doc)
 
         feed_change = self.get_feed_change(self.waypoint.document_id)
-        self.assertIsNotNone(feed_change)
-        self.assertEqual(feed_change.change_type, 'updated')
-        self.assertEqual(feed_change.user_ids, [self.global_userids['contributor']])
-        self.assertIsNotNone(feed_change.image1_id)
-        self.assertIsNotNone(feed_change.image2_id)
-        self.assertNotEqual(feed_change.image1_id, feed_change.image2_id)
-        self.assertIsNone(feed_change.image3_id)
+        assert feed_change is not None
+        assert feed_change.change_type == 'updated'
+        assert feed_change.user_ids == [self.global_userids['contributor']]
+        assert feed_change.image1_id is not None
+        assert feed_change.image2_id is not None
+        assert feed_change.image1_id != feed_change.image2_id
+        assert feed_change.image3_id is None
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
     def test_post_multiple_for_outing(self, post_mock):
@@ -1051,15 +1072,15 @@ class TestImageListRest(BaseTestImage):
         association_img = self.session.get(
             Association, (self.outing1.document_id, doc.document_id)
         )
-        self.assertIsNotNone(association_img)
+        assert association_img is not None
 
         feed_change = self.get_feed_change(self.outing1.document_id)
-        self.assertIsNotNone(feed_change)
-        self.assertEqual(feed_change.change_type, 'updated')
-        self.assertEqual(feed_change.user_ids, [self.global_userids['contributor']])
-        self.assertIsNotNone(feed_change.image1_id)
-        self.assertIsNone(feed_change.image2_id)
-        self.assertIsNone(feed_change.image3_id)
+        assert feed_change is not None
+        assert feed_change.change_type == 'updated'
+        assert feed_change.user_ids == [self.global_userids['contributor']]
+        assert feed_change.image1_id is not None
+        assert feed_change.image2_id is None
+        assert feed_change.image3_id is None
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
     def test_post_multiple_as_contributor2(self, post_mock):
@@ -1076,12 +1097,12 @@ class TestImageListRest(BaseTestImage):
         feed_change = self.get_feed_change(
             self.waypoint.document_id, change_type='added_photos'
         )
-        self.assertIsNotNone(feed_change)
-        self.assertEqual(feed_change.change_type, 'added_photos')
-        self.assertEqual(feed_change.user_ids, [user_id])
-        self.assertIsNotNone(feed_change.image1_id)
-        self.assertIsNotNone(feed_change.image2_id)
-        self.assertNotEqual(feed_change.image1_id, feed_change.image2_id)
+        assert feed_change is not None
+        assert feed_change.change_type == 'added_photos'
+        assert feed_change.user_ids == [user_id]
+        assert feed_change.image1_id is not None
+        assert feed_change.image2_id is not None
+        assert feed_change.image1_id != feed_change.image2_id
 
         q = (
             self.session.query(DocumentChange)
@@ -1090,7 +1111,7 @@ class TestImageListRest(BaseTestImage):
             .filter(DocumentChange.user_id == user_id)
         )
 
-        self.assertEqual(1, q.count())
+        assert 1 == q.count()
 
         # again upload images, and check that there is still only one entry
         body_request = {
@@ -1100,11 +1121,11 @@ class TestImageListRest(BaseTestImage):
             ]
         }
         self.post_success(body_request, user='contributor2')
-        self.assertEqual(1, q.count())
+        assert 1 == q.count()
 
         self.session.refresh(feed_change)
-        self.assertIsNotNone(feed_change.image3_id)
-        self.assertTrue(feed_change.more_images)
+        assert feed_change.image3_id is not None
+        assert feed_change.more_images
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
     def test_post_validation_error(self, post_mock):
@@ -1130,7 +1151,7 @@ class TestImageListRest(BaseTestImage):
 
 
 class TestImageProxyRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestRest.setUp(self)
         self._add_test_data()
 
@@ -1152,62 +1173,56 @@ class TestImageProxyRest(BaseTestRest):
         self.session.flush()
 
     def test_get_not_exists(self):
-        self.app.get('/images/proxy/{}'.format(999), status=404)
+        self.app.get(f'/images/proxy/{999}', status=404)
 
     def test_bad_size(self):
         resp = self.app.get(
-            '/images/proxy/{}?size=badsize'.format(self.image.document_id), status=400
+            f'/images/proxy/{self.image.document_id}?size=badsize', status=400
         )
         errors = resp.json.get('errors')
-        self.assertEqual('invalid size', errors[0].get('description'))
+        assert 'invalid size' == errors[0].get('description')
 
     def test_success_without_size(self):
-        resp = self.app.get(
-            '/images/proxy/{}'.format(self.image.document_id), status=302
-        )
-        self.assertIn('image.jpg', resp.headers['Location'])
+        resp = self.app.get(f'/images/proxy/{self.image.document_id}', status=302)
+        assert 'image.jpg' in resp.headers['Location']
 
     def test_success_with_size(self):
         resp = self.app.get(
-            '/images/proxy/{}?size=BI'.format(self.image.document_id), status=302
+            f'/images/proxy/{self.image.document_id}?size=BI', status=302
         )
-        self.assertIn('imageBI.jpg', resp.headers['Location'])
+        assert 'imageBI.jpg' in resp.headers['Location']
 
     def test_svg_without_size(self):
-        resp = self.app.get(
-            '/images/proxy/{}'.format(self.image2.document_id), status=302
-        )
-        self.assertIn('image.svg', resp.headers['Location'])
+        resp = self.app.get(f'/images/proxy/{self.image2.document_id}', status=302)
+        assert 'image.svg' in resp.headers['Location']
 
     def test_svg_with_size(self):
         resp = self.app.get(
-            '/images/proxy/{}?size=BI'.format(self.image2.document_id), status=302
+            f'/images/proxy/{self.image2.document_id}?size=BI', status=302
         )
-        self.assertIn('imageBI.jpg', resp.headers['Location'])
+        assert 'imageBI.jpg' in resp.headers['Location']
 
     def test_bad_extension(self):
         resp = self.app.get(
-            '/images/proxy/{}?size=BI&extension=badextension'.format(
-                self.image.document_id
-            ),
+            f'/images/proxy/{self.image.document_id}?size=BI&extension=badextension',
             status=400,
         )
         errors = resp.json.get('errors')
-        self.assertEqual('invalid extension', errors[0].get('description'))
+        assert 'invalid extension' == errors[0].get('description')
 
     def test_format_without_size(self):
         resp = self.app.get(
-            '/images/proxy/{}?extension=webp'.format(self.image.document_id), status=400
+            f'/images/proxy/{self.image.document_id}?extension=webp', status=400
         )
         errors = resp.json.get('errors')
-        self.assertEqual('invalid extension', errors[0].get('description'))
+        assert 'invalid extension' == errors[0].get('description')
 
     def test_format_with_size(self):
         resp = self.app.get(
-            '/images/proxy/{}?size=BI&extension=avif'.format(self.image.document_id),
+            f'/images/proxy/{self.image.document_id}?size=BI&extension=avif',
             status=302,
         )
-        self.assertIn('imageBI.avif', resp.headers['Location'])
+        assert 'imageBI.avif' in resp.headers['Location']
 
     def test_merged_image(self):
         # the files of a merged image are deleted, redirect to the target
@@ -1221,10 +1236,8 @@ class TestImageProxyRest(BaseTestRest):
         self.session.add(merged)
         self.session.flush()
 
-        resp = self.app.get(
-            '/images/proxy/{}?size=BI'.format(merged.document_id), status=302
-        )
-        self.assertIn('imageBI.jpg', resp.headers['Location'])
+        resp = self.app.get(f'/images/proxy/{merged.document_id}?size=BI', status=302)
+        assert 'imageBI.jpg' in resp.headers['Location']
 
     def test_not_an_image(self):
         article = Article(
@@ -1233,15 +1246,29 @@ class TestImageProxyRest(BaseTestRest):
         self.session.add(article)
         self.session.flush()
 
-        self.app.get('/images/proxy/{}'.format(article.document_id), status=404)
+        self.app.get(f'/images/proxy/{article.document_id}', status=404)
 
     def test_redirect_is_cacheable(self):
-        resp = self.app.get(
-            '/images/proxy/{}'.format(self.image.document_id), status=302
-        )
-        self.assertEqual('public, max-age=86400', resp.headers['Cache-Control'])
+        resp = self.app.get(f'/images/proxy/{self.image.document_id}', status=302)
+        assert 'public, max-age=86400' == resp.headers['Cache-Control']
 
         resp = self.app.get(
-            '/images/proxy/{}?size=MI'.format(self.image.document_id), status=302
+            f'/images/proxy/{self.image.document_id}?size=MI', status=302
         )
-        self.assertEqual('public, max-age=86400', resp.headers['Cache-Control'])
+        assert 'public, max-age=86400' == resp.headers['Cache-Control']
+
+
+def test_publish_image_in_backend_sets_a_timeout():
+    from c2corg_api.views.image import publish_image_in_backend
+
+    request = Mock()
+    request.registry.settings = {
+        'image_backend.url': 'http://images.example',
+        'image_backend.secret_key': 'secret',
+        'url.timeout': '10',
+    }
+    with patch(
+        'c2corg_api.views.image.requests.post', return_value=Mock(status_code=200)
+    ) as post:
+        publish_image_in_backend(request, 'image.jpg')
+    assert post.call_args.kwargs['timeout'] == 10

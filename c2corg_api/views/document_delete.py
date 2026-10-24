@@ -1,23 +1,26 @@
-from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
-from c2corg_api.security.acl import ACLDefault
+from cornice.resource import resource
+from sqlalchemy.sql.expression import and_, exists, or_, over
+from sqlalchemy.sql.functions import func
+
 from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area_association import AreaAssociation
-from c2corg_api.models.article import ARTICLE_TYPE, Article, ArchiveArticle
+from c2corg_api.models.article import ARTICLE_TYPE, ArchiveArticle, Article
 from c2corg_api.models.association import Association, AssociationLog
-from c2corg_api.models.book import BOOK_TYPE, Book, ArchiveBook
+from c2corg_api.models.book import BOOK_TYPE, ArchiveBook, Book
 from c2corg_api.models.cache_version import CacheVersion, update_cache_version_full
+from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
 from c2corg_api.models.document import (
-    Document,
-    DocumentLocale,
-    ArchiveDocumentLocale,
     ArchiveDocument,
-    DocumentGeometry,
     ArchiveDocumentGeometry,
+    ArchiveDocumentLocale,
+    Document,
+    DocumentGeometry,
+    DocumentLocale,
     get_available_langs,
 )
 from c2corg_api.models.document_history import (
-    HistoryMetaData,
     DocumentVersion,
+    HistoryMetaData,
     has_been_created_by,
     is_less_than_24h_old,
 )
@@ -25,43 +28,41 @@ from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
 from c2corg_api.models.feed import DocumentChange, update_langs_of_changes
-from c2corg_api.models.image import IMAGE_TYPE, Image, ArchiveImage
+from c2corg_api.models.image import IMAGE_TYPE, ArchiveImage, Image
 from c2corg_api.models.outing import (
     OUTING_TYPE,
-    Outing,
-    OutingLocale,
     ArchiveOuting,
     ArchiveOutingLocale,
+    Outing,
+    OutingLocale,
 )
 from c2corg_api.models.route import (
     ROUTE_TYPE,
-    Route,
-    RouteLocale,
     ArchiveRoute,
     ArchiveRouteLocale,
+    Route,
+    RouteLocale,
 )
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import (
     WAYPOINT_TYPE,
-    Waypoint,
-    WaypointLocale,
     ArchiveWaypoint,
     ArchiveWaypointLocale,
+    Waypoint,
+    WaypointLocale,
 )
 from c2corg_api.models.xreport import (
     XREPORT_TYPE,
-    Xreport,
-    XreportLocale,
     ArchiveXreport,
     ArchiveXreportLocale,
+    Xreport,
+    XreportLocale,
 )
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.image import delete_all_files_for_image
 from c2corg_api.views.validation import validate_id, validate_lang
-from cornice.resource import resource
-from sqlalchemy.sql.expression import or_, and_, exists, over
-from sqlalchemy.sql.functions import func
 
 
 def validate_document_type(request, **kwargs):
@@ -415,7 +416,7 @@ def _get_models(document_type):
         return Coverage, None, ArchiveDocument, None
     if document_type == XREPORT_TYPE:
         return Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale
-    assert False
+    raise AssertionError(f'unexpected document type {document_type}')
 
 
 def remove_from_cache(document_id):
@@ -487,7 +488,7 @@ def _remove_archive_locale(archive_clazz_locale, document_id, lang=None):
         archive_document_locale_ids = query.scalar_subquery()
         DBSession.execute(
             archive_clazz_locale.__table__.delete().where(
-                getattr(archive_clazz_locale, 'id').in_(archive_document_locale_ids)
+                archive_clazz_locale.id.in_(archive_document_locale_ids)
             )
         )
 
@@ -516,7 +517,7 @@ def _remove_locale(clazz_locale, document_id, lang=None):
     if clazz_locale:
         DBSession.execute(
             clazz_locale.__table__.delete().where(
-                getattr(clazz_locale, 'id').in_(document_locale_ids)
+                clazz_locale.id.in_(document_locale_ids)
             )
         )
 
@@ -548,7 +549,7 @@ def _remove_archive(archive_clazz, document_id):
     )
     DBSession.execute(
         archive_clazz.__table__.delete().where(
-            getattr(archive_clazz, 'id').in_(archive_document_ids)
+            archive_clazz.id.in_(archive_document_ids)
         )
     )
 
@@ -558,7 +559,7 @@ def _remove_archive(archive_clazz, document_id):
 
 
 def _remove_figures(clazz, document_id):
-    DBSession.query(clazz).filter(getattr(clazz, 'document_id') == document_id).delete()
+    DBSession.query(clazz).filter(clazz.document_id == document_id).delete()
 
 
 def _remove_document(document_id):

@@ -1,6 +1,5 @@
-from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.article import Article
-
+from c2corg_api.models.document import DocumentLocale
 from c2corg_api.tests import BaseTestCase
 
 
@@ -23,24 +22,24 @@ class TestArticle(BaseTestCase):
 
         article_archive = article.to_archive()
 
-        self.assertIsNone(article_archive.id)
-        self.assertIsNotNone(article_archive.activities)
-        self.assertIsNotNone(article_archive.article_type)
+        assert article_archive.id is None
+        assert article_archive.activities is not None
+        assert article_archive.article_type is not None
 
-        self.assertEqual(article_archive.document_id, article.document_id)
-        self.assertEqual(article_archive.activities, article.activities)
-        self.assertEqual(article_archive.article_type, article.article_type)
-        self.assertEqual(article_archive.categories, article.categories)
+        assert article_archive.document_id == article.document_id
+        assert article_archive.activities == article.activities
+        assert article_archive.article_type == article.article_type
+        assert article_archive.categories == article.categories
 
         archive_locals = article.get_archive_locales()
 
-        self.assertEqual(len(archive_locals), 2)
+        assert len(archive_locals) == 2
         locale = article.locales[0]
         locale_archive = archive_locals[0]
-        self.assertIsNot(locale_archive, locale)
-        self.assertIsNone(locale_archive.id)
-        self.assertEqual(locale_archive.lang, locale.lang)
-        self.assertEqual(locale_archive.title, locale.title)
-        self.assertEqual(locale_archive.description, locale.description)
-        self.assertEqual(locale_archive.type, locale.type)
-        self.assertEqual(locale_archive.summary, locale.summary)
+        assert locale_archive is not locale
+        assert locale_archive.id is None
+        assert locale_archive.lang == locale.lang
+        assert locale_archive.title == locale.title
+        assert locale_archive.description == locale.description
+        assert locale_archive.type == locale.type
+        assert locale_archive.summary == locale.summary

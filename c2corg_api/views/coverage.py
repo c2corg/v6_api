@@ -1,28 +1,12 @@
-from c2corg_api.views.validation import (
-    validate_associations,
-    validate_pagination,
-    validate_preferred_lang_param,
-)
-from c2corg_api.views import cors_policy, restricted_json_view
-from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
-from shapely.geometry import Point, shape
-from c2corg_api.views.document import (
-    DocumentRest,
-    make_validator_create,
-    make_validator_update,
-)
-from c2corg_api.views.validation import (
-    validate_cook_param,
-    validate_id,
-    validate_lang_param,
-)
-from c2corg_api.views.document_schemas import coverage_documents_config
-from c2corg_api.models.utils import wkb_to_shape
 import functools
 import json
 import logging
 import time
+
+from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
+from shapely.geometry import Point, shape
+
 from c2corg_api.models import DBSession
 from c2corg_api.models.common.fields_coverage import fields_coverage
 from c2corg_api.models.coverage import (
@@ -32,7 +16,22 @@ from c2corg_api.models.coverage import (
     schema_create_coverage,
     schema_update_coverage,
 )
-
+from c2corg_api.models.utils import wkb_to_shape
+from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views.document import (
+    DocumentRest,
+    make_validator_create,
+    make_validator_update,
+)
+from c2corg_api.views.document_schemas import coverage_documents_config
+from c2corg_api.views.validation import (
+    validate_associations,
+    validate_cook_param,
+    validate_id,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+)
 
 log = logging.getLogger(__name__)
 
@@ -92,8 +91,7 @@ class WaypointCoverageRest(DocumentRest):
 
     @view(validators=[])
     def get(self):
-        """Returns the coverage from a longitude and a latitude"""
-
+        """Return the coverage from a longitude and a latitude."""
         lon = float(self.request.GET['lon'])
         lat = float(self.request.GET['lat'])
 
@@ -107,8 +105,11 @@ class PolygonCoverage(DocumentRest):
 
     @view(validators=[])
     def post(self):
-        """Returns the coverages from a geom_detail type polygon
-        (geom_detail has to be EPSG 4326 since isochrone is 4326)"""
+        """Return the coverages for a geom_detail polygon.
+
+        Returns the coverages from a geom_detail type polygon
+        (geom_detail has to be EPSG 4326 since isochrone is 4326).
+        """
         geom_detail = json.loads(json.loads(self.request.body)['geom_detail'])
         polygon = shape(geom_detail)
         return get_coverages(polygon)
@@ -124,7 +125,7 @@ _coverages_cache = {'loaded_at': None, 'coverages': []}
 
 
 def _get_coverage_polygons():
-    """returns the list of (coverage_type, shapely polygon)"""
+    """Return the list of (coverage_type, shapely polygon)."""
     loaded_at = _coverages_cache['loaded_at']
     if loaded_at is None or time.monotonic() - loaded_at > COVERAGES_CACHE_TTL:
         _coverages_cache['coverages'] = [
@@ -137,13 +138,13 @@ def _get_coverage_polygons():
 
 
 def clear_coverages_cache():
-    """forget the cached coverage polygons (they are loaded again on demand)"""
+    """Forget the cached coverage polygons (they are loaded again on demand)."""
     _coverages_cache['loaded_at'] = None
     _coverages_cache['coverages'] = []
 
 
 def get_coverage(lon, lat):
-    """get the coverage that contains a point(lon, lat)"""
+    """Get the coverage that contains a point(lon, lat)."""
     pt = Point(lon, lat)
 
     for coverage_type, poly in _get_coverage_polygons():
@@ -154,7 +155,7 @@ def get_coverage(lon, lat):
 
 
 def get_coverages(polygon):
-    """get all the coverages that intersects a polygon"""
+    """Get all the coverages that intersects a polygon."""
     return [
         coverage_type
         for coverage_type, poly in _get_coverage_polygons()

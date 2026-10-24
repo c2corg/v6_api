@@ -5,7 +5,7 @@ from c2corg_api.views.document import DocumentRest
 
 
 class BaseProtectTest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         contributor_id = self.global_userids['contributor']
 
@@ -48,7 +48,7 @@ class BaseProtectTest(BaseTestRest):
 
 
 class TestDocumentProtectRest(BaseProtectTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/documents/protect'
 
@@ -64,7 +64,7 @@ class TestDocumentProtectRest(BaseProtectTest):
         headers = self.add_authorization_header(username='moderator')
         self.app_post_json(self._prefix, request_body, status=200, headers=headers)
 
-        self.assertTrue(self.is_protected(self.waypoint.document_id))
+        assert self.is_protected(self.waypoint.document_id)
 
     def test_protect_already_protected_user(self):
         """Test that protecting an already protected document
@@ -75,7 +75,7 @@ class TestDocumentProtectRest(BaseProtectTest):
         headers = self.add_authorization_header(username='moderator')
         self.app_post_json(self._prefix, request_body, status=200, headers=headers)
 
-        self.assertTrue(self.is_protected(self.waypoint2.document_id))
+        assert self.is_protected(self.waypoint2.document_id)
 
     def test_protected_invalid_document_id(self):
         request_body = {'document_id': -1}
@@ -85,7 +85,7 @@ class TestDocumentProtectRest(BaseProtectTest):
 
 
 class TestDocumentUnprotectRest(BaseProtectTest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/documents/unprotect'
 
@@ -101,7 +101,7 @@ class TestDocumentUnprotectRest(BaseProtectTest):
         headers = self.add_authorization_header(username='moderator')
         self.app_post_json(self._prefix, request_body, status=200, headers=headers)
 
-        self.assertFalse(self.is_protected(self.waypoint2.document_id))
+        assert not self.is_protected(self.waypoint2.document_id)
 
     def test_unprotect_already_unprotected_user(self):
         """Test that unprotecting an already unprotected document
@@ -112,7 +112,7 @@ class TestDocumentUnprotectRest(BaseProtectTest):
         headers = self.add_authorization_header(username='moderator')
         self.app_post_json(self._prefix, request_body, status=200, headers=headers)
 
-        self.assertFalse(self.is_protected(self.waypoint.document_id))
+        assert not self.is_protected(self.waypoint.document_id)
 
     def test_protected_invalid_document_id(self):
         request_body = {'document_id': -1}

@@ -1,16 +1,17 @@
 import logging
 
-from c2corg_api.security.acl import ACLDefault
+from colander import Integer, MappingSchema, OneOf, SchemaNode, String, required
+from cornice.resource import resource
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPBadRequest
+from sqlalchemy.sql.expression import and_, exists
+
 from c2corg_api import DBSession
 from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy, restricted_json_view
-from colander import MappingSchema, SchemaNode, Integer, String, required, OneOf
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from pyramid.httpexceptions import HTTPBadRequest
-from sqlalchemy.sql.expression import exists, and_
 
 log = logging.getLogger(__name__)
 
@@ -37,9 +38,7 @@ def validate_version(request, **kwargs):
         )
     ).scalar()
     if not version_exists:
-        raise HTTPBadRequest(
-            'Unknown version {}/{}/{}'.format(document_id, lang, version_id)
-        )
+        raise HTTPBadRequest(f'Unknown version {document_id}/{lang}/{version_id}')
 
     # check the version to mask/unmask is not the latest one
     (latest_version_id,) = (
@@ -54,7 +53,7 @@ def validate_version(request, **kwargs):
     )
     if version_id == latest_version_id:
         raise HTTPBadRequest(
-            'Version {}/{}/{} is the latest one'.format(document_id, lang, version_id)
+            f'Version {document_id}/{lang}/{version_id} is the latest one'
         )
 
 
@@ -66,12 +65,10 @@ def _get_version(request):
     version = DBSession.get(DocumentVersion, version_id)
 
     if not version:
-        raise HTTPBadRequest('Unknown version_id {}'.format(version_id))
+        raise HTTPBadRequest(f'Unknown version_id {version_id}')
 
     if version.document_id != document_id or version.lang != lang:
-        raise HTTPBadRequest(
-            'Unknown version {}/{}/{}'.format(document_id, lang, version_id)
-        )
+        raise HTTPBadRequest(f'Unknown version {document_id}/{lang}/{version_id}')
 
     return version
 

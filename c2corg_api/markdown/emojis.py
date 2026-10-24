@@ -1,14 +1,12 @@
-"""
-Inspired from
-https://facelessuser.github.io/pymdown-extensions/extensions/emoji/
-"""
+"""Inspired from https://facelessuser.github.io/pymdown-extensions/extensions/emoji/."""
+
+import copy
+from xml.etree import ElementTree  # nosec
 
 from markdown import Extension
 from markdown.inlinepatterns import Pattern
-from xml.etree import ElementTree  # nosec
-import copy
-
 from pymdownx import emoji1_db
+
 from c2corg_api.markdown.emoji_databases import c2c_activities, c2c_waypoints
 
 emoji1_db.SVG_CDN = 'https://cdn.jsdelivr.net/emojione/assets/svg/'
@@ -28,11 +26,11 @@ class Emoji:
         self.unicode_alt = kwargs.pop('unicode_alt', self.unicode)
         self.classes = kwargs.pop('classes', 'emoji')
 
-        assert self.svg_name, 'Please precise a SVG name'
+        if not self.svg_name:
+            raise ValueError('Please precise a SVG name')
 
     def get_alt(self, user_code):
         """Get alt form."""
-
         if self.unicode_alt is None:
             alt = user_code
         else:

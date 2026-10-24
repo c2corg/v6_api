@@ -1,20 +1,19 @@
 import os
 import sys
+
 import transaction
 from alembic.command import upgrade
 from alembic.config import Config
-from c2corg_api.models import DBSession, document
-from c2corg_api.models.es_sync import ESSyncStatus
-
-from sqlalchemy import engine_from_config
-
 from pyramid.paster import (
     get_appsettings,
     setup_logging,
 )
-
 from pyramid.scripts.common import parse_vars
+from sqlalchemy import engine_from_config
+
+from c2corg_api.models import DBSession, document
 from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.models.es_sync import ESSyncStatus
 
 alembic_configfile = os.path.realpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../alembic.ini')
@@ -23,10 +22,7 @@ alembic_configfile = os.path.realpath(
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print(
-        'usage: %s <config_uri> [var=value]\n'
-        '(example: "%s development.ini")' % (cmd, cmd)
-    )
+    print(f'usage: {cmd} <config_uri> [var=value]\n(example: "{cmd} development.ini")')
     sys.exit(1)
 
 

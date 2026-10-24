@@ -1,34 +1,35 @@
-from c2corg_api.models.outing import OUTING_TYPE, Outing
-from c2corg_api.search.mapping import SearchDocument, BaseMeta
-from c2corg_api.search.mapping_types import (
-    QueryableMixin,
-    QDateRange,
-    QInteger,
-    QBoolean,
-    QLong,
-    QEnumArray,
-    QEnumRange,
-    QPeriod,
-)
+from elasticsearch_dsl import Date
+
 from c2corg_api.models.common.sortable_search_attributes import (
-    sortable_frequentation_types,
+    sortable_climbing_ratings,
     sortable_condition_ratings,
-    sortable_snow_quality_ratings,
-    sortable_snow_quantity_ratings,
+    sortable_engagement_ratings,
+    sortable_equipment_ratings,
+    sortable_frequentation_types,
     sortable_glacier_ratings,
     sortable_global_ratings,
-    sortable_ski_ratings,
-    sortable_equipment_ratings,
-    sortable_engagement_ratings,
-    sortable_ice_ratings,
-    sortable_climbing_ratings,
-    sortable_via_ferrata_ratings,
     sortable_hiking_ratings,
-    sortable_snowshoe_ratings,
-    sortable_mtb_up_ratings,
+    sortable_ice_ratings,
     sortable_mtb_down_ratings,
+    sortable_mtb_up_ratings,
+    sortable_ski_ratings,
+    sortable_snow_quality_ratings,
+    sortable_snow_quantity_ratings,
+    sortable_snowshoe_ratings,
+    sortable_via_ferrata_ratings,
 )
-from elasticsearch_dsl import Date
+from c2corg_api.models.outing import OUTING_TYPE, Outing
+from c2corg_api.search.mapping import BaseMeta, SearchDocument
+from c2corg_api.search.mapping_types import (
+    QBoolean,
+    QDateRange,
+    QEnumArray,
+    QEnumRange,
+    QInteger,
+    QLong,
+    QPeriod,
+    QueryableMixin,
+)
 
 
 class SearchOuting(SearchDocument):
