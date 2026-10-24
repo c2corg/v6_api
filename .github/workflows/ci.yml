@@ -18,6 +18,18 @@ permissions:
   contents: read
 
 jobs:
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: "0.13.1"
+      - name: Check the locked dependencies for known vulnerabilities
+        run: make audit
+
   test:
     name: test (${{ matrix.services }})
     runs-on: ubuntu-latest
@@ -46,18 +58,6 @@ jobs:
           --health-retries 5
         ports:
           - 6379:6379
-      # elasticsearch:
-      #   image: elasticsearch:6.8.14
-      #   options: >-
-      #     --health-cmd "curl -f http://localhost:9200"
-      #     --health-interval 10s
-      #     --health-timeout 5s
-      #     --health-retries 5
-      #   ports:
-      #     - 9200:9200
-      #     - 9300:9300
-      #   env:
-      #     discovery.type: single-node
       postgres:
         image: ${{ matrix.postgres }}
         env:
@@ -75,17 +75,19 @@ jobs:
         uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          python-version: "3.15"
       - uses: astral-sh/setup-uv@v10.3.0
         with:
-          version: "0.12.21"
+          version: "0.13.1"
           enable-cache: true
       - name: Install python dependencies
         run: |
           uv sync --frozen
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - name: Lint
-        run: ruff check c2corg_api es_migration
+        run: |
+          ruff check c2corg_api es_migration
+          ruff format --check c2corg_api es_migration
       - name: Configure postgres
         run: |
           scripts/database/create_test_schema.sh
@@ -96,29 +98,20 @@ jobs:
           PGPORT: 5432
       - name: Create config from templates
         run: make CONFIG=config/env.test load-env
-      - name: Install java 8 for (old) elasticsearch
-        uses: actions/setup-java@v5
-        with:
-          distribution: "adopt"
-          java-version: 8
       - name: Run (old) elasticsearch
+        # Elasticsearch 2.4 as in production, with the ICU analysis plugin
+        # the index settings need. Started here rather than as a service
+        # container, because a service cannot install the plugin first.
         run: |
-          set -e
-          mkdir /tmp/elasticsearch
-          ES_URL="https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.4.6/elasticsearch-2.4.6.tar.gz"
-          # This 2016-era release is served from the old
-          # download.elasticsearch.org CDN, not artifacts.elastic.co (used
-          # for versions >= 5.x), which does not publish a .sha512 file for
-          # it: only .sha1/.md5/.asc are available there. Verify against
-          # the .sha1 checksum instead of downloading unverified.
-          curl -sSfL "$ES_URL" -o /tmp/elasticsearch.tar.gz
-          curl -sSfL "$ES_URL.sha1" -o /tmp/elasticsearch.tar.gz.sha1
-          echo "$(cat /tmp/elasticsearch.tar.gz.sha1)  /tmp/elasticsearch.tar.gz" | sha1sum -c -
-          tar xz -f /tmp/elasticsearch.tar.gz --directory=/tmp/elasticsearch --strip-components=1
-          /tmp/elasticsearch/bin/plugin install analysis-icu
-          /tmp/elasticsearch/bin/elasticsearch --daemonize --path.data /tmp
-          sleep 30 # ElasticSearch takes few seconds to start, make sure it is available when the build script runs
-      - run: curl -v http://localhost:9200
+          docker run --detach --name elasticsearch --publish 9200:9200 \
+            elasticsearch:2.4.6-alpine \
+            sh -c 'bin/plugin install --batch analysis-icu && exec /docker-entrypoint.sh elasticsearch'
+          for i in $(seq 1 90); do
+            if curl -sf http://localhost:9200; then exit 0; fi
+            sleep 1
+          done
+          docker logs elasticsearch
+          exit 1
       - name: Run tests (with secrets)
         # Dependabot runs do not get the repository secrets
         if: ${{ github.actor != 'dependabot[bot]' }}
@@ -127,7 +120,8 @@ jobs:
         run: |
           export $(cat .env | grep -v "^#" | grep -v "^NAVITIA_API_KEY" | xargs)
           export NAVITIA_API_KEY="${NAVITIA_API_KEY:-test-key}"
-          pytest --cov-report term --cov-report xml --cov=c2corg_api
+          # coverage floor just below the baseline (90%, see pyproject.toml)
+          pytest --cov-report term --cov-report xml --cov=c2corg_api --cov-fail-under=89
       - name: Run tests (without secrets)
         # secrets are not available for dependabot runs
         if: ${{ github.actor == 'dependabot[bot]' }}

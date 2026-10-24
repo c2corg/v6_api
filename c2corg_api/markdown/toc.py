@@ -1,6 +1,4 @@
-"""
-Table of Contents Extension for Python-Markdown
-===============================================
+"""Table of Contents extension for Python-Markdown.
 
 See <https://pythonhosted.org/Markdown/extensions/toc.html>
 for documentation.
@@ -14,20 +12,25 @@ License: [BSD](http://www.opensource.org/licenses/bsd-license.php)
 Modified for C2C : remove title emphasis, toc HTML class. Add c2c:role
 """
 
+from markdown.extensions.toc import (
+    AtomicString,
+    TocExtension,
+    TocTreeprocessor,
+    html,
+    nest_toc_tokens,
+    stashedHTML2text,
+    unescape,
+    unique,
+)
 from markdown.util import code_escape
-from markdown.extensions.toc import (TocExtension, TocTreeprocessor,
-                                     stashedHTML2text, unescape,
-                                     unique, nest_toc_tokens,
-                                     AtomicString, html)
 
 
 def not_emphasis(elt):
-    return elt.attrib.get("c2c:role") != "header-emphasis"
+    return elt.attrib.get('c2c:role') != 'header-emphasis'
 
 
 def get_name(el):
     """Get title name."""
-
     result = []
     for item in el.iter():
         if not_emphasis(item):
@@ -64,8 +67,8 @@ class C2CTocTreeprocessor(TocTreeprocessor):
         # Get a list of id attributes
         used_ids = set()
         for el in doc.iter():
-            if "id" in el.attrib:
-                used_ids.add(el.attrib["id"])
+            if 'id' in el.attrib:
+                used_ids.add(el.attrib['id'])
 
         toc_tokens = []
         for el in doc.iter():
@@ -74,33 +77,43 @@ class C2CTocTreeprocessor(TocTreeprocessor):
                 text = get_name(el)
 
                 # Do not override pre-existing ids
-                if "id" not in el.attrib:
+                if 'id' not in el.attrib:
                     innertext = unescape(stashedHTML2text(text, self.md))
-                    el.attrib["id"] = unique(self.slugify(innertext, self.sep), used_ids)  # noqa: E501
+                    el.attrib['id'] = unique(
+                        self.slugify(innertext, self.sep), used_ids
+                    )
 
-                if int(el.tag[-1]) >= self.toc_top and int(el.tag[-1]) <= self.toc_bottom:  # noqa: E501
-                    toc_tokens.append({
-                        'level': int(el.tag[-1]),
-                        'id': el.attrib["id"],
-                        'name': unescape(stashedHTML2text(
-                            code_escape(el.attrib.get('data-toc-label', text)),
-                            self.md, strip_entities=False
-                        ))
-                    })
+                if (
+                    int(el.tag[-1]) >= self.toc_top
+                    and int(el.tag[-1]) <= self.toc_bottom
+                ):
+                    toc_tokens.append(
+                        {
+                            'level': int(el.tag[-1]),
+                            'id': el.attrib['id'],
+                            'name': unescape(
+                                stashedHTML2text(
+                                    code_escape(el.attrib.get('data-toc-label', text)),
+                                    self.md,
+                                    strip_entities=False,
+                                )
+                            ),
+                        }
+                    )
 
                 # Remove the data-toc-label attribute as it is no longer needed
                 if 'data-toc-label' in el.attrib:
                     del el.attrib['data-toc-label']
 
                 if self.use_anchors:
-                    self.add_anchor(el, el.attrib["id"])
+                    self.add_anchor(el, el.attrib['id'])
                 if self.use_permalinks not in [False, None]:
-                    self.add_permalink(el, el.attrib["id"])
+                    self.add_permalink(el, el.attrib['id'])
 
         toc_tokens = nest_toc_tokens(toc_tokens)
         div = self.build_toc_div(toc_tokens)
-        div.attrib["c2c:role"] = "toc"
-        del div.attrib["class"]
+        div.attrib['c2c:role'] = 'toc'
+        del div.attrib['class']
 
         if self.marker:
             self.replace_marker(doc, div)

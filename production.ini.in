@@ -15,7 +15,7 @@ pyramid.includes =
     pyramid_mailer
     pyramid_tm
 
-sqlalchemy.url = postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}
+sqlalchemy.url = postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}
 
 [server:main]
 use = egg:waitress#main
@@ -93,5 +93,5 @@ formatter = json
 format = %(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s
 
 [formatter_json]
-class = pythonjsonlogger.jsonlogger.JsonFormatter
+class = pythonjsonlogger.json.JsonFormatter
 format = %(message)%(levelname)%(name)%(asctime)%(funcName)%(lineno)%(pathname)%(stack_info)%(module)%(created)%(threadName)%(processName)%(getMessage)

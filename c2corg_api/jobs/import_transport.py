@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 
 
 def import_transport():
-    """Imports the GTFS feeds that changed, then links the Navitia stops."""
+    """Import the GTFS feeds that changed, then links the Navitia stops."""
     with transaction.manager:
         imported = import_feeds(DBSession)
         # the links are written with raw SQL, which does not mark the

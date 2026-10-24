@@ -1,4 +1,5 @@
-"""
+"""Link the Navitia stops to the imported GTFS stops.
+
 Links the Navitia stops (`guidebook.stopareas`) to the imported GTFS stops
 (`guidebook.transport_stops`), so that a stop of a waypoint shows its
 timetables and lines.
@@ -8,6 +9,7 @@ The SQL is in `link_stops.sql`, shared with the Navitia import script
 computed again after each import of GTFS feeds and after each import of
 Navitia stops.
 """
+
 import logging
 import os
 import re
@@ -30,8 +32,7 @@ def _statements():
     with open(SQL_FILE, encoding='utf-8') as f:
         sql = f.read()
     sql = re.sub(r'^--.*$', '', sql, flags=re.MULTILINE)
-    return [s.strip() for s in re.split(r';\s*$', sql, flags=re.MULTILINE)
-            if s.strip()]
+    return [s.strip() for s in re.split(r';\s*$', sql, flags=re.MULTILINE) if s.strip()]
 
 
 def link_transport_stops(session):
@@ -40,7 +41,11 @@ def link_transport_stops(session):
     session.execute(text(reset))
     linked_by_id = session.execute(text(by_id)).rowcount
     linked_by_line = session.execute(
-        text(by_line), {'max_distance': MAX_DISTANCE}).rowcount
-    log.info('Linked %d GTFS stops by id, %d by line and distance',
-             linked_by_id, linked_by_line)
+        text(by_line), {'max_distance': MAX_DISTANCE}
+    ).rowcount
+    log.info(
+        'Linked %d GTFS stops by id, %d by line and distance',
+        linked_by_id,
+        linked_by_line,
+    )
     return linked_by_id + linked_by_line

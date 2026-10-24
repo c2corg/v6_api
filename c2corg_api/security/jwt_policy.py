@@ -7,7 +7,9 @@ _TOKEN_RE = re.compile(r'token="([^"]+)"')
 
 
 class IntegerSubJWTAuthenticationPolicy(JWTAuthenticationPolicy):
-    """Custom JWT authentication policy that handles the legacy
+    """JWT policy for the legacy header format and integer `sub` claims.
+
+    Custom JWT authentication policy that handles the legacy
     ``JWT token="<token>"`` header format used by the frontend,
     and converts the ``sub`` claim back to an integer so that the
     rest of the application can keep comparing
@@ -21,7 +23,9 @@ class IntegerSubJWTAuthenticationPolicy(JWTAuthenticationPolicy):
     """
 
     def get_claims(self, request):
-        """Extract claims from the request, supporting the legacy
+        """Extract the claims from the request.
+
+        Extract claims from the request, supporting the legacy
         ``JWT token="<value>"`` authorization header format.
         """
         try:
@@ -44,6 +48,6 @@ class IntegerSubJWTAuthenticationPolicy(JWTAuthenticationPolicy):
         if sub is not None:
             try:
                 return int(sub)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 return sub
         return None

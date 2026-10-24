@@ -1,16 +1,19 @@
 import logging
 
-from c2corg_api.search import create_search, elasticsearch_config, \
-    get_text_query_on_title
-from c2corg_api.views.document_listings import get_documents
 from elasticsearch_dsl.search import MultiSearch
+
+from c2corg_api.search import (
+    create_search,
+    elasticsearch_config,
+    get_text_query_on_title,
+)
+from c2corg_api.views.document_listings import get_documents
 
 log = logging.getLogger(__name__)
 
 
 def search_for_types(search_types, search_term, limit, lang):
-    """Get results for all given types.
-    """
+    """Get results for all given types."""
     if not search_types:
         return {}
 
@@ -22,25 +25,31 @@ def search_for_types(search_types, search_term, limit, lang):
     else:
         # search in ElasticSearch
         results_for_type = do_multi_search_for_types(
-            search_types, search_term, limit, lang)
+            search_types, search_term, limit, lang
+        )
 
     # load the documents using the document ids returned from the search
     results = {}
-    for search_type, result_for_type in zip(search_types, results_for_type):
+    for search_type, result_for_type in zip(
+        search_types, results_for_type, strict=True
+    ):
         (key, get_documents_config) = search_type
         (document_ids, total) = result_for_type
 
-        def search_documents(_, __):
+        def search_documents(_, __, document_ids=document_ids, total=total):
             return document_ids, total
 
         results[key] = get_documents(
-            get_documents_config, {'lang': lang}, search_documents)
+            get_documents_config, {'lang': lang}, search_documents
+        )
 
     return results
 
 
 def do_multi_search_for_types(search_types, search_term, limit, lang):
-    """ Executes a multi-search for all document types in a single request
+    """Search all document types in a single multi-search request.
+
+    Executes a multi-search for all document types in a single request
     and returns a list of tuples (document_ids, total) containing the results
     for each type.
     """
@@ -48,12 +57,16 @@ def do_multi_search_for_types(search_types, search_term, limit, lang):
 
     for search_type in search_types:
         (_, get_documents_config) = search_type
-        search = create_search(get_documents_config.document_type).\
-            query(get_text_query_on_title(search_term, lang)).\
-            fields([]).\
-            extra(from_=0, size=limit)
-        log.debug('Search filter for type {}: {}'.format(
-            get_documents_config.document_type, search.to_dict()))
+        search = (
+            create_search(get_documents_config.document_type)
+            .query(get_text_query_on_title(search_term, lang))
+            .fields([])
+            .extra(from_=0, size=limit)
+        )
+        log.debug(
+            f'Search filter for type {get_documents_config.document_type}: '
+            f'{search.to_dict()}'
+        )
         multi_search = multi_search.add(search)
 
     responses = multi_search.execute()
@@ -70,5 +83,5 @@ def do_multi_search_for_types(search_types, search_term, limit, lang):
 def try_to_parse_document_id(search_term):
     try:
         return int(search_term)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return None

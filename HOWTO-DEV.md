@@ -76,7 +76,7 @@ For more details, see [`.devcontainer/README.md`](.devcontainer/README.md).
 ### Requirements
 
 - A computer running Linux or Windows (on Windows, take a look at [WSL](https://learn.microsoft.com/fr-fr/windows/wsl/install), it will make your developer life easier). Maybe MacOs can work, but it was not tested.
-- [uv](https://docs.astral.sh/uv/getting-started/installation/), which installs the right Python version (3.14) and all dependencies for you
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13 or newer, which installs the right Python version (3.15) and all dependencies for you
 - A docker environment with docker compose plugin (either [docker desktop](https://www.docker.com/products/docker-desktop/) or a manual installation)
 - A development IDE is not mandatory, but highly recommended (pycharm, vscode...)
 - If you have GNU make installed, you can use it to run all the commands below to initialize and run your development environment (run `make help` to see what can be done) instead of running them "by hand"
@@ -85,10 +85,10 @@ For more details, see [`.devcontainer/README.md`](.devcontainer/README.md).
 
 - Clone the git repository
 - Cd inside your cloned repo
-- Install Python and the dependencies (pinned in `uv.lock`) in a `.venv` virtual environment:
+- Install Python and the dependencies (pinned in `uv.lock`) in a `.venv` virtual environment, and the git pre-commit hook:
 
 ```shell
-uv sync
+make install   # or: uv sync && uv run pre-commit install
 ```
 
 - Activate the virtual environment (⚠️ Do not forget to activate it in all terminal instances you intend to use), or prefix commands with `uv run`:
@@ -194,10 +194,23 @@ pytest
 
 ## Linting
 
-- Run the linter:
+- Format the code and run the linter (CI checks both; in the devcontainer, VS Code formats on save):
 
 ```shell
-ruff check c2corg_api es_migration
+make format   # ruff format + ruff check --fix (also sorts imports)
+make lint     # ruff check + ruff format --check
+```
+
+- Check the locked dependencies for known vulnerabilities (CI runs it too). Advisories that can't be fixed yet are listed in `AUDIT_IGNORE` in the Makefile, each with its reason:
+
+```shell
+make audit    # uv audit
+```
+
+- A git pre-commit hook runs ruff before each commit. `make install` and the devcontainer install it; otherwise run once per clone:
+
+```shell
+uv run pre-commit install
 ```
 
 ## Public transport (GTFS)

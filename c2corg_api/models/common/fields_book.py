@@ -11,14 +11,10 @@ DEFAULT_FIELDS = [
     'book_types',
     'publication_date',
     'langs',
-    'nb_pages'
+    'nb_pages',
 ]
 
-DEFAULT_REQUIRED = [
-    'locales',
-    'locales.title',
-    'book_types'
-]
+DEFAULT_REQUIRED = ['locales', 'locales.title', 'book_types']
 
 LISTING_FIELDS = [
     'locales',
@@ -27,11 +23,11 @@ LISTING_FIELDS = [
     'activities',
     'author',
     'quality',
-    'book_types'
+    'book_types',
 ]
 
 fields_book = {
     'fields': DEFAULT_FIELDS,
     'required': DEFAULT_REQUIRED,
-    'listing': LISTING_FIELDS
+    'listing': LISTING_FIELDS,
 }
