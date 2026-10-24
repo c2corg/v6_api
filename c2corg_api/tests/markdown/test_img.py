@@ -1,12 +1,10 @@
-import unittest
-
 from c2corg_api.markdown import parse_code
 from c2corg_api.markdown.img import get_image_url, make_image_url_resolver
 
 BASE_URL = 'https://media.example.org/'
 
 
-class TestImageUrl(unittest.TestCase):
+class TestImageUrl:
     def test_get_image_url(self):
         assert 'https://media.example.org/123.jpg' == get_image_url(
             BASE_URL, '123.jpg', ''
@@ -27,8 +25,8 @@ class TestImageUrl(unittest.TestCase):
         )
 
 
-class TestImageTagUrl(unittest.TestCase):
-    def setUp(self):
+class TestImageTagUrl:
+    def setup_method(self):
         self.resolver = make_image_url_resolver(BASE_URL, {1: 'one.jpg', 2: 'two.svg'})
 
     def test_known_image(self):

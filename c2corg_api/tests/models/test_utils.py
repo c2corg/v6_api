@@ -1,5 +1,4 @@
 import json
-import unittest
 
 import pytest
 
@@ -11,7 +10,7 @@ from c2corg_api.models.waypoint import schema_waypoint
 from c2corg_api.tests import AssertionsMixin
 
 
-class TestUtils(unittest.TestCase, AssertionsMixin):
+class TestUtils(AssertionsMixin):
     def test_restrict_schema(self):
         fields = fields_waypoint.get('summit').get('fields')
         schema = restrict_schema(schema_waypoint, fields)

@@ -1,5 +1,3 @@
-import unittest
-
 import bcrypt
 import pytest
 
@@ -8,7 +6,7 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.tests import BaseTestCase
 
 
-class TestPasswordUtil(unittest.TestCase):
+class TestPasswordUtil:
     # 80 bytes in UTF-8: above bcrypt's 72-byte limit, with multi-byte
     # characters across the cut
     long_password = 'Élève 日本 ' * 5 + 'x' * 5

@@ -46,7 +46,7 @@ class DummyRegistry:
         self.settings = settings
 
 
-class ClientIpTest(unittest.TestCase):
+class TestClientIp:
     def test_uses_x_forwarded_for_when_present(self):
         request = DummyRequest()
         request.headers['X-Forwarded-For'] = '203.0.113.5, 10.0.0.1'
@@ -58,7 +58,7 @@ class ClientIpTest(unittest.TestCase):
         assert _client_ip(request) == '198.51.100.7'
 
 
-class IsAnonymousRequestRateLimitedTest(unittest.TestCase):
+class TestIsAnonymousRequestRateLimited:
     def test_allows_requests_under_the_limit(self):
         redis_client = FakeRedis()
         for _ in range(3):
@@ -93,7 +93,7 @@ class IsAnonymousRequestRateLimitedTest(unittest.TestCase):
         assert not limited
 
 
-class CheckAnonymousRateLimitTest(unittest.TestCase):
+class TestCheckAnonymousRateLimit:
     def _make_request(self, ip='192.0.2.1'):
         request = DummyRequest()
         request.remote_addr = ip
@@ -151,7 +151,7 @@ class CheckAnonymousRateLimitTest(unittest.TestCase):
         assert not _check_anonymous_rate_limit(request, registry, 'account_recovery')
 
 
-class RateLimitingTweenAnonymousTest(unittest.TestCase):
+class TestRateLimitingTweenAnonymous:
     """
     Test that the tween routes anonymous requests correctly.
 

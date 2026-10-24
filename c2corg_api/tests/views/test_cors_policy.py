@@ -7,7 +7,7 @@ from c2corg_api.views import (
 )
 
 
-class ConfigureCorsPolicyTest(unittest.TestCase):
+class TestConfigureCorsPolicy:
     """
     Test `configure_cors_policy`, saving/restoring `cors_policy` state.
 
@@ -17,10 +17,10 @@ class ConfigureCorsPolicyTest(unittest.TestCase):
     tests don't leak state into each other or into the rest of the suite.
     """
 
-    def setUp(self):
+    def setup_method(self):
         self._original_origins = cors_policy['origins']
 
-    def tearDown(self):
+    def teardown_method(self):
         cors_policy['origins'] = self._original_origins
 
     def test_never_configures_a_wildcard(self):

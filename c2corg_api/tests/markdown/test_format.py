@@ -1,5 +1,4 @@
 import os
-import unittest
 
 from c2corg_api.markdown import parse_code
 from c2corg_api.markdown.img import make_image_url_resolver
@@ -15,7 +14,7 @@ def read_file(path):
         return f.read()
 
 
-class TestFormat(unittest.TestCase):
+class TestFormat:
     def test_all(self):
         def do_test(test_id, text, expected):
             result = parse_code(text, IMAGE_URL_RESOLVER)
