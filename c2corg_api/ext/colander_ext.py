@@ -1,17 +1,34 @@
 # Inspired from the c2cgeoform colander extension
 # https://github.com/camptocamp/c2cgeoform/blob/master/c2cgeoform/ext/
 
-from colander import (null, Invalid, SchemaType)
+import math
+import struct
+from numbers import Number
 
+import geojson
+from colander import Float, Invalid, SchemaType, null
 from geoalchemy2 import WKBElement
 from geomet import wkb
-from geoalchemy2.compat import buffer, bytes
-import geojson
-from numbers import Number
+
+# EWKB SRID flag, see https://git.osgeo.org/gitea/postgis/postgis/raw/
+# master/doc/ZMSgeoms.txt
+_EWKB_SRID_FLAG = 0x20000000
+
+
+class FiniteFloat(Float):
+    """Float that turns NaN and infinite values into null (not valid JSON)."""
+
+    def deserialize(self, node, cstruct):
+        result = super().deserialize(node, cstruct)
+        if result is not null and not math.isfinite(result):
+            return null
+        return result
 
 
 class Geometry(SchemaType):
-    """ A Colander type meant to be used with GeoAlchemy 2 geometry columns.
+    """Colander type for GeoAlchemy 2 geometry columns.
+
+    A Colander type meant to be used with GeoAlchemy 2 geometry columns.
     Example usage
     .. code-block:: python
         geom = Column(
@@ -27,12 +44,14 @@ class Geometry(SchemaType):
     srid
         The SRID of the geometry should also match the column definition.
     """
-    def __init__(self, geometry_types=['GEOMETRY'], srid=-1, map_srid=-1):
+
+    def __init__(self, geometry_types=('GEOMETRY',), srid=-1, map_srid=-1):
         self.geometry_types = [t.upper() for t in geometry_types]
         self.srid = int(srid)
 
     def serialize(self, node, appstruct):
-        """
+        """Convert a `WKBElement` (appstruct) into a GeoJSON string (cstruct).
+
         In Colander speak: Converts a Python data structure (an appstruct) into
         a serialization (a cstruct).
         Or: Converts a `WKBElement` into a GeoJSON string.
@@ -42,10 +61,11 @@ class Geometry(SchemaType):
         if isinstance(appstruct, WKBElement):
             return geojson_from_wkbelement(appstruct)
 
-        raise Invalid(node, 'Unexpected value: %r' % appstruct)
+        raise Invalid(node, f'Unexpected value: {appstruct!r}')
 
     def deserialize(self, node, cstruct):
-        """
+        """Convert a GeoJSON string (cstruct) into a `WKBElement` (appstruct).
+
         In Colander speak: Converts a serialized value (a cstruct) into a
         Python data structure (a appstruct).
         Or: Converts a GeoJSON string into a `WKBElement`.
@@ -56,21 +76,22 @@ class Geometry(SchemaType):
             data = geojson.loads(cstruct)
         except Invalid as exc:
             raise exc
-        except Exception:
-            raise Invalid(node, 'Invalid geometry: %s' % cstruct)
+        except Exception as e:
+            raise Invalid(node, f'Invalid geometry: {cstruct}') from e
         if not isinstance(data, geojson.GeoJSON):
-            raise Invalid(node, 'Invalid geometry: %s' % cstruct)
+            raise Invalid(node, f'Invalid geometry: {cstruct}')
         geom_type = data['type'].upper()
         allowed_types = self.geometry_types
         if geom_type in allowed_types:
             if not is_valid_geometry(data):
-                raise Invalid(node, 'Invalid geometry: %s' % cstruct)
+                raise Invalid(node, f'Invalid geometry: {cstruct}')
             else:
                 return wkbelement_from_geojson(data, self.srid)
         else:
             raise Invalid(
-                node, 'Invalid geometry type. Expected: %s. Got: %s.'
-                % (allowed_types, geom_type))
+                node,
+                f'Invalid geometry type. Expected: {allowed_types}. Got: {geom_type}.',
+            )
 
     def cstruct_children(self, node, cstruct):
         return []
@@ -78,7 +99,28 @@ class Geometry(SchemaType):
 
 def wkbelement_from_geojson(geojson, srid):
     geometry = wkb.dumps(geojson, big_endian=False)
+    if srid and srid > 0:
+        # Embed the SRID directly in the WKB header, turning it into EWKB.
+        # geoalchemy2 binds a non-extended WKBElement by converting it
+        # through Shapely, which does not support M (4th dimension)
+        # coordinates and silently drops them. A WKBElement built from real
+        # EWKB is detected as already-extended and bound as a hex string
+        # directly instead, preserving all dimensions.
+        geometry = _to_ewkb(geometry, srid)
     return from_wkb(geometry, srid)
+
+
+def _to_ewkb(wkb_bytes, srid):
+    byte_order = wkb_bytes[0]
+    fmt = '<I' if byte_order == 1 else '>I'
+    geom_type = struct.unpack(fmt, wkb_bytes[1:5])[0]
+    ewkb_type = geom_type | _EWKB_SRID_FLAG
+    return (
+        wkb_bytes[0:1]
+        + struct.pack(fmt, ewkb_type)
+        + struct.pack(fmt, srid)
+        + wkb_bytes[5:]
+    )
 
 
 def geojson_from_wkbelement(wkb_element):
@@ -87,7 +129,7 @@ def geojson_from_wkbelement(wkb_element):
 
 
 def from_wkb(wkb, srid=-1):
-    return WKBElement(buffer(wkb), srid=srid)
+    return WKBElement(memoryview(wkb), srid=srid)
 
 
 def is_valid_geometry(obj):

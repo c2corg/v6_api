@@ -1,14 +1,14 @@
-import logging
 import datetime
-import pytz
+import logging
+from smtplib import SMTPAuthenticationError
 
 from pyramid.httpexceptions import HTTPBadRequest, HTTPTooManyRequests
+
 from c2corg_api.caching import cache_document_detail
 from c2corg_api.emails.email_service import get_email_service
-from c2corg_api.views import http_error_handler
 from c2corg_api.models import DBSession
 from c2corg_api.models.user import User
-from smtplib import SMTPAuthenticationError
+from c2corg_api.views import http_error_handler
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ ANONYMOUS_RATE_LIMITED_BUCKETS = {
     # credential, but static analysis (Codacy/Bandit-style hardcoded
     # password checks) flags string literals that look password-related
     # regardless of context.
-    '/users/request_password_change': 'account_recovery',
+    '/users/request_password_change': 'account_recovery',  # nosec B105
 }
 
 
@@ -56,13 +56,11 @@ def _get_anonymous_rate_limit_redis_client():
     try:
         return cache_document_detail.backend.writer_client
     except Exception:
-        log.exception(
-            'Unable to get a Redis client for anonymous rate limiting')
+        log.exception('Unable to get a Redis client for anonymous rate limiting')
         return None
 
 
-def _is_anonymous_request_rate_limited(
-        redis_client, key, window_span, limit):
+def _is_anonymous_request_rate_limited(redis_client, key, window_span, limit):
     """
     Increment the counter stored at `key` in Redis.
 
@@ -80,9 +78,7 @@ def _is_anonymous_request_rate_limited(
         if current == 1:
             redis_client.expire(key, window_span)
     except Exception:
-        log.exception(
-            'Redis error while checking the anonymous rate limit for %s',
-            key)
+        log.exception('Redis error while checking the anonymous rate limit for %s', key)
         return False
 
     return current > limit
@@ -97,32 +93,32 @@ def _check_anonymous_rate_limit(request, registry, bucket):
     given `bucket` (e.g. "login") during the current time window.
     """
     settings = registry.settings
-    window_span = int(settings.get(
-        'rate_limiting.anonymous_window_span') or
-        settings.get('rate_limiting.window_span', 900))
+    window_span = int(
+        settings.get('rate_limiting.anonymous_window_span')
+        or settings.get('rate_limiting.window_span', 900)
+    )
     limit = int(settings.get('rate_limiting.anonymous_limit', 20))
 
     # Namespace the key with the same prefix used for the cache, so that
     # dev/test/prod instances sharing a Redis server don't collide.
     key_prefix = settings.get('redis.cache_key_prefix', 'c2corg')
-    key = '{0}:ratelimit:anon:{1}:{2}'.format(
-        key_prefix, bucket, _client_ip(request))
+    key = f'{key_prefix}:ratelimit:anon:{bucket}:{_client_ip(request)}'
 
     redis_client = _get_anonymous_rate_limit_redis_client()
-    limited = _is_anonymous_request_rate_limited(
-        redis_client, key, window_span, limit)
+    limited = _is_anonymous_request_rate_limited(redis_client, key, window_span, limit)
 
     if limited:
         log.warning(
             'ANONYMOUS RATE LIMIT REACHED for bucket "%s" from %s',
-            bucket, _client_ip(request))
+            bucket,
+            _client_ip(request),
+        )
 
     return limited
 
 
 def rate_limiting_tween_factory(handler, registry):
-    """ Add a rate limiting protection on write requests.
-    """
+    """Add a rate limiting protection on write requests."""
 
     def tween(request):
 
@@ -135,40 +131,45 @@ def rate_limiting_tween_factory(handler, registry):
         if request.authorization is None:
             bucket = ANONYMOUS_RATE_LIMITED_BUCKETS.get(request.path)
             if bucket is not None and _check_anonymous_rate_limit(
-                    request, registry, bucket):
+                request, registry, bucket
+            ):
                 return http_error_handler(
-                    HTTPTooManyRequests('Rate limit reached'), request)
+                    HTTPTooManyRequests('Rate limit reached'), request
+                )
             # See comment of similar block in jwt_database_validation tween
             return handler(request)
 
-        user = DBSession.query(User).get(request.authenticated_userid)
+        user = DBSession.get(User, request.authenticated_userid)
         if user is None:
-            return http_error_handler(
-                HTTPBadRequest('Unknown user'), request)
+            return http_error_handler(HTTPBadRequest('Unknown user'), request)
 
-        now = datetime.datetime.now(pytz.utc)
+        now = datetime.datetime.now(datetime.UTC)
         if user.ratelimit_reset is None or user.ratelimit_reset < now:
             # No window exists or it is expired: create a new one.
             span = int(registry.settings.get('rate_limiting.window_span'))
-            limit = int(registry.settings.get(
-                'rate_limiting.limit_robot' if user.robot else
-                'rate_limiting.limit_moderator' if user.moderator else
-                'rate_limiting.limit'))
+            limit = int(
+                registry.settings.get(
+                    'rate_limiting.limit_robot'
+                    if user.robot
+                    else 'rate_limiting.limit_moderator'
+                    if user.moderator
+                    else 'rate_limiting.limit'
+                )
+            )
             user.ratelimit_reset = now + datetime.timedelta(seconds=span)
             user.ratelimit_remaining = limit - 1
-            log.debug('RATE LIMITING, CREATE WINDOW SPAN : {}'.format(
-                user.ratelimit_reset
-            ))
+            log.debug(f'RATE LIMITING, CREATE WINDOW SPAN : {user.ratelimit_reset}')
 
         elif user.ratelimit_remaining:
             user.ratelimit_remaining -= 1
-            log.info('RATE LIMITING, REQUESTS REMAINING FOR {} : {}'.format(
-                user.id, user.ratelimit_remaining
-            ))
+            log.info(
+                f'RATE LIMITING, REQUESTS REMAINING FOR {user.id} : '
+                f'{user.ratelimit_remaining}'
+            )
 
         else:
             # User is rate limited
-            log.warning('RATE LIMIT REACHED FOR USER {}'.format(user.id))
+            log.warning(f'RATE LIMIT REACHED FOR USER {user.id}')
 
             # Count how many windows the user has been rate limited
             # and block them if too many.
@@ -177,10 +178,9 @@ def rate_limiting_tween_factory(handler, registry):
                 user.ratelimit_last_blocked_window = current_window
                 user.ratelimit_times += 1
 
-                max_times = int(
-                    registry.settings.get('rate_limiting.max_times'))
+                max_times = int(registry.settings.get('rate_limiting.max_times'))
                 if user.ratelimit_times > max_times:
-                    log.warning('RATE LIMIT BLOCK USER {}'.format(user.id))
+                    log.warning(f'RATE LIMIT BLOCK USER {user.id}')
                     user.blocked = True
 
                 # An alert message is sent to the moderators
@@ -191,7 +191,8 @@ def rate_limiting_tween_factory(handler, registry):
                     log.error('RATE LIMIT ALERT MAIL : AUTHENTICATION ERROR')
 
             return http_error_handler(
-                HTTPTooManyRequests('Rate limit reached'), request)
+                HTTPTooManyRequests('Rate limit reached'), request
+            )
 
         return handler(request)
 

@@ -1,6 +1,6 @@
-from pyramid.security import Allow, Everyone, Authenticated
+from pyramid.security import Allow, Authenticated, Everyone
 
-__all__ = ["ACLDefault"]
+__all__ = ['ACLDefault']
 
 
 class ACLDefault:
@@ -9,7 +9,7 @@ class ACLDefault:
         return [
             (Allow, Everyone, 'public'),
             (Allow, Authenticated, 'authenticated'),
-            (Allow, 'group:moderators', 'moderator')
+            (Allow, 'group:moderators', 'moderator'),
         ]
 
     def __init__(self, request, context=None, **kwargs):

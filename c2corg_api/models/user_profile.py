@@ -1,19 +1,21 @@
-from c2corg_api.models import schema, Base
-from c2corg_api.models.document import (
-    ArchiveDocument, Document, get_geometry_schema_overrides,
-    schema_document_locale, schema_attributes, DocumentLocale)
-from c2corg_api.models.enums import user_category, activity_type
-from c2corg_api.models.schema_utils import restrict_schema, get_update_schema
-from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
-from c2corg_api.models.common.fields_user_profile import fields_user_profile
 from colanderalchemy import SQLAlchemySchemaNode
-from sqlalchemy import (
-    Column,
-    Integer,
-    ForeignKey
-    )
-from c2corg_api.models.common import document_types
+from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.ext.associationproxy import association_proxy
+
+from c2corg_api.models import Base, schema
+from c2corg_api.models.common import document_types
+from c2corg_api.models.common.fields_user_profile import fields_user_profile
+from c2corg_api.models.document import (
+    ArchiveDocument,
+    Document,
+    DocumentLocale,
+    get_geometry_schema_overrides,
+    schema_attributes,
+    schema_document_locale,
+)
+from c2corg_api.models.enums import activity_type, user_category
+from c2corg_api.models.schema_utils import get_update_schema, restrict_schema
+from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
 USERPROFILE_TYPE = document_types.USERPROFILE_TYPE
 
@@ -27,18 +29,21 @@ attributes = ['activities', 'categories']
 
 
 class UserProfile(_UserProfileMixin, Document):
-    """The user profile for each user
+    """The profile of a user.
+
+    The user profile for each user
     User profile documents are created automatically when creating a new user.
     """
+
     __tablename__ = 'user_profiles'
 
     document_id = Column(
-        Integer,
-        ForeignKey(schema + '.documents.document_id'), primary_key=True)
+        Integer, ForeignKey(schema + '.documents.document_id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': USERPROFILE_TYPE,
-        'inherit_condition': Document.document_id == document_id
+        'inherit_condition': Document.document_id == document_id,
     }
 
     name = association_proxy('user', 'name')
@@ -57,17 +62,17 @@ class UserProfile(_UserProfileMixin, Document):
 
 
 class ArchiveUserProfile(_UserProfileMixin, ArchiveDocument):
-    """
-    """
+    """Archived version of an user profile."""
+
     __tablename__ = 'user_profiles_archives'
 
     id = Column(
-        Integer,
-        ForeignKey(schema + '.documents_archives.id'), primary_key=True)
+        Integer, ForeignKey(schema + '.documents_archives.id'), primary_key=True
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': USERPROFILE_TYPE,
-        'inherit_condition': ArchiveDocument.id == id
+        'inherit_condition': ArchiveDocument.id == id,
     }
 
     __table_args__ = Base.__table_args__
@@ -79,11 +84,8 @@ schema_user_profile_locale = SQLAlchemySchemaNode(
     DocumentLocale,
     # whitelisted attributes (without 'title')
     includes=['version', 'lang', 'description', 'summary'],
-    overrides={
-        'version': {
-            'missing': None
-        }
-    })
+    overrides={'version': {'missing': None}},
+)
 
 
 schema_user_profile = SQLAlchemySchemaNode(
@@ -91,17 +93,12 @@ schema_user_profile = SQLAlchemySchemaNode(
     # whitelisted attributes
     includes=schema_attributes + attributes,
     overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_user_profile_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POINT'])
-    })
+        'document_id': {'missing': None},
+        'version': {'missing': None},
+        'locales': {'children': [schema_user_profile_locale]},
+        'geometry': get_geometry_schema_overrides(['POINT']),
+    },
+)
 
 
 schema_internal_user_profile = SQLAlchemySchemaNode(
@@ -109,18 +106,14 @@ schema_internal_user_profile = SQLAlchemySchemaNode(
     # whitelisted attributes
     includes=schema_attributes + attributes,
     overrides={
-        'document_id': {
-            'missing': None
-        },
-        'version': {
-            'missing': None
-        },
-        'locales': {
-            'children': [schema_document_locale]
-        },
-        'geometry': get_geometry_schema_overrides(['POINT'])
-    })
+        'document_id': {'missing': None},
+        'version': {'missing': None},
+        'locales': {'children': [schema_document_locale]},
+        'geometry': get_geometry_schema_overrides(['POINT']),
+    },
+)
 
 schema_update_user_profile = get_update_schema(schema_user_profile)
 schema_listing_user_profile = restrict_schema(
-    schema_user_profile, fields_user_profile.get('listing'))
+    schema_user_profile, fields_user_profile.get('listing')
+)

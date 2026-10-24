@@ -1,28 +1,32 @@
-import logging
-
 import collections.abc
 import datetime
+import logging
+import math
 
-from c2corg_api.ext.colander_ext import geojson_from_wkbelement
-from c2corg_api.models import DBSession
-from c2corg_api.models.document import DocumentGeometry
-from c2corg_api.models.document_history import get_creators
-from c2corg_api.models.user import AccountNotValidated
-from c2corg_api.models.common.attributes import langs_priority
 from colander import null
-from pyramid.httpexceptions import HTTPError, HTTPNotFound, HTTPForbidden, \
-    HTTPNotModified
-from pyramid.view import view_config
-from pyramid.interfaces import IRendererFactory
 from cornice import Errors
 from cornice.renderer import JSONError
 from cornice.resource import view
 from geoalchemy2 import WKBElement
+from pyramid.httpexceptions import (
+    HTTPError,
+    HTTPForbidden,
+    HTTPNotFound,
+    HTTPNotModified,
+)
+from pyramid.interfaces import IRendererFactory
+from pyramid.view import view_config
 from sqlalchemy.inspection import inspect
 from sqlalchemy.sql.functions import func
+
+from c2corg_api.ext.colander_ext import geojson_from_wkbelement
+from c2corg_api.models import DBSession
+from c2corg_api.models.common.attributes import langs_priority
+from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document_history import get_creators
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
-
+from c2corg_api.models.user import AccountNotValidated
 from c2corg_api.views.markdown import cook
 
 log = logging.getLogger(__name__)
@@ -40,10 +44,7 @@ DEFAULT_CORS_ORIGINS = ('http://localhost:6553',)
 # overrides this dict (in place, before the view modules using it are
 # imported by `config.scan()`) with the origins configured in the ini
 # settings.
-cors_policy = dict(
-    headers=('Content-Type'),
-    origins=DEFAULT_CORS_ORIGINS
-)
+cors_policy = dict(headers=('Content-Type'), origins=DEFAULT_CORS_ORIGINS)
 
 
 def configure_cors_policy(settings):
@@ -64,17 +65,19 @@ def configure_cors_policy(settings):
             'Ignoring "*" in the "cors.allowed_origins" setting: a '
             'wildcard would let any website make authenticated '
             'cross-origin requests to this API; list explicit origins '
-            'instead.')
+            'instead.'
+        )
 
     origins = tuple(
-        token.strip() for token in tokens
-        if token.strip() and token.strip() != '*')
+        token.strip() for token in tokens if token.strip() and token.strip() != '*'
+    )
 
     if not origins:
         log.warning(
             'No (valid) "cors.allowed_origins" setting found, falling '
             'back to the default origins: %s',
-            ', '.join(DEFAULT_CORS_ORIGINS))
+            ', '.join(DEFAULT_CORS_ORIGINS),
+        )
         return
 
     cors_policy['origins'] = origins
@@ -85,18 +88,20 @@ def configure_cors_policy(settings):
 @view_config(context=HTTPError)
 @view_config(context=HTTPForbidden)
 def http_error_handler(exc, request):
-    """In case of a HTTP error, return the error details as JSON, e.g.:
+    """Return the details of an HTTP error as JSON.
 
-        {
-            "status": "error",
-            "errors": [
-                {
-                    "location": "body",
-                    "name": "Not Found",
-                    "description": "document not found"
-                }
-            ]
-        }
+    In case of a HTTP error, return the error details as JSON, e.g.:
+
+    {
+        "status": "error",
+        "errors": [
+            {
+                "location": "body",
+                "name": "Not Found",
+                "description": "document not found"
+            }
+        ]
+    }
     """
     if isinstance(exc, JSONError):
         # if it is an error from Cornice, just return it
@@ -110,16 +115,16 @@ def http_error_handler(exc, request):
 
 @view_config(context=Exception)
 def catch_all_error_handler(exc, request):
-    log.exception('Unexpected error: {}'.format(exc))
+    log.exception(f'Unexpected error: {exc}')
 
-    show_debugger_for_errors = \
-        request.registry.settings.get('show_debugger_for_errors', '')
+    show_debugger_for_errors = request.registry.settings.get(
+        'show_debugger_for_errors', ''
+    )
     if show_debugger_for_errors == 'true':
         raise exc
 
     request.errors = Errors(500)
-    request.errors.add(
-        'body', 'unexpected error', 'please consult the server logs')
+    request.errors.add('body', 'unexpected error', 'please consult the server logs')
 
     return json_error(request)
 
@@ -133,14 +138,18 @@ def account_error_handler(exc, request):
 
 
 def json_view(**kw):
-    """ A Cornice view that expects 'application/json' as content-type.
+    """Cornice view that expects 'application/json' as content-type.
+
+    A Cornice view that expects 'application/json' as content-type.
     """
     kw['content_type'] = 'application/json'
     return view(**kw)
 
 
 def restricted_json_view(**kw):
-    """ A Cornice view that handles restricted json resources.
+    """Cornice view for restricted JSON resources.
+
+    A Cornice view that handles restricted json resources.
     """
     if 'permission' not in kw:
         kw['permission'] = 'authenticated'
@@ -148,31 +157,44 @@ def restricted_json_view(**kw):
 
 
 def restricted_view(**kw):
-    """ A Cornice view that handles restricted resources.
+    """Cornice view for restricted resources.
+
+    A Cornice view that handles restricted resources.
     """
     if 'permission' not in kw:
         kw['permission'] = 'authenticated'
     return view(**kw)
 
 
-def to_json_dict(obj, schema, with_special_locales_attrs=False,
-                 with_special_geometry_attrs=False,
-                 cook_locale=False):
+def to_json_dict(
+    obj,
+    schema,
+    with_special_locales_attrs=False,
+    with_special_geometry_attrs=False,
+    cook_locale=False,
+):
     obj_dict = serialize(schema.dictify(obj))
     # manually copy certain attributes that were set on the object (it would be
     # cleaner to add the field to the schema, but ColanderAlchemy doesn't like
     # it because it's not a real column)
     special_attributes = [
-        'available_langs', 'associations', 'maps', 'areas', 'author',
-        'protected', 'type', 'name', 'forum_username', 'creator', 'img_count'
+        'available_langs',
+        'associations',
+        'maps',
+        'areas',
+        'author',
+        'protected',
+        'type',
+        'name',
+        'forum_username',
+        'creator',
+        'img_count',
     ]
     for attr in special_attributes:
         if hasattr(obj, attr):
             obj_dict[attr] = getattr(obj, attr)
 
-    locale_special_attributes = [
-        'topic_id'
-    ]
+    locale_special_attributes = ['topic_id']
     if with_special_locales_attrs and hasattr(obj, 'locales'):
         for i in range(0, len(obj.locales)):
             locale = obj.locales[i]
@@ -195,12 +217,13 @@ def to_json_dict(obj, schema, with_special_locales_attrs=False,
 
 
 def serialize(data):
-    """
+    """Serialize with Colander for JSON output.
+
     Colanders `serialize` method is not intended for JSON serialization (it
     turns everything into a string and keeps colander.null).
     https://github.com/tisdall/cornice/blob/c18b873/cornice/schemas.py
     Returns the most agnostic version of specified data.
-    (remove colander notions, datetimes in ISO, ...)
+    (remove colander notions, datetimes in ISO, ...).
     """
     if isinstance(data, str):
         return str(data)
@@ -214,14 +237,18 @@ def serialize(data):
         return geojson_from_wkbelement(data)
     if data is null:
         return None
+    if isinstance(data, float) and not math.isfinite(data):
+        # NaN/Infinity are not valid JSON
+        return None
 
     return data
 
 
 def set_best_locale(documents, preferred_lang, expunge=True):
-    """Sets the "best" locale on the given documents. The "best" locale is
-    the locale in the given "preferred language" if available. Otherwise
-    it is the "most relevant" translation according to `langs_priority`.
+    """Set the "best" locale on the given documents.
+
+    The "best" locale is the locale in the given "preferred language" if available.
+    Otherwise it is the "most relevant" translation according to `langs_priority`.
     """
     if preferred_lang is None:
         return
@@ -233,8 +260,7 @@ def set_best_locale(documents, preferred_lang, expunge=True):
             DBSession.expunge(document)
 
         if document.locales:
-            available_locales = {
-                locale.lang: locale for locale in document.locales}
+            available_locales = {locale.lang: locale for locale in document.locales}
             best_locale = get_best_locale(available_locales, preferred_lang)
             if best_locale:
                 document.locales = [best_locale]
@@ -245,13 +271,20 @@ def get_best_locale(available_locales, preferred_lang):
         best_locale = available_locales[preferred_lang]
     else:
         best_locale = next(
-                (available_locales[lang] for lang in langs_priority
-                 if lang in available_locales), None)
+            (
+                available_locales[lang]
+                for lang in langs_priority
+                if lang in available_locales
+            ),
+            None,
+        )
     return best_locale
 
 
 def set_creator(documents, field_name):
-    """Set the creator (the user who created the first version of a document)
+    """Set the creator on a list of documents.
+
+    Set the creator (the user who created the first version of a document)
     on a list of documents.
     """
     if not documents:
@@ -261,20 +294,15 @@ def set_creator(documents, field_name):
     author_for_documents = get_creators(document_ids)
 
     for document in documents:
-        setattr(
-            document, field_name,
-            author_for_documents.get(document.document_id))
+        setattr(document, field_name, author_for_documents.get(document.document_id))
 
 
 def set_author(outings, lang):
-    """Set the author (the user who created an outing) on a list of
-    outings.
-    """
+    """Set the author (the user who created an outing) on a list of outings."""
     set_creator(outings, 'author')
 
 
-def set_default_geom_from_associations(
-        doc, linked_docs, update_always=False):
+def set_default_geom_from_associations(doc, linked_docs, update_always=False):
     if update_always or doc.geometry is None or doc.geometry.geom is None:
         default_geom = _get_default_geom(linked_docs)
 
@@ -285,8 +313,9 @@ def set_default_geom_from_associations(
                 doc.geometry = DocumentGeometry(geom=default_geom)
         else:
             log.warning(
-                'Creating or updating document {} without default geometry'.
-                format(doc.document_id))
+                f'Creating or updating document {doc.document_id} '
+                'without default geometry'
+            )
 
 
 def _get_default_geom(linked_docs):
@@ -294,17 +323,33 @@ def _get_default_geom(linked_docs):
         return None
 
     linked_waypoint_ids = [d['document_id'] for d in linked_docs]
-    default_geom = DBSession. \
-        query(func.ST_SetSRID(func.ST_Centroid(func.ST_ConvexHull(
-            func.ST_Collect(DocumentGeometry.geom))), 3857)). \
-        filter(DocumentGeometry.document_id.in_(linked_waypoint_ids)). \
-        scalar()
+    # Fetch the geometry as EWKB, which carries its SRID, so that it is
+    # written back with SRID 3857 whatever the PostGIS / geoalchemy2
+    # versions (a plain geometry result may come back without it).
+    default_geom = (
+        DBSession.query(
+            func.ST_AsEWKB(
+                func.ST_SetSRID(
+                    func.ST_Centroid(
+                        func.ST_ConvexHull(func.ST_Collect(DocumentGeometry.geom))
+                    ),
+                    3857,
+                )
+            )
+        )
+        .filter(DocumentGeometry.document_id.in_(linked_waypoint_ids))
+        .scalar()
+    )
 
-    return default_geom
+    if default_geom is None:
+        return None
+    return WKBElement(bytes(default_geom), srid=3857, extended=True)
 
 
 def etag_cache(request, key):
-    """Use the HTTP Entity Tag cache for Browser side caching
+    """Use the HTTP Entity Tag cache for browser-side caching.
+
+    Use the HTTP Entity Tag cache for Browser side caching
     If a "If-None-Match" header is found, and equivalent to ``key``,
     then a ``304`` HTTP message will be returned with the ETag to tell
     the browser that it should use its current cache of the page.
@@ -322,18 +367,16 @@ def etag_cache(request, key):
     https://github.com/Pylons/pylons/blob/799c310/pylons/controllers/util.py#L148
     """
     # we are always using a weak ETag validator
-    etag = 'W/"%s"' % key
+    etag = f'W/"{key}"'
     etag_matcher = request.if_none_match
 
     if str(key) in etag_matcher:
-        headers = [
-            ('ETag', etag)
-        ]
+        headers = [('ETag', etag)]
         if request.response.headers.get('Cache-Control'):
             headers.append(
-                ('Cache-Control',
-                 request.response.headers.get('Cache-Control')))
-        log.debug("ETag match, returning 304 HTTP Not Modified Response")
+                ('Cache-Control', request.response.headers.get('Cache-Control'))
+            )
+        log.debug('ETag match, returning 304 HTTP Not Modified Response')
         raise HTTPNotModified(headers=headers)
     else:
         request.response.headers['ETag'] = etag
@@ -348,5 +391,5 @@ def json_error(request):
     # Get the cornice renderer and use its render_errors method
     return request.registry.queryUtility(
         provided=IRendererFactory,
-        name="cornicejson",
+        name='cornicejson',
     ).render_errors(request)

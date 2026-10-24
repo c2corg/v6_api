@@ -1,4 +1,4 @@
-from colander import MappingSchema, SchemaNode, String, Integer, Sequence
+from colander import Integer, MappingSchema, SchemaNode, Sequence, String
 
 default_fields_doc = ['document_id', 'version', 'waypoint_type']
 default_fields_locale = ['version', 'lang']
@@ -6,9 +6,7 @@ default_fields_geometry = ['version']
 
 
 def restrict_schema(base_schema, all_fields):
-    """Create a new schema from an existing one with only the
-    given fields.
-    """
+    """Create a new schema from an existing one with only the given fields."""
     fields, geom_fields, locale_fields = split_fields(all_fields)
 
     schema = base_schema.clone()
@@ -32,7 +30,9 @@ def restrict_schema(base_schema, all_fields):
 
 
 def split_fields(all_fields):
-    """Split a list of fields ([name, geometry.geom, locales.title, ...]) into
+    """Split a list of fields into three lists depending on the prefix.
+
+    Split a list of fields ([name, geometry.geom, locales.title, ...]) into
     three lists depending on the prefix:
 
         fields: [name]
@@ -71,30 +71,22 @@ class SchemaAssociationUser(MappingSchema):
 
 
 class SchemaAssociations(MappingSchema):
-    users = SchemaNode(
-        Sequence(), SchemaAssociationUser(), missing=None)
-    routes = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    xreports = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    waypoints = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    waypoint_children = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    books = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    images = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    articles = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    outings = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
-    coverages = SchemaNode(
-        Sequence(), SchemaAssociationDoc(), missing=None)
+    users = SchemaNode(Sequence(), SchemaAssociationUser(), missing=None)
+    routes = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    xreports = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    waypoints = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    waypoint_children = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    books = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    images = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    articles = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    outings = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
+    coverages = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=None)
 
 
 def get_create_schema(document_schema):
-    """ Create a Colander schema for the create view which contains
+    """Create the Colander schema of the create view.
+
+    Create a Colander schema for the create view which contains
     associations for the document.
     """
     schema = document_schema.clone()
@@ -103,7 +95,9 @@ def get_create_schema(document_schema):
 
 
 def get_update_schema(document_schema):
-    """Create a Colander schema for the update view which contains an update
+    """Create the Colander schema of the update view.
+
+    Create a Colander schema for the update view which contains an update
     message and the document (with associations).
     """
     document_schema_with_associations = get_create_schema(document_schema)

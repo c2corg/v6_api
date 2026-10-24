@@ -1,23 +1,29 @@
 import logging
 import math
 import re
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from functools import partial
 
-from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.search import (create_search, get_text_query_on_title,
-                               search_documents)
-from c2corg_api.search.mapping_types import reserved_query_fields
-from elasticsearch_dsl.query import (Bool, GeoBoundingBox, Missing, Range,
-                                     Script, Term, Terms)
+from elasticsearch_dsl.query import (
+    Bool,
+    GeoBoundingBox,
+    Missing,
+    Range,
+    Script,
+    Term,
+    Terms,
+)
 from pyproj import Transformer
+
+from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.search import create_search, get_text_query_on_title, search_documents
+from c2corg_api.search.mapping_types import reserved_query_fields
 
 log = logging.getLogger(__name__)
 
 
 def build_query(url_params, meta_params, doc_type):
-    """Creates an ElasticSearch query from query parameters.
-    """
+    """Create an ElasticSearch query from query parameters."""
     search_term = url_params.get('q', '').strip()
     limit = meta_params.get('limit')
     offset = meta_params.get('offset')
@@ -25,7 +31,8 @@ def build_query(url_params, meta_params, doc_type):
     search = create_search(doc_type)
     if search_term:
         search = search.query(
-            get_text_query_on_title(search_term, meta_params.get('lang')))
+            get_text_query_on_title(search_term, meta_params.get('lang'))
+        )
 
     search_model = search_documents[doc_type]
     for param in url_params:
@@ -35,9 +42,7 @@ def build_query(url_params, meta_params, doc_type):
         if filter:
             search = search.filter(filter)
 
-    search = search. \
-        fields([]). \
-        extra(from_=offset, size=limit)
+    search = search.fields([]).extra(from_=offset, size=limit)
 
     if url_params.get('bbox'):
         bbox_filter = create_bbox_filter(url_params.get('bbox'))
@@ -52,17 +57,20 @@ def build_query(url_params, meta_params, doc_type):
         # score. if not explicitly sort by id/date.
         if doc_type == OUTING_TYPE:
             search = search.sort(
-                {'date_end': {'order': 'desc'}}, {'id': {'order': 'desc'}})
+                {'date_end': {'order': 'desc'}}, {'id': {'order': 'desc'}}
+            )
         else:
             search = search.sort({'id': {'order': 'desc'}})
 
-    log.debug('Search filter: {}'.format(search.to_dict()))
+    log.debug(f'Search filter: {search.to_dict()}')
 
     return search
 
 
 def create_filter(field_name, query_term, search_model):
-    """Creates an ES filter for a search tuple (field_name, query_term), e.g.
+    """Create an ES filter for a search tuple (field_name, query_term).
+
+    Creates an ES filter for a search tuple (field_name, query_term), e.g.
     `('e', '1500,2500')` (which creates a range filter on the elevation field).
     """
     if field_name not in search_model.queryable_fields:
@@ -96,7 +104,7 @@ def create_filter(field_name, query_term, search_model):
 
 
 def create_range_filter(field, query_term):
-    """Creates an ElasticSearch range filter.
+    """Create an ElasticSearch range filter.
 
     E.g. the call `create_range_filter(elevation_field, '1500,2500') creates
     the following filter:
@@ -123,7 +131,7 @@ def create_range_filter(field, query_term):
 
 
 def create_enum_range_filter(field, query_term):
-    """Creates an ElasticSearch enum range filter.
+    """Create an ElasticSearch enum range filter.
 
     E.g. the call `create_enum_range_filter(quality, 'medium,great')
     creates the following filter:
@@ -151,7 +159,7 @@ def create_enum_range_filter(field, query_term):
 
 
 def create_enum_range_min_max_filter(field, query_term):
-    """Creates an ElasticSearch combined enum range filter.
+    """Create an ElasticSearch combined enum range filter.
 
     For example the fields `climbing_rating_min` and `climbing_rating_max` are
     combined into a single search field. Searching for `crat=4c,6b` returns
@@ -168,22 +176,26 @@ def create_enum_range_min_max_filter(field, query_term):
 
     kwargs_start = {field.field_min: {'gt': range_values[1]}}
     kwargs_end = {field.field_max: {'lt': range_values[0]}}
-    return Bool(must_not=Bool(should=[
-        Range(**kwargs_start),
-        Range(**kwargs_end),
-        Bool(must=[
-            Missing(field=field.field_min),
-            Missing(field=field.field_max)
-        ])
-    ]))
+    return Bool(
+        must_not=Bool(
+            should=[
+                Range(**kwargs_start),
+                Range(**kwargs_end),
+                Bool(
+                    must=[
+                        Missing(field=field.field_min),
+                        Missing(field=field.field_max),
+                    ]
+                ),
+            ]
+        )
+    )
 
 
 def create_term_filter(field, query_term):
-    """Creates an ElasticSearch term/terms filter for an enum field.
-    """
+    """Create an ElasticSearch term/terms filter for an enum field."""
     query_terms = query_term.split(',')
-    term_values = list(
-        map(partial(parse_enum_value, field._enum), query_terms))
+    term_values = list(map(partial(parse_enum_value, field._enum), query_terms))
     term_values = [t for t in term_values if t is not None]
 
     if not term_values:
@@ -197,8 +209,7 @@ def create_term_filter(field, query_term):
 
 
 def create_boolean_filter(field, query_term):
-    """Creates an ElasticSearch term filter for a boolean field.
-    """
+    """Create an ElasticSearch term filter for a boolean field."""
     filter_value = None
     if query_term in ['true', 'True', '1']:
         filter_value = True
@@ -213,9 +224,7 @@ def create_boolean_filter(field, query_term):
 
 
 def create_id_filter(field, query_term):
-    """Creates an ElasticSearch term filter for a field, that contains
-    document ids.
-    """
+    """Create an ElasticSearch term filter for a field, that contains document ids."""
     query_terms = query_term.split(',')
     term_values = list(map(parse_num, query_terms))
     term_values = [t for t in term_values if t is not None]
@@ -231,7 +240,7 @@ def create_id_filter(field, query_term):
 
 
 def create_date_range_filter(field, query_term):
-    """Creates an ElasticSearch date-range filter.
+    """Create an ElasticSearch date-range filter.
 
     This filter type is currently only used for Outing.date_start/date_end.
 
@@ -239,7 +248,6 @@ def create_date_range_filter(field, query_term):
         2016-01-01
         2016-01-01,2016-01-01
         2016-01-01,2016-01-03
-
     """
     query_terms = query_term.split(',')
     range_values = list(map(parse_date, query_terms))
@@ -252,22 +260,16 @@ def create_date_range_filter(field, query_term):
         # single date
         kwargs_start = {field.field_date_start: {'lte': range_values[0]}}
         kwargs_end = {field.field_date_end: {'gte': range_values[0]}}
-        return Bool(must=[
-            Range(**kwargs_start),
-            Range(**kwargs_end)
-        ])
+        return Bool(must=[Range(**kwargs_start), Range(**kwargs_end)])
     else:
         # date range
         kwargs_start = {field.field_date_start: {'gt': range_values[1]}}
         kwargs_end = {field.field_date_end: {'lt': range_values[0]}}
-        return Bool(must_not=Bool(should=[
-            Range(**kwargs_start),
-            Range(**kwargs_end)
-        ]))
+        return Bool(must_not=Bool(should=[Range(**kwargs_start), Range(**kwargs_end)]))
 
 
 def create_period_filter(field, query_term):
-    """Creates an ElasticSearch period filter.
+    """Create an ElasticSearch period filter.
 
     This filter type is currently only used for Outing.date_start/date_end.
 
@@ -275,7 +277,6 @@ def create_period_filter(field, query_term):
         2022-01-01,2022-01-01
         2022-01-01,2022-01-03
     Search will ignore the year.
-
     """
     milliseconds_in_one_year = int(365.2425 * 24 * 3600 * 1000)
     query_terms = query_term.split(',')
@@ -283,11 +284,10 @@ def create_period_filter(field, query_term):
     range_values = [t for t in range_values if t is not None]
 
     def milliseconds_since_first_day_of_year(date):
-        processed_date = datetime.strptime(date, '%Y-%m-%d')
         # Force UTC, to avoid problems when running on a machine that is not
         # set to UTC
-        seconds_since_epoch = (processed_date.replace(tzinfo=UTC)
-                               .timestamp())
+        processed_date = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=UTC)
+        seconds_since_epoch = processed_date.timestamp()
 
         return int(1000 * seconds_since_epoch) % milliseconds_in_one_year
 
@@ -300,19 +300,17 @@ def create_period_filter(field, query_term):
 
     return Script(
         script=template.format(
-            field.field_date_end,
-            field.field_date_start,
-            milliseconds_in_one_year
+            field.field_date_end, field.field_date_start, milliseconds_in_one_year
         ),
         params={
-            "min": milliseconds_since_first_day_of_year(range_values[0]),
-            "max": milliseconds_since_first_day_of_year(range_values[1])
-        }
+            'min': milliseconds_since_first_day_of_year(range_values[0]),
+            'max': milliseconds_since_first_day_of_year(range_values[1]),
+        },
     )
 
 
 def create_date_filter(field, query_term):
-    """Creates an ElasticSearch date-range filter for a single field.
+    """Create an ElasticSearch date-range filter for a single field.
 
     This filter type is currently only used for Image.date_time
 
@@ -320,7 +318,6 @@ def create_date_filter(field, query_term):
         2016-01-01
         2016-01-01,2016-01-01
         2016-01-01,2016-01-03
-
     """
     query_terms = query_term.split(',')
     range_values = list(map(parse_date, query_terms))
@@ -332,14 +329,13 @@ def create_date_filter(field, query_term):
     elif n == 1:
         range_values.append(range_values[0])
 
-    kwargs = {
-        field._field_date: {'gte': range_values[0], 'lte': range_values[1]}
-    }
+    kwargs = {field._field_date: {'gte': range_values[0], 'lte': range_values[1]}}
     return Range(**kwargs)
 
 
 def create_number_range_filter(field, query_term):
-    """Creates an ElasticSearch number range filter.
+    """Create an ElasticSearch number range filter.
+
     Used for `elevation_min`/`elevation_max` for routes.
     """
     query_terms = query_term.split(',')
@@ -352,14 +348,20 @@ def create_number_range_filter(field, query_term):
 
     kwargs_start = {field.field_min: {'gt': range_values[1]}}
     kwargs_end = {field.field_max: {'lt': range_values[0]}}
-    return Bool(must_not=Bool(should=[
-        Range(**kwargs_start),
-        Range(**kwargs_end),
-        Bool(must=[
-            Missing(field=field.field_min),
-            Missing(field=field.field_max)
-        ])
-    ]))
+    return Bool(
+        must_not=Bool(
+            should=[
+                Range(**kwargs_start),
+                Range(**kwargs_end),
+                Bool(
+                    must=[
+                        Missing(field=field.field_min),
+                        Missing(field=field.field_max),
+                    ]
+                ),
+            ]
+        )
+    )
 
 
 def create_bbox_filter(query_term):
@@ -376,8 +378,7 @@ def create_bbox_filter(query_term):
         return None
 
     return GeoBoundingBox(
-        geom={'left': xmin, 'bottom': ymin, 'right': xmax, 'top': ymax},
-        type='indexed'
+        geom={'left': xmin, 'bottom': ymin, 'right': xmax, 'top': ymax}, type='indexed'
     )
 
 
@@ -386,7 +387,8 @@ transformer = Transformer.from_crs('epsg:3857', 'epsg:4326', always_xy=True)
 
 
 def map_enum_to_int(enum_mapper, s):
-    """
+    """Map an enum value to an integer using an `enum_mapper`.
+
     Maps an enum value to an integer using an `enum_mapper` (one of the
     objects in `c2corg_api.models.common.sortable_search_attributes`.
     """
