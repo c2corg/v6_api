@@ -1,4 +1,5 @@
-"""
+"""Group the duplicate stops and lines of the GTFS feeds.
+
 The same stop or the same line is often described by several feeds (a
 regional express coach and the network of a department, a train and a regional
 feed...), with other ids and other names: the stops are grouped in clusters
@@ -19,6 +20,7 @@ and the duplicate lines are hidden.
 To compute them again after the imports: `transport_postprocess <config_uri>`.
 The thresholds are the variables `TRANSPORT_*` of the environment (`.env`).
 """
+
 import logging
 import re
 import unicodedata
@@ -37,38 +39,63 @@ log = logging.getLogger(__name__)
 SAME_PLACE_DISTANCE = env_int('TRANSPORT_SAME_PLACE_DISTANCE', 15, minimum=0)
 # meters: two stops this close are the same place if they look like it
 NEAR_DISTANCE = max(
-    SAME_PLACE_DISTANCE, env_int('TRANSPORT_NEAR_DISTANCE', 50, minimum=0))
+    SAME_PLACE_DISTANCE, env_int('TRANSPORT_NEAR_DISTANCE', 50, minimum=0)
+)
 
 # meters: the path of a line is covered by the one of a duplicate within this
 LINE_TOLERANCE = env_int('TRANSPORT_LINE_TOLERANCE', 25, minimum=1)
 # at least this share of each path must be covered by the other
-LINE_OVERLAP = env_float(
-    'TRANSPORT_LINE_OVERLAP', 0.9, minimum=0.5, maximum=1)
+LINE_OVERLAP = env_float('TRANSPORT_LINE_OVERLAP', 0.9, minimum=0.5, maximum=1)
 
 _STOP_WORDS = {
-    'a', 'au', 'aux', 'd', 'de', 'des', 'du', 'en', 'et', 'l', 'la', 'le',
-    'les', 'sur', 'sous', 'the', 'der', 'die', 'das', 'di', 'del', 'della',
-    'arret', 'stop', 'bus',
+    'a',
+    'au',
+    'aux',
+    'd',
+    'de',
+    'des',
+    'du',
+    'en',
+    'et',
+    'l',
+    'la',
+    'le',
+    'les',
+    'sur',
+    'sous',
+    'the',
+    'der',
+    'die',
+    'das',
+    'di',
+    'del',
+    'della',
+    'arret',
+    'stop',
+    'bus',
 }
 
 
 def name_tokens(name):
-    """
+    """Return the words of the name of a stop.
+
     The words of the name of a stop, without accents, case, punctuation and
-    little words: "Annecy, Gare Routière" -> {annecy, gare, routiere}
+    little words: "Annecy, Gare Routière" -> {annecy, gare, routiere}.
     """
     name = unicodedata.normalize('NFKD', name or '')
     name = ''.join(c for c in name if not unicodedata.combining(c)).lower()
     return {
-        word for word in re.split(r'[^a-z0-9]+', name)
+        word
+        for word in re.split(r'[^a-z0-9]+', name)
         if word and word not in _STOP_WORDS
     }
 
 
 def names_similar(a, b):
-    """
-    Do two names look like the same place? One contains the other ("Gare
-    Routière" in "Annecy Gare Routière"), or half of their words are the same.
+    """Tell whether two names look like the same place.
+
+    One contains the other ("Gare Routière" in "Annecy Gare Routière"), or half of their
+    words are the same.
     """
     tokens_a, tokens_b = name_tokens(a), name_tokens(b)
     if not tokens_a or not tokens_b:
@@ -82,14 +109,14 @@ def _same_place(anchor, stop, distance):
     if distance <= SAME_PLACE_DISTANCE:
         return True
     if distance <= NEAR_DISTANCE:
-        return names_similar(anchor['name'], stop['name']) \
-            or bool(anchor['codes'] & stop['codes'])
+        return names_similar(anchor['name'], stop['name']) or bool(
+            anchor['codes'] & stop['codes']
+        )
     return False
 
 
 def cluster_stops(stops, pairs):
-    """
-    Groups the stops of the same place.
+    """Group the stops of the same place.
 
     `stops`: {stop_pk: {'name', 'codes' (set of lowercase codes of the lines),
     'departures' (number)}}. `pairs`: (stop_pk, stop_pk, meters) for the stops
@@ -109,15 +136,13 @@ def cluster_stops(stops, pairs):
             continue
         clusters[anchor] = anchor
         for distance, pk in sorted(near[anchor]):
-            if pk not in clusters \
-                    and _same_place(stops[anchor], stops[pk], distance):
+            if pk not in clusters and _same_place(stops[anchor], stops[pk], distance):
                 clusters[pk] = anchor
     return clusters
 
 
 def duplicate_lines(lines, pairs):
-    """
-    Finds the lines to hide.
+    """Find the lines to hide.
 
     `lines`: {line_id: {'trips' (number), 'length' (meters)}}. `pairs`:
     (line_id, line_id, share of the first one covered by the second one, share
@@ -146,9 +171,7 @@ def duplicate_lines(lines, pairs):
 
     hidden = {}
     for group in groups.values():
-        kept = min(
-            group,
-            key=lambda i: (-lines[i]['trips'], -lines[i]['length'], i))
+        kept = min(group, key=lambda i: (-lines[i]['trips'], -lines[i]['length'], i))
         for line_id in group:
             if line_id != kept:
                 hidden[line_id] = kept
@@ -215,54 +238,63 @@ _LINE_PAIRS = text("""
 
 
 def cluster_transport_stops(session):
-    """
-    Writes `transport_stops.cluster_id`. Returns the clusters of several stops:
-    [(anchor, [(member, meters)])] to check them.
+    """Write `transport_stops.cluster_id`.
+
+    Returns the clusters of several stops: [(anchor, [(member, meters)])] to check them.
     """
     stops = {
         pk: {'name': name, 'codes': set(codes), 'departures': int(departures)}
         for pk, name, codes, departures in session.execute(_STOPS)
     }
     pairs = [
-        (a, b, float(meters)) for a, b, meters in session.execute(
-            _STOP_PAIRS, {'distance': NEAR_DISTANCE})
+        (a, b, float(meters))
+        for a, b, meters in session.execute(_STOP_PAIRS, {'distance': NEAR_DISTANCE})
     ]
     clusters = cluster_stops(stops, pairs)
-    distances = {
-        (min(a, b), max(a, b)): meters for a, b, meters in pairs}
+    distances = {(min(a, b), max(a, b)): meters for a, b, meters in pairs}
 
-    session.execute(text("""
+    session.execute(
+        text("""
         UPDATE guidebook.transport_stops SET cluster_id = stop_pk
         WHERE cluster_id IS DISTINCT FROM stop_pk
-    """))
+    """)
+    )
     members = [
-        {'pk': pk, 'cluster': anchor}
-        for pk, anchor in clusters.items() if pk != anchor
+        {'pk': pk, 'cluster': anchor} for pk, anchor in clusters.items() if pk != anchor
     ]
     if members:
-        session.execute(text("""
+        session.execute(
+            text("""
             UPDATE guidebook.transport_stops SET cluster_id = :cluster
             WHERE stop_pk = :pk
-        """), members)
+        """),
+            members,
+        )
 
     grouped = defaultdict(list)
     for member in members:
         pk, anchor = member['pk'], member['cluster']
-        grouped[anchor].append((pk, distances[(min(pk, anchor),
-                                               max(pk, anchor))]))
-    log.info('%d stops grouped in %d clusters (%d stops)',
-             len(members), len(grouped), len(stops))
+        grouped[anchor].append((pk, distances[(min(pk, anchor), max(pk, anchor))]))
+    log.info(
+        '%d stops grouped in %d clusters (%d stops)',
+        len(members),
+        len(grouped),
+        len(stops),
+    )
     return [
-        (anchor, [(pk, stops[pk]['name'], meters) for pk, meters in group],
-         stops[anchor]['name'])
+        (
+            anchor,
+            [(pk, stops[pk]['name'], meters) for pk, meters in group],
+            stops[anchor]['name'],
+        )
         for anchor, group in grouped.items()
     ]
 
 
 def hide_duplicate_lines(session):
-    """
-    Writes `transport_lines.duplicate_of`. Returns the hidden lines:
-    {hidden: kept}.
+    """Write `transport_lines.duplicate_of`.
+
+    Returns the hidden lines: {hidden: kept}.
     """
     lines = {
         line_id: {'trips': int(trips), 'length': float(meters or 0)}
@@ -271,18 +303,24 @@ def hide_duplicate_lines(session):
     pairs = [
         (a, b, float(a_in_b or 0), float(b_in_a or 0))
         for a, b, a_in_b, b_in_a in session.execute(
-            _LINE_PAIRS, {'tolerance': LINE_TOLERANCE})
+            _LINE_PAIRS, {'tolerance': LINE_TOLERANCE}
+        )
     ]
     hidden = duplicate_lines(lines, pairs)
 
-    session.execute(text("""
+    session.execute(
+        text("""
         UPDATE guidebook.transport_lines SET duplicate_of = NULL
         WHERE duplicate_of IS NOT NULL
-    """))
+    """)
+    )
     if hidden:
-        session.execute(text("""
+        session.execute(
+            text("""
             UPDATE guidebook.transport_lines SET duplicate_of = :kept
             WHERE line_id = :hidden
-        """), [{'hidden': h, 'kept': k} for h, k in hidden.items()])
+        """),
+            [{'hidden': h, 'kept': k} for h, k in hidden.items()],
+        )
     log.info('%d lines hidden as duplicates', len(hidden))
     return hidden

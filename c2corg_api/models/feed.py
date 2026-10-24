@@ -1,29 +1,35 @@
 import logging
 
-from c2corg_api.models import Base, schema, users_schema, enums, DBSession
-from c2corg_api.models.area import Area, AREA_TYPE
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql.array import ARRAY
+from sqlalchemy.orm import column_property, relationship
+from sqlalchemy.sql.elements import literal_column
+from sqlalchemy.sql.expression import cast, select, text
+from sqlalchemy.sql.functions import func
+from sqlalchemy.sql.schema import (
+    CheckConstraint,
+    Column,
+    ForeignKey,
+    Index,
+    PrimaryKeyConstraint,
+)
+from sqlalchemy.sql.sqltypes import Boolean, DateTime, Integer, String
+
+from c2corg_api.models import Base, DBSession, enums, schema, users_schema
+from c2corg_api.models.area import AREA_TYPE, Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.association import Association
 from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.document import Document, DocumentLocale, UpdateType
 from c2corg_api.models.enums import feed_change_type
-from c2corg_api.models.image import Image, IMAGE_TYPE
+from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.utils import ArrayOfEnum
 from c2corg_api.views.validation import association_keys
-from sqlalchemy.dialects import postgresql
-from sqlalchemy.dialects.postgresql.array import ARRAY
-from sqlalchemy.orm import relationship, column_property
-from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import select, text, cast
-from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import Column, ForeignKey, PrimaryKeyConstraint, \
-    CheckConstraint, Index
-from sqlalchemy.sql.sqltypes import Integer, String, DateTime, Boolean
 
 log = logging.getLogger(__name__)
 
@@ -34,34 +40,30 @@ class FilterArea(Base):
     E.g. with an entry (user_id=1, area_id=2) the user 1 will only
     see changes in area 2 in their feed (except changes from followed users).
     """
+
     __tablename__ = 'feed_filter_area'
 
-    area_id = Column(
-        Integer, ForeignKey(schema + '.areas.document_id'),
-        nullable=False)
-    area = relationship(
-        Area, primaryjoin=area_id == Area.document_id)
+    area_id = Column(Integer, ForeignKey(schema + '.areas.document_id'), nullable=False)
+    area = relationship(Area, primaryjoin=area_id == Area.document_id)
 
     user_id = Column(
-        Integer, ForeignKey(users_schema + '.user.id'),
-        nullable=False, index=True)
-    user = relationship(
-        User, primaryjoin=user_id == User.id
+        Integer, ForeignKey(users_schema + '.user.id'), nullable=False, index=True
     )
+    user = relationship(User, primaryjoin=user_id == User.id)
 
-    __table_args__ = (
-        PrimaryKeyConstraint(area_id, user_id),
-        Base.__table_args__
-    )
+    __table_args__ = (PrimaryKeyConstraint(area_id, user_id), Base.__table_args__)
 
 
 User.has_area_filter = column_property(
-    select([func.count(FilterArea.area_id) > 0]).
-    where(FilterArea.user_id == User.id).
-    correlate_except(FilterArea),
-    deferred=True
+    select(func.count(FilterArea.area_id) > 0)
+    .where(FilterArea.user_id == User.id)
+    .correlate_except(FilterArea)
+    .scalar_subquery(),
+    deferred=True,
 )
-User.feed_filter_areas = relationship('Area', secondary=FilterArea.__table__)
+User.feed_filter_areas = relationship(
+    'Area', secondary=FilterArea.__table__, overlaps='area,user'
+)
 
 
 class FollowedUser(Base):
@@ -70,45 +72,47 @@ class FollowedUser(Base):
     E.g. if user 1 follows user 2, user 1 will see changes of user 2 in their
     feed.
     """
+
     __tablename__ = 'feed_followed_users'
 
     followed_user_id = Column(
-        Integer, ForeignKey(users_schema + '.user.id'),
-        nullable=False)
-    followed_user = relationship(
-        User, primaryjoin=followed_user_id == User.id
+        Integer, ForeignKey(users_schema + '.user.id'), nullable=False
     )
+    followed_user = relationship(User, primaryjoin=followed_user_id == User.id)
 
     follower_user_id = Column(
-        Integer, ForeignKey(users_schema + '.user.id'),
-        nullable=False)
-    follower_user = relationship(
-        User, primaryjoin=follower_user_id == User.id
+        Integer, ForeignKey(users_schema + '.user.id'), nullable=False
     )
+    follower_user = relationship(User, primaryjoin=follower_user_id == User.id)
 
     __table_args__ = (
         PrimaryKeyConstraint(followed_user_id, follower_user_id),
         CheckConstraint(
             'followed_user_id != follower_user_id',
-            name='check_feed_followed_user_self_follow'),
-        Base.__table_args__
+            name='check_feed_followed_user_self_follow',
+        ),
+        Base.__table_args__,
     )
 
 
 User.is_following_users = column_property(
-    select([func.count(FollowedUser.followed_user_id) > 0]).
-    where(FollowedUser.follower_user_id == User.id).
-    correlate_except(FollowedUser),
-    deferred=True
+    select(func.count(FollowedUser.followed_user_id) > 0)
+    .where(FollowedUser.follower_user_id == User.id)
+    .correlate_except(FollowedUser)
+    .scalar_subquery(),
+    deferred=True,
 )
 
 
 class DocumentChange(Base):
-    """This table contains "changes" that are shown in the homepage feed and
+    """Changes shown in the homepage feed and the user profiles.
+
+    This table contains "changes" that are shown in the homepage feed and
     the user profile.
     For example if a user creates a document or uploads images, an entry is
     added to this table.
     """
+
     __tablename__ = 'feed_document_changes'
 
     change_id = Column(Integer, primary_key=True)
@@ -116,9 +120,7 @@ class DocumentChange(Base):
     time = Column(DateTime(timezone=True), default=func.now(), nullable=False)
 
     # the actor: who did the change?
-    user_id = Column(
-        Integer, ForeignKey(users_schema + '.user.id'),
-        nullable=False)
+    user_id = Column(Integer, ForeignKey(users_schema + '.user.id'), nullable=False)
     user = relationship(User, primaryjoin=user_id == User.id)
 
     # the action type: what did the user do? e.g. create or update a document
@@ -126,21 +128,19 @@ class DocumentChange(Base):
 
     # the object: what document did the user change?
     document_id = Column(
-        Integer, ForeignKey(schema + '.documents.document_id'),
-        nullable=False)
-    document = relationship(
-        Document, primaryjoin=document_id == Document.document_id
+        Integer, ForeignKey(schema + '.documents.document_id'), nullable=False
     )
+    document = relationship(Document, primaryjoin=document_id == Document.document_id)
 
     document_type = Column(String(1), nullable=False)
 
     # activities related to the document
     activities = Column(
-        ArrayOfEnum(enums.activity_type), nullable=False, server_default='{}')
+        ArrayOfEnum(enums.activity_type), nullable=False, server_default='{}'
+    )
 
     # langs of the document locales
-    langs = Column(
-        ArrayOfEnum(enums.lang), nullable=False, server_default='{}')
+    langs = Column(ArrayOfEnum(enums.lang), nullable=False, server_default='{}')
 
     # For performance reasons, areas and users are referenced in simple integer
     # arrays in 'feed_document_changes', no PK-FK relations are set up.
@@ -154,18 +154,12 @@ class DocumentChange(Base):
     user_ids = Column(ARRAY(Integer), nullable=False, server_default='{}')
 
     # images
-    image1_id = Column(
-        Integer, ForeignKey(schema + '.images.document_id'))
-    image1 = relationship(
-        Image, primaryjoin=image1_id == Image.document_id)
-    image2_id = Column(
-        Integer, ForeignKey(schema + '.images.document_id'))
-    image2 = relationship(
-        Image, primaryjoin=image2_id == Image.document_id)
-    image3_id = Column(
-        Integer, ForeignKey(schema + '.images.document_id'))
-    image3 = relationship(
-        Image, primaryjoin=image3_id == Image.document_id)
+    image1_id = Column(Integer, ForeignKey(schema + '.images.document_id'))
+    image1 = relationship(Image, primaryjoin=image1_id == Image.document_id)
+    image2_id = Column(Integer, ForeignKey(schema + '.images.document_id'))
+    image2 = relationship(Image, primaryjoin=image2_id == Image.document_id)
+    image3_id = Column(Integer, ForeignKey(schema + '.images.document_id'))
+    image3 = relationship(Image, primaryjoin=image3_id == Image.document_id)
     more_images = Column(Boolean, server_default='FALSE', nullable=False)
 
     __table_args__ = (
@@ -173,9 +167,11 @@ class DocumentChange(Base):
         # change_id, therefore create an index for these two columns.
         Index(
             'ix_guidebook_feed_document_changes_time_and_change_id',
-            time.desc(), change_id,
-            postgresql_using='btree'),
-        Base.__table_args__
+            time.desc(),
+            change_id,
+            postgresql_using='btree',
+        ),
+        Base.__table_args__,
     )
 
     def copy(self):
@@ -194,10 +190,8 @@ class DocumentChange(Base):
 
 
 def update_feed_document_create(document, user_id):
-    """Creates a new entry in the feed table when creating a new document.
-    """
-    if document.redirects_to or \
-            document.type in NO_FEED_DOCUMENT_TYPES:
+    """Create a new entry in the feed table when creating a new document."""
+    if document.redirects_to or document.type in NO_FEED_DOCUMENT_TYPES:
         return
 
     # make sure all updates are written to the database, so that areas and
@@ -205,8 +199,7 @@ def update_feed_document_create(document, user_id):
     DBSession.flush()
 
     activities = []
-    if document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE,
-                         BOOK_TYPE]:
+    if document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE, BOOK_TYPE]:
         activities = document.activities
 
     langs = [locale.lang for locale in document.locales]
@@ -228,14 +221,14 @@ def update_feed_document_create(document, user_id):
         activities=activities,
         langs=langs,
         area_ids=area_ids,
-        user_ids=user_ids
+        user_ids=user_ids,
     )
     DBSession.add(change)
     DBSession.flush()
 
 
 def update_feed_document_update(document, user_id, update_types):
-    """Update the feed entry for a document:
+    """Update the feed entry for a document.
 
     - update `area_ids` if the geometry has changed.
     - update `activities` if figures have changed.
@@ -260,9 +253,10 @@ def update_feed_document_update(document, user_id, update_types):
         update_areas_of_changes(document)
 
     # updates activities
-    if document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE,
-                         BOOK_TYPE] and \
-            UpdateType.FIGURES in update_types:
+    if (
+        document.type in [ARTICLE_TYPE, OUTING_TYPE, ROUTE_TYPE, BOOK_TYPE]
+        and UpdateType.FIGURES in update_types
+    ):
         update_activities_of_changes(document)
 
     update_langs_of_changes(document.document_id)
@@ -278,7 +272,7 @@ def update_participants_of_outing(outing_id, user_id):
     existing_change = get_existing_change(outing_id)
 
     if not existing_change:
-        log.warning('no feed change for document {}'.format(outing_id))
+        log.warning(f'no feed change for document {outing_id}')
         return
 
     participant_ids = _get_participants_of_outing(outing_id)
@@ -304,52 +298,64 @@ def update_participants_of_outing(outing_id, user_id):
     participants_and_editor = text(
         'ARRAY(SELECT DISTINCT UNNEST(array_cat('
         '   ARRAY[guidebook.feed_document_changes.user_id], :participants)) '
-        'ORDER BY 1)')
+        'ORDER BY 1)'
+    )
     DBSession.execute(
-        DocumentChange.__table__.update().
-        where(DocumentChange.document_id == outing_id).
-        where(DocumentChange.change_id != existing_change.change_id).
-        values(user_ids=participants_and_editor),
-        {'participants': participant_ids}
+        DocumentChange.__table__.update()
+        .where(DocumentChange.document_id == outing_id)
+        .where(DocumentChange.change_id != existing_change.change_id)
+        .values(user_ids=participants_and_editor),
+        {'participants': participant_ids},
     )
 
 
 def get_existing_change(document_id):
-    return DBSession. \
-        query(DocumentChange). \
-        filter(DocumentChange.document_id == document_id). \
-        filter(DocumentChange.change_type.in_(['created', 'updated'])). \
-        first()
+    return (
+        DBSession.query(DocumentChange)
+        .filter(DocumentChange.document_id == document_id)
+        .filter(DocumentChange.change_type.in_(['created', 'updated']))
+        .first()
+    )
 
 
 def get_existing_change_for_user(document_id, user_id):
-    return DBSession. \
-        query(DocumentChange). \
-        filter(DocumentChange.document_id == document_id). \
-        filter(DocumentChange.user_id == user_id). \
-        order_by(DocumentChange.time.desc()). \
-        first()
+    return (
+        DBSession.query(DocumentChange)
+        .filter(DocumentChange.document_id == document_id)
+        .filter(DocumentChange.user_id == user_id)
+        .order_by(DocumentChange.time.desc())
+        .first()
+    )
 
 
 def update_feed_association_update(
-        _parent_document_id, parent_document_type,
-        child_document_id, child_document_type, user_id):
+    _parent_document_id,
+    parent_document_type,
+    child_document_id,
+    child_document_type,
+    user_id,
+):
     """Update the feed entries when associations have been created or deleted.
+
     Currently only associations between outings and users are considered.
     """
-    if not (parent_document_type == USERPROFILE_TYPE and
-            child_document_type == OUTING_TYPE):
+    if not (
+        parent_document_type == USERPROFILE_TYPE and child_document_type == OUTING_TYPE
+    ):
         return
     update_participants_of_outing(child_document_id, user_id)
 
 
 def update_feed_images_upload(images, images_in, user_id):
-    """When uploading a set of images, create a feed entry for the document
-     the images are linked to.
+    """Create a feed entry for the document of uploaded images.
+
+    When uploading a set of images, create a feed entry for the document
+    the images are linked to.
     """
     if not images or not images_in:
         return
-    assert len(images) == len(images_in)
+    if len(images) != len(images_in):
+        raise ValueError('images and images_in must have the same length')
 
     # get the document that the images were uploaded to
     document_id, document_type = get_linked_document(images_in)
@@ -357,7 +363,8 @@ def update_feed_images_upload(images, images_in, user_id):
         return
 
     image1_id, image2_id, image3_id, more_images = get_images(
-        images, images_in, document_id, document_type)
+        images, images_in, document_id, document_type
+    )
 
     if not image1_id:
         return
@@ -365,7 +372,7 @@ def update_feed_images_upload(images, images_in, user_id):
     # load the feed entry for the images
     change = get_existing_change(document_id)
     if not change:
-        log.warning('no feed change for document {}'.format(document_id))
+        log.warning(f'no feed change for document {document_id}')
         return
 
     if change.user_id == user_id:
@@ -395,93 +402,89 @@ def update_feed_images_upload(images, images_in, user_id):
 
 
 def _update_images(change, image1_id, image2_id, image3_id, more_images):
-    """ Set the new images on a feed entry by keeping the old images if
+    """Set the new images on a feed entry.
+
+    Set the new images on a feed entry by keeping the old images if
     there are not enough new ones.
     """
     existing_images = [
-        image_id for image_id in [
-            change.image1_id, change.image2_id, change.image3_id
-        ] if image_id is not None
+        image_id
+        for image_id in [change.image1_id, change.image2_id, change.image3_id]
+        if image_id is not None
     ]
 
     change.image1_id = image1_id
-    change.image2_id = image2_id or (existing_images.pop()
-                                     if existing_images else None)
-    change.image3_id = image3_id or (existing_images.pop()
-                                     if existing_images else None)
-    change.more_images = more_images or change.more_images or \
-        len(existing_images) > 0
+    change.image2_id = image2_id or (existing_images.pop() if existing_images else None)
+    change.image3_id = image3_id or (existing_images.pop() if existing_images else None)
+    change.more_images = more_images or change.more_images or len(existing_images) > 0
 
 
 def _get_participants_of_outing(outing_id):
-    participant_ids = DBSession. \
-        query(Association.parent_document_id). \
-        filter(Association.child_document_id == outing_id). \
-        filter(Association.parent_document_type == USERPROFILE_TYPE). \
-        all()
+    participant_ids = (
+        DBSession.query(Association.parent_document_id)
+        .filter(Association.child_document_id == outing_id)
+        .filter(Association.parent_document_type == USERPROFILE_TYPE)
+        .all()
+    )
     return [user_id for (user_id,) in participant_ids]
 
 
 def _get_area_ids(document):
-    area_ids = DBSession. \
-        query(AreaAssociation.area_id). \
-        filter(AreaAssociation.document_id == document.document_id). \
-        all()
+    area_ids = (
+        DBSession.query(AreaAssociation.area_id)
+        .filter(AreaAssociation.document_id == document.document_id)
+        .all()
+    )
     return [area_id for (area_id,) in area_ids]
 
 
 def update_areas_of_changes(document):
-    """Update the area ids of all feed entries of the given document.
-    """
+    """Update the area ids of all feed entries of the given document."""
     areas_select = select(
-            [
-                # concatenate with empty array to avoid null values
-                # select ARRAY[]::integer[] || array_agg(area_id)
-                literal_column('ARRAY[]::integer[]').op('||')(
-                    func.array_agg(
-                        AreaAssociation.area_id,
-                        type_=postgresql.ARRAY(Integer)))
-            ]).\
-        where(AreaAssociation.document_id == document.document_id)
+        # concatenate with empty array to avoid null values
+        # select ARRAY[]::integer[] || array_agg(area_id)
+        literal_column('ARRAY[]::integer[]').op('||')(
+            func.array_agg(AreaAssociation.area_id, type_=postgresql.ARRAY(Integer))
+        )
+    ).where(AreaAssociation.document_id == document.document_id)
 
     DBSession.execute(
-        DocumentChange.__table__.update().
-        where(DocumentChange.document_id == document.document_id).
-        values(area_ids=areas_select.as_scalar())
+        DocumentChange.__table__.update()
+        .where(DocumentChange.document_id == document.document_id)
+        .values(area_ids=areas_select.scalar_subquery())
     )
 
 
 def update_activities_of_changes(document):
-    """Update the activities of all feed entries of the given document.
-    """
+    """Update the activities of all feed entries of the given document."""
     DBSession.execute(
-        DocumentChange.__table__.update().
-        where(DocumentChange.document_id == document.document_id).
-        values(activities=document.activities)
+        DocumentChange.__table__.update()
+        .where(DocumentChange.document_id == document.document_id)
+        .values(activities=document.activities)
     )
 
 
 def update_langs_of_changes(document_id):
-    """Update the langs of all feed entries of the given document.
-    """
-    langs = DBSession. \
-        query(cast(
-            func.array_agg(DocumentLocale.lang),
-            ArrayOfEnum(enums.lang))). \
-        filter(DocumentLocale.document_id == document_id). \
-        group_by(DocumentLocale.document_id). \
-        subquery('langs')
+    """Update the langs of all feed entries of the given document."""
+    langs = (
+        DBSession.query(
+            cast(func.array_agg(DocumentLocale.lang), ArrayOfEnum(enums.lang))
+        )
+        .filter(DocumentLocale.document_id == document_id)
+        .group_by(DocumentLocale.document_id)
+        .subquery('langs')
+    )
     DBSession.execute(
-        DocumentChange.__table__.update().
-        where(DocumentChange.document_id == document_id).
-        values(langs=langs.select()))
+        DocumentChange.__table__.update()
+        .where(DocumentChange.document_id == document_id)
+        .values(langs=langs.select().scalar_subquery())
+    )
 
 
 def get_linked_document(images_in):
-    """Given a list of image inputs, return a linked document from the first
-    image.
-    """
-    assert images_in
+    """Given a list of image inputs, return a linked document from the first image."""
+    if not images_in:
+        raise ValueError('no image given')
 
     image_in = images_in[0]
     associations = image_in.get('associations')
@@ -501,8 +504,7 @@ def get_linked_document(images_in):
 
 
 def get_images(images, images_in, document_id, document_type):
-    """Returns the first 3 images that are associated to the given document.
-    """
+    """Return the first 3 images that are associated to the given document."""
     image_count = len(images)
 
     # get all the images linked to the document
@@ -538,8 +540,7 @@ def get_images(images, images_in, document_id, document_type):
 
 
 def is_linked_to_doc(image_in, document_id, document_type):
-    """Check if the given document is linked to the image.
-    """
+    """Check if the given document is linked to the image."""
     associations = image_in.get('associations')
     if not associations:
         return False

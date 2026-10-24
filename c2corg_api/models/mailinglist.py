@@ -7,23 +7,23 @@ from c2corg_api.models.user import User
 
 
 class Mailinglist(Base):
+    """Class containing mailing list subscriptions.
+
+    Based upon Sympa mailing list server https://www.sympa.org/.
     """
-    Class containing mailing list subscriptions.
-    Based upon Sympa mailing list server https://www.sympa.org/
-    """
+
     __tablename__ = 'subscriber_table'
-    __table_args__ = {"schema": sympa_schema}
+    __table_args__ = {'schema': sympa_schema}
 
     listname = Column('list_subscriber', String(50), primary_key=True)
     email = Column('user_subscriber', String(200), primary_key=True)
-    user_id = Column(
-        Integer, ForeignKey(users_schema + '.user.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey(users_schema + '.user.id'), nullable=False)
     user = relationship(User, primaryjoin=user_id == User.id)
 
     # additional fields, used only by Sympa
     date_subscriber = Column(
-        DateTime, default=func.now(), server_default=func.now(),
-        nullable=False)
+        DateTime, default=func.now(), server_default=func.now(), nullable=False
+    )
     update_subscriber = Column(DateTime)
     visibility_subscriber = Column(String(20))
     reception_subscriber = Column(String(20))

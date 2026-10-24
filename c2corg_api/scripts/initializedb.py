@@ -1,30 +1,28 @@
 import os
 import sys
+
 import transaction
 from alembic.command import upgrade
 from alembic.config import Config
-from c2corg_api.models import DBSession, document
-from c2corg_api.models.es_sync import ESSyncStatus
-
-from sqlalchemy import engine_from_config
-
 from pyramid.paster import (
     get_appsettings,
     setup_logging,
-    )
-
+)
 from pyramid.scripts.common import parse_vars
-from c2corg_api.models.common.attributes import default_langs
+from sqlalchemy import engine_from_config
 
-alembic_configfile = os.path.realpath(os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    '../../alembic.ini'))
+from c2corg_api.models import DBSession, document
+from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.models.es_sync import ESSyncStatus
+
+alembic_configfile = os.path.realpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../alembic.ini')
+)
 
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print('usage: %s <config_uri> [var=value]\n'
-          '(example: "%s development.ini")' % (cmd, cmd))
+    print(f'usage: {cmd} <config_uri> [var=value]\n(example: "{cmd} development.ini")')
     sys.exit(1)
 
 
@@ -47,9 +45,7 @@ def setup_db(alembic_config, session):
 
     with transaction.manager:
         # add default languages
-        session.add_all([
-            document.Lang(lang=lang) for lang in default_langs
-        ])
+        session.add_all([document.Lang(lang=lang) for lang in default_langs])
 
         # add a default status for the ElasticSearch synchronization
         session.add(ESSyncStatus())

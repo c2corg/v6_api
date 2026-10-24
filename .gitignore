@@ -22,3 +22,7 @@ config/docker
 coverage.xml
 /config/env.local
 project.tar
+
+# Database dumps (raw production dumps must never be committed)
+*.dump
+/scripts/anonymize-database/*dump*/

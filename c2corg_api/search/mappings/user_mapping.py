@@ -1,5 +1,5 @@
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.search.mapping import SearchDocument, BaseMeta
+from c2corg_api.search.mapping import BaseMeta, SearchDocument
 from c2corg_api.search.mapping_types import QueryableMixin
 
 
@@ -17,8 +17,9 @@ class SearchUser(SearchDocument):
             return search_document
 
         for locale in document.locales:
-            search_document['title_' + locale.lang] = '{0} {1}'.format(
-                document.name or '', document.forum_username or '')
+            search_document['title_' + locale.lang] = '{} {}'.format(
+                document.name or '', document.forum_username or ''
+            )
 
         return search_document
 

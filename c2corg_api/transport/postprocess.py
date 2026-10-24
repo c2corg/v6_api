@@ -1,4 +1,5 @@
-"""
+"""Post-process the imported GTFS feeds.
+
 What is done once the feeds are imported (`import_gtfs` does it at the end):
 
 1. the Navitia stops are linked to the GTFS stops (`link_stops.sql`);
@@ -14,6 +15,7 @@ a change of the thresholds of `dedup.py`:
 `--report` writes the groups of stops with different names, and the hidden
 lines, to check the thresholds.
 """
+
 import argparse
 import logging
 
@@ -24,17 +26,20 @@ from zope.sqlalchemy import mark_changed
 
 from c2corg_api.models import Base, DBSession
 from c2corg_api.transport.dedup import (
-    cluster_transport_stops, hide_duplicate_lines, name_tokens)
+    cluster_transport_stops,
+    hide_duplicate_lines,
+    name_tokens,
+)
 from c2corg_api.transport.linking import link_transport_stops
 
 log = logging.getLogger(__name__)
 
 
 def postprocess(session):
-    """
-    Links, groups and hides. Returns what it found:
-    {'linked': number, 'clusters': [...], 'hidden_lines': {hidden: kept}}
-    The caller commits.
+    """Links, groups and hides.
+
+    Returns what it found: {'linked': number, 'clusters': [...], 'hidden_lines':
+    {hidden: kept}} The caller commits.
     """
     return {
         'linked': link_transport_stops(session),
@@ -44,27 +49,31 @@ def postprocess(session):
 
 
 def report(found):
-    """The groups to read to check the thresholds."""
+    """Return the groups to read to check the thresholds."""
     lines = []
     for anchor, members, anchor_name in found['clusters']:
         names = {frozenset(name_tokens(name)) for _, name, _ in members}
         names.add(frozenset(name_tokens(anchor_name)))
         if len(names) > 1:
             joined = ', '.join(
-                '"%s" (%d m)' % (name, meters) for _, name, meters in members)
-            lines.append('stop %d "%s" <- %s' % (anchor, anchor_name, joined))
+                f'"{name}" ({int(meters)} m)' for _, name, meters in members
+            )
+            lines.append(f'stop {anchor} "{anchor_name}" <- {joined}')
     lines.extend(
-        'line %d hidden, duplicate of line %d' % (hidden, kept)
-        for hidden, kept in sorted(found['hidden_lines'].items()))
+        f'line {hidden} hidden, duplicate of line {kept}'
+        for hidden, kept in sorted(found['hidden_lines'].items())
+    )
     return lines
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     parser.add_argument('config_uri')
-    parser.add_argument('--report', action='store_true',
-                        help='write the groups of stops with different names '
-                             'and the hidden lines')
+    parser.add_argument(
+        '--report',
+        action='store_true',
+        help='write the groups of stops with different names and the hidden lines',
+    )
     args = parser.parse_args(argv)
 
     setup_logging(args.config_uri)
@@ -81,11 +90,12 @@ def main(argv=None):
 
     if args.report:
         print('\n'.join(report(found)))
-    print('%d stops linked to Navitia, %d stops in %d clusters, '
-          '%d lines hidden' % (
-              found['linked'],
-              sum(len(members) for _, members, _ in found['clusters']),
-              len(found['clusters']), len(found['hidden_lines'])))
+    clustered = sum(len(members) for _, members, _ in found['clusters'])
+    print(
+        f'{found["linked"]} stops linked to Navitia, '
+        f'{clustered} stops in {len(found["clusters"])} clusters, '
+        f'{len(found["hidden_lines"])} lines hidden'
+    )
 
 
 if __name__ == '__main__':

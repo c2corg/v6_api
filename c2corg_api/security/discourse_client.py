@@ -1,22 +1,18 @@
-from pydiscourse.client import DiscourseClient
-
-import logging
-
-from base64 import b64encode, b64decode
-from pyramid.httpexceptions import HTTPBadRequest
-
-import hmac
 import hashlib
-import requests
+import hmac
+import logging
 import urllib.error
-
+from base64 import b64decode, b64encode
 from urllib.parse import parse_qs, urlparse
+
+import requests
+from pydiscourse.client import DiscourseClient
+from pyramid.httpexceptions import HTTPBadRequest
 
 log = logging.getLogger(__name__)
 
 
 class APIDiscourseClient:
-
     def __init__(self, settings):
         self.settings = settings
         self.timeout = int(settings['url.timeout'])
@@ -37,14 +33,13 @@ class APIDiscourseClient:
         } | {host.strip() for host in extra_hosts.split(',') if host.strip()}
 
         self.discourse_userid_cache = {}
-        # FIXME: are we guaranteed usernames can never change? -> no!
-        self.discourse_username_cache = {}
 
         self.client = DiscourseClient(
-                self.discourse_base_url,
-                api_username='system',  # the built-in Discourse user
-                api_key=self.api_key,
-                timeout=self.timeout)
+            self.discourse_base_url,
+            api_username='system',  # the built-in Discourse user
+            api_key=self.api_key,
+            timeout=self.timeout,
+        )
 
     def get_userid(self, userid):
         discourse_userid = self.discourse_userid_cache.get(userid)
@@ -52,17 +47,7 @@ class APIDiscourseClient:
             discourse_user = self.client.by_external_id(userid)
             discourse_userid = discourse_user['id']
             self.discourse_userid_cache[userid] = discourse_userid
-            self.discourse_username_cache[userid] = discourse_user['username']
         return discourse_userid
-
-    def get_username(self, userid):
-        discourse_username = self.discourse_username_cache.get(userid)
-        if not discourse_username:
-            discourse_user = self.client.by_external_id(userid)
-            self.discourse_userid_cache[userid] = discourse_user['id']
-            discourse_username = discourse_user['username']
-            self.discourse_username_cache[userid] = discourse_username
-        return discourse_username
 
     def sync_sso(self, user):
         result = self.client.sync_sso(
@@ -71,7 +56,8 @@ class APIDiscourseClient:
             username=user.forum_username,
             email=user.email,
             external_id=user.id,
-            **{"custom.user_field_1": str(user.id)})
+            **{'custom.user_field_1': str(user.id)},
+        )
         if result:
             self.discourse_userid_cache[user.id] = result['id']
         return result
@@ -93,8 +79,7 @@ class APIDiscourseClient:
         """Invite a forum user, by username, to a topic."""
         # pydiscourse only invites by e-mail (invite_user_to_topic); the
         # c2corg fork used to add this call by username.
-        return self.client._post(
-            '/t/{0}/invite.json'.format(topic_id), user=username)
+        return self.client._post(f'/t/{topic_id}/invite.json', user=username)
 
     # Below this: SSO provider
     def decode_payload(self, payload):
@@ -113,13 +98,13 @@ class APIDiscourseClient:
             raise HTTPBadRequest('discourse login failed')
 
     def request_nonce(self):
-        url = '%s/session/sso' % self.discourse_base_url
+        url = f'{self.discourse_base_url}/session/sso'
         try:
             r = requests.get(url, allow_redirects=False, timeout=self.timeout)
             assert r.status_code == 302
-        except Exception:
+        except Exception as e:
             log.error('Could not request nonce', exc_info=True)
-            raise Exception('Could not request nonce')
+            raise Exception('Could not request nonce') from e
 
         location = r.headers['Location']
         parsed = urllib.parse.urlparse(location)
@@ -147,7 +132,7 @@ class APIDiscourseClient:
         r_payload = b64encode(urllib.parse.urlencode(params).encode('utf-8'))
         h = hmac.new(key, r_payload, digestmod=hashlib.sha256)
         qs = urllib.parse.urlencode({'sso': r_payload, 'sig': h.hexdigest()})
-        return '%s?%s' % (return_sso_url, qs)
+        return f'{return_sso_url}?{qs}'
 
     def get_nonce_from_sso(self, sso, sig):
         payload = urllib.parse.unquote(sso)
@@ -155,7 +140,7 @@ class APIDiscourseClient:
             decoded = self.decode_payload(payload)
         except Exception as e:
             log.error('Failed to decode payload', e)
-            raise HTTPBadRequest('discourse login failed')
+            raise HTTPBadRequest('discourse login failed') from e
 
         self.check_signature(payload, sig)
 
@@ -170,8 +155,10 @@ class APIDiscourseClient:
         qs = parse_qs(decoded)
         return_sso_url = qs['return_sso_url'][0]
         parsed_return_url = urlparse(return_sso_url)
-        if parsed_return_url.scheme != 'https' \
-                or parsed_return_url.hostname not in self.allowed_sso_hosts:
+        if (
+            parsed_return_url.scheme != 'https'
+            or parsed_return_url.hostname not in self.allowed_sso_hosts
+        ):
             log.error('return_sso_url not allowed: %s', return_sso_url)
             raise HTTPBadRequest('discourse login failed')
 
@@ -184,7 +171,8 @@ class APIDiscourseClient:
     def redirect_without_nonce(self, user):
         nonce = self.request_nonce()
         return self.create_response_payload(
-            user, nonce, '%s/session/sso_login' % self.discourse_public_url)
+            user, nonce, f'{self.discourse_public_url}/session/sso_login'
+        )
 
 
 c = None

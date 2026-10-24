@@ -1,3 +1,5 @@
+from sqlalchemy.sql.expression import and_, asc, or_
+
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, Area
 from c2corg_api.models.article import ARTICLE_TYPE, Article
@@ -5,43 +7,66 @@ from c2corg_api.models.association import Association, updatable_associations
 from c2corg_api.models.book import BOOK_TYPE, Book
 from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import OUTING_TYPE, Outing
-from c2corg_api.models.xreport import Xreport, XREPORT_TYPE
-from c2corg_api.models.route import Route, ROUTE_TYPE
+from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
+from c2corg_api.models.xreport import XREPORT_TYPE, Xreport
 from c2corg_api.views.document_listings import get_documents_for_ids
-from c2corg_api.views.document_schemas import waypoint_documents_config, \
-    route_documents_config, user_profile_documents_config, \
-    image_documents_config, article_documents_config, area_documents_config, \
-    outing_documents_config, book_documents_config, xreport_documents_config
-from sqlalchemy.sql.expression import or_, and_, asc
+from c2corg_api.views.document_schemas import (
+    area_documents_config,
+    article_documents_config,
+    book_documents_config,
+    image_documents_config,
+    outing_documents_config,
+    route_documents_config,
+    user_profile_documents_config,
+    waypoint_documents_config,
+    xreport_documents_config,
+)
 
 associations_to_include = {
     WAYPOINT_TYPE: {
-        'waypoints', 'waypoint_children', 'routes', 'images', 'articles',
-        'books', 'xreports'},
-    ROUTE_TYPE:
-        {'waypoints', 'routes', 'images', 'articles', 'books', 'xreports'},
-    OUTING_TYPE:
-        {'routes', 'images', 'users', 'articles', 'xreports'},
-    IMAGE_TYPE:
-        {'waypoints', 'routes', 'images', 'users', 'outings', 'articles',
-         'areas', 'books', 'xreports'},
-    ARTICLE_TYPE:
-        {'waypoints', 'routes', 'images', 'users', 'outings', 'articles',
-         'books', 'xreports'},
+        'waypoints',
+        'waypoint_children',
+        'routes',
+        'images',
+        'articles',
+        'books',
+        'xreports',
+    },
+    ROUTE_TYPE: {'waypoints', 'routes', 'images', 'articles', 'books', 'xreports'},
+    OUTING_TYPE: {'routes', 'images', 'users', 'articles', 'xreports'},
+    IMAGE_TYPE: {
+        'waypoints',
+        'routes',
+        'images',
+        'users',
+        'outings',
+        'articles',
+        'areas',
+        'books',
+        'xreports',
+    },
+    ARTICLE_TYPE: {
+        'waypoints',
+        'routes',
+        'images',
+        'users',
+        'outings',
+        'articles',
+        'books',
+        'xreports',
+    },
     AREA_TYPE: {'images'},
     BOOK_TYPE: {'routes', 'articles', 'images', 'waypoints'},
-    XREPORT_TYPE: {'waypoints', 'users', 'routes', 'outings', 'articles',
-                   'images'},
-    USERPROFILE_TYPE: {'images'}
+    XREPORT_TYPE: {'waypoints', 'users', 'routes', 'outings', 'articles', 'images'},
+    USERPROFILE_TYPE: {'images'},
 }
 
 
 def get_associations(document, lang, editing_view):
-    """Load and return associated documents.
-    """
+    """Load and return associated documents."""
     types_to_include = associations_to_include.get(document.type, set())
 
     if editing_view:
@@ -49,11 +74,9 @@ def get_associations(document, lang, editing_view):
         types_to_include = types_to_include.intersection(edit_types)
 
     associations = {}
-    if 'waypoints' in types_to_include and \
-            'waypoint_children' in types_to_include:
+    if 'waypoints' in types_to_include and 'waypoint_children' in types_to_include:
         associations['waypoints'] = get_linked_waypoint_parents(document, lang)
-        associations['waypoint_children'] = \
-            get_linked_waypoint_children(document, lang)
+        associations['waypoint_children'] = get_linked_waypoint_children(document, lang)
     elif 'waypoints' in types_to_include:
         associations['waypoints'] = get_linked_waypoints(document, lang)
     if 'routes' in types_to_include:
@@ -85,221 +108,246 @@ def get_associations(document, lang, editing_view):
 
 def get_linked_waypoint_parents(document, lang):
     waypoint_ids = get_first_column(
-        DBSession.query(Waypoint.document_id).
-        filter(Waypoint.redirects_to.is_(None)).
-        join(Association,
-             Association.parent_document_id == Waypoint.document_id).
-        filter(Association.child_document_id == document.document_id).
-        group_by(Waypoint.document_id).
-        all())
+        DBSession.query(Waypoint.document_id)
+        .filter(Waypoint.redirects_to.is_(None))
+        .join(Association, Association.parent_document_id == Waypoint.document_id)
+        .filter(Association.child_document_id == document.document_id)
+        .group_by(Waypoint.document_id)
+        .all()
+    )
 
-    return get_documents_for_ids(
-        waypoint_ids, lang, waypoint_documents_config).get('documents')
+    return get_documents_for_ids(waypoint_ids, lang, waypoint_documents_config).get(
+        'documents'
+    )
 
 
 def get_linked_waypoint_children(document, lang):
     waypoint_ids = get_first_column(
-        DBSession.query(Waypoint.document_id).
-        filter(Waypoint.redirects_to.is_(None)).
-        join(Association,
-             Association.child_document_id == Waypoint.document_id).
-        filter(Association.parent_document_id == document.document_id).
-        group_by(Waypoint.document_id).
-        all())
+        DBSession.query(Waypoint.document_id)
+        .filter(Waypoint.redirects_to.is_(None))
+        .join(Association, Association.child_document_id == Waypoint.document_id)
+        .filter(Association.parent_document_id == document.document_id)
+        .group_by(Waypoint.document_id)
+        .all()
+    )
 
-    return get_documents_for_ids(
-        waypoint_ids, lang, waypoint_documents_config).get('documents')
+    return get_documents_for_ids(waypoint_ids, lang, waypoint_documents_config).get(
+        'documents'
+    )
 
 
 def get_linked_waypoints(document, lang):
     waypoint_ids = get_first_column(
-        DBSession.query(Waypoint.document_id).
-        filter(Waypoint.redirects_to.is_(None)).
-        join(Association,
-             or_(
-                 Association.child_document_id == Waypoint.document_id,
-                 Association.parent_document_id == Waypoint.document_id)).
-        filter(
+        DBSession.query(Waypoint.document_id)
+        .filter(Waypoint.redirects_to.is_(None))
+        .join(
+            Association,
+            or_(
+                Association.child_document_id == Waypoint.document_id,
+                Association.parent_document_id == Waypoint.document_id,
+            ),
+        )
+        .filter(
             or_(
                 Association.parent_document_id == document.document_id,
-                Association.child_document_id == document.document_id)).
-        group_by(Waypoint.document_id).
-        all())
+                Association.child_document_id == document.document_id,
+            )
+        )
+        .group_by(Waypoint.document_id)
+        .all()
+    )
 
-    return get_documents_for_ids(
-        waypoint_ids, lang, waypoint_documents_config).get('documents')
+    return get_documents_for_ids(waypoint_ids, lang, waypoint_documents_config).get(
+        'documents'
+    )
 
 
 def get_linked_routes(document, lang):
     condition_as_child = and_(
         Association.child_document_id == Route.document_id,
-        Association.parent_document_id == document.document_id)
+        Association.parent_document_id == document.document_id,
+    )
     condition_as_parent = and_(
         Association.child_document_id == document.document_id,
-        Association.parent_document_id == Route.document_id)
+        Association.parent_document_id == Route.document_id,
+    )
 
     if document.type == WAYPOINT_TYPE:
         condition = condition_as_child
-    elif document.type in [OUTING_TYPE, IMAGE_TYPE, ARTICLE_TYPE,
-                           XREPORT_TYPE]:
+    elif document.type in [OUTING_TYPE, IMAGE_TYPE, ARTICLE_TYPE, XREPORT_TYPE]:
         condition = condition_as_parent
     else:
         condition = or_(condition_as_child, condition_as_parent)
 
     route_ids = get_first_column(
-        DBSession.query(Route.document_id).
-        filter(Route.redirects_to.is_(None)).
-        join(Association, condition).
-        group_by(Route.document_id).
-        all())
+        DBSession.query(Route.document_id)
+        .filter(Route.redirects_to.is_(None))
+        .join(Association, condition)
+        .group_by(Route.document_id)
+        .all()
+    )
 
-    return get_documents_for_ids(
-        route_ids, lang, route_documents_config).get('documents')
+    return get_documents_for_ids(route_ids, lang, route_documents_config).get(
+        'documents'
+    )
 
 
 def get_linked_users(document, lang):
     user_ids = get_first_column(
-        DBSession.query(User.id).
-        join(Association, Association.parent_document_id == User.id).
-        filter(Association.child_document_id == document.document_id).
-        group_by(User.id).
-        all())
+        DBSession.query(User.id)
+        .join(Association, Association.parent_document_id == User.id)
+        .filter(Association.child_document_id == document.document_id)
+        .group_by(User.id)
+        .all()
+    )
 
-    return get_documents_for_ids(
-        user_ids, lang, user_profile_documents_config).get('documents')
+    return get_documents_for_ids(user_ids, lang, user_profile_documents_config).get(
+        'documents'
+    )
 
 
 def get_linked_images(document, lang):
     image_ids = get_first_column(
-        DBSession.query(Image.document_id).
-        filter(Image.redirects_to.is_(None)).
-        join(
+        DBSession.query(Image.document_id)
+        .filter(Image.redirects_to.is_(None))
+        .join(
             Association,
             and_(
                 Association.child_document_id == Image.document_id,
-                Association.parent_document_id == document.document_id)
-            ).
-        order_by(asc(Image.date_time)).
-        group_by(Image.document_id).
-        all())
+                Association.parent_document_id == document.document_id,
+            ),
+        )
+        .order_by(asc(Image.date_time))
+        .group_by(Image.document_id)
+        .all()
+    )
 
-    return get_documents_for_ids(
-        image_ids, lang, image_documents_config).get('documents')
+    return get_documents_for_ids(image_ids, lang, image_documents_config).get(
+        'documents'
+    )
 
 
 def get_linked_areas(document, lang):
     area_ids = get_first_column(
-        DBSession.query(Area.document_id).
-        filter(Area.redirects_to.is_(None)).
-        join(
+        DBSession.query(Area.document_id)
+        .filter(Area.redirects_to.is_(None))
+        .join(
             Association,
             and_(
                 Association.parent_document_id == Area.document_id,
-                Association.child_document_id == document.document_id)
-            ).
-        group_by(Area.document_id).
-        all())
+                Association.child_document_id == document.document_id,
+            ),
+        )
+        .group_by(Area.document_id)
+        .all()
+    )
 
-    return get_documents_for_ids(
-        area_ids, lang, area_documents_config).get('documents')
+    return get_documents_for_ids(area_ids, lang, area_documents_config).get('documents')
 
 
 def get_linked_outings(document, lang):
     outing_ids = get_first_column(
-        DBSession.query(Outing.document_id).
-        filter(Outing.redirects_to.is_(None)).
-        join(
+        DBSession.query(Outing.document_id)
+        .filter(Outing.redirects_to.is_(None))
+        .join(
             Association,
             and_(
                 Association.parent_document_id == Outing.document_id,
-                Association.child_document_id == document.document_id)
-            ).
-        group_by(Outing.document_id).
-        all())
+                Association.child_document_id == document.document_id,
+            ),
+        )
+        .group_by(Outing.document_id)
+        .all()
+    )
 
-    return get_documents_for_ids(
-        outing_ids, lang, outing_documents_config).get('documents')
+    return get_documents_for_ids(outing_ids, lang, outing_documents_config).get(
+        'documents'
+    )
 
 
 def get_linked_articles(document, lang):
     condition_as_child = and_(
         Association.child_document_id == Article.document_id,
-        Association.parent_document_id == document.document_id
+        Association.parent_document_id == document.document_id,
     )
     condition_as_parent = and_(
         Association.child_document_id == document.document_id,
-        Association.parent_document_id == Article.document_id
+        Association.parent_document_id == Article.document_id,
     )
 
     if document.type == IMAGE_TYPE:
         condition = condition_as_parent
-    elif document.type in [WAYPOINT_TYPE,
-                           OUTING_TYPE,
-                           ROUTE_TYPE,
-                           BOOK_TYPE,
-                           XREPORT_TYPE,
-                           USERPROFILE_TYPE]:
+    elif document.type in [
+        WAYPOINT_TYPE,
+        OUTING_TYPE,
+        ROUTE_TYPE,
+        BOOK_TYPE,
+        XREPORT_TYPE,
+        USERPROFILE_TYPE,
+    ]:
         condition = condition_as_child
 
     elif document.type == ARTICLE_TYPE:
         condition = or_(condition_as_child, condition_as_parent)
 
     article_ids = get_first_column(
-        DBSession.query(Article.document_id).
-        filter(Article.redirects_to.is_(None)).
-        join(
-            Association, condition).
-        group_by(Article.document_id).
-        all())
+        DBSession.query(Article.document_id)
+        .filter(Article.redirects_to.is_(None))
+        .join(Association, condition)
+        .group_by(Article.document_id)
+        .all()
+    )
 
-    return get_documents_for_ids(
-        article_ids, lang, article_documents_config).get('documents')
+    return get_documents_for_ids(article_ids, lang, article_documents_config).get(
+        'documents'
+    )
 
 
 def get_linked_books(document, lang):
     book_ids = get_first_column(
-        DBSession.query(Book.document_id).
-        filter(Book.redirects_to.is_(None)).
-        join(
+        DBSession.query(Book.document_id)
+        .filter(Book.redirects_to.is_(None))
+        .join(
             Association,
             and_(
                 Association.child_document_id == document.document_id,
-                Association.parent_document_id == Book.document_id)
-            ).
-        group_by(Book.document_id).
-        all())
+                Association.parent_document_id == Book.document_id,
+            ),
+        )
+        .group_by(Book.document_id)
+        .all()
+    )
 
-    return get_documents_for_ids(
-        book_ids, lang, book_documents_config).get('documents')
+    return get_documents_for_ids(book_ids, lang, book_documents_config).get('documents')
 
 
 def get_linked_xreports(document, lang):
     condition_as_child = and_(
         Association.child_document_id == Xreport.document_id,
-        Association.parent_document_id == document.document_id
+        Association.parent_document_id == document.document_id,
     )
     condition_as_parent = and_(
         Association.child_document_id == document.document_id,
-        Association.parent_document_id == Xreport.document_id
+        Association.parent_document_id == Xreport.document_id,
     )
 
-    if document.type in [WAYPOINT_TYPE, USERPROFILE_TYPE,
-                         ARTICLE_TYPE, IMAGE_TYPE]:
+    if document.type in [WAYPOINT_TYPE, USERPROFILE_TYPE, ARTICLE_TYPE, IMAGE_TYPE]:
         condition = condition_as_parent
     elif document.type in [ROUTE_TYPE, OUTING_TYPE]:
         condition = condition_as_child
 
     xreport_ids = get_first_column(
-        DBSession.query(Xreport.document_id).
-        filter(Xreport.redirects_to.is_(None)).
-        join(
-            Association, condition).
-        group_by(Xreport.document_id).
-        all())
+        DBSession.query(Xreport.document_id)
+        .filter(Xreport.redirects_to.is_(None))
+        .join(Association, condition)
+        .group_by(Xreport.document_id)
+        .all()
+    )
 
-    return get_documents_for_ids(
-        xreport_ids, lang, xreport_documents_config).get('documents')
+    return get_documents_for_ids(xreport_ids, lang, xreport_documents_config).get(
+        'documents'
+    )
 
 
 def get_first_column(rows):
-    return [r for (r, ) in rows]
+    return [row[0] for row in rows]

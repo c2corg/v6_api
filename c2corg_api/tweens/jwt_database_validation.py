@@ -1,15 +1,15 @@
 import logging
 
-from pyramid.httpexceptions import HTTPUnauthorized, HTTPError
-from c2corg_api.security.roles import is_valid_token, extract_token
-from c2corg_api.views import http_error_handler, catch_all_error_handler
+from pyramid.httpexceptions import HTTPError, HTTPUnauthorized
+
+from c2corg_api.security.roles import extract_token, is_valid_token
+from c2corg_api.views import catch_all_error_handler, http_error_handler
 
 log = logging.getLogger(__name__)
 
 
 def jwt_database_validation_tween_factory(handler, registry):
-    """ Check validity of the JWT token.
-    """
+    """Check validity of the JWT token."""
 
     def tween(request):
 
@@ -35,7 +35,6 @@ def jwt_database_validation_tween_factory(handler, registry):
         if valid:
             return handler(request)
         else:
-            return http_error_handler(
-                HTTPUnauthorized('Invalid token'), request)
+            return http_error_handler(HTTPUnauthorized('Invalid token'), request)
 
     return tween

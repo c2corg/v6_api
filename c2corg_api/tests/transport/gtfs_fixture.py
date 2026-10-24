@@ -1,5 +1,6 @@
 # ruff: noqa: E501
 """A small GTFS archive for the tests."""
+
 import io
 import zipfile
 from datetime import date

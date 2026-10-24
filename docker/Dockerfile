@@ -1,4 +1,4 @@
-FROM docker.io/python:3.14-slim-bookworm
+FROM docker.io/python:3.15-slim-trixie
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL=en_US.UTF-8
@@ -12,19 +12,18 @@ RUN set -x \
     && dpkg-reconfigure locales \
     && /usr/sbin/update-locale LANG=en_US.UTF-8
 
+# git: uv fetches the git-sourced dependencies. Compiled wheels (Shapely,
+# pyproj, psycopg2-binary, numpy) bundle their own native libraries.
 RUN set -x \
     && apt-get -y --no-install-recommends install \
-    git \
-    libffi8 \
-    libgeos-c1v5 \
-    libpq5
+    git
 
 RUN set -x \
  && apt-get -y purge \
  && apt-get -y --purge autoremove \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
-COPY --from=ghcr.io/astral-sh/uv:0.12.21 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /usr/local/bin/uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_PYTHON_DOWNLOADS=never \
     UV_COMPILE_BYTECODE=1 \
