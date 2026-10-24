@@ -1,6 +1,5 @@
 """Tests for the Discourse API client wrapper."""
 
-import unittest
 from unittest.mock import MagicMock, patch
 
 from c2corg_api.security.discourse_client import APIDiscourseClient
@@ -22,7 +21,7 @@ def _ok_response(body):
     return response
 
 
-class TestAPIDiscourseClient(unittest.TestCase):
+class TestAPIDiscourseClient:
     """Check the requests APIDiscourseClient sends to Discourse."""
 
     @patch('pydiscourse.client.requests.request')

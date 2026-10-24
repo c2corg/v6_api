@@ -1,5 +1,3 @@
-import unittest
-
 import markdown
 from markdown.blockprocessors import BlockProcessor
 from markdown.extensions import Extension
@@ -28,7 +26,7 @@ def fake_get_markdown_parser(*args, **kwargs):
     )
 
 
-class TestFormat(unittest.TestCase):
+class TestFormat:
     """
     parse_code() function should never raise an exception. All sensitive
     functions (parsing and cleaning) are inside a try-catch block. This
@@ -36,7 +34,7 @@ class TestFormat(unittest.TestCase):
     appropriate default message (_PARSER_EXCEPTION_MESSAGE) is returned.
     """
 
-    def setUp(self):
+    def setup_method(self):
         self.real_get_markdown_parser = c2c_markdown._get_markdown_parser
         c2c_markdown._get_markdown_parser = fake_get_markdown_parser
 
@@ -44,5 +42,5 @@ class TestFormat(unittest.TestCase):
         result = c2c_markdown.parse_code('!! Hello')
         assert result == c2c_markdown._PARSER_EXCEPTION_MESSAGE
 
-    def tearDown(self):
+    def teardown_method(self):
         c2c_markdown._get_markdown_parser = self.real_get_markdown_parser

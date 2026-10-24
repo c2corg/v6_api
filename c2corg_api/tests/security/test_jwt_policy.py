@@ -1,5 +1,3 @@
-import unittest
-
 import jwt
 from webob import Request
 
@@ -7,8 +5,8 @@ from c2corg_api.security.jwt_policy import IntegerSubJWTAuthenticationPolicy
 from c2corg_api.security.roles import extract_token
 
 
-class TestIntegerSubJWTAuthenticationPolicy(unittest.TestCase):
-    def setUp(self):
+class TestIntegerSubJWTAuthenticationPolicy:
+    def setup_method(self):
         self.secret = 'a_long_enough_secret_key_for_hs256_testing'
         self.policy = IntegerSubJWTAuthenticationPolicy(
             private_key=self.secret,
@@ -79,7 +77,7 @@ class TestIntegerSubJWTAuthenticationPolicy(unittest.TestCase):
         assert userid is None
 
 
-class TestExtractToken(unittest.TestCase):
+class TestExtractToken:
     def _make_request(self, authorization_header):
         environ = {
             'REQUEST_METHOD': 'GET',

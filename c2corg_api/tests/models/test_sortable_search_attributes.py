@@ -1,11 +1,9 @@
-import unittest
-
 import pytest
 
 from c2corg_api.models.common import attributes, sortable_search_attributes
 
 
-class SortableSearchAttributes(unittest.TestCase):
+class TestSortableSearchAttributes:
     def test_check_search_attributes(self):
         """Check that all values used in `sortable_search_attributes` have
         a corresponding value in `attributes`.

@@ -1,5 +1,3 @@
-import unittest
-
 import pytest
 
 from c2corg_api.models.article import Article
@@ -20,7 +18,7 @@ from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.xreport import Xreport, XreportLocale
 
 
-class TestFields(unittest.TestCase):
+class TestFields:
     def test_waypoint_fields(self):
         """Test that the fields listed for a waypoint type are correct."""
         for type in fields_waypoint:
