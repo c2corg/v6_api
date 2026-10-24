@@ -1,8 +1,9 @@
 import logging
 
+from cornice.resource import resource, view
+
 from c2corg_api.views import cors_policy
 from c2corg_api.views.markdown import cook
-from cornice.resource import resource, view
 
 log = logging.getLogger(__name__)
 
@@ -14,8 +15,7 @@ class CookerRest:
 
     @view()
     def post(self):
-        """
-        This service is a stateless service that returns HTML values.
+        """Thi service is a stateless service that returns HTML values.
 
         * Input and output are dictionaries
         * keys are keep unmodified

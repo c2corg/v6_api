@@ -1,17 +1,18 @@
 import logging
 
-from c2corg_api.security.acl import ACLDefault
+from colander import Integer, MappingSchema, SchemaNode, required
+from cornice.resource import resource
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError
+
 from c2corg_api import DBSession
 from c2corg_api.models.user import User
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import user_profile_documents_config
-from c2corg_api.views.validation import validate_id, validate_body_user_id
-from colander import MappingSchema, SchemaNode, Integer, required
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError
+from c2corg_api.views.validation import validate_body_user_id, validate_id
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ def _get_user(user_id):
     user = DBSession.get(User, user_id)
 
     if not user:
-        raise HTTPBadRequest('Unknown user {}'.format(user_id))
+        raise HTTPBadRequest(f'Unknown user {user_id}')
 
     return user
 
@@ -54,11 +55,13 @@ class UserBlockRest(ACLDefault):
             client = get_discourse_client(self.request.registry.settings)
             block_duration = 99999  # 99999 days = 273 years
             client.suspend(user.id, block_duration, 'account blocked by moderator')
-        except Exception:
+        except Exception as e:
             log.error(
                 'Suspending account in Discourse failed: %d', user.id, exc_info=True
             )
-            raise HTTPInternalServerError('Suspending account in Discourse failed')
+            raise HTTPInternalServerError(
+                'Suspending account in Discourse failed'
+            ) from e
 
         return {}
 
@@ -90,11 +93,13 @@ class UserUnblockRest(ACLDefault):
         try:
             client = get_discourse_client(self.request.registry.settings)
             client.unsuspend(user.id)
-        except Exception:
+        except Exception as e:
             log.error(
                 'Unsuspending account in Discourse failed: %d', user.id, exc_info=True
             )
-            raise HTTPInternalServerError('Unsuspending account in Discourse failed')
+            raise HTTPInternalServerError(
+                'Unsuspending account in Discourse failed'
+            ) from e
 
         return {}
 

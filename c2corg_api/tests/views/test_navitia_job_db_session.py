@@ -33,13 +33,13 @@ class TestNavitiaJobDbSession(BaseTestCase):
     # The jobs run in their own thread, outside of pyramid_tm: they must end
     # their transaction and remove their scoped session themselves.
 
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         # Use a real pool (not the test connection) to count connections.
         self.job_engine = get_engine()
         DBSession.configure(bind=self.job_engine)
 
-    def tearDown(self):  # noqa
+    def tearDown(self):
         DBSession.configure(bind=self.connection)
         self.job_engine.dispose()
         super().tearDown()
@@ -59,16 +59,16 @@ class TestNavitiaJobDbSession(BaseTestCase):
             thread = threading.Thread(target=target)
             thread.start()
             thread.join(timeout=30)
-            self.assertFalse(thread.is_alive())
+            assert not thread.is_alive()
         return state, redis_client.return_value
 
     def _assert_connection_released(self, state):
         pool = self.job_engine.pool
         # the job did use a connection ...
-        self.assertEqual(pool.checkedin(), 1)
+        assert pool.checkedin() == 1
         # ... and gave it back to the pool
-        self.assertEqual(pool.checkedout(), 0)
-        self.assertFalse(state['session_left'])
+        assert pool.checkedout() == 0
+        assert not state['session_left']
 
     def test_waypoints_job_releases_connection(self):
         request = mock.Mock()

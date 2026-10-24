@@ -1,57 +1,55 @@
-import os
 import functools
+import os
+
 import requests
+from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPForbidden,
+    HTTPFound,
+    HTTPInternalServerError,
+    HTTPNotFound,
+)
 
 from c2corg_api.models import DBSession
+from c2corg_api.models.common.fields_image import fields_image
 from c2corg_api.models.document import ArchiveDocumentLocale
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.feed import update_feed_images_upload
 from c2corg_api.models.image import (
-    Image,
-    schema_image,
-    schema_update_image,
     IMAGE_TYPE,
+    ArchiveImage,
+    Image,
+    get_image_filenames,
     schema_create_image,
     schema_create_image_list,
-    ArchiveImage,
-    get_image_filenames,
+    schema_image,
+    schema_update_image,
 )
 from c2corg_api.search.notify_sync import run_on_successful_transaction
 from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views.document_info import DocumentInfoRest
-from c2corg_api.views.document_schemas import image_documents_config
-from c2corg_api.views.document_version import DocumentVersionRest
-
-from c2corg_api.models.common.fields_image import fields_image
-from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
-
+from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
     DocumentRest,
     make_validator_create,
     make_validator_update,
     validate_document,
 )
-from c2corg_api.views import cors_policy, restricted_json_view
-from c2corg_api.views import set_creator as set_creator_on_documents
+from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import image_documents_config
+from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.validation import (
-    validate_id,
-    validate_pagination,
-    validate_lang_param,
-    validate_preferred_lang_param,
     validate_associations,
     validate_associations_in,
-    validate_lang,
-    validate_version_id,
     validate_cook_param,
-)
-
-from pyramid.httpexceptions import (
-    HTTPForbidden,
-    HTTPNotFound,
-    HTTPBadRequest,
-    HTTPInternalServerError,
-    HTTPFound,
+    validate_id,
+    validate_lang,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+    validate_version_id,
 )
 
 # Let browsers cache the redirect to the media server: the image filename
@@ -60,7 +58,7 @@ PROXY_CACHE_CONTROL = 'public, max-age=86400'
 
 
 def check_filename_unique(image, request, updating):
-    """Checks that filename is unique"""
+    """Check that filename is unique."""
     if 'filename' not in image:
         return
     sql = DBSession.query(Image).filter(Image.filename == image['filename'])
@@ -139,9 +137,10 @@ def create_image(self, document_in):
 
 
 def before_image_update(request, document, document_in):
-    """
-    callback sent to DocumentRest.update_document()
-    check update of filename, and publish on image backend if needed
+    """Check filename updates and publish them on the image backend.
+
+    Callback sent to DocumentRest.update_document()
+    check update of filename, and publish on image backend if needed.
     """
     old_filename = document.filename
     new_filename = document_in.filename
@@ -155,18 +154,18 @@ def publish_image_in_backend(request, filename):
     url = '{}/{}'.format(settings['image_backend.url'], 'publish')
     data = {'secret': settings['image_backend.secret_key'], 'filename': filename}
 
-    response = requests.post(url, data)
+    response = requests.post(url, data, timeout=int(settings['url.timeout']))
 
     if response.status_code != 200:
         raise HTTPInternalServerError(
-            'Image backend returns : {} {}'.format(
-                response.status_code, response.reason
-            )
+            f'Image backend returns : {response.status_code} {response.reason}'
         )
 
 
 def delete_all_files_for_image(document_id, request):
-    """When the current database transaction is committed successfully,
+    """Delete the files of an image document after commit.
+
+    When the current database transaction is committed successfully,
     delete all files of the given image document by making a request to
     the image service.
     Note that no error is raised if this requests fails.
@@ -189,13 +188,12 @@ def delete_all_files_for_image(document_id, request):
                 'secret': settings['image_backend.secret_key'],
                 'filenames': filenames,
             },
+            timeout=int(settings['url.timeout']),
         )
 
         if response.status_code != 200:
             raise HTTPInternalServerError(
-                'Deleting image files failed: {} {}'.format(
-                    response.status_code, response.reason
-                )
+                f'Deleting image files failed: {response.status_code} {response.reason}'
             )
 
     run_on_successful_transaction(send_delete_request)
@@ -240,7 +238,7 @@ class ImageRest(DocumentRest):
             image_id = self.request.validated['id']
             image = DBSession.get(Image, image_id)
             if image is None:
-                raise HTTPNotFound('No image found for id {}'.format(image_id))
+                raise HTTPNotFound(f'No image found for id {image_id}')
             new_image_type = self.request.validated['document']['image_type']
             if new_image_type == 'copyright':
                 if new_image_type != image.image_type:
@@ -298,7 +296,7 @@ class ImageInfoRest(DocumentInfoRest):
 
 
 def validate_size(request, **kwargs):
-    """Checks if size is one of the available sizes."""
+    """Check if size is one of the available sizes."""
     size = request.GET.get('size', None)
     if size in (None, 'SI', 'MI', 'BI'):
         request.validated['size'] = size
@@ -307,7 +305,7 @@ def validate_size(request, **kwargs):
 
 
 def validate_extension(request, **kwargs):
-    """Checks if the extension is an modern one."""
+    """Check if the extension is an modern one."""
     ext = request.GET.get('extension', None)
     size = request.GET.get('size', None)
     if (ext is None) or (ext in ('webp', 'avif') and size is not None):
@@ -329,14 +327,14 @@ class ImageProxyRest(ACLDefault):
             raise HTTPNotFound()
         image_url = self.request.registry.settings['image_url']
         if size is None:
-            location = '{}{}'.format(image_url, filename)
+            location = f'{image_url}{filename}'
         else:
             base, ext = os.path.splitext(filename)
             if extension is None:
                 ext = '.jpg' if ext == '.svg' else ext
             else:
                 ext = '.' + extension
-            location = '{}{}{}{}'.format(image_url, base, size, ext)
+            location = f'{image_url}{base}{size}{ext}'
         return HTTPFound(location, headers={'Cache-Control': PROXY_CACHE_CONTROL})
 
 

@@ -1,39 +1,40 @@
 import datetime
 import logging
 import re
+from functools import partial
 
 import colander
 import requests
+from cornice.resource import resource
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPForbidden, HTTPInternalServerError
+from pyramid.settings import asbool
+from sqlalchemy.sql.expression import and_, func
+
 from c2corg_api.emails.email_service import get_email_service
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentLocale
-from c2corg_api.models.user import User, schema_user, schema_create_user, Purpose
+from c2corg_api.models.user import Purpose, User, schema_create_user, schema_user
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import (
-    try_login,
+    extract_token,
     log_validated_user_i_know_what_i_do,
     remove_token,
-    extract_token,
     renew_token,
+    try_login,
 )
 from c2corg_api.views import (
     cors_policy,
     json_view,
-    restricted_view,
     restricted_json_view,
+    restricted_view,
     to_json_dict,
 )
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.validation import validate_required_json_string
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from functools import partial
-from pyramid.httpexceptions import HTTPInternalServerError, HTTPForbidden
-from pyramid.settings import asbool
-from sqlalchemy.sql.expression import and_, func
 
 log = logging.getLogger(__name__)
 
@@ -45,14 +46,16 @@ VALIDATION_EXPIRE_DAYS = 3
 MINIMUM_PASSWORD_LENGTH = 10
 
 PASSWORD_STRENGTH_ERROR = (
-    'Password must be at least {0} characters long and contain a '
-    'lowercase letter, an uppercase letter, a digit and a special '
-    'character'.format(MINIMUM_PASSWORD_LENGTH)
+    f'Password must be at least {MINIMUM_PASSWORD_LENGTH} characters long and '
+    'contain a lowercase letter, an uppercase letter, a digit and a special '
+    'character'
 )
 
 
 def is_password_strong_enough(password):
-    """Simple complexity check for newly created/changed passwords: at
+    """Check the complexity of a new password.
+
+    Simple complexity check for newly created/changed passwords: at
     least one lowercase letter, one uppercase letter, one digit and one
     special (non-alphanumeric, non-space) character. Not applied to
     existing passwords (login, "current password" checks) - only to
@@ -67,7 +70,7 @@ def is_password_strong_enough(password):
 
 
 def is_valid_email(email):
-    """Checks if a string is a valid email."""
+    """Check if a string is a valid email."""
     try:
         colander.Email()(None, email)
     except colander.Invalid:
@@ -76,10 +79,10 @@ def is_valid_email(email):
 
 
 def validate_json_password(request, require_strength=True, **kwargs):
-    """Checks if the password was given and encodes it.
-    This is done here as the password is not an SQLAlchemy field.
-    In addition, we can ensure the password is not leaked in the
-    validation error messages.
+    """Check if the password was given and encodes it.
+
+    This is done here as the password is not an SQLAlchemy field. In addition, we can
+    ensure the password is not leaked in the validation error messages.
 
     `require_strength` gates the length/complexity checks: only a
     password being *set* (registration, reset) should be held to the
@@ -88,7 +91,6 @@ def validate_json_password(request, require_strength=True, **kwargs):
     their password is correct - see partial() usage on the login view
     below.
     """
-
     if 'password' not in request.json:
         request.errors.add('body', 'password', 'Required')
         return
@@ -121,8 +123,7 @@ def is_unused_user_attribute(attrname, value, lowercase=False):
 
 
 def validate_unique_attribute(attrname, request, lowercase=False, **kwargs):
-    """Checks if the given attribute is unique."""
-
+    """Check if the given attribute is unique."""
     if attrname in request.json:
         value = request.json[attrname]
         if is_unused_user_attribute(attrname, value, lowercase=lowercase):
@@ -168,10 +169,11 @@ def validate_forum_username(request, **kwargs):
 
 
 def validate_username(request, **kwargs):
-    """Checks username is set, strips leading/trailing whitespaces,
+    """Check and normalize the username.
+
+    Checks username is set, strips leading/trailing whitespaces,
     checks unicity and if an email, that it matches the provided email.
     """
-
     if 'username' not in request.json:
         request.errors.add('body', 'username', 'Required')
         return
@@ -204,7 +206,6 @@ def validate_username(request, **kwargs):
 
 def validate_captcha(request, **kwargs):
     """Validate the recaptcha sent by UI."""
-
     settings = request.registry.settings
     if asbool(settings['skip.captcha.validation']):
         log.warning('Skipping captcha validation')
@@ -264,14 +265,14 @@ class UserRegistrationRest(ACLDefault):
         )
         # Checkbox is mandatory on the frontend when registering
         # so we can store ToS acceptance.
-        user.tos_validated = datetime.datetime.utcnow()
+        user.tos_validated = datetime.datetime.now(datetime.UTC)
 
         DBSession.add(user)
         try:
             DBSession.flush()
-        except Exception:
+        except Exception as e:
             log.warning('Error persisting user', exc_info=True)
-            raise HTTPInternalServerError('Error persisting user')
+            raise HTTPInternalServerError('Error persisting user') from e
 
         # also create a version for the profile
         DocumentRest.create_new_version(user.profile, user.id)
@@ -291,7 +292,7 @@ def validate_user_from_nonce(purpose, request, **kwargs):
     if nonce is None:
         request.errors.add('querystring', 'nonce', 'missing nonce')
     else:
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.UTC)
         user = (
             DBSession.query(User)
             .filter(
@@ -309,7 +310,8 @@ def validate_user_from_nonce(purpose, request, **kwargs):
 
 @resource(path='/users/validate_new_password/{nonce}', cors_policy=cors_policy)
 class UserValidateNewPasswordRest(ACLDefault):
-    """
+    """Set a new password for a user who forgot theirs.
+
     This service allows to set a new password in case a user has forgotten
     their password. The expected nonce is the one generated by the
     `/users/request_password_change` service (see below).
@@ -344,9 +346,9 @@ class UserValidateNewPasswordRest(ACLDefault):
             user.clear_validation_nonce()
             try:
                 DBSession.flush()
-            except Exception:
+            except Exception as e:
                 log.warning('Error persisting user', exc_info=True)
-                raise HTTPInternalServerError('Error persisting user')
+                raise HTTPInternalServerError('Error persisting user') from e
 
             return response
         else:
@@ -369,11 +371,11 @@ def validate_required_user_from_email(request, **kwargs):
 
 @resource(path='/users/request_password_change', cors_policy=cors_policy)
 class UserRequestChangePasswordRest(ACLDefault):
-    """
-    This web-service is used when a user has forgotten their password.
-    It will send out an email containing a link to a page on which the
-    user can enter a new password. The new password is sent to the
-    web-service `/users/validate_new_password/{nonce}` (see above).
+    """This web-service is used when a user has forgotten their password.
+
+    It will send out an email containing a link to a page on which the user can enter a
+    new password. The new password is sent to the web-service
+    `/users/validate_new_password/{nonce}` (see above).
     """
 
     @json_view(validators=[validate_required_user_from_email])
@@ -388,9 +390,9 @@ class UserRequestChangePasswordRest(ACLDefault):
 
         try:
             DBSession.flush()
-        except Exception:
+        except Exception as e:
             log.warning('Error persisting user', exc_info=True)
-            raise HTTPInternalServerError('Error persisting user')
+            raise HTTPInternalServerError('Error persisting user') from e
 
         email_service = get_email_service(request)
         nonce = user.validation_nonce
@@ -426,16 +428,16 @@ class UserNonceValidationRest(ACLDefault):
                 client = get_discourse_client(settings)
                 r = client.redirect_without_nonce(user)
                 response['redirect_internal'] = r
-            except Exception:
+            except Exception as e:
                 # Any error with discourse must prevent login and validation
                 log.error('Error logging into discourse for %d', user.id, exc_info=True)
-                raise HTTPInternalServerError('Error with Discourse')
+                raise HTTPInternalServerError('Error with Discourse') from e
 
             try:
                 DBSession.flush()
-            except Exception:
+            except Exception as e:
                 log.warning('Error persisting user', exc_info=True)
-                raise HTTPInternalServerError('Error persisting user')
+                raise HTTPInternalServerError('Error persisting user') from e
 
             return response
         else:
@@ -458,15 +460,15 @@ class UserChangeEmailNonceValidationRest(ACLDefault):
         try:
             client = get_discourse_client(request.registry.settings)
             client.sync_sso(user)
-        except Exception:
+        except Exception as e:
             log.error('Error syncing email with discourse', exc_info=True)
-            raise HTTPInternalServerError('Error with Discourse')
+            raise HTTPInternalServerError('Error with Discourse') from e
 
         try:
             DBSession.flush()
-        except Exception:
+        except Exception as e:
             log.warning('Error persisting user', exc_info=True)
-            raise HTTPInternalServerError('Error persisting user')
+            raise HTTPInternalServerError('Error persisting user') from e
 
         # no login since user is supposed to be already logged in
 
@@ -482,14 +484,13 @@ login_schema = LoginSchema()
 
 def token_to_response(user, token, request):
     assert token is not None
-    expire_time = token.expire - datetime.datetime(1970, 1, 1)
     roles = ['moderator'] if user.moderator else []
     return {
         'token': token.value,
         'username': user.username,
         'name': user.name,
         'forum_username': user.forum_username,
-        'expire': int(expire_time.total_seconds()),
+        'expire': int(token.expire.timestamp()),
         'roles': roles,
         'id': user.id,
         'lang': user.lang,
@@ -531,12 +532,12 @@ class UserLoginRest(ACLDefault):
                     DBSession.execute(
                         User.__table__.update()
                         .where(User.id == user.id)
-                        .values(tos_validated=datetime.datetime.utcnow())
+                        .values(tos_validated=datetime.datetime.now(datetime.UTC))
                     )
                     DBSession.flush()
-                except Exception:
+                except Exception as e:
                     log.warning('Error persisting user', exc_info=True)
-                    raise HTTPInternalServerError('Error persisting user')
+                    raise HTTPInternalServerError('Error persisting user') from e
 
             response = token_to_response(user, token, request)
             if 'discourse' in request.json:
@@ -561,6 +562,41 @@ class UserLoginRest(ACLDefault):
             request.errors.status = 401
             request.errors.add('body', 'user', 'Login failed')
             return None
+
+
+class DiscourseRedirectSchema(colander.MappingSchema):
+    """Signed payload Discourse sent to the UI's `/auth-sso` page."""
+
+    sso = colander.SchemaNode(colander.String())
+    sig = colander.SchemaNode(colander.String())
+
+
+discourse_redirect_schema = DiscourseRedirectSchema()
+
+
+@resource(path='/users/discourse-redirect', cors_policy=cors_policy)
+class UserDiscourseRedirectRest(ACLDefault):
+    """Answer a Discourse SSO handshake for an already logged-in user."""
+
+    # The browser asks the forum for a nonce (`<forum>/session/sso`), gets
+    # sent to the UI's `/auth-sso` page with the signed `sso`/`sig` payload,
+    # and the UI exchanges it here for the signed `sso_login` URL to send the
+    # browser to. Discourse binds the nonce to the browser session that asked
+    # for it (`discourse_connect_csrf_protection`), so a nonce requested
+    # server-side (see `redirect_without_nonce`) can't open a forum session
+    # in the browser.
+
+    @restricted_json_view(
+        schema=discourse_redirect_schema, validators=[colander_body_validator]
+    )
+    def post(self):
+        """Return the signed `sso_login` URL to send the browser to."""
+        request = self.request
+        user = DBSession.get(User, request.authenticated_userid)
+        client = get_discourse_client(request.registry.settings)
+        sso = request.validated['sso']
+        sig = request.validated['sig']
+        return {'redirect': client.redirect(user, sso, sig)}
 
 
 @resource(path='/users/renew', cors_policy=cors_policy)

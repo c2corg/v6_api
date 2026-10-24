@@ -1,31 +1,27 @@
-from c2corg_api.scripts.es.sync import sync_es
-from c2corg_api.search import search_documents, elasticsearch_config
-# from pytest import mark
+import base64
+import datetime
+import hashlib
+import hmac
+import re
+import time
+from unittest.mock import MagicMock, Mock, patch
+from urllib.parse import quote, urlencode, urlparse
 
+import pytest
+from pyramid.httpexceptions import HTTPBadRequest
+
+# from pytest import mark
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
-from c2corg_api.models.user_profile import UserProfile, USERPROFILE_TYPE
-
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
+from c2corg_api.scripts.es.sync import sync_es
+from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.security.discourse_client import (
     APIDiscourseClient,
     get_discourse_client,
     set_discourse_client,
 )
-
-from pyramid.httpexceptions import HTTPBadRequest
-
-from urllib.parse import urlparse, urlencode, quote
-
-import base64
-import hashlib
-import hmac
-import re
-import time
-import datetime
-
-from unittest.mock import Mock, MagicMock, patch
-
+from c2corg_api.tests.views import BaseTestRest
 
 forum_username_tests = {
     # min length
@@ -49,7 +45,7 @@ forum_username_tests = {
 
 
 class BaseUserTestRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.original_discourse_client = get_discourse_client(self.settings)
         self._prefix = '/users'
         self._model = User
@@ -125,8 +121,8 @@ class TestUserRest(BaseUserTestRest):
         body = self.app_post_json(url, request_body, status=200).json
         user_id = body.get('id')
         user = self.session.get(User, user_id)
-        self.assertFalse(user.email_validated)
-        self.assertIsNotNone(user.tos_validated)
+        assert not user.email_validated
+        assert user.tos_validated is not None
         _send_email.check_call_once()
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
@@ -143,7 +139,7 @@ class TestUserRest(BaseUserTestRest):
         body = self.app_post_json(url, request_body, status=200).json
         user_id = body.get('id')
         user = self.session.get(User, user_id)
-        self.assertEqual(user.lang, 'fr')
+        assert user.lang == 'fr'
         _send_email.check_call_once()
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
@@ -161,7 +157,7 @@ class TestUserRest(BaseUserTestRest):
         body = self.app_post_json(url, request_body, status=200).json
         user_id = body.get('id')
         user = self.session.get(User, user_id)
-        self.assertEqual(user.lang, 'en')
+        assert user.lang == 'en'
         _send_email.check_call_once()
 
     def test_register_invalid_lang(self):
@@ -183,17 +179,17 @@ class TestUserRest(BaseUserTestRest):
         for forum_username, value in forum_username_tests.items():
             i += 1
             request_body = {
-                'username': 'test{}'.format(i),
+                'username': f'test{i}',
                 'forum_username': forum_username,
-                'name': 'Max Mustermann{}'.format(i),
+                'name': f'Max Mustermann{i}',
                 'password': 'Super$ecret1',
-                'email': 'some_user{}@camptocamp.org'.format(i),
+                'email': f'some_user{i}@camptocamp.org',
             }
             if value is False:
                 self.app_post_json(url, request_body, status=200).json
             else:
                 json = self.app_post_json(url, request_body, status=400).json
-                self.assertEqual(json['errors'][0]['description'], value)
+                assert json['errors'][0]['description'] == value
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_register_forum_username_unique(self, _send_email):
@@ -206,9 +202,7 @@ class TestUserRest(BaseUserTestRest):
         }
         url = self._prefix + '/register'
         json = self.app_post_json(url, request_body, status=400).json
-        self.assertEqual(
-            json['errors'][0]['description'], 'already used forum_username'
-        )
+        assert json['errors'][0]['description'] == 'already used forum_username'
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_register_stripped_username(self, _send_email):
@@ -221,9 +215,7 @@ class TestUserRest(BaseUserTestRest):
         }
         url = self._prefix + '/register'
         json = self.app_post_json(url, request_body, status=400).json
-        self.assertEqual(
-            json['errors'][0]['description'], 'This username already exists'
-        )
+        assert json['errors'][0]['description'] == 'This username already exists'
 
         request_body = {
             'username': ' username with spaces ',
@@ -237,8 +229,8 @@ class TestUserRest(BaseUserTestRest):
         self.assertBodyEqual(body, 'username', 'username with spaces')
         user_id = body.get('id')
         user = self.session.get(User, user_id)
-        self.assertIsNotNone(user)
-        self.assertEqual(user.username, 'username with spaces')
+        assert user is not None
+        assert user.username == 'username with spaces'
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_register_username_email_not_equals_email(self, _send_email):
@@ -251,10 +243,10 @@ class TestUserRest(BaseUserTestRest):
         }
         url = self._prefix + '/register'
         json = self.app_post_json(url, request_body, status=400).json
-        self.assertEqual(
-            json['errors'][0]['description'],
-            'An email address used as username should be the '
-            + 'same as the one used as the account email address.',
+        assert (
+            json['errors'][0]['description']
+            == 'An email address used as username should be the '
+            + 'same as the one used as the account email address.'
         )
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
@@ -280,7 +272,7 @@ class TestUserRest(BaseUserTestRest):
         }
         url = self._prefix + '/register'
         json = self.app_post_json(url, request_body, status=400).json
-        self.assertEqual(json['errors'][0]['description'], 'Invalid email address')
+        assert json['errors'][0]['description'] == 'Invalid email address'
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_register_discourse_up(self, _send_email):
@@ -299,21 +291,21 @@ class TestUserRest(BaseUserTestRest):
         self.assertBodyEqual(body, 'forum_username', 'testf')
         self.assertBodyEqual(body, 'name', 'Max Mustermann')
         self.assertBodyEqual(body, 'email', 'some_user@camptocamp.org')
-        self.assertNotIn('password', body)
-        self.assertIn('id', body)
+        assert 'password' not in body
+        assert 'id' in body
         user_id = body.get('id')
         user = self.session.get(User, user_id)
-        self.assertIsNotNone(user)
-        self.assertFalse(user.email_validated)
+        assert user is not None
+        assert not user.email_validated
         profile = self.session.get(UserProfile, user_id)
-        self.assertIsNotNone(profile)
-        self.assertEqual(len(profile.versions), 1)
+        assert profile is not None
+        assert len(profile.versions) == 1
         _send_email.check_call_once()
 
-        self.assertEqual(user.lang, 'fr')
+        assert user.lang == 'fr'
         # Simulate confirmation email validation
         nonce = self.extract_nonce(_send_email, 'validate_register_email')
-        url_api_validation = '/users/validate_register_email/%s' % nonce
+        url_api_validation = f'/users/validate_register_email/{nonce}'
         self.app_post_json(url_api_validation, {}, status=200)
 
         # Need to expunge the profile and user so that the latest
@@ -321,9 +313,9 @@ class TestUserRest(BaseUserTestRest):
         self.session.expunge(profile)
         self.session.expunge(user)
         profile = self.session.get(UserProfile, user_id)
-        self.assertEqual(len(profile.versions), 1)
+        assert len(profile.versions) == 1
         user = self.session.get(User, user_id)
-        self.assertTrue(user.email_validated)
+        assert user.email_validated
 
         # Now reject non unique attributes
         body = self.app_post_json(url, request_body, status=400).json
@@ -361,7 +353,7 @@ class TestUserRest(BaseUserTestRest):
         url = self._prefix + '/register'
 
         body = self.app_post_json(url, request_body, status=200).json
-        self.assertIn('id', body)
+        assert 'id' in body
         user_id = body.get('id')
 
         # check that the profile is not inserted in the search index
@@ -369,11 +361,11 @@ class TestUserRest(BaseUserTestRest):
         search_doc = search_documents[USERPROFILE_TYPE].get(
             id=user_id, index=elasticsearch_config['index'], ignore=404
         )
-        self.assertIsNone(search_doc)
+        assert search_doc is None
 
         # Simulate confirmation email validation
         nonce = self.extract_nonce(_send_email, 'validate_register_email')
-        url_api_validation = '/users/validate_register_email/%s' % nonce
+        url_api_validation = f'/users/validate_register_email/{nonce}'
         self.app_post_json(url_api_validation, {}, status=200)
 
         # check that the profile is inserted in the index after confirmation
@@ -381,10 +373,10 @@ class TestUserRest(BaseUserTestRest):
         search_doc = search_documents[USERPROFILE_TYPE].get(
             id=user_id, index=elasticsearch_config['index']
         )
-        self.assertIsNotNone(search_doc)
+        assert search_doc is not None
 
-        self.assertIsNotNone(search_doc['doc_type'])
-        self.assertEqual(search_doc['title_fr'], 'Max Mustermann testf')
+        assert search_doc['doc_type'] is not None
+        assert search_doc['title_fr'] == 'Max Mustermann testf'
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_register_discourse_down(self, _send_email):
@@ -403,7 +395,7 @@ class TestUserRest(BaseUserTestRest):
 
         # Simulate confirmation email validation
         nonce = self.extract_nonce(_send_email, 'validate_register_email')
-        url_api_validation = '/users/validate_register_email/%s' % nonce
+        url_api_validation = f'/users/validate_register_email/{nonce}'
 
         self.app_post_json(url_api_validation, {}, status=500)
 
@@ -427,7 +419,7 @@ class TestUserRest(BaseUserTestRest):
 
         # Simulate confirmation email validation
         nonce = self.extract_nonce(_send_email, 'change_password')
-        url_api_validation = '/users/validate_new_password/%s' % nonce
+        url_api_validation = f'/users/validate_new_password/{nonce}'
 
         self.app_post_json(
             url_api_validation,
@@ -439,10 +431,10 @@ class TestUserRest(BaseUserTestRest):
 
         self.session.expunge(user)
         user = self.session.get(User, user_id)
-        self.assertIsNone(user.validation_nonce)
+        assert user.validation_nonce is None
         modified_encoded_password = user.password
 
-        self.assertTrue(initial_encoded_password != modified_encoded_password)
+        assert initial_encoded_password != modified_encoded_password
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_forgot_password_discourse_down(self, _send_email):
@@ -457,7 +449,7 @@ class TestUserRest(BaseUserTestRest):
 
         # Simulate confirmation email validation
         nonce = self.extract_nonce(_send_email, 'change_password')
-        url_api_validation = '/users/validate_new_password/%s' % nonce
+        url_api_validation = f'/users/validate_new_password/{nonce}'
 
         # Succeed anyway since only the password has changed
         self.app_post_json(
@@ -480,8 +472,9 @@ class TestUserRest(BaseUserTestRest):
     # @mark.jobs
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_purge_accounts(self, _send_email):
-        from c2corg_api.jobs.purge_non_activated_accounts import purge_account
         from datetime import datetime
+
+        from c2corg_api.jobs.purge_non_activated_accounts import purge_account
 
         request_body = {
             'username': 'test',
@@ -510,12 +503,13 @@ class TestUserRest(BaseUserTestRest):
 
         # The user should be removed
         purge_account(self.session)
-        self.assertEqual(0, query.count())
+        assert 0 == query.count()
 
     # @mark.jobs
     def test_purge_tokens(self):
-        from c2corg_api.jobs.purge_expired_tokens import purge_token
         from datetime import datetime
+
+        from c2corg_api.jobs.purge_expired_tokens import purge_token
 
         body = self.login('moderator', status=200).json
         token_value = body['token']
@@ -526,7 +520,7 @@ class TestUserRest(BaseUserTestRest):
 
         # Token should still exist
         purge_token(self.session)
-        self.assertEqual(1, query.count())
+        assert 1 == query.count()
 
         # Expire token
         token = query.one()
@@ -534,7 +528,7 @@ class TestUserRest(BaseUserTestRest):
 
         # The token should be removed
         purge_token(self.session)
-        self.assertEqual(0, query.count())
+        assert 0 == query.count()
 
     def login(
         self,
@@ -566,19 +560,19 @@ class TestUserRest(BaseUserTestRest):
 
     def test_login_success_discourse_up(self):
         body = self.login('moderator', status=200).json
-        self.assertTrue('token' in body)
+        assert 'token' in body
 
     def test_login_success_discourse_down(self):
         # Topoguide login allowed even if Discourse is down.
         body = self.login('moderator', status=200).json
-        self.assertTrue('token' in body)
+        assert 'token' in body
 
     def test_login_success_use_email(self):
         # login allowed if providing the email instead of login
         body = self.login(
             'moderator@camptocamp.org', self.global_passwords['moderator'], status=200
         ).json
-        self.assertTrue('token' in body)
+        assert 'token' in body
 
     def test_login_success_with_legacy_short_password(self):
         # Regression test: MINIMUM_PASSWORD_LENGTH/complexity are policy
@@ -593,7 +587,7 @@ class TestUserRest(BaseUserTestRest):
         self.session.flush()
 
         body = self.login('contributor', password='abc', status=200).json
-        self.assertTrue('token' in body)
+        assert 'token' in body
 
     def test_login_blocked_account(self):
         contributor = self.session.get(User, self.global_userids['contributor'])
@@ -616,13 +610,13 @@ class TestUserRest(BaseUserTestRest):
 
         moderator = self.session.query(User).filter(User.username == 'moderator').one()
         redirect1 = self.discourse_client.redirect(moderator, sso, sig)
-        self.assertTrue(redirect1.startswith(return_sso_url + '?'))
+        assert redirect1.startswith(return_sso_url + '?')
 
         body = self.login('moderator', sso=sso, sig=sig, discourse=True).json
-        self.assertTrue('token' in body)
+        assert 'token' in body
         redirect2 = body['redirect']
 
-        self.assertEqual(redirect1, redirect2)
+        assert redirect1 == redirect2
 
     def test_login_discourse_rejects_unlisted_return_sso_url(self):
         self.set_discourse_not_mocked()
@@ -638,8 +632,48 @@ class TestUserRest(BaseUserTestRest):
         )
 
         moderator = self.session.query(User).filter(User.username == 'moderator').one()
-        with self.assertRaises(HTTPBadRequest):
+        with pytest.raises(HTTPBadRequest):
             self.discourse_client.redirect(moderator, sso, sig)
+
+    def test_discourse_redirect_success(self):
+        self.set_discourse_not_mocked()
+        self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
+        return_sso_url = 'https://forum-test.example.org/session/sso_login'
+        self.discourse_client.allowed_sso_hosts = {'forum-test.example.org'}
+
+        sso, sig = self._build_signed_sso_payload(return_sso_url)
+
+        moderator = self.session.query(User).filter(User.username == 'moderator').one()
+        expected = self.discourse_client.redirect(moderator, sso, sig)
+
+        body = self.post_json_with_token(
+            '/users/discourse-redirect',
+            self.global_tokens['moderator'],
+            {'sso': sso, 'sig': sig},
+            status=200,
+        )
+        assert body['redirect'] == expected
+
+    def test_discourse_redirect_bad_signature(self):
+        self.set_discourse_not_mocked()
+        self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
+        self.discourse_client.allowed_sso_hosts = {'forum-test.example.org'}
+
+        sso, _ = self._build_signed_sso_payload(
+            'https://forum-test.example.org/session/sso_login'
+        )
+
+        self.post_json_with_token(
+            '/users/discourse-redirect',
+            self.global_tokens['moderator'],
+            {'sso': sso, 'sig': 'not-the-right-signature'},
+            status=400,
+        )
+
+    def test_discourse_redirect_unauthenticated(self):
+        self.app_post_json(
+            '/users/discourse-redirect', {'sso': 'x', 'sig': 'y'}, status=403
+        )
 
     def _build_signed_sso_payload(self, return_sso_url):
         payload = urlencode(
@@ -658,7 +692,7 @@ class TestUserRest(BaseUserTestRest):
 
     def test_login_failure(self):
         body = self.login('moderator', password='invalid_password', status=401).json
-        self.assertEqual(body['status'], 'error')
+        assert body['status'] == 'error'
 
     def test_login_no_tos_failure(self):
         body = self.login('contributornotos', password='some password', status=403).json
@@ -672,21 +706,20 @@ class TestUserRest(BaseUserTestRest):
         body = self.login(
             'contributornotos', password='some password', accept_tos=True, status=200
         ).json
-        self.assertTrue('token' in body)
+        assert 'token' in body
         user = (
             self.session.query(User).filter(User.username == 'contributornotos').one()
         )
-        self.assertTrue(
-            (datetime.datetime.now(datetime.UTC) - user.tos_validated).total_seconds()
-            < 5
-        )
+        assert (
+            datetime.datetime.now(datetime.UTC) - user.tos_validated
+        ).total_seconds() < 5
 
     def assertExpireAlmostEqual(self, expire, days, seconds_delta):  # noqa
         now = int(round(time.time()))
         expected = days * 24 * 3600 + now  # 14 days from now
         if abs(expected - expire) > seconds_delta:
-            raise self.failureException(
-                '%r == %r within %r seconds' % (expected, expire, seconds_delta)
+            raise AssertionError(
+                f'{expected!r} == {expire!r} within {seconds_delta!r} seconds'
             )
 
     def test_login_logout_success(self):
@@ -718,7 +751,7 @@ class TestUserRest(BaseUserTestRest):
         time.sleep(1.01)
 
         token2 = self.post_json_with_token('/users/renew', token1)['token']
-        self.assertNotEqual(token1, token2)
+        assert token1 != token2
 
         body = self.get_json_with_token('/users/account', token2, status=200)
         self.assertBodyEqual(body, 'name', 'Contributor')

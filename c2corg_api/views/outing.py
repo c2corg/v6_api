@@ -1,14 +1,20 @@
-from datetime import datetime, timedelta, UTC
 import functools
+from datetime import UTC, datetime, timedelta
 
+from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPForbidden
+
+from c2corg_api.models.common.attributes import activities
+from c2corg_api.models.common.fields_outing import fields_outing
 from c2corg_api.models.outing import (
-    schema_outing,
-    Outing,
-    schema_create_outing,
-    schema_update_outing,
+    OUTING_TYPE,
     ArchiveOuting,
     ArchiveOutingLocale,
-    OUTING_TYPE,
+    Outing,
+    schema_create_outing,
+    schema_outing,
+    schema_update_outing,
 )
 from c2corg_api.models.utils import get_mid_point
 from c2corg_api.views import (
@@ -28,21 +34,16 @@ from c2corg_api.views.document_schemas import (
 )
 from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.validation import (
-    validate_id,
-    validate_pagination,
-    validate_lang,
-    validate_version_id,
-    validate_lang_param,
-    validate_preferred_lang_param,
-    validate_associations,
     has_permission_for_outing,
+    validate_associations,
     validate_cook_param,
+    validate_id,
+    validate_lang,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+    validate_version_id,
 )
-from c2corg_api.models.common.attributes import activities
-from c2corg_api.models.common.fields_outing import fields_outing
-from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
-from pyramid.httpexceptions import HTTPForbidden
 
 validate_outing_create = make_validator_create(fields_outing, 'activities', activities)
 validate_outing_update = make_validator_update(fields_outing, 'activities', activities)
@@ -60,7 +61,7 @@ def _validate_dates(request, date_start, date_end):
 
     if isinstance(date_start, str):
         try:
-            date_start = datetime.strptime(date_start, '%Y-%m-%d').date()
+            date_start = datetime.strptime(date_start, '%Y-%m-%d').date()  # noqa: DTZ007 (date only)
         except ValueError:
             request.errors.add(
                 'body', 'date_start', 'invalid format, expecting YEAR-MONTH-DAY'
@@ -72,7 +73,7 @@ def _validate_dates(request, date_start, date_end):
 
     if isinstance(date_end, str):
         try:
-            date_end = datetime.strptime(date_end, '%Y-%m-%d').date()
+            date_end = datetime.strptime(date_end, '%Y-%m-%d').date()  # noqa: DTZ007 (date only)
         except ValueError:
             request.errors.add(
                 'body', 'date_end', 'invalid format, expecting YEAR-MONTH-DAY'
@@ -189,7 +190,9 @@ class OutingInfoRest(DocumentInfoRest):
 
 
 def set_default_geometry(linked_routes, outing, user_id):
-    """When creating a new outing, set the default geometry to the middle point
+    """Set the default geometry of a new outing.
+
+    When creating a new outing, set the default geometry to the middle point
     of a given track, if not to the centroid of the convex hull
     of all associated routes.
     """
@@ -206,10 +209,11 @@ def set_default_geometry(linked_routes, outing, user_id):
 
 
 def update_default_geometry(outing, outing_in):
-    """When updating an outing, set the default geometry to the middle point
-    of a new track if proovided
-    """
+    """Update the default geometry of an outing.
 
+    When updating an outing, set the default geometry to the middle point
+    of a new track if proovided.
+    """
     geometry_in = outing_in.geometry
 
     if geometry_in is not None and geometry_in.geom_detail is not None:

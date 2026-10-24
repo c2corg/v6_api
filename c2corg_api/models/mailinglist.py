@@ -7,9 +7,9 @@ from c2corg_api.models.user import User
 
 
 class Mailinglist(Base):
-    """
-    Class containing mailing list subscriptions.
-    Based upon Sympa mailing list server https://www.sympa.org/
+    """Class containing mailing list subscriptions.
+
+    Based upon Sympa mailing list server https://www.sympa.org/.
     """
 
     __tablename__ = 'subscriber_table'

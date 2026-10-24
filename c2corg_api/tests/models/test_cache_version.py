@@ -10,20 +10,19 @@ from c2corg_api.models.cache_version import (
     update_cache_version_for_area,
     update_cache_version_for_map,
 )
-from c2corg_api.models.outing import Outing, OUTING_TYPE
-from c2corg_api.models.route import Route, ROUTE_TYPE
+from c2corg_api.models.outing import OUTING_TYPE, Outing
+from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE, WaypointLocale
-
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint, WaypointLocale
 from c2corg_api.tests import BaseTestCase
 from c2corg_api.views.document import DocumentRest
 
 
 class TestCacheVersion(BaseTestCase):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestCase.setUp(self)
 
     def test_trigger_create_cache_version(self):
@@ -32,9 +31,9 @@ class TestCacheVersion(BaseTestCase):
         self.session.flush()
 
         cache_version = self.session.get(CacheVersion, waypoint.document_id)
-        self.assertIsNotNone(cache_version)
-        self.assertIsNotNone(cache_version.version)
-        self.assertIsNotNone(cache_version.last_updated)
+        assert cache_version is not None
+        assert cache_version.version is not None
+        assert cache_version.last_updated is not None
 
     def test_update_cache_version_single_wp(self):
         waypoint = Waypoint(waypoint_type='summit')
@@ -50,13 +49,13 @@ class TestCacheVersion(BaseTestCase):
 
         update_cache_version(waypoint)
         self.session.refresh(cache_version)
-        self.assertEqual(cache_version.version, current_version + 1)
-        self.assertNotEqual(cache_version.last_updated, current_last_updated)
+        assert cache_version.version == current_version + 1
+        assert cache_version.last_updated != current_last_updated
 
         cache_version_untouched = self.session.get(
             CacheVersion, waypoint_unrelated.document_id
         )
-        self.assertEqual(cache_version_untouched.version, 1)
+        assert cache_version_untouched.version == 1
 
     def test_update_cache_version_wp_with_associations(self):
         waypoint1 = Waypoint(waypoint_type='summit')
@@ -78,10 +77,10 @@ class TestCacheVersion(BaseTestCase):
             CacheVersion, waypoint_unrelated.document_id
         )
 
-        self.assertEqual(cache_version1.version, 2)
-        self.assertEqual(cache_version2.version, 2)
-        self.assertEqual(cache_version3.version, 2)
-        self.assertEqual(cache_version_untouched.version, 1)
+        assert cache_version1.version == 2
+        assert cache_version2.version == 2
+        assert cache_version3.version == 2
+        assert cache_version_untouched.version == 1
 
     def test_update_cache_version_wp_as_main_wp(self):
         waypoint1 = Waypoint(waypoint_type='summit')
@@ -108,11 +107,11 @@ class TestCacheVersion(BaseTestCase):
             CacheVersion, waypoint_unrelated.document_id
         )
 
-        self.assertEqual(cache_version_wp1.version, 3)
-        self.assertEqual(cache_version_wp2.version, 2)
-        self.assertEqual(cache_version_wp3.version, 2)
-        self.assertEqual(cache_version_route.version, 2)
-        self.assertEqual(cache_version_untouched.version, 1)
+        assert cache_version_wp1.version == 3
+        assert cache_version_wp2.version == 2
+        assert cache_version_wp3.version == 2
+        assert cache_version_route.version == 2
+        assert cache_version_untouched.version == 1
 
     def test_update_cache_version_route(self):
         route1 = Route(activities=['skitouring'])
@@ -137,11 +136,11 @@ class TestCacheVersion(BaseTestCase):
             CacheVersion, waypoint_unrelated.document_id
         )
 
-        self.assertEqual(cache_version_route1.version, 2)
-        self.assertEqual(cache_version_route2.version, 2)
-        self.assertEqual(cache_version_wp1.version, 3)
-        self.assertEqual(cache_version_wp2.version, 2)
-        self.assertEqual(cache_version_untouched.version, 1)
+        assert cache_version_route1.version == 2
+        assert cache_version_route2.version == 2
+        assert cache_version_wp1.version == 3
+        assert cache_version_wp2.version == 2
+        assert cache_version_untouched.version == 1
 
     def test_update_cache_version_outing(self):
         outing = Outing(
@@ -175,12 +174,12 @@ class TestCacheVersion(BaseTestCase):
             CacheVersion, waypoint_unrelated.document_id
         )
 
-        self.assertEqual(cache_version_outing.version, 2)
-        self.assertEqual(cache_version_route1.version, 2)
-        self.assertEqual(cache_version_route2.version, 2)
-        self.assertEqual(cache_version_wp1.version, 2)
-        self.assertEqual(cache_version_wp2.version, 2)
-        self.assertEqual(cache_version_untouched.version, 1)
+        assert cache_version_outing.version == 2
+        assert cache_version_route1.version == 2
+        assert cache_version_route2.version == 2
+        assert cache_version_wp1.version == 2
+        assert cache_version_wp2.version == 2
+        assert cache_version_untouched.version == 1
 
     def test_update_cache_version_user(self):
         """Test that outings are invalidated if an user name changes."""
@@ -202,8 +201,8 @@ class TestCacheVersion(BaseTestCase):
         )
         cache_version_outing = self.session.get(CacheVersion, outing.document_id)
 
-        self.assertEqual(cache_version_outing.version, 2)
-        self.assertEqual(cache_version_user_profile.version, 2)
+        assert cache_version_outing.version == 2
+        assert cache_version_user_profile.version == 2
 
     def test_update_cache_version_user_document_version(self):
         """Test that a document is invalidated if a user name of a user that
@@ -236,8 +235,8 @@ class TestCacheVersion(BaseTestCase):
         )
         cache_version_waypoint = self.session.get(CacheVersion, waypoint.document_id)
 
-        self.assertEqual(cache_version_waypoint.version, 2)
-        self.assertEqual(cache_version_user_profile.version, 2)
+        assert cache_version_waypoint.version == 2
+        assert cache_version_user_profile.version == 2
 
     def test_update_cache_version_associations_removed_wp(self):
         waypoint1 = Waypoint(waypoint_type='summit')
@@ -272,10 +271,10 @@ class TestCacheVersion(BaseTestCase):
             CacheVersion, waypoint_unrelated.document_id
         )
 
-        self.assertEqual(cache_version1.version, 2)
-        self.assertEqual(cache_version2.version, 2)
-        self.assertEqual(cache_version3.version, 2)
-        self.assertEqual(cache_version_untouched.version, 1)
+        assert cache_version1.version == 2
+        assert cache_version2.version == 2
+        assert cache_version3.version == 2
+        assert cache_version_untouched.version == 1
 
     def test_update_cache_version_associations_removed_wp_route(self):
         waypoint1 = Waypoint(waypoint_type='summit')
@@ -312,11 +311,11 @@ class TestCacheVersion(BaseTestCase):
             CacheVersion, waypoint_unrelated.document_id
         )
 
-        self.assertEqual(cache_version1.version, 2)
-        self.assertEqual(cache_version2.version, 2)
-        self.assertEqual(cache_version3.version, 2)
-        self.assertEqual(cache_version_route.version, 2)
-        self.assertEqual(cache_version_untouched.version, 1)
+        assert cache_version1.version == 2
+        assert cache_version2.version == 2
+        assert cache_version3.version == 2
+        assert cache_version_route.version == 2
+        assert cache_version_untouched.version == 1
 
     def test_update_cache_version_associations_removed_route_outing(self):
         waypoint1 = Waypoint(waypoint_type='summit')
@@ -360,12 +359,12 @@ class TestCacheVersion(BaseTestCase):
             CacheVersion, waypoint_unrelated.document_id
         )
 
-        self.assertEqual(cache_version1.version, 2)
-        self.assertEqual(cache_version2.version, 2)
-        self.assertEqual(cache_version3.version, 2)
-        self.assertEqual(cache_version_route.version, 2)
-        self.assertEqual(cache_version_outing.version, 2)
-        self.assertEqual(cache_version_untouched.version, 1)
+        assert cache_version1.version == 2
+        assert cache_version2.version == 2
+        assert cache_version3.version == 2
+        assert cache_version_route.version == 2
+        assert cache_version_outing.version == 2
+        assert cache_version_untouched.version == 1
 
     def test_update_cache_version_for_area(self):
         waypoint = Waypoint(waypoint_type='summit')
@@ -387,10 +386,10 @@ class TestCacheVersion(BaseTestCase):
         )
         cache_version_area = self.session.get(CacheVersion, area.document_id)
 
-        self.assertEqual(cache_version_waypoint.version, 2)
-        self.assertEqual(cache_version_untouched.version, 1)
+        assert cache_version_waypoint.version == 2
+        assert cache_version_untouched.version == 1
         # the cache key of the area is also not updated!
-        self.assertEqual(cache_version_area.version, 1)
+        assert cache_version_area.version == 1
 
     def test_update_cache_version_for_map(self):
         waypoint = Waypoint(waypoint_type='summit')
@@ -414,7 +413,7 @@ class TestCacheVersion(BaseTestCase):
         )
         cache_version_map = self.session.get(CacheVersion, topo_map.document_id)
 
-        self.assertEqual(cache_version_waypoint.version, 2)
-        self.assertEqual(cache_version_untouched.version, 1)
+        assert cache_version_waypoint.version == 2
+        assert cache_version_untouched.version == 1
         # the cache key of the map is also not updated!
-        self.assertEqual(cache_version_map.version, 1)
+        assert cache_version_map.version == 1

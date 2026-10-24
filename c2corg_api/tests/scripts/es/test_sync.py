@@ -1,6 +1,8 @@
 import datetime
 from unittest.mock import patch
 
+import pytest
+
 from c2corg_api.models import es_sync
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry
@@ -11,21 +13,21 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.sync import (
-    get_changed_documents,
-    get_documents_per_type,
-    sync_documents,
     create_search_documents,
-    get_changed_users,
+    get_changed_documents,
     get_changed_documents_for_associations,
+    get_changed_users,
     get_deleted_locale_documents,
+    get_documents_per_type,
     sync_deleted_documents,
+    sync_documents,
 )
 from c2corg_api.tests import BaseTestCase, global_userids
 from c2corg_api.views.document import DocumentRest
 
 
-class SyncTest(BaseTestCase):
-    def setUp(self):  # noqa
+class TestSync(BaseTestCase):
+    def setUp(self):
         BaseTestCase.setUp(self)
         self._add_test_data()
 
@@ -33,18 +35,18 @@ class SyncTest(BaseTestCase):
         last_update, _ = es_sync.get_status(self.session)
 
         changed_documents = get_changed_documents(self.session, last_update)
-        self.assertEqual(len(changed_documents), 5)
-        self.assertEqual('o', changed_documents[0][1])
-        self.assertEqual('r', changed_documents[1][1])
-        self.assertEqual('w', changed_documents[2][1])
+        assert len(changed_documents) == 5
+        assert 'o' == changed_documents[0][1]
+        assert 'r' == changed_documents[1][1]
+        assert 'w' == changed_documents[2][1]
 
-        self.assertEqual(
+        assert (
             len(
                 get_changed_documents(
                     self.session, last_update + datetime.timedelta(0, 1)
                 )
-            ),
-            0,
+            )
+            == 0
         )
 
     def test_get_changed_documents_for_associations(self):
@@ -53,19 +55,19 @@ class SyncTest(BaseTestCase):
         changed_documents = get_changed_documents_for_associations(
             self.session, last_update
         )
-        self.assertEqual(len(changed_documents), 4)
-        self.assertEqual(changed_documents[0][0], self.route1.document_id)
-        self.assertEqual(changed_documents[1][0], self.outing1.document_id)
-        self.assertEqual(changed_documents[2][0], self.route1.document_id)
-        self.assertEqual(changed_documents[3][0], self.outing1.document_id)
+        assert len(changed_documents) == 4
+        assert changed_documents[0][0] == self.route1.document_id
+        assert changed_documents[1][0] == self.outing1.document_id
+        assert changed_documents[2][0] == self.route1.document_id
+        assert changed_documents[3][0] == self.outing1.document_id
 
-        self.assertEqual(
+        assert (
             len(
                 get_changed_documents_for_associations(
                     self.session, last_update + datetime.timedelta(0, 1)
                 )
-            ),
-            0,
+            )
+            == 0
         )
 
     def test_get_changed_users(self):
@@ -77,17 +79,17 @@ class SyncTest(BaseTestCase):
         last_update, _ = es_sync.get_status(self.session)
 
         changed_users = get_changed_users(self.session, last_update)
-        self.assertEqual(len(changed_users), 1)
-        self.assertEqual(user_id, changed_users[0][0])
-        self.assertEqual('u', changed_users[0][1])
+        assert len(changed_users) == 1
+        assert user_id == changed_users[0][0]
+        assert 'u' == changed_users[0][1]
 
-        self.assertEqual(
+        assert (
             len(
                 get_changed_documents(
                     self.session, last_update + datetime.timedelta(0, 1)
                 )
-            ),
-            0,
+            )
+            == 0
         )
 
     def test_get_deleted_locale_documents(self):
@@ -101,13 +103,13 @@ class SyncTest(BaseTestCase):
 
         changed_documents = get_deleted_locale_documents(self.session, last_update)
 
-        self.assertEqual(len(changed_documents), 1)
-        self.assertEqual('w', changed_documents[0][1])
+        assert len(changed_documents) == 1
+        assert 'w' == changed_documents[0][1]
 
     def test_get_documents_per_type(self):
         changed_documents = [(1, 'r'), (2, 'w'), (3, 'r'), (4, 'r'), (4, 'r')]
         docs_per_type = get_documents_per_type(changed_documents)
-        self.assertEqual(docs_per_type, {'r': {1, 3, 4}, 'w': {2}})
+        assert docs_per_type == {'r': {1, 3, 4}, 'w': {2}}
 
     def test_create_search_documents(self):
         search_documents = []
@@ -118,11 +120,11 @@ class SyncTest(BaseTestCase):
         create_search_documents('r', [self.route1], batch_mock)
         doc = search_documents[0]
 
-        self.assertEqual(doc['_op_type'], 'index')
-        self.assertEqual(doc['_id'], self.route1.document_id)
-        self.assertEqual(doc['title_en'], 'Mont Blanc : Face N')
+        assert doc['_op_type'] == 'index'
+        assert doc['_id'] == self.route1.document_id
+        assert doc['title_en'] == 'Mont Blanc : Face N'
         # self.assertEqual(doc['description_en'], '...')
-        self.assertEqual(doc['geom'], [6, 46])
+        assert doc['geom'] == [6, 46]
 
     def test_create_search_documents_user_profile(self):
         search_documents = []
@@ -134,11 +136,11 @@ class SyncTest(BaseTestCase):
         create_search_documents('u', [user_profile], batch_mock)
         doc = search_documents[0]
 
-        self.assertEqual(doc['_op_type'], 'index')
-        self.assertEqual(doc['_id'], document_id)
-        self.assertEqual(doc['title_en'], 'Contributor contributor')
+        assert doc['_op_type'] == 'index'
+        assert doc['_id'] == document_id
+        assert doc['title_en'] == 'Contributor contributor'
         # self.assertEqual(doc['description_en'], 'Me')
-        self.assertEqual(doc['title_fr'], 'Contributor contributor')
+        assert doc['title_fr'] == 'Contributor contributor'
         # self.assertEqual(doc['description_fr'], 'Moi')
 
     @patch('c2corg_api.scripts.es.sync.ElasticBatch')
@@ -161,28 +163,28 @@ class SyncTest(BaseTestCase):
             (user_id, 'u'),
         ]
         sync_documents(self.session, changed_documents, 1000)
-        self.assertEqual(len(search_documents), 5)
+        assert len(search_documents) == 5
 
         redirected_doc = self._get_by_id(search_documents, self.waypoint3.document_id)
-        self.assertEqual(redirected_doc['_op_type'], 'delete')
+        assert redirected_doc['_op_type'] == 'delete'
 
         waypoint1_doc = self._get_by_id(search_documents, self.waypoint1.document_id)
-        self.assertAlmostEqual(waypoint1_doc['geom'][0], 5.71288995)
-        self.assertAlmostEqual(waypoint1_doc['geom'][1], 45.64476395)
+        assert waypoint1_doc['geom'][0] == pytest.approx(5.71288995, abs=5e-8)
+        assert waypoint1_doc['geom'][1] == pytest.approx(45.64476395, abs=5e-8)
 
         route_doc = self._get_by_id(search_documents, self.route1.document_id)
-        self.assertEqual(route_doc['title_en'], 'Mont Blanc : Face N')
-        self.assertEqual(
-            set(route_doc['waypoints']),
-            {self.waypoint1.document_id, self.waypoint2.document_id},
-        )
+        assert route_doc['title_en'] == 'Mont Blanc : Face N'
+        assert set(route_doc['waypoints']) == {
+            self.waypoint1.document_id,
+            self.waypoint2.document_id,
+        }
 
         outing_doc = self._get_by_id(search_documents, self.outing1.document_id)
-        self.assertEqual(outing_doc['title_en'], '...')
-        self.assertEqual(
-            set(outing_doc['waypoints']),
-            {self.waypoint1.document_id, self.waypoint2.document_id},
-        )
+        assert outing_doc['title_en'] == '...'
+        assert set(outing_doc['waypoints']) == {
+            self.waypoint1.document_id,
+            self.waypoint2.document_id,
+        }
 
     @patch('c2corg_api.scripts.es.sync.ElasticBatch')
     def test_sync_deleted_documents(self, mock):
@@ -195,16 +197,16 @@ class SyncTest(BaseTestCase):
             (self.outing1.document_id, 'o'),
         ]
         sync_deleted_documents(self.session, deleted_documents, 1000)
-        self.assertEqual(len(search_documents), 3)
+        assert len(search_documents) == 3
 
         waypoint1_doc = self._get_by_id(search_documents, self.waypoint1.document_id)
-        self.assertEqual(waypoint1_doc['_op_type'], 'delete')
+        assert waypoint1_doc['_op_type'] == 'delete'
 
         route_doc = self._get_by_id(search_documents, self.route1.document_id)
-        self.assertEqual(route_doc['_op_type'], 'delete')
+        assert route_doc['_op_type'] == 'delete'
 
         outing_doc = self._get_by_id(search_documents, self.outing1.document_id)
-        self.assertEqual(outing_doc['_op_type'], 'delete')
+        assert outing_doc['_op_type'] == 'delete'
 
     def _get_by_id(self, search_documents, document_id):
         return next(

@@ -3,14 +3,15 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
 )
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import backref, relationship
 
-from c2corg_api.models import schema, Base
+from c2corg_api.models import Base, schema
 from c2corg_api.models.document import DocumentLocale
 
 
 class DocumentTopic(Base):
-    """
+    """Discourse comment topic of each document locale.
+
     Mapping between document locales and the corresponding Discourse topics
     for the comments.
     """

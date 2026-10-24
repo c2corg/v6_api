@@ -1,6 +1,4 @@
-"""
-Table of Contents Extension for Python-Markdown
-===============================================
+"""Table of Contents extension for Python-Markdown.
 
 See <https://pythonhosted.org/Markdown/extensions/toc.html>
 for documentation.
@@ -14,17 +12,17 @@ License: [BSD](http://www.opensource.org/licenses/bsd-license.php)
 Modified for C2C : remove title emphasis, toc HTML class. Add c2c:role
 """
 
-from markdown.util import code_escape
 from markdown.extensions.toc import (
+    AtomicString,
     TocExtension,
     TocTreeprocessor,
+    html,
+    nest_toc_tokens,
     stashedHTML2text,
     unescape,
     unique,
-    nest_toc_tokens,
-    AtomicString,
-    html,
 )
+from markdown.util import code_escape
 
 
 def not_emphasis(elt):
@@ -33,7 +31,6 @@ def not_emphasis(elt):
 
 def get_name(el):
     """Get title name."""
-
     result = []
     for item in el.iter():
         if not_emphasis(item):
@@ -84,12 +81,12 @@ class C2CTocTreeprocessor(TocTreeprocessor):
                     innertext = unescape(stashedHTML2text(text, self.md))
                     el.attrib['id'] = unique(
                         self.slugify(innertext, self.sep), used_ids
-                    )  # noqa: E501
+                    )
 
                 if (
                     int(el.tag[-1]) >= self.toc_top
                     and int(el.tag[-1]) <= self.toc_bottom
-                ):  # noqa: E501
+                ):
                     toc_tokens.append(
                         {
                             'level': int(el.tag[-1]),

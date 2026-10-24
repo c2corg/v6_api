@@ -1,18 +1,17 @@
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import (
-    update_area,
     AreaAssociation,
-    update_areas_for_document,
     get_areas,
+    update_area,
+    update_areas_for_document,
 )
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.waypoint import Waypoint
-
 from c2corg_api.tests import BaseTestCase
 
 
 class TestAreaAssociation(BaseTestCase):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestCase.setUp(self)
 
         self.area1 = Area(
@@ -72,8 +71,8 @@ class TestAreaAssociation(BaseTestCase):
             .filter(AreaAssociation.area_id == self.area1.document_id)
             .all()
         )
-        self.assertEqual(len(added_links), 1)
-        self.assertEqual(added_links[0].document_id, self.waypoint1.document_id)
+        assert len(added_links) == 1
+        assert added_links[0].document_id == self.waypoint1.document_id
 
     def test_update_area_reset_first(self):
         # add an association with wp2, which should be removed after the update
@@ -91,8 +90,8 @@ class TestAreaAssociation(BaseTestCase):
             .filter(AreaAssociation.area_id == self.area1.document_id)
             .all()
         )
-        self.assertEqual(len(updated_links), 1)
-        self.assertEqual(updated_links[0].document_id, self.waypoint1.document_id)
+        assert len(updated_links) == 1
+        assert updated_links[0].document_id == self.waypoint1.document_id
 
     def test_update_area_reset_first_forwarded(self):
         """Tests that areas with `redirects_to` are ignored."""
@@ -111,40 +110,40 @@ class TestAreaAssociation(BaseTestCase):
             .filter(AreaAssociation.area_id == self.area2.document_id)
             .all()
         )
-        self.assertEqual(len(updated_links), 0)
+        assert len(updated_links) == 0
 
     def test_update_document(self):
         # waypoint inside the area
         update_areas_for_document(self.waypoint1)
 
         added_links = self._get_links_for_document(self.waypoint1)
-        self.assertEqual(len(added_links), 1)
-        self.assertEqual(added_links[0].area_id, self.area1.document_id)
+        assert len(added_links) == 1
+        assert added_links[0].area_id == self.area1.document_id
 
         # wp outside the area
         update_areas_for_document(self.waypoint2)
 
         added_links = self._get_links_for_document(self.waypoint2)
-        self.assertEqual(len(added_links), 0)
+        assert len(added_links) == 0
 
         # wp without geometry
         update_areas_for_document(self.waypoint3)
 
         added_links = self._get_links_for_document(self.waypoint3)
-        self.assertEqual(len(added_links), 0)
+        assert len(added_links) == 0
 
         # wp with empty geometry
         update_areas_for_document(self.waypoint4)
 
         added_links = self._get_links_for_document(self.waypoint4)
-        self.assertEqual(len(added_links), 0)
+        assert len(added_links) == 0
 
     def test_update_document_forwarded(self):
         # waypoint inside the area but forwarded (should be ignored)
         update_areas_for_document(self.waypoint5)
 
         added_links = self._get_links_for_document(self.waypoint1)
-        self.assertEqual(len(added_links), 0)
+        assert len(added_links) == 0
 
     def test_update_document_reset_first(self):
         # add an association with wp2, which should be removed after the update
@@ -158,14 +157,14 @@ class TestAreaAssociation(BaseTestCase):
         update_areas_for_document(self.waypoint2, reset=True)
 
         updated_links = self._get_links_for_document(self.waypoint2)
-        self.assertEqual(len(updated_links), 0)
+        assert len(updated_links) == 0
 
     def test_get_areas(self):
         update_area(self.area1)
         areas = get_areas(self.waypoint1, 'en')
 
-        self.assertEqual(len(areas), 1)
-        self.assertEqual(areas[0].document_id, self.area1.document_id)
+        assert len(areas) == 1
+        assert areas[0].document_id == self.area1.document_id
 
     def test_get_areas_forwarded(self):
         """Tests that forwarded areas are not included."""
@@ -178,7 +177,7 @@ class TestAreaAssociation(BaseTestCase):
         self.session.flush()
         areas = get_areas(self.waypoint1, 'en')
 
-        self.assertEqual(len(areas), 0)
+        assert len(areas) == 0
 
     def _get_links_for_document(self, doc):
         return (

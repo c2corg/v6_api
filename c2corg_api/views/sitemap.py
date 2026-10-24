@@ -1,21 +1,21 @@
 import functools
 import logging
+from datetime import UTC, datetime
+from math import ceil
+
+from cornice.resource import resource, view
+from pyramid.httpexceptions import HTTPNotFound
+from sqlalchemy.sql.functions import func
 
 from c2corg_api import DBSession, caching
-from c2corg_api.caching import cache_sitemap
+from c2corg_api.caching import cache_sitemap, get_or_create
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.route import ROUTE_TYPE, RouteLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.views import cors_policy, etag_cache
 from c2corg_api.security.acl import ACLDefault
+from c2corg_api.views import cors_policy, etag_cache
 from c2corg_api.views.validation import create_int_validator, validate_document_type
-from c2corg_api.caching import get_or_create
-from cornice.resource import resource, view
-from pyramid.httpexceptions import HTTPNotFound
-from sqlalchemy.sql.functions import func
-from math import ceil
-from datetime import date
 
 log = logging.getLogger(__name__)
 
@@ -37,8 +37,9 @@ validate_page = create_int_validator('i')
 class SitemapRest(ACLDefault):
     @view()
     def collection_get(self):
-        """Returns the information needed to generate a sitemap index file.
-        See: http://www.sitemaps.org/protocol.html
+        """Return the information needed to generate a sitemap index file.
+
+        See: http://www.sitemaps.org/protocol.html.
 
         The response consists of a list of URLs to request the information
         needed to generate the sitemap linked from the sitemap index.
@@ -66,7 +67,9 @@ class SitemapRest(ACLDefault):
 
     @view(validators=[validate_page, validate_document_type])
     def get(self):
-        """Returns the information needed to generate a sitemap for a given
+        """Return the information to build a sitemap page.
+
+        Returns the information needed to generate a sitemap for a given
         type and sitemap page number.
         """
         doc_type = self.request.validated['doc_type']
@@ -81,12 +84,11 @@ class SitemapRest(ACLDefault):
 
 
 def _get_cache_key(doc_type=None, i=None):
+    today = datetime.now(UTC).date().isoformat()
     if doc_type:
-        return '{}-{}-{}-{}'.format(
-            doc_type, i, date.today().isoformat(), caching.CACHE_VERSION
-        )
+        return f'{doc_type}-{i}-{today}-{caching.CACHE_VERSION}'
     else:
-        return '{}-{}'.format(date.today().isoformat(), caching.CACHE_VERSION)
+        return f'{today}-{caching.CACHE_VERSION}'
 
 
 def _get_sitemap_index():
@@ -102,7 +104,7 @@ def _get_sitemap_index():
     for doc_type, count in document_locales_per_type:
         num_sitemaps = ceil(count / PAGES_PER_SITEMAP)
         sitemaps_for_type = [
-            {'url': '/sitemaps/{}/{}'.format(doc_type, i), 'doc_type': doc_type, 'i': i}
+            {'url': f'/sitemaps/{doc_type}/{i}', 'doc_type': doc_type, 'i': i}
             for i in range(0, num_sitemaps)
         ]
         sitemaps.extend(sitemaps_for_type)

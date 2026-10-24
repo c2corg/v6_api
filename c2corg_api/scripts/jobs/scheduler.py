@@ -1,25 +1,21 @@
 import logging
-import sys
 import os
 import signal
+import sys
 
-from pyramid.scripts.common import parse_vars
 from pyramid.paster import get_appsettings, setup_logging
-
+from pyramid.scripts.common import parse_vars
 from sqlalchemy import engine_from_config
 
-from c2corg_api.models import DBSession
 from c2corg_api.jobs import configure_scheduler_from_config
+from c2corg_api.models import DBSession
 
 log = logging.getLogger('c2corg_api_background_jobs')
 
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print(
-        'usage: %s <config_uri> [var=value]\n'
-        '(example: "%s development.ini")' % (cmd, cmd)
-    )
+    print(f'usage: {cmd} <config_uri> [var=value]\n(example: "{cmd} development.ini")')
     sys.exit(1)
 
 

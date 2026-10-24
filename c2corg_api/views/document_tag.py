@@ -1,17 +1,18 @@
 import logging
 
-from c2corg_api.security.acl import ACLDefault
+from colander import Integer, MappingSchema, SchemaNode, required
+from cornice.resource import resource
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPBadRequest
+
 from c2corg_api import DBSession
 from c2corg_api.models.document import Document
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.validation import create_int_validator
-from colander import MappingSchema, SchemaNode, Integer, required
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from pyramid.httpexceptions import HTTPBadRequest
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +34,9 @@ validate_document_id = create_int_validator('document_id')
 
 
 def validate_document(request, **kwargs):
-    """Check that the document exists, is a route and
+    """Check that the document exists, is a route and is not merged.
+
+    Check that the document exists, is a route and
     not merged with another document.
     """
     document_id = request.validated['document_id']
@@ -48,7 +51,7 @@ def validate_document(request, **kwargs):
 
     if not document_exists:
         request.errors.add(
-            'body', 'document_id', 'document {0} does not exist'.format(document_id)
+            'body', 'document_id', f'document {document_id} does not exist'
         )
 
 
@@ -60,8 +63,9 @@ class DocumentTagRest(ACLDefault):
     )
     def post(self):
         """Tag the given document as todo.
-        Creates a tag relation, so that the authenticated user is
-        marking the given document as todo.
+
+        Creates a tag relation, so that the authenticated user is marking the given
+        document as todo.
 
 
         Request:
@@ -69,7 +73,6 @@ class DocumentTagRest(ACLDefault):
 
         Request body:
             {'document_id': @document_id@}
-
         """
         document_id = self.request.validated['document_id']
         document_type = ROUTE_TYPE
@@ -130,9 +133,7 @@ class DocumentUntagRest(ACLDefault):
             )
         else:
             log.warning(
-                'tried to delete not existing tag relation ({0}, {1})'.format(
-                    user_id, document_id
-                )
+                f'tried to delete not existing tag relation ({user_id}, {document_id})'
             )
             raise HTTPBadRequest('This document has no such tag.')
 

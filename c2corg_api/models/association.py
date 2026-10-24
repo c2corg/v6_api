@@ -1,23 +1,23 @@
+from colanderalchemy.schema import SQLAlchemySchemaNode
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, column
+from sqlalchemy.orm import relationship
+from sqlalchemy.schema import PrimaryKeyConstraint
+from sqlalchemy.sql.elements import literal_column
+from sqlalchemy.sql.expression import and_, or_, union
+from sqlalchemy.sql.functions import func
+
+from c2corg_api.models import Base, DBSession, schema, users_schema
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.book import BOOK_TYPE
+from c2corg_api.models.document import Document
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
-from colanderalchemy.schema import SQLAlchemySchemaNode
-from sqlalchemy import Boolean, Column, Integer, DateTime, ForeignKey, String, column
-from sqlalchemy.schema import PrimaryKeyConstraint
-from sqlalchemy.orm import relationship
-
-from c2corg_api.models import Base, schema, users_schema, DBSession
-from c2corg_api.models.document import Document
-from sqlalchemy.sql.elements import literal_column
-from sqlalchemy.sql.expression import or_, and_, union
-from sqlalchemy.sql.functions import func
+from c2corg_api.models.xreport import XREPORT_TYPE
 
 
 class Association(Base):
@@ -79,9 +79,7 @@ class Association(Base):
 
 
 class AssociationLog(Base):
-    """Model to log when an association between documents was established or
-    removed.
-    """
+    """Model to log when an association between documents was established or removed."""
 
     __tablename__ = 'association_log'
 
@@ -129,8 +127,9 @@ schema_association = SQLAlchemySchemaNode(
 
 
 def exists_already(link):
-    """Checks if the given association exists already. For example, for
-    two given documents D1 and D2, it checks if there is no association
+    """Check if the given association exists already.
+
+    For example, for two given documents D1 and D2, it checks if there is no association
     D1 -> D2 or D2 -> D1.
     """
     associations_exists = (
@@ -161,7 +160,9 @@ def add_association(
     check_first=False,
     check_association=None,
 ):
-    """Create an association between the two documents and create a log entry
+    """Create an association between two documents and log it.
+
+    Create an association between the two documents and create a log entry
     in the association history table with the given user id.
     """
     association = Association(
@@ -190,7 +191,9 @@ def remove_association(
     check_first=False,
     check_association=None,
 ):
-    """Remove an association between the two documents and create a log entry
+    """Remove an association between two documents and log it.
+
+    Remove an association between the two documents and create a log entry
     in the association history table with the given user id.
     """
     association = Association(
@@ -215,7 +218,9 @@ def remove_association(
 def create_associations(
     document, associations_for_document, user_id, check_association=None
 ):
-    """Create associations for a document that were provided when creating
+    """Create the associations given when creating a document.
+
+    Create associations for a document that were provided when creating
     a document.
     """
     added_associations = []
@@ -304,7 +309,9 @@ def _apply_operation(docs, add_or_remove, document, user_id, check_association):
 
 
 def _get_current_associations(document, new_associations):
-    """Load the current associations of a document (only those association
+    """Load the current associations of a document.
+
+    Load the current associations of a document (only those association
     types are loaded that are also given in `new_association`).
     """
     updatable_types = updatable_associations.get(document.type, set())
@@ -367,7 +374,9 @@ def _get_load_associations_query(document, doc_types_to_load):
 
 
 def _diff_associations(new_associations, current_associations):
-    """Given two dicts with associated documents for each association type,
+    """Find the associations to add and to remove.
+
+    Given two dicts with associated documents for each association type,
     detect which associations have to be added or removed.
     """
     to_add = _get_associations_to_add(new_associations, current_associations)

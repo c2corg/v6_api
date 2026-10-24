@@ -1,31 +1,28 @@
 import datetime
-import jwt
 import logging
 import os
-import pytest
 import time
+from random import randint
+
+import jwt
+import pytest
 import transaction
-import unittest
 from alembic.command import downgrade
 from alembic.config import Config
 from dotenv import load_dotenv
-from pyramid import testing
 from pyramid.paster import get_appsettings
-from pytz import utc
-from random import randint
 from sqlalchemy import engine_from_config
 
 from c2corg_api import caching as caching_common
-from c2corg_api.emails.email_service import EmailService
 from c2corg_api.models import DBSession, sessionmaker
-from c2corg_api.models.document import DocumentLocale, DocumentGeometry
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.sso import SsoExternalId, SsoKey
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.scripts import initializedb, initializees
 from c2corg_api.scripts.es.fill_index import fill_index
 from c2corg_api.search import configure_es_from_config
-from c2corg_api.security.roles import create_claims, add_or_retrieve_token
+from c2corg_api.security.roles import add_or_retrieve_token, create_claims
 
 load_dotenv()
 
@@ -180,7 +177,7 @@ def _add_global_test_data(session):
         external_id='1',
         user=contributor,
         token='token',
-        expire=utc.localize(datetime.datetime.utcnow()),
+        expire=datetime.datetime.now(datetime.UTC),
     )
     session.add(sso_external_id)
 
@@ -237,16 +234,14 @@ def teardown_package():
 
 class AssertionsMixin:
     def assertCoodinateEquals(self, coord1, coord2):  # noqa
-        self.assertEqual(len(coord1), len(coord2), 'not the same dimension')
+        assert len(coord1) == len(coord2), 'not the same dimension'
         for i in range(0, len(coord1)):
-            self.assertAlmostEqual(
-                coord1[i],
-                coord2[i],
-                msg='{} does not almost equal {}'.format(coord1[i], coord2[i]),
+            assert coord1[i] == pytest.approx(coord2[i], abs=5e-8), (
+                f'{coord1[i]} does not almost equal {coord2[i]}'
             )
 
 
-class BaseTestCase(unittest.TestCase, AssertionsMixin):
+class BaseTestCase(AssertionsMixin):
     """The idea for unit tests is, that the database tables
     are created only once per test run and every test case uses a
     transaction which is rolled back at the end. This avoids that
@@ -256,48 +251,42 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
     http://www.sontek.net/blog/2011/12/01/writing_tests_for_pyramid_and_sqlalchemy.html
     """
 
-    def __init__(self, *args, **kwargs):
+    @pytest.fixture(autouse=True)
+    def _base_fixtures(
+        self,
+        client,
+        db_connection,
+        pyramid_config,
+        email_service,
+        queue_config,
+        app_state,
+    ):
+        """Expose the pytest fixtures to the tests and run setUp/tearDown."""
+        # The fixtures are defined in conftest.py.
         self.global_userids = global_userids
         self.global_tokens = global_tokens
         self.global_passwords = global_passwords
         self.settings = settings
-        unittest.TestCase.__init__(self, *args, **kwargs)
-
-    def get_email_box_length(self):
-        return len(self.mailer.outbox)
-
-    def get_last_email(self):
-        outbox_count = self.get_email_box_length()
-        return self.mailer.outbox[outbox_count - 1]
-
-    @pytest.fixture(autouse=True)
-    def _base_fixtures(self, client, db_connection):
-        """Expose the pytest fixtures to the unittest-style tests."""
-        # The fixtures are defined in conftest.py; this runs before setUp.
         self.app = client
         self.connection = db_connection
         # the session used in the test code, bound to the test's connection
         # (the views use DBSession, bound to the same connection)
         self.session = sessionmaker()(bind=db_connection)
+        self.config = pyramid_config
+        self.email_service = email_service
+        self.queue_config = queue_config
+        # pytest does not call setUp/tearDown on plain classes: the
+        # subclasses still define them, so call them here
+        self.setUp()
         yield
+        self.tearDown()
         self.session.close()
 
-    def setUp(self):  # noqa
-        registry = self.app.app.registry
-        self.email_service = EmailService(settings)
-        EmailService.instance = None
+    def setUp(self):
+        """Prepare the test; subclasses override it."""
 
-        self.config = testing.setUp()
-
-        self.queue_config = registry.queue_config
-        reset_queue(self.queue_config)
-        reset_cache_key()
-        registry.feed_admin_user_account_id = None
-
-    def tearDown(self):  # noqa
-        # the database transaction is rolled back by the db_connection
-        # fixture, after this
-        testing.tearDown()
+    def tearDown(self):
+        """Clean up after the test; subclasses override it."""
 
     def app_post_json(self, *args, **kwargs):
         return self.app_send_json('post', *args, **kwargs)
@@ -316,7 +305,7 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
         res = getattr(self.app, action + '_json')(*args, **kwargs)
         if status != '*' and res.status_code != status:
             errors = res.body if res.status_code == 400 else ''
-            self.fail('Bad response: %s (not %d) : %s' % (res.status, status, errors))
+            pytest.fail(f'Bad response: {res.status} (not {status}) : {errors}')
         return res
 
 
@@ -328,7 +317,7 @@ def reset_queue(queue_config):
 
 def reset_cache_key():
     cache_version = settings['cache_version']
-    caching_common.CACHE_VERSION = '{0}-{1}-{2}'.format(
-        cache_version, int(time.time()), randint(0, 10**9)
+    caching_common.CACHE_VERSION = (
+        f'{cache_version}-{int(time.time())}-{randint(0, 10**9)}'
     )
     caching_common.cache_status = caching_common.CacheStatus()

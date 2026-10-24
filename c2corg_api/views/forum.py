@@ -1,43 +1,22 @@
-import colander
+import logging
 
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.models.common import document_types
+import colander
+from cornice.resource import resource
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPInternalServerError
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association, association_keys_for_types
 from c2corg_api.models.cache_version import update_cache_version_direct
+from c2corg_api.models.common import document_types
 from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.user import User
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
-
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
-
 from c2corg_api.views import cors_policy, restricted_view
 
-from pyramid.httpexceptions import HTTPInternalServerError
-
-import logging
-
 log = logging.getLogger(__name__)
-
-
-@resource(path='/forum/private-messages/unread-count', cors_policy=cors_policy)
-class PrivateMessageRest(ACLDefault):
-    @restricted_view(renderer='json')
-    def get(self):
-        settings = self.request.registry.settings
-        userid = self.request.authenticated_userid
-
-        client = get_discourse_client(settings)
-        d_username = client.get_username(userid)
-        messages = client.client.private_messages_unread(d_username)
-
-        count = len(messages['topic_list']['topics'])
-        link = '%s/u/%s/messages' % (client.discourse_public_url, d_username)
-
-        return {'link': link, 'count': count}
 
 
 class SchemaTopicCreate(colander.MappingSchema):
@@ -59,9 +38,7 @@ def validate_topic_create(request, **kwargs):
         .one_or_none()
     )
     if locale is None:
-        request.errors.add(
-            'body', '{}/{}'.format(document_id, lang), 'Document not found'
-        )
+        request.errors.add('body', f'{document_id}/{lang}', 'Document not found')
         return
     request.validated['locale'] = locale
 
@@ -71,16 +48,14 @@ def validate_topic_create(request, **kwargs):
         .one_or_none()
     )
     if document is None:
-        request.errors.add(
-            'body', '{}/{}'.format(document_id, lang), 'Document not found'
-        )
+        request.errors.add('body', f'{document_id}/{lang}', 'Document not found')
         return
     request.validated['document'] = document
 
     if locale.topic_id is not None:
         request.errors.add(
             'body',
-            '{}_{}'.format(document_id, lang),
+            f'{document_id}_{lang}',
             'Topic already exists',
             topic_id=locale.topic_id,
         )
@@ -103,30 +78,29 @@ class ForumTopicRest(ACLDefault):
         document = self.request.validated['document']
         document_type = association_keys_for_types[document.type]
 
-        document_path = '/{}/{}/{}'.format(
-            document_type, locale.document_id, locale.lang
-        )
+        document_path = f'/{document_type}/{locale.document_id}/{locale.lang}'
 
-        content = '<a href="https://www.camptocamp.org{}">{}</a>'.format(
-            document_path, locale.title or document_path
+        content = (
+            f'<a href="https://www.camptocamp.org{document_path}">'
+            f'{locale.title or document_path}</a>'
         )
 
         category = settings['discourse.category']
         # category could be id or name
         try:
             category = int(category)
-        except Exception:
-            pass
+        except ValueError:
+            pass  # a name: use it as it is
 
         client = get_discourse_client(settings)
         try:
-            title = '{}_{}'.format(locale.document_id, locale.lang)
+            title = f'{locale.document_id}_{locale.lang}'
             response = client.client.create_post(
                 content, title=title, category_id=category
             )
         except Exception as e:
-            log.error('Error with Discourse: {}'.format(str(e)), exc_info=True)
-            raise HTTPInternalServerError('Error with Discourse')
+            log.error(f'Error with Discourse: {e!s}', exc_info=True)
+            raise HTTPInternalServerError('Error with Discourse') from e
 
         if 'topic_id' in response:
             topic_id = response['topic_id']
@@ -141,9 +115,7 @@ class ForumTopicRest(ACLDefault):
                     self.invite_participants(client, locale, topic_id)
                 except Exception:
                     log.error(
-                        'Inviting participants of outing {} failed'.format(
-                            locale.document_id
-                        ),
+                        f'Inviting participants of outing {locale.document_id} failed',
                         exc_info=True,
                     )
 
@@ -162,8 +134,6 @@ class ForumTopicRest(ACLDefault):
                 client.invite_user_to_topic(forum_username, topic_id)
             except Exception:
                 log.error(
-                    'Inviting forum user {} in topic {} failed'.format(
-                        forum_username, topic_id
-                    ),
+                    f'Inviting forum user {forum_username} in topic {topic_id} failed',
                     exc_info=True,
                 )

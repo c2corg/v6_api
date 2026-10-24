@@ -1,17 +1,17 @@
 from c2corg_api.models.association import (
-    _get_current_associations,
     Association,
     _diff_associations,
+    _get_current_associations,
     synchronize_associations,
 )
-from c2corg_api.models.route import Route, ROUTE_TYPE
+from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.tests import BaseTestCase
 
 
 class TestAssociation(BaseTestCase):
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestCase.setUp(self)
 
         self.waypoint1 = Waypoint(waypoint_type='summit')
@@ -65,7 +65,7 @@ class TestAssociation(BaseTestCase):
                 {'document_id': self.waypoint2.document_id, 'is_parent': True},
             ],
         }
-        self.assertEqual(current_associations, expected_current_associations)
+        assert current_associations == expected_current_associations
 
     def test_get_current_associations_routes_partial(self):
         """Check that only those types are loaded that are also given in the
@@ -81,7 +81,7 @@ class TestAssociation(BaseTestCase):
         expected_current_associations = {
             'routes': [{'document_id': self.route2.document_id, 'is_parent': False}]
         }
-        self.assertEqual(current_associations, expected_current_associations)
+        assert current_associations == expected_current_associations
 
     def test_get_current_associations_waypoints(self):
         self.waypoint3 = Waypoint(waypoint_type='summit')
@@ -127,7 +127,7 @@ class TestAssociation(BaseTestCase):
                 {'document_id': self.waypoint2.document_id, 'is_parent': False}
             ],
         }
-        self.assertEqual(current_associations, expected_current_associations)
+        assert current_associations == expected_current_associations
 
     def test_get_current_associations_waypoints_partial(self):
         self.session.add(
@@ -143,7 +143,7 @@ class TestAssociation(BaseTestCase):
         )
 
         expected_current_associations = {}
-        self.assertEqual(current_associations, expected_current_associations)
+        assert current_associations == expected_current_associations
 
     def test_diff_associations(self):
         new_associations = {
@@ -172,10 +172,8 @@ class TestAssociation(BaseTestCase):
             {'document_id': 4, 'is_parent': True, 'doc_type': ROUTE_TYPE}
         ]
 
-        self.assertEqual(_get_document_ids(to_add), _get_document_ids(expected_to_add))
-        self.assertEqual(
-            _get_document_ids(to_remove), _get_document_ids(expected_to_remove)
-        )
+        assert _get_document_ids(to_add) == _get_document_ids(expected_to_add)
+        assert _get_document_ids(to_remove) == _get_document_ids(expected_to_remove)
 
     def test_synchronize_associations(self):
         self.route3 = Route(activities=['hiking'])
@@ -207,11 +205,11 @@ class TestAssociation(BaseTestCase):
             self.route1, new_associations, self.global_userids['contributor']
         )
 
-        self.assertIsNotNone(self._get_association(self.route1, self.route2))
-        self.assertIsNotNone(self._get_association(self.route4, self.route1))
-        self.assertIsNone(self._get_association(self.route2, self.route1))
-        self.assertIsNone(self._get_association(self.route1, self.route3))
-        self.assertIsNotNone(self._get_association(self.waypoint1, self.route1))
+        assert self._get_association(self.route1, self.route2) is not None
+        assert self._get_association(self.route4, self.route1) is not None
+        assert self._get_association(self.route2, self.route1) is None
+        assert self._get_association(self.route1, self.route3) is None
+        assert self._get_association(self.waypoint1, self.route1) is not None
 
     def _get_association(self, main_doc, child_doc):
         return self.session.get(

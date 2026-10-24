@@ -1,12 +1,11 @@
-from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.stoparea import Stoparea
+from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
-
 from c2corg_api.tests.views import BaseDocumentTestRest
 
 
 class TestWaypointStopareaRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/waypoints_stopareas', 'ws', WaypointStoparea, None, None
         )
@@ -84,28 +83,28 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
     def test_get_stopareas_by_waypoint(self):
         """Test getting stopareas for a waypoint."""
         response = self.app.get(
-            '/waypoints/{}/stopareas'.format(self.waypoint1.document_id), status=200
+            f'/waypoints/{self.waypoint1.document_id}/stopareas', status=200
         )
         result = response.json
 
-        self.assertEqual(result['waypoint_id'], self.waypoint1.document_id)
-        self.assertEqual(len(result['stopareas']), 2)
+        assert result['waypoint_id'] == self.waypoint1.document_id
+        assert len(result['stopareas']) == 2
 
         stoparea1 = result['stopareas'][0]
-        self.assertEqual(stoparea1['id'], 1)
-        self.assertEqual(stoparea1['navitia_id'], 'nav1')
-        self.assertEqual(stoparea1['stoparea_name'], 'Stop Area 1')
-        self.assertEqual(stoparea1['line'], 'line1')
-        self.assertEqual(stoparea1['operator'], 'operator1')
-        self.assertEqual(stoparea1['distance'], 100.0)
+        assert stoparea1['id'] == 1
+        assert stoparea1['navitia_id'] == 'nav1'
+        assert stoparea1['stoparea_name'] == 'Stop Area 1'
+        assert stoparea1['line'] == 'line1'
+        assert stoparea1['operator'] == 'operator1'
+        assert stoparea1['distance'] == 100.0
 
         stoparea2 = result['stopareas'][1]
-        self.assertEqual(stoparea2['id'], 2)
-        self.assertEqual(stoparea2['navitia_id'], 'nav2')
-        self.assertEqual(stoparea2['stoparea_name'], 'Stop Area 2')
-        self.assertEqual(stoparea2['line'], 'line2')
-        self.assertEqual(stoparea2['operator'], 'operator2')
-        self.assertEqual(stoparea2['distance'], 200.0)
+        assert stoparea2['id'] == 2
+        assert stoparea2['navitia_id'] == 'nav2'
+        assert stoparea2['stoparea_name'] == 'Stop Area 2'
+        assert stoparea2['line'] == 'line2'
+        assert stoparea2['operator'] == 'operator2'
+        assert stoparea2['distance'] == 200.0
 
     def test_get_stopareas_by_waypoint_not_found(self):
         """Test getting stopareas for a waypoint that doesn't exist."""
@@ -113,26 +112,26 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
         response = self.app.get('/waypoints/999999/stopareas', status=200)
         result = response.json
 
-        self.assertEqual(result['waypoint_id'], 999999)
-        self.assertEqual(result['stopareas'], [])
+        assert result['waypoint_id'] == 999999
+        assert result['stopareas'] == []
 
     def test_get_is_reachable_true(self):
         """Test checking if a waypoint is reachable (has stopareas)."""
         response = self.app.get(
-            '/waypoints/{}/isReachable'.format(self.waypoint1.document_id), status=200
+            f'/waypoints/{self.waypoint1.document_id}/isReachable', status=200
         )
         result = response.json
 
-        self.assertTrue(result)
+        assert result
 
     def test_get_is_reachable_false(self):
         """Test checking if a waypoint is not reachable (no stopareas)."""
         response = self.app.get(
-            '/waypoints/{}/isReachable'.format(self.waypoint2.document_id), status=200
+            f'/waypoints/{self.waypoint2.document_id}/isReachable', status=200
         )
         result = response.json
 
-        self.assertFalse(result)
+        assert not result
 
     def test_get_info(self):
         """Test getting info for a waypoint-stoparea."""
@@ -140,23 +139,22 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
         response = self.app.get('/waypoints_stopareas/1/en/info', status=200)
         result = response.json
 
-        self.assertEqual(
-            result['waypoint_stoparea_id'], self.waypoint_stoparea1.waypoint_stoparea_id
+        assert (
+            result['waypoint_stoparea_id']
+            == self.waypoint_stoparea1.waypoint_stoparea_id
         )
-        self.assertEqual(result['attributes']['distance'], 100.0)
-        self.assertEqual(
-            result['attributes']['waypoint_id'], self.waypoint1.document_id
-        )
-        self.assertEqual(result['attributes']['stoparea_id'], 1)
+        assert result['attributes']['distance'] == 100.0
+        assert result['attributes']['waypoint_id'] == self.waypoint1.document_id
+        assert result['attributes']['stoparea_id'] == 1
 
     def test_get_info_not_found(self):
         """Test getting info for a waypoint-stoparea that doesn't exist."""
         response = self.app.get('/waypoints_stopareas/999999/en/info', status=404)
-        self.assertEqual(response.json_body, {'error': 'Waypoint Stoparea not found'})
+        assert response.json_body == {'error': 'Waypoint Stoparea not found'}
 
     def test_get_info_lang_not_found(self):
         """Test getting info with an invalid lang."""
         response = self.app.get('/waypoints_stopareas/1/invalid/info', status=400)
 
         # Updated to match actual JSON response format
-        self.assertEqual(response.json_body['errors'][0]['description'], 'invalid lang')
+        assert response.json_body['errors'][0]['description'] == 'invalid lang'

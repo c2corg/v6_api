@@ -1,12 +1,13 @@
 import logging
+from os.path import isfile
 
-from c2corg_api.security.acl import ACLDefault
+from cornice.resource import resource, view
+
 from c2corg_api.caching import cache_document_detail
 from c2corg_api.models import DBSession, es_sync
 from c2corg_api.search import elasticsearch_config
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy
-from cornice.resource import resource, view
-from os.path import isfile
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +16,9 @@ log = logging.getLogger(__name__)
 class HealthRest(ACLDefault):
     @view()
     def get(self):
-        """Returns information about the version of the API and the status
+        """Return the API version and the status of its components.
+
+        Returns information about the version of the API and the status
         of its components:
 
             - Git revision
@@ -26,7 +29,6 @@ class HealthRest(ACLDefault):
             - Redis status
             - Number of keys in Redis
             - Maintenance mode status
-
         """
         status = {'version': self.request.registry.settings.get('cache_version')}
 
@@ -91,8 +93,8 @@ class HealthRest(ACLDefault):
         if isfile(maintenance_file):
             maintenance_mode = True
             log.warning(
-                'service is in maintenance mode, remove %s to reenable.'
-                % maintenance_file
+                'service is in maintenance mode, '
+                f'remove {maintenance_file} to reenable.'
             )
             self.request.response.status_code = 404
 

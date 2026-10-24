@@ -5,7 +5,7 @@ from c2corg_api.models.common import attributes
 
 
 def enum(name, types):
-    return Enum(name=name, metadata=Base.metadata, schema=schema, *types)
+    return Enum(*types, name=name, metadata=Base.metadata, schema=schema)
 
 
 quality_type = enum('quality_type', attributes.quality_types)

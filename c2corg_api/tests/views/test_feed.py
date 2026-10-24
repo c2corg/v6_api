@@ -3,15 +3,15 @@ import datetime
 from c2corg_api.models.area import Area
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.feed import DocumentChange, FilterArea, FollowedUser
-from c2corg_api.models.outing import Outing, OutingLocale, OUTING_TYPE
-from c2corg_api.models.route import Route, RouteLocale, ROUTE_TYPE
+from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
+from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.user import User
-from c2corg_api.models.waypoint import Waypoint, WaypointLocale, WAYPOINT_TYPE
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint, WaypointLocale
 from c2corg_api.tests.views import BaseTestRest
 
 
 class BaseFeedTestRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/feed'
 
@@ -149,13 +149,11 @@ class TestFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(4, len(feed))
+        assert 4 == len(feed)
 
         # check that the change for the outing (latest change) is listed first
         latest_change = feed[0]
-        self.assertEqual(
-            self.outing.document_id, latest_change['document']['document_id']
-        )
+        assert self.outing.document_id == latest_change['document']['document_id']
 
     def test_get_public_feed_ignoring_admin(self):
         """Test that feed entries of admin users can be ignored."""
@@ -166,26 +164,24 @@ class TestFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(1, len(feed))
+        assert 1 == len(feed)
 
         # check that only the change of contributor2 is returned
         latest_change = feed[0]
-        self.assertEqual(
-            self.waypoint2.document_id, latest_change['document']['document_id']
-        )
+        assert self.waypoint2.document_id == latest_change['document']['document_id']
 
     def test_get_public_feed_lang(self):
         response = self.app.get(self._prefix + '?pl=en', status=200)
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(4, len(feed))
+        assert 4 == len(feed)
 
         # check that only the 'en' locale is returned for the outing
         latest_change = feed[0]
         outing_locales = latest_change['document']['locales']
-        self.assertEqual(1, len(outing_locales))
-        self.assertEqual('en', outing_locales[0]['lang'])
+        assert 1 == len(outing_locales)
+        assert 'en' == outing_locales[0]['lang']
 
     def test_get_public_feed_pagination_invalid_format(self):
         response = self.app.get(self._prefix + '?token=123,invalid-token', status=400)
@@ -198,10 +194,8 @@ class TestFeedRest(BaseFeedTestRest):
         body = response.json
 
         document_ids = get_document_ids(body)
-        self.assertEqual(2, len(document_ids))
-        self.assertEqual(
-            document_ids, [self.outing.document_id, self.route.document_id]
-        )
+        assert 2 == len(document_ids)
+        assert document_ids == [self.outing.document_id, self.route.document_id]
         pagination_token = body['pagination_token']
 
         # last 2 changes
@@ -211,10 +205,8 @@ class TestFeedRest(BaseFeedTestRest):
         body = response.json
 
         document_ids = get_document_ids(body)
-        self.assertEqual(2, len(document_ids))
-        self.assertEqual(
-            document_ids, [self.waypoint1.document_id, self.waypoint2.document_id]
-        )
+        assert 2 == len(document_ids)
+        assert document_ids == [self.waypoint1.document_id, self.waypoint2.document_id]
         pagination_token = body['pagination_token']
 
         # empty response
@@ -224,7 +216,7 @@ class TestFeedRest(BaseFeedTestRest):
         body = response.json
 
         document_ids = get_document_ids(body)
-        self.assertEqual(0, len(document_ids))
+        assert 0 == len(document_ids)
 
     def test_get_public_feed_redirected_document(self):
         """Test that redirected documents are ignored."""
@@ -235,7 +227,7 @@ class TestFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(3, len(feed))
+        assert 3 == len(feed)
 
 
 class TestPersonalFeedRest(BaseFeedTestRest):
@@ -250,13 +242,11 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(4, len(feed))
+        assert 4 == len(feed)
 
         # check that the change for the outing (latest change) is listed first
         latest_change = feed[0]
-        self.assertEqual(
-            self.outing.document_id, latest_change['document']['document_id']
-        )
+        assert self.outing.document_id == latest_change['document']['document_id']
 
     def test_get_feed_activities_filter(self):
         """Get personal feed with an activity filter."""
@@ -270,9 +260,9 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(1, len(feed))
+        assert 1 == len(feed)
 
-        self.assertEqual(self.route.document_id, feed[0]['document']['document_id'])
+        assert self.route.document_id == feed[0]['document']['document_id']
 
     def test_get_feed_langs_filter(self):
         """Get personal feed with a language filter."""
@@ -286,11 +276,11 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(2, len(feed))
+        assert 2 == len(feed)
 
         # Last saved documents are listed first (anti-chronologically)
-        self.assertEqual(self.outing.document_id, feed[0]['document']['document_id'])
-        self.assertEqual(self.waypoint2.document_id, feed[1]['document']['document_id'])
+        assert self.outing.document_id == feed[0]['document']['document_id']
+        assert self.waypoint2.document_id == feed[1]['document']['document_id']
 
     def test_get_feed_areas_filter(self):
         """Get personal feed with an area filter."""
@@ -308,10 +298,10 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(2, len(feed))
+        assert 2 == len(feed)
 
-        self.assertEqual(self.route.document_id, feed[0]['document']['document_id'])
-        self.assertEqual(self.waypoint1.document_id, feed[1]['document']['document_id'])
+        assert self.route.document_id == feed[0]['document']['document_id']
+        assert self.waypoint1.document_id == feed[1]['document']['document_id']
 
     def test_get_feed_areas_filter_ignoring_admin_changes(self):
         """Test that feed entries of admin users can be ignored."""
@@ -332,7 +322,7 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(0, len(feed))
+        assert 0 == len(feed)
 
     def test_get_feed_areas_and_activities_filter(self):
         """Get personal feed with an area and activity filter."""
@@ -352,9 +342,9 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(1, len(feed))
+        assert 1 == len(feed)
 
-        self.assertEqual(self.route.document_id, feed[0]['document']['document_id'])
+        assert self.route.document_id == feed[0]['document']['document_id']
 
     def test_get_feed_followed_user_filter_ignored(self):
         """Get personal feed with a followed user filter without area and
@@ -374,7 +364,7 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(4, len(feed))
+        assert 4 == len(feed)
 
     def test_get_feed_followed_user_filter_followed_only(self):
         """Get personal feed with a followed user and `feed_followed_only`."""
@@ -396,10 +386,10 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(2, len(feed))
+        assert 2 == len(feed)
 
-        self.assertEqual(self.outing.document_id, feed[0]['document']['document_id'])
-        self.assertEqual(self.waypoint2.document_id, feed[1]['document']['document_id'])
+        assert self.outing.document_id == feed[0]['document']['document_id']
+        assert self.waypoint2.document_id == feed[1]['document']['document_id']
 
     def test_get_feed_followed_user_and_activity_filter(self):
         """Get personal feed with a followed user and an activity filter."""
@@ -421,11 +411,11 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(3, len(feed))
+        assert 3 == len(feed)
 
-        self.assertEqual(self.outing.document_id, feed[0]['document']['document_id'])
-        self.assertEqual(self.route.document_id, feed[1]['document']['document_id'])
-        self.assertEqual(self.waypoint2.document_id, feed[2]['document']['document_id'])
+        assert self.outing.document_id == feed[0]['document']['document_id']
+        assert self.route.document_id == feed[1]['document']['document_id']
+        assert self.waypoint2.document_id == feed[2]['document']['document_id']
 
     def test_get_feed_areas_filter_paginated(self):
         """Get personal feed with an area filter (paginated)."""
@@ -444,8 +434,8 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(1, len(feed))
-        self.assertEqual(self.route.document_id, feed[0]['document']['document_id'])
+        assert 1 == len(feed)
+        assert self.route.document_id == feed[0]['document']['document_id']
         pagination_token = body['pagination_token']
 
         # second page
@@ -457,8 +447,8 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(1, len(feed))
-        self.assertEqual(self.waypoint1.document_id, feed[0]['document']['document_id'])
+        assert 1 == len(feed)
+        assert self.waypoint1.document_id == feed[0]['document']['document_id']
         pagination_token = body['pagination_token']
 
         # empty response
@@ -470,7 +460,7 @@ class TestPersonalFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(0, len(feed))
+        assert 0 == len(feed)
 
 
 class TestProfileFeedRest(BaseFeedTestRest):
@@ -496,11 +486,11 @@ class TestProfileFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(3, len(feed))
+        assert 3 == len(feed)
 
-        self.assertEqual(self.outing.document_id, feed[0]['document']['document_id'])
-        self.assertEqual(self.route.document_id, feed[1]['document']['document_id'])
-        self.assertEqual(self.waypoint1.document_id, feed[2]['document']['document_id'])
+        assert self.outing.document_id == feed[0]['document']['document_id']
+        assert self.route.document_id == feed[1]['document']['document_id']
+        assert self.waypoint1.document_id == feed[2]['document']['document_id']
 
     def test_get_profile_contributor2(self):
         """Get profile feed for 'contributor2'."""
@@ -512,10 +502,10 @@ class TestProfileFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(2, len(feed))
+        assert 2 == len(feed)
 
-        self.assertEqual(self.outing.document_id, feed[0]['document']['document_id'])
-        self.assertEqual(self.waypoint2.document_id, feed[1]['document']['document_id'])
+        assert self.outing.document_id == feed[0]['document']['document_id']
+        assert self.waypoint2.document_id == feed[1]['document']['document_id']
 
     def test_get_feed_unauthenticated_public_profile(self):
         """Get the public profile feed for 'contributor2'."""
@@ -528,7 +518,7 @@ class TestProfileFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(2, len(feed))
+        assert 2 == len(feed)
 
     def test_get_feed_unauthenticated_non_public_profile(self):
         """Try to get the non-public profile feed for 'contributor2'."""
@@ -544,9 +534,9 @@ class TestProfileFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(1, len(feed))
+        assert 1 == len(feed)
 
-        self.assertEqual(self.outing.document_id, feed[0]['document']['document_id'])
+        assert self.outing.document_id == feed[0]['document']['document_id']
         pagination_token = body['pagination_token']
 
         # second page
@@ -555,8 +545,8 @@ class TestProfileFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(1, len(feed))
-        self.assertEqual(self.waypoint2.document_id, feed[0]['document']['document_id'])
+        assert 1 == len(feed)
+        assert self.waypoint2.document_id == feed[0]['document']['document_id']
         pagination_token = body['pagination_token']
 
         # empty response
@@ -565,7 +555,7 @@ class TestProfileFeedRest(BaseFeedTestRest):
         body = response.json
 
         feed = body['feed']
-        self.assertEqual(0, len(feed))
+        assert 0 == len(feed)
 
 
 def get_document_ids(body):

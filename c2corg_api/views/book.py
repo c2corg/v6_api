@@ -1,36 +1,36 @@
 import functools
 
+from cornice.resource import resource, view
+from cornice.validators import colander_body_validator
+
 from c2corg_api.models.book import (
+    BOOK_TYPE,
+    ArchiveBook,
     Book,
     schema_book,
     schema_create_book,
     schema_update_book,
-    BOOK_TYPE,
-    ArchiveBook,
 )
-from c2corg_api.models.document import ArchiveDocumentLocale
-from c2corg_api.views.document_info import DocumentInfoRest
-from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.models.common.fields_book import fields_book
-from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
-
-from c2corg_api.views.document_schemas import book_documents_config
+from c2corg_api.models.document import ArchiveDocumentLocale
+from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import (
     DocumentRest,
     make_validator_create,
     make_validator_update,
 )
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_schemas import book_documents_config
+from c2corg_api.views.document_version import DocumentVersionRest
 from c2corg_api.views.validation import (
-    validate_id,
-    validate_pagination,
-    validate_lang_param,
-    validate_preferred_lang_param,
     validate_associations,
-    validate_lang,
-    validate_version_id,
     validate_cook_param,
+    validate_id,
+    validate_lang,
+    validate_lang_param,
+    validate_pagination,
+    validate_preferred_lang_param,
+    validate_version_id,
 )
 
 validate_book_create = make_validator_create(fields_book.get('required'))

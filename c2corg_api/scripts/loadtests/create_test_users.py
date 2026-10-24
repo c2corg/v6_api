@@ -1,21 +1,17 @@
-import sys
 import logging
-import transaction
-
-from sqlalchemy import engine_from_config
-
 import os
-from sqlalchemy.orm import sessionmaker
+import sys
 
+import transaction
 from pyramid.paster import get_appsettings
-
+from sqlalchemy import engine_from_config
+from sqlalchemy.orm import sessionmaker
 from zope.sqlalchemy import register
 
-from c2corg_api.models.document import DocumentLocale, DocumentGeometry
-from c2corg_api.models.document_history import HistoryMetaData, DocumentVersion
+from c2corg_api.models.document import DocumentGeometry, DocumentLocale
+from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
-
 
 NB_USERS_TO_CREATE = 1000
 BASE_USERNAME = 'testuserc2c'
@@ -93,9 +89,7 @@ def main(argv=sys.argv):
             session.add_all(versions)
             session.flush()
 
-    print(
-        'Created %d users with base username `%s`' % (NB_USERS_TO_CREATE, BASE_USERNAME)
-    )
+    print(f'Created {NB_USERS_TO_CREATE} users with base username `{BASE_USERNAME}`')
 
 
 if __name__ == '__main__':

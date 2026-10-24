@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from c2corg_api.models import Base, users_schema
@@ -6,9 +6,7 @@ from c2corg_api.models.user import User
 
 
 class SsoKey(Base):
-    """
-    Class containing API keys.
-    """
+    """Class containing API keys."""
 
     __tablename__ = 'sso_key'
     __table_args__ = {'schema': users_schema}
@@ -18,9 +16,7 @@ class SsoKey(Base):
 
 
 class SsoExternalId(Base):
-    """
-    Class containing User's SSO external identifiers.
-    """
+    """Class containing User's SSO external identifiers."""
 
     __tablename__ = 'sso_external_id'
     __table_args__ = {'schema': users_schema}
