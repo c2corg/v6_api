@@ -4,6 +4,9 @@ set -e
 echo "==> Installing Python dependencies..."
 uv sync --frozen
 
+echo "==> Installing the git pre-commit hook (ruff)..."
+uv run --frozen pre-commit install
+
 echo "==> Copying env.local.sample to env.local (if not present)..."
 if [ ! -f config/env.local ]; then
   cp config/env.local.sample config/env.local
@@ -96,5 +99,6 @@ echo ""
 echo "  Run the API:   pserve development.ini --reload"
 echo "  Run tests:     pytest"
 echo "  Run linter:    ruff check c2corg_api es_migration"
+echo "  Format code:   make format (also done on save in VS Code)"
 echo "  Or use make:   make test / make serve / make lint"
 echo "============================================="
