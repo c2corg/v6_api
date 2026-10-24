@@ -89,8 +89,8 @@ class ForumTopicRest(ACLDefault):
         # category could be id or name
         try:
             category = int(category)
-        except Exception:
-            pass
+        except ValueError:
+            pass  # a name: use it as it is
 
         client = get_discourse_client(settings)
         try:

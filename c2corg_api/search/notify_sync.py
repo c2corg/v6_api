@@ -18,12 +18,12 @@ def notify_es_syncer(queue_config):
         def on_revive(channel):
             """Try to re-create the Redis queue on connection errors."""
             try:
-                # try to unbind the queue, ignore errors
+                # try to unbind the queue: it may already be gone
                 channel.queue_unbind(
                     queue_config.queue.name, exchange=queue_config.exchange.name
                 )
             except Exception:
-                pass
+                log.debug('Unbinding the ES sync queue failed', exc_info=True)
 
             # the re-create the queue
             channel.queue_bind(
