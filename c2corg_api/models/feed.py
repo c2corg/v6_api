@@ -354,7 +354,8 @@ def update_feed_images_upload(images, images_in, user_id):
     """
     if not images or not images_in:
         return
-    assert len(images) == len(images_in)
+    if len(images) != len(images_in):
+        raise ValueError('images and images_in must have the same length')
 
     # get the document that the images were uploaded to
     document_id, document_type = get_linked_document(images_in)
@@ -482,7 +483,8 @@ def update_langs_of_changes(document_id):
 
 def get_linked_document(images_in):
     """Given a list of image inputs, return a linked document from the first image."""
-    assert images_in
+    if not images_in:
+        raise ValueError('no image given')
 
     image_in = images_in[0]
     associations = image_in.get('associations')

@@ -117,7 +117,8 @@ class DocumentInfoRest:
                 'available_langs': get_available_langs(document.redirects_to),
             }
 
-        assert len(document.locales) == 1
+        if len(document.locales) != 1:
+            raise RuntimeError(f'expected 1 locale, got {len(document.locales)}')
         locale = document.locales[0]
 
         return {
