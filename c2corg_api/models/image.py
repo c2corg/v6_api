@@ -12,7 +12,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import declared_attr
 from sqlalchemy.sql.functions import func
 
-from c2corg_api.ext.colander_ext import finite
+from c2corg_api.ext.colander_ext import FiniteFloat
 from c2corg_api.models import Base, DBSession, enums, schema
 from c2corg_api.models.common import document_types
 from c2corg_api.models.common.fields_image import fields_image
@@ -34,7 +34,7 @@ from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 IMAGE_TYPE = document_types.IMAGE_TYPE
 
 
-_finite_float = {'colanderalchemy': {'validator': finite}}
+_finite_float = {'colanderalchemy': {'typ': FiniteFloat()}}
 
 
 class _ImageMixin:

@@ -6,7 +6,7 @@ import struct
 from numbers import Number
 
 import geojson
-from colander import Invalid, SchemaType, null
+from colander import Float, Invalid, SchemaType, null
 from geoalchemy2 import WKBElement
 from geomet import wkb
 
@@ -15,10 +15,14 @@ from geomet import wkb
 _EWKB_SRID_FLAG = 0x20000000
 
 
-def finite(node, value):
-    """Reject NaN and infinite floats, which cannot be serialized to JSON."""
-    if not math.isfinite(value):
-        raise Invalid(node, 'Must be a finite number')
+class FiniteFloat(Float):
+    """Float that turns NaN and infinite values into null (not valid JSON)."""
+
+    def deserialize(self, node, cstruct):
+        result = super().deserialize(node, cstruct)
+        if result is not null and not math.isfinite(result):
+            return null
+        return result
 
 
 class Geometry(SchemaType):

@@ -405,13 +405,17 @@ class TestImageRest(BaseTestImage):
         self.assertCorniceRequired(errors[0], 'filename')
 
     @pytest.mark.parametrize('value', ['NaN', 'inf', float('nan')])
-    def test_post_non_finite_exif(self, value):
+    @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
+    def test_post_non_finite_exif(self, post_mock, value):
         body_post = self._post_success_document()
         body_post['fnumber'] = value
-        body = self.post_error(body_post)
-        errors = body.get('errors')
-        assert errors[0].get('name') == 'fnumber'
-        assert errors[0].get('description') == 'Must be a finite number'
+        body_post['exposure_time'] = value
+        body_post['focal_length'] = 26
+
+        body, doc = self.post_success(body_post)
+        assert doc.fnumber is None
+        assert doc.exposure_time is None
+        assert doc.focal_length == 26
 
     def test_get_nan_exif(self):
         self.image.fnumber = float('nan')
