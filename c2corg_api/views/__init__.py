@@ -1,6 +1,7 @@
 import collections.abc
 import datetime
 import logging
+import math
 
 from colander import null
 from cornice import Errors
@@ -235,6 +236,9 @@ def serialize(data):
     if isinstance(data, WKBElement):
         return geojson_from_wkbelement(data)
     if data is null:
+        return None
+    if isinstance(data, float) and not math.isfinite(data):
+        # NaN/Infinity are not valid JSON
         return None
 
     return data

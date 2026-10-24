@@ -1,6 +1,7 @@
 # Inspired from the c2cgeoform colander extension
 # https://github.com/camptocamp/c2cgeoform/blob/master/c2cgeoform/ext/
 
+import math
 import struct
 from numbers import Number
 
@@ -12,6 +13,12 @@ from geomet import wkb
 # EWKB SRID flag, see https://git.osgeo.org/gitea/postgis/postgis/raw/
 # master/doc/ZMSgeoms.txt
 _EWKB_SRID_FLAG = 0x20000000
+
+
+def finite(node, value):
+    """Reject NaN and infinite floats, which cannot be serialized to JSON."""
+    if not math.isfinite(value):
+        raise Invalid(node, 'Must be a finite number')
 
 
 class Geometry(SchemaType):
