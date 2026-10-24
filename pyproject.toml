@@ -101,7 +101,8 @@ preview = true
 # D: docstring style (pep257 convention, see pydocstyle below).
 # DTZ: no naive datetimes (the database columns are timestamptz).
 # RUF100: report `# noqa` comments that no longer silence anything.
-select = ["E", "W", "F", "I", "N", "UP", "B", "D", "DTZ", "RUF100"]
+# S113: outbound HTTP requests must have a timeout (flake8-bandit).
+select = ["E", "W", "F", "I", "N", "UP", "B", "D", "DTZ", "S113", "RUF100"]
 ignore = [
     "E226", "E241", "E242",  # in pycodestyle's default ignore list
     "N818",  # off by default in pep8-naming
@@ -120,6 +121,7 @@ ignore = [
     "B023",  # fake generators defined and used within one loop iteration
     "D",  # test docstrings describe test cases, not an API
     "DTZ",  # fixtures use naive UTC datetimes; the test database runs in UTC
+    "S113",  # the conftest requests.get passthrough forwards the caller's timeout
 ]
 
 [tool.ruff.lint.pydocstyle]

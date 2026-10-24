@@ -131,6 +131,11 @@ def delete_waypoint_stopareas(connection, waypoint_id):
     )
 
 
+# Timeout (seconds) of each Navitia request made while saving a waypoint: the
+# save waits for them, so a Navitia outage must not block it indefinitely.
+NAVITIA_TIMEOUT = 30
+
+
 @event.listens_for(DocumentGeometry, 'after_insert')
 @event.listens_for(DocumentGeometry, 'after_update')
 def process_new_waypoint(mapper, connection, geometry):
@@ -219,7 +224,10 @@ def process_new_waypoint(mapper, connection, geometry):
     navitia_headers = {'Authorization': api_key}
 
     places_response = requests.get(
-        places_url, headers=navitia_headers, params=places_params
+        places_url,
+        headers=navitia_headers,
+        params=places_params,
+        timeout=NAVITIA_TIMEOUT,
     )
     places_data = places_response.json()
 
@@ -249,7 +257,9 @@ def process_new_waypoint(mapper, connection, geometry):
 
         # Get informations of stopareas to know its transports
         stop_info_url = f'https://api.navitia.io/v1/places/{stop_id}'
-        stop_info_response = requests.get(stop_info_url, headers=navitia_headers)
+        stop_info_response = requests.get(
+            stop_info_url, headers=navitia_headers, timeout=NAVITIA_TIMEOUT
+        )
         stop_info = stop_info_response.json()
 
         if 'places' not in stop_info or not stop_info['places']:
@@ -302,7 +312,10 @@ def process_new_waypoint(mapper, connection, geometry):
         }
 
         journey_response = requests.get(
-            journey_url, headers=navitia_headers, params=journey_params
+            journey_url,
+            headers=navitia_headers,
+            params=journey_params,
+            timeout=NAVITIA_TIMEOUT,
         )
         journey_data = journey_response.json()
 

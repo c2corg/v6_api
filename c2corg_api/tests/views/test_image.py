@@ -1229,3 +1229,19 @@ class TestImageProxyRest(BaseTestRest):
             f'/images/proxy/{self.image.document_id}?size=MI', status=302
         )
         assert 'public, max-age=86400' == resp.headers['Cache-Control']
+
+
+def test_publish_image_in_backend_sets_a_timeout():
+    from c2corg_api.views.image import publish_image_in_backend
+
+    request = Mock()
+    request.registry.settings = {
+        'image_backend.url': 'http://images.example',
+        'image_backend.secret_key': 'secret',
+        'url.timeout': '10',
+    }
+    with patch(
+        'c2corg_api.views.image.requests.post', return_value=Mock(status_code=200)
+    ) as post:
+        publish_image_in_backend(request, 'image.jpg')
+    assert post.call_args.kwargs['timeout'] == 10

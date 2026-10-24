@@ -154,7 +154,7 @@ def publish_image_in_backend(request, filename):
     url = '{}/{}'.format(settings['image_backend.url'], 'publish')
     data = {'secret': settings['image_backend.secret_key'], 'filename': filename}
 
-    response = requests.post(url, data)
+    response = requests.post(url, data, timeout=int(settings['url.timeout']))
 
     if response.status_code != 200:
         raise HTTPInternalServerError(
@@ -188,6 +188,7 @@ def delete_all_files_for_image(document_id, request):
                 'secret': settings['image_backend.secret_key'],
                 'filenames': filenames,
             },
+            timeout=int(settings['url.timeout']),
         )
 
         if response.status_code != 200:
