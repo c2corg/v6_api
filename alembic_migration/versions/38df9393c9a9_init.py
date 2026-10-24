@@ -446,7 +446,7 @@ language plpgsql;
 # https://github.com/discourse/discourse/blob/master/app/models/username_validator.rb
 function_check_forum_username = extensions.ReplaceableObject(
     'users.check_forum_username(name TEXT)',
-    """
+    r"""
 RETURNS boolean AS $$
 BEGIN
   IF name = NULL THEN
