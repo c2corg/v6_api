@@ -137,14 +137,15 @@ class LTagNumbering:
         try:
             return self.PATTERN.sub(handle_match, markdown)
 
-        except NotImplementedError, AssertionError:
+        except NotImplementedError:
             self.supported = False
             return self.PATTERN.sub(self.handle_unmatched, markdown)
 
     def compute_label(self, raw_label):
         """Get L# label, and check supported use case."""
         if raw_label is not None:
-            assert self.allow_labels, "Can't handle label"
+            if not self.allow_labels:
+                raise NotImplementedError("Can't handle label")
 
             self.contains_label = True
         else:
@@ -197,7 +198,8 @@ class LTagNumbering:
 
         elif len(value) == 0:  # Simple use case : L#
             self.allow_labels = False
-            assert not self.contains_label, 'Not yet supported'
+            if self.contains_label:
+                raise NotImplementedError('Not yet supported')
 
             value = self.value[typ if is_first_cell else row_type]
 

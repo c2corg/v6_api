@@ -507,7 +507,8 @@ class DocumentRest(ACLDefault):
 
     @staticmethod
     def create_new_version(document, user_id, written_at=None):
-        assert user_id
+        if not user_id:
+            raise ValueError('a new version needs a user id')
         archive = document.to_archive()
         archive_locales = document.get_archive_locales()
         archive_geometry = document.get_archive_geometry()
@@ -535,8 +536,10 @@ class DocumentRest(ACLDefault):
 
     @staticmethod
     def update_version(document, user_id, comment, update_types, changed_langs):
-        assert user_id
-        assert update_types
+        if not user_id:
+            raise ValueError('a new version needs a user id')
+        if not update_types:
+            raise ValueError('a new version needs update types')
 
         # flush pending changes first: it updates the version numbers that
         # the archives below copy. Callers that change the document without

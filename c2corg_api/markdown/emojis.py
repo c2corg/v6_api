@@ -26,7 +26,8 @@ class Emoji:
         self.unicode_alt = kwargs.pop('unicode_alt', self.unicode)
         self.classes = kwargs.pop('classes', 'emoji')
 
-        assert self.svg_name, 'Please precise a SVG name'
+        if not self.svg_name:
+            raise ValueError('Please precise a SVG name')
 
     def get_alt(self, user_code):
         """Get alt form."""

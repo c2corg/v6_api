@@ -86,7 +86,8 @@ def wkb_to_shape(wkb_element):
     Create a 2D Shapely shape from a WKB value. 3D and 4D geometries
     are turned into 2D geometries.
     """
-    assert isinstance(wkb_element, WKBElement)
+    if not isinstance(wkb_element, WKBElement):
+        raise TypeError(f'expected a WKBElement, got {type(wkb_element).__name__}')
     geometry = wkb.loads(bytes(wkb_element.data))
     return shape(_force_2d(geometry))
 

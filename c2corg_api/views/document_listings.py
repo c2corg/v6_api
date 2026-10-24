@@ -58,9 +58,10 @@ def get_documents(documents_config, meta_params, search_documents):
 
         docs = _get_documents_from_ids(ids, base_query, documents_config, lang)
 
-        assert len(cache_keys) == len(docs), (
-            'the number of returned documents must match ' + 'the number of keys'
-        )
+        if len(cache_keys) != len(docs):
+            raise RuntimeError(
+                'the number of returned documents must match the number of keys'
+            )
 
         return docs
 
