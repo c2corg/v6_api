@@ -15,7 +15,7 @@ class _StopareaMixin:
     operator = Column(String, nullable=False)
     # same SRID as the stopareas table created by the migration and as the
     # points written by the Navitia import (EPSG:3857, like the waypoints)
-    geom = Column(Geometry('POINT', srid=3857, management=True))
+    geom = Column(Geometry('POINT', srid=3857))
 
 
 attributes = ['navitia_id', 'stoparea_name', 'line', 'operator', 'geom']
