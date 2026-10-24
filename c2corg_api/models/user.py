@@ -53,7 +53,7 @@ class PasswordUtil:
 
 class Purpose(Enum):
     registration = 'regemail'
-    new_password = 'newpass'
+    new_password = 'newpass'  # nosec B105 - nonce prefix, not a password
     change_email = 'chgemail'
 
 
