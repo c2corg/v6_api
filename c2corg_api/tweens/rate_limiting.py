@@ -26,7 +26,7 @@ ANONYMOUS_RATE_LIMITED_BUCKETS = {
     # credential, but static analysis (Codacy/Bandit-style hardcoded
     # password checks) flags string literals that look password-related
     # regardless of context.
-    '/users/request_password_change': 'account_recovery',
+    '/users/request_password_change': 'account_recovery',  # nosec B105
 }
 
 
