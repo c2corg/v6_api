@@ -1,16 +1,24 @@
+from functools import cache
+
 from c2corg_api.models.area import AREA_TYPE, Area, schema_listing_area
 from c2corg_api.models.article import ARTICLE_TYPE, Article, schema_listing_article
 from c2corg_api.models.book import BOOK_TYPE, Book, schema_listing_book
+from c2corg_api.models.common import attributes
+from c2corg_api.models.common.fields_area import fields_area
+from c2corg_api.models.common.fields_article import fields_article
+from c2corg_api.models.common.fields_book import fields_book
+from c2corg_api.models.common.fields_coverage import fields_coverage
+from c2corg_api.models.common.fields_image import fields_image
+from c2corg_api.models.common.fields_outing import fields_outing
+from c2corg_api.models.common.fields_route import fields_route
+from c2corg_api.models.common.fields_topo_map import fields_topo_map
+from c2corg_api.models.common.fields_user_profile import fields_user_profile
+from c2corg_api.models.common.fields_waypoint import fields_waypoint
+from c2corg_api.models.common.fields_xreport import fields_xreport
 from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage, schema_listing_coverage
 from c2corg_api.models.image import IMAGE_TYPE, Image, schema_listing_image
 from c2corg_api.models.outing import OUTING_TYPE, Outing, schema_outing
-from c2corg_api.models.xreport import (
-    XREPORT_TYPE,
-    Xreport,
-    schema_listing_xreport,
-    XreportLocale,
-)
-from c2corg_api.models.route import schema_route, ROUTE_TYPE, Route, RouteLocale
+from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale, schema_route
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.topo_map import MAP_TYPE, TopoMap, schema_listing_topo_map
 from c2corg_api.models.user_profile import (
@@ -20,24 +28,17 @@ from c2corg_api.models.user_profile import (
 )
 from c2corg_api.models.waypoint import (
     WAYPOINT_TYPE,
-    schema_waypoint,
     Waypoint,
     WaypointLocale,
+    schema_waypoint,
+)
+from c2corg_api.models.xreport import (
+    XREPORT_TYPE,
+    Xreport,
+    XreportLocale,
+    schema_listing_xreport,
 )
 from c2corg_api.views import set_author
-from c2corg_api.models.common import attributes
-from c2corg_api.models.common.fields_outing import fields_outing
-from c2corg_api.models.common.fields_xreport import fields_xreport
-from c2corg_api.models.common.fields_route import fields_route
-from c2corg_api.models.common.fields_waypoint import fields_waypoint
-from c2corg_api.models.common.fields_area import fields_area
-from c2corg_api.models.common.fields_article import fields_article
-from c2corg_api.models.common.fields_book import fields_book
-from c2corg_api.models.common.fields_image import fields_image
-from c2corg_api.models.common.fields_topo_map import fields_topo_map
-from c2corg_api.models.common.fields_user_profile import fields_user_profile
-from c2corg_api.models.common.fields_coverage import fields_coverage
-from functools import cache
 
 
 class GetDocumentsConfig:
@@ -93,26 +94,34 @@ class GetDocumentsConfig:
         return listing_fields
 
     def get_load_only_fields(self):
-        """Return the fields for a document type that are needed to query
+        """Return the document fields needed by the listing views.
+
+        Return the fields for a document type that are needed to query
         documents for the listing views.
         """
         return self.fields_document
 
     def get_load_only_fields_locales(self):
-        """Return the locales fields for a document type that are needed to
+        """Return the locale fields needed by the listing views.
+
+        Return the locales fields for a document type that are needed to
         query documents for the listing views.
         """
         return self.fields_locales
 
     def get_load_only_fields_geometry(self):
-        """Return the geometry fields for a document type that are needed to
+        """Return the geometry fields needed by the listing views.
+
+        Return the geometry fields for a document type that are needed to
         query documents for the listing views.
         """
         return self.fields_geometry
 
 
 def make_schema_adaptor(adapt_schema_for_type, type_field, field_list_type):
-    """Returns a function which adapts a base schema to a specific document
+    """Return a function adapting a base schema to a document type.
+
+    Returns a function which adapts a base schema to a specific document
     type, e.g. it returns a function which turns the base schema for waypoints
     into a schema which contains only the fields for the waypoint type
     "summit".
@@ -125,7 +134,7 @@ def make_schema_adaptor(adapt_schema_for_type, type_field, field_list_type):
 
 
 def get_all_fields(fields, activities, field_list_type):
-    """Returns all fields needed for the given list of activities."""
+    """Return all fields needed for the given list of activities."""
     fields_list = [
         fields.get(activity).get(field_list_type)
         for activity in activities
@@ -186,6 +195,7 @@ image_documents_config = GetDocumentsConfig(
 
 def adapt_outing_schema_for_activities(activities, field_list_type):
     """Get the schema for a set of activities.
+
     `field_list_type` should be either "fields" or "listing".
     """
     if not activities:
@@ -233,6 +243,7 @@ xreport_documents_config = GetDocumentsConfig(
 
 def adapt_route_schema_for_activities(activities, field_list_type):
     """Get the schema for a set of activities.
+
     `field_list_type` should be either "fields" or "listing".
     """
     if not activities:
@@ -290,6 +301,7 @@ user_profile_documents_config = GetDocumentsConfig(
 @cache
 def adapt_waypoint_schema_for_type(waypoint_type, field_list_type):
     """Get the schema for a waypoint type.
+
     `field_list_type` should be either "fields" or "listing".
     """
     fields = fields_waypoint.get(waypoint_type, {}).get(field_list_type, [])

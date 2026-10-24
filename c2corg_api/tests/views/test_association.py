@@ -1,11 +1,11 @@
 import datetime
 
-from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.article import Article
+from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.image import Image
-from c2corg_api.models.outing import Outing, OUTING_TYPE
+from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint
@@ -17,7 +17,7 @@ from c2corg_api.views.document import DocumentRest
 class TestAssociationRest(BaseTestRest):
     prefix = '/associations'
 
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestRest.setUp(self)
         self._add_test_data()
 
@@ -37,7 +37,7 @@ class TestAssociationRest(BaseTestRest):
         association = self.session.get(
             Association, (self.waypoint1.document_id, self.waypoint2.document_id)
         )
-        self.assertIsNotNone(association)
+        assert association is not None
 
         association_log = (
             self.session.query(AssociationLog)
@@ -45,8 +45,8 @@ class TestAssociationRest(BaseTestRest):
             .filter(AssociationLog.child_document_id == self.waypoint2.document_id)
             .one()
         )
-        self.assertEqual(association_log.is_creation, True)
-        self.assertIsNotNone(association_log.user_id)
+        assert association_log.is_creation is True
+        assert association_log.user_id is not None
 
         self.assertNotifiedEs()
 
@@ -66,7 +66,7 @@ class TestAssociationRest(BaseTestRest):
         association = self.session.get(
             Association, (self.waypoint1.document_id, self.article1.document_id)
         )
-        self.assertIsNotNone(association)
+        assert association is not None
 
         association_log = (
             self.session.query(AssociationLog)
@@ -74,8 +74,8 @@ class TestAssociationRest(BaseTestRest):
             .filter(AssociationLog.child_document_id == self.article1.document_id)
             .one()
         )
-        self.assertEqual(association_log.is_creation, True)
-        self.assertIsNotNone(association_log.user_id)
+        assert association_log.is_creation is True
+        assert association_log.user_id is not None
 
         self.check_cache_version(self.waypoint1.document_id, 2)
         self.check_cache_version(self.article1.document_id, 2)
@@ -94,38 +94,29 @@ class TestAssociationRest(BaseTestRest):
         association = self.session.get(
             Association, (contributor2, self.outing.document_id)
         )
-        self.assertIsNotNone(association)
+        assert association is not None
 
         # check that the feed change is updated
         feed_change = self.get_feed_change(
             self.outing.document_id, change_type='updated'
         )
-        self.assertIsNotNone(feed_change)
-        self.assertEqual(feed_change.change_type, 'updated')
-        self.assertEqual(
-            set(feed_change.user_ids),
-            set(
-                [
-                    self.global_userids['contributor'],
-                    self.global_userids['contributor2'],
-                ]
-            ),
+        assert feed_change is not None
+        assert feed_change.change_type == 'updated'
+        assert set(feed_change.user_ids) == set(
+            [self.global_userids['contributor'], self.global_userids['contributor2']]
         )
 
         # check that the participants of the 2nd feed change are also updated
         feed_change = self.get_feed_change(
             self.outing.document_id, change_type='added_photos'
         )
-        self.assertIsNotNone(feed_change)
-        self.assertEqual(
-            set(feed_change.user_ids),
-            set(
-                [
-                    self.global_userids['contributor'],
-                    self.global_userids['contributor2'],
-                    self.global_userids['moderator'],
-                ]
-            ),
+        assert feed_change is not None
+        assert set(feed_change.user_ids) == set(
+            [
+                self.global_userids['contributor'],
+                self.global_userids['contributor2'],
+                self.global_userids['moderator'],
+            ]
         )
 
     def test_add_association_uo_no_rights(self):
@@ -146,9 +137,7 @@ class TestAssociationRest(BaseTestRest):
         self.assertError(
             body['errors'],
             'associations.outings',
-            'no rights to modify associations with outing {}'.format(
-                self.outing.document_id
-            ),
+            f'no rights to modify associations with outing {self.outing.document_id}',
         )
 
     def test_add_association_wc_article_collab(self):
@@ -184,9 +173,8 @@ class TestAssociationRest(BaseTestRest):
         self.assertError(
             body['errors'],
             'associations.articles',
-            'no rights to modify associations with article {}'.format(
-                self.article1.document_id
-            ),
+            'no rights to modify associations with article '
+            f'{self.article1.document_id}',
         )
 
     def test_add_association_wc_article_personal_authorized(self):
@@ -222,9 +210,8 @@ class TestAssociationRest(BaseTestRest):
         self.assertError(
             body['errors'],
             'associations.articles',
-            'no rights to modify associations with article {}'.format(
-                self.article2.document_id
-            ),
+            'no rights to modify associations with article '
+            f'{self.article2.document_id}',
         )
 
     def test_add_association_wi_image_personal_unauthorized(self):
@@ -247,9 +234,7 @@ class TestAssociationRest(BaseTestRest):
         self.assertError(
             body['errors'],
             'associations.images',
-            'no rights to modify associations with image {}'.format(
-                self.image1.document_id
-            ),
+            f'no rights to modify associations with image {self.image1.document_id}',
         )
 
     def test_add_association_wi_image_personal_authorized(self):
@@ -285,9 +270,7 @@ class TestAssociationRest(BaseTestRest):
         self.assertError(
             body['errors'],
             'associations.xreports',
-            'no rights to modify associations with xreport {}'.format(
-                self.report1.document_id
-            ),
+            f'no rights to modify associations with xreport {self.report1.document_id}',
         )
 
     def test_add_association_wx_xreport_authorized(self):
@@ -323,16 +306,13 @@ class TestAssociationRest(BaseTestRest):
         self.assertError(
             body['errors'],
             'associations.xreports',
-            'no rights to modify associations with xreport {}'.format(
-                self.report1.document_id
-            ),
+            f'no rights to modify associations with xreport {self.report1.document_id}',
         )
         self.assertError(
             body['errors'],
             'associations.articles',
-            'no rights to modify associations with article {}'.format(
-                self.article1.document_id
-            ),
+            'no rights to modify associations with article '
+            f'{self.article1.document_id}',
         )
 
     def test_add_association_duplicate(self):
@@ -373,12 +353,12 @@ class TestAssociationRest(BaseTestRest):
         )
 
         body = response.json
-        self.assertEqual(body.get('status'), 'error')
+        assert body.get('status') == 'error'
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
+        assert len(errors) == 1
 
-        self.assertEqual(errors[0].get('name'), 'association')
-        self.assertEqual(errors[0].get('description'), 'invalid association type')
+        assert errors[0].get('name') == 'association'
+        assert errors[0].get('description') == 'invalid association type'
 
     def test_add_association_redirected_document(self):
         request_body = {
@@ -391,14 +371,14 @@ class TestAssociationRest(BaseTestRest):
         )
 
         body = response.json
-        self.assertEqual(body.get('status'), 'error')
+        assert body.get('status') == 'error'
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
+        assert len(errors) == 1
 
-        self.assertEqual(errors[0].get('name'), 'child_document_id')
-        self.assertEqual(
-            errors[0].get('description'),
-            'child document does not exist or is redirected',
+        assert errors[0].get('name') == 'child_document_id'
+        assert (
+            errors[0].get('description')
+            == 'child document does not exist or is redirected'
         )
 
     def test_add_association_invalid_ids(self):
@@ -412,20 +392,20 @@ class TestAssociationRest(BaseTestRest):
         )
 
         body = response.json
-        self.assertEqual(body.get('status'), 'error')
+        assert body.get('status') == 'error'
         errors = body.get('errors')
-        self.assertEqual(len(errors), 2)
+        assert len(errors) == 2
 
-        self.assertEqual(errors[0].get('name'), 'parent_document_id')
-        self.assertEqual(
-            errors[0].get('description'),
-            'parent document does not exist or is redirected',
+        assert errors[0].get('name') == 'parent_document_id'
+        assert (
+            errors[0].get('description')
+            == 'parent document does not exist or is redirected'
         )
 
-        self.assertEqual(errors[1].get('name'), 'child_document_id')
-        self.assertEqual(
-            errors[1].get('description'),
-            'child document does not exist or is redirected',
+        assert errors[1].get('name') == 'child_document_id'
+        assert (
+            errors[1].get('description')
+            == 'child document does not exist or is redirected'
         )
 
     def test_add_association_no_es_update(self):
@@ -477,7 +457,7 @@ class TestAssociationRest(BaseTestRest):
         association = self.session.get(
             Association, (self.waypoint1.document_id, self.waypoint2.document_id)
         )
-        self.assertIsNone(association)
+        assert association is None
 
         logs = (
             self.session.query(AssociationLog)
@@ -486,8 +466,8 @@ class TestAssociationRest(BaseTestRest):
             .order_by(AssociationLog.written_at)
             .all()
         )
-        self.assertEqual(logs[0].is_creation, True)
-        self.assertEqual(logs[1].is_creation, False)
+        assert logs[0].is_creation is True
+        assert logs[1].is_creation is False
 
         self.assertNotifiedEs()
 
@@ -519,9 +499,7 @@ class TestAssociationRest(BaseTestRest):
             body['errors'],
             'Bad Request',
             'no rights to modify associations between document '
-            'w ({}) and w ({})'.format(
-                self.waypoint1.document_id, self.waypoint2.document_id
-            ),
+            f'w ({self.waypoint1.document_id}) and w ({self.waypoint2.document_id})',
         )
 
     def test_delete_association_fuzzy(self):
@@ -551,7 +529,7 @@ class TestAssociationRest(BaseTestRest):
         association = self.session.get(
             Association, (self.waypoint1.document_id, self.waypoint2.document_id)
         )
-        self.assertIsNone(association)
+        assert association is None
 
     def test_delete_association_main_waypoint(self):
         request_body = {
@@ -575,14 +553,14 @@ class TestAssociationRest(BaseTestRest):
         )
 
         body = response.json
-        self.assertEqual(body.get('status'), 'error')
+        assert body.get('status') == 'error'
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
+        assert len(errors) == 1
 
-        self.assertEqual(errors[0].get('name'), 'Bad Request')
-        self.assertEqual(
-            errors[0].get('description'),
-            'as the main waypoint of the route, this waypoint can not be disassociated',
+        assert errors[0].get('name') == 'Bad Request'
+        assert (
+            errors[0].get('description') == 'as the main waypoint of the route, '
+            'this waypoint can not be disassociated'
         )
 
     def test_delete_association_uo(self):
@@ -645,9 +623,7 @@ class TestAssociationRest(BaseTestRest):
             body['errors'],
             'Bad Request',
             'no rights to modify associations between document '
-            'w ({}) and c ({})'.format(
-                self.waypoint1.document_id, self.article1.document_id
-            ),
+            f'w ({self.waypoint1.document_id}) and c ({self.article1.document_id})',
         )
 
         # but the original user can delete it
@@ -674,7 +650,7 @@ class TestAssociationRest(BaseTestRest):
 
         body = response.json
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
+        assert len(errors) == 1
         self.assertError(
             errors,
             'Bad Request',
@@ -712,7 +688,7 @@ class TestAssociationRest(BaseTestRest):
 
         body = response.json
         errors = body.get('errors')
-        self.assertEqual(len(errors), 1)
+        assert len(errors) == 1
         self.assertError(
             errors,
             'Bad Request',

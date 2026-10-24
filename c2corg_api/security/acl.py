@@ -1,4 +1,4 @@
-from pyramid.security import Allow, Everyone, Authenticated
+from pyramid.security import Allow, Authenticated, Everyone
 
 __all__ = ['ACLDefault']
 

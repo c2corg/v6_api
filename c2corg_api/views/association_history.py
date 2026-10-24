@@ -1,17 +1,18 @@
+from cornice.resource import resource, view
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
-from cornice.resource import resource, view
+
+from c2corg_api.models import DBSession
+from c2corg_api.models.association import AssociationLog
+from c2corg_api.models.document import Document, DocumentLocale
+from c2corg_api.models.user import User
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.views import cors_policy
 from c2corg_api.views.validation import (
+    validate_document_id_not_required,
     validate_pagination,
     validate_user_id_not_required,
-    validate_document_id_not_required,
 )
-from c2corg_api.models import DBSession
-from c2corg_api.models.user import User
-from c2corg_api.models.document import Document, DocumentLocale
-from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.models.association import AssociationLog
 
 # max/default sizes of requests
 LIMIT_MAX = 500

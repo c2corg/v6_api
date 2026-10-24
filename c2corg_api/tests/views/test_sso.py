@@ -1,10 +1,10 @@
-from unittest.mock import patch, Mock
-from urllib.parse import urlparse, parse_qs
+from unittest.mock import Mock, patch
+from urllib.parse import parse_qs, urlparse
 
 from pydiscourse.exceptions import DiscourseClientError
 
+from c2corg_api.models.sso import SsoExternalId, SsoKey
 from c2corg_api.models.user import User
-from c2corg_api.models.sso import SsoKey, SsoExternalId
 from c2corg_api.security.discourse_client import set_discourse_client
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.sso import localized_now, sso_expire_from_now
@@ -42,8 +42,8 @@ class TestSsoSyncRest(BaseTestRest):
         request_body = {'external_id': '999', 'email': 'newuser@external.domain.net'}
         body = self.app_post_json(self._url, request_body, status=400).json
         errors = body.get('errors')
-        self.assertEqual('sso_key', errors[0].get('name'))
-        self.assertEqual('Required', errors[0].get('description'))
+        assert 'sso_key' == errors[0].get('name')
+        assert 'Required' == errors[0].get('description')
 
     def test_bad_sso_key(self):
         request_body = {
@@ -53,15 +53,15 @@ class TestSsoSyncRest(BaseTestRest):
         }
         body = self.app_post_json(self._url, request_body, status=403).json
         errors = body.get('errors')
-        self.assertEqual('sso_key', errors[0].get('name'))
-        self.assertEqual('Invalid', errors[0].get('description'))
+        assert 'sso_key' == errors[0].get('name')
+        assert 'Invalid' == errors[0].get('description')
 
     def test_no_external_id(self):
         request_body = {'sso_key': sso_key}
         body = self.app_post_json(self._url, request_body, status=400).json
         errors = body.get('errors')
-        self.assertEqual('external_id', errors[0].get('name'))
-        self.assertEqual('Required', errors[0].get('description'))
+        assert 'external_id' == errors[0].get('name')
+        assert 'Required' == errors[0].get('description')
 
     def test_new_user_no_email(self):
         request_body = {
@@ -70,8 +70,8 @@ class TestSsoSyncRest(BaseTestRest):
         }
         body = self.app_post_json(self._url, request_body, status=400).json
         errors = body.get('errors')
-        self.assertEqual('email', errors[0].get('name'))
-        self.assertEqual('Required', errors[0].get('description'))
+        assert 'email' == errors[0].get('name')
+        assert 'Required' == errors[0].get('description')
 
     def test_new_user_existing_username(self):
         request_body = {
@@ -84,7 +84,7 @@ class TestSsoSyncRest(BaseTestRest):
         }
         body = self.app_post_json(self._url, request_body, status=400).json
         errors = body.get('errors')
-        self.assertEqual('already used username', errors[0].get('description'))
+        assert 'already used username' == errors[0].get('description')
 
     def test_new_user_existing_forum_username(self):
         request_body = {
@@ -98,7 +98,7 @@ class TestSsoSyncRest(BaseTestRest):
         }
         body = self.app_post_json(self._url, request_body, status=400).json
         errors = body.get('errors')
-        self.assertEqual('already used forum_username', errors[0].get('description'))
+        assert 'already used forum_username' == errors[0].get('description')
 
     def test_new_user_forum_username_too_long(self):
         request_body = {
@@ -112,8 +112,8 @@ class TestSsoSyncRest(BaseTestRest):
         }
         body = self.app_post_json(self._url, request_body, status=400).json
         errors = body.get('errors')
-        self.assertEqual('forum_username', errors[0].get('name'))
-        self.assertEqual('Longer than maximum length 25', errors[0].get('description'))
+        assert 'forum_username' == errors[0].get('name')
+        assert 'Longer than maximum length 25' == errors[0].get('description')
 
     @patch(
         'c2corg_api.security.discourse_client.DiscourseClient',
@@ -142,13 +142,13 @@ class TestSsoSyncRest(BaseTestRest):
             .filter(SsoExternalId.external_id == '999')
             .one_or_none()
         )
-        self.assertIsNotNone(sso_external_id)
+        assert sso_external_id is not None
         sso_user = sso_external_id.user
-        self.assertEqual('newuser', sso_user.username)
-        self.assertEqual('New User', sso_user.name)
-        self.assertEqual('NewUser', sso_user.forum_username)
+        assert 'newuser' == sso_user.username
+        assert 'New User' == sso_user.name
+        assert 'NewUser' == sso_user.forum_username
 
-        self.assertEqual(sso_external_id.token, self.token_from_url(body.get('url')))
+        assert sso_external_id.token == self.token_from_url(body.get('url'))
 
         client = discourse_mock.return_value
         client.by_external_id.assert_called_with(sso_external_id.user.id)
@@ -185,10 +185,10 @@ class TestSsoSyncRest(BaseTestRest):
             .filter(SsoExternalId.external_id == '1')
             .one_or_none()
         )
-        self.assertIsNotNone(sso_external_id)
-        self.assertEqual('contributor', sso_external_id.user.username)
+        assert sso_external_id is not None
+        assert 'contributor' == sso_external_id.user.username
 
-        self.assertEqual(sso_external_id.token, self.token_from_url(body.get('url')))
+        assert sso_external_id.token == self.token_from_url(body.get('url'))
 
     @patch(
         'c2corg_api.security.discourse_client.DiscourseClient',
@@ -209,8 +209,8 @@ class TestSsoSyncRest(BaseTestRest):
         body = self.app_post_json(self._url, request_body, status=200).json
 
         self.session.expire(self.contributor_external_id)
-        self.assertEqual(
-            self.contributor_external_id.token, self.token_from_url(body.get('url'))
+        assert self.contributor_external_id.token == self.token_from_url(
+            body.get('url')
         )
 
         client = discourse_mock.return_value
@@ -232,7 +232,7 @@ class TestSsoSyncRest(BaseTestRest):
         }
         body = self.app_post_json(self._url, request_body, status=500).json
         errors = body.get('errors')
-        self.assertEqual('Error with Discourse', errors[0].get('description'))
+        assert 'Error with Discourse' == errors[0].get('description')
 
     @patch(
         'c2corg_api.security.discourse_client.DiscourseClient',
@@ -260,11 +260,11 @@ class TestSsoSyncRest(BaseTestRest):
             .filter(SsoExternalId.external_id == '999')
             .one_or_none()
         )
-        self.assertIsNotNone(sso_external_id)
+        assert sso_external_id is not None
         sso_user = sso_external_id.user
-        self.assertEqual('newuser', sso_user.username)
-        self.assertEqual('newuser', sso_user.name)
-        self.assertEqual('newuser', sso_user.forum_username)
+        assert 'newuser' == sso_user.username
+        assert 'newuser' == sso_user.name
+        assert 'newuser' == sso_user.forum_username
 
     @patch(
         'c2corg_api.security.discourse_client.DiscourseClient',
@@ -327,14 +327,14 @@ class TestSsoLoginRest(BaseTestRest):
     def test_no_token(self):
         body = self.app_post_json(self._url, status=400).json
         errors = body.get('errors')
-        self.assertEqual('token', errors[0].get('name'))
-        self.assertEqual('Required', errors[0].get('description'))
+        assert 'token' == errors[0].get('name')
+        assert 'Required' == errors[0].get('description')
 
     def test_invalid_token(self):
         body = self.app_post_json(self._url, {'token': 'bad_token'}, status=403).json
         errors = body.get('errors')
-        self.assertEqual('token', errors[0].get('name'))
-        self.assertEqual('Invalid', errors[0].get('description'))
+        assert 'token' == errors[0].get('name')
+        assert 'Invalid' == errors[0].get('description')
 
     def test_expired_token(self):
         self.sso_external_id.expire = localized_now()
@@ -344,8 +344,8 @@ class TestSsoLoginRest(BaseTestRest):
             self._url, params={'token': 'good_token'}, status=403
         ).json
         errors = body.get('errors')
-        self.assertEqual('token', errors[0].get('name'))
-        self.assertEqual('Invalid', errors[0].get('description'))
+        assert 'token' == errors[0].get('name')
+        assert 'Invalid' == errors[0].get('description')
 
     def test_success(self):
         self.sso_external_id.expire = sso_expire_from_now()
@@ -354,7 +354,7 @@ class TestSsoLoginRest(BaseTestRest):
         body = self.app_post_json(
             self._url, {'discourse': True, 'token': 'good_token'}, status=200
         ).json
-        self.assertTrue('token' in body)
+        assert 'token' in body
 
     @patch(
         'c2corg_api.views.sso.get_discourse_client',
@@ -369,7 +369,7 @@ class TestSsoLoginRest(BaseTestRest):
         body = self.app_post_json(
             self._url, {'discourse': True, 'token': 'good_token'}, status=200
         ).json
-        self.assertTrue('token' in body)
+        assert 'token' in body
 
     @patch(
         'c2corg_api.views.sso.get_discourse_client',
@@ -383,4 +383,4 @@ class TestSsoLoginRest(BaseTestRest):
         body = self.app_post_json(
             self._url, {'discourse': True, 'token': 'good_token'}, status=200
         ).json
-        self.assertTrue('token' in body)
+        assert 'token' in body

@@ -3,9 +3,9 @@ import logging
 from sqlalchemy import (
     Boolean,
     Column,
-    Integer,
     DateTime,
     ForeignKey,
+    Integer,
     PrimaryKeyConstraint,
     String,
 )

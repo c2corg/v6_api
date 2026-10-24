@@ -1,9 +1,8 @@
-from base64 import b64encode
-from datetime import datetime, timedelta
-from os import urandom
-from pytz import utc
-from urllib.parse import urlencode
 import logging
+from base64 import b64encode
+from datetime import UTC, datetime, timedelta
+from os import urandom
+from urllib.parse import urlencode
 
 import colander
 from cornice.resource import resource, view
@@ -13,27 +12,26 @@ from pyramid.httpexceptions import (
     HTTPInternalServerError,
 )
 
-from c2corg_api.models.common.attributes import default_langs
-
 from c2corg_api.models import DBSession
+from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.sso import (
-    SsoKey,
     SsoExternalId,
+    SsoKey,
 )
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import log_validated_user_i_know_what_i_do
 from c2corg_api.views import (
     cors_policy,
     json_view,
 )
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views.user import (
     token_to_response,
-    validate_unique_attribute,
     validate_forum_username,
+    validate_unique_attribute,
 )
 
 CONST_EXPIRE_AFTER_MINUTES = 10
@@ -66,9 +64,7 @@ def sso_sync_validator(request, **kwargs):
         .one_or_none()
     )
     if sso_key is None:
-        log.warning(
-            'Attempt to use sso_sync with bad key from {}'.format(request.client_addr)
-        )
+        log.warning(f'Attempt to use sso_sync with bad key from {request.client_addr}')
         request.errors.status = 403
         request.errors.add('body', 'sso_key', 'Invalid')
         return
@@ -128,8 +124,8 @@ class SsoSyncRest(ACLDefault):
         ],
     )
     def post(self):
-        """
-        Synchronize user details and return authentication url.
+        """Synchronize user details and return authentication url.
+
         Important: Email addresses need to be validated by external site.
         """
         request = self.request
@@ -210,7 +206,7 @@ class SsoSyncRest(ACLDefault):
 
 
 def get_discourse_userid(client, userid):
-    """Get discourse user id with 404 handling"""
+    """Get discourse user id with 404 handling."""
     try:
         return client.get_userid(userid)
     except DiscourseClientError as e:
@@ -223,8 +219,8 @@ def call_discourse(method, *args, **kwargs):
     try:
         return method.__call__(*args, **kwargs)
     except Exception as e:
-        log.error('Error with Discourse: {}'.format(str(e)), exc_info=True)
-        raise HTTPInternalServerError('Error with Discourse')
+        log.error(f'Error with Discourse: {e!s}', exc_info=True)
+        raise HTTPInternalServerError('Error with Discourse') from e
 
 
 def generate_token():
@@ -232,7 +228,7 @@ def generate_token():
 
 
 def localized_now():
-    return utc.localize(datetime.utcnow())
+    return datetime.now(UTC)
 
 
 def sso_expire_from_now():
@@ -258,9 +254,7 @@ def validate_token(request, **kwargs):
     )
     if sso_external_id is None:
         log.warning(
-            'Attempt to use sso_login with bad token from {}'.format(
-                request.client_addr
-            )
+            f'Attempt to use sso_login with bad token from {request.client_addr}'
         )
         request.errors.status = 403
         request.errors.add('body', 'token', 'Invalid')

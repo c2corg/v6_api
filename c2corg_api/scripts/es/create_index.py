@@ -1,13 +1,13 @@
 #!/usr/bin/env python
-"""
-Creates (or recreates) the ES index with the correct mappings.
+"""Creates (or recreates) the ES index with the correct mappings.
+
 Must be run before fill_index.py when building the index from scratch.
 
 Usage: python create_index.py <config>.ini
 """
 
-import sys
 import logging
+import sys
 
 from pyramid.paster import get_appsettings, setup_logging
 from pyramid.scripts.common import parse_vars
@@ -22,7 +22,7 @@ from c2corg_api.search.mapping import analysis_settings
 
 def main(argv=sys.argv):
     if len(argv) < 2:
-        print('Usage: %s <config_uri> [var=value]' % argv[0])
+        print(f'Usage: {argv[0]} <config_uri> [var=value]')
         sys.exit(1)
 
     config_uri = argv[1]
@@ -38,11 +38,11 @@ def main(argv=sys.argv):
 
     # Delete index if it exists (to fix potentially wrong mappings)
     if client.indices.exists(index=index_name):
-        print('Deleting existing index: {}'.format(index_name))
+        print(f'Deleting existing index: {index_name}')
         client.indices.delete(index=index_name)
 
     # Create index with analysis settings
-    print('Creating index: {}'.format(index_name))
+    print(f'Creating index: {index_name}')
     client.indices.create(
         index=index_name, body={'settings': {'analysis': analysis_settings}}
     )
@@ -52,10 +52,10 @@ def main(argv=sys.argv):
     # we could run into type errors on some fields like
     # a mapping geom -> double instead of geo_point).
     for doc_type, search_class in search_documents.items():
-        print('Applying mapping for doc_type: {}'.format(doc_type))
+        print(f'Applying mapping for doc_type: {doc_type}')
         search_class._doc_type.mapping.save(index_name)
 
-    print('Done. Index "{}" created with correct mappings.'.format(index_name))
+    print(f'Done. Index "{index_name}" created with correct mappings.')
     print('You can now run fill_index.py safely.')
 
 

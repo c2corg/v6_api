@@ -1,13 +1,14 @@
-from c2corg_api.models import Base, schema, DBSession
-from c2corg_api.models.area import Area, AREA_TYPE
-from c2corg_api.models.cache_version import update_cache_version_for_area
-from c2corg_api.models.document import Document, DocumentGeometry, DocumentLocale
-from c2corg_api.views import set_best_locale
-from sqlalchemy import Column, Integer, ForeignKey
-from sqlalchemy.orm import relationship, load_only, joinedload
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.orm import joinedload, load_only, relationship
 from sqlalchemy.schema import PrimaryKeyConstraint
 from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import and_, or_, select
+
+from c2corg_api.models import Base, DBSession, schema
+from c2corg_api.models.area import AREA_TYPE, Area
+from c2corg_api.models.cache_version import update_cache_version_for_area
+from c2corg_api.models.document import Document, DocumentGeometry, DocumentLocale
+from c2corg_api.views import set_best_locale
 
 
 class AreaAssociation(Base):

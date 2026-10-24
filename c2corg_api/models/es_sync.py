@@ -1,11 +1,14 @@
-from c2corg_api.models import Base, schema
 from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import Column, CheckConstraint, ForeignKey
+from sqlalchemy.sql.schema import CheckConstraint, Column, ForeignKey
 from sqlalchemy.sql.sqltypes import DateTime, Integer, String
+
+from c2corg_api.models import Base, schema
 
 
 class ESSyncStatus(Base):
-    """A table with a single row that indicates the last time the
+    """Last time the ElasticSearch index was updated (a single row).
+
+    A table with a single row that indicates the last time the
     ElasticSearch index was updated.
     """
 
@@ -30,16 +33,16 @@ def get_status(session):
 
 
 def mark_as_updated(session, new_update_time):
-    """To be called when ElasticSearch has been updated to store the update
-    time.
-    """
+    """To be called when ElasticSearch has been updated to store the update time."""
     session.query(ESSyncStatus).filter(ESSyncStatus.id == 1).update(
         {ESSyncStatus.last_update: new_update_time}, synchronize_session=False
     )
 
 
 class ESDeletedDocument(Base):
-    """A table listing documents that have been deleted and that should be
+    """Deleted documents to remove from the ES index.
+
+    A table listing documents that have been deleted and that should be
     removed from the ES index.
     """
 
@@ -55,7 +58,9 @@ class ESDeletedDocument(Base):
 
 
 class ESDeletedLocale(Base):
-    """A table listing locales that have been deleted and that should be
+    """Deleted locales to remove from the ES index.
+
+    A table listing locales that have been deleted and that should be
     removed from the ES index.
     """
 

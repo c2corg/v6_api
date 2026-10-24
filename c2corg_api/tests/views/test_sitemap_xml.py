@@ -1,11 +1,10 @@
-from c2corg_api.models.route import RouteLocale, Route
-from c2corg_api.models.waypoint import WaypointLocale, Waypoint
-
+from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.views import BaseTestRest
 
 
 class TestSitemapXml(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/sitemaps.xml'
         self.ui_url = 'https://www.camptocamp.org'
@@ -51,8 +50,8 @@ class TestSitemapXml(BaseTestRest):
         def route_filter(s):
             return s[0].text == base_url + '/r/0.xml'
 
-        self.assertIsNotNone(next(filter(waypoint_filter, sitemaps), None))
-        self.assertIsNotNone(next(filter(route_filter, sitemaps), None))
+        assert next(filter(waypoint_filter, sitemaps), None) is not None
+        assert next(filter(route_filter, sitemaps), None) is not None
 
     def test_get_sitemap_invalid_doc_type(self):
         response = self.app.get(self._prefix + '/z/0.xml', status=400)
@@ -68,16 +67,14 @@ class TestSitemapXml(BaseTestRest):
         response = self.app.get(self._prefix + '/w/0.xml', status=200)
         urlset = response.xml
 
-        self.assertEqual(len(urlset), 3)
+        assert len(urlset) == 3
         url = urlset[0]
 
-        self.assertEqual(url[0].tag, '{}loc'.format(self.schema_url))
-        self.assertEqual(url[1].tag, '{}lastmod'.format(self.schema_url))
-        self.assertEqual(
-            url[0].text,
-            '{}/waypoints/{}/fr/dent-de-crolles'.format(
-                self.ui_url, self.waypoint1.document_id
-            ),
+        assert url[0].tag == f'{self.schema_url}loc'
+        assert url[1].tag == f'{self.schema_url}lastmod'
+        assert (
+            url[0].text == f'{self.ui_url}/waypoints/{self.waypoint1.document_id}'
+            '/fr/dent-de-crolles'
         )
 
     def test_get_waypoint_sitemap_no_pages(self):
@@ -87,14 +84,12 @@ class TestSitemapXml(BaseTestRest):
         response = self.app.get(self._prefix + '/r/0.xml', status=200)
         urlset = response.xml
 
-        self.assertEqual(len(urlset), 1)
+        assert len(urlset) == 1
         url = urlset[0]
 
-        self.assertEqual(url[0].tag, '{}loc'.format(self.schema_url))
-        self.assertEqual(url[1].tag, '{}lastmod'.format(self.schema_url))
-        self.assertEqual(
-            url[0].text,
-            '{}/routes/{}/fr/mont-blanc-mont-blanc-du-ciel'.format(
-                self.ui_url, self.route.document_id
-            ),
+        assert url[0].tag == f'{self.schema_url}loc'
+        assert url[1].tag == f'{self.schema_url}lastmod'
+        assert (
+            url[0].text == f'{self.ui_url}/routes/{self.route.document_id}'
+            '/fr/mont-blanc-mont-blanc-du-ciel'
         )

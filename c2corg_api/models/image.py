@@ -1,9 +1,5 @@
-from c2corg_api.models.schema_utils import (
-    restrict_schema,
-    get_update_schema,
-    get_create_schema,
-)
-from c2corg_api.models.common.fields_image import fields_image
+from colander import MappingSchema, SchemaNode, Sequence
+from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Column,
     DateTime,
@@ -16,22 +12,29 @@ from sqlalchemy import (
 from sqlalchemy.orm import declared_attr
 from sqlalchemy.sql.functions import func
 
-from colander import MappingSchema, SchemaNode, Sequence
-from colanderalchemy import SQLAlchemySchemaNode
-
-from c2corg_api.models import schema, enums, Base, DBSession
-from c2corg_api.models.utils import copy_attributes, ArrayOfEnum
+from c2corg_api.ext.colander_ext import FiniteFloat
+from c2corg_api.models import Base, DBSession, enums, schema
+from c2corg_api.models.common import document_types
+from c2corg_api.models.common.fields_image import fields_image
 from c2corg_api.models.document import (
     ArchiveDocument,
     Document,
+    DocumentLocale,
     get_geometry_schema_overrides,
     schema_attributes,
-    DocumentLocale,
     schema_locale_attributes,
 )
-from c2corg_api.models.common import document_types
+from c2corg_api.models.schema_utils import (
+    get_create_schema,
+    get_update_schema,
+    restrict_schema,
+)
+from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
 IMAGE_TYPE = document_types.IMAGE_TYPE
+
+
+_finite_float = {'colanderalchemy': {'typ': FiniteFloat()}}
 
 
 class _ImageMixin:
@@ -59,11 +62,11 @@ class _ImageMixin:
 
     camera_name = Column(String(100))
 
-    exposure_time = Column(Float)
+    exposure_time = Column(Float, info=_finite_float)
 
-    focal_length = Column(Float)
+    focal_length = Column(Float, info=_finite_float)
 
-    fnumber = Column(Float)
+    fnumber = Column(Float, info=_finite_float)
 
     iso_speed = Column(SmallInteger)
 
@@ -88,7 +91,7 @@ attributes = [
 
 
 class Image(_ImageMixin, Document):
-    """ """
+    """Current version of an image."""
 
     __tablename__ = 'images'
 
@@ -114,7 +117,7 @@ class Image(_ImageMixin, Document):
 
 
 class ArchiveImage(_ImageMixin, ArchiveDocument):
-    """ """
+    """Archived version of an image."""
 
     __tablename__ = 'images_archives'
 

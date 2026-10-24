@@ -1,27 +1,24 @@
 import colander
-from c2corg_api.models.schema_utils import (
-    restrict_schema,
-    get_update_schema,
-    get_create_schema,
-)
-from sqlalchemy import Column, Integer, Boolean, SmallInteger, String, Date, ForeignKey
-
 from colanderalchemy import SQLAlchemySchemaNode
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, SmallInteger, String
 
-from c2corg_api.models import schema, Base
-from c2corg_api.models.utils import ArrayOfEnum
-from c2corg_api.models.utils import copy_attributes
+from c2corg_api.models import Base, enums, schema
+from c2corg_api.models.common import document_types
 from c2corg_api.models.document import (
     ArchiveDocument,
+    ArchiveDocumentLocale,
     Document,
     DocumentLocale,
-    ArchiveDocumentLocale,
-    schema_locale_attributes,
-    schema_attributes,
     get_geometry_schema_overrides,
+    schema_attributes,
+    schema_locale_attributes,
 )
-from c2corg_api.models import enums
-from c2corg_api.models.common import document_types
+from c2corg_api.models.schema_utils import (
+    get_create_schema,
+    get_update_schema,
+    restrict_schema,
+)
+from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
 OUTING_TYPE = document_types.OUTING_TYPE
 
@@ -146,7 +143,7 @@ attributes = [
 
 
 class Outing(_OutingMixin, Document):
-    """ """
+    """Current version of an outing."""
 
     __tablename__ = 'outings'
 
@@ -172,7 +169,7 @@ class Outing(_OutingMixin, Document):
 
 
 class ArchiveOuting(_OutingMixin, ArchiveDocument):
-    """ """
+    """Archived version of an outing."""
 
     __tablename__ = 'outings_archives'
 
@@ -224,7 +221,7 @@ attributes_locales = [
 
 
 class OutingLocale(_OutingLocaleMixin, DocumentLocale):
-    """ """
+    """Current version of an outing locale."""
 
     __tablename__ = 'outings_locales'
 
@@ -243,7 +240,7 @@ class OutingLocale(_OutingLocaleMixin, DocumentLocale):
 
 
 class ArchiveOutingLocale(_OutingLocaleMixin, ArchiveDocumentLocale):
-    """ """
+    """Archived version of an outing locale."""
 
     __tablename__ = 'outings_locales_archives'
 

@@ -1,12 +1,13 @@
 import logging
 
+from elasticsearch_dsl.search import MultiSearch
+
 from c2corg_api.search import (
     create_search,
     elasticsearch_config,
     get_text_query_on_title,
 )
 from c2corg_api.views.document_listings import get_documents
-from elasticsearch_dsl.search import MultiSearch
 
 log = logging.getLogger(__name__)
 
@@ -29,11 +30,13 @@ def search_for_types(search_types, search_term, limit, lang):
 
     # load the documents using the document ids returned from the search
     results = {}
-    for search_type, result_for_type in zip(search_types, results_for_type):
+    for search_type, result_for_type in zip(
+        search_types, results_for_type, strict=True
+    ):
         (key, get_documents_config) = search_type
         (document_ids, total) = result_for_type
 
-        def search_documents(_, __):
+        def search_documents(_, __, document_ids=document_ids, total=total):
             return document_ids, total
 
         results[key] = get_documents(
@@ -44,7 +47,9 @@ def search_for_types(search_types, search_term, limit, lang):
 
 
 def do_multi_search_for_types(search_types, search_term, limit, lang):
-    """Executes a multi-search for all document types in a single request
+    """Search all document types in a single multi-search request.
+
+    Executes a multi-search for all document types in a single request
     and returns a list of tuples (document_ids, total) containing the results
     for each type.
     """
@@ -59,9 +64,8 @@ def do_multi_search_for_types(search_types, search_term, limit, lang):
             .extra(from_=0, size=limit)
         )
         log.debug(
-            'Search filter for type {}: {}'.format(
-                get_documents_config.document_type, search.to_dict()
-            )
+            f'Search filter for type {get_documents_config.document_type}: '
+            f'{search.to_dict()}'
         )
         multi_search = multi_search.add(search)
 

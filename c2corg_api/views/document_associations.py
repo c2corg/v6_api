@@ -1,3 +1,5 @@
+from sqlalchemy.sql.expression import and_, asc, or_
+
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE, Area
 from c2corg_api.models.article import ARTICLE_TYPE, Article
@@ -5,24 +7,23 @@ from c2corg_api.models.association import Association, updatable_associations
 from c2corg_api.models.book import BOOK_TYPE, Book
 from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import OUTING_TYPE, Outing
-from c2corg_api.models.xreport import Xreport, XREPORT_TYPE
-from c2corg_api.models.route import Route, ROUTE_TYPE
+from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.models.waypoint import Waypoint, WAYPOINT_TYPE
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
+from c2corg_api.models.xreport import XREPORT_TYPE, Xreport
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import (
-    waypoint_documents_config,
+    area_documents_config,
+    article_documents_config,
+    book_documents_config,
+    image_documents_config,
+    outing_documents_config,
     route_documents_config,
     user_profile_documents_config,
-    image_documents_config,
-    article_documents_config,
-    area_documents_config,
-    outing_documents_config,
-    book_documents_config,
+    waypoint_documents_config,
     xreport_documents_config,
 )
-from sqlalchemy.sql.expression import or_, and_, asc
 
 associations_to_include = {
     WAYPOINT_TYPE: {

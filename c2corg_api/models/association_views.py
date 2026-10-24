@@ -1,3 +1,9 @@
+from sqlalchemy import Integer
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql.expression import and_, join, select, text, union
+from sqlalchemy.sql.functions import func
+
 from c2corg_api.ext import sqa_view
 from c2corg_api.models import Base, schema
 from c2corg_api.models.association import Association
@@ -6,11 +12,6 @@ from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
-from sqlalchemy.dialects import postgresql
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql.expression import and_, union, select, text, join
-from sqlalchemy.sql.functions import func
-from sqlalchemy import Integer
 
 # This file contains definitions for database views that are used when filling
 # the search index.
@@ -89,7 +90,9 @@ def _get_select_waypoints_for_routes():
 
 
 def _get_select_waypoints_for_routes_aggregated():
-    """Returns a select which retrieves for every route the ids for the
+    """Select the waypoint ids associated to each route.
+
+    Returns a select which retrieves for every route the ids for the
     waypoints that are associated to the route. It also returns the parent
     and grand-parent of waypoints, so that when searching for routes for a
     waypoint, you also get the routes associated to child waypoints.
@@ -111,7 +114,9 @@ def _get_select_waypoints_for_routes_aggregated():
 
 
 class WaypointsForRoutesView(Base):
-    """A (non-materialized) view which contains the associated waypoints
+    """View of the waypoints associated to each route.
+
+    A (non-materialized) view which contains the associated waypoints
     for each route. This view is used when filling the search index for
     routes.
     """
@@ -136,7 +141,9 @@ Route.associated_waypoints_ids = relationship(
 
 # waypoints for outings
 def _get_select_waypoints_for_outings_aggregated():
-    """Returns a select which retrieves for every outing the ids for the
+    """Select the waypoint ids associated to each outing.
+
+    Returns a select which retrieves for every outing the ids for the
     waypoints that are associated to routes associated to the outing. It
     also returns the parent and grand-parent of waypoints, so that when
     searching for outings for a waypoint, you also get the outings associated
@@ -180,7 +187,9 @@ def _get_select_waypoints_for_outings_aggregated():
 
 
 class WaypointsForOutingsView(Base):
-    """A (non-materialized) view which contains the associated waypoints
+    """View of the waypoints associated to each outing.
+
+    A (non-materialized) view which contains the associated waypoints
     for each outing. This view is used when filling the search index for
     outings.
     """
@@ -205,9 +214,7 @@ Outing.associated_waypoints_ids = relationship(
 
 # users for outings
 def _get_select_users_for_outings_aggregated():
-    """Returns a select which retrieves for every outing the ids of
-    associated users.
-    """
+    """Return a select which retrieves for every outing the ids of associated users."""
     outing_type = text("'" + OUTING_TYPE + "'")
     user_type = text("'" + USERPROFILE_TYPE + "'")
     return (
@@ -229,9 +236,9 @@ def _get_select_users_for_outings_aggregated():
 
 
 class UsersForOutingsView(Base):
-    """A (non-materialized) view which contains the associated users
-    for each outing. This view is used when filling the search index for
-    outings.
+    """A (non-materialized) view which contains the associated users for each outing.
+
+    This view is used when filling the search index for outings.
     """
 
     __table__ = sqa_view.view(
@@ -254,9 +261,7 @@ Outing.associated_users_ids = relationship(
 
 # routes for outings
 def _get_select_routes_for_outings_aggregated():
-    """Returns a select which retrieves for every outing the ids of
-    associated routes.
-    """
+    """Return a select which retrieves for every outing the ids of associated routes."""
     outing_type = text("'" + OUTING_TYPE + "'")
     route_type = text("'" + ROUTE_TYPE + "'")
     return (
@@ -278,7 +283,9 @@ def _get_select_routes_for_outings_aggregated():
 
 
 class RoutesForOutingsView(Base):
-    """A (non-materialized) view which contains the associated routes
+    """View of the routes associated to each outing.
+
+    A (non-materialized) view which contains the associated routes
     for each outing. This view is used when filling the search index for
     outings.
     """
@@ -303,9 +310,7 @@ Outing.associated_routes_ids = relationship(
 
 # users for routes (tags)
 def _get_select_users_for_routes_aggregated():
-    """Returns a select which retrieves for every route the ids of
-    associated users.
-    """
+    """Return a select which retrieves for every route the ids of associated users."""
     return (
         select(
             DocumentTag.document_id.label('route_id'),
@@ -319,9 +324,9 @@ def _get_select_users_for_routes_aggregated():
 
 
 class UsersForRoutesView(Base):
-    """A (non-materialized) view which contains the associated users
-    for each route. This view is used when filling the search index for
-    routes.
+    """A (non-materialized) view which contains the associated users for each route.
+
+    This view is used when filling the search index for routes.
     """
 
     __table__ = sqa_view.view(

@@ -1,6 +1,6 @@
 from c2corg_api.models.book import BOOK_TYPE, Book
-from c2corg_api.search.mapping import SearchDocument, BaseMeta
-from c2corg_api.search.mapping_types import QueryableMixin, QEnumArray
+from c2corg_api.search.mapping import BaseMeta, SearchDocument
+from c2corg_api.search.mapping_types import QEnumArray, QueryableMixin
 
 
 class SearchBook(SearchDocument):

@@ -1,26 +1,25 @@
 import json
 
+from shapely.geometry import Point, shape
+
+from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.document import ArchiveDocumentLocale, DocumentLocale
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import (
-    UserProfile,
-    ArchiveUserProfile,
     USERPROFILE_TYPE,
+    ArchiveUserProfile,
+    UserProfile,
 )
 from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.models.common.attributes import quality_types
-from shapely.geometry import shape, Point
-
-from c2corg_api.models.document import ArchiveDocumentLocale, DocumentLocale
-from c2corg_api.views.document import DocumentRest
-
 from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.views.document import DocumentRest
 
 
 class TestUserProfileRest(BaseDocumentTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         self.set_prefix_and_model(
             '/profiles',
             USERPROFILE_TYPE,
@@ -37,10 +36,10 @@ class TestUserProfileRest(BaseDocumentTestRest):
     def test_get_collection(self):
         body = self.get_collection(user='contributor')
         doc = body['documents'][0]
-        self.assertIn('areas', doc)
-        self.assertIn('name', doc)
-        self.assertNotIn('username', doc)
-        self.assertNotIn('geometry', doc)
+        assert 'areas' in doc
+        assert 'name' in doc
+        assert 'username' not in doc
+        assert 'geometry' not in doc
 
     def test_get_collection_paginated(self):
         self.assertResultsEqual(
@@ -96,11 +95,11 @@ class TestUserProfileRest(BaseDocumentTestRest):
         )
         body = response.json
 
-        self.assertEqual(body.get('not_authorized'), True)
-        self.assertNotIn('username', body)
-        self.assertIn('name', body)
-        self.assertNotIn('locales', body)
-        self.assertNotIn('geometry', body)
+        assert body.get('not_authorized') is True
+        assert 'username' not in body
+        assert 'name' in body
+        assert 'locales' not in body
+        assert 'geometry' not in body
 
     def test_get_unauthenticated_public_profile(self):
         """Tests that the full profile is returned when requesting a public
@@ -111,19 +110,19 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.session.flush()
 
         body = self.get(self.profile1, check_title=False)
-        self.assertNotIn('username', body)
-        self.assertIn('name', body)
-        self.assertIn('locales', body)
-        self.assertIn('geometry', body)
+        assert 'username' not in body
+        assert 'name' in body
+        assert 'locales' in body
+        assert 'geometry' in body
 
     def test_get(self):
         body = self.get(self.profile1, user='contributor', check_title=False)
         self._assert_geometry(body)
-        self.assertIsNone(body['locales'][0].get('title'))
-        self.assertNotIn('maps', body)
-        self.assertNotIn('username', body)
-        self.assertIn('name', body)
-        self.assertIn('forum_username', body)
+        assert body['locales'][0].get('title') is None
+        assert 'maps' not in body
+        assert 'username' not in body
+        assert 'name' in body
+        assert 'forum_username' in body
 
     def test_get_unconfirmed_user(self):
         headers = self.add_authorization_header(username='contributor')
@@ -153,8 +152,8 @@ class TestUserProfileRest(BaseDocumentTestRest):
 
     def test_get_info(self):
         body, locale = self.get_info(self.profile1, 'en')
-        self.assertEqual(locale.get('lang'), 'en')
-        self.assertEqual(locale.get('title'), 'Contributor')
+        assert locale.get('lang') == 'en'
+        assert locale.get('title') == 'Contributor'
 
     def test_no_post(self):
         # can not create new profiles
@@ -177,7 +176,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 ],
                 'geometry': {
                     'version': self.profile1.geometry.version,
-                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}',  # noqa
+                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}',
                 },
             },
         }
@@ -272,7 +271,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
                 ],
                 'geometry': {
                     'version': self.profile1.geometry.version,
-                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}',  # noqa
+                    'geom': '{"type": "Point", "coordinates": [635957, 5723605]}',
                 },
             },
         }
@@ -285,7 +284,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
 
         # geometry has been changed
         archive_geometry_en = version_en.document_geometry_archive
-        self.assertEqual(archive_geometry_en.version, 2)
+        assert archive_geometry_en.version == 2
 
         self._check_es_index()
 
@@ -310,7 +309,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             body, self.profile1, user='moderator', check_es=False
         )
 
-        self.assertEqual(profile.categories, ['mountain_guide'])
+        assert profile.categories == ['mountain_guide']
         self._check_es_index()
 
     def test_put_success_lang_only(self):
@@ -334,7 +333,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             body, self.profile1, user='moderator', check_es=False
         )
 
-        self.assertEqual(profile.get_locale('en').description, 'Me!')
+        assert profile.get_locale('en').description == 'Me!'
         self._check_es_index()
 
     def test_put_reset_title(self):
@@ -360,9 +359,9 @@ class TestUserProfileRest(BaseDocumentTestRest):
             body, self.profile1, user='moderator', check_es=False
         )
 
-        self.assertEqual(profile.get_locale('en').description, 'Me!')
+        assert profile.get_locale('en').description == 'Me!'
         self.session.refresh(self.locale_en)
-        self.assertEqual(self.locale_en.title, '')
+        assert self.locale_en.title == ''
 
         # check that the the user names are added to the search index
         self._check_es_index()
@@ -383,29 +382,29 @@ class TestUserProfileRest(BaseDocumentTestRest):
             body, self.profile1, user='moderator', check_es=False
         )
 
-        self.assertEqual(profile.get_locale('es').description, 'Yo')
+        assert profile.get_locale('es').description == 'Yo'
         search_doc = self._check_es_index()
-        self.assertEqual(search_doc['title_es'], 'Contributor contributor')
+        assert search_doc['title_es'] == 'Contributor contributor'
 
     def _check_es_index(self):
         sync_es(self.session)
         search_doc = SearchUser.get(
             id=self.profile1.document_id, index=elasticsearch_config['index']
         )
-        self.assertEqual(search_doc['doc_type'], self.profile1.type)
-        self.assertEqual(search_doc['title_en'], 'Contributor contributor')
-        self.assertEqual(search_doc['title_fr'], 'Contributor contributor')
+        assert search_doc['doc_type'] == self.profile1.type
+        assert search_doc['title_en'] == 'Contributor contributor'
+        assert search_doc['title_fr'] == 'Contributor contributor'
         return search_doc
 
     def _assert_geometry(self, body):
-        self.assertIsNotNone(body.get('geometry'))
+        assert body.get('geometry') is not None
         geometry = body.get('geometry')
-        self.assertIsNotNone(geometry.get('version'))
-        self.assertIsNotNone(geometry.get('geom'))
+        assert geometry.get('version') is not None
+        assert geometry.get('geom') is not None
 
         geom = geometry.get('geom')
         point = shape(json.loads(geom))
-        self.assertIsInstance(point, Point)
+        assert isinstance(point, Point)
 
     def _add_test_data(self):
         user_id = self.global_userids['contributor']

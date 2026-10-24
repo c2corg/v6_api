@@ -1,23 +1,20 @@
 import logging
 import os
+
 import requests
+from pyramid.authorization import ACLAuthorizationPolicy
+from pyramid.config import Configurator
+from pyramid.settings import asbool
+from sqlalchemy import engine_from_config, event, exc, text
+from sqlalchemy.pool import Pool
 
 from c2corg_api.caching import configure_caches
-from c2corg_api.security.acl import ACLDefault
-from pyramid.config import Configurator
-from sqlalchemy import engine_from_config, exc, event
-from sqlalchemy.pool import Pool
-from sqlalchemy import text
-
+from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route
-
-from c2corg_api.models import DBSession
 from c2corg_api.search import configure_es_from_config, get_queue_config
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import configure_cors_policy
-
-from pyramid.authorization import ACLAuthorizationPolicy
-from pyramid.settings import asbool
 
 log = logging.getLogger(__name__)
 
@@ -27,8 +24,7 @@ class RootFactory(ACLDefault):
 
 
 def main(global_config, **settings):
-    """This function returns a Pyramid WSGI application."""
-
+    """Thi function returns a Pyramid WSGI application."""
     # Configure SQLAlchemy
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
@@ -52,8 +48,8 @@ def main(global_config, **settings):
         bypass_auth = asbool(settings['noauthorization'])
 
     if not bypass_auth:
-        from c2corg_api.security.roles import groupfinder
         from c2corg_api.security.jwt_policy import IntegerSubJWTAuthenticationPolicy
+        from c2corg_api.security.roles import groupfinder
 
         policy = IntegerSubJWTAuthenticationPolicy(
             private_key=settings['jwt.private_key'],
@@ -95,10 +91,10 @@ def ping_connection(dbapi_connection, connection_record, connection_proxy):
     cursor = dbapi_connection.cursor()
     try:
         cursor.execute('SELECT 1')
-    except Exception:
+    except Exception as e:
         # raise DisconnectionError - pool will try
         # connecting again up to three times before raising.
-        raise exc.DisconnectionError()
+        raise exc.DisconnectionError() from e
     cursor.close()
 
 
@@ -135,12 +131,19 @@ def delete_waypoint_stopareas(connection, waypoint_id):
     )
 
 
+# Timeout (seconds) of each Navitia request made while saving a waypoint: the
+# save waits for them, so a Navitia outage must not block it indefinitely.
+NAVITIA_TIMEOUT = 30
+
+
 @event.listens_for(DocumentGeometry, 'after_insert')
 @event.listens_for(DocumentGeometry, 'after_update')
 def process_new_waypoint(mapper, connection, geometry):
-    """Processes a new waypoint to find its public transports after
-    inserting it into documents_geometries."""
+    """Find the public transports of a newly inserted waypoint.
 
+    Processes a new waypoint to find its public transports after
+    inserting it into documents_geometries.
+    """
     # When GHCI runs without access to GH secrets
     # (eg. for PR triggered by dependabot)
     # return immediatly by matching test key from .env
@@ -212,7 +215,7 @@ def process_new_waypoint(mapper, connection, geometry):
     lon, lat = lon_lat.strip().split(',')
 
     # Navitia request - get more stop areas to filter
-    places_url = 'https://api.navitia.io/v1/coord/%s;%s/places_nearby' % (lon, lat)
+    places_url = f'https://api.navitia.io/v1/coord/{lon};{lat}/places_nearby'
     places_params = {
         'type[]': 'stop_area',
         'count': max_stop_area_fetched,  # Plus d'arrêts récupérés
@@ -221,7 +224,10 @@ def process_new_waypoint(mapper, connection, geometry):
     navitia_headers = {'Authorization': api_key}
 
     places_response = requests.get(
-        places_url, headers=navitia_headers, params=places_params
+        places_url,
+        headers=navitia_headers,
+        params=places_params,
+        timeout=NAVITIA_TIMEOUT,
     )
     places_data = places_response.json()
 
@@ -251,7 +257,9 @@ def process_new_waypoint(mapper, connection, geometry):
 
         # Get informations of stopareas to know its transports
         stop_info_url = f'https://api.navitia.io/v1/places/{stop_id}'
-        stop_info_response = requests.get(stop_info_url, headers=navitia_headers)
+        stop_info_response = requests.get(
+            stop_info_url, headers=navitia_headers, timeout=NAVITIA_TIMEOUT
+        )
         stop_info = stop_info_response.json()
 
         if 'places' not in stop_info or not stop_info['places']:
@@ -295,7 +303,7 @@ def process_new_waypoint(mapper, connection, geometry):
         # Get the travel time by walking - use same parameters as bash script
         journey_url = 'https://api.navitia.io/v1/journeys'
         journey_params = {
-            'to': '%s;%s' % (lon, lat),
+            'to': f'{lon};{lat}',
             'walking_speed': walking_speed,
             'max_walking_direct_path_duration': max_duration,
             'direct_path_mode[]': 'walking',
@@ -304,7 +312,10 @@ def process_new_waypoint(mapper, connection, geometry):
         }
 
         journey_response = requests.get(
-            journey_url, headers=navitia_headers, params=journey_params
+            journey_url,
+            headers=navitia_headers,
+            params=journey_params,
+            timeout=NAVITIA_TIMEOUT,
         )
         journey_data = journey_response.json()
 
@@ -370,7 +381,7 @@ def process_new_waypoint(mapper, connection, geometry):
                     {
                         'stop_id': stop_id,
                         'stop_name': stop_name,
-                        'line': '%s %s - %s' % (mode, line_name, line_full_name),
+                        'line': f'{mode} {line_name} - {line_full_name}',
                         'operator': operator_name,
                         'lon_stop': lon_stop,
                         'lat_stop': lat_stop,
@@ -406,7 +417,8 @@ def process_new_waypoint(mapper, connection, geometry):
 @event.listens_for(Route, 'after_insert')
 @event.listens_for(Route, 'after_update')
 def calculate_route_duration(mapper, connection, route):
-    """
+    """Calculate the estimated duration of a route after an insert or update.
+
     Calcule la durée estimée d'un itinéraire
     après son insertion ou sa mise à jour,
     en intégrant les règles métier mises à
@@ -459,7 +471,10 @@ def _get_climbing_activities():
 def _calculate_min_duration_for_activities(
     route, activities, height_diff_up, height_diff_down, route_id
 ):
-    """Calcule la durée minimale parmi toutes les activités."""
+    """Calculate the minimum duration over all activities.
+
+    Calcule la durée minimale parmi toutes les activités.
+    """
     min_duration = None
     climbing_activities = _get_climbing_activities()
 
@@ -482,9 +497,7 @@ def _calculate_min_duration_for_activities(
 def _calculate_climbing_duration(
     route, height_diff_up, height_diff_down, route_id, activity
 ):
-    """
-    Compute duration for climbing activities according to bash script
-    """
+    """Compute duration for climbing activities according to bash script."""
     v_diff = 50.0  # Climbing ascent speed for difficulties (m/h)
 
     h = float(route.route_length if route.route_length is not None else 0) / 1000  # km
@@ -541,8 +554,12 @@ def _calculate_climbing_duration(
 
     log.info(
         'Calculated climbing route duration for route \
-        %d (activity %s): %.2f hours (t_diff=%.2f, t_app=%.2f)'
-        % (route_id, activity, dm, t_diff, t_app)
+        %d (activity %s): %.2f hours (t_diff=%.2f, t_app=%.2f)',
+        route_id,
+        activity,
+        dm,
+        t_diff,
+        t_app,
     )
     return dm
 
@@ -582,8 +599,11 @@ def _get_activity_parameters(activity):
 def _calculate_standard_duration(
     activity, route, height_diff_up, height_diff_down, route_id
 ):
-    """Calculate duration for standard (non-climbing) activities
-    according to DIN 33466."""
+    """Calculate the duration of non-climbing activities (DIN 33466).
+
+    Calculate duration for standard (non-climbing) activities
+    according to DIN 33466.
+    """
     v, a, d = _get_activity_parameters(activity)
 
     h = float(route.route_length if route.route_length is not None else 0) / 1000  # km
@@ -600,9 +620,8 @@ def _calculate_standard_duration(
         dm = (dv / 2) + dh
 
     log.info(
-        'Calculated standard route duration for route %s \
-        (activity %s): %.2f hours'
-        % (route_id, activity, dm)
+        f'Calculated standard route duration for route {route_id} \
+        (activity {activity}): {dm:.2f} hours'
     )
     return dm
 
@@ -620,11 +639,14 @@ def _validate_and_convert_duration(min_duration, route_id):
         if min_duration is None:
             min_duration_str = 'None'
         else:
-            min_duration_str = '%0.2f', min_duration
+            min_duration_str = f'{min_duration:0.2f}'
         log.info(
             'Route %d: Calculated duration (min_duration=%s) is out of bounds \
-            (min=%fh, max=%fh) or NULL. Setting duration to NULL.'
-            % (route_id, min_duration_str, min_duration_hours, max_duration_hours)
+            (min=%fh, max=%fh) or NULL. Setting duration to NULL.',
+            route_id,
+            min_duration_str,
+            min_duration_hours,
+            max_duration_hours,
         )
         return None
 

@@ -1,16 +1,17 @@
+from json import loads
+
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry, UpdateType
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.views.document import DocumentRest
 from c2corg_api.tests.views import BaseTestRest
-from json import loads
+from c2corg_api.views.document import DocumentRest
 
 
 class TestDocumentRevertRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/documents/revert'
         self._add_test_data()
@@ -44,7 +45,7 @@ class TestDocumentRevertRest(BaseTestRest):
         self.assertErrorsContain(
             response.json,
             'Bad Request',
-            'Unknown version {}/{}/{}'.format(document_id, lang, version_id),
+            f'Unknown version {document_id}/{lang}/{version_id}',
         )
 
     def test_revert_latest_version_id(self):
@@ -71,9 +72,7 @@ class TestDocumentRevertRest(BaseTestRest):
         self.assertErrorsContain(
             response.json,
             'Bad Request',
-            'Version {}/{}/{} is already the latest one'.format(
-                document_id, lang, version_id
-            ),
+            f'Version {document_id}/{lang}/{version_id} is already the latest one',
         )
 
     def test_revert_waypoint(self):
@@ -106,13 +105,13 @@ class TestDocumentRevertRest(BaseTestRest):
 
         response = self.app.get('/waypoints/' + str(document_id), status=200)
         body = response.json
-        self.assertEqual(body['elevation'], 4810)
+        assert body['elevation'] == 4810
         geom = loads(body['geometry']['geom'])
-        self.assertEqual(geom['coordinates'][0], 635957)
-        self.assertEqual(geom['coordinates'][1], 5723605)
+        assert geom['coordinates'][0] == 635957
+        assert geom['coordinates'][1] == 5723605
         for locale in body['locales']:
             if locale['lang'] == lang:
-                self.assertEqual(locale['summary'], 'The highest point in Europe')
+                assert locale['summary'] == 'The highest point in Europe'
 
         # check a new version has been created
         count = (
@@ -121,7 +120,7 @@ class TestDocumentRevertRest(BaseTestRest):
             .filter(DocumentVersion.lang == lang)
             .count()
         )
-        self.assertEqual(count, initial_count + 1)
+        assert count == initial_count + 1
 
     def test_revert_route(self):
         route_id = self.route1.document_id
@@ -146,12 +145,12 @@ class TestDocumentRevertRest(BaseTestRest):
 
         response = self.app.get('/routes/' + str(route_id), status=200)
         body = response.json
-        self.assertEqual(body['elevation_max'], 1500)
-        self.assertEqual(body['activities'], ['skitouring'])
+        assert body['elevation_max'] == 1500
+        assert body['activities'] == ['skitouring']
         for locale in body['locales']:
             if locale['lang'] == route_lang:
-                self.assertEqual(locale['title'], 'Mont Blanc du ciel')
-                self.assertEqual(locale['title_prefix'], 'Mount Everest')
+                assert locale['title'] == 'Mont Blanc du ciel'
+                assert locale['title_prefix'] == 'Mount Everest'
 
         # Now revert the main waypoint as well and check the title prefix
         # of the route has been updated:
@@ -179,8 +178,8 @@ class TestDocumentRevertRest(BaseTestRest):
         body = response.json
         for locale in body['locales']:
             if locale['lang'] == route_lang:
-                self.assertEqual(locale['title'], 'Mont Blanc du ciel')
-                self.assertEqual(locale['title_prefix'], 'Mont Blanc')
+                assert locale['title'] == 'Mont Blanc du ciel'
+                assert locale['title_prefix'] == 'Mont Blanc'
 
     def _add_test_data(self):
         contributor_id = self.global_userids['contributor']

@@ -1,8 +1,9 @@
+import logging
+import re
+from xml.etree import ElementTree  # nosec
+
 from markdown import Extension
 from markdown.blockprocessors import BlockProcessor
-from xml.etree import ElementTree  # nosec
-import re
-import logging
 
 logger = logging.getLogger('MARKDOWN')
 
@@ -36,7 +37,7 @@ class C2CHeaderProcessor(BlockProcessor):
                 # recursively parse this lines as a block.
                 self.parser.parseBlocks(parent, [before])
             # Create header using named groups from RE
-            h = ElementTree.SubElement(parent, 'h%d' % len(m.group('level')))
+            h = ElementTree.SubElement(parent, f'h{len(m.group("level"))}')
             h.text = m.group('header').strip()
 
             if m.group('fixed_id'):
@@ -54,7 +55,7 @@ class C2CHeaderProcessor(BlockProcessor):
                 blocks.insert(0, after)
         else:  # pragma: no cover
             # This should never happen, but just in case...
-            logger.warn("We've got a problem header: %r" % block)
+            logger.warn(f"We've got a problem header: {block!r}")
 
 
 class C2CHeaderExtension(Extension):
@@ -64,5 +65,5 @@ class C2CHeaderExtension(Extension):
         )
 
 
-def makeExtension(configs=[]):  # noqa: N802
-    return C2CHeaderExtension(configs=configs)
+def makeExtension(*args, **kwargs):  # noqa: N802
+    return C2CHeaderExtension(*args, **kwargs)

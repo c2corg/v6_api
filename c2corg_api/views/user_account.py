@@ -1,28 +1,29 @@
 import logging
+from functools import partial
 
 import colander
-from c2corg_api.security.acl import ACLDefault
+from cornice.resource import resource
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPInternalServerError
+
 from c2corg_api import DBSession
 from c2corg_api.emails.email_service import get_email_service
 from c2corg_api.models.cache_version import update_cache_version
-from c2corg_api.models.user import User, Purpose
+from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.models.user import Purpose, User
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
 from c2corg_api.views.user import (
-    is_unused_user_attribute,
     ENCODING,
     MINIMUM_PASSWORD_LENGTH,
     PASSWORD_STRENGTH_ERROR,
     VALIDATION_EXPIRE_DAYS,
     is_password_strong_enough,
+    is_unused_user_attribute,
     validate_forum_username,
 )
-from c2corg_api.models.common.attributes import default_langs
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from functools import partial
-from pyramid.httpexceptions import HTTPInternalServerError
 
 log = logging.getLogger(__name__)
 
@@ -172,15 +173,15 @@ class UserAccountRest(ACLDefault):
             try:
                 client = get_discourse_client(request.registry.settings)
                 client.sync_sso(user)
-            except Exception:
+            except Exception as e:
                 log.error('Error syncing with discourse', exc_info=True)
-                raise HTTPInternalServerError('Error with Discourse')
+                raise HTTPInternalServerError('Error with Discourse') from e
 
         try:
             DBSession.flush()
-        except Exception:
+        except Exception as e:
             log.warning('Error persisting user', exc_info=True)
-            raise HTTPInternalServerError('Error persisting user')
+            raise HTTPInternalServerError('Error persisting user') from e
 
         if email_link:
             email_service.send_change_email_confirmation(user, link)

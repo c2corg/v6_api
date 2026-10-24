@@ -1,17 +1,14 @@
-from c2corg_api.models import DBSession
-from c2corg_api.views.document_info import DocumentInfoRest
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPBadRequest
-from sqlalchemy import func, exists
+from sqlalchemy import exists, func
 
-
-from c2corg_api.models.waypoint_stoparea import WaypointStoparea
-
-from c2corg_api.views.document import make_validator_create, make_validator_update
-from c2corg_api.views import cors_policy
-from c2corg_api.views.validation import validate_id, validate_lang
-
+from c2corg_api.models import DBSession
 from c2corg_api.models.stoparea import Stoparea
+from c2corg_api.models.waypoint_stoparea import WaypointStoparea
+from c2corg_api.views import cors_policy
+from c2corg_api.views.document import make_validator_create, make_validator_update
+from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.validation import validate_id, validate_lang
 
 validate_waypoint_stoparea_create = make_validator_create(
     ['waypoint_id', 'stoparea_id', 'distance'], 'waypoint_id'
@@ -50,8 +47,8 @@ def validate_waypoint_id(request, *args, **kwargs):
     """Check if waypoint_stoparea_id is valid."""
     try:
         request.matchdict['waypoint_id'] = int(request.matchdict['waypoint_id'])
-    except KeyError, ValueError:
-        raise HTTPBadRequest(json_body={'error': 'Invalid waypoint_id'})
+    except (KeyError, ValueError) as e:
+        raise HTTPBadRequest(json_body={'error': 'Invalid waypoint_id'}) from e
 
 
 @resource(path='/waypoints/{waypoint_id}/stopareas', cors_policy=cors_policy)
@@ -61,8 +58,11 @@ class WaypointStopareasByWaypointRest:
 
     @view(validators=[validate_waypoint_id])
     def get(self):
-        """Returns all stopareas associated with a waypoint,
-        with their full attributes and distance."""
+        """Return the stopareas of a waypoint with their distance.
+
+        Returns all stopareas associated with a waypoint,
+        with their full attributes and distance.
+        """
         waypoint_id = self.request.matchdict['waypoint_id']
 
         query = (
@@ -94,8 +94,11 @@ class WaypointStopareasReachableRest:
 
     @view(validators=[validate_waypoint_id])
     def get(self):
-        """Returns true if the waypoint has at least one stoparea
-        associated with it, false otherwise."""
+        """Return whether the waypoint has at least one stoparea.
+
+        Returns true if the waypoint has at least one stoparea
+        associated with it, false otherwise.
+        """
         waypoint_id = self.request.matchdict['waypoint_id']
 
         has_stopareas = DBSession.query(

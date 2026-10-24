@@ -1,22 +1,25 @@
 import logging
 
+from sqlalchemy import text
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql.functions import func
+from sqlalchemy.sql.schema import Column, ForeignKey
+from sqlalchemy.sql.sqltypes import DateTime, Integer
+
 from c2corg_api import caching
-from c2corg_api.models import Base, schema, DBSession
+from c2corg_api.models import Base, DBSession, schema
 from c2corg_api.models.document import Document
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import Column, ForeignKey
-from sqlalchemy.sql.sqltypes import Integer, DateTime
-from sqlalchemy import text
 
 log = logging.getLogger(__name__)
 
 
 class CacheVersion(Base):
-    """This table contains a version number for each document that reflects
+    """Cache version of each document and its associated documents.
+
+    This table contains a version number for each document that reflects
     the state of the document and all its associated documents.
     When the document or one of its associated documents is updated, the
     version of the document is incremented, so that outdated documents are not
@@ -53,7 +56,9 @@ def update_cache_version_full(document_id, type):
 
 
 def update_cache_version_direct(document_id):
-    """Update the cache version for the document with the given id
+    """Update the cache version of a document, not of its dependencies.
+
+    Update the cache version for the document with the given id
     without updating any dependencies.
     """
     DBSession.execute(
@@ -63,7 +68,9 @@ def update_cache_version_direct(document_id):
 
 
 def update_cache_version_for_area(area):
-    """Invalidate the cache keys of all documents that are currently
+    """Invalidate the cache keys of the documents in an area.
+
+    Invalidate the cache keys of all documents that are currently
     associated to the given area.
     Note that the cache key of the area itself is not changed when calling this
     function.
@@ -75,7 +82,9 @@ def update_cache_version_for_area(area):
 
 
 def update_cache_version_for_map(topo_map):
-    """Invalidate the cache keys of all documents that are currently
+    """Invalidate the cache keys of the documents on a map.
+
+    Invalidate the cache keys of all documents that are currently
     associated to the given map.
     Note that the cache key of the map itself is not changed when calling this
     function.
@@ -127,7 +136,7 @@ def update_cache_version_associations(
         # if an association between waypoint and route was removed/added,
         # the waypoint parents and grand-parents have to be updated
         DBSession.execute(
-            text('SELECT guidebook.update_cache_version_of_waypoints(:waypoint_ids)'),  # noqa: E501
+            text('SELECT guidebook.update_cache_version_of_waypoints(:waypoint_ids)'),
             {'waypoint_ids': list(waypoints_to_update)},
         )
 
@@ -136,7 +145,7 @@ def update_cache_version_associations(
         # waypoints (and parents and grand-parents) associated to the route
         # have to be updated
         DBSession.execute(
-            text('SELECT guidebook.update_cache_version_of_routes(:route_ids)'),  # noqa: E501
+            text('SELECT guidebook.update_cache_version_of_routes(:route_ids)'),
             {'route_ids': list(routes_to_update)},
         )
 
@@ -144,32 +153,32 @@ def update_cache_version_associations(
 def _format_cache_key(document_id, lang, version, doc_type=None, custom_cache_key=None):
     if not version:
         # no version for this document id, the document should not exist
-        log.debug('no version for document id {0}'.format(document_id))
+        log.debug(f'no version for document id {document_id}')
         return None
 
     cache_key = None
     if not lang:
-        cache_key = '{0}-{1}-{2}'.format(document_id, version, caching.CACHE_VERSION)
+        cache_key = f'{document_id}-{version}-{caching.CACHE_VERSION}'
     else:
-        cache_key = '{0}-{1}-{2}-{3}'.format(
-            document_id, lang, version, caching.CACHE_VERSION
-        )
+        cache_key = f'{document_id}-{lang}-{version}-{caching.CACHE_VERSION}'
 
     if doc_type:
-        cache_key = '{0}-{1}'.format(cache_key, doc_type)
+        cache_key = f'{cache_key}-{doc_type}'
 
     # custom_cache_key is used for xreports to distinguish between the cache
     # values for users that are allowed to see the full xreport with personal
     # data (moderators and the creator of the xreport) and a public version for
     # all other users.
     if custom_cache_key:
-        cache_key = '{0}-{1}'.format(cache_key, custom_cache_key)
+        cache_key = f'{cache_key}-{custom_cache_key}'
 
     return cache_key
 
 
 def get_cache_key(document_id, lang, document_type, custom_cache_key=None):
-    """Returns an identifier which reflects the version of a document and
+    """Return the cache key (and ETag) of a document.
+
+    Returns an identifier which reflects the version of a document and
     all its associated documents. This identifier is used as cache key
     and as ETag value.
     """
