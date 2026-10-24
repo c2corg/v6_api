@@ -8,7 +8,7 @@ from c2corg_api.security.roles import groupfinder
 from c2corg_api.tests import BaseTestCase
 
 
-class RolesTest(BaseTestCase):
+class TestRoles(BaseTestCase):
     def test_groupfinder(self):
         assert [Authenticated] == groupfinder(self.global_userids['contributor'], None)
         assert ['group:moderators'] == groupfinder(

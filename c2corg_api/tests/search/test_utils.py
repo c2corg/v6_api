@@ -2,7 +2,7 @@ from c2corg_api.search.utils import strip_bbcodes
 from c2corg_api.tests import BaseTestCase
 
 
-class UtilsTest(BaseTestCase):
+class TestUtils(BaseTestCase):
     def test_strip_bbcodes(self):
         assert None is strip_bbcodes(None)
         assert '  Test   [boom]  <b>' == strip_bbcodes(

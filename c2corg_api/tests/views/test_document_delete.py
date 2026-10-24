@@ -923,7 +923,7 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # Moderators can:
         headers = self.add_authorization_header(username='moderator')
-        return self.app.delete_json(
+        self.app.delete_json(
             self._prefix + str(self.waypoint4.document_id),
             {},
             headers=headers,
@@ -942,7 +942,7 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # Except by moderators:
         headers = self.add_authorization_header(username='moderator')
-        return self.app.delete_json(
+        self.app.delete_json(
             self._prefix + str(self.article1.document_id),
             {},
             headers=headers,
@@ -952,7 +952,7 @@ class TestDocumentDeleteRest(BaseTestRest):
     def test_delete_personal_doc_author_less_24h(self):
         # article1 has just been created by 'contributor'
         headers = self.add_authorization_header(username='contributor')
-        return self.app.delete_json(
+        self.app.delete_json(
             self._prefix + str(self.article1.document_id),
             {},
             headers=headers,
@@ -962,7 +962,7 @@ class TestDocumentDeleteRest(BaseTestRest):
     def test_delete_personal_doc_author_more_24h(self):
         # article2 is older than 24h
         headers = self.add_authorization_header(username='contributor')
-        return self.app.delete_json(
+        self.app.delete_json(
             self._prefix + str(self.article2.document_id),
             {},
             headers=headers,
@@ -975,7 +975,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         headers = self.add_authorization_header(username='contributor')
-        return self.app.delete_json(
+        self.app.delete_json(
             self._prefix + str(self.waypoint1.document_id) + '/fr',
             {},
             headers=headers,

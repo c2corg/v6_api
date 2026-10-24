@@ -377,14 +377,14 @@ class TestNavitiaRestParams(BaseTestCase):
     # /navitia/journeyreachableroutes endpoints (includes job handling)
     # /navitia/journeyreachableroutes/start endpoint
     # /navitia/journeyreachablewaypoints/start endpoint
-    def test_navitia_journeyreachabledocs_start(self):
+    def test_navitia_journeyreachabledocs_start(self, subtests):
         test_cases = [
             ('/navitia/journeyreachableroutes', compute_journey_reachable_routes),
             ('/navitia/journeyreachablewaypoints', compute_journey_reachable_waypoints),
         ]
 
         for base_url, func in test_cases:
-            with self.subTest(base_url=base_url, func=func):
+            with subtests.test(base_url=base_url, func=func):
                 with mock.patch(
                     'c2corg_api.views.navitia.start_job_background'
                 ) as mock_start:
@@ -407,14 +407,14 @@ class TestNavitiaRestParams(BaseTestCase):
                     assert json.loads(response.body.decode()) == 'job-123'
                     mock_start.assert_called_once_with(func, mock.ANY)
 
-    def test_navitia_journeyreachabledocs_start_missing_params(self):
+    def test_navitia_journeyreachabledocs_start_missing_params(self, subtests):
         base_urls = [
             '/navitia/journeyreachableroutes',
             '/navitia/journeyreachablewaypoints',
         ]
 
         for base_url in base_urls:
-            with self.subTest(base_url=base_url):
+            with subtests.test(base_url=base_url):
                 # missing datetime
                 self.app.get(
                     base_url
@@ -452,14 +452,14 @@ class TestNavitiaRestParams(BaseTestCase):
 
     # /navitia/journeyreachableroutes/progress endpoint
     # /navitia/journeyreachablewaypoints/progress endpoint
-    def test_navitia_journeyreachabledocs_progress(self):
+    def test_navitia_journeyreachabledocs_progress(self, subtests):
         urls = [
             '/navitia/journeyreachableroutes/progress/job-123',
             '/navitia/journeyreachablewaypoints/progress/job-123',
         ]
 
         for url in urls:
-            with self.subTest(url=url):
+            with subtests.test(url=url):
                 fake_events = [
                     b'data: %s\n\n'
                     % json.dumps(
@@ -502,14 +502,14 @@ class TestNavitiaRestParams(BaseTestCase):
 
     # /navitia/journeyreachableroutes/result endpoint
     # /navitia/journeyreachablewaypoints/result endpoint
-    def test_navitia_journeyreachabledocs_result(self):
+    def test_navitia_journeyreachabledocs_result(self, subtests):
         urls = [
             '/navitia/journeyreachableroutes/result/job-123',
             '/navitia/journeyreachablewaypoints/result/job-123',
         ]
 
         for url in urls:
-            with self.subTest(url=url):
+            with subtests.test(url=url):
 
                 def fake_read_result(redis, job_id):
                     assert job_id == 'job-123'

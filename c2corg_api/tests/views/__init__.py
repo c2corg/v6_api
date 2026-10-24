@@ -2,6 +2,7 @@ import json
 import urllib.parse
 from collections import Counter
 
+import pytest
 from dateutil import parser as datetime_parser
 from dogpile.cache.api import NO_VALUE
 
@@ -23,7 +24,7 @@ class BaseTestRest(BaseTestCase):
                 if value is not None:
                     assert error.get('description') == value
                 return
-        self.fail(str(body) + ' does not contain ' + key)
+        pytest.fail(str(body) + ' does not contain ' + key)
 
     def assertBodyEqual(self, body, key, expected):  # noqa
         assert body.get(key) == expected
@@ -64,13 +65,13 @@ class BaseTestRest(BaseTestCase):
         for error in errors:
             if description == error.get('description') and name == error.get('name'):
                 return
-        self.fail(f'no error ({name}, {description}) in {errors}')
+        pytest.fail(f'no error ({name}, {description}) in {errors}')
 
     def get_error(self, errors, name):
         for error in errors:
             if name == error.get('name'):
                 return error
-        self.fail(f'no error for {name}')
+        pytest.fail(f'no error for {name}')
 
     def post_json_with_token(self, url, token, body={}, status=200):
         headers = self.add_authorization_header(token=token)

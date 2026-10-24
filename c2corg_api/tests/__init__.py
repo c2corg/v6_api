@@ -2,7 +2,6 @@ import datetime
 import logging
 import os
 import time
-import unittest
 from random import randint
 
 import jwt
@@ -242,7 +241,7 @@ class AssertionsMixin:
             )
 
 
-class BaseTestCase(unittest.TestCase, AssertionsMixin):
+class BaseTestCase(AssertionsMixin):
     """The idea for unit tests is, that the database tables
     are created only once per test run and every test case uses a
     transaction which is rolled back at the end. This avoids that
@@ -262,9 +261,8 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
         queue_config,
         app_state,
     ):
-        """Expose the pytest fixtures to the unittest-style tests."""
-        # The fixtures are defined in conftest.py; this runs before setUp,
-        # so subclasses calling `super().setUp()` find everything set up.
+        """Expose the pytest fixtures to the tests and run setUp/tearDown."""
+        # The fixtures are defined in conftest.py.
         self.global_userids = global_userids
         self.global_tokens = global_tokens
         self.global_passwords = global_passwords
@@ -277,8 +275,18 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
         self.config = pyramid_config
         self.email_service = email_service
         self.queue_config = queue_config
+        # pytest does not call setUp/tearDown on plain classes: the
+        # subclasses still define them, so call them here
+        self.setUp()
         yield
+        self.tearDown()
         self.session.close()
+
+    def setUp(self):
+        """Prepare the test; subclasses override it."""
+
+    def tearDown(self):
+        """Clean up after the test; subclasses override it."""
 
     def app_post_json(self, *args, **kwargs):
         return self.app_send_json('post', *args, **kwargs)
@@ -297,7 +305,7 @@ class BaseTestCase(unittest.TestCase, AssertionsMixin):
         res = getattr(self.app, action + '_json')(*args, **kwargs)
         if status != '*' and res.status_code != status:
             errors = res.body if res.status_code == 400 else ''
-            self.fail(f'Bad response: {res.status} (not {status}) : {errors}')
+            pytest.fail(f'Bad response: {res.status} (not {status}) : {errors}')
         return res
 
 

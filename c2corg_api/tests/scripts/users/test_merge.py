@@ -35,7 +35,7 @@ from c2corg_api.tests import BaseTestCase
 from c2corg_api.views.document import DocumentRest
 
 
-class MergeUsersTest(BaseTestCase):
+class TestMergeUsers(BaseTestCase):
     def setUp(self):
         BaseTestCase.setUp(self)
         self._add_test_data()

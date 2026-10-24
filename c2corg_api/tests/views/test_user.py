@@ -718,7 +718,7 @@ class TestUserRest(BaseUserTestRest):
         now = int(round(time.time()))
         expected = days * 24 * 3600 + now  # 14 days from now
         if abs(expected - expire) > seconds_delta:
-            raise self.failureException(
+            raise AssertionError(
                 f'{expected!r} == {expire!r} within {seconds_delta!r} seconds'
             )
 
