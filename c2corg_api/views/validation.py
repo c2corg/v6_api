@@ -190,6 +190,46 @@ def validate_token_pagination(request, **kwargs):
     validate_token(request)
 
 
+def validate_zoom(request, **kwargs):
+    """Checks that a required `zoom=...` integer query parameter is given."""
+    check_get_for_integer_property(request, 'zoom', True)
+
+
+def validate_bbox(request, **kwargs):
+    """Checks and parses a required `bbox=xmin,ymin,xmax,ymax` (EPSG:3857)
+    query parameter into `request.validated['bbox']` as a 4-tuple of
+    floats.
+
+    This is distinct from `create_bbox_filter` in
+    `c2corg_api.search.search_filters`, which parses the same shape of
+    parameter for an Elasticsearch bounding-box filter and reprojects it
+    to EPSG:4326 in the process. Views that query PostGIS directly want
+    the bbox to stay in EPSG:3857, matching the SRID of the geometry
+    columns.
+    """
+    bbox_param = request.GET.get('bbox')
+    if not bbox_param:
+        request.errors.add('querystring', 'bbox', 'bbox is missing')
+        return
+
+    values = bbox_param.split(',')
+    if len(values) != 4:
+        request.errors.add('querystring', 'bbox', 'invalid bbox')
+        return
+
+    try:
+        xmin, ymin, xmax, ymax = (float(v) for v in values)
+    except ValueError:
+        request.errors.add('querystring', 'bbox', 'invalid bbox')
+        return
+
+    if xmin >= xmax or ymin >= ymax:
+        request.errors.add('querystring', 'bbox', 'invalid bbox')
+        return
+
+    request.validated['bbox'] = (xmin, ymin, xmax, ymax)
+
+
 def validate_simple_token_pagination(request, **kwargs):
     """Validate token pagination parameters (limit and token) for changes feed."""
     check_get_for_integer_property(request, 'limit', False)
