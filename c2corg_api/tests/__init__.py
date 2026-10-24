@@ -235,12 +235,10 @@ def teardown_package():
 
 class AssertionsMixin:
     def assertCoodinateEquals(self, coord1, coord2):  # noqa
-        self.assertEqual(len(coord1), len(coord2), 'not the same dimension')
+        assert len(coord1) == len(coord2), 'not the same dimension'
         for i in range(0, len(coord1)):
-            self.assertAlmostEqual(
-                coord1[i],
-                coord2[i],
-                msg=f'{coord1[i]} does not almost equal {coord2[i]}',
+            assert coord1[i] == pytest.approx(coord2[i], abs=5e-8), (
+                f'{coord1[i]} does not almost equal {coord2[i]}'
             )
 
 
