@@ -404,6 +404,33 @@ class TestImageRest(BaseTestImage):
         errors = body.get('errors')
         self.assertCorniceRequired(errors[0], 'filename')
 
+    @pytest.mark.parametrize('value', ['NaN', 'inf', float('nan')])
+    @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
+    def test_post_non_finite_exif(self, post_mock, value):
+        body_post = self._post_success_document()
+        body_post['fnumber'] = value
+        body_post['exposure_time'] = value
+        body_post['focal_length'] = 26
+
+        body, doc = self.post_success(body_post)
+        assert doc.fnumber is None
+        assert doc.exposure_time is None
+        assert doc.focal_length == 26
+
+    def test_get_nan_exif(self):
+        self.image.fnumber = float('nan')
+        self.image.exposure_time = float('inf')
+        self.session.flush()
+
+        response = self.app.get(
+            self._prefix + '/' + str(self.image.document_id), status=200
+        )
+        assert 'NaN' not in response.text
+        assert 'Infinity' not in response.text
+        body = response.json
+        assert body['fnumber'] is None
+        assert body['exposure_time'] is None
+
     def test_post_duplicated_filename(self):
         body_post = self._post_success_document()
         body_post['filename'] = 'image.jpg'

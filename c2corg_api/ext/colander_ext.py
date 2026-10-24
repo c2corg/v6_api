@@ -1,17 +1,28 @@
 # Inspired from the c2cgeoform colander extension
 # https://github.com/camptocamp/c2cgeoform/blob/master/c2cgeoform/ext/
 
+import math
 import struct
 from numbers import Number
 
 import geojson
-from colander import Invalid, SchemaType, null
+from colander import Float, Invalid, SchemaType, null
 from geoalchemy2 import WKBElement
 from geomet import wkb
 
 # EWKB SRID flag, see https://git.osgeo.org/gitea/postgis/postgis/raw/
 # master/doc/ZMSgeoms.txt
 _EWKB_SRID_FLAG = 0x20000000
+
+
+class FiniteFloat(Float):
+    """Float that turns NaN and infinite values into null (not valid JSON)."""
+
+    def deserialize(self, node, cstruct):
+        result = super().deserialize(node, cstruct)
+        if result is not null and not math.isfinite(result):
+            return null
+        return result
 
 
 class Geometry(SchemaType):

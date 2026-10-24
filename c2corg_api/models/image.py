@@ -12,6 +12,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import declared_attr
 from sqlalchemy.sql.functions import func
 
+from c2corg_api.ext.colander_ext import FiniteFloat
 from c2corg_api.models import Base, DBSession, enums, schema
 from c2corg_api.models.common import document_types
 from c2corg_api.models.common.fields_image import fields_image
@@ -31,6 +32,9 @@ from c2corg_api.models.schema_utils import (
 from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
 IMAGE_TYPE = document_types.IMAGE_TYPE
+
+
+_finite_float = {'colanderalchemy': {'typ': FiniteFloat()}}
 
 
 class _ImageMixin:
@@ -58,11 +62,11 @@ class _ImageMixin:
 
     camera_name = Column(String(100))
 
-    exposure_time = Column(Float)
+    exposure_time = Column(Float, info=_finite_float)
 
-    focal_length = Column(Float)
+    focal_length = Column(Float, info=_finite_float)
 
-    fnumber = Column(Float)
+    fnumber = Column(Float, info=_finite_float)
 
     iso_speed = Column(SmallInteger)
 
