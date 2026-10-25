@@ -1,0 +1,66 @@
+{
+  "body": {
+    "document": {
+      "activities": [
+        "str"
+      ],
+      "author": "null",
+      "camera_name": "null",
+      "categories": "null",
+      "cooked": {
+        "description": "null",
+        "lang": "str",
+        "summary": "null",
+        "title": "str",
+        "version": "int"
+      },
+      "date_time": "null",
+      "document_id": "int",
+      "elevation": "null",
+      "exposure_time": "null",
+      "file_size": "null",
+      "filename": "str",
+      "fnumber": "null",
+      "focal_length": "null",
+      "geometry": {
+        "geom": "str",
+        "geom_detail": "null",
+        "version": "int"
+      },
+      "height": "int",
+      "image_type": "str",
+      "iso_speed": "null",
+      "locales": [
+        {
+          "description": "null",
+          "lang": "str",
+          "summary": "null",
+          "title": "str",
+          "version": "int"
+        }
+      ],
+      "protected": "bool",
+      "quality": "str",
+      "type": "str",
+      "version": "int",
+      "width": "null"
+    },
+    "next_version_id": "null",
+    "previous_version_id": "null",
+    "version": {
+      "comment": "str",
+      "masked": "bool",
+      "name": "str",
+      "user_id": "int",
+      "version_id": "int",
+      "written_at": "str"
+    }
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json",
+    "ETag": "<etag>"
+  },
+  "status": 200
+}
