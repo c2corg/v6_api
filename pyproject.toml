@@ -57,6 +57,7 @@ dependencies = [
     "cornice @ git+https://github.com/c2corg/cornice.git@6.1.0+c2corg",
     # Discourse API client
     "pydiscourse==1.7.0",
+    "pydantic==2.14.1",
 ]
 
 [dependency-groups]

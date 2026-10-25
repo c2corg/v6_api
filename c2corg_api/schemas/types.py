@@ -1,0 +1,145 @@
+"""Field types that validate like the Colander types they replace."""
+# Each type converts and checks the raw value in a `BeforeValidator`, so the
+# error a client gets is the Colander one (name and message), not Pydantic's.
+#
+# Colander also treats some values as missing: `null` (Cornice turned it into
+# `colander.null`), and values each type considers empty (any falsy value for a
+# string, '' or [] for an integer...). A missing value takes the default of the
+# field, or is an error if the field is required. `Empty` records the rule of a
+# type, and `Schema` removes the empty values of a mapping before validation,
+# so the defaults apply. List items have no default: an empty item is missing.
+
+from functools import partial
+from typing import Annotated, get_args
+
+from pydantic import BeforeValidator
+from pydantic_core import PydanticCustomError
+
+
+class Empty:
+    """Marker: when a value counts as missing for a field type."""
+
+    def __init__(self, is_empty):
+        self.is_empty = is_empty
+
+
+def _required():
+    return PydanticCustomError('missing', 'Required')
+
+
+def _str_empty(value):
+    return value is None or not value
+
+
+def _int_empty(value):
+    return value is None or (value != 0 and not value)
+
+
+def _none(value):
+    return value is None
+
+
+def _to_int(value):
+    """Convert like `colander.Integer`: `int(value)`, so 1.5 gives 1."""
+    if _int_empty(value):
+        raise _required()
+    try:
+        return int(value)
+    except (TypeError, ValueError) as e:
+        raise PydanticCustomError(
+            'not_a_number', '"{value}" is not a number', {'value': str(value)}
+        ) from e
+
+
+class _StrSpec:
+    def __init__(self, max_length=None, choices=None):
+        self.max_length = max_length
+        self.choices = choices
+
+
+def _check_str(value, info, spec, item=False):
+    """Check like `colander.String` with a `Length` or `OneOf` validator."""
+    if _str_empty(value):
+        raise _required()
+    if not isinstance(value, str):
+        # Colander's own message, odd suffix included: the name of the node
+        name = '' if item else info.field_name
+        raise PydanticCustomError(
+            'not_a_string',
+            '{value} is not a string: {suffix}',
+            {'value': str(value), 'suffix': str({name: ''})},
+        )
+    if spec.max_length is not None and len(value) > spec.max_length:
+        raise PydanticCustomError(
+            'too_long',
+            'Longer than maximum length {max_length}',
+            {'max_length': spec.max_length},
+        )
+    if spec.choices is not None and value not in spec.choices:
+        raise PydanticCustomError(
+            'not_one_of',
+            '"{value}" is not one of {choices}',
+            {'value': value, 'choices': ', '.join(spec.choices)},
+        )
+    return value
+
+
+def _str_type(spec, item=False):
+    return Annotated[
+        str | None,
+        Empty(_str_empty),
+        spec,
+        BeforeValidator(partial(_check_str, spec=spec, item=item)),
+    ]
+
+
+def _check_sequence(value):
+    """Check like `colander.Sequence`: a list (a string is not one)."""
+    if value is None:
+        raise _required()
+    if not isinstance(value, (list, tuple)):
+        raise PydanticCustomError(
+            'not_iterable', '"{value}" is not iterable', {'value': str(value)}
+        )
+    return list(value)
+
+
+def check_mapping(value):
+    """Check like `colander.Mapping`: a dict."""
+    if value is None:
+        raise _required()
+    if not isinstance(value, dict):
+        raise PydanticCustomError(
+            'not_a_mapping',
+            '"{value}" is not a mapping type: '
+            'Does not implement dict-like functionality.',
+            {'value': str(value)},
+        )
+    return value
+
+
+Int = Annotated[int | None, Empty(_int_empty), BeforeValidator(_to_int)]
+
+
+def Str(max_length=None):  # noqa: N802 (used like a type)
+    """Return a string type limited to `max_length` characters."""
+    return _str_type(_StrSpec(max_length=max_length))
+
+
+def OneOf(choices):  # noqa: N802 (used like a type)
+    """Return a string type limited to the given choices."""
+    return _str_type(_StrSpec(choices=list(choices)))
+
+
+def Seq(item):  # noqa: N802 (used like a type)
+    """Return a list type of `item`."""
+    specs = [arg for arg in get_args(item) if isinstance(arg, _StrSpec)]
+    if specs:
+        # the items of a list are unnamed nodes in Colander
+        item = _str_type(specs[0], item=True)
+    return Annotated[list[item] | None, Empty(_none), BeforeValidator(_check_sequence)]
+
+
+def Map(schema):  # noqa: N802 (used like a type)
+    """Return a type for a nested schema."""
+    return Annotated[schema | None, Empty(_none), BeforeValidator(check_mapping)]
