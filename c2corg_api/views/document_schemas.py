@@ -16,7 +16,7 @@ from c2corg_api.models.common.fields_user_profile import fields_user_profile
 from c2corg_api.models.common.fields_waypoint import fields_waypoint
 from c2corg_api.models.common.fields_xreport import fields_xreport
 from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
-from c2corg_api.models.image import IMAGE_TYPE, Image, schema_listing_image
+from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import OUTING_TYPE, Outing, schema_outing
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale, schema_route
 from c2corg_api.models.schema_utils import restrict_schema
@@ -41,6 +41,7 @@ from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.article import article_listing_schema
 from c2corg_api.schemas.book import book_listing_schema
 from c2corg_api.schemas.coverage import coverage_listing_schema
+from c2corg_api.schemas.image import image_listing_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.schemas.xreport import xreport_listing_schema
 from c2corg_api.views import set_author
@@ -191,7 +192,7 @@ book_documents_config = GetDocumentsConfig(
 
 
 image_documents_config = GetDocumentsConfig(
-    IMAGE_TYPE, Image, schema_listing_image, listing_fields=fields_image['listing']
+    IMAGE_TYPE, Image, image_listing_schema, listing_fields=fields_image['listing']
 )
 
 
