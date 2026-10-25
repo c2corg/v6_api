@@ -463,14 +463,16 @@ class DocumentRest(ACLDefault):
         (update_types, changed_langs) = document.get_update_type(old_versions)
 
         if update_types:
-            # A new version needs to be created and persisted
-            DocumentRest.update_version(
-                document,
-                user_id,
-                request.validated['message'],
-                update_types,
-                changed_langs,
-            )
+            # A new version needs to be created and persisted, except for
+            # coverages: they have no history (see _create_document)
+            if document.type != COVERAGE_TYPE:
+                DocumentRest.update_version(
+                    document,
+                    user_id,
+                    request.validated['message'],
+                    update_types,
+                    changed_langs,
+                )
 
             if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
                 update_areas_for_document(document, reset=True)
