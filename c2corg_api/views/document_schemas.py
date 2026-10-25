@@ -18,7 +18,7 @@ from c2corg_api.models.common.fields_xreport import fields_xreport
 from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
 from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import OUTING_TYPE, Outing
-from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale, schema_route
+from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.topo_map import MAP_TYPE, TopoMap
 from c2corg_api.models.user_profile import (
@@ -42,6 +42,7 @@ from c2corg_api.schemas.book import book_listing_schema
 from c2corg_api.schemas.coverage import coverage_listing_schema
 from c2corg_api.schemas.image import image_listing_schema
 from c2corg_api.schemas.outing import outing_schema
+from c2corg_api.schemas.route import route_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.schemas.user_profile import user_profile_listing_schema
 from c2corg_api.schemas.xreport import xreport_listing_schema
@@ -260,7 +261,7 @@ def adapt_route_schema_for_activities(activities, field_list_type):
         activities = [a for a in attributes.activities if a != 'paragliding']
 
     fields = get_all_fields(fields_route, activities, field_list_type)
-    return restrict_schema(schema_route, fields)
+    return route_schema.restrict(fields)
 
 
 route_schema_adaptor = make_schema_adaptor(
@@ -273,7 +274,7 @@ route_listing_schema_adaptor = make_schema_adaptor(
 route_documents_config = GetDocumentsConfig(
     ROUTE_TYPE,
     Route,
-    schema_route,
+    route_schema,
     clazz_locale=RouteLocale,
     fields=fields_route,
     adapt_schema=route_listing_schema_adaptor,

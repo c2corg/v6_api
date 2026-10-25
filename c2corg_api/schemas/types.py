@@ -262,16 +262,21 @@ def _to_datetime(value):
         raise PydanticCustomError('invalid_date', 'Invalid date') from e
 
 
-def _to_finite_float(value):
-    """Convert like `colander_ext.FiniteFloat`: NaN and infinity give null."""
+def _to_float(value):
+    """Convert like `colander.Float`: `float(value)`."""
     if _int_empty(value):
         raise _required()
     try:
-        result = float(value)
+        return float(value)
     except (TypeError, ValueError) as e:
         raise PydanticCustomError(
             'not_a_number', '"{value}" is not a number', {'value': str(value)}
         ) from e
+
+
+def _to_finite_float(value):
+    """Convert like `colander_ext.FiniteFloat`: NaN and infinity give null."""
+    result = _to_float(value)
     return result if math.isfinite(result) else None
 
 
@@ -286,6 +291,7 @@ Date = Annotated[datetime.date | None, Empty(_date_empty), BeforeValidator(_to_d
 DateTime = Annotated[
     datetime.datetime | None, Empty(_date_empty), BeforeValidator(_to_datetime)
 ]
+Float = Annotated[float | None, Empty(_int_empty), BeforeValidator(_to_float)]
 FiniteFloat = Annotated[
     float | None, Empty(_int_empty), BeforeValidator(_to_finite_float)
 ]

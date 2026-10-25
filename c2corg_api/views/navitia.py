@@ -22,9 +22,9 @@ from shapely.geometry import Point, shape
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import Area
-from c2corg_api.models.route import schema_route
 from c2corg_api.models.waypoint import Waypoint, schema_waypoint
 from c2corg_api.schemas.area import area_listing_schema
+from c2corg_api.schemas.route import route_schema
 from c2corg_api.views import cors_policy, to_json_dict
 from c2corg_api.views.coverage import get_coverage
 from c2corg_api.views.route import build_reachable_route_query_with_waypoints
@@ -293,7 +293,7 @@ def compute_journey_reachable_routes(job_id, request):
                 if area_obj:
                     json_areas.append(to_json_dict(area_obj, area_listing_schema))
             route.areas = json_areas
-            routes.append(to_json_dict(route, schema_route, True))
+            routes.append(to_json_dict(route, route_schema, True))
 
         r.set(
             f'job:{job_id}:result',
@@ -465,7 +465,7 @@ class NavitiaIsochronesReachableRoutesRest:
 
                         # assign JSON areas to the waypoint
                         route.areas = json_areas
-                        route_dict = to_json_dict(route, schema_route, True)
+                        route_dict = to_json_dict(route, route_schema, True)
                         routes.append(route_dict)
 
             return {'documents': routes, 'total': len(routes), 'isochron_geom': geojson}

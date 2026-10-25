@@ -7,6 +7,7 @@ of another type, too long, not one of its choices...
 
 import copy
 import json
+import math
 
 import colander
 from cornice.validators._colander import _none_to_null
@@ -172,6 +173,8 @@ def cases(node):
 def _normalize(value):
     if value is colander.null:
         return None
+    if isinstance(value, float) and math.isnan(value):
+        return 'nan'
     if isinstance(value, WKBElement):
         return ('wkb', bytes(value.data), value.srid)
     if isinstance(value, dict):
