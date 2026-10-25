@@ -117,8 +117,6 @@ dependencies = [
     { name = "alembic" },
     { name = "apscheduler" },
     { name = "bcrypt" },
-    { name = "colander" },
-    { name = "colanderalchemy" },
     { name = "cornice" },
     { name = "dogpile-cache" },
     { name = "elasticsearch" },
@@ -170,8 +168,6 @@ requires-dist = [
     { name = "alembic", specifier = "==1.20.0" },
     { name = "apscheduler", specifier = "==3.11.3" },
     { name = "bcrypt", specifier = "==5.0.0" },
-    { name = "colander", specifier = "==2.0" },
-    { name = "colanderalchemy", git = "https://github.com/c2corg/ColanderAlchemy.git?rev=d2cc04a041d111deac307666e20fc24e47cc62e6" },
     { name = "cornice", git = "https://github.com/c2corg/cornice.git?rev=6.1.0%2Bc2corg" },
     { name = "dogpile-cache", specifier = "==1.5.0" },
     { name = "elasticsearch", specifier = "==2.4.1" },
@@ -303,28 +299,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b9/2e/0090cbf739cee7d23781ad4b89a9894a41538e4fcf4c31dcdd705b78eb8b/click-8.1.8.tar.gz", hash = "sha256:ed53c9d8990d83c2a27deae68e4ee337473f6330c040a31d4225c9574d16096a", size = 226593, upload-time = "2024-12-21T18:38:44.339Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7e/d4/7ebdbd03970677812aac39c869717059dbb71a4cfc033ca6e5221787892c/click-8.1.8-py3-none-any.whl", hash = "sha256:63c132bbbed01578a06712a2d1f497bb62d9c1c0d329b7903a866228027263b2", size = 98188, upload-time = "2024-12-21T18:38:41.666Z" },
-]
-
-[[package]]
-name = "colander"
-version = "2.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "iso8601" },
-    { name = "translationstring" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/1c/de/cf5f43f6ad702486473a40480d4f36efc03cba29ca372b55d78e9af0f2ca/colander-2.0.tar.gz", hash = "sha256:419cd68178d2ee6ee4cae5d5cb1830725634b0a2840917156e89eb2592237ef3", size = 137014, upload-time = "2023-01-03T02:20:04.696Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8e/55/b83c3cf4e997ab2c1e1f1bccee2fb1b75ad6977faa0c906f965da55be1bf/colander-2.0-py3-none-any.whl", hash = "sha256:cb6b929fd0e79cdd3d310d3229e8f7884bd4fddd5cbf1d882063a6fb283b272b", size = 98754, upload-time = "2023-01-03T02:20:02.15Z" },
-]
-
-[[package]]
-name = "colanderalchemy"
-version = "0.3.4.post1.dev2+c2corg.1.gd2cc04a04"
-source = { git = "https://github.com/c2corg/ColanderAlchemy.git?rev=d2cc04a041d111deac307666e20fc24e47cc62e6#d2cc04a041d111deac307666e20fc24e47cc62e6" }
-dependencies = [
-    { name = "colander" },
-    { name = "sqlalchemy" },
 ]
 
 [[package]]
@@ -593,15 +567,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ef/4c/5dd1d8af08107f88c7f741ead7a40854b8ac24ddf9ae850afbcf698aa552/ipython_pygments_lexers-1.1.1.tar.gz", hash = "sha256:09c0138009e56b6854f9535736f4171d855c8c08a563a0dcd8022f78355c7e81", size = 8393, upload-time = "2025-01-17T11:24:34.505Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d9/33/1f075bf72b0b747cb3288d011319aaf64083cf2efef8354174e3ed4540e2/ipython_pygments_lexers-1.1.1-py3-none-any.whl", hash = "sha256:a9462224a505ade19a605f71f8fa63c2048833ce50abc86768a0d81d876dc81c", size = 8074, upload-time = "2025-01-17T11:24:33.271Z" },
-]
-
-[[package]]
-name = "iso8601"
-version = "2.1.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b9/f3/ef59cee614d5e0accf6fd0cbba025b93b272e626ca89fb70a3e9187c5d15/iso8601-2.1.0.tar.gz", hash = "sha256:6b1d3829ee8921c4301998c909f7829fa9ed3cbdac0d3b16af2d743aed1ba8df", size = 6522, upload-time = "2023-10-03T00:25:39.317Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/6c/0c/f37b6a241f0759b7653ffa7213889d89ad49a2b76eb2ddf3b57b2738c347/iso8601-2.1.0-py3-none-any.whl", hash = "sha256:aac4145c4dcb66ad8b648a02830f5e2ff6c24af20f4f482689be402db2429242", size = 7545, upload-time = "2023-10-03T00:25:32.304Z" },
 ]
 
 [[package]]
