@@ -1,8 +1,6 @@
 import logging
 
-from colander import Integer, MappingSchema, OneOf, SchemaNode, String, required
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.sql.expression import and_, exists
 
@@ -10,16 +8,18 @@ from c2corg_api import DBSession
 from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.schemas.base import Schema, body_validator
+from c2corg_api.schemas.types import Int, OneOf
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy, restricted_json_view
 
 log = logging.getLogger(__name__)
 
 
-class MaskSchema(MappingSchema):
-    document_id = SchemaNode(Integer(), missing=required)
-    lang = SchemaNode(String(), missing=required, validator=OneOf(default_langs))
-    version_id = SchemaNode(Integer(), missing=required)
+class MaskSchema(Schema):
+    document_id: Int
+    lang: OneOf(default_langs)
+    version_id: Int
 
 
 def validate_version(request, **kwargs):
@@ -77,8 +77,7 @@ def _get_version(request):
 class VersionMaskRest(ACLDefault):
     @restricted_json_view(
         permission='moderator',
-        schema=MaskSchema(),
-        validators=[colander_body_validator, validate_version],
+        validators=[body_validator(MaskSchema), validate_version],
     )
     def post(self):
         """Mask the given document version.
@@ -106,8 +105,7 @@ class VersionMaskRest(ACLDefault):
 class VersionUnmaskRest(ACLDefault):
     @restricted_json_view(
         permission='moderator',
-        schema=MaskSchema(),
-        validators=[colander_body_validator, validate_version],
+        validators=[body_validator(MaskSchema), validate_version],
     )
     def post(self):
         """Unmask the given version.

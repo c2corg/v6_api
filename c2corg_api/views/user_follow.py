@@ -1,11 +1,11 @@
 import logging
 
-from colander import Integer, MappingSchema, SchemaNode, required
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 
 from c2corg_api import DBSession
 from c2corg_api.models.feed import FollowedUser
+from c2corg_api.schemas.base import Schema, body_validator
+from c2corg_api.schemas.types import Int
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document_listings import get_documents_for_ids
@@ -19,8 +19,8 @@ from c2corg_api.views.validation import (
 log = logging.getLogger(__name__)
 
 
-class FollowSchema(MappingSchema):
-    user_id = SchemaNode(Integer(), missing=required)
+class FollowSchema(Schema):
+    user_id: Int
 
 
 def get_follower_relation(followed_user_id, follower_user_id):
@@ -35,8 +35,7 @@ def get_follower_relation(followed_user_id, follower_user_id):
 @resource(path='/users/follow', cors_policy=cors_policy)
 class UserFollowRest(ACLDefault):
     @restricted_json_view(
-        schema=FollowSchema(),
-        validators=[colander_body_validator, validate_body_user_id],
+        validators=[body_validator(FollowSchema), validate_body_user_id],
     )
     def post(self):
         """Follow the given user.
@@ -68,8 +67,7 @@ class UserFollowRest(ACLDefault):
 @resource(path='/users/unfollow', cors_policy=cors_policy)
 class UserUnfollowRest(ACLDefault):
     @restricted_json_view(
-        schema=FollowSchema(),
-        validators=[colander_body_validator, validate_body_user_id],
+        validators=[body_validator(FollowSchema), validate_body_user_id],
     )
     def post(self):
         """Unfollow the given user.
