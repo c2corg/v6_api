@@ -149,9 +149,18 @@ def before_image_update(request, document, document_in):
         publish_image_in_backend(request, new_filename)
 
 
+def image_backend_endpoint(settings, action):
+    """Build the URL of an image backend endpoint.
+
+    A trailing slash in `image_backend.url` must not produce a `//` path,
+    which the image backend answers with a 404.
+    """
+    return '{}/{}'.format(settings['image_backend.url'].rstrip('/'), action)
+
+
 def publish_image_in_backend(request, filename):
     settings = request.registry.settings
-    url = '{}/{}'.format(settings['image_backend.url'], 'publish')
+    url = image_backend_endpoint(settings, 'publish')
     data = {'secret': settings['image_backend.secret_key'], 'filename': filename}
 
     response = requests.post(url, data, timeout=int(settings['url.timeout']))
@@ -179,7 +188,7 @@ def delete_all_files_for_image(document_id, request):
     filenames = [f for (f,) in filenames_result]
 
     settings = request.registry.settings
-    url = '{}/{}'.format(settings['image_backend.url'], 'delete')
+    url = image_backend_endpoint(settings, 'delete')
 
     def send_delete_request():
         response = requests.post(
