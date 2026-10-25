@@ -24,7 +24,6 @@ from c2corg_api.models.topo_map import MAP_TYPE, TopoMap
 from c2corg_api.models.user_profile import (
     USERPROFILE_TYPE,
     UserProfile,
-    schema_listing_user_profile,
 )
 from c2corg_api.models.waypoint import (
     WAYPOINT_TYPE,
@@ -43,6 +42,7 @@ from c2corg_api.schemas.book import book_listing_schema
 from c2corg_api.schemas.coverage import coverage_listing_schema
 from c2corg_api.schemas.image import image_listing_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
+from c2corg_api.schemas.user_profile import user_profile_listing_schema
 from c2corg_api.schemas.xreport import xreport_listing_schema
 from c2corg_api.views import set_author
 
@@ -296,7 +296,7 @@ topo_map_documents_config = GetDocumentsConfig(
 user_profile_documents_config = GetDocumentsConfig(
     USERPROFILE_TYPE,
     UserProfile,
-    schema_listing_user_profile,
+    user_profile_listing_schema,
     listing_fields=fields_user_profile['listing'],
 )
 
