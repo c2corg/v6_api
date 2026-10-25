@@ -42,8 +42,9 @@ from c2corg_api.models.feed import (
     update_feed_document_update,
 )
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.models.topo_map import MAP_TYPE, schema_listing_topo_map
+from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.topo_map_association import get_maps, update_maps_for_document
+from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.acl import ACLDefault
@@ -244,7 +245,7 @@ class DocumentRest(ACLDefault):
 
     def _set_maps(self, document, lang):
         topo_maps = get_maps(document, lang)
-        document.maps = [to_json_dict(m, schema_listing_topo_map) for m in topo_maps]
+        document.maps = [to_json_dict(m, topo_map_listing_schema) for m in topo_maps]
 
     def _set_areas(self, document, lang):
         areas = get_areas(document, lang)

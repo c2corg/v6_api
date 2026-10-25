@@ -20,7 +20,7 @@ from c2corg_api.models.image import IMAGE_TYPE, Image, schema_listing_image
 from c2corg_api.models.outing import OUTING_TYPE, Outing, schema_outing
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale, schema_route
 from c2corg_api.models.schema_utils import restrict_schema
-from c2corg_api.models.topo_map import MAP_TYPE, TopoMap, schema_listing_topo_map
+from c2corg_api.models.topo_map import MAP_TYPE, TopoMap
 from c2corg_api.models.user_profile import (
     USERPROFILE_TYPE,
     UserProfile,
@@ -40,6 +40,7 @@ from c2corg_api.models.xreport import (
 )
 from c2corg_api.schemas.article import article_listing_schema
 from c2corg_api.schemas.book import book_listing_schema
+from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.views import set_author
 
 
@@ -281,7 +282,7 @@ route_documents_config = GetDocumentsConfig(
 topo_map_documents_config = GetDocumentsConfig(
     MAP_TYPE,
     TopoMap,
-    schema_listing_topo_map,
+    topo_map_listing_schema,
     listing_fields=fields_topo_map['listing'],
 )
 
