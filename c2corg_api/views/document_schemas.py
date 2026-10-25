@@ -19,7 +19,6 @@ from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
 from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
-from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.topo_map import MAP_TYPE, TopoMap
 from c2corg_api.models.user_profile import (
     USERPROFILE_TYPE,
@@ -29,7 +28,6 @@ from c2corg_api.models.waypoint import (
     WAYPOINT_TYPE,
     Waypoint,
     WaypointLocale,
-    schema_waypoint,
 )
 from c2corg_api.models.xreport import (
     XREPORT_TYPE,
@@ -45,6 +43,7 @@ from c2corg_api.schemas.outing import outing_schema
 from c2corg_api.schemas.route import route_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.schemas.user_profile import user_profile_listing_schema
+from c2corg_api.schemas.waypoint import waypoint_schema
 from c2corg_api.schemas.xreport import xreport_listing_schema
 from c2corg_api.views import set_author
 
@@ -314,7 +313,7 @@ def adapt_waypoint_schema_for_type(waypoint_type, field_list_type):
     """
     fields = fields_waypoint.get(waypoint_type, {}).get(field_list_type, [])
 
-    schema = restrict_schema(schema_waypoint, fields)
+    schema = waypoint_schema.restrict(fields)
 
     return schema
 
@@ -329,7 +328,7 @@ waypoint_listing_schema_adaptor = make_schema_adaptor(
 waypoint_documents_config = GetDocumentsConfig(
     WAYPOINT_TYPE,
     Waypoint,
-    schema_waypoint,
+    waypoint_schema,
     clazz_locale=WaypointLocale,
     fields=fields_waypoint,
     adapt_schema=waypoint_listing_schema_adaptor,

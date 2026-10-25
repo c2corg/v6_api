@@ -2,7 +2,6 @@ import functools
 import logging
 
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 from sqlalchemy import case, func
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import aliased, joinedload, load_only
@@ -23,12 +22,15 @@ from c2corg_api.models.waypoint import (
     ArchiveWaypoint,
     ArchiveWaypointLocale,
     Waypoint,
-    schema_create_waypoint,
-    schema_update_waypoint,
-    schema_waypoint,
 )
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
 from c2corg_api.schemas.area import area_listing_schema
+from c2corg_api.schemas.base import body_validator
+from c2corg_api.schemas.waypoint import (
+    WaypointCreateSchema,
+    WaypointUpdateSchema,
+    waypoint_schema,
+)
 from c2corg_api.search.advanced_search import get_all_filtered_docs
 from c2corg_api.views import cors_policy, restricted_json_view, to_json_dict
 from c2corg_api.views.document import (
@@ -172,16 +174,15 @@ class WaypointRest(DocumentRest):
         """
         return self._get(
             waypoint_documents_config,
-            schema_waypoint,
+            waypoint_schema,
             adapt_schema=waypoint_schema_adaptor,
             include_maps=True,
             set_custom_associations=set_custom_associations,
         )
 
     @restricted_json_view(
-        schema=schema_create_waypoint,
         validators=[
-            colander_body_validator,
+            body_validator(WaypointCreateSchema),
             validate_waypoint_create,
             validate_associations_create,
         ],
@@ -216,12 +217,11 @@ class WaypointRest(DocumentRest):
             }
 
         """
-        return self._collection_post(schema_waypoint)
+        return self._collection_post(waypoint_schema)
 
     @restricted_json_view(
-        schema=schema_update_waypoint,
         validators=[
-            colander_body_validator,
+            body_validator(WaypointUpdateSchema),
             validate_id,
             validate_waypoint_update,
             validate_associations_update,
@@ -272,7 +272,7 @@ class WaypointRest(DocumentRest):
               and waypoints can be provided. If only waypoint associations are
               given, the route associations will not be changed.
         """
-        return self._put(Waypoint, schema_waypoint, after_update=update_linked_routes)
+        return self._put(Waypoint, waypoint_schema, after_update=update_linked_routes)
 
 
 def set_custom_associations(waypoint, lang):
@@ -424,7 +424,7 @@ class WaypointVersionRest(DocumentVersionRest):
             ArchiveWaypoint,
             WAYPOINT_TYPE,
             ArchiveWaypointLocale,
-            schema_waypoint,
+            waypoint_schema,
             waypoint_schema_adaptor,
         )
 
@@ -495,7 +495,7 @@ class ReachableWaypointRest(DocumentRest):
 
             # assign JSON areas to the waypoint
             wp.areas = json_areas
-            wp_dict = to_json_dict(wp, schema_waypoint, True)
+            wp_dict = to_json_dict(wp, waypoint_schema, True)
             waypoints.append(wp_dict)
 
         return {'documents': waypoints, 'total': count}
