@@ -36,13 +36,13 @@ from c2corg_api.models.xreport import (
     XREPORT_TYPE,
     Xreport,
     XreportLocale,
-    schema_listing_xreport,
 )
 from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.article import article_listing_schema
 from c2corg_api.schemas.book import book_listing_schema
 from c2corg_api.schemas.coverage import coverage_listing_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
+from c2corg_api.schemas.xreport import xreport_listing_schema
 from c2corg_api.views import set_author
 
 
@@ -237,7 +237,7 @@ outing_documents_config = GetDocumentsConfig(
 xreport_documents_config = GetDocumentsConfig(
     XREPORT_TYPE,
     Xreport,
-    schema_listing_xreport,
+    xreport_listing_schema,
     clazz_locale=XreportLocale,
     listing_fields=fields_xreport['listing'],
 )
