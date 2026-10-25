@@ -1,0 +1,18 @@
+{
+  "body": {
+    "expire": "int",
+    "forum_username": "str",
+    "id": "int",
+    "lang": "str",
+    "name": "str",
+    "roles": [],
+    "token": "str",
+    "username": "str"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}
