@@ -97,13 +97,19 @@ def _str_type(spec, item=False):
     ]
 
 
-def _check_sequence(value):
+def _check_sequence(value, min_length=None):
     """Check like `colander.Sequence`: a list (a string is not one)."""
     if value is None:
         raise _required()
     if not isinstance(value, (list, tuple)):
         raise PydanticCustomError(
             'not_iterable', '"{value}" is not iterable', {'value': str(value)}
+        )
+    if min_length is not None and len(value) < min_length:
+        raise PydanticCustomError(
+            'too_short',
+            'Shorter than minimum length {min_length}',
+            {'min_length': min_length},
         )
     return list(value)
 
@@ -135,13 +141,17 @@ def OneOf(choices):  # noqa: N802 (used like a type)
     return _str_type(_StrSpec(choices=list(choices)))
 
 
-def Seq(item):  # noqa: N802 (used like a type)
-    """Return a list type of `item`."""
+def Seq(item, min_length=None):  # noqa: N802 (used like a type)
+    """Return a list type of `item`, of at least `min_length` items."""
     specs = [arg for arg in get_args(item) if isinstance(arg, _StrSpec)]
     if specs:
         # the items of a list are unnamed nodes in Colander
         item = _str_type(specs[0], item=True)
-    return Annotated[list[item] | None, Empty(_none), BeforeValidator(_check_sequence)]
+    return Annotated[
+        list[item] | None,
+        Empty(_none),
+        BeforeValidator(partial(_check_sequence, min_length=min_length)),
+    ]
 
 
 def Map(schema):  # noqa: N802 (used like a type)
