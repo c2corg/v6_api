@@ -12,11 +12,12 @@ from cornice.validators import colander_body_validator
 from sqlalchemy.orm import joinedload, load_only
 
 from c2corg_api import DBSession
-from c2corg_api.models.area import Area, schema_listing_area
+from c2corg_api.models.area import Area
 from c2corg_api.models.common.attributes import activities, default_langs
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.schema_utils import SchemaAssociationDoc
 from c2corg_api.models.user import User
+from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import (
     cors_policy,
@@ -83,7 +84,7 @@ class UserFilterPreferencesRest(ACLDefault):
             'followed_only': user.feed_followed_only,
             'activities': user.feed_filter_activities,
             'langs': user.feed_filter_langs,
-            'areas': [to_json_dict(a, schema_listing_area) for a in areas],
+            'areas': [to_json_dict(a, area_listing_schema) for a in areas],
         }
 
     @restricted_json_view(

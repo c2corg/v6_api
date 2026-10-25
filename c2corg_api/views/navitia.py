@@ -21,9 +21,10 @@ from pyramid.response import Response
 from shapely.geometry import Point, shape
 
 from c2corg_api.models import DBSession
-from c2corg_api.models.area import Area, schema_listing_area
+from c2corg_api.models.area import Area
 from c2corg_api.models.route import schema_route
 from c2corg_api.models.waypoint import Waypoint, schema_waypoint
+from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.views import cors_policy, to_json_dict
 from c2corg_api.views.coverage import get_coverage
 from c2corg_api.views.route import build_reachable_route_query_with_waypoints
@@ -290,7 +291,7 @@ def compute_journey_reachable_routes(job_id, request):
             for area in areas or []:
                 area_obj = areas_map.get(area.get('document_id'))
                 if area_obj:
-                    json_areas.append(to_json_dict(area_obj, schema_listing_area))
+                    json_areas.append(to_json_dict(area_obj, area_listing_schema))
             route.areas = json_areas
             routes.append(to_json_dict(route, schema_route, True))
 
@@ -364,7 +365,7 @@ def compute_journey_reachable_waypoints(job_id, request):
                 for area in areas or []:
                     area_obj = areas_map.get(area.get('document_id'))
                     if area_obj:
-                        json_areas.append(to_json_dict(area_obj, schema_listing_area))
+                        json_areas.append(to_json_dict(area_obj, area_listing_schema))
                 waypoint.areas = json_areas
                 waypoints.append(to_json_dict(waypoint, schema_waypoint, True))
             else:
@@ -459,7 +460,7 @@ class NavitiaIsochronesReachableRoutesRest:
                             area_obj = areas_map.get(area.get('document_id'))
                             if area_obj:
                                 json_areas.append(
-                                    to_json_dict(area_obj, schema_listing_area)
+                                    to_json_dict(area_obj, area_listing_schema)
                                 )
 
                         # assign JSON areas to the waypoint
@@ -520,7 +521,7 @@ class NavitiaIsochronesReachableWaypointsRest:
                             area_obj = areas_map.get(area.get('document_id'))
                             if area_obj:
                                 json_areas.append(
-                                    to_json_dict(area_obj, schema_listing_area)
+                                    to_json_dict(area_obj, area_listing_schema)
                                 )
 
                         # assign JSON areas to the waypoint
