@@ -2,7 +2,7 @@ from functools import cache
 
 from c2corg_api.models.area import AREA_TYPE, Area, schema_listing_area
 from c2corg_api.models.article import ARTICLE_TYPE, Article, schema_listing_article
-from c2corg_api.models.book import BOOK_TYPE, Book, schema_listing_book
+from c2corg_api.models.book import BOOK_TYPE, Book
 from c2corg_api.models.common import attributes
 from c2corg_api.models.common.fields_area import fields_area
 from c2corg_api.models.common.fields_article import fields_article
@@ -38,6 +38,7 @@ from c2corg_api.models.xreport import (
     XreportLocale,
     schema_listing_xreport,
 )
+from c2corg_api.schemas.book import book_listing_schema
 from c2corg_api.views import set_author
 
 
@@ -176,7 +177,7 @@ article_documents_config = GetDocumentsConfig(
 book_documents_config = GetDocumentsConfig(
     BOOK_TYPE,
     Book,
-    schema_listing_book,
+    book_listing_schema,
     listing_fields=fields_book['listing'],
     include_areas=False,
 )
