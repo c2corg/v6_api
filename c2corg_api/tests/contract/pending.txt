@@ -1,5 +1,3 @@
-PUT     /coverages/{id}  [authenticated]
-DELETE  /documents/delete/{id}/{lang}  [moderator]
 GET     /navitia/isochronesreachableroutes  [public]
 GET     /navitia/isochronesreachablewaypoints  [public]
 GET     /navitia/journeyreachableroutes/progress/{job_id}  [public]
