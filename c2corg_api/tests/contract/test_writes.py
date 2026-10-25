@@ -96,11 +96,9 @@ class TestDocumentCreate(WriteContractTest):
         )
 
 
-# coverages have no archive model: a PUT changing only a locale answers 500
-# (it never worked; coverages are only created, by update_navitia_coverage.sh)
 # the profiles of the test users have no archived version (real ones get
 # it at registration): their PUT is covered with the user routes
-UPDATED_TYPES = [t for t in DOCUMENT_TYPES if t not in ('coverages', 'profiles')]
+UPDATED_TYPES = [t for t in DOCUMENT_TYPES if t != 'profiles']
 
 
 class TestDocumentUpdate(WriteContractTest):
@@ -201,6 +199,20 @@ class TestDocumentDelete(WriteContractTest):
             status=400,
         )
         check_snapshot('documents_delete_refused', response)
+
+    @contract(('DELETE', '/documents/delete/{id}/{lang}'))
+    def test_delete_locale(self):
+        # a translation added in its own version (#2406)
+        def add_french(document):
+            document['locales'].append({'lang': 'fr', 'title': 'Rapport'})
+
+        self.update('xreports', add_french)
+        response = self.request(
+            'DELETE', f'/documents/delete/{self.ids["xreports"]}/fr', user='moderator'
+        )
+        check_snapshot('documents_delete_locale', response)
+        langs = self.get(self.url('xreports'), user='moderator').json['available_langs']
+        assert langs == ['en']
 
 
 class TestAssociations(WriteContractTest):
