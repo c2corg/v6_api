@@ -52,13 +52,32 @@ def validation_errors(error):
     ]
 
 
+class _Drop:
+    def __repr__(self):
+        return 'DROP'
+
+
+# default of a field left out of the validated data when it is missing, like
+# `colander.drop`
+DROP = _Drop()
+
+
+def _without_dropped(value):
+    if isinstance(value, dict):
+        return {k: _without_dropped(v) for k, v in value.items() if v is not DROP}
+    if isinstance(value, list):
+        return [_without_dropped(item) for item in value]
+    return value
+
+
 def validate(schema, data):
     """Validate `data` against `schema`; return (validated dict, errors)."""
     try:
         validated = schema.model_validate(data)
     except ValidationError as e:
         return None, validation_errors(e)
-    return validated.model_dump(), []
+    # DROP is not of the field's type: no serializer warning about it
+    return _without_dropped(validated.model_dump(warnings=False)), []
 
 
 def body_validator(schema):

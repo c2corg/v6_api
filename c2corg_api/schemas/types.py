@@ -56,13 +56,65 @@ def _to_int(value):
 
 
 class _StrSpec:
-    def __init__(self, max_length=None, choices=None):
-        self.max_length = max_length
-        self.choices = choices
+    def __init__(self, checks):
+        # functions returning an error message, or None if the value is valid
+        self.checks = checks
+
+
+def max_length_check(max_length):
+    def check(value):
+        if len(value) > max_length:
+            return f'Longer than maximum length {max_length}'
+        return None
+
+    return check
+
+
+def min_length_check(min_length):
+    def check(value):
+        if len(value) < min_length:
+            return f'Shorter than minimum length {min_length}'
+        return None
+
+    return check
+
+
+def one_of_check(choices):
+    def check(value):
+        if value not in choices:
+            return f'"{value}" is not one of {", ".join(choices)}'
+        return None
+
+    return check
+
+
+# the regular expression of `colander.Email`
+_EMAIL = re.compile(
+    r"^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9]"
+    r'(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9]'
+    r'(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'
+)
+
+
+def email_check(value):
+    """Check like `colander.Email`."""
+    return None if _EMAIL.match(value) else 'Invalid email address'
+
+
+def function_check(function, message='Invalid value'):
+    """Check like `colander.Function`: `function` returns a truthy value."""
+
+    def check(value):
+        result = function(value)
+        if isinstance(result, str) and result:
+            return result
+        return None if result else message
+
+    return check
 
 
 def _check_str(value, info, spec, item=False):
-    """Check like `colander.String` with a `Length` or `OneOf` validator."""
+    """Check like `colander.String` with its validators."""
     if _str_empty(value):
         raise _required()
     if not isinstance(value, str):
@@ -73,17 +125,11 @@ def _check_str(value, info, spec, item=False):
             '{value} is not a string: {suffix}',
             {'value': str(value), 'suffix': str({name: ''})},
         )
-    if spec.max_length is not None and len(value) > spec.max_length:
+    # all the checks run, like `colander.All`: their messages are joined
+    messages = [m for m in (check(value) for check in spec.checks) if m]
+    if messages:
         raise PydanticCustomError(
-            'too_long',
-            'Longer than maximum length {max_length}',
-            {'max_length': spec.max_length},
-        )
-    if spec.choices is not None and value not in spec.choices:
-        raise PydanticCustomError(
-            'not_one_of',
-            '"{value}" is not one of {choices}',
-            {'value': value, 'choices': ', '.join(spec.choices)},
+            'invalid_string', '{message}', {'message': '; '.join(messages)}
         )
     return value
 
@@ -131,14 +177,19 @@ def check_mapping(value):
 Int = Annotated[int | None, Empty(_int_empty), BeforeValidator(_to_int)]
 
 
-def Str(max_length=None):  # noqa: N802 (used like a type)
-    """Return a string type limited to `max_length` characters."""
-    return _str_type(_StrSpec(max_length=max_length))
+def Str(max_length=None, min_length=None, checks=()):  # noqa: N802 (used like a type)
+    """Return a string type with the given length limits and checks."""
+    all_checks = []
+    if min_length is not None:
+        all_checks.append(min_length_check(min_length))
+    if max_length is not None:
+        all_checks.append(max_length_check(max_length))
+    return _str_type(_StrSpec([*all_checks, *checks]))
 
 
 def OneOf(choices):  # noqa: N802 (used like a type)
     """Return a string type limited to the given choices."""
-    return _str_type(_StrSpec(choices=list(choices)))
+    return _str_type(_StrSpec([one_of_check(list(choices))]))
 
 
 def Seq(item, min_length=None):  # noqa: N802 (used like a type)
