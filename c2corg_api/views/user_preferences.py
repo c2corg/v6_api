@@ -1,23 +1,15 @@
-from colander import (
-    Boolean,
-    MappingSchema,
-    OneOf,
-    SchemaNode,
-    Sequence,
-    String,
-    required,
-)
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from sqlalchemy.orm import joinedload, load_only
 
 from c2corg_api import DBSession
 from c2corg_api.models.area import Area
 from c2corg_api.models.common.attributes import activities, default_langs
 from c2corg_api.models.document import DocumentLocale
-from c2corg_api.models.schema_utils import SchemaAssociationDoc
 from c2corg_api.models.user import User
 from c2corg_api.schemas.area import area_listing_schema
+from c2corg_api.schemas.base import Schema, body_validator
+from c2corg_api.schemas.document import AssociatedDocument
+from c2corg_api.schemas.types import Bool, OneOf, Seq
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import (
     cors_policy,
@@ -29,17 +21,11 @@ from c2corg_api.views import (
 from c2corg_api.views.validation import validate_preferred_lang_param
 
 
-class FilterPreferencesSchema(MappingSchema):
-    activities = SchemaNode(
-        Sequence(), SchemaNode(String(), validator=OneOf(activities)), missing=required
-    )
-    langs = SchemaNode(
-        Sequence(),
-        SchemaNode(String(), validator=OneOf(default_langs)),
-        missing=required,
-    )
-    areas = SchemaNode(Sequence(), SchemaAssociationDoc(), missing=required)
-    followed_only = SchemaNode(Boolean(), missing=required)
+class FilterPreferencesSchema(Schema):
+    activities: Seq(OneOf(activities))
+    langs: Seq(OneOf(default_langs))
+    areas: Seq(AssociatedDocument)
+    followed_only: Bool
 
 
 @resource(path='/users/preferences', cors_policy=cors_policy)
@@ -87,9 +73,7 @@ class UserFilterPreferencesRest(ACLDefault):
             'areas': [to_json_dict(a, area_listing_schema) for a in areas],
         }
 
-    @restricted_json_view(
-        schema=FilterPreferencesSchema(), validators=[colander_body_validator]
-    )
+    @restricted_json_view(validators=[body_validator(FilterPreferencesSchema)])
     def post(self):
         user = self.get_user(with_area_locales=False)
 
