@@ -1,6 +1,6 @@
 from functools import cache
 
-from c2corg_api.models.area import AREA_TYPE, Area, schema_listing_area
+from c2corg_api.models.area import AREA_TYPE, Area
 from c2corg_api.models.article import ARTICLE_TYPE, Article
 from c2corg_api.models.book import BOOK_TYPE, Book
 from c2corg_api.models.common import attributes
@@ -38,6 +38,7 @@ from c2corg_api.models.xreport import (
     XreportLocale,
     schema_listing_xreport,
 )
+from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.article import article_listing_schema
 from c2corg_api.schemas.book import book_listing_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
@@ -155,7 +156,7 @@ def get_all_fields(fields, activities, field_list_type):
 area_documents_config = GetDocumentsConfig(
     AREA_TYPE,
     Area,
-    schema_listing_area,
+    area_listing_schema,
     listing_fields=fields_area['listing'],
     include_areas=False,
 )

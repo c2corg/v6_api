@@ -17,7 +17,7 @@ from c2corg_api.caching import (
     get_or_create,
 )
 from c2corg_api.models import DBSession
-from c2corg_api.models.area import AREA_TYPE, schema_listing_area
+from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.area_association import get_areas, update_areas_for_document
 from c2corg_api.models.association import create_associations, synchronize_associations
 from c2corg_api.models.cache_version import (
@@ -44,6 +44,7 @@ from c2corg_api.models.feed import (
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.topo_map_association import get_maps, update_maps_for_document
+from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
@@ -249,7 +250,7 @@ class DocumentRest(ACLDefault):
 
     def _set_areas(self, document, lang):
         areas = get_areas(document, lang)
-        document.areas = [to_json_dict(m, schema_listing_area) for m in areas]
+        document.areas = [to_json_dict(m, area_listing_schema) for m in areas]
 
     def _collection_post(
         self, schema, before_add=None, after_add=None, allow_anonymous=False

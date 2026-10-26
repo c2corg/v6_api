@@ -10,7 +10,7 @@ from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import and_, column, text, union
 
 from c2corg_api.models import DBSession
-from c2corg_api.models.area import Area, schema_listing_area
+from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
 from c2corg_api.models.common.attributes import waypoint_types
@@ -28,6 +28,7 @@ from c2corg_api.models.waypoint import (
     schema_waypoint,
 )
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
+from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.search.advanced_search import get_all_filtered_docs
 from c2corg_api.views import cors_policy, restricted_json_view, to_json_dict
 from c2corg_api.views.document import (
@@ -490,7 +491,7 @@ class ReachableWaypointRest(DocumentRest):
             for area in areas:
                 area_obj = areas_map.get(area.get('document_id'))
                 if area_obj:
-                    json_areas.append(to_json_dict(area_obj, schema_listing_area))
+                    json_areas.append(to_json_dict(area_obj, area_listing_schema))
 
             # assign JSON areas to the waypoint
             wp.areas = json_areas
