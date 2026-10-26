@@ -805,3 +805,126 @@ def get_routes_reachable_ids():
     all_routes_reachable_ids = set([r.document_id for r in all_routes_reachable])
 
     return all_routes_reachable_ids
+
+
+def route_duration_days(calculated_duration, durations):
+    """Return the duration of a route in days, or None if it is unknown.
+
+    The calculated duration (see c2corg_api/__init__.py::calculate_route_duration,
+    stored in DAYS) when there is one, otherwise the shortest of the durations
+    declared in days by the authors ('1' to '10', '10+' counting as 10).
+    """
+    if calculated_duration is not None:
+        return calculated_duration
+
+    declared = [10 if value == '10+' else int(value) for value in durations or []]
+    return min(declared) if declared else None
+
+
+def get_route_candidates_within_geometry(intersection_geom_wkt):
+    """Get the routes with an access waypoint within a geometry.
+
+    Get all routes having at least one access waypoint whose geometry
+    intersects the given geometry, as `(document_id, calculated_duration,
+    durations)` tuples.
+
+    Unlike get_routes_reachable_ids (static ID-set based on the
+    WaypointStoparea table), this computes the set dynamically from an
+    arbitrary geometry (typically the aller/retour isochrone intersection
+    computed for a given transport search), via a direct PostGIS
+    ST_Intersects.
+
+    intersection_geom_wkt: a WKT geometry, expressed in the same SRID as
+        DocumentGeometry.geom (EPSG:3857). Callers computing a geometry in
+        WGS84 (e.g. from a Navitia isochrone, which is GeoJSON/EPSG:4326)
+        must reproject it to EPSG:3857 before calling this function.
+        If falsy (None or empty), no candidate can intersect it, so an
+        empty list is returned without querying the database.
+    """
+    if not intersection_geom_wkt:
+        return []
+
+    # Select the full Route entity (rather than just Route.document_id):
+    # since Route.document_id is inherited from the base Document table,
+    # a query selecting only that column does not reliably bring the
+    # "routes" table itself into the FROM clause.
+    routes = (
+        DBSession.query(Route)
+        .options(
+            load_only(Route.document_id, Route.calculated_duration, Route.durations)
+        )
+        .join(
+            Association,
+            or_(
+                Association.child_document_id == Route.document_id,
+                Association.parent_document_id == Route.document_id,
+            ),
+        )
+        .join(
+            Waypoint,
+            and_(
+                or_(
+                    Waypoint.document_id == Association.child_document_id,
+                    Waypoint.document_id == Association.parent_document_id,
+                ),
+                Waypoint.waypoint_type == 'access',
+            ),
+        )
+        .join(DocumentGeometry, DocumentGeometry.document_id == Waypoint.document_id)
+        .filter(
+            func.ST_Intersects(
+                DocumentGeometry.geom, func.ST_GeomFromText(intersection_geom_wkt, 3857)
+            )
+        )
+        .distinct()
+        .all()
+    )
+
+    return [(r.document_id, r.calculated_duration, r.durations) for r in routes]
+
+
+def classify_routes_within_geometry(intersection_geom_wkt, max_duration_seconds=None):
+    """Split the routes with an access waypoint within a geometry.
+
+    Return `(sure_ids, unverifiable_ids)`, two sets of route document_ids
+    (see get_route_candidates_within_geometry):
+
+    - sure: the duration of the route is known (see route_duration_days)
+    - unverifiable: the duration of the route is unknown (about half of the
+      routes have no calculated duration, nor declared durations): the route
+      may be reachable, but it cannot be checked.
+
+    max_duration_seconds: if given, the routes of a known duration longer than
+        this budget are left out. The durations are stored in DAYS, so the
+        budget (in seconds) is converted to days (1 day = 86400 seconds).
+    """
+    max_duration_days = (
+        max_duration_seconds / 86400.0 if max_duration_seconds is not None else None
+    )
+
+    sure_ids = set()
+    unverifiable_ids = set()
+    for (
+        document_id,
+        calculated_duration,
+        durations,
+    ) in get_route_candidates_within_geometry(intersection_geom_wkt):
+        duration = route_duration_days(calculated_duration, durations)
+        if duration is None:
+            unverifiable_ids.add(document_id)
+        elif max_duration_days is None or duration <= max_duration_days:
+            sure_ids.add(document_id)
+
+    return sure_ids, unverifiable_ids
+
+
+def get_route_ids_within_geometry(intersection_geom_wkt, max_duration_seconds=None):
+    """Get the ids of the routes with an access waypoint within a geometry.
+
+    Both the routes of a known duration and the ones of an unknown duration
+    are returned (see classify_routes_within_geometry).
+    """
+    sure_ids, unverifiable_ids = classify_routes_within_geometry(
+        intersection_geom_wkt, max_duration_seconds
+    )
+    return sure_ids | unverifiable_ids

@@ -42,8 +42,10 @@ from c2corg_api.models.feed import (
     update_feed_document_update,
 )
 from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.topo_map_association import get_maps, update_maps_for_document
+from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.search import advanced_search
@@ -74,6 +76,9 @@ LIMIT_DEFAULT = 30
 # the number of recent outings that are included for waypoint and routes
 NUM_RECENT_OUTINGS = 10
 
+# prefix of the query string parameters of the public transport filter
+TRANSPORT_QUERY_PREFIX = 'transport_'
+
 # page offset limit by ElasticSearch
 ES_MAX_RESULT_WINDOW = 10000
 
@@ -94,7 +99,29 @@ class DocumentRest(ACLDefault):
             # https://www.elastic.co/guide/en/elasticsearch/reference/master/search-request-from-size.html
             raise HTTPBadRequest('offset + limit greater than 10000')
 
-        if advanced_search.contains_search_params(self.request.GET):
+        transport_ids = self._get_transport_reachable_ids(doc_type)
+        unverifiable_ids = set()
+        if transport_ids is not None:
+            # the documents reachable by public transport are ANDed with all
+            # other ES filters already present in the query string, exactly
+            # like the static reachable ID-sets used by /reachableroutes and
+            # /reachablewaypoints.
+            unverifiable_ids = set(transport_ids['unverifiable_ids'])
+
+            def search_documents(_, __):
+                document_ids, total = advanced_search.get_all_filtered_docs(
+                    self.request.GET,
+                    meta_params,
+                    transport_ids['ids'] + transport_ids['unverifiable_ids'],
+                    doc_type,
+                )
+                # the routes of an unknown duration (that cannot be checked)
+                # come after the others
+                return [
+                    *(i for i in document_ids if i not in unverifiable_ids),
+                    *(i for i in document_ids if i in unverifiable_ids),
+                ], total
+        elif advanced_search.contains_search_params(self.request.GET):
             # search with ElasticSearch
             search_documents = advanced_search.get_search_documents(
                 self.request.GET, meta_params, doc_type
@@ -103,7 +130,49 @@ class DocumentRest(ACLDefault):
             # if no search parameters, directly load documents from the db
             search_documents = partial(self._search_documents_paginated, meta_params)
 
-        return get_documents(documents_config, meta_params, search_documents)
+        result = get_documents(documents_config, meta_params, search_documents)
+
+        if unverifiable_ids:
+            # copies: the documents of the listing can be shared with the cache
+            result['documents'] = [
+                {**document, 'duration_unknown': True}
+                if document.get('document_id') in unverifiable_ids
+                else document
+                for document in result['documents']
+            ]
+
+        return result
+
+    def _get_transport_reachable_ids(self, doc_type):
+        """Return the ids of the documents reachable by public transport.
+
+        Returns the ids of the routes or waypoints reachable by public
+        transport, according to the `transport_*` parameters of the query
+        string (see parse_transport_params), as
+        `{'ids': [...], 'unverifiable_ids': [...]}` (see
+        get_cached_transport_document_ids), or None if there are none.
+        """
+        if doc_type not in (ROUTE_TYPE, WAYPOINT_TYPE):
+            return None
+        if self.request.GET.get(TRANSPORT_QUERY_PREFIX + 'from') is None:
+            return None
+
+        # imported here: the navitia views import the route and waypoint
+        # views, which import this module
+        from c2corg_api.views.navitia import (
+            get_cached_transport_document_ids,
+            parse_transport_params,
+        )
+
+        try:
+            transport = parse_transport_params(
+                self.request.GET, prefix=TRANSPORT_QUERY_PREFIX
+            )
+        except ValueError as exc:
+            raise HTTPBadRequest(str(exc)) from exc
+
+        document_type = 'route' if doc_type == ROUTE_TYPE else 'waypoint'
+        return get_cached_transport_document_ids(transport, document_type)
 
     def _search_documents_paginated(self, meta_params, base_query, base_total_query):
         """Return a batch of document ids with the given `offset` and `limit`."""

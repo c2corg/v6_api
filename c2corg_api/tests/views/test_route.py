@@ -1,5 +1,6 @@
 import datetime
 import json
+from unittest import mock
 
 import pytest
 from shapely.geometry import LineString, shape
@@ -100,6 +101,120 @@ class TestRouteRest(BaseDocumentTestRest):
 
         body = self.get_collection_search({'hdif': '700,900'})
         assert body.get('total') == 2
+
+    def _transport_search(self, **params):
+        search = {
+            'transport_from': '5.1;45.1',
+            'transport_date': '2026-01-16',
+            'transport_min_departure': '08:00',
+            'transport_max_return': '18:00',
+        }
+        search.update(params)
+        return search
+
+    def test_get_collection_transport(self):
+        # DocumentRest._collection_get: the `transport_*` params select the
+        # routes reachable by public transport, with an ID-set filter plugged
+        # into the same advanced_search.get_all_filtered_docs used by the
+        # static reachable-ids searches.
+        reset_search_index(self.session)
+
+        with mock.patch(
+            'c2corg_api.views.navitia.get_cached_transport_document_ids'
+        ) as mock_ids:
+            mock_ids.return_value = {
+                'ids': [self.route3.document_id],
+                'unverifiable_ids': [],
+            }
+            body = self.get_collection_search(self._transport_search())
+
+        assert body.get('total') == 1
+        assert body['documents'][0]['document_id'] == self.route3.document_id
+        # parsed (and normalized) search, for routes
+        transport, document_type = mock_ids.call_args.args
+        assert transport['from'] == '5.100;45.100'
+        assert document_type == 'route'
+
+    def test_get_collection_transport_anded_with_filters(self):
+        # the id-set must be ANDed with other ES filters, exactly like any
+        # other search parameter.
+        reset_search_index(self.session)
+
+        with mock.patch(
+            'c2corg_api.views.navitia.get_cached_transport_document_ids'
+        ) as mock_ids:
+            mock_ids.return_value = {
+                'ids': [self.route3.document_id, self.route4.document_id],
+                'unverifiable_ids': [],
+            }
+            body = self.get_collection_search(
+                self._transport_search(act='rock_climbing')
+            )
+
+        assert body.get('total') == 1
+        assert body['documents'][0]['document_id'] == self.route4.document_id
+
+    def test_get_collection_transport_nothing_reachable(self):
+        # no route reachable: the search is empty, not unfiltered
+        reset_search_index(self.session)
+
+        with mock.patch(
+            'c2corg_api.views.navitia.get_cached_transport_document_ids'
+        ) as mock_ids:
+            mock_ids.return_value = {'ids': [], 'unverifiable_ids': []}
+            body = self.get_collection_search(self._transport_search())
+
+        assert body.get('total') == 0
+        assert body.get('documents') == []
+
+    def test_get_collection_transport_return_date(self):
+        reset_search_index(self.session)
+
+        with mock.patch(
+            'c2corg_api.views.navitia.get_cached_transport_document_ids'
+        ) as mock_ids:
+            mock_ids.return_value = {'ids': [], 'unverifiable_ids': []}
+            self.get_collection_search(
+                self._transport_search(
+                    transport_date='2026-01-16', transport_return_date='2026-01-18'
+                )
+            )
+
+        transport, _ = mock_ids.call_args.args
+        assert transport['date'] == '2026-01-16'
+        assert transport['return_date'] == '2026-01-18'
+
+    def test_get_collection_transport_unverifiable_last(self):
+        # the routes of an unknown duration come after the others, whatever the
+        # order of the search, and are flagged
+        reset_search_index(self.session)
+        route3_id = self.route3.document_id
+        route4_id = self.route4.document_id
+
+        for sure_id, unverifiable_id in (
+            (route3_id, route4_id),
+            (route4_id, route3_id),
+        ):
+            with mock.patch(
+                'c2corg_api.views.navitia.get_cached_transport_document_ids'
+            ) as mock_ids:
+                mock_ids.return_value = {
+                    'ids': [sure_id],
+                    'unverifiable_ids': [unverifiable_id],
+                }
+                body = self.get_collection_search(self._transport_search())
+
+            assert body.get('total') == 2
+            documents = body['documents']
+            assert [d['document_id'] for d in documents] == [sure_id, unverifiable_id]
+            assert 'duration_unknown' not in documents[0]
+            assert documents[1]['duration_unknown'] is True
+
+    def test_get_collection_transport_invalid(self):
+        self.app.get(
+            self._prefix + '?transport_from=5.1%3B45.1&transport_date=bad',
+            status=400,
+        )
 
     def test_get(self):
         body = self.get(self.route)

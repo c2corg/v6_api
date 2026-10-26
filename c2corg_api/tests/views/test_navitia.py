@@ -5,6 +5,7 @@ from unittest import mock
 from unittest.mock import call
 
 import pytest
+import redis
 import requests
 from dotenv import load_dotenv
 from pyramid.httpexceptions import (
@@ -16,34 +17,52 @@ from pyramid.httpexceptions import (
 from shapely.geometry import Polygon
 
 from c2corg_api.models.area import Area
+from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry
-from c2corg_api.models.route import Route
-from c2corg_api.models.waypoint import Waypoint
+from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.schemas.route import route_schema
 from c2corg_api.tests import BaseTestCase
 from c2corg_api.views import to_json_dict
+from c2corg_api.views.coverage import (
+    clear_coverages_cache,
+    get_coverage,
+    get_coverages,
+)
 from c2corg_api.views.navitia import (
     BASE_URL,
     MAX_ROUTE_THRESHOLD,
     MAX_TRIP_DURATION,
     MIN_TRIP_DURATION,
+    _is_one_way_route,
+    _resolve_hiking_duration_seconds,
+    _sort_targets_by_distance,
     _store_job_progress,
+    best_round_trip_result,
     compute_journey_reachable_routes,
     compute_journey_reachable_waypoints,
+    compute_round_trip_reachable_routes,
+    compute_round_trip_reachable_waypoints,
     extract_isochrone_params,
     extract_journey_params,
     extract_meta_params,
+    get_cached_isochrone_pair,
+    get_cached_transport_document_ids,
     get_job_status,
     get_navitia_isochrone,
+    get_navitia_isochrone_pair,
     handle_navitia_response,
     is_wp_in_isochrone,
     is_wp_journey_reachable,
+    is_wp_round_trip_reachable,
     navitia_get,
+    parse_transport_params,
     progress_stream,
     read_result_from_redis,
     redis_client,
     start_job_background,
 )
+from c2corg_api.views.route import route_duration_days
 
 # load .env into os.environ (call once)
 load_dotenv()
@@ -51,6 +70,19 @@ load_dotenv()
 NAVITIA_GET_PATH = 'c2corg_api.views.navitia.navitia_get'
 NAVITIA_REDIS_CLIENT_PATH = 'c2corg_api.views.navitia.redis_client'
 NAVITIA_KEY = os.getenv('NAVITIA_API_KEY', 'test-key')
+
+
+class FakeCache:
+    """in-memory replacement of the redis client used as a cache"""
+
+    def __init__(self):
+        self.data = {}
+
+    def get(self, key):
+        return self.data.get(key)
+
+    def set(self, key, value, ex=None):
+        self.data[key] = value
 
 
 class TestNavitiaRestParams(BaseTestCase):
@@ -324,12 +356,7 @@ class TestNavitiaRestParams(BaseTestCase):
 
         payload = json.loads(first.decode().replace('data: ', '').strip())
 
-        assert payload == {
-            'progress': 10,
-            'total': 10,
-            'found': 7,
-            'not_found': 3,
-        }
+        assert payload == {'progress': 10, 'total': 10, 'found': 7, 'not_found': 3}
 
         assert second == b'event: done\ndata: done\n\n'
 
@@ -349,12 +376,7 @@ class TestNavitiaRestParams(BaseTestCase):
 
         payload = json.loads(output.decode().replace('data: ', '').strip())
 
-        assert payload == {
-            'progress': 0,
-            'total': 0,
-            'found': 0,
-            'not_found': 0,
-        }
+        assert payload == {'progress': 0, 'total': 0, 'found': 0, 'not_found': 0}
 
     def test_progress_stream_error(self):
         r = mock.Mock()
@@ -1403,11 +1425,7 @@ class TestNavitiaRestParams(BaseTestCase):
         mock_request = mock.Mock()
         mock_request.validated = {}
         result = extract_meta_params(mock_request)
-        assert result == {
-            'offset': 0,
-            'limit': 2000,
-            'lang': None,
-        }
+        assert result == {'offset': 0, 'limit': 2000, 'lang': None}
 
     def test_navitia_extract_meta_params_with_lang(self):
         mock_request = mock.Mock()
@@ -1416,11 +1434,7 @@ class TestNavitiaRestParams(BaseTestCase):
             'lang': 'fr',
         }
         result = extract_meta_params(mock_request)
-        assert result == {
-            'offset': 0,
-            'limit': 2000,
-            'lang': 'fr',
-        }
+        assert result == {'offset': 0, 'limit': 2000, 'lang': 'fr'}
 
     def test_navitia_extract_journey_params(self):
         mock_request = mock.Mock()
@@ -1651,3 +1665,1687 @@ class TestNavitiaRestParams(BaseTestCase):
                 params=mock_journey_params,
                 headers={'Authorization': NAVITIA_KEY},
             )
+
+    # get_navitia_isochrone_pair
+    def test_get_navitia_isochrone_pair_both_found(self):
+        aller_geojson = {
+            'type': 'Polygon',
+            'coordinates': [[[0, 0], [0, 2], [2, 2], [2, 0], [0, 0]]],
+        }
+        retour_geojson = {
+            'type': 'Polygon',
+            'coordinates': [[[1, 1], [1, 3], [3, 3], [3, 1], [1, 1]]],
+        }
+
+        responses = [
+            {'isochrones': [{'geojson': aller_geojson}]},
+            {'isochrones': [{'geojson': retour_geojson}]},
+        ]
+
+        with mock.patch(
+            'c2corg_api.views.navitia.get_navitia_isochrone', side_effect=responses
+        ) as mock_get_iso:
+            result = get_navitia_isochrone_pair(
+                '5.1;45.1', '2026-01-16', '08:00', '18:00'
+            )
+
+        assert result['aller_geom'] is not None
+        assert result['retour_geom'] is not None
+        assert result['intersection_geom'] is not None
+        assert result['intersection_geom']['type'] == 'Polygon'
+
+        aller_call_params = mock_get_iso.call_args_list[0][0][0]
+        retour_call_params = mock_get_iso.call_args_list[1][0][0]
+
+        assert aller_call_params['from'] == '5.1;45.1'
+        assert aller_call_params['datetime'] == '20260116T080000'
+        assert aller_call_params['datetime_represents'] == 'departure'
+        # window (600 min) is above MAX_TRIP_DURATION, so it is clamped
+        assert aller_call_params['boundary_duration[]'] == MAX_TRIP_DURATION * 60
+
+        assert retour_call_params['to'] == '5.1;45.1'
+        assert retour_call_params['datetime'] == '20260116T180000'
+        assert retour_call_params['datetime_represents'] == 'arrival'
+        assert retour_call_params['boundary_duration[]'] == MAX_TRIP_DURATION * 60
+
+    def test_get_navitia_isochrone_pair_several_days(self):
+        polygon = {
+            'type': 'Polygon',
+            'coordinates': [[[0, 0], [0, 2], [2, 2], [2, 0], [0, 0]]],
+        }
+        responses = [
+            {'isochrones': [{'geojson': polygon}]},
+            {'isochrones': [{'geojson': polygon}]},
+        ]
+
+        with mock.patch(
+            'c2corg_api.views.navitia.get_navitia_isochrone', side_effect=responses
+        ) as mock_get_iso:
+            get_navitia_isochrone_pair(
+                '5.1;45.1', '2026-01-16', '08:00', '07:00', return_date='2026-01-18'
+            )
+
+        aller_call_params = mock_get_iso.call_args_list[0][0][0]
+        retour_call_params = mock_get_iso.call_args_list[1][0][0]
+        # the aller leaves on the first day, the retour arrives on the last one
+        assert aller_call_params['datetime'] == '20260116T080000'
+        assert retour_call_params['datetime'] == '20260118T070000'
+        assert aller_call_params['boundary_duration[]'] == MAX_TRIP_DURATION * 60
+
+    def test_get_navitia_isochrone_pair_retour_empty(self):
+        aller_geojson = {
+            'type': 'Polygon',
+            'coordinates': [[[0, 0], [0, 2], [2, 2], [2, 0], [0, 0]]],
+        }
+
+        responses = [
+            {'isochrones': [{'geojson': aller_geojson}]},
+            {'isochrones': []},
+        ]
+
+        with mock.patch(
+            'c2corg_api.views.navitia.get_navitia_isochrone', side_effect=responses
+        ):
+            result = get_navitia_isochrone_pair(
+                '5.1;45.1', '2026-01-16', '08:00', '09:00'
+            )
+
+        assert result['aller_geom'] is not None
+        assert result['retour_geom'] is None
+        assert result['intersection_geom'] is None
+
+    def test_get_navitia_isochrone_pair_both_empty(self):
+        responses = [{'isochrones': []}, {'isochrones': []}]
+
+        with mock.patch(
+            'c2corg_api.views.navitia.get_navitia_isochrone', side_effect=responses
+        ):
+            result = get_navitia_isochrone_pair(
+                '5.1;45.1', '2026-01-16', '08:00', '09:00'
+            )
+
+        assert result == {
+            'aller_geom': None,
+            'retour_geom': None,
+            'intersection_geom': None,
+        }
+
+    def test_get_navitia_isochrone_pair_override_duration(self):
+        responses = [{'isochrones': []}, {'isochrones': []}]
+
+        with mock.patch(
+            'c2corg_api.views.navitia.get_navitia_isochrone', side_effect=responses
+        ) as mock_get_iso:
+            get_navitia_isochrone_pair(
+                '5.1;45.1', '2026-01-16', '08:00', '09:00', override_duration_minutes=30
+            )
+
+        aller_call_params = mock_get_iso.call_args_list[0][0][0]
+        assert aller_call_params['boundary_duration[]'] == 30 * 60
+
+    # is_wp_round_trip_reachable
+    def _make_access_wp_json(self):
+        return {
+            'geometry': {'geom': json.dumps({'type': 'Point', 'coordinates': [0, 0]})}
+        }
+
+    def _navitia_by_leg(self, aller_response, retour_response):
+        """A navitia_get answering each leg, whatever the order they are asked"""
+
+        def navitia_get(url, params=None, **kwargs):
+            if params['datetime_represents'] == 'departure':
+                return aller_response
+            return retour_response
+
+        return navitia_get
+
+    def test_is_wp_round_trip_reachable_aller_only(self):
+        wp_json = self._make_access_wp_json()
+
+        aller_response = {
+            'journeys': [
+                {
+                    'departure_date_time': '20260116T080000',
+                    'arrival_date_time': '20260116T090000',
+                }
+            ]
+        }
+        retour_response = {'journeys': []}
+
+        with (
+            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
+            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,
+        ):
+            mock_get_coverage.return_value = 'fr-se'
+            mock_navitia_get.side_effect = self._navitia_by_leg(
+                aller_response, retour_response
+            )
+
+            result = is_wp_round_trip_reachable(
+                wp_json, '5.7;45.1', '2026-01-16', '08:00', '18:00', 3600
+            )
+
+        assert result['aller']['found'] is True
+        assert result['aller']['departure'] == '20260116T080000'
+        assert result['aller']['arrival'] == '20260116T090000'
+        assert result['retour']['found'] is False
+        assert result['retour']['departure'] is None
+        assert result['compatible'] is False
+
+    def test_is_wp_round_trip_reachable_retour_only(self):
+        wp_json = self._make_access_wp_json()
+
+        aller_response = {'journeys': []}
+        retour_response = {
+            'journeys': [
+                {
+                    'departure_date_time': '20260116T133000',
+                    'arrival_date_time': '20260116T180000',
+                }
+            ]
+        }
+
+        with (
+            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
+            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,
+        ):
+            mock_get_coverage.return_value = 'fr-se'
+            mock_navitia_get.side_effect = self._navitia_by_leg(
+                aller_response, retour_response
+            )
+
+            result = is_wp_round_trip_reachable(
+                wp_json, '5.7;45.1', '2026-01-16', '08:00', '18:00', 3600
+            )
+
+        assert result['aller']['found'] is False
+        assert result['retour']['found'] is True
+        assert result['retour']['departure'] == '20260116T133000'
+        assert result['compatible'] is False
+
+    def test_is_wp_round_trip_reachable_both_compatible(self):
+        wp_json = self._make_access_wp_json()
+
+        # aller arrives at 09:00, retour leaves at 13:30 : 4h30 available
+        aller_response = {
+            'journeys': [
+                {
+                    'departure_date_time': '20260116T080000',
+                    'arrival_date_time': '20260116T090000',
+                }
+            ]
+        }
+        retour_response = {
+            'journeys': [
+                {
+                    'departure_date_time': '20260116T133000',
+                    'arrival_date_time': '20260116T180000',
+                }
+            ]
+        }
+
+        with (
+            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
+            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,
+        ):
+            mock_get_coverage.return_value = 'fr-se'
+            mock_navitia_get.side_effect = self._navitia_by_leg(
+                aller_response, retour_response
+            )
+
+            # 1 hour hiking duration, well below the 4h30 available
+            result = is_wp_round_trip_reachable(
+                wp_json, '5.7;45.1', '2026-01-16', '08:00', '18:00', 3600
+            )
+
+        assert result['aller']['found'] is True
+        assert result['retour']['found'] is True
+        assert result['compatible'] is True
+
+    def test_is_wp_round_trip_reachable_both_incompatible(self):
+        wp_json = self._make_access_wp_json()
+
+        # aller arrives at 09:00, retour leaves at 09:30 : only 30 min
+        aller_response = {
+            'journeys': [
+                {
+                    'departure_date_time': '20260116T080000',
+                    'arrival_date_time': '20260116T090000',
+                }
+            ]
+        }
+        retour_response = {
+            'journeys': [
+                {
+                    'departure_date_time': '20260116T093000',
+                    'arrival_date_time': '20260116T180000',
+                }
+            ]
+        }
+
+        with (
+            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
+            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,
+        ):
+            mock_get_coverage.return_value = 'fr-se'
+            mock_navitia_get.side_effect = self._navitia_by_leg(
+                aller_response, retour_response
+            )
+
+            # 1 hour hiking duration : not enough time (only 30 min)
+            result = is_wp_round_trip_reachable(
+                wp_json, '5.7;45.1', '2026-01-16', '08:00', '18:00', 3600
+            )
+
+        assert result['aller']['found'] is True
+        assert result['retour']['found'] is True
+        assert result['compatible'] is False
+
+    def test_is_wp_round_trip_reachable_several_days(self):
+        wp_json = self._make_access_wp_json()
+        requested = []
+
+        def navitia_get(url, params=None, **kwargs):
+            requested.append((params['datetime_represents'], params['datetime']))
+            if params['datetime_represents'] == 'departure':
+                return {
+                    'journeys': [
+                        {
+                            'departure_date_time': '20260116T080000',
+                            'arrival_date_time': '20260116T100000',
+                        }
+                    ]
+                }
+            # a journey of the day of the aller must not be taken for the retour
+            return {
+                'journeys': [
+                    {
+                        'departure_date_time': '20260116T180000',
+                        'arrival_date_time': '20260116T200000',
+                    },
+                    {
+                        'departure_date_time': '20260118T150000',
+                        'arrival_date_time': '20260118T170000',
+                    },
+                ]
+            }
+
+        with (
+            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
+            mock.patch('c2corg_api.views.navitia.navitia_get', side_effect=navitia_get),
+        ):
+            mock_get_coverage.return_value = 'fr-se'
+
+            # two days of hiking
+            result = is_wp_round_trip_reachable(
+                wp_json,
+                '5.7;45.1',
+                '2026-01-16',
+                '08:00',
+                '18:00',
+                2 * 86400,
+                return_date='2026-01-18',
+            )
+
+        assert ('departure', '20260116T080000') in requested
+        assert ('arrival', '20260118T180000') in requested
+        assert result['aller']['departure'] == '20260116T080000'
+        assert result['retour']['departure'] == '20260118T150000'
+        assert result['compatible'] is True
+
+    def test_is_wp_round_trip_reachable_several_days_too_short(self):
+        wp_json = self._make_access_wp_json()
+
+        with (
+            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
+            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,
+        ):
+            mock_get_coverage.return_value = 'fr-se'
+            mock_navitia_get.side_effect = self._navitia_by_leg(
+                {
+                    'journeys': [
+                        {
+                            'departure_date_time': '20260116T080000',
+                            'arrival_date_time': '20260116T100000',
+                        }
+                    ]
+                },
+                {
+                    'journeys': [
+                        {
+                            'departure_date_time': '20260118T150000',
+                            'arrival_date_time': '20260118T170000',
+                        }
+                    ]
+                },
+            )
+
+            # three days of hiking do not fit between the aller and the retour
+            result = is_wp_round_trip_reachable(
+                wp_json,
+                '5.7;45.1',
+                '2026-01-16',
+                '08:00',
+                '18:00',
+                3 * 86400,
+                return_date='2026-01-18',
+            )
+
+        assert result['aller']['found'] is True
+        assert result['retour']['found'] is True
+        assert result['compatible'] is False
+
+    def test_best_round_trip_result_unknown_duration_is_not_checked(self):
+        prepared = {
+            'targets': [{'document_id': 1, 'coords': '5.7;45.1', 'coverage': None}],
+            'hiking_duration_seconds': None,
+            'one_way': False,
+        }
+
+        with mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get:
+            result = best_round_trip_result(
+                prepared, '5.7;45.1', '2026-01-16', '08:00', '18:00'
+            )
+
+        assert result == {'compatible': None, 'duration_unknown': True}
+        mock_navitia_get.assert_not_called()
+
+    def test_best_round_trip_result_return_date(self):
+        prepared = {
+            'targets': [
+                {'document_id': 1, 'coords': '5.7;45.1', 'coverage': 'fr-se'},
+            ],
+            'hiking_duration_seconds': 86400,
+            'one_way': False,
+        }
+
+        with mock.patch('c2corg_api.views.navitia._query_round_trip_legs') as mock_legs:
+            mock_legs.return_value = (
+                {
+                    'found': True,
+                    'departure': '20260116T080000',
+                    'arrival': '20260116T100000',
+                },
+                {
+                    'found': True,
+                    'departure': '20260117T150000',
+                    'arrival': '20260117T170000',
+                },
+            )
+            result = best_round_trip_result(
+                prepared,
+                '5.7;45.1',
+                '2026-01-16',
+                '08:00',
+                '18:00',
+                return_date='2026-01-17',
+            )
+
+        mock_legs.assert_called_once_with(
+            prepared['targets'][0],
+            '5.7;45.1',
+            '2026-01-16',
+            '08:00',
+            '18:00',
+            '2026-01-17',
+        )
+        assert result['compatible'] is True
+
+    # _resolve_hiking_duration_seconds
+    def test_resolve_hiking_duration_seconds_explicit(self):
+        assert _resolve_hiking_duration_seconds('30', 1, 'route') == 1800
+        assert _resolve_hiking_duration_seconds('30', 1, 'waypoint') == 1800
+
+    def test_resolve_hiking_duration_seconds_waypoint_default(self):
+        assert _resolve_hiking_duration_seconds(None, 1, 'waypoint') == 0
+
+    def test_resolve_hiking_duration_seconds_route_default(self):
+        fake_route = mock.Mock(calculated_duration=0.5, durations=None)
+        with mock.patch('c2corg_api.views.navitia.DBSession') as mock_db_session:
+            query = mock_db_session.query.return_value
+            query.filter.return_value.first.return_value = fake_route
+            result = _resolve_hiking_duration_seconds(None, 42, 'route')
+
+        assert result == 0.5 * 86400
+
+    def test_resolve_hiking_duration_seconds_route_declared_duration(self):
+        # no calculated duration: the shortest of the declared durations (days)
+        fake_route = mock.Mock(calculated_duration=None, durations=['3', '2'])
+        with mock.patch('c2corg_api.views.navitia.DBSession') as mock_db_session:
+            query = mock_db_session.query.return_value
+            query.filter.return_value.first.return_value = fake_route
+            result = _resolve_hiking_duration_seconds(None, 42, 'route')
+
+        assert result == 2 * 86400
+
+    def test_resolve_hiking_duration_seconds_explicit_for_unknown_duration(self):
+        # an explicit duration makes a route of an unknown duration checkable
+        assert _resolve_hiking_duration_seconds('90', 42, 'route') == 90 * 60
+
+    def test_resolve_hiking_duration_seconds_route_no_duration(self):
+        # unknown duration: not 0, the route cannot be checked
+        fake_route = mock.Mock(calculated_duration=None, durations=None)
+        with mock.patch('c2corg_api.views.navitia.DBSession') as mock_db_session:
+            query = mock_db_session.query.return_value
+            query.filter.return_value.first.return_value = fake_route
+            result = _resolve_hiking_duration_seconds(None, 42, 'route')
+
+        assert result is None
+
+    # transport search: parameters, cache and /navitia/transportisochrones
+    TRANSPORT_QUERY = (
+        'from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00'
+    )
+
+    ISOCHRONES = {
+        'aller_geom': {'type': 'Polygon', 'coordinates': [[[0, 0]]]},
+        'retour_geom': {'type': 'Polygon', 'coordinates': [[[1, 1]]]},
+        'intersection_geom': {'type': 'Polygon', 'coordinates': [[[2, 2]]]},
+    }
+
+    def _transport_params(self, **overrides):
+        params = {
+            'from': '5.1;45.1',
+            'date': '2026-01-16',
+            'min_departure': '08:00',
+            'max_return': '18:00',
+        }
+        params.update(overrides)
+        return params
+
+    def test_parse_transport_params(self):
+        transport = parse_transport_params(
+            self._transport_params(**{'from': '5.12345;45.67891'})
+        )
+
+        # the starting point is rounded to about 110 m
+        assert transport['from'] == '5.123;45.679'
+        assert transport['date'] == '2026-01-16'
+        assert transport['return_date'] == '2026-01-16'
+        assert transport['min_departure'] == '08:00'
+        assert transport['max_return'] == '18:00'
+        assert transport['max_duration'] is None
+        assert transport['hiking_duration'] is None
+
+    def test_parse_transport_params_prefix_and_optional_values(self):
+        params = {
+            'transport_' + name: value
+            for name, value in self._transport_params(
+                max_duration='90', hiking_duration='60'
+            ).items()
+        }
+
+        transport = parse_transport_params(params, prefix='transport_')
+
+        assert transport['from'] == '5.100;45.100'
+        assert transport['max_duration'] == 90
+        assert transport['hiking_duration'] == 60
+
+    def test_parse_transport_params_invalid(self, subtests):
+        invalid_params = [
+            {'date': None},
+            {'from': '5.1'},
+            {'from': 'a;b'},
+            {'from': '500;45'},
+            {'date': '16/01/2026'},
+            {'min_departure': '8h'},
+            {'max_return': '25:00'},
+            {'min_departure': '18:00', 'max_return': '08:00'},
+            {'max_duration': 'abc'},
+            {'hiking_duration': '-5'},
+            {'return_date': '17/01/2026'},
+            {'return_date': '2026-01-15'},
+            # same day: the retour has to be after the aller
+            {'return_date': '2026-01-16', 'max_return': '07:00'},
+        ]
+        for overrides in invalid_params:
+            params = {
+                key: value
+                for key, value in self._transport_params(**overrides).items()
+                if value is not None
+            }
+            with subtests.test(msg=str(overrides)), pytest.raises(ValueError):
+                parse_transport_params(params)
+
+    def test_parse_transport_params_several_days(self):
+        # the retour is on another day: it can be earlier in the day
+        transport = parse_transport_params(
+            self._transport_params(return_date='2026-01-18', max_return='07:00')
+        )
+
+        assert transport['date'] == '2026-01-16'
+        assert transport['return_date'] == '2026-01-18'
+        assert transport['max_return'] == '07:00'
+
+        # the same day as the aller, given or not
+        for overrides in ({}, {'return_date': '2026-01-16'}):
+            transport = parse_transport_params(self._transport_params(**overrides))
+            assert transport['return_date'] == '2026-01-16'
+
+    def test_navitia_transportisochrones_invalid_params(self):
+        for query in [
+            'from=5.1%3B45.1&date=2026-01-16&return_date=2026-01-15&min_departure=08:00&max_return=18:00',
+            'from=5.1%3B45.1&date=2026-01-16&return_date=abc&min_departure=08:00&max_return=18:00',
+            'date=2026-01-16&min_departure=08:00&max_return=18:00',
+            'from=5.1%3B45.1&date=2026-01-16&min_departure=18:00&max_return=08:00',
+            'from=abc&date=2026-01-16&min_departure=08:00&max_return=18:00',
+        ]:
+            self.app.get('/navitia/transportisochrones?' + query, status=400)
+
+    def test_navitia_transportisochrones(self):
+        with (
+            mock.patch('c2corg_api.views.navitia._cache_client') as mock_cache,
+            mock.patch(
+                'c2corg_api.views.navitia.get_navitia_isochrone_pair'
+            ) as mock_iso_pair,
+        ):
+            mock_cache.return_value = FakeCache()
+            mock_iso_pair.return_value = self.ISOCHRONES
+
+            response = self.app.get(
+                '/navitia/transportisochrones?from=5.12345%3B45.67891'
+                '&date=2026-01-16&min_departure=08:00&max_return=18:00',
+                status=200,
+            )
+
+            assert response.json == self.ISOCHRONES
+            mock_iso_pair.assert_called_once_with(
+                '5.123;45.679',
+                '2026-01-16',
+                '08:00',
+                '18:00',
+                override_duration_minutes=None,
+                return_date='2026-01-16',
+            )
+
+    def test_navitia_transportisochrones_several_days(self):
+        with (
+            mock.patch('c2corg_api.views.navitia._cache_client') as mock_cache,
+            mock.patch(
+                'c2corg_api.views.navitia.get_navitia_isochrone_pair'
+            ) as mock_iso_pair,
+        ):
+            mock_cache.return_value = FakeCache()
+            mock_iso_pair.return_value = self.ISOCHRONES
+
+            self.app.get(
+                '/navitia/transportisochrones?from=5.12345%3B45.67891'
+                '&date=2026-01-16&return_date=2026-01-18'
+                '&min_departure=08:00&max_return=07:00',
+                status=200,
+            )
+
+            mock_iso_pair.assert_called_once_with(
+                '5.123;45.679',
+                '2026-01-16',
+                '08:00',
+                '07:00',
+                override_duration_minutes=None,
+                return_date='2026-01-18',
+            )
+
+    def test_isochrones_are_computed_once_per_search(self):
+        with (
+            mock.patch('c2corg_api.views.navitia._cache_client') as mock_cache,
+            mock.patch(
+                'c2corg_api.views.navitia.get_navitia_isochrone_pair'
+            ) as mock_iso_pair,
+        ):
+            mock_cache.return_value = FakeCache()
+            mock_iso_pair.return_value = self.ISOCHRONES
+
+            # the same search, and one starting about 30 m away: same entry
+            for from_coords in ('5.1001;45.1001', '5.1001;45.1001', '5.1003;45.1002'):
+                transport = parse_transport_params(
+                    self._transport_params(**{'from': from_coords})
+                )
+                assert get_cached_isochrone_pair(transport) == self.ISOCHRONES
+            assert mock_iso_pair.call_count == 1
+
+            # another time, or another maximum duration: other isochrones
+            for overrides in (
+                {'max_return': '19:00'},
+                {'max_duration': '45'},
+                {'return_date': '2026-01-17'},
+            ):
+                get_cached_isochrone_pair(
+                    parse_transport_params(self._transport_params(**overrides))
+                )
+            assert mock_iso_pair.call_count == 4
+
+    def test_incomplete_isochrones_are_not_cached(self):
+        with (
+            mock.patch('c2corg_api.views.navitia._cache_client') as mock_cache,
+            mock.patch(
+                'c2corg_api.views.navitia.get_navitia_isochrone_pair'
+            ) as mock_iso_pair,
+        ):
+            mock_cache.return_value = FakeCache()
+            mock_iso_pair.return_value = {
+                'aller_geom': self.ISOCHRONES['aller_geom'],
+                'retour_geom': None,
+                'intersection_geom': None,
+            }
+
+            transport = parse_transport_params(self._transport_params())
+            get_cached_isochrone_pair(transport)
+            get_cached_isochrone_pair(transport)
+
+            assert mock_iso_pair.call_count == 2
+
+    def test_cache_failure_does_not_break_the_search(self):
+        with (
+            mock.patch('c2corg_api.views.navitia._cache_client') as mock_cache,
+            mock.patch(
+                'c2corg_api.views.navitia.get_navitia_isochrone_pair'
+            ) as mock_iso_pair,
+        ):
+            mock_cache.side_effect = redis.ConnectionError('no redis')
+            mock_iso_pair.return_value = self.ISOCHRONES
+
+            transport = parse_transport_params(self._transport_params())
+
+            assert get_cached_isochrone_pair(transport) == self.ISOCHRONES
+
+    def test_transport_document_ids_route(self):
+        with (
+            mock.patch('c2corg_api.views.navitia._cache_client') as mock_cache,
+            mock.patch(
+                'c2corg_api.views.navitia.get_navitia_isochrone_pair'
+            ) as mock_iso_pair,
+            mock.patch(
+                'c2corg_api.views.navitia.classify_routes_within_geometry'
+            ) as mock_get_route_ids,
+            mock.patch(
+                'c2corg_api.views.navitia._reproject_geojson_to_3857'
+            ) as mock_reproject,
+        ):
+            mock_cache.return_value = FakeCache()
+            mock_iso_pair.return_value = self.ISOCHRONES
+            mock_reproject.return_value = 'POLYGON((0 0,1 1,2 2,0 0))'
+            mock_get_route_ids.return_value = ({3, 1, 2}, {9, 7})
+
+            transport = parse_transport_params(self._transport_params())
+            expected = {'ids': [1, 2, 3], 'unverifiable_ids': [7, 9]}
+
+            assert get_cached_transport_document_ids(transport, 'route') == expected
+            mock_get_route_ids.assert_called_once_with(
+                'POLYGON((0 0,1 1,2 2,0 0))', None
+            )
+
+            # the same search again (other filters changed): nothing is computed
+            assert get_cached_transport_document_ids(transport, 'route') == expected
+            assert mock_get_route_ids.call_count == 1
+            assert mock_iso_pair.call_count == 1
+
+    def test_transport_document_ids_route_with_hiking_duration(self):
+        with (
+            mock.patch('c2corg_api.views.navitia._cache_client') as mock_cache,
+            mock.patch(
+                'c2corg_api.views.navitia.get_navitia_isochrone_pair'
+            ) as mock_iso_pair,
+            mock.patch(
+                'c2corg_api.views.navitia.classify_routes_within_geometry'
+            ) as mock_get_route_ids,
+            mock.patch(
+                'c2corg_api.views.navitia._reproject_geojson_to_3857'
+            ) as mock_reproject,
+        ):
+            mock_cache.return_value = FakeCache()
+            mock_iso_pair.return_value = self.ISOCHRONES
+            mock_reproject.return_value = 'POLYGON((0 0,1 1,2 2,0 0))'
+            mock_get_route_ids.return_value = ({1}, set())
+
+            transport = parse_transport_params(
+                self._transport_params(hiking_duration='60')
+            )
+            get_cached_transport_document_ids(transport, 'route')
+
+            # window = 08:00 -> 18:00 = 600 minutes = 36000 seconds
+            mock_get_route_ids.assert_called_once_with(
+                'POLYGON((0 0,1 1,2 2,0 0))', 36000
+            )
+
+    def test_transport_document_ids_route_several_days(self):
+        with (
+            mock.patch('c2corg_api.views.navitia._cache_client') as mock_cache,
+            mock.patch(
+                'c2corg_api.views.navitia.get_navitia_isochrone_pair'
+            ) as mock_iso_pair,
+            mock.patch(
+                'c2corg_api.views.navitia.classify_routes_within_geometry'
+            ) as mock_get_route_ids,
+            mock.patch(
+                'c2corg_api.views.navitia._reproject_geojson_to_3857'
+            ) as mock_reproject,
+        ):
+            mock_cache.return_value = FakeCache()
+            mock_iso_pair.return_value = self.ISOCHRONES
+            mock_reproject.return_value = 'POLYGON((0 0,1 1,2 2,0 0))'
+            mock_get_route_ids.return_value = (set(), set())
+
+            transport = parse_transport_params(
+                self._transport_params(
+                    hiking_duration='60', return_date='2026-01-18', max_return='17:00'
+                )
+            )
+            get_cached_transport_document_ids(transport, 'route')
+
+            # window = 2026-01-16 08:00 -> 2026-01-18 17:00 = 57 hours
+            mock_get_route_ids.assert_called_once_with(
+                'POLYGON((0 0,1 1,2 2,0 0))', 57 * 3600
+            )
+            # the retour isochrone is the one of the day of the retour
+            assert mock_iso_pair.call_args.kwargs['return_date'] == '2026-01-18'
+
+    def test_transport_document_ids_waypoint_no_intersection(self):
+        with (
+            mock.patch('c2corg_api.views.navitia._cache_client') as mock_cache,
+            mock.patch(
+                'c2corg_api.views.navitia.get_navitia_isochrone_pair'
+            ) as mock_iso_pair,
+            mock.patch(
+                'c2corg_api.views.navitia.get_waypoint_ids_within_geometry'
+            ) as mock_get_wp_ids,
+            mock.patch(
+                'c2corg_api.views.navitia._reproject_geojson_to_3857'
+            ) as mock_reproject,
+        ):
+            fake_cache = FakeCache()
+            mock_cache.return_value = fake_cache
+            mock_iso_pair.return_value = {
+                'aller_geom': None,
+                'retour_geom': None,
+                'intersection_geom': None,
+            }
+            mock_get_wp_ids.return_value = set()
+
+            transport = parse_transport_params(self._transport_params())
+
+            assert get_cached_transport_document_ids(transport, 'waypoint') == {
+                'ids': [],
+                'unverifiable_ids': [],
+            }
+            mock_reproject.assert_not_called()
+            mock_get_wp_ids.assert_called_once_with(None)
+            # nothing is kept: the isochrones may have failed temporarily
+            assert fake_cache.data == {}
+
+    # /navitia/roundtripreachable endpoint
+    def test_navitia_roundtripreachable_missing_params(self):
+        self.app.get(
+            '/navitia/roundtripreachable?document_type=waypoint&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00',
+            status=400,
+        )
+
+    def test_navitia_roundtripreachable_return_date(self):
+        base = (
+            '/navitia/roundtripreachable?document_id=1&document_type=waypoint'
+            '&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00'
+        )
+        self.app.get(base + '&return_date=2026-01-15', status=400)
+
+        with (
+            mock.patch('c2corg_api.views.navitia.prepare_round_trip_document'),
+            mock.patch(
+                'c2corg_api.views.navitia.best_round_trip_result'
+            ) as mock_best_result,
+        ):
+            mock_best_result.return_value = {
+                'compatible': None,
+                'duration_unknown': True,
+            }
+            response = self.app.get(base + '&return_date=2026-01-18', status=200)
+
+        assert response.json == {'compatible': None, 'duration_unknown': True}
+        assert mock_best_result.call_args.args[-1] == '2026-01-18'
+
+    def test_navitia_roundtripreachable_invalid_document_type(self):
+        self.app.get(
+            '/navitia/roundtripreachable?document_id=1&document_type=invalid&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00',
+            status=400,
+        )
+
+    def test_navitia_roundtripreachable(self):
+        with (
+            mock.patch(
+                'c2corg_api.views.navitia.prepare_round_trip_document'
+            ) as mock_prepare,
+            mock.patch(
+                'c2corg_api.views.navitia.best_round_trip_result'
+            ) as mock_best_result,
+        ):
+            mock_prepare.return_value = {'prepared': True}
+            mock_best_result.return_value = {
+                'aller': {
+                    'found': True,
+                    'departure': '20260116T080000',
+                    'arrival': '20260116T090000',
+                },
+                'retour': {
+                    'found': True,
+                    'departure': '20260116T133000',
+                    'arrival': '20260116T180000',
+                },
+                'compatible': True,
+            }
+
+            response = self.app.get(
+                '/navitia/roundtripreachable?document_id=1&document_type=waypoint&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00&hiking_duration=60',
+                status=200,
+            )
+
+            data = json.loads(response.body.decode())
+
+            assert data['compatible'] is True
+            mock_prepare.assert_called_once_with(1, 'waypoint', '5.1;45.1', '60')
+            mock_best_result.assert_called_once_with(
+                {'prepared': True}, '5.1;45.1', '2026-01-16', '08:00', '18:00', None
+            )
+
+    def test_navitia_roundtripreachable_no_access_waypoint(self):
+        with mock.patch(
+            'c2corg_api.views.navitia._get_access_waypoints_for_document'
+        ) as mock_get_wps:
+            mock_get_wps.return_value = []
+
+            response = self.app.get(
+                '/navitia/roundtripreachable?document_id=1&document_type=waypoint&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00',
+                status=200,
+            )
+
+            data = json.loads(response.body.decode())
+            assert data['compatible'] is False
+            assert data['aller']['found'] is False
+            assert data['retour']['found'] is False
+
+    # best_round_trip_result: access waypoints, traverses, early exit
+    def _journeys_by_leg(self, timetable, calls):
+        """A _query_navitia_journeys answering from `timetable`, which maps
+        (waypoint coordinates, 'departure' for the aller / 'arrival' for the
+        retour) to a journey, and recording the requests in `calls`"""
+
+        def query(params, coverage):
+            leg = params['datetime_represents']
+            coords = params['to'] if leg == 'departure' else params['from']
+            calls.append((leg, coords))
+            journey = timetable.get((coords, leg))
+            return {'journeys': [journey]} if journey else None
+
+        return query
+
+    def _aller_journey(self, arrival):
+        return {
+            'departure_date_time': '20260116T080000',
+            'arrival_date_time': arrival,
+        }
+
+    def _retour_journey(self, departure):
+        return {
+            'departure_date_time': departure,
+            'arrival_date_time': '20260116T180000',
+        }
+
+    def _target(self, document_id, lon, lat):
+        return {
+            'document_id': document_id,
+            'lon': lon,
+            'lat': lat,
+            'coords': f'{lon};{lat}',
+            'coverage': 'fr-se',
+        }
+
+    def _best_result(self, timetable, targets, hiking_duration_seconds, one_way):
+        calls = []
+        prepared = {
+            'targets': targets,
+            'hiking_duration_seconds': hiking_duration_seconds,
+            'one_way': one_way,
+        }
+        with mock.patch(
+            'c2corg_api.views.navitia._query_navitia_journeys',
+            side_effect=self._journeys_by_leg(timetable, calls),
+        ):
+            result = best_round_trip_result(
+                prepared, '5.7;45.1', '2026-01-16', '08:00', '18:00'
+            )
+        return result, calls
+
+    def test_best_round_trip_result_traverse(self):
+        # arrive by one end of the traverse, leave from the other one
+        start = self._target(1, 6.0, 45.0)
+        end = self._target(2, 6.5, 45.5)
+        timetable = {
+            (start['coords'], 'departure'): self._aller_journey('20260116T090000'),
+            (end['coords'], 'arrival'): self._retour_journey('20260116T160000'),
+        }
+
+        result, _ = self._best_result(timetable, [start, end], 4 * 3600, True)
+
+        assert result['compatible'] is True
+        assert result['aller_waypoint_id'] == 1
+        assert result['retour_waypoint_id'] == 2
+
+    def test_best_round_trip_result_same_data_out_and_back(self):
+        # an out-and-back route has to come back from where it arrived
+        start = self._target(1, 6.0, 45.0)
+        end = self._target(2, 6.5, 45.5)
+        timetable = {
+            (start['coords'], 'departure'): self._aller_journey('20260116T090000'),
+            (end['coords'], 'arrival'): self._retour_journey('20260116T160000'),
+        }
+
+        result, _ = self._best_result(timetable, [start, end], 4 * 3600, False)
+
+        assert result['compatible'] is False
+
+    def test_best_round_trip_result_traverse_too_long(self):
+        start = self._target(1, 6.0, 45.0)
+        end = self._target(2, 6.5, 45.5)
+        timetable = {
+            (start['coords'], 'departure'): self._aller_journey('20260116T090000'),
+            (end['coords'], 'arrival'): self._retour_journey('20260116T160000'),
+        }
+
+        # 7 hours between the aller and the retour, 8 needed
+        result, _ = self._best_result(timetable, [start, end], 8 * 3600, True)
+
+        assert result['compatible'] is False
+        # the best legs found are still returned
+        assert result['aller_waypoint_id'] == 1
+        assert result['retour_waypoint_id'] == 2
+
+    def test_best_round_trip_result_stops_at_first_working_waypoint(self):
+        close = self._target(1, 6.0, 45.0)
+        far = self._target(2, 9.0, 47.0)
+        timetable = {
+            (close['coords'], 'departure'): self._aller_journey('20260116T090000'),
+            (close['coords'], 'arrival'): self._retour_journey('20260116T170000'),
+            (far['coords'], 'departure'): self._aller_journey('20260116T100000'),
+            (far['coords'], 'arrival'): self._retour_journey('20260116T171000'),
+        }
+
+        result, calls = self._best_result(timetable, [close, far], 3600, False)
+
+        assert result['compatible'] is True
+        assert result['aller_waypoint_id'] == 1
+        assert result['retour_waypoint_id'] == 1
+        # only the aller and retour of the first access waypoint were asked
+        assert len(calls) == 2
+
+    def test_best_round_trip_result_traverse_stops_at_first_working_pair(self):
+        start = self._target(1, 6.0, 45.0)
+        end = self._target(2, 6.5, 45.5)
+        timetable = {
+            (start['coords'], 'departure'): self._aller_journey('20260116T090000'),
+            (start['coords'], 'arrival'): self._retour_journey('20260116T170000'),
+            (end['coords'], 'departure'): self._aller_journey('20260116T100000'),
+            (end['coords'], 'arrival'): self._retour_journey('20260116T171000'),
+        }
+
+        result, calls = self._best_result(timetable, [start, end], 3600, True)
+
+        assert result['compatible'] is True
+        assert len(calls) == 2
+
+    def test_best_round_trip_result_without_access_waypoint(self):
+        result, calls = self._best_result({}, [], 0, False)
+
+        assert result['compatible'] is False
+        assert result['aller']['found'] is False
+        assert result['retour']['found'] is False
+        assert result['aller_waypoint_id'] is None
+        assert result['retour_waypoint_id'] is None
+        assert calls == []
+
+    def test_sort_targets_by_distance(self):
+        targets = [
+            self._target(3, 9.0, 47.0),
+            self._target(1, 5.8, 45.1),
+            self._target(2, 6.5, 45.5),
+        ]
+
+        ordered = _sort_targets_by_distance(targets, '5.7;45.1')
+
+        assert [target['document_id'] for target in ordered] == [1, 2, 3]
+
+    def test_is_one_way_route(self):
+        for route_types, expected in [
+            (['traverse'], True),
+            (['loop', 'raid'], True),
+            (['return_same_way'], False),
+            ([], False),
+            (None, False),
+        ]:
+            route = mock.Mock(route_types=route_types)
+            with mock.patch('c2corg_api.views.navitia.DBSession') as mock_db_session:
+                mock_db_session.query.return_value.filter.return_value.first.return_value = route  # noqa
+                assert _is_one_way_route(42) is expected, str(route_types)
+
+        with mock.patch('c2corg_api.views.navitia.DBSession') as mock_db_session:
+            mock_db_session.query.return_value.filter.return_value.first.return_value = None  # noqa
+            assert _is_one_way_route(42) is False
+
+    def test_compute_round_trip_checks_documents_at_once_and_counts_them(self):
+        job_id = 'job-123'
+        checked = []
+
+        def best_result(prepared, *args):
+            checked.append(prepared['document_id'])
+            return {
+                'aller': {'found': True, 'departure': 'a', 'arrival': 'b'},
+                'retour': {'found': True, 'departure': 'c', 'arrival': 'd'},
+                'compatible': prepared['document_id'] % 2 == 0,
+            }
+
+        with (
+            mock.patch(
+                'c2corg_api.views.navitia.prepare_round_trip_document'
+            ) as mock_prepare,
+            mock.patch(
+                'c2corg_api.views.navitia.best_round_trip_result',
+                side_effect=best_result,
+            ),
+            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,
+            mock.patch('c2corg_api.views.navitia._store_job_progress') as mock_progress,
+        ):
+            mock_prepare.side_effect = lambda document_id, *args: {
+                'document_id': document_id
+            }
+
+            request = mock.Mock()
+            request.GET = {
+                # a document given twice is checked once
+                'ids': '1,2,3,4,4',
+                'from': '5.1;45.1',
+                'date': '2026-01-16',
+                'min_departure': '08:00',
+                'max_return': '18:00',
+            }
+
+            compute_round_trip_reachable_routes(job_id, request)
+
+        mock_redis = mock_redis_client.return_value
+        assert sorted(checked) == [1, 2, 3, 4]
+        mock_redis.set.assert_any_call(f'job:{job_id}:total', 4)
+        mock_redis.set.assert_any_call(f'job:{job_id}:status', 'done')
+        # the progress counts the documents checked so far, found and not found
+        assert mock_progress.call_count == 4
+        assert mock_progress.call_args_list[-1] == call(mock_redis, job_id, 4, 2, 2)
+
+    def test_compute_round_trip_return_date_and_unknown_duration(self):
+        job_id = 'job-123'
+        best_result_args = []
+
+        def best_result(prepared, *args):
+            best_result_args.append(args)
+            if prepared['hiking_duration_seconds'] is None:
+                return {'compatible': None, 'duration_unknown': True}
+            return {'compatible': True}
+
+        with (
+            mock.patch(
+                'c2corg_api.views.navitia.prepare_round_trip_document'
+            ) as mock_prepare,
+            mock.patch(
+                'c2corg_api.views.navitia.best_round_trip_result',
+                side_effect=best_result,
+            ),
+            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,
+            mock.patch('c2corg_api.views.navitia._store_job_progress') as mock_progress,
+        ):
+            mock_prepare.side_effect = lambda document_id, *args: {
+                'hiking_duration_seconds': None if document_id == 2 else 3600
+            }
+
+            request = mock.Mock()
+            request.GET = {
+                'ids': '1,2',
+                'from': '5.1;45.1',
+                'date': '2026-01-16',
+                'return_date': '2026-01-18',
+                'min_departure': '08:00',
+                'max_return': '18:00',
+            }
+
+            compute_round_trip_reachable_routes(job_id, request)
+
+        assert best_result_args[0] == (
+            '5.1;45.1',
+            '2026-01-16',
+            '08:00',
+            '18:00',
+            '2026-01-18',
+        )
+        mock_redis = mock_redis_client.return_value
+        results = json.loads(
+            [
+                call_args[0][1]
+                for call_args in mock_redis.set.call_args_list
+                if call_args[0][0] == f'job:{job_id}:result'
+            ][0]
+        )['results']
+        assert results['2'] == {'compatible': None, 'duration_unknown': True}
+        assert results['1']['compatible'] is True
+        # an unchecked document is counted as not found
+        assert mock_progress.call_args_list[-1] == call(mock_redis, job_id, 2, 1, 1)
+
+    def test_compute_round_trip_stops_on_error(self):
+        job_id = 'job-123'
+
+        with (
+            mock.patch(
+                'c2corg_api.views.navitia.prepare_round_trip_document'
+            ) as mock_prepare,
+            mock.patch(
+                'c2corg_api.views.navitia.best_round_trip_result',
+                side_effect=HTTPInternalServerError('Navitia is down'),
+            ),
+            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,
+        ):
+            mock_prepare.return_value = {}
+
+            request = mock.Mock()
+            request.GET = {
+                'ids': '1,2,3',
+                'from': '5.1;45.1',
+                'date': '2026-01-16',
+                'min_departure': '08:00',
+                'max_return': '18:00',
+            }
+
+            compute_round_trip_reachable_routes(job_id, request)
+
+        mock_redis = mock_redis_client.return_value
+        mock_redis.set.assert_any_call(f'job:{job_id}:status', 'error')
+        assert not any(
+            call_args[0][0] == f'job:{job_id}:result'
+            for call_args in mock_redis.set.call_args_list
+        )
+
+    # compute_round_trip_reachable_routes / waypoints
+    def test_compute_round_trip_reachable_routes(self):
+        job_id = 'job-123'
+
+        with (
+            mock.patch(
+                'c2corg_api.views.navitia.prepare_round_trip_document'
+            ) as mock_prepare,
+            mock.patch(
+                'c2corg_api.views.navitia.best_round_trip_result'
+            ) as mock_is_reachable,
+            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,
+        ):
+            mock_prepare.side_effect = lambda document_id, *args: {
+                'document_id': document_id
+            }
+
+            def is_reachable_side_effect(
+                prepared, from_coords, date, min_departure, max_return, return_date
+            ):
+                return {
+                    'aller': {'found': True, 'departure': 'a', 'arrival': 'b'},
+                    'retour': {'found': True, 'departure': 'c', 'arrival': 'd'},
+                    'compatible': True,
+                }
+
+            mock_is_reachable.side_effect = is_reachable_side_effect
+
+            mock_redis = mock_redis_client.return_value
+
+            request = mock.Mock()
+            request.GET = {
+                'ids': '1,2',
+                'from': '5.1;45.1',
+                'date': '2026-01-16',
+                'min_departure': '08:00',
+                'max_return': '18:00',
+            }
+
+            compute_round_trip_reachable_routes(job_id, request)
+
+            mock_redis.set.assert_any_call(f'job:{job_id}:total', 2)
+            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'done')
+
+            result_json = next(
+                call[0][1]
+                for call in mock_redis.set.call_args_list
+                if call[0][0] == f'job:{job_id}:result'
+            )
+            result_data = json.loads(result_json)
+
+            assert result_data['total'] == 2
+            assert result_data['results']['1']['compatible'] is True
+            assert result_data['results']['2']['compatible'] is True
+
+    def test_compute_round_trip_reachable_routes_above_threshold(self):
+        job_id = 'job-123'
+
+        with mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client:
+            mock_redis = mock_redis_client.return_value
+
+            request = mock.Mock()
+            request.GET = {
+                'ids': ','.join(str(i) for i in range(MAX_ROUTE_THRESHOLD + 1)),
+                'from': '5.1;45.1',
+                'date': '2026-01-16',
+                'min_departure': '08:00',
+                'max_return': '18:00',
+            }
+
+            compute_round_trip_reachable_routes(job_id, request)
+
+            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'error')
+            mock_redis.set.assert_any_call(
+                f'job:{job_id}:error',
+                "Couldn't proceed with computation : Too much routes found.",
+            )
+            assert not any(
+                call[0][0] == f'job:{job_id}:result'
+                for call in mock_redis.set.call_args_list
+            )
+
+    def test_compute_round_trip_reachable_waypoints(self):
+        job_id = 'job-123'
+
+        with (
+            mock.patch(
+                'c2corg_api.views.navitia.prepare_round_trip_document'
+            ) as mock_prepare,
+            mock.patch(
+                'c2corg_api.views.navitia.best_round_trip_result'
+            ) as mock_is_reachable,
+            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,
+        ):
+            mock_prepare.side_effect = lambda document_id, *args: {
+                'document_id': document_id
+            }
+            mock_is_reachable.return_value = {
+                'aller': {'found': True, 'departure': 'a', 'arrival': 'b'},
+                'retour': {'found': False, 'departure': None, 'arrival': None},
+                'compatible': False,
+            }
+
+            mock_redis = mock_redis_client.return_value
+
+            request = mock.Mock()
+            request.GET = {
+                'ids': '1',
+                'from': '5.1;45.1',
+                'date': '2026-01-16',
+                'min_departure': '08:00',
+                'max_return': '18:00',
+            }
+
+            compute_round_trip_reachable_waypoints(job_id, request)
+
+            mock_redis.set.assert_any_call(f'job:{job_id}:total', 1)
+            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'done')
+
+            result_json = next(
+                call[0][1]
+                for call in mock_redis.set.call_args_list
+                if call[0][0] == f'job:{job_id}:result'
+            )
+            result_data = json.loads(result_json)
+
+            assert result_data['total'] == 1
+            assert result_data['results']['1']['compatible'] is False
+
+    def test_compute_round_trip_reachable_waypoints_above_threshold(self):
+        job_id = 'job-123'
+
+        with mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client:
+            mock_redis = mock_redis_client.return_value
+
+            request = mock.Mock()
+            request.GET = {
+                'ids': ','.join(str(i) for i in range(MAX_ROUTE_THRESHOLD + 1)),
+                'from': '5.1;45.1',
+                'date': '2026-01-16',
+                'min_departure': '08:00',
+                'max_return': '18:00',
+            }
+
+            compute_round_trip_reachable_waypoints(job_id, request)
+
+            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'error')
+            mock_redis.set.assert_any_call(
+                f'job:{job_id}:error',
+                "Couldn't proceed with computation : Too much waypoints found.",
+            )
+
+    def test_navitia_journeyroundtrip_start_missing_params(self, subtests):
+        base_urls = [
+            '/navitia/journeyroundtriproutes',
+            '/navitia/journeyroundtripwaypoints',
+        ]
+
+        for base_url in base_urls:
+            with subtests.test(base_url=base_url):
+                # missing ids
+                self.app.get(
+                    base_url
+                    + '/start?from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00',  # noqa
+                    status=400,
+                )
+
+    def test_navitia_journeyroundtrip_start_invalid_return_date(self, subtests):
+        base_urls = [
+            '/navitia/journeyroundtriproutes',
+            '/navitia/journeyroundtripwaypoints',
+        ]
+        return_dates = ['2026-01-15', 'abc', '2026-01-16']
+
+        for base_url in base_urls:
+            for return_date in return_dates:
+                with subtests.test(base_url=base_url, return_date=return_date):
+                    # before the aller, not a date, and the same day with
+                    # a retour before the aller
+                    max_return = '07:00' if return_date == '2026-01-16' else '18:00'
+                    self.app.get(
+                        base_url + '/start?ids=1&from=5.1%3B45.1&date=2026-01-16'
+                        f'&return_date={return_date}'
+                        f'&min_departure=08:00&max_return={max_return}',
+                        status=400,
+                    )
+
+    def test_navitia_journeyroundtrip_start_several_days(self):
+        with mock.patch('c2corg_api.views.navitia.start_job_background') as mock_start:
+            mock_start.return_value = 'job-123'
+
+            # the retour can be earlier in the day than the aller
+            self.app.get(
+                '/navitia/journeyroundtriproutes/start?ids=1&from=5.1%3B45.1'
+                '&date=2026-01-16&return_date=2026-01-18'
+                '&min_departure=08:00&max_return=07:00',
+                status=200,
+            )
+
+    def test_navitia_journeyroundtrip_start(self, subtests):
+        test_cases = [
+            ('/navitia/journeyroundtriproutes', compute_round_trip_reachable_routes),
+            (
+                '/navitia/journeyroundtripwaypoints',
+                compute_round_trip_reachable_waypoints,
+            ),
+        ]
+
+        for base_url, func in test_cases:
+            with subtests.test(base_url=base_url, func=func):
+                with mock.patch(
+                    'c2corg_api.views.navitia.start_job_background'
+                ) as mock_start:
+                    mock_start.return_value = 'job-123'
+
+                    response = self.app.get(
+                        (
+                            base_url + '/start?'
+                            'ids=1,2&'
+                            'from=5.1%3B45.1&'
+                            'date=2026-01-16&'
+                            'min_departure=08:00&'
+                            'max_return=18:00'
+                        ),
+                        status=200,
+                    )
+                    assert json.loads(response.body.decode()) == 'job-123'
+                    mock_start.assert_called_once_with(func, mock.ANY)
+
+    def test_navitia_journeyroundtrip_result(self, subtests):
+        urls = [
+            '/navitia/journeyroundtriproutes/result/job-123',
+            '/navitia/journeyroundtripwaypoints/result/job-123',
+        ]
+
+        for url in urls:
+            with subtests.test(url=url):
+
+                def fake_read_result(redis, job_id):
+                    assert job_id == 'job-123'
+                    return {'status': 'error', 'message': 'missing_result'}
+
+                with (
+                    mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis,
+                    mock.patch(
+                        'c2corg_api.views.navitia.read_result_from_redis',
+                        side_effect=fake_read_result,
+                    ) as mock_read_result,
+                ):
+                    mock_redis.return_value = mock.Mock()
+
+                    response = self.app.get(url, status=200)
+
+                    body = response.body
+                    assert json.loads(body.decode()) == {
+                        'status': 'error',
+                        'message': 'missing_result',
+                    }
+                    mock_read_result.assert_called_once_with(
+                        mock_redis.return_value, 'job-123'
+                    )
+
+    def test_navitia_journeyroundtrip_progress(self, subtests):
+        urls = [
+            '/navitia/journeyroundtriproutes/progress/job-123',
+            '/navitia/journeyroundtripwaypoints/progress/job-123',
+        ]
+
+        for url in urls:
+            with subtests.test(url=url):
+                fake_events = [b'data: {}\n\n']
+
+                def fake_progress_stream(redis, job_id):
+                    assert job_id == 'job-123'
+                    for event in fake_events:
+                        yield event
+
+                with (
+                    mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis,
+                    mock.patch(
+                        'c2corg_api.views.navitia.progress_stream',
+                        side_effect=fake_progress_stream,
+                    ),
+                ):
+                    mock_redis.return_value = mock.Mock()
+
+                    response = self.app.get(url, status=200)
+
+                    assert response.content_type == 'text/event-stream'
+                    assert response.body == b''.join(fake_events)
+
+
+class TestReachableIdsByGeometry(BaseTestCase):
+    """
+    Tests for get_route_ids_within_geometry (route.py) and
+    get_waypoint_ids_within_geometry (waypoint.py) : these are kept here,
+    alongside the other Itinevert/transport-accessibility tests, rather
+    than in test_route.py/test_waypoint.py, since they exercise a single
+    focused PostGIS query each and don't fit those files' REST-oriented
+    (BaseDocumentTestRest) fixtures.
+    """
+
+    def setUp(self):
+        BaseTestCase.setUp(self)
+        self._add_test_data()
+
+    def _add_test_data(self):
+        from c2corg_api.views.route import (
+            classify_routes_within_geometry,
+            get_route_ids_within_geometry,
+        )
+        from c2corg_api.views.waypoint import get_waypoint_ids_within_geometry
+
+        self.get_route_ids_within_geometry = get_route_ids_within_geometry
+        self.classify_routes_within_geometry = classify_routes_within_geometry
+        self.get_waypoint_ids_within_geometry = get_waypoint_ids_within_geometry
+
+        # an access waypoint located at (0, 0) in EPSG:3857
+        self.access_wp = Waypoint(
+            waypoint_type='access',
+            locales=[WaypointLocale(lang='en', title='Access wp')],
+        )
+        self.access_wp.geometry = DocumentGeometry(geom='SRID=3857;POINT(0 0)')
+        self.session.add(self.access_wp)
+        self.session.flush()
+
+        # a waypoint far away, at (100000, 100000)
+        self.far_wp = Waypoint(
+            waypoint_type='access', locales=[WaypointLocale(lang='en', title='Far wp')]
+        )
+        self.far_wp.geometry = DocumentGeometry(geom='SRID=3857;POINT(100000 100000)')
+        self.session.add(self.far_wp)
+        self.session.flush()
+
+        self.route = Route(
+            activities=['hiking'],
+            durations='1',
+            calculated_duration=0.5,
+            locales=[RouteLocale(lang='en', title='A hike')],
+        )
+        self.session.add(self.route)
+        self.session.flush()
+        # calculate_route_duration (after_insert) sets calculated_duration
+        # to NULL for a hiking route without height differences: set it
+        # again with a bulk update, which does not run the mapper events
+        self.session.query(Route).filter(
+            Route.document_id == self.route.document_id
+        ).update({'calculated_duration': 0.5}, synchronize_session=False)
+
+        self.session.add(
+            Association.create(
+                parent_document=self.route, child_document=self.access_wp
+            )
+        )
+        self.session.flush()
+
+        # a route with no access waypoint intersecting the geometry
+        self.far_route = Route(
+            activities=['hiking'],
+            durations='1',
+            calculated_duration=2.0,
+            locales=[RouteLocale(lang='en', title='A far hike')],
+        )
+        self.session.add(self.far_route)
+        self.session.flush()
+
+        self.session.add(
+            Association.create(
+                parent_document=self.far_route, child_document=self.far_wp
+            )
+        )
+        self.session.flush()
+
+        # a small square around (0, 0), not covering the far waypoint
+        self.geom_wkt = 'POLYGON((-10 -10, -10 10, 10 10, 10 -10, -10 -10))'
+
+    def test_get_route_ids_within_geometry(self):
+        ids = self.get_route_ids_within_geometry(self.geom_wkt)
+        assert self.route.document_id in ids
+        assert self.far_route.document_id not in ids
+
+    def test_get_route_ids_within_geometry_no_geom(self):
+        assert self.get_route_ids_within_geometry(None) == set()
+        assert self.get_route_ids_within_geometry('') == set()
+
+    def test_get_route_ids_within_geometry_duration_filter(self):
+        # the route's calculated_duration is 0.5 days = 43200 seconds
+        ids = self.get_route_ids_within_geometry(
+            self.geom_wkt, max_duration_seconds=43200
+        )
+        assert self.route.document_id in ids
+
+        ids = self.get_route_ids_within_geometry(
+            self.geom_wkt, max_duration_seconds=3600
+        )
+        assert self.route.document_id not in ids
+
+    def _set_route_durations(self, calculated_duration, durations):
+        self.session.query(Route).filter(
+            Route.document_id == self.route.document_id
+        ).update(
+            {'calculated_duration': calculated_duration, 'durations': durations},
+            synchronize_session=False,
+        )
+        self.session.flush()
+
+    def test_classify_routes_within_geometry(self):
+        route_id = self.route.document_id
+
+        # a known duration: sure (0.5 days)
+        assert self.classify_routes_within_geometry(self.geom_wkt) == (
+            {route_id},
+            set(),
+        )
+
+        # no calculated duration, no declared duration: unverifiable
+        self._set_route_durations(None, None)
+        assert self.classify_routes_within_geometry(self.geom_wkt) == (
+            set(),
+            {route_id},
+        )
+        # ... and kept (not hidden) by the duration filter
+        assert route_id in self.get_route_ids_within_geometry(
+            self.geom_wkt, max_duration_seconds=3600
+        )
+
+    def test_classify_routes_within_geometry_declared_durations(self):
+        route_id = self.route.document_id
+        self._set_route_durations(None, ['3', '2'])
+
+        # the shortest declared duration (2 days) is the duration of the route
+        assert self.classify_routes_within_geometry(
+            self.geom_wkt, max_duration_seconds=3 * 86400
+        ) == ({route_id}, set())
+        assert self.classify_routes_within_geometry(
+            self.geom_wkt, max_duration_seconds=86400
+        ) == (set(), set())
+        # without budget, a known duration is not checked
+        assert self.classify_routes_within_geometry(self.geom_wkt) == (
+            {route_id},
+            set(),
+        )
+
+    def test_route_duration_days(self):
+        assert route_duration_days(0.5, ['3']) == 0.5
+        assert route_duration_days(None, ['3', '2']) == 2
+        assert route_duration_days(None, ['10+']) == 10
+        assert route_duration_days(None, ['4', '10+']) == 4
+        assert route_duration_days(None, []) is None
+        assert route_duration_days(None, None) is None
+
+    def test_get_waypoint_ids_within_geometry(self):
+        ids = self.get_waypoint_ids_within_geometry(self.geom_wkt)
+        assert self.access_wp.document_id in ids
+        assert self.far_wp.document_id not in ids
+
+    def test_get_waypoint_ids_within_geometry_no_geom(self):
+        assert self.get_waypoint_ids_within_geometry(None) == set()
+
+
+class TestCoveragesCache(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        clear_coverages_cache()
+
+    def tearDown(self):
+        clear_coverages_cache()
+        super().tearDown()
+
+    def test_coverage_polygons_are_loaded_once(self):
+        coverage = mock.Mock(coverage_type='fr-se')
+        coverage.geometry.geom_detail = 'wkb'
+
+        with (
+            mock.patch('c2corg_api.views.coverage.DBSession') as mock_db_session,
+            mock.patch('c2corg_api.views.coverage.wkb_to_shape') as mock_to_shape,
+        ):
+            mock_db_session.query.return_value.all.return_value = [coverage]
+            mock_to_shape.return_value = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
+
+            assert get_coverage(5, 5) == 'fr-se'
+            assert get_coverage(50, 50) is None
+            assert get_coverages(Polygon([(1, 1), (2, 1), (2, 2)])) == ['fr-se']
+
+            assert mock_db_session.query.call_count == 1
+            assert mock_to_shape.call_count == 1
