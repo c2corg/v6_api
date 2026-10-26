@@ -43,7 +43,7 @@ port = {debug_port}
 ###
 
 [loggers]
-keys = root, c2corg_api, sqlalchemy, c2corg_api_syncer, kombu
+keys = root, c2corg_api, sqlalchemy, c2corg_api_syncer, c2corg_api_background_jobs, kombu
 
 [handlers]
 keys = console
