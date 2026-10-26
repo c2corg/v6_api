@@ -8,12 +8,17 @@ from a2wsgi import ASGIMiddleware
 from fastapi import FastAPI
 from starlette.routing import Match
 
+from c2corg_api.web import health
+from c2corg_api.web.cors import CorsMiddleware
+
 
 def create_fastapi_app(settings):
     """Return the FastAPI application, with the routes moved to it."""
     # no generated docs: the API documentation is not served (yet)
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings = settings
+    app.add_middleware(CorsMiddleware)
+    health.include(app)
     return app
 
 
@@ -33,22 +38,30 @@ class Dispatcher:
     def handles(self, environ):
         """Tell whether FastAPI has the route of a request (path and method)."""
         method = environ['REQUEST_METHOD']
-        requested = environ.get('HTTP_ACCESS_CONTROL_REQUEST_METHOD')
-        if method == 'OPTIONS' and requested:
-            # a CORS preflight goes where the request it announces will go
-            method = requested
-        scope = {
-            'type': 'http',
-            'path': environ.get('PATH_INFO') or '/',
-            'root_path': '',
-            'method': method,
-        }
+        path = environ.get('PATH_INFO') or '/'
+        if method == 'OPTIONS':
+            # a CORS preflight goes where the request it announces will go,
+            # or to FastAPI if only FastAPI knows the path (it then answers
+            # that the method is not allowed)
+            requested = environ.get('HTTP_ACCESS_CONTROL_REQUEST_METHOD')
+            match = self._fastapi_match(path, requested or method)
+            return match == Match.FULL or (
+                match == Match.PARTIAL and not self._pyramid_has(path)
+            )
         # a partial match is the right path with another method: that method
         # may still be served by Pyramid
-        return any(
-            route.matches(scope)[0] == Match.FULL
-            for route in self.fastapi_app.router.routes
-        )
+        return self._fastapi_match(path, method) == Match.FULL
+
+    def _fastapi_match(self, path, method):
+        scope = {'type': 'http', 'path': path, 'root_path': '', 'method': method}
+        matches = [route.matches(scope)[0] for route in self.fastapi_app.router.routes]
+        return max(matches, key=lambda m: m.value, default=Match.NONE)
+
+    def _pyramid_has(self, path):
+        mapper = getattr(self.pyramid_app, 'routes_mapper', None)
+        if mapper is None:
+            return True
+        return any(route.match(path) is not None for route in mapper.get_routes())
 
     def __call__(self, environ, start_response):
         app = self._fastapi_wsgi if self.handles(environ) else self.pyramid_app
