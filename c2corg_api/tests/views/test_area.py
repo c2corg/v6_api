@@ -175,10 +175,12 @@ class TestAreaRest(BaseDocumentTestRest):
             .filter(AreaAssociation.area_id == doc.document_id)
             .all()
         )
-        assert len(links) == 2
-        assert links[0].document_id == self.waypoint1.document_id
+        # no ORDER BY: the database returns the links in any order
+        assert {link.document_id for link in links} == {
+            self.waypoint1.document_id,
+            self.route.document_id,
+        }
         self.check_cache_version(self.waypoint1.document_id, 2)
-        assert links[1].document_id == self.route.document_id
         self.check_cache_version(self.route.document_id, 2)
 
         # check that a link to the provided image is created
@@ -368,10 +370,11 @@ class TestAreaRest(BaseDocumentTestRest):
             .filter(AreaAssociation.area_id == self.area1.document_id)
             .all()
         )
-        assert len(links) == 2
-        assert links[0].document_id == self.waypoint1.document_id
+        assert {link.document_id for link in links} == {
+            self.waypoint1.document_id,
+            self.route.document_id,
+        }
         self.check_cache_version(self.waypoint1.document_id, 2)
-        assert links[1].document_id == self.route.document_id
         self.check_cache_version(self.route.document_id, 2)
         # waypoint 2 is no longer associated, the cache key was incremented
         self.check_cache_version(self.waypoint2.document_id, 2)
