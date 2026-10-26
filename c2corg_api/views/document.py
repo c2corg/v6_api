@@ -99,16 +99,28 @@ class DocumentRest(ACLDefault):
             # https://www.elastic.co/guide/en/elasticsearch/reference/master/search-request-from-size.html
             raise HTTPBadRequest('offset + limit greater than 10000')
 
-        reachable_ids = self._get_transport_reachable_ids(doc_type)
-        if reachable_ids is not None:
+        transport_ids = self._get_transport_reachable_ids(doc_type)
+        unverifiable_ids = set()
+        if transport_ids is not None:
             # the documents reachable by public transport are ANDed with all
             # other ES filters already present in the query string, exactly
             # like the static reachable ID-sets used by /reachableroutes and
             # /reachablewaypoints.
+            unverifiable_ids = set(transport_ids['unverifiable_ids'])
+
             def search_documents(_, __):
-                return advanced_search.get_all_filtered_docs(
-                    self.request.GET, meta_params, reachable_ids, doc_type
+                document_ids, total = advanced_search.get_all_filtered_docs(
+                    self.request.GET,
+                    meta_params,
+                    transport_ids['ids'] + transport_ids['unverifiable_ids'],
+                    doc_type,
                 )
+                # the routes of an unknown duration (that cannot be checked)
+                # come after the others
+                return [
+                    *(i for i in document_ids if i not in unverifiable_ids),
+                    *(i for i in document_ids if i in unverifiable_ids),
+                ], total
         elif advanced_search.contains_search_params(self.request.GET):
             # search with ElasticSearch
             search_documents = advanced_search.get_search_documents(
@@ -118,14 +130,27 @@ class DocumentRest(ACLDefault):
             # if no search parameters, directly load documents from the db
             search_documents = partial(self._search_documents_paginated, meta_params)
 
-        return get_documents(documents_config, meta_params, search_documents)
+        result = get_documents(documents_config, meta_params, search_documents)
+
+        if unverifiable_ids:
+            # copies: the documents of the listing can be shared with the cache
+            result['documents'] = [
+                {**document, 'duration_unknown': True}
+                if document.get('document_id') in unverifiable_ids
+                else document
+                for document in result['documents']
+            ]
+
+        return result
 
     def _get_transport_reachable_ids(self, doc_type):
         """Return the ids of the documents reachable by public transport.
 
         Returns the ids of the routes or waypoints reachable by public
         transport, according to the `transport_*` parameters of the query
-        string (see parse_transport_params), or None if there are none.
+        string (see parse_transport_params), as
+        `{'ids': [...], 'unverifiable_ids': [...]}` (see
+        get_cached_transport_document_ids), or None if there are none.
         """
         if doc_type not in (ROUTE_TYPE, WAYPOINT_TYPE):
             return None
