@@ -122,24 +122,24 @@ def get_changed_documents_for_associations(session, last_update):
 
 def get_changed_routes_from_associations(session, last_update):
     return (
-        get_changed_routes_wr(session, last_update)
+        get_changed_routes_and_outings_wr(session, last_update)
         + get_changed_routes_and_outings_ww(session, last_update)
         + get_changed_outings_ro_uo(session, last_update)
     )
 
 
-def get_changed_routes_wr(session, last_update):
-    """Return the routes whose waypoint associations changed.
+def get_changed_routes_and_outings_wr(session, last_update):
+    """Return the routes and outings whose waypoint associations changed.
 
     Returns the routes when associations between waypoint and route have
-    been created/removed.
+    been created/removed, and the outings associated to these routes.
 
     E.g. when an association between waypoint W1 and route R1 is created,
     route R1 has to be updated so that W1 is listed under
-    `associated_waypoints_ids`.
+    `associated_waypoints_ids`, and so have all outings associated to R1.
     """
-    return (
-        session.query(AssociationLog.child_document_id, literal(ROUTE_TYPE))
+    select_changed_routes = (
+        session.query(AssociationLog.child_document_id.label('route_id'))
         .filter(
             and_(
                 AssociationLog.parent_document_type == WAYPOINT_TYPE,
@@ -147,6 +147,36 @@ def get_changed_routes_wr(session, last_update):
             )
         )
         .filter(AssociationLog.written_at >= last_update)
+        .group_by(AssociationLog.child_document_id)
+        .cte('changed_routes')
+    )
+
+    select_changed_outings = (
+        session.query(Association.child_document_id.label('outing_id'))
+        .select_from(select_changed_routes)
+        .join(
+            Association,
+            and_(
+                Association.parent_document_id == select_changed_routes.c.route_id,
+                Association.child_document_type == OUTING_TYPE,
+            ),
+        )
+        .group_by(Association.child_document_id)
+        .cte('changed_outings')
+    )
+
+    return (
+        session.query(
+            select_changed_routes.c.route_id.label('document_id'),
+            literal(ROUTE_TYPE).label('type'),
+        )
+        .select_from(select_changed_routes)
+        .union(
+            session.query(
+                select_changed_outings.c.outing_id.label('document_id'),
+                literal(OUTING_TYPE).label('type'),
+            ).select_from(select_changed_outings)
+        )
         .all()
     )
 
