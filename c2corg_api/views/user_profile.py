@@ -1,16 +1,15 @@
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
 from sqlalchemy.orm import load_only
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.user import User
-from c2corg_api.models.user_profile import (
-    USERPROFILE_TYPE,
-    UserProfile,
-    schema_internal_user_profile,
-    schema_update_user_profile,
-    schema_user_profile,
+from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
+from c2corg_api.schemas.base import body_validator
+from c2corg_api.schemas.user_profile import (
+    UserProfileUpdateSchema,
+    internal_user_profile_schema,
+    user_profile_schema,
 )
 from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
 from c2corg_api.views.document import DocumentRest
@@ -51,7 +50,7 @@ class UserProfileRest(DocumentRest):
         ):
             # only show the full profile if authenticated or if the user marked
             # the profile as public
-            return self._get(user_profile_documents_config, schema_user_profile)
+            return self._get(user_profile_documents_config, user_profile_schema)
         else:
             # otherwise only return the user name
             return {
@@ -61,8 +60,7 @@ class UserProfileRest(DocumentRest):
             }
 
     @restricted_json_view(
-        schema=schema_update_user_profile,
-        validators=[colander_body_validator, validate_id],
+        validators=[body_validator(UserProfileUpdateSchema), validate_id],
     )
     def put(self):
         if not self.request.has_permission('moderator'):
@@ -73,7 +71,7 @@ class UserProfileRest(DocumentRest):
 
         self._reset_title()
 
-        return self._put(UserProfile, schema_internal_user_profile)
+        return self._put(UserProfile, internal_user_profile_schema)
 
     def _reset_title(self):
         """Set the title of a user profile to an empty string.

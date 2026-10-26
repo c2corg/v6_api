@@ -16,6 +16,7 @@ from c2corg_api.scripts.es.sync import (
     create_search_documents,
     get_changed_documents,
     get_changed_documents_for_associations,
+    get_changed_routes_and_outings_wr,
     get_changed_users,
     get_deleted_locale_documents,
     get_documents_per_type,
@@ -55,11 +56,16 @@ class TestSync(BaseTestCase):
         changed_documents = get_changed_documents_for_associations(
             self.session, last_update
         )
-        assert len(changed_documents) == 4
-        assert changed_documents[0][0] == self.route1.document_id
-        assert changed_documents[1][0] == self.outing1.document_id
-        assert changed_documents[2][0] == self.route1.document_id
-        assert changed_documents[3][0] == self.outing1.document_id
+        # W1 -> R1 and W2 -> W1 give R1 and O1 each, R1 -> O1 and U -> O1 give O1
+        assert sorted(changed_documents) == sorted(
+            [
+                (self.route1.document_id, 'r'),
+                (self.outing1.document_id, 'o'),
+                (self.route1.document_id, 'r'),
+                (self.outing1.document_id, 'o'),
+                (self.outing1.document_id, 'o'),
+            ]
+        )
 
         assert (
             len(
@@ -68,6 +74,26 @@ class TestSync(BaseTestCase):
                 )
             )
             == 0
+        )
+
+    def test_get_changed_routes_and_outings_wr(self):
+        last_update, _ = es_sync.get_status(self.session)
+
+        # the outings of R1 list the waypoints of R1, so they have to be
+        # updated too when W1 -> R1 changes
+        changed_documents = get_changed_routes_and_outings_wr(self.session, last_update)
+        assert sorted(changed_documents) == sorted(
+            [
+                (self.route1.document_id, 'r'),
+                (self.outing1.document_id, 'o'),
+            ]
+        )
+
+        assert (
+            get_changed_routes_and_outings_wr(
+                self.session, last_update + datetime.timedelta(0, 1)
+            )
+            == []
         )
 
     def test_get_changed_users(self):

@@ -1,5 +1,4 @@
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.sql.expression import exists
 
@@ -7,7 +6,6 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.association import (
     Association,
     exists_already,
-    schema_association,
 )
 from c2corg_api.models.cache_version import update_cache_version_associations
 from c2corg_api.models.common.associations import valid_associations
@@ -16,6 +14,8 @@ from c2corg_api.models.feed import update_feed_association_update
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
+from c2corg_api.schemas.association import AssociationSchema, association_schema
+from c2corg_api.schemas.base import body_validator
 from c2corg_api.scripts.es import sync
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.acl import ACLDefault
@@ -87,11 +87,10 @@ def validate_association(request, **kwargs):
 )
 class AssociationRest(ACLDefault):
     @restricted_json_view(
-        schema=schema_association,
-        validators=[colander_body_validator, validate_association],
+        validators=[body_validator(AssociationSchema), validate_association],
     )
     def collection_post(self):
-        association = schema_association.objectify(self.request.validated)
+        association = association_schema.objectify(self.request.validated)
         association.parent_document_type = self.request.validated[
             'parent_document_type'
         ]
@@ -126,11 +125,9 @@ class AssociationRest(ACLDefault):
 
         return {}
 
-    @restricted_json_view(
-        schema=schema_association, validators=[colander_body_validator]
-    )
+    @restricted_json_view(validators=[body_validator(AssociationSchema)])
     def collection_delete(self):
-        association_in = schema_association.objectify(self.request.validated)
+        association_in = association_schema.objectify(self.request.validated)
 
         association = self._load(association_in)
         if association is None:

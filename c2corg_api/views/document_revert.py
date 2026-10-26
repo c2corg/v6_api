@@ -1,8 +1,6 @@
 import logging
 
-from colander import Integer, MappingSchema, OneOf, SchemaNode, String, required
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.orm import contains_eager, joinedload, with_polymorphic
 from sqlalchemy.sql.expression import and_, exists
@@ -43,6 +41,8 @@ from c2corg_api.models.xreport import (
     Xreport,
     XreportLocale,
 )
+from c2corg_api.schemas.base import Schema, body_validator
+from c2corg_api.schemas.types import Int, OneOf
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.area import update_associations
@@ -53,10 +53,10 @@ from c2corg_api.views.waypoint import update_linked_route_titles
 log = logging.getLogger(__name__)
 
 
-class RevertSchema(MappingSchema):
-    document_id = SchemaNode(Integer(), missing=required)
-    lang = SchemaNode(String(), missing=required, validator=OneOf(default_langs))
-    version_id = SchemaNode(Integer(), missing=required)
+class RevertSchema(Schema):
+    document_id: Int
+    lang: OneOf(default_langs)
+    version_id: Int
 
 
 def validate_version(request, **kwargs):
@@ -98,8 +98,7 @@ def validate_version(request, **kwargs):
 class DocumentRevertRest(ACLDefault):
     @restricted_json_view(
         permission='moderator',
-        schema=RevertSchema(),
-        validators=[colander_body_validator, validate_version],
+        validators=[body_validator(RevertSchema), validate_version],
     )
     def post(self):
         """Create a new version of the document based upon an old one.

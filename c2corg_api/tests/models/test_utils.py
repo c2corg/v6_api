@@ -2,34 +2,27 @@ import json
 
 import pytest
 
-from c2corg_api.ext.colander_ext import wkbelement_from_geojson
+from c2corg_api.ext.wkb import wkbelement_from_geojson
 from c2corg_api.models.common.fields_waypoint import fields_waypoint
-from c2corg_api.models.schema_utils import restrict_schema
 from c2corg_api.models.utils import wkb_to_shape
-from c2corg_api.models.waypoint import schema_waypoint
+from c2corg_api.schemas.waypoint import waypoint_schema
 from c2corg_api.tests import AssertionsMixin
 
 
 class TestUtils(AssertionsMixin):
     def test_restrict_schema(self):
         fields = fields_waypoint.get('summit').get('fields')
-        schema = restrict_schema(schema_waypoint, fields)
+        schema = waypoint_schema.restrict(fields)
 
-        self.assertHasField(schema, 'document_id')
-        self.assertHasField(schema, 'version')
-        self.assertHasField(schema, 'elevation')
-        self.assertHasNotField(schema, 'climbing_outdoor_types')
+        assert {'document_id', 'version', 'elevation'} <= set(schema.fields)
+        assert 'climbing_outdoor_types' not in schema.fields
 
-        geometry_node = self.get_child_node(schema, 'geometry')
-        self.assertHasField(geometry_node, 'version')
-        self.assertHasField(geometry_node, 'geom')
+        geometry_fields = schema.children['geometry'].fields
+        assert {'version', 'geom'} <= set(geometry_fields)
 
-        locales_node = self.get_child_node(schema, 'locales')
-        locale_node = locales_node.children[0]
-        self.assertHasField(locale_node, 'version')
-        self.assertHasField(locale_node, 'lang')
-        self.assertHasField(locale_node, 'title')
-        self.assertHasNotField(locale_node, 'access_period')
+        locale_fields = schema.children['locales'].fields
+        assert {'version', 'lang', 'title'} <= set(locale_fields)
+        assert 'access_period' not in locale_fields
 
     def test_wkb_to_shape_point(self):
         wkb = wkbelement_from_geojson(

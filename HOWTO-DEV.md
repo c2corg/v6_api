@@ -192,6 +192,14 @@ pytest
 
 - Or directly in your favorite development IDE (pycharm, vscode...)
 
+### API contract tests
+
+`c2corg_api/tests/contract/` checks what the clients of the API rely on, so that a change of framework or library cannot change it unnoticed:
+
+- `routes.txt` lists every route with its methods and permission. After adding, removing or changing a route, regenerate it with `python -m c2corg_api.tests.contract.inventory`.
+- Each contract test sends a request and compares the status, the headers clients rely on (CORS, `Cache-Control`, `ETag`…) and the shape of the JSON body (keys and value types) with a snapshot in `snapshots/`. After an intended change of the API, rewrite the snapshots with `CONTRACT_UPDATE=1 pytest c2corg_api/tests/contract` and review their diff.
+- `pending.txt` lists the routes without a contract test yet. A new route needs a contract test (marked with `@contract(...)`) or a line there.
+
 ## Linting
 
 - Format the code and run the linter (CI checks both; in the devcontainer, VS Code formats on save):

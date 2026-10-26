@@ -17,7 +17,7 @@ from c2corg_api.caching import (
     get_or_create,
 )
 from c2corg_api.models import DBSession
-from c2corg_api.models.area import AREA_TYPE, schema_listing_area
+from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.area_association import get_areas, update_areas_for_document
 from c2corg_api.models.association import create_associations, synchronize_associations
 from c2corg_api.models.cache_version import (
@@ -42,8 +42,10 @@ from c2corg_api.models.feed import (
     update_feed_document_update,
 )
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.models.topo_map import MAP_TYPE, schema_listing_topo_map
+from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.topo_map_association import get_maps, update_maps_for_document
+from c2corg_api.schemas.area import area_listing_schema
+from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.acl import ACLDefault
@@ -244,11 +246,11 @@ class DocumentRest(ACLDefault):
 
     def _set_maps(self, document, lang):
         topo_maps = get_maps(document, lang)
-        document.maps = [to_json_dict(m, schema_listing_topo_map) for m in topo_maps]
+        document.maps = [to_json_dict(m, topo_map_listing_schema) for m in topo_maps]
 
     def _set_areas(self, document, lang):
         areas = get_areas(document, lang)
-        document.areas = [to_json_dict(m, schema_listing_area) for m in areas]
+        document.areas = [to_json_dict(m, area_listing_schema) for m in areas]
 
     def _collection_post(
         self, schema, before_add=None, after_add=None, allow_anonymous=False
@@ -463,14 +465,16 @@ class DocumentRest(ACLDefault):
         (update_types, changed_langs) = document.get_update_type(old_versions)
 
         if update_types:
-            # A new version needs to be created and persisted
-            DocumentRest.update_version(
-                document,
-                user_id,
-                request.validated['message'],
-                update_types,
-                changed_langs,
-            )
+            # A new version needs to be created and persisted, except for
+            # coverages: they have no history (see _create_document)
+            if document.type != COVERAGE_TYPE:
+                DocumentRest.update_version(
+                    document,
+                    user_id,
+                    request.validated['message'],
+                    update_types,
+                    changed_langs,
+                )
 
             if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
                 update_areas_for_document(document, reset=True)

@@ -2,7 +2,6 @@ import functools
 from datetime import UTC, datetime, timedelta
 
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPForbidden
 
 from c2corg_api.models.common.attributes import activities
@@ -12,11 +11,14 @@ from c2corg_api.models.outing import (
     ArchiveOuting,
     ArchiveOutingLocale,
     Outing,
-    schema_create_outing,
-    schema_outing,
-    schema_update_outing,
 )
 from c2corg_api.models.utils import get_mid_point
+from c2corg_api.schemas.base import body_validator
+from c2corg_api.schemas.outing import (
+    OutingCreateSchema,
+    OutingUpdateSchema,
+    outing_schema,
+)
 from c2corg_api.views import (
     cors_policy,
     restricted_json_view,
@@ -144,13 +146,12 @@ class OutingRest(DocumentRest):
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(
-            outing_documents_config, schema_outing, adapt_schema=outing_schema_adaptor
+            outing_documents_config, outing_schema, adapt_schema=outing_schema_adaptor
         )
 
     @restricted_json_view(
-        schema=schema_create_outing,
         validators=[
-            colander_body_validator,
+            body_validator(OutingCreateSchema),
             validate_outing_create,
             validate_associations_create,
             validate_required_associations,
@@ -161,12 +162,11 @@ class OutingRest(DocumentRest):
         set_default_geom = functools.partial(
             set_default_geometry, self.request.validated['associations']['routes']
         )
-        return self._collection_post(schema_outing, before_add=set_default_geom)
+        return self._collection_post(outing_schema, before_add=set_default_geom)
 
     @restricted_json_view(
-        schema=schema_update_outing,
         validators=[
-            colander_body_validator,
+            body_validator(OutingUpdateSchema),
             validate_id,
             validate_outing_update,
             validate_associations_update,
@@ -179,7 +179,7 @@ class OutingRest(DocumentRest):
             # moderators can change every outing, but a normal user can only
             # change an outing that they are associated to
             raise HTTPForbidden('No permission to change this outing')
-        return self._put(Outing, schema_outing, before_update=update_default_geometry)
+        return self._put(Outing, outing_schema, before_update=update_default_geometry)
 
 
 @resource(path='/outings/{id}/{lang}/info', cors_policy=cors_policy)
@@ -229,6 +229,6 @@ class OutingVersionRest(DocumentVersionRest):
             ArchiveOuting,
             OUTING_TYPE,
             ArchiveOutingLocale,
-            schema_outing,
+            outing_schema,
             outing_schema_adaptor,
         )

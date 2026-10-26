@@ -1,7 +1,6 @@
 import functools
 
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
 
 from c2corg_api.models import DBSession
@@ -9,13 +8,16 @@ from c2corg_api.models.article import (
     ARTICLE_TYPE,
     ArchiveArticle,
     Article,
-    schema_article,
-    schema_create_article,
-    schema_update_article,
 )
 from c2corg_api.models.common.fields_article import fields_article
 from c2corg_api.models.document import ArchiveDocumentLocale
 from c2corg_api.models.document_history import has_been_created_by
+from c2corg_api.schemas.article import (
+    ArticleCreateSchema,
+    ArticleUpdateSchema,
+    article_schema,
+)
+from c2corg_api.schemas.base import body_validator
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
@@ -57,26 +59,24 @@ class ArticleRest(DocumentRest):
     def get(self):
         return self._get(
             article_documents_config,
-            schema_article,
+            article_schema,
             include_areas=False,
             set_custom_fields=set_author,
         )
 
     @restricted_json_view(
-        schema=schema_create_article,
         validators=[
-            colander_body_validator,
+            body_validator(ArticleCreateSchema),
             validate_article_create,
             validate_associations_create,
         ],
     )
     def collection_post(self):
-        return self._collection_post(schema_article)
+        return self._collection_post(article_schema)
 
     @restricted_json_view(
-        schema=schema_update_article,
         validators=[
-            colander_body_validator,
+            body_validator(ArticleUpdateSchema),
             validate_id,
             validate_article_update,
             validate_associations_update,
@@ -98,7 +98,7 @@ class ArticleRest(DocumentRest):
             # their creator and moderators
             elif not has_been_created_by(article_id, self.request.authenticated_userid):
                 raise HTTPForbidden('No permission to change this article')
-        return self._put(Article, schema_article)
+        return self._put(Article, article_schema)
 
 
 @resource(path='/articles/{id}/{lang}/{version_id}', cors_policy=cors_policy)
@@ -106,7 +106,7 @@ class ArticlesVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveArticle, ARTICLE_TYPE, ArchiveDocumentLocale, schema_article
+            ArchiveArticle, ARTICLE_TYPE, ArchiveDocumentLocale, article_schema
         )
 
 
