@@ -23,6 +23,11 @@ validate_stoparea_update = validate_stoparea_create
 # safety net: a stop is stored once per line, a wide bbox could return a lot
 MAX_STOPAREAS_BY_BBOX = 5000
 
+# The map asks for extents aligned on a fixed grid, so that the same urls come
+# back: the browsers may keep the answers. The stops only change when the
+# imports are run.
+BBOX_CACHE_CONTROL = 'public, max-age=3600'
+
 
 def validate_bbox_param(request, **kwargs):
     """Check the optional `bbox` parameter (EPSG:3857).
@@ -153,6 +158,7 @@ class StopareaRest:
         bbox = self.request.validated.get('bbox')
         if bbox:
             documents = _get_stopareas_in_bbox(bbox)
+            self.request.response.headers['Cache-Control'] = BBOX_CACHE_CONTROL
             return {'documents': documents, 'total_results': len(documents)}
 
         page_id = self.request.GET.get('page_id', 1)

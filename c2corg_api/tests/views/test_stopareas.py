@@ -154,6 +154,16 @@ class TestStopareaBboxRest(BaseDocumentTestRest):
         assert stop['coordinates'] == {'x': 1000, 'y': 1000}
         assert [line['line'] for line in stop['lines']] == ['bus 1', 'bus 2']
 
+    def test_bbox_answer_can_be_kept_by_the_browsers(self):
+        response = self.app.get('/stopareas?bbox=0,0,2000,2000', status=200)
+
+        assert response.headers['Cache-Control'] == 'public, max-age=3600'
+
+    def test_list_without_bbox_is_not_kept(self):
+        response = self.app.get('/stopareas', status=200)
+
+        assert 'public' not in response.headers.get('Cache-Control', '')
+
     def test_bbox_returns_nearest_distance_and_waypoint_titles(self):
         response = self.app.get('/stopareas?bbox=0,0,2000,2000', status=200)
         waypoints = response.json['documents'][0]['waypoints']
