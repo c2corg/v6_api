@@ -3,7 +3,7 @@ import math
 
 from cornice.resource import resource, view
 
-from c2corg_api.ext.colander_ext import geojson_from_wkbelement
+from c2corg_api.ext.wkb import geojson_from_wkbelement
 from c2corg_api.models.document_map_queries import get_locales_for_documents, get_tracks
 from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
