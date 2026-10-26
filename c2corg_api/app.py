@@ -8,7 +8,7 @@ from a2wsgi import ASGIMiddleware
 from fastapi import FastAPI
 from starlette.routing import Match
 
-from c2corg_api.web import health, search
+from c2corg_api.web import documents, health, search
 from c2corg_api.web.auth import TokenValidationMiddleware
 from c2corg_api.web.cors import CorsMiddleware
 
@@ -23,6 +23,7 @@ def create_fastapi_app(settings):
     app.add_middleware(CorsMiddleware)
     health.include(app)
     search.include(app)
+    documents.include(app)
     return app
 
 
@@ -32,6 +33,8 @@ class Dispatcher:
     def __init__(self, fastapi_app, pyramid_app):
         self.fastapi_app = fastapi_app
         self.pyramid_app = pyramid_app
+        # the moved views read some of its attributes (see web.compat)
+        fastapi_app.state.pyramid_registry = getattr(pyramid_app, 'registry', None)
         self._fastapi_wsgi = ASGIMiddleware(fastapi_app)
 
     @property
