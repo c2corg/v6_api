@@ -83,6 +83,21 @@ class TestErrors(DocumentContractTest):
         check_snapshot('error_invalid_token', response)
 
     @contract(('POST', '/waypoints'))
+    def test_invalid_token_from_another_origin(self):
+        # the error answers carry the CORS headers (#720, #730), but only
+        # for the allowed origins
+        response = self.app.post_json(
+            '/waypoints',
+            WAYPOINT,
+            headers={
+                'Authorization': 'JWT token="not-a-token"',
+                'Origin': 'https://evil.example.org',
+            },
+            status=401,
+        )
+        assert 'Access-Control-Allow-Origin' not in response.headers
+
+    @contract(('POST', '/waypoints'))
     def test_rate_limited(self):
         user = self.session.get(User, self.global_userids['contributor'])
         user.ratelimit_reset = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
