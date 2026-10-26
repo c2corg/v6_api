@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, Mock
 from c2corg_api.models.user import User
 from c2corg_api.security.discourse_client import (
     APIDiscourseClient,
+    get_discourse_client,
     set_discourse_client,
 )
 from c2corg_api.tests.views import BaseTestRest
@@ -11,6 +12,9 @@ from c2corg_api.tests.views import BaseTestRest
 class BaseBlockTest(BaseTestRest):
     def setUp(self):
         super().setUp()
+        # the Discourse client is global: restore it after the test, or the
+        # mock leaks into the tests that run after this one
+        self.original_discourse_client = get_discourse_client(self.settings)
 
         self.contributor = self.session.get(User, self.global_userids['contributor'])
         self.contributor2 = self.session.get(User, self.global_userids['contributor2'])
@@ -21,6 +25,10 @@ class BaseBlockTest(BaseTestRest):
 
         self.session.flush()
         self.set_discourse_up()
+
+    def tearDown(self):
+        self.set_discourse_not_mocked()
+        super().tearDown()
 
     def set_discourse_client_mock(self, client):
         self.discourse_client = client

@@ -1,18 +1,12 @@
 import functools
 
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 
-from c2corg_api.models.book import (
-    BOOK_TYPE,
-    ArchiveBook,
-    Book,
-    schema_book,
-    schema_create_book,
-    schema_update_book,
-)
+from c2corg_api.models.book import BOOK_TYPE, ArchiveBook, Book
 from c2corg_api.models.common.fields_book import fields_book
 from c2corg_api.models.document import ArchiveDocumentLocale
+from c2corg_api.schemas.base import body_validator
+from c2corg_api.schemas.book import BookCreateSchema, BookUpdateSchema, book_schema
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import (
     DocumentRest,
@@ -49,30 +43,28 @@ class BookRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
-        return self._get(book_documents_config, schema_book, include_areas=False)
+        return self._get(book_documents_config, book_schema, include_areas=False)
 
     @restricted_json_view(
-        schema=schema_create_book,
         validators=[
-            colander_body_validator,
+            body_validator(BookCreateSchema),
             validate_book_create,
             validate_associations_create,
         ],
     )
     def collection_post(self):
-        return self._collection_post(schema_book)
+        return self._collection_post(book_schema)
 
     @restricted_json_view(
-        schema=schema_update_book,
         validators=[
-            colander_body_validator,
+            body_validator(BookUpdateSchema),
             validate_id,
             validate_book_update,
             validate_associations_update,
         ],
     )
     def put(self):
-        return self._put(Book, schema_book)
+        return self._put(Book, book_schema)
 
 
 @resource(path='/books/{id}/{lang}/{version_id}', cors_policy=cors_policy)
@@ -80,7 +72,7 @@ class BooksVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveBook, BOOK_TYPE, ArchiveDocumentLocale, schema_book
+            ArchiveBook, BOOK_TYPE, ArchiveDocumentLocale, book_schema
         )
 
 

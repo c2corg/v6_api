@@ -1,9 +1,7 @@
-from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import Column, Float, ForeignKey, Integer
 from sqlalchemy.orm import declared_attr, relationship
 
 from c2corg_api.models import Base, schema
-from c2corg_api.models.document import get_geometry_schema_overrides
 from c2corg_api.models.utils import copy_attributes
 
 # don't remove this import
@@ -66,13 +64,3 @@ class WaypointStoparea(Base, _WaypointStopareaMixin):
 
     def update(self, other):
         copy_attributes(other, self, attributes)
-
-
-schema_waypoint_stoparea = SQLAlchemySchemaNode(
-    WaypointStoparea,
-    includes=attributes,
-    overrides={
-        'waypoint_stoparea_id': {'missing': None},
-        'geometry': get_geometry_schema_overrides(['POINT']),
-    },
-)

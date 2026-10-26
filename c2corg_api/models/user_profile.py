@@ -1,20 +1,13 @@
-from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.ext.associationproxy import association_proxy
 
 from c2corg_api.models import Base, schema
 from c2corg_api.models.common import document_types
-from c2corg_api.models.common.fields_user_profile import fields_user_profile
 from c2corg_api.models.document import (
     ArchiveDocument,
     Document,
-    DocumentLocale,
-    get_geometry_schema_overrides,
-    schema_attributes,
-    schema_document_locale,
 )
 from c2corg_api.models.enums import activity_type, user_category
-from c2corg_api.models.schema_utils import get_update_schema, restrict_schema
 from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
 USERPROFILE_TYPE = document_types.USERPROFILE_TYPE
@@ -76,44 +69,3 @@ class ArchiveUserProfile(_UserProfileMixin, ArchiveDocument):
     }
 
     __table_args__ = Base.__table_args__
-
-
-# user profiles use a special schema for the locales which ignores the 'title'
-# attribute (user profiles do not have a title).
-schema_user_profile_locale = SQLAlchemySchemaNode(
-    DocumentLocale,
-    # whitelisted attributes (without 'title')
-    includes=['version', 'lang', 'description', 'summary'],
-    overrides={'version': {'missing': None}},
-)
-
-
-schema_user_profile = SQLAlchemySchemaNode(
-    UserProfile,
-    # whitelisted attributes
-    includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {'missing': None},
-        'version': {'missing': None},
-        'locales': {'children': [schema_user_profile_locale]},
-        'geometry': get_geometry_schema_overrides(['POINT']),
-    },
-)
-
-
-schema_internal_user_profile = SQLAlchemySchemaNode(
-    UserProfile,
-    # whitelisted attributes
-    includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {'missing': None},
-        'version': {'missing': None},
-        'locales': {'children': [schema_document_locale]},
-        'geometry': get_geometry_schema_overrides(['POINT']),
-    },
-)
-
-schema_update_user_profile = get_update_schema(schema_user_profile)
-schema_listing_user_profile = restrict_schema(
-    schema_user_profile, fields_user_profile.get('listing')
-)

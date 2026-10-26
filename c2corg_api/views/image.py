@@ -3,7 +3,6 @@ import os
 
 import requests
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPForbidden,
@@ -22,10 +21,13 @@ from c2corg_api.models.image import (
     ArchiveImage,
     Image,
     get_image_filenames,
-    schema_create_image,
-    schema_create_image_list,
-    schema_image,
-    schema_update_image,
+)
+from c2corg_api.schemas.base import body_validator
+from c2corg_api.schemas.image import (
+    ImageCreateSchema,
+    ImageListCreateSchema,
+    ImageUpdateSchema,
+    image_schema,
 )
 from c2corg_api.search.notify_sync import run_on_successful_transaction
 from c2corg_api.security.acl import ACLDefault
@@ -130,7 +132,7 @@ def validate_list_associations_create(request, **kwargs):
 
 
 def create_image(self, document_in):
-    document = self._create_document(document_in, schema_image)
+    document = self._create_document(document_in, image_schema)
     publish_image_in_backend(self.request, document.filename)
 
     return document
@@ -149,9 +151,18 @@ def before_image_update(request, document, document_in):
         publish_image_in_backend(request, new_filename)
 
 
+def image_backend_endpoint(settings, action):
+    """Build the URL of an image backend endpoint.
+
+    A trailing slash in `image_backend.url` must not produce a `//` path,
+    which the image backend answers with a 404.
+    """
+    return '{}/{}'.format(settings['image_backend.url'].rstrip('/'), action)
+
+
 def publish_image_in_backend(request, filename):
     settings = request.registry.settings
-    url = '{}/{}'.format(settings['image_backend.url'], 'publish')
+    url = image_backend_endpoint(settings, 'publish')
     data = {'secret': settings['image_backend.secret_key'], 'filename': filename}
 
     response = requests.post(url, data, timeout=int(settings['url.timeout']))
@@ -179,7 +190,7 @@ def delete_all_files_for_image(document_id, request):
     filenames = [f for (f,) in filenames_result]
 
     settings = request.registry.settings
-    url = '{}/{}'.format(settings['image_backend.url'], 'delete')
+    url = image_backend_endpoint(settings, 'delete')
 
     def send_delete_request():
         response = requests.post(
@@ -208,13 +219,12 @@ class ImageRest(DocumentRest):
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(
-            image_documents_config, schema_image, set_custom_fields=set_creator
+            image_documents_config, image_schema, set_custom_fields=set_creator
         )
 
     @restricted_json_view(
-        schema=schema_create_image,
         validators=[
-            colander_body_validator,
+            body_validator(ImageCreateSchema),
             validate_image_create,
             validate_associations_create,
         ],
@@ -225,9 +235,8 @@ class ImageRest(DocumentRest):
         return {'document_id': document.document_id}
 
     @restricted_json_view(
-        schema=schema_update_image,
         validators=[
-            colander_body_validator,
+            body_validator(ImageUpdateSchema),
             validate_id,
             validate_image_update,
             validate_associations_update,
@@ -254,7 +263,7 @@ class ImageRest(DocumentRest):
                 raise HTTPForbidden('No permission to change this image')
         return self._put(
             Image,
-            schema_image,
+            image_schema,
             before_update=functools.partial(before_image_update, self.request),
         )
 
@@ -266,9 +275,8 @@ class ImageRest(DocumentRest):
 )
 class ImageListRest(DocumentRest):
     @restricted_json_view(
-        schema=schema_create_image_list,
         validators=[
-            colander_body_validator,
+            body_validator(ImageListCreateSchema),
             validate_list_image_create,
             validate_list_associations_create,
         ],
@@ -348,5 +356,5 @@ class ImageVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveImage, IMAGE_TYPE, ArchiveDocumentLocale, schema_image
+            ArchiveImage, IMAGE_TYPE, ArchiveDocumentLocale, image_schema
         )

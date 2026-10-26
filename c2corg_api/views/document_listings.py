@@ -4,7 +4,7 @@ from sqlalchemy.sql.functions import func
 
 from c2corg_api.caching import cache_document_listing, get_or_create_multi
 from c2corg_api.models import DBSession
-from c2corg_api.models.area import Area, schema_listing_area
+from c2corg_api.models.area import Area
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import get_cache_keys, get_document_id
 from c2corg_api.models.document import (
@@ -16,6 +16,7 @@ from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.views import set_best_locale, to_json_dict
 
 
@@ -215,7 +216,7 @@ def _set_areas_for_documents(documents, lang):
         # was already disconnected from the session at this point
         set_best_locale(document._areas, lang, expunge=False)
 
-        document.areas = [to_json_dict(m, schema_listing_area) for m in document._areas]
+        document.areas = [to_json_dict(m, area_listing_schema) for m in document._areas]
 
 
 def _set_img_count_for_documents(documents, document_ids):

@@ -139,3 +139,15 @@ def mock_navitia_requests():
     forwarded to the real ``requests.get``."""
     with patch('c2corg_api.requests.get', side_effect=_selective_get):
         yield
+
+
+@pytest.fixture(autouse=True)
+def reset_discourse_client():
+    """Drop the Discourse client a test may have replaced or built."""
+    # The client is a module global, created on first use. Tests replace it
+    # with mocks, or build it while `DiscourseClient` is patched: without a
+    # reset, the next tests in the process would get that mock.
+    yield
+    from c2corg_api.security.discourse_client import set_discourse_client
+
+    set_discourse_client(None)

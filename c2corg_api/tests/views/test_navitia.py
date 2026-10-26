@@ -17,8 +17,9 @@ from shapely.geometry import Polygon
 
 from c2corg_api.models.area import Area
 from c2corg_api.models.document import DocumentGeometry
-from c2corg_api.models.route import Route, schema_route
+from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
+from c2corg_api.schemas.route import route_schema
 from c2corg_api.tests import BaseTestCase
 from c2corg_api.views import to_json_dict
 from c2corg_api.views.navitia import (
@@ -271,10 +272,10 @@ class TestNavitiaRestParams(BaseTestCase):
     def test_read_result_from_redis_job_done_success(self):
         def error_side_effect(*args, **kwargs):
             r1 = to_json_dict(
-                Route(activities=['hiking', 'rock_climbing']), schema_route
+                Route(activities=['hiking', 'rock_climbing']), route_schema
             )
             r2 = to_json_dict(
-                Route(activities=['slacklining', 'rock_climbing']), schema_route
+                Route(activities=['slacklining', 'rock_climbing']), route_schema
             )
             routes = [r1, r2]
             if args[0] == f'job:{job_id}:status':
@@ -282,9 +283,9 @@ class TestNavitiaRestParams(BaseTestCase):
             if args[0] == f'job:{job_id}:result':
                 return json.dumps({'documents': routes, 'total': len(routes)})
 
-        r1 = to_json_dict(Route(activities=['hiking', 'rock_climbing']), schema_route)
+        r1 = to_json_dict(Route(activities=['hiking', 'rock_climbing']), route_schema)
         r2 = to_json_dict(
-            Route(activities=['slacklining', 'rock_climbing']), schema_route
+            Route(activities=['slacklining', 'rock_climbing']), route_schema
         )
         routes = [r1, r2]
 

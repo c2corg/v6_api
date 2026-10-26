@@ -62,8 +62,9 @@ duplicated for no reason, it makes a difference if only figures (in `Document`/
 `Waypoint`) are changed, if only translation fields are changed or if only
 the geometry has changed.. The process is as follows (see `views.document.DocumentRest._put`):
 
- - Using Colander a `Document` instance `document_in` is created from the JSON
-   input data.
+ - The JSON input data is validated by the Pydantic schema of the document type
+   (`c2corg_api/schemas/`), and its `ModelSchema` builds a `Document` instance
+   `document_in` from it (`objectify`).
  - The current version of the document is loaded from the database.
  - The version numbers of the current document, its locales and geometry are stored
    in a dictionary `old_versions`.

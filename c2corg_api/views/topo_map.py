@@ -1,16 +1,16 @@
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 
 from c2corg_api.models.cache_version import update_cache_version_for_map
 from c2corg_api.models.common.fields_topo_map import fields_topo_map
 from c2corg_api.models.document import UpdateType
-from c2corg_api.models.topo_map import (
-    MAP_TYPE,
-    TopoMap,
-    schema_topo_map,
-    schema_update_topo_map,
-)
+from c2corg_api.models.topo_map import MAP_TYPE, TopoMap
 from c2corg_api.models.topo_map_association import update_map
+from c2corg_api.schemas.base import body_validator
+from c2corg_api.schemas.topo_map import (
+    TopoMapCreateSchema,
+    TopoMapUpdateSchema,
+    topo_map_schema,
+)
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import (
     DocumentRest,
@@ -40,23 +40,25 @@ class TopoMapRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
-        return self._get(topo_map_documents_config, schema_topo_map)
+        return self._get(topo_map_documents_config, topo_map_schema)
 
     @restricted_json_view(
-        schema=schema_topo_map,
-        validators=[colander_body_validator, validate_map_create],
+        validators=[body_validator(TopoMapCreateSchema), validate_map_create],
         permission='moderator',
     )
     def collection_post(self):
-        return self._collection_post(schema_topo_map, after_add=insert_associations)
+        return self._collection_post(topo_map_schema, after_add=insert_associations)
 
     @restricted_json_view(
-        schema=schema_update_topo_map,
-        validators=[colander_body_validator, validate_id, validate_map_update],
+        validators=[
+            body_validator(TopoMapUpdateSchema),
+            validate_id,
+            validate_map_update,
+        ],
         permission='moderator',
     )
     def put(self):
-        return self._put(TopoMap, schema_topo_map, after_update=update_associations)
+        return self._put(TopoMap, topo_map_schema, after_update=update_associations)
 
 
 @resource(path='/maps/{id}/{lang}/info', cors_policy=cors_policy)

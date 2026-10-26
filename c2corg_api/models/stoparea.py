@@ -1,5 +1,3 @@
-import colander
-from colanderalchemy import SQLAlchemySchemaNode
 from geoalchemy2 import shape
 from geoalchemy2.types import Geometry
 from sqlalchemy import Column, Integer, String
@@ -46,10 +44,3 @@ class Stoparea(Base, _StopareaMixin):
             if self.geom is not None
             else None,
         }
-
-
-schema_stoparea = SQLAlchemySchemaNode(
-    Stoparea,
-    includes=attributes,
-    overrides={'stoparea_id': {'missing': None}, 'geom': {'typ': colander.String()}},
-)
