@@ -7,6 +7,7 @@
 
 from fastapi.responses import JSONResponse, Response
 from pyramid.httpexceptions import HTTPError, HTTPNotModified
+from pyramid.threadlocal import manager
 from webob.etag import ETagMatcher, NoETag
 
 from c2corg_api.web.errors import error_response
@@ -84,6 +85,12 @@ def validate_query(request, *validators, user=None):
 
 def run_view(adapted, view):
     """Call a view, and turn its Pyramid HTTP exceptions into answers."""
+    # Some code reads the Pyramid registry from the thread locals
+    # (get_current_registry(), e.g. the image URLs of the markdown cooker):
+    # set it for the view, as Pyramid does for its own requests.
+    registry = adapted.registry._pyramid_registry
+    if registry is not None:
+        manager.push({'registry': registry, 'request': None})
     try:
         result = view()
     except HTTPNotModified as e:
@@ -93,6 +100,9 @@ def run_view(adapted, view):
     except HTTPError as e:
         # like views.http_error_handler
         return error_response([('body', e.title, e.detail)], e.code)
+    finally:
+        if registry is not None:
+            manager.pop()
     headers = adapted.response.headers
     if not headers:
         return result
