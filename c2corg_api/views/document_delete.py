@@ -459,12 +459,13 @@ def _remove_locale_versions(document_id, lang):
     )
     # Gets the list of history_metadata_id associated only
     # to the current locale:
-    history_metadata_ids = (
-        DBSession.query(t.c.history_metadata_id)
+    history_metadata_ids = [
+        row[0]
+        for row in DBSession.query(t.c.history_metadata_id)
         .filter(t.c.lang == lang)
         .filter(t.c.cnt == 1)
         .all()
-    )
+    ]
 
     DBSession.query(DocumentVersion).filter(
         DocumentVersion.document_id == document_id

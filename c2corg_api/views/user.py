@@ -3,10 +3,8 @@ import logging
 import re
 from functools import partial
 
-import colander
 import requests
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPForbidden, HTTPInternalServerError
 from pyramid.settings import asbool
 from sqlalchemy.sql.expression import and_, func
@@ -14,8 +12,11 @@ from sqlalchemy.sql.expression import and_, func
 from c2corg_api.emails.email_service import get_email_service
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentLocale
-from c2corg_api.models.user import Purpose, User, schema_create_user, schema_user
+from c2corg_api.models.user import Purpose, User
 from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.schemas.base import Schema, body_validator
+from c2corg_api.schemas.types import Bool, Str, email_check
+from c2corg_api.schemas.user import UserCreateSchema, user_create_schema, user_schema
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
@@ -71,11 +72,7 @@ def is_password_strong_enough(password):
 
 def is_valid_email(email):
     """Check if a string is a valid email."""
-    try:
-        colander.Email()(None, email)
-    except colander.Invalid:
-        return False
-    return True
+    return email_check(email) is None
 
 
 def validate_json_password(request, require_strength=True, **kwargs):
@@ -241,9 +238,8 @@ def validate_captcha(request, **kwargs):
 @resource(path='/users/register', cors_policy=cors_policy)
 class UserRegistrationRest(ACLDefault):
     @json_view(
-        schema=schema_create_user,
         validators=[
-            colander_body_validator,
+            body_validator(UserCreateSchema),
             validate_json_password,
             partial(validate_unique_attribute, 'email'),
             partial(validate_unique_attribute, 'forum_username', lowercase=True),
@@ -253,7 +249,7 @@ class UserRegistrationRest(ACLDefault):
         ],
     )
     def post(self):
-        user = schema_create_user.objectify(self.request.validated)
+        user = user_create_schema.objectify(self.request.validated)
         user.password = self.request.validated['password']
         user.update_validation_nonce(Purpose.registration, VALIDATION_EXPIRE_DAYS)
 
@@ -284,7 +280,7 @@ class UserRegistrationRest(ACLDefault):
         link = settings['mail.validate_register_url_template'].format('#', nonce)
         email_service.send_registration_confirmation(user, link)
 
-        return to_json_dict(user, schema_user)
+        return to_json_dict(user, user_schema)
 
 
 def validate_user_from_nonce(purpose, request, **kwargs):
@@ -473,13 +469,10 @@ class UserChangeEmailNonceValidationRest(ACLDefault):
         # no login since user is supposed to be already logged in
 
 
-class LoginSchema(colander.MappingSchema):
-    username = colander.SchemaNode(colander.String())
-    password = colander.SchemaNode(colander.String())
-    accept_tos = colander.SchemaNode(colander.Boolean(), missing=False)
-
-
-login_schema = LoginSchema()
+class LoginSchema(Schema):
+    username: Str()
+    password: Str()
+    accept_tos: Bool = False
 
 
 def token_to_response(user, token, request):
@@ -500,9 +493,8 @@ def token_to_response(user, token, request):
 @resource(path='/users/login', cors_policy=cors_policy)
 class UserLoginRest(ACLDefault):
     @json_view(
-        schema=login_schema,
         validators=[
-            colander_body_validator,
+            body_validator(LoginSchema),
             partial(validate_json_password, require_strength=False),
         ],
     )
@@ -564,14 +556,11 @@ class UserLoginRest(ACLDefault):
             return None
 
 
-class DiscourseRedirectSchema(colander.MappingSchema):
+class DiscourseRedirectSchema(Schema):
     """Signed payload Discourse sent to the UI's `/auth-sso` page."""
 
-    sso = colander.SchemaNode(colander.String())
-    sig = colander.SchemaNode(colander.String())
-
-
-discourse_redirect_schema = DiscourseRedirectSchema()
+    sso: Str()
+    sig: Str()
 
 
 @resource(path='/users/discourse-redirect', cors_policy=cors_policy)
@@ -586,9 +575,7 @@ class UserDiscourseRedirectRest(ACLDefault):
     # server-side (see `redirect_without_nonce`) can't open a forum session
     # in the browser.
 
-    @restricted_json_view(
-        schema=discourse_redirect_schema, validators=[colander_body_validator]
-    )
+    @restricted_json_view(validators=[body_validator(DiscourseRedirectSchema)])
     def post(self):
         """Return the signed `sso_login` URL to send the browser to."""
         request = self.request

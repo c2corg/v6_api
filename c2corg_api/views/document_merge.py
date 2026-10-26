@@ -1,6 +1,4 @@
-from colander import Integer, MappingSchema, SchemaNode, required
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from sqlalchemy import not_
 from sqlalchemy.sql.expression import and_, or_
 from sqlalchemy.sql.functions import func
@@ -18,6 +16,8 @@ from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.route import Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
+from c2corg_api.schemas.base import Schema, body_validator
+from c2corg_api.schemas.types import Int
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy, restricted_json_view
@@ -26,9 +26,9 @@ from c2corg_api.views.image import delete_all_files_for_image
 from c2corg_api.views.waypoint import update_linked_route_titles
 
 
-class MergeSchema(MappingSchema):
-    source_document_id = SchemaNode(Integer(), missing=required)
-    target_document_id = SchemaNode(Integer(), missing=required)
+class MergeSchema(Schema):
+    source_document_id: Int
+    target_document_id: Int
 
 
 def validate_documents(request, **kwargs):
@@ -113,8 +113,7 @@ def validate_documents(request, **kwargs):
 class MergeDocumentRest(ACLDefault):
     @restricted_json_view(
         permission='moderator',
-        schema=MergeSchema(),
-        validators=[colander_body_validator, validate_documents],
+        validators=[body_validator(MergeSchema), validate_documents],
     )
     def post(self):
         """Merge a document into another document.

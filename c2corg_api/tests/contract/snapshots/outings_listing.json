@@ -1,0 +1,68 @@
+{
+  "body": {
+    "documents": [
+      {
+        "activities": [
+          "str"
+        ],
+        "areas": [
+          {
+            "area_type": "str",
+            "available_langs": "null",
+            "document_id": "int",
+            "locales": [
+              {
+                "lang": "str",
+                "title": "str",
+                "version": "int"
+              }
+            ],
+            "protected": "bool",
+            "type": "str",
+            "version": "int"
+          }
+        ],
+        "author": {
+          "name": "str",
+          "user_id": "int"
+        },
+        "available_langs": [
+          "str"
+        ],
+        "condition_rating": "null",
+        "date_end": "str",
+        "date_start": "str",
+        "document_id": "int",
+        "elevation_max": "int",
+        "geometry": {
+          "geom": "str",
+          "has_geom_detail": "bool",
+          "version": "int"
+        },
+        "height_diff_up": "null",
+        "hiking_rating": "null",
+        "img_count": "int",
+        "locales": [
+          {
+            "lang": "str",
+            "summary": "null",
+            "title": "str",
+            "version": "int"
+          }
+        ],
+        "protected": "bool",
+        "public_transport": "null",
+        "quality": "str",
+        "type": "str",
+        "version": "int"
+      }
+    ],
+    "total": "int"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}

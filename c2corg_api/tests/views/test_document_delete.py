@@ -19,7 +19,7 @@ from c2corg_api.models.document import (
     UpdateType,
     get_available_langs,
 )
-from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.feed import (
@@ -1079,6 +1079,31 @@ class TestDocumentDeleteRest(BaseTestRest):
 
     def test_delete_locale_waypoint(self):
         self._test_delete_locale(self.waypoint3.document_id, 'fr')
+
+    def test_delete_locale_added_in_its_own_version(self):
+        # a translation added later has a history metadata entry of its own,
+        # which the deletion removes too
+        self.waypoint3.locales.append(
+            WaypointLocale(lang='de', title='Granier', description='...')
+        )
+        self.session.flush()
+        DocumentRest.update_version(
+            self.waypoint3,
+            self.global_userids['contributor'],
+            'add de',
+            [UpdateType.LANG],
+            ['de'],
+        )
+        history_metadata_id = (
+            self.session.query(DocumentVersion.history_metadata_id)
+            .filter(DocumentVersion.document_id == self.waypoint3.document_id)
+            .filter(DocumentVersion.lang == 'de')
+            .scalar()
+        )
+
+        self._test_delete_locale(self.waypoint3.document_id, 'de')
+
+        assert self.session.get(HistoryMetaData, history_metadata_id) is None
 
     def test_delete_locale_route_with_only_one_locale(self):
         document_id = self.route3.document_id

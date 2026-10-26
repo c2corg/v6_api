@@ -1,7 +1,6 @@
 import functools
 
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPForbidden
 
 from c2corg_api.models.common.fields_xreport import fields_xreport
@@ -12,10 +11,13 @@ from c2corg_api.models.xreport import (
     ArchiveXreportLocale,
     Xreport,
     XreportLocale,
-    schema_create_xreport,
-    schema_update_xreport,
-    schema_xreport,
-    schema_xreport_without_personal,
+)
+from c2corg_api.schemas.base import body_validator
+from c2corg_api.schemas.xreport import (
+    XreportCreateSchema,
+    XreportUpdateSchema,
+    xreport_schema,
+    xreport_without_personal_schema,
 )
 from c2corg_api.views import cors_policy, restricted_json_view, set_private_cache_header
 from c2corg_api.views import set_creator as set_creator_on_documents
@@ -63,34 +65,32 @@ class XreportRest(DocumentRest):
             # xreport (including personal information)
             return self._get(
                 xreport_documents_config,
-                schema_xreport_without_personal,
+                xreport_without_personal_schema,
                 clazz_locale=XreportLocale,
                 set_custom_fields=set_author,
             )
 
         return self._get(
             xreport_documents_config,
-            schema_xreport,
+            xreport_schema,
             clazz_locale=XreportLocale,
             custom_cache_key='private',
             set_custom_fields=set_author,
         )
 
     @restricted_json_view(
-        schema=schema_create_xreport,
         validators=[
-            colander_body_validator,
+            body_validator(XreportCreateSchema),
             validate_xreport_create,
             validate_associations_create,
         ],
     )
     def collection_post(self):
-        return self._collection_post(schema_xreport, allow_anonymous=True)
+        return self._collection_post(xreport_schema, allow_anonymous=True)
 
     @restricted_json_view(
-        schema=schema_update_xreport,
         validators=[
-            colander_body_validator,
+            body_validator(XreportUpdateSchema),
             validate_id,
             validate_xreport_update,
             validate_associations_update,
@@ -100,7 +100,7 @@ class XreportRest(DocumentRest):
         if not _has_permission(self.request, self.request.validated['id']):
             raise HTTPForbidden('No permission to change this xreport')
 
-        return self._put(Xreport, schema_xreport)
+        return self._put(Xreport, xreport_schema)
 
 
 def _has_permission(request, xreport_id):
@@ -134,7 +134,7 @@ class XreportVersionRest(DocumentVersionRest):
             ArchiveXreport,
             XREPORT_TYPE,
             ArchiveXreportLocale,
-            schema_xreport_without_personal,
+            xreport_without_personal_schema,
         )
 
 

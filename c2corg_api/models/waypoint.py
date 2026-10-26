@@ -1,4 +1,3 @@
-from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import (
     Boolean,
     Column,
@@ -15,14 +14,6 @@ from c2corg_api.models.document import (
     ArchiveDocumentLocale,
     Document,
     DocumentLocale,
-    get_geometry_schema_overrides,
-    schema_attributes,
-    schema_locale_attributes,
-)
-from c2corg_api.models.schema_utils import (
-    get_create_schema,
-    get_update_schema,
-    restrict_schema,
 )
 from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
@@ -336,37 +327,3 @@ class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
     }
 
     __table_args__ = Base.__table_args__
-
-
-schema_waypoint_locale = SQLAlchemySchemaNode(
-    WaypointLocale,
-    # whitelisted attributes
-    includes=schema_locale_attributes + attributes_locales,
-    overrides={'version': {'missing': None}},
-)
-
-
-schema_waypoint = SQLAlchemySchemaNode(
-    Waypoint,
-    # whitelisted attributes
-    includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {'missing': None},
-        'version': {'missing': None},
-        'locales': {'children': [schema_waypoint_locale]},
-        'geometry': get_geometry_schema_overrides(['POINT']),
-    },
-)
-
-schema_create_waypoint = get_create_schema(schema_waypoint)
-schema_update_waypoint = get_update_schema(schema_waypoint)
-schema_association_waypoint = restrict_schema(
-    schema_waypoint,
-    [
-        'elevation',
-        'locales.title',
-        'locales.access_period',
-        'geometry.geom',
-        'public_transportation_rating',
-    ],
-)

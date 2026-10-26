@@ -1,21 +1,19 @@
 import functools
 
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest
 
 from c2corg_api.models.area import (
     AREA_TYPE,
     ArchiveArea,
     Area,
-    schema_area,
-    schema_create_area,
-    schema_update_area,
 )
 from c2corg_api.models.area_association import update_area
 from c2corg_api.models.cache_version import update_cache_version_for_area
 from c2corg_api.models.common.fields_area import fields_area
 from c2corg_api.models.document import ArchiveDocumentLocale, UpdateType
+from c2corg_api.schemas.area import AreaCreateSchema, AreaUpdateSchema, area_schema
+from c2corg_api.schemas.base import body_validator
 from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views.document import (
     DocumentRest,
@@ -52,24 +50,22 @@ class AreaRest(DocumentRest):
 
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
-        return self._get(area_documents_config, schema_area, include_areas=False)
+        return self._get(area_documents_config, area_schema, include_areas=False)
 
     @restricted_json_view(
-        schema=schema_create_area,
         validators=[
-            colander_body_validator,
+            body_validator(AreaCreateSchema),
             validate_area_create,
             validate_associations_create,
         ],
         permission='moderator',
     )
     def collection_post(self):
-        return self._collection_post(schema_area, after_add=insert_associations)
+        return self._collection_post(area_schema, after_add=insert_associations)
 
     @restricted_json_view(
-        schema=schema_update_area,
         validators=[
-            colander_body_validator,
+            body_validator(AreaUpdateSchema),
             validate_id,
             validate_area_update,
             validate_associations_update,
@@ -84,7 +80,7 @@ class AreaRest(DocumentRest):
             ):
                 raise HTTPBadRequest('No permission to change the geometry')
 
-        return self._put(Area, schema_area, after_update=update_associations)
+        return self._put(Area, area_schema, after_update=update_associations)
 
 
 @resource(path='/areas/{id}/{lang}/info', cors_policy=cors_policy)
@@ -118,5 +114,5 @@ class AreaVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
         return self._get_version(
-            ArchiveArea, AREA_TYPE, ArchiveDocumentLocale, schema_area
+            ArchiveArea, AREA_TYPE, ArchiveDocumentLocale, area_schema
         )

@@ -4,9 +4,7 @@ from datetime import UTC, datetime, timedelta
 from os import urandom
 from urllib.parse import urlencode
 
-import colander
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 from pydiscourse.exceptions import DiscourseClientError
 from pyramid.httpexceptions import (
     HTTPInternalServerError,
@@ -21,6 +19,8 @@ from c2corg_api.models.sso import (
 )
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.schemas.base import Schema, body_validator
+from c2corg_api.schemas.types import OneOf, Str
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import log_validated_user_i_know_what_i_do
@@ -39,25 +39,20 @@ CONST_EXPIRE_AFTER_MINUTES = 10
 log = logging.getLogger(__name__)
 
 
-class SsoSyncSchema(colander.MappingSchema):
-    sso_key = colander.SchemaNode(colander.String())
-    external_id = colander.SchemaNode(colander.String())
-    email = colander.SchemaNode(colander.String(), missing=None)
-    username = colander.SchemaNode(colander.String(), missing=None)
-    name = colander.SchemaNode(colander.String(), missing=None)
-    forum_username = colander.SchemaNode(colander.String(), missing=None)
-    lang = colander.SchemaNode(
-        colander.String(), validator=colander.OneOf(default_langs), missing=None
-    )
-    groups = colander.SchemaNode(colander.String(), missing=None)
-
-
-sso_sync_schema = SsoSyncSchema()
+class SsoSyncSchema(Schema):
+    sso_key: Str()
+    external_id: Str()
+    email: Str() = None
+    username: Str() = None
+    name: Str() = None
+    forum_username: Str() = None
+    lang: OneOf(default_langs) = None
+    groups: Str() = None
 
 
 def sso_sync_validator(request, **kwargs):
     if 'sso_key' not in request.validated:
-        return  # validated by colander schema
+        return  # invalid body, see the schema
     sso_key = (
         DBSession.query(SsoKey)
         .filter(SsoKey.key == request.validated['sso_key'])
@@ -73,7 +68,7 @@ def sso_sync_validator(request, **kwargs):
 
     # search user by external_id
     if 'external_id' not in request.validated:
-        return  # validated by colander schema
+        return  # invalid body, see the schema
     sso_external_id = (
         DBSession.query(SsoExternalId)
         .filter(SsoExternalId.domain == sso_key.domain)
@@ -117,9 +112,8 @@ def sso_sync_validator(request, **kwargs):
 @resource(path='/sso_sync', cors_policy=cors_policy)
 class SsoSyncRest(ACLDefault):
     @json_view(
-        schema=sso_sync_schema,
         validators=[
-            colander_body_validator,
+            body_validator(SsoSyncSchema),
             sso_sync_validator,
         ],
     )
@@ -235,16 +229,13 @@ def sso_expire_from_now():
     return localized_now() + timedelta(minutes=CONST_EXPIRE_AFTER_MINUTES)
 
 
-class SsoLoginSchema(colander.MappingSchema):
-    token = colander.SchemaNode(colander.String())
-
-
-sso_login_schema = SsoLoginSchema()
+class SsoLoginSchema(Schema):
+    token: Str()
 
 
 def validate_token(request, **kwargs):
     if 'token' not in request.validated:
-        return  # validated by colander schema
+        return  # invalid body, see the schema
 
     sso_external_id = (
         DBSession.query(SsoExternalId)
@@ -264,7 +255,7 @@ def validate_token(request, **kwargs):
 
 @resource(path='/sso_login', cors_policy=cors_policy)
 class SsoLoginRest(ACLDefault):
-    @view(schema=sso_login_schema, validators=[colander_body_validator, validate_token])
+    @view(validators=[body_validator(SsoLoginSchema), validate_token])
     def post(self):
         user = self.request.validated['sso_user']
         token = log_validated_user_i_know_what_i_do(user, self.request)

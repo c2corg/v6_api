@@ -1,14 +1,14 @@
 import logging
 
-from colander import Integer, MappingSchema, SchemaNode, required
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest
 
 from c2corg_api import DBSession
 from c2corg_api.models.document import Document
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.route import ROUTE_TYPE
+from c2corg_api.schemas.base import Schema, body_validator
+from c2corg_api.schemas.types import Int
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import cors_policy, restricted_json_view
@@ -17,8 +17,8 @@ from c2corg_api.views.validation import create_int_validator
 log = logging.getLogger(__name__)
 
 
-class DocumentTagSchema(MappingSchema):
-    document_id = SchemaNode(Integer(), missing=required)
+class DocumentTagSchema(Schema):
+    document_id: Int
 
 
 def get_tag_relation(user_id, document_id):
@@ -58,8 +58,7 @@ def validate_document(request, **kwargs):
 @resource(path='/tags/add', cors_policy=cors_policy)
 class DocumentTagRest(ACLDefault):
     @restricted_json_view(
-        schema=DocumentTagSchema(),
-        validators=[colander_body_validator, validate_document],
+        validators=[body_validator(DocumentTagSchema), validate_document],
     )
     def post(self):
         """Tag the given document as todo.
@@ -103,8 +102,7 @@ class DocumentTagRest(ACLDefault):
 @resource(path='/tags/remove', cors_policy=cors_policy)
 class DocumentUntagRest(ACLDefault):
     @restricted_json_view(
-        schema=DocumentTagSchema(),
-        validators=[colander_body_validator, validate_document],
+        validators=[body_validator(DocumentTagSchema), validate_document],
     )
     def post(self):
         """Untag the given document.

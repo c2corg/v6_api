@@ -1,4 +1,3 @@
-from colanderalchemy.schema import SQLAlchemySchemaNode
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, column
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import PrimaryKeyConstraint
@@ -116,14 +115,6 @@ class AssociationLog(Base):
     written_at = Column(
         DateTime(timezone=True), default=func.now(), nullable=False, index=True
     )
-
-
-schema_association = SQLAlchemySchemaNode(
-    Association,
-    # whitelisted attributes
-    includes=['parent_document_id', 'child_document_id'],
-    overrides={},
-)
 
 
 def exists_already(link):

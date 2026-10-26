@@ -1,0 +1,34 @@
+{
+  "body": {
+    "following": [
+      {
+        "activities": "null",
+        "areas": [],
+        "available_langs": [
+          "str"
+        ],
+        "categories": [
+          "str"
+        ],
+        "document_id": "int",
+        "forum_username": "str",
+        "locales": [
+          {
+            "lang": "str",
+            "version": "int"
+          }
+        ],
+        "name": "str",
+        "protected": "bool",
+        "type": "str",
+        "version": "int"
+      }
+    ]
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}
