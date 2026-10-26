@@ -125,7 +125,7 @@ _coverages_cache = {'loaded_at': None, 'coverages': []}
 
 
 def _get_coverage_polygons():
-    """returns the list of (coverage_type, shapely polygon)"""
+    """Return the list of (coverage_type, shapely polygon)."""
     loaded_at = _coverages_cache['loaded_at']
     if loaded_at is None or time.monotonic() - loaded_at > COVERAGES_CACHE_TTL:
         _coverages_cache['coverages'] = [
@@ -138,13 +138,13 @@ def _get_coverage_polygons():
 
 
 def clear_coverages_cache():
-    """forget the cached coverage polygons (they are loaded again on demand)"""
+    """Forget the cached coverage polygons (they are loaded again on demand)."""
     _coverages_cache['loaded_at'] = None
     _coverages_cache['coverages'] = []
 
 
 def get_coverage(lon, lat):
-    """get the coverage that contains a point(lon, lat)"""
+    """Get the coverage that contains a point(lon, lat)."""
     pt = Point(lon, lat)
 
     for coverage_type, poly in _get_coverage_polygons():
@@ -155,7 +155,7 @@ def get_coverage(lon, lat):
 
 
 def get_coverages(polygon):
-    """get all the coverages that intersects a polygon"""
+    """Get all the coverages that intersects a polygon."""
     return [
         coverage_type
         for coverage_type, poly in _get_coverage_polygons()

@@ -639,9 +639,7 @@ def get_waypoints_reachable_ids():
 
 
 def get_waypoint_ids_within_geometry(intersection_geom_wkt):
-    """
-    Get the ids of all waypoints whose geometry intersects the given
-    geometry.
+    """Get the ids of all waypoints whose geometry intersects the given geometry.
 
     Unlike get_waypoints_reachable_ids (static ID-set based on the
     WaypointStoparea table), this computes the ID-set dynamically from an

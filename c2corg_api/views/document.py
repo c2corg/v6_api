@@ -121,9 +121,11 @@ class DocumentRest(ACLDefault):
         return get_documents(documents_config, meta_params, search_documents)
 
     def _get_transport_reachable_ids(self, doc_type):
-        """Returns the ids of the routes or waypoints reachable by public
-        transport, according to the `transport_*` parameters of the query
-        string (see parse_transport_params), or None if there are none.
+        """Return the ids of the routes or waypoints reachable by public transport.
+
+        They are computed according to the `transport_*` parameters of the
+        query string (see parse_transport_params). Return None if there are
+        none.
         """
         if doc_type not in (ROUTE_TYPE, WAYPOINT_TYPE):
             return None
@@ -142,7 +144,7 @@ class DocumentRest(ACLDefault):
                 self.request.GET, prefix=TRANSPORT_QUERY_PREFIX
             )
         except ValueError as exc:
-            raise HTTPBadRequest(str(exc))
+            raise HTTPBadRequest(str(exc)) from exc
 
         document_type = 'route' if doc_type == ROUTE_TYPE else 'waypoint'
         return get_cached_transport_document_ids(transport, document_type)

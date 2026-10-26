@@ -1849,8 +1849,8 @@ class TestNavitiaRestParams(BaseTestCase):
         retour_response = {'journeys': []}
 
         with (
-            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,  # noqa
-            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,  # noqa
+            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
+            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,
         ):
             mock_get_coverage.return_value = 'fr-se'
             mock_navitia_get.side_effect = self._navitia_by_leg(
@@ -1882,8 +1882,8 @@ class TestNavitiaRestParams(BaseTestCase):
         }
 
         with (
-            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,  # noqa
-            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,  # noqa
+            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
+            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,
         ):
             mock_get_coverage.return_value = 'fr-se'
             mock_navitia_get.side_effect = self._navitia_by_leg(
@@ -1921,8 +1921,8 @@ class TestNavitiaRestParams(BaseTestCase):
         }
 
         with (
-            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,  # noqa
-            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,  # noqa
+            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
+            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,
         ):
             mock_get_coverage.return_value = 'fr-se'
             mock_navitia_get.side_effect = self._navitia_by_leg(
@@ -1960,8 +1960,8 @@ class TestNavitiaRestParams(BaseTestCase):
         }
 
         with (
-            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,  # noqa
-            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,  # noqa
+            mock.patch('c2corg_api.views.navitia.get_coverage') as mock_get_coverage,
+            mock.patch('c2corg_api.views.navitia.navitia_get') as mock_navitia_get,
         ):
             mock_get_coverage.return_value = 'fr-se'
             mock_navitia_get.side_effect = self._navitia_by_leg(
@@ -2262,13 +2262,13 @@ class TestNavitiaRestParams(BaseTestCase):
     # /navitia/roundtripreachable endpoint
     def test_navitia_roundtripreachable_missing_params(self):
         self.app.get(
-            '/navitia/roundtripreachable?document_type=waypoint&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00',  # noqa
+            '/navitia/roundtripreachable?document_type=waypoint&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00',
             status=400,
         )
 
     def test_navitia_roundtripreachable_invalid_document_type(self):
         self.app.get(
-            '/navitia/roundtripreachable?document_id=1&document_type=invalid&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00',  # noqa
+            '/navitia/roundtripreachable?document_id=1&document_type=invalid&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00',
             status=400,
         )
 
@@ -2276,10 +2276,10 @@ class TestNavitiaRestParams(BaseTestCase):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.prepare_round_trip_document'
-            ) as mock_prepare,  # noqa
+            ) as mock_prepare,
             mock.patch(
                 'c2corg_api.views.navitia.best_round_trip_result'
-            ) as mock_best_result,  # noqa
+            ) as mock_best_result,
         ):
             mock_prepare.return_value = {'prepared': True}
             mock_best_result.return_value = {
@@ -2297,7 +2297,7 @@ class TestNavitiaRestParams(BaseTestCase):
             }
 
             response = self.app.get(
-                '/navitia/roundtripreachable?document_id=1&document_type=waypoint&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00&hiking_duration=60',  # noqa
+                '/navitia/roundtripreachable?document_id=1&document_type=waypoint&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00&hiking_duration=60',
                 status=200,
             )
 
@@ -2316,7 +2316,7 @@ class TestNavitiaRestParams(BaseTestCase):
             mock_get_wps.return_value = []
 
             response = self.app.get(
-                '/navitia/roundtripreachable?document_id=1&document_type=waypoint&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00',  # noqa
+                '/navitia/roundtripreachable?document_id=1&document_type=waypoint&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00',
                 status=200,
             )
 
@@ -2357,7 +2357,7 @@ class TestNavitiaRestParams(BaseTestCase):
             'document_id': document_id,
             'lon': lon,
             'lat': lat,
-            'coords': '%s;%s' % (lon, lat),
+            'coords': f'{lon};{lat}',
             'coverage': 'fr-se',
         }
 
@@ -2583,11 +2583,11 @@ class TestNavitiaRestParams(BaseTestCase):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.prepare_round_trip_document'
-            ) as mock_prepare,  # noqa
+            ) as mock_prepare,
             mock.patch(
                 'c2corg_api.views.navitia.best_round_trip_result'
-            ) as mock_is_reachable,  # noqa
-            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,  # noqa
+            ) as mock_is_reachable,
+            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,
         ):
             mock_prepare.side_effect = lambda document_id, *args: {
                 'document_id': document_id
@@ -2666,11 +2666,11 @@ class TestNavitiaRestParams(BaseTestCase):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.prepare_round_trip_document'
-            ) as mock_prepare,  # noqa
+            ) as mock_prepare,
             mock.patch(
                 'c2corg_api.views.navitia.best_round_trip_result'
-            ) as mock_is_reachable,  # noqa
-            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,  # noqa
+            ) as mock_is_reachable,
+            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,
         ):
             mock_prepare.side_effect = lambda document_id, *args: {
                 'document_id': document_id
@@ -2851,13 +2851,13 @@ class TestReachableIdsByGeometry(BaseTestCase):
     (BaseDocumentTestRest) fixtures.
     """
 
-    def setUp(self):  # noqa
+    def setUp(self):
         BaseTestCase.setUp(self)
         self._add_test_data()
 
     def _add_test_data(self):
         from c2corg_api.views.route import get_route_ids_within_geometry
-        from c2corg_api.views.waypoint import get_waypoint_ids_within_geometry  # noqa
+        from c2corg_api.views.waypoint import get_waypoint_ids_within_geometry
 
         self.get_route_ids_within_geometry = get_route_ids_within_geometry
         self.get_waypoint_ids_within_geometry = get_waypoint_ids_within_geometry
@@ -2946,11 +2946,11 @@ class TestReachableIdsByGeometry(BaseTestCase):
 
 
 class TestCoveragesCache(BaseTestCase):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         clear_coverages_cache()
 
-    def tearDown(self):  # noqa
+    def tearDown(self):
         clear_coverages_cache()
         super().tearDown()
 

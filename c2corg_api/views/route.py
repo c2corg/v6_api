@@ -808,9 +808,10 @@ def get_routes_reachable_ids():
 
 
 def get_route_ids_within_geometry(intersection_geom_wkt, max_duration_seconds=None):
-    """
-    Get the ids of all routes having at least one access waypoint whose
-    geometry intersects the given geometry.
+    """Get the ids of all routes with an access waypoint in the given geometry.
+
+    The geometry has to intersect the geometry of at least one access
+    waypoint of the route.
 
     Unlike get_routes_reachable_ids (static ID-set based on the
     WaypointStoparea table), this computes the ID-set dynamically from an
