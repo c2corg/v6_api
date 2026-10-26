@@ -1,5 +1,3 @@
-import colander
-from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, SmallInteger, String
 
 from c2corg_api.models import Base, enums, schema
@@ -9,14 +7,6 @@ from c2corg_api.models.document import (
     ArchiveDocumentLocale,
     Document,
     DocumentLocale,
-    get_geometry_schema_overrides,
-    schema_attributes,
-    schema_locale_attributes,
-)
-from c2corg_api.models.schema_utils import (
-    get_create_schema,
-    get_update_schema,
-    restrict_schema,
 )
 from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
@@ -249,30 +239,3 @@ class ArchiveOutingLocale(_OutingLocaleMixin, ArchiveDocumentLocale):
     )
 
     __table_args__ = Base.__table_args__
-
-
-schema_outing_locale = SQLAlchemySchemaNode(
-    OutingLocale,
-    # whitelisted attributes
-    includes=schema_locale_attributes + attributes_locales,
-    overrides={'version': {'missing': None}},
-)
-
-schema_outing = SQLAlchemySchemaNode(
-    Outing,
-    # whitelisted attributes
-    includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {'missing': None},
-        'version': {'missing': None},
-        'locales': {'children': [schema_outing_locale]},
-        'activities': {'validator': colander.Length(min=1)},
-        'geometry': get_geometry_schema_overrides(['LINESTRING', 'MULTILINESTRING']),
-    },
-)
-
-schema_create_outing = get_create_schema(schema_outing)
-schema_update_outing = get_update_schema(schema_outing)
-schema_association_outing = restrict_schema(
-    schema_outing, ['locales.title', 'activities', 'date_start', 'date_end']
-)

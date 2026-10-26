@@ -28,10 +28,13 @@ from shapely.ops import transform as shapely_transform
 from sqlalchemy import or_
 
 from c2corg_api.models import DBSession
-from c2corg_api.models.area import Area, schema_listing_area
+from c2corg_api.models.area import Area
 from c2corg_api.models.association import Association
-from c2corg_api.models.route import Route, schema_route
-from c2corg_api.models.waypoint import Waypoint, schema_waypoint
+from c2corg_api.models.route import Route
+from c2corg_api.models.waypoint import Waypoint
+from c2corg_api.schemas.area import area_listing_schema
+from c2corg_api.schemas.route import route_schema
+from c2corg_api.schemas.waypoint import waypoint_schema
 from c2corg_api.views import cors_policy, to_json_dict
 from c2corg_api.views.coverage import get_coverage
 from c2corg_api.views.route import (
@@ -410,7 +413,7 @@ def compute_journey_reachable_routes(job_id, request):
 
         for wp in wp_objects:
             result = is_wp_journey_reachable(
-                to_json_dict(wp, schema_waypoint), journey_params
+                to_json_dict(wp, waypoint_schema), journey_params
             )
             navitia_wp_map[wp.document_id] = result
             count += 1
@@ -431,9 +434,9 @@ def compute_journey_reachable_routes(job_id, request):
             for area in areas or []:
                 area_obj = areas_map.get(area.get('document_id'))
                 if area_obj:
-                    json_areas.append(to_json_dict(area_obj, schema_listing_area))
+                    json_areas.append(to_json_dict(area_obj, area_listing_schema))
             route.areas = json_areas
-            routes.append(to_json_dict(route, schema_route, True))
+            routes.append(to_json_dict(route, route_schema, True))
 
         r.set(
             f'job:{job_id}:result',
@@ -497,7 +500,7 @@ def compute_journey_reachable_waypoints(job_id, request):
             count += 1
             r.publish(f'job:{job_id}:events', f'not_found:{not_found}')
             reachable = is_wp_journey_reachable(
-                to_json_dict(waypoint, schema_waypoint), journey_params
+                to_json_dict(waypoint, waypoint_schema), journey_params
             )
             if reachable:
                 found += 1
@@ -505,9 +508,9 @@ def compute_journey_reachable_waypoints(job_id, request):
                 for area in areas or []:
                     area_obj = areas_map.get(area.get('document_id'))
                     if area_obj:
-                        json_areas.append(to_json_dict(area_obj, schema_listing_area))
+                        json_areas.append(to_json_dict(area_obj, area_listing_schema))
                 waypoint.areas = json_areas
-                waypoints.append(to_json_dict(waypoint, schema_waypoint, True))
+                waypoints.append(to_json_dict(waypoint, waypoint_schema, True))
             else:
                 not_found += 1
             _store_job_progress(r, job_id, count, found, not_found)
@@ -700,7 +703,7 @@ class NavitiaIsochronesReachableRoutesRest:
 
                 navitia_wp_map = {
                     wp.document_id: is_wp_in_isochrone(
-                        to_json_dict(wp, schema_waypoint), isochrone_geom
+                        to_json_dict(wp, waypoint_schema), isochrone_geom
                     )
                     for wp in wp_objects
                 }
@@ -723,12 +726,12 @@ class NavitiaIsochronesReachableRoutesRest:
                             area_obj = areas_map.get(area.get('document_id'))
                             if area_obj:
                                 json_areas.append(
-                                    to_json_dict(area_obj, schema_listing_area)
+                                    to_json_dict(area_obj, area_listing_schema)
                                 )
 
                         # assign JSON areas to the waypoint
                         route.areas = json_areas
-                        route_dict = to_json_dict(route, schema_route, True)
+                        route_dict = to_json_dict(route, route_schema, True)
                         routes.append(route_dict)
 
             return {'documents': routes, 'total': len(routes), 'isochron_geom': geojson}
@@ -774,7 +777,7 @@ class NavitiaIsochronesReachableWaypointsRest:
                 for waypoint, areas in results:
                     # check if wp is in isochrone
                     if is_wp_in_isochrone(
-                        to_json_dict(waypoint, schema_waypoint), isochrone_geom
+                        to_json_dict(waypoint, waypoint_schema), isochrone_geom
                     ):
                         json_areas = []
                         if areas is None:
@@ -784,12 +787,12 @@ class NavitiaIsochronesReachableWaypointsRest:
                             area_obj = areas_map.get(area.get('document_id'))
                             if area_obj:
                                 json_areas.append(
-                                    to_json_dict(area_obj, schema_listing_area)
+                                    to_json_dict(area_obj, area_listing_schema)
                                 )
 
                         # assign JSON areas to the waypoint
                         waypoint.areas = json_areas
-                        wp_dict = to_json_dict(waypoint, schema_waypoint, True)
+                        wp_dict = to_json_dict(waypoint, waypoint_schema, True)
                         waypoints.append(wp_dict)
 
             return {
@@ -1437,7 +1440,7 @@ def prepare_round_trip_document(
     access_waypoints = _get_access_waypoints_for_document(document_id, document_type)
 
     targets = [
-        resolve_round_trip_target(to_json_dict(wp, schema_waypoint))
+        resolve_round_trip_target(to_json_dict(wp, waypoint_schema))
         for wp in access_waypoints
     ]
 

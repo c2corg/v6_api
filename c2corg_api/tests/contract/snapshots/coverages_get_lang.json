@@ -1,0 +1,36 @@
+{
+  "body": {
+    "associations": {},
+    "available_langs": [
+      "str"
+    ],
+    "coverage_type": "str",
+    "document_id": "int",
+    "geometry": {
+      "geom": "null",
+      "geom_detail": "str",
+      "version": "int"
+    },
+    "locales": [
+      {
+        "description": "null",
+        "lang": "str",
+        "summary": "null",
+        "title": "str",
+        "topic_id": "null",
+        "version": "int"
+      }
+    ],
+    "protected": "bool",
+    "quality": "str",
+    "type": "str",
+    "version": "int"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json",
+    "ETag": "<etag>"
+  },
+  "status": 200
+}

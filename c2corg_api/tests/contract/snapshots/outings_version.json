@@ -1,0 +1,86 @@
+{
+  "body": {
+    "document": {
+      "access_condition": "null",
+      "activities": [
+        "str"
+      ],
+      "condition_rating": "null",
+      "cooked": {
+        "access_comment": "null",
+        "conditions": "null",
+        "conditions_levels": "null",
+        "description": "null",
+        "hut_comment": "null",
+        "lang": "str",
+        "participants": "null",
+        "route_description": "null",
+        "summary": "null",
+        "timing": "null",
+        "title": "str",
+        "version": "int",
+        "weather": "str"
+      },
+      "date_end": "str",
+      "date_start": "str",
+      "disable_comments": "null",
+      "document_id": "int",
+      "elevation_access": "null",
+      "elevation_max": "int",
+      "elevation_min": "null",
+      "frequentation": "null",
+      "geometry": {
+        "geom": "str",
+        "geom_detail": "str",
+        "version": "int"
+      },
+      "height_diff_down": "null",
+      "height_diff_up": "null",
+      "hiking_rating": "null",
+      "hut_status": "null",
+      "length_total": "null",
+      "lift_status": "null",
+      "locales": [
+        {
+          "access_comment": "null",
+          "conditions": "null",
+          "conditions_levels": "null",
+          "description": "null",
+          "hut_comment": "null",
+          "lang": "str",
+          "participants": "null",
+          "route_description": "null",
+          "summary": "null",
+          "timing": "null",
+          "title": "str",
+          "version": "int",
+          "weather": "str"
+        }
+      ],
+      "partial_trip": "null",
+      "participant_count": "null",
+      "protected": "bool",
+      "public_transport": "null",
+      "quality": "str",
+      "type": "str",
+      "version": "int"
+    },
+    "next_version_id": "null",
+    "previous_version_id": "null",
+    "version": {
+      "comment": "str",
+      "masked": "bool",
+      "name": "str",
+      "user_id": "int",
+      "version_id": "int",
+      "written_at": "str"
+    }
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json",
+    "ETag": "<etag>"
+  },
+  "status": 200
+}

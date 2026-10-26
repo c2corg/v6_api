@@ -1,21 +1,11 @@
-from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import Column, ForeignKey, Integer
 
 from c2corg_api.models import schema
 from c2corg_api.models.common import document_types
-from c2corg_api.models.common.fields_coverage import fields_coverage
 from c2corg_api.models.document import (
     Document,
-    get_geometry_schema_overrides,
-    schema_attributes,
-    schema_document_locale,
 )
 from c2corg_api.models.enums import coverage_types
-from c2corg_api.models.schema_utils import (
-    get_create_schema,
-    get_update_schema,
-    restrict_schema,
-)
 from c2corg_api.models.utils import copy_attributes
 
 COVERAGE_TYPE = document_types.COVERAGE_TYPE
@@ -65,25 +55,3 @@ class Coverage(_CoverageMixin, Document):
     def update(self, other):
         super().update(other)
         copy_attributes(other, self, attributes)
-
-
-schema_coverage_locale = schema_document_locale
-schema_coverage_attributes = list(schema_attributes)
-
-schema_coverage = SQLAlchemySchemaNode(
-    Coverage,
-    # whitelisted attributes
-    includes=schema_coverage_attributes + attributes,
-    overrides={
-        'document_id': {'missing': None},
-        'version': {'missing': None},
-        'locales': {'children': [schema_coverage_locale]},
-        'geometry': get_geometry_schema_overrides(['POLYGON']),
-    },
-)
-
-schema_create_coverage = get_create_schema(schema_coverage)
-schema_update_coverage = get_update_schema(schema_coverage)
-schema_listing_coverage = restrict_schema(
-    schema_coverage, fields_coverage.get('listing')
-)

@@ -1,20 +1,11 @@
-from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import Column, ForeignKey, Integer, SmallInteger, String
 from sqlalchemy.dialects.postgresql.array import ARRAY
 
 from c2corg_api.models import Base, enums, schema
 from c2corg_api.models.common import document_types
-from c2corg_api.models.common.fields_book import fields_book
 from c2corg_api.models.document import (
     ArchiveDocument,
     Document,
-    schema_attributes,
-    schema_document_locale,
-)
-from c2corg_api.models.schema_utils import (
-    get_create_schema,
-    get_update_schema,
-    restrict_schema,
 )
 from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
@@ -83,23 +74,3 @@ class ArchiveBook(_BookMixin, ArchiveDocument):
     }
 
     __table_args__ = Base.__table_args__
-
-
-schema_book_locale = schema_document_locale
-schema_book_attributes = list(schema_attributes)
-schema_book_attributes.remove('geometry')
-
-schema_book = SQLAlchemySchemaNode(
-    Book,
-    # whitelisted attributes
-    includes=schema_book_attributes + attributes,
-    overrides={
-        'document_id': {'missing': None},
-        'version': {'missing': None},
-        'locales': {'children': [schema_book_locale]},
-    },
-)
-
-schema_create_book = get_create_schema(schema_book)
-schema_update_book = get_update_schema(schema_book)
-schema_listing_book = restrict_schema(schema_book, fields_book.get('listing'))

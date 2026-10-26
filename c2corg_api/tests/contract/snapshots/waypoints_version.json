@@ -1,0 +1,54 @@
+{
+  "body": {
+    "document": {
+      "cooked": {
+        "description": "null",
+        "external_resources": "null",
+        "lang": "str",
+        "summary": "null",
+        "title": "str",
+        "version": "int"
+      },
+      "document_id": "int",
+      "elevation": "int",
+      "geometry": {
+        "geom": "str",
+        "version": "int"
+      },
+      "locales": [
+        {
+          "description": "null",
+          "external_resources": "null",
+          "lang": "str",
+          "summary": "null",
+          "title": "str",
+          "version": "int"
+        }
+      ],
+      "maps_info": "null",
+      "prominence": "null",
+      "protected": "bool",
+      "quality": "str",
+      "type": "str",
+      "version": "int",
+      "waypoint_type": "str"
+    },
+    "next_version_id": "null",
+    "previous_version_id": "null",
+    "version": {
+      "comment": "str",
+      "masked": "bool",
+      "name": "str",
+      "user_id": "int",
+      "version_id": "int",
+      "written_at": "str"
+    }
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json",
+    "ETag": "<etag>"
+  },
+  "status": 200
+}

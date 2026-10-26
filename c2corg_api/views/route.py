@@ -3,13 +3,12 @@ from itertools import combinations
 from operator import and_
 
 from cornice.resource import resource, view
-from cornice.validators import colander_body_validator
 from sqlalchemy import case, func, literal_column
 from sqlalchemy.orm import load_only
 from sqlalchemy.sql.expression import column, or_, text, union
 
 from c2corg_api.models import DBSession
-from c2corg_api.models.area import Area, schema_listing_area
+from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
 from c2corg_api.models.common.attributes import (
@@ -25,13 +24,13 @@ from c2corg_api.models.route import (
     ArchiveRouteLocale,
     Route,
     RouteLocale,
-    schema_create_route,
-    schema_route,
-    schema_update_route,
 )
 from c2corg_api.models.utils import get_mid_point
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
+from c2corg_api.schemas.area import area_listing_schema
+from c2corg_api.schemas.base import body_validator
+from c2corg_api.schemas.route import RouteCreateSchema, RouteUpdateSchema, route_schema
 from c2corg_api.search.advanced_search import get_all_filtered_docs
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import (
@@ -128,7 +127,7 @@ class RouteRest(DocumentRest):
     def get(self):
         return self._get(
             route_documents_config,
-            schema_route,
+            route_schema,
             clazz_locale=RouteLocale,
             adapt_schema=route_schema_adaptor,
             include_maps=True,
@@ -136,9 +135,8 @@ class RouteRest(DocumentRest):
         )
 
     @restricted_json_view(
-        schema=schema_create_route,
         validators=[
-            colander_body_validator,
+            body_validator(RouteCreateSchema),
             validate_route_create,
             validate_associations_create,
             validate_required_associations,
@@ -150,15 +148,14 @@ class RouteRest(DocumentRest):
             'waypoints', []
         )
         return self._collection_post(
-            schema_route,
+            route_schema,
             before_add=functools.partial(set_default_geometry, linked_waypoints),
             after_add=init_linked_attributes,
         )
 
     @restricted_json_view(
-        schema=schema_update_route,
         validators=[
-            colander_body_validator,
+            body_validator(RouteUpdateSchema),
             validate_id,
             validate_route_update,
             validate_associations_update,
@@ -169,7 +166,7 @@ class RouteRest(DocumentRest):
     def put(self):
         return self._put(
             Route,
-            schema_route,
+            route_schema,
             before_update=update_default_geometry,
             after_update=update_linked_attributes,
         )
@@ -210,7 +207,7 @@ class RouteVersionRest(DocumentVersionRest):
             ArchiveRoute,
             ROUTE_TYPE,
             ArchiveRouteLocale,
-            schema_route,
+            route_schema,
             route_schema_adaptor,
         )
 
@@ -302,11 +299,11 @@ class ReachableRouteRest(DocumentRest):
             for area in areas:
                 area_obj = areas_map.get(area.get('document_id'))
                 if area_obj:
-                    json_areas.append(to_json_dict(area_obj, schema_listing_area))
+                    json_areas.append(to_json_dict(area_obj, area_listing_schema))
 
             # assign JSON areas to the route
             route.areas = json_areas
-            wp_dict = to_json_dict(route, schema_route, True)
+            wp_dict = to_json_dict(route, route_schema, True)
             routes.append(wp_dict)
 
         return {'documents': routes, 'total': count}

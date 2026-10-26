@@ -1,7 +1,6 @@
 import functools
 import urllib
 
-from colander import null
 from cornice.errors import Errors
 from dateutil import parser as datetime_parser
 from pyramid.httpexceptions import HTTPBadRequest
@@ -124,7 +123,7 @@ def validate_preferred_lang_param(request, **kwargs):
 
 
 def is_missing(val):
-    return val is None or val == '' or val == [] or val is null
+    return val is None or val == '' or val == []
 
 
 def check_required_fields(document, fields, request, updating):

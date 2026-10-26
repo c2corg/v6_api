@@ -1,12 +1,12 @@
 import logging
 
-from colander import Integer, MappingSchema, SchemaNode, required
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError
 
 from c2corg_api import DBSession
 from c2corg_api.models.user import User
+from c2corg_api.schemas.base import Schema, body_validator
+from c2corg_api.schemas.types import Int
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import cors_policy, restricted_json_view
@@ -17,8 +17,8 @@ from c2corg_api.views.validation import validate_body_user_id, validate_id
 log = logging.getLogger(__name__)
 
 
-class BlockSchema(MappingSchema):
-    user_id = SchemaNode(Integer(), missing=required)
+class BlockSchema(Schema):
+    user_id: Int
 
 
 def _get_user(user_id):
@@ -34,8 +34,7 @@ def _get_user(user_id):
 class UserBlockRest(ACLDefault):
     @restricted_json_view(
         permission='moderator',
-        schema=BlockSchema(),
-        validators=[colander_body_validator, validate_body_user_id],
+        validators=[body_validator(BlockSchema), validate_body_user_id],
     )
     def post(self):
         """Block the given user.
@@ -70,8 +69,7 @@ class UserBlockRest(ACLDefault):
 class UserUnblockRest(ACLDefault):
     @restricted_json_view(
         permission='moderator',
-        schema=BlockSchema(),
-        validators=[colander_body_validator, validate_body_user_id],
+        validators=[body_validator(BlockSchema), validate_body_user_id],
     )
     def post(self):
         """Unblock the given user.

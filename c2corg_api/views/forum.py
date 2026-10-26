@@ -1,8 +1,6 @@
 import logging
 
-import colander
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPInternalServerError
 
 from c2corg_api.models import DBSession
@@ -12,6 +10,8 @@ from c2corg_api.models.common import document_types
 from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.user import User
+from c2corg_api.schemas.base import Schema, body_validator
+from c2corg_api.schemas.types import Int, Str
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import cors_policy, restricted_view
@@ -19,12 +19,9 @@ from c2corg_api.views import cors_policy, restricted_view
 log = logging.getLogger(__name__)
 
 
-class SchemaTopicCreate(colander.MappingSchema):
-    document_id = colander.SchemaNode(colander.Int())
-    lang = colander.SchemaNode(colander.String())
-
-
-schema_topic_create = SchemaTopicCreate()
+class TopicCreateSchema(Schema):
+    document_id: Int
+    lang: Str()
 
 
 def validate_topic_create(request, **kwargs):
@@ -68,8 +65,7 @@ def validate_topic_create(request, **kwargs):
 )
 class ForumTopicRest(ACLDefault):
     @restricted_view(
-        schema=schema_topic_create,
-        validators=[colander_body_validator, validate_topic_create],
+        validators=[body_validator(TopicCreateSchema), validate_topic_create],
     )
     def collection_post(self):
         settings = self.request.registry.settings

@@ -4,15 +4,12 @@ import os
 from enum import Enum
 
 import bcrypt
-import colander
-from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.sql.functions import func
 from sqlalchemy.sql.schema import ForeignKey, Index
 
 from c2corg_api.models import Base, enums, schema, users_schema
-from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.utils import ArrayOfEnum
 
@@ -164,31 +161,4 @@ class User(Base):
 
 Index(
     'ix_users_user_lower_forum_username', func.lower(User.forum_username), unique=True
-)
-
-
-schema_user = SQLAlchemySchemaNode(
-    User,
-    # whitelisted attributes
-    includes=[
-        'id',
-        'username',
-        'forum_username',
-        'name',
-        'email',
-        'email_validated',
-        'moderator',
-    ],
-    overrides={'id': {'missing': None}},
-)
-
-
-schema_create_user = SQLAlchemySchemaNode(
-    User,
-    # whitelisted attributes
-    includes=['username', 'forum_username', 'name', 'email', 'lang'],
-    overrides={
-        'email': {'validator': colander.Email()},
-        'lang': {'validator': colander.OneOf(default_langs)},
-    },
 )

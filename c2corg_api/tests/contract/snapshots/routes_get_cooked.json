@@ -1,0 +1,219 @@
+{
+  "body": {
+    "activities": [
+      "str"
+    ],
+    "areas": [
+      {
+        "area_type": "str",
+        "available_langs": "null",
+        "document_id": "int",
+        "locales": [
+          {
+            "lang": "str",
+            "title": "str",
+            "version": "int"
+          }
+        ],
+        "protected": "bool",
+        "type": "str",
+        "version": "int"
+      }
+    ],
+    "associations": {
+      "articles": [],
+      "books": [],
+      "images": [],
+      "recent_outings": {
+        "documents": [
+          {
+            "activities": [
+              "str"
+            ],
+            "areas": [
+              {
+                "area_type": "str",
+                "available_langs": "null",
+                "document_id": "int",
+                "locales": [
+                  {
+                    "lang": "str",
+                    "title": "str",
+                    "version": "int"
+                  }
+                ],
+                "protected": "bool",
+                "type": "str",
+                "version": "int"
+              }
+            ],
+            "author": {
+              "name": "str",
+              "user_id": "int"
+            },
+            "available_langs": [
+              "str"
+            ],
+            "condition_rating": "null",
+            "date_end": "str",
+            "date_start": "str",
+            "document_id": "int",
+            "elevation_max": "int",
+            "geometry": {
+              "geom": "str",
+              "has_geom_detail": "bool",
+              "version": "int"
+            },
+            "height_diff_up": "null",
+            "hiking_rating": "null",
+            "img_count": "int",
+            "locales": [
+              {
+                "lang": "str",
+                "summary": "null",
+                "title": "str",
+                "version": "int"
+              }
+            ],
+            "protected": "bool",
+            "public_transport": "null",
+            "quality": "str",
+            "type": "str",
+            "version": "int"
+          }
+        ],
+        "total": "int"
+      },
+      "routes": [],
+      "waypoints": [
+        {
+          "areas": [
+            {
+              "area_type": "str",
+              "available_langs": "null",
+              "document_id": "int",
+              "locales": [
+                {
+                  "lang": "str",
+                  "title": "str",
+                  "version": "int"
+                }
+              ],
+              "protected": "bool",
+              "type": "str",
+              "version": "int"
+            }
+          ],
+          "available_langs": [
+            "str"
+          ],
+          "document_id": "int",
+          "elevation": "int",
+          "geometry": {
+            "geom": "str",
+            "version": "int"
+          },
+          "locales": [
+            {
+              "lang": "str",
+              "summary": "null",
+              "title": "str",
+              "version": "int"
+            }
+          ],
+          "protected": "bool",
+          "quality": "str",
+          "type": "str",
+          "version": "int",
+          "waypoint_type": "str"
+        }
+      ],
+      "xreports": []
+    },
+    "available_langs": [
+      "str"
+    ],
+    "calculated_duration": "float",
+    "cooked": {
+      "description": "null",
+      "external_resources": "null",
+      "gear": "str",
+      "lang": "str",
+      "remarks": "null",
+      "route_history": "null",
+      "summary": "null",
+      "title": "str",
+      "title_prefix": "str",
+      "topic_id": "null",
+      "version": "int"
+    },
+    "document_id": "int",
+    "durations": [
+      "str"
+    ],
+    "elevation_max": "int",
+    "elevation_min": "int",
+    "geometry": {
+      "geom": "str",
+      "geom_detail": "str",
+      "version": "int"
+    },
+    "glacier_gear": "str",
+    "height_diff_access": "null",
+    "height_diff_difficulties": "null",
+    "height_diff_down": "int",
+    "height_diff_up": "int",
+    "hiking_mtb_exposition": "null",
+    "hiking_rating": "null",
+    "lift_access": "null",
+    "locales": [
+      {
+        "description": "null",
+        "external_resources": "null",
+        "gear": "str",
+        "lang": "str",
+        "remarks": "null",
+        "route_history": "null",
+        "summary": "null",
+        "title": "str",
+        "title_prefix": "str",
+        "topic_id": "null",
+        "version": "int"
+      }
+    ],
+    "main_waypoint_id": "int",
+    "maps": [
+      {
+        "available_langs": "null",
+        "code": "str",
+        "document_id": "int",
+        "editor": "str",
+        "locales": [
+          {
+            "lang": "str",
+            "title": "str",
+            "version": "int"
+          }
+        ],
+        "protected": "bool",
+        "type": "str",
+        "version": "int"
+      }
+    ],
+    "orientations": "null",
+    "protected": "bool",
+    "public_transportation_rating": "str",
+    "quality": "str",
+    "route_length": "null",
+    "route_types": "null",
+    "type": "str",
+    "version": "int"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json",
+    "ETag": "<etag>"
+  },
+  "status": 200
+}

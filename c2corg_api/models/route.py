@@ -1,5 +1,3 @@
-import colander
-from colanderalchemy import SQLAlchemySchemaNode
 from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, SmallInteger, String
 from sqlalchemy.orm import relationship
 
@@ -10,14 +8,6 @@ from c2corg_api.models.document import (
     ArchiveDocumentLocale,
     Document,
     DocumentLocale,
-    get_geometry_schema_overrides,
-    schema_attributes,
-    schema_locale_attributes,
-)
-from c2corg_api.models.schema_utils import (
-    get_create_schema,
-    get_update_schema,
-    restrict_schema,
 )
 from c2corg_api.models.utils import ArrayOfEnum, copy_attributes
 
@@ -340,48 +330,3 @@ class ArchiveRouteLocale(_RouteLocaleMixin, ArchiveDocumentLocale):
     }
 
     __table_args__ = Base.__table_args__
-
-
-schema_route_locale = SQLAlchemySchemaNode(
-    RouteLocale,
-    # whitelisted attributes
-    includes=schema_locale_attributes + attributes_locales + ['title_prefix'],
-    overrides={'version': {'missing': None}},
-)
-
-schema_route = SQLAlchemySchemaNode(
-    Route,
-    # whitelisted attributes
-    includes=schema_attributes + attributes,
-    overrides={
-        'document_id': {'missing': None},
-        'version': {'missing': None},
-        'locales': {'children': [schema_route_locale]},
-        'activities': {'validator': colander.Length(min=1)},
-        'geometry': get_geometry_schema_overrides(['LINESTRING', 'MULTILINESTRING']),
-    },
-)
-
-schema_create_route = get_create_schema(schema_route)
-schema_update_route = get_update_schema(schema_route)
-schema_association_route = restrict_schema(
-    schema_route,
-    [
-        'locales.title',
-        'locales.title_prefix',
-        'elevation_min',
-        'elevation_max',
-        'activities',
-    ],
-)
-schema_association_waypoint_route = restrict_schema(
-    schema_route,
-    [
-        'locales.title',
-        'locales.title_prefix',
-        'elevation_min',
-        'elevation_max',
-        'activities',
-        'geometry.geom_detail',
-    ],
-)
