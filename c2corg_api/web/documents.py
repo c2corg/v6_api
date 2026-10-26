@@ -79,6 +79,21 @@ def include_document_type(app, prefix, rest, version_rest=None, info_rest=None):
 
 def include(app):
     """Add the document routes moved to FastAPI."""
+    from c2corg_api.views.area import AreaInfoRest, AreaRest, AreaVersionRest
+    from c2corg_api.views.article import (
+        ArticleRest,
+        ArticlesInfoRest,
+        ArticlesVersionRest,
+    )
     from c2corg_api.views.book import BookRest, BooksInfoRest, BooksVersionRest
+    from c2corg_api.views.coverage import CoverageRest
+    from c2corg_api.views.topo_map import TopoMapInfoRest, TopoMapRest
 
     include_document_type(app, 'books', BookRest, BooksVersionRest, BooksInfoRest)
+    include_document_type(
+        app, 'articles', ArticleRest, ArticlesVersionRest, ArticlesInfoRest
+    )
+    include_document_type(app, 'areas', AreaRest, AreaVersionRest, AreaInfoRest)
+    # maps have no version route, coverages neither version nor info
+    include_document_type(app, 'maps', TopoMapRest, info_rest=TopoMapInfoRest)
+    include_document_type(app, 'coverages', CoverageRest)
