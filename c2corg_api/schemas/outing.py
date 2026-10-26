@@ -31,10 +31,8 @@ class OutingSchema(DocumentSchema):
     locales: Seq(OutingLocaleSchema) = []
     geometry: Map(OutingGeometrySchema) = None
     access_condition: OneOf(a.access_conditions) = None
-    # as with Colander, the items of activities and avalanche_signs are not
-    # checked against their enum here
-    activities: Seq(Str(), min_length=1)
-    avalanche_signs: Seq(Str()) = None
+    activities: Seq(OneOf(a.activities), min_length=1)
+    avalanche_signs: Seq(OneOf(a.avalanche_signs)) = None
     condition_rating: OneOf(a.condition_ratings) = None
     date_end: Date
     date_start: Date

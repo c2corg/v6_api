@@ -105,6 +105,13 @@ class TestConversions:
         assert _error({'text': 'abcdef'}, 'text') == 'Longer than maximum length 5'
         assert _error({'choice': 'c'}, 'choice') == '"c" is not one of a, b'
 
+    def test_choice_items(self):
+        class Choices(Schema):
+            items: Seq(OneOf(['a', 'b'])) = None
+
+        _, errors = validate(Choices, {'items': ['a', 'c']})
+        assert dict(errors) == {'items.1': '"c" is not one of a, b'}
+
     def test_sequence_and_mapping(self):
         assert _error({'items': 'abc'}, 'items') == '"abc" is not iterable'
         assert _error({'non_empty': []}, 'non_empty') == 'Shorter than minimum length 1'
