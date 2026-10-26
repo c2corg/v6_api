@@ -4,6 +4,7 @@ import datetime
 import json
 import math
 
+from c2corg_api.ext.wkb import geojson_from_wkbelement
 from c2corg_api.schemas.base import DROP, Schema, validate
 from c2corg_api.schemas.geometry import Geometry
 from c2corg_api.schemas.types import (
@@ -145,6 +146,38 @@ class TestChecks:
             'Shorter than minimum length 3; Invalid email address; No x'
         )
         assert _value({'checked': 'a@b.org'}, 'checked') == 'a@b.org'
+
+
+class Track(Schema):
+    line: Geometry(['LINESTRING', 'MULTILINESTRING']) = None
+
+
+def _coordinates(geometry):
+    validated, errors = validate(Track, {'line': json.dumps(geometry)})
+    assert errors == []
+    return json.loads(geojson_from_wkbelement(validated['line']))['coordinates']
+
+
+class TestMixedDimensions:
+    def test_lowest_dimension_is_kept(self):
+        for positions, expected in (
+            ([[0, 0], [1, 1, 2]], [[0, 0], [1, 1]]),
+            ([[0, 0, 5], [1, 1, 6, 7]], [[0, 0, 5], [1, 1, 6]]),
+            ([[0, 0, 5, 6], [1, 1]], [[0, 0], [1, 1]]),
+        ):
+            line = {'type': 'LineString', 'coordinates': positions}
+            assert _coordinates(line) == expected
+
+    def test_same_dimension_is_unchanged(self):
+        line = {'type': 'LineString', 'coordinates': [[0, 0, 5, 6], [1, 1, 7, 8]]}
+        assert _coordinates(line) == [[0, 0, 5, 6], [1, 1, 7, 8]]
+
+    def test_across_the_lines_of_a_multilinestring(self):
+        lines = {
+            'type': 'MultiLineString',
+            'coordinates': [[[0, 0, 5, 6], [1, 1, 7, 8]], [[2, 2], [3, 3]]],
+        }
+        assert _coordinates(lines) == [[[0, 0], [1, 1]], [[2, 2], [3, 3]]]
 
 
 class TestGeometry:
