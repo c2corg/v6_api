@@ -30,7 +30,7 @@ def main(path):
         },
         Config=TransferConfig(multipart_chunksize=16 * 1024 * 1024),
     )
-    print('uploaded %s' % key)
+    print(f'uploaded {key}')
 
 
 if __name__ == '__main__':

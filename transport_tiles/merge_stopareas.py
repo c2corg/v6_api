@@ -27,7 +27,8 @@ METERS_PER_DEGREE = 111_320
 
 QUERY = """
     SELECT navitia_id, stoparea_name, line, operator,
-           ST_X(geom) AS lon, ST_Y(geom) AS lat
+           ST_X(ST_Transform(geom, 4326)) AS lon,
+           ST_Y(ST_Transform(geom, 4326)) AS lat
     FROM guidebook.stopareas
     WHERE geom IS NOT NULL
 """
@@ -94,7 +95,7 @@ def stop_feature(stoparea):
 
 
 def merge(stops, stopareas, max_distance=MAX_DISTANCE):
-    """Yields the stops, then the stop areas that no stop matched."""
+    """Yield the stops, then the stop areas that no stop matched."""
     tree = STRtree([Point(s['lon'], s['lat']) for s in stopareas])
     matched = set()
     for stop in stops:
@@ -117,7 +118,7 @@ def merge(stops, stopareas, max_distance=MAX_DISTANCE):
 
 def main(path, database_url):
     stopareas = load_stopareas(database_url)
-    print('%d stop areas' % len(stopareas))
+    print(f'{len(stopareas)} stop areas')
     temporary = path + '.merged'
     count = 0
     with (
@@ -130,7 +131,7 @@ def main(path, database_url):
             target.write('\n')
             count += 1
     os.replace(temporary, path)
-    print('%d stops' % count)
+    print(f'{count} stops')
 
 
 if __name__ == '__main__':

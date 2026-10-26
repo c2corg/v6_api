@@ -73,7 +73,7 @@ def date_bounds(value):
 
 
 def is_in_service(tags, today):
-    """False for lines (or ways) that are closed, abandoned or not built yet."""
+    """Tell whether a line (or way) is neither closed, abandoned nor to be built."""
     if tags.get('disused') == 'yes' or tags.get('abandoned') == 'yes':
         return False
     if tags.get('state') in NOT_IN_SERVICE:
@@ -86,7 +86,7 @@ def is_in_service(tags, today):
 
 
 def is_usable_way(tags, today):
-    """A way of a route that is still there: not a disused railway, say."""
+    """Tell whether a way of a route is still there: not a disused railway, say."""
     if tags.get('railway') in NOT_IN_SERVICE or tags.get('highway') in NOT_IN_SERVICE:
         return False
     return is_in_service(tags, today)
@@ -97,7 +97,7 @@ def stop_role(role):
 
 
 def read_relations(path, today):
-    """Returns the route relations (by id), and the route_master of each."""
+    """Read the route relations (by id), and the route_master of each."""
     routes = {}
     master_of = {}
     masters = {}
@@ -203,7 +203,7 @@ def way_coords(ways, ref):
 
 
 def route_stops(route, ways, nodes):
-    """Stops of a route: its platforms, or its stop positions without any."""
+    """Find the stops of a route: its platforms, or its stop positions without any."""
     found = {'platform': [], 'stop': []}
     for member_type, ref, role in route['members']:
         if not stop_role(role):
@@ -239,7 +239,7 @@ def line_group(route_id, route, master_of):
 
 
 def build(path, today=None):
-    today = today or datetime.date.today()
+    today = today or datetime.datetime.now(datetime.UTC).date()
     routes, master_of, masters = read_relations(path, today)
     ways, nodes = read_geometries(path, routes, today)
 
@@ -271,7 +271,7 @@ def build(path, today=None):
         first = routes[route_ids[0]]['tags']
         master = masters.get(key[1], {}) if key[0] == 'master' else {}
 
-        def tag(name):
+        def tag(name, first=first, master=master):
             return first.get(name) or master.get(name)
 
         mode = first['route']
@@ -341,7 +341,7 @@ def main(path, lines_path, stops_path):
                     json.dumps(feature, ensure_ascii=False, separators=(',', ':'))
                     + '\n'
                 )
-    print('%d lines, %d stops' % (len(lines), len(stops)))
+    print(f'{len(lines)} lines, {len(stops)} stops')
 
 
 if __name__ == '__main__':

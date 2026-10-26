@@ -36,6 +36,9 @@ for region in $REGIONS; do
     [ -n "${KEEP_EXTRACTS:-}" ] || rm -f "$WORK_DIR/$region.osm.pbf"
 done
 
+echo "== borders"
+python3 reconcile.py "$WORK_DIR/lines.geojsonl" "$WORK_DIR/stops.geojsonl"
+
 if [ -n "${DATABASE_URL:-}" ]; then
     echo "== stop areas"
     python3 merge_stopareas.py "$WORK_DIR/stops.geojsonl"

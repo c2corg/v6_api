@@ -7,7 +7,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY regions.json build_lines.py merge_stopareas.py upload.py run.sh pytest.ini ./
+COPY regions.json build_lines.py merge_stopareas.py reconcile.py upload.py run.sh pytest.ini ./
 COPY tests ./tests
 RUN chmod +x run.sh
 
