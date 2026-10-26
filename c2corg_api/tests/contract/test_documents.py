@@ -190,6 +190,18 @@ class TestDocumentGet(DocumentContractTest):
         )
         check_snapshot('waypoints_get_not_modified', response)
 
+    @contract(*_routes('GET', '/{prefix}/{{id}}', ['books']))
+    def test_get_not_modified_book(self):
+        etag = self.get(self.url('books')).headers['ETag']
+        response = self.get(
+            self.url('books'), headers={'If-None-Match': etag}, status=304
+        )
+        check_snapshot('books_get_not_modified', response)
+
+    @contract(*_routes('GET', '/{prefix}/{{id}}', ['books']))
+    def test_get_unknown_book(self):
+        check_snapshot('books_get_not_found', self.get('/books/9999999', status=404))
+
     @contract(*_routes('GET', '/{prefix}/{{id}}/{{lang}}/info', WITH_INFO))
     @pytest.mark.parametrize('prefix', WITH_INFO)
     def test_info(self, prefix):
