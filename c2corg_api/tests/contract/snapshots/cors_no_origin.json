@@ -1,0 +1,18 @@
+{
+  "body": {
+    "es": "str",
+    "es_indexed_docs": "int",
+    "last_es_syncer_run": "str",
+    "maintenance_mode": "bool",
+    "pg": "str",
+    "redis": "str",
+    "redis_keys": "int",
+    "version": "str"
+  },
+  "headers": {
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json",
+    "X-Content-Type-Options": "nosniff"
+  },
+  "status": 200
+}
