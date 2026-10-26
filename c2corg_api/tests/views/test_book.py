@@ -5,7 +5,7 @@ from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.book import BOOK_TYPE, ArchiveBook, Book
 from c2corg_api.models.cache_version import get_cache_key
-from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.common.attributes import activities, quality_types
 from c2corg_api.models.document import (
     ArchiveDocumentLocale,
     DocumentGeometry,
@@ -171,6 +171,21 @@ class TestBookRest(BaseDocumentTestRest):
         errors = body.get('errors')
         assert len(errors) == 2
         self.assertCorniceRequired(errors[0], 'locales')
+
+    def test_post_invalid_enum_item(self):
+        # an unknown activity used to reach the database enum (500)
+        body = {
+            'activities': ['hiking', 'not-an-activity'],
+            'book_types': ['biography'],
+            'locales': [{'lang': 'en', 'title': 'Book'}],
+        }
+        headers = self.add_authorization_header(username='contributor')
+        response = self.app_post_json(self._prefix, body, headers=headers, status=400)
+        self.assertError(
+            response.json['errors'],
+            'activities.1',
+            f'"not-an-activity" is not one of {", ".join(activities)}',
+        )
 
     def test_post_missing_title(self):
         body_post = {

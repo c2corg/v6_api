@@ -1,5 +1,6 @@
 """Schemas of the user profiles."""
 
+from c2corg_api.models.common import attributes as a
 from c2corg_api.models.common.fields_user_profile import fields_user_profile
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.schemas.base import ModelSchema, Schema, create_schema, update_schema
@@ -9,7 +10,7 @@ from c2corg_api.schemas.document import (
     document_children,
     geometry_schema,
 )
-from c2corg_api.schemas.types import Int, Map, Seq, Str
+from c2corg_api.schemas.types import Int, Map, OneOf, Seq, Str
 
 UserProfileGeometrySchema = geometry_schema(['POINT'])
 
@@ -25,9 +26,8 @@ class UserProfileLocaleSchema(Schema):
 class UserProfileSchema(DocumentSchema):
     locales: Seq(UserProfileLocaleSchema) = []
     geometry: Map(UserProfileGeometrySchema) = None
-    # as with Colander, the items are not checked against their enum here
-    activities: Seq(Str()) = None
-    categories: Seq(Str()) = None
+    activities: Seq(OneOf(a.activities)) = None
+    categories: Seq(OneOf(a.user_categories)) = None
 
 
 UserProfileUpdateSchema = update_schema(

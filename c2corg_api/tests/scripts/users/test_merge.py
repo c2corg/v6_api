@@ -56,7 +56,8 @@ class TestMergeUsers(BaseTestCase):
         assert self._count_associated_feed_entries(target_id) == 0
 
         assert self._count_metadata_entries(source_id) == 5
-        assert self._count_metadata_entries(target_id) == 0
+        # the target has the history entry of its own profile
+        assert self._count_metadata_entries(target_id) == 1
 
         assert self._is_registered_to_ml(self.contributor)
         assert not self._is_registered_to_ml(self.contributor2)
@@ -82,7 +83,7 @@ class TestMergeUsers(BaseTestCase):
         assert self._count_associated_feed_entries(target_id) == 4
 
         assert self._count_metadata_entries(source_id) == 0
-        assert self._count_metadata_entries(target_id) == 4
+        assert self._count_metadata_entries(target_id) == 4 + 1
 
         assert not self._is_registered_to_ml(self.contributor)
         assert not self._is_registered_to_ml(self.contributor2)
@@ -231,8 +232,6 @@ class TestMergeUsers(BaseTestCase):
     def _add_test_data(self):
         self.contributor = self.session.get(User, self.global_userids['contributor'])
         self.contributor2 = self.session.get(User, self.global_userids['contributor2'])
-
-        DocumentRest.create_new_version(self.contributor.profile, self.contributor.id)
 
         ml = Mailinglist(
             listname='avalanche',
