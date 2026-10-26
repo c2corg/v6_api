@@ -11,7 +11,7 @@ from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.book import Book
-from c2corg_api.models.common.attributes import quality_types
+from c2corg_api.models.common.attributes import activities, quality_types
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.document_topic import DocumentTopic
@@ -417,10 +417,13 @@ class TestRouteRest(BaseDocumentTestRest):
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
         body = self.post_error(body_post)
-        errors = body.get('errors')
-        assert len(errors) == 1
-        assert errors[0].get('description') == 'invalid value: cooking'
-        assert errors[0].get('name') == 'activities'
+        # the schema rejects the body, so the association checks also miss
+        # their data and add their own errors
+        self.assertError(
+            body.get('errors'),
+            'activities.0',
+            f'"cooking" is not one of {", ".join(activities)}',
+        )
 
     def test_post_missing_title(self):
         body_post = {
