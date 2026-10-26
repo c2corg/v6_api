@@ -9,7 +9,7 @@ from geoalchemy2 import WKBElement
 from pydantic import BeforeValidator
 from pydantic_core import PydanticCustomError
 
-from c2corg_api.ext.colander_ext import wkbelement_from_geojson
+from c2corg_api.ext.wkb import wkbelement_from_geojson
 from c2corg_api.schemas.types import Empty
 
 

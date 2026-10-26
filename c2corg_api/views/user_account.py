@@ -1,9 +1,7 @@
 import logging
 from functools import partial
 
-import colander
 from cornice.resource import resource
-from cornice.validators import colander_body_validator
 from pyramid.httpexceptions import HTTPInternalServerError
 
 from c2corg_api import DBSession
@@ -11,12 +9,13 @@ from c2corg_api.emails.email_service import get_email_service
 from c2corg_api.models.cache_version import update_cache_version
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.user import Purpose, User
+from c2corg_api.schemas.base import DROP, Schema, body_validator
+from c2corg_api.schemas.types import Bool, OneOf, Str, email_check, function_check
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
 from c2corg_api.views.user import (
-    ENCODING,
     MINIMUM_PASSWORD_LENGTH,
     PASSWORD_STRENGTH_ERROR,
     VALIDATION_EXPIRE_DAYS,
@@ -28,18 +27,14 @@ from c2corg_api.views.user import (
 log = logging.getLogger(__name__)
 
 
-class UpdatePreferredLangSchema(colander.MappingSchema):
-    lang = colander.SchemaNode(
-        colander.String(), validator=colander.OneOf(default_langs)
-    )
+class UpdatePreferredLangSchema(Schema):
+    lang: OneOf(default_langs)
 
 
 @resource(path='/users/update_preferred_language', cors_policy=cors_policy)
 class UserPreferredLanguageRest(ACLDefault):
-    schema = UpdatePreferredLangSchema()
-
     @restricted_json_view(
-        renderer='json', schema=schema, validators=[colander_body_validator]
+        renderer='json', validators=[body_validator(UpdatePreferredLangSchema)]
     )
     def post(self):
         request = self.request
@@ -49,54 +44,40 @@ class UserPreferredLanguageRest(ACLDefault):
         return {}
 
 
-class UpdateAccountSchema(colander.MappingSchema):
-    email = colander.SchemaNode(
-        colander.String(),
-        missing=colander.drop,
-        validator=colander.All(
-            colander.Email(),
-            colander.Function(
+class UpdateAccountSchema(Schema):
+    email: Str(
+        checks=[
+            email_check,
+            function_check(
                 partial(is_unused_user_attribute, 'email'), 'Already used email'
             ),
-        ),
-    )
-    name = colander.SchemaNode(
-        colander.String(), missing=colander.drop, validator=colander.Length(min=3)
-    )
-    forum_username = colander.SchemaNode(
-        colander.String(),
-        missing=colander.drop,
-        validator=colander.All(
-            colander.Length(max=25),
-            colander.Function(
+        ]
+    ) = DROP
+    name: Str(min_length=3) = DROP
+    forum_username: Str(
+        max_length=25,
+        checks=[
+            function_check(
                 partial(is_unused_user_attribute, 'forum_username', lowercase=True),
                 'Already used forum name',
-            ),
-        ),
-    )
+            )
+        ],
+    ) = DROP
     # Verifies an *existing* credential, so it must accept whatever was
     # valid when the account was created (e.g. under a looser, older
     # policy) - just needs to be non-empty, not held to today's policy.
-    currentpassword = colander.SchemaNode(
-        colander.String(encoding=ENCODING), validator=colander.Length(min=1)
-    )
+    currentpassword: Str(min_length=1)
     # A *new* password being set: held to the current policy.
-    newpassword = colander.SchemaNode(
-        colander.String(encoding=ENCODING),
-        missing=colander.drop,
-        validator=colander.All(
-            colander.Length(min=MINIMUM_PASSWORD_LENGTH),
-            colander.Function(is_password_strong_enough, PASSWORD_STRENGTH_ERROR),
-        ),
-    )
+    newpassword: Str(
+        min_length=MINIMUM_PASSWORD_LENGTH,
+        checks=[function_check(is_password_strong_enough, PASSWORD_STRENGTH_ERROR)],
+    ) = DROP
 
-    is_profile_public = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
+    is_profile_public: Bool = DROP
 
 
 @resource(path='/users/account', cors_policy=cors_policy)
 class UserAccountRest(ACLDefault):
-    updateschema = UpdateAccountSchema()
-
     def get_user(self):
         userid = self.request.authenticated_userid
         return DBSession.get(User, userid)
@@ -113,8 +94,7 @@ class UserAccountRest(ACLDefault):
 
     @restricted_json_view(
         renderer='json',
-        schema=updateschema,
-        validators=[colander_body_validator, validate_forum_username],
+        validators=[body_validator(UpdateAccountSchema), validate_forum_username],
     )
     def post(self):
         user = self.get_user()

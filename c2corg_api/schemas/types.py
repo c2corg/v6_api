@@ -56,13 +56,65 @@ def _to_int(value):
 
 
 class _StrSpec:
-    def __init__(self, max_length=None, choices=None):
-        self.max_length = max_length
-        self.choices = choices
+    def __init__(self, checks):
+        # functions returning an error message, or None if the value is valid
+        self.checks = checks
+
+
+def max_length_check(max_length):
+    def check(value):
+        if len(value) > max_length:
+            return f'Longer than maximum length {max_length}'
+        return None
+
+    return check
+
+
+def min_length_check(min_length):
+    def check(value):
+        if len(value) < min_length:
+            return f'Shorter than minimum length {min_length}'
+        return None
+
+    return check
+
+
+def one_of_check(choices):
+    def check(value):
+        if value not in choices:
+            return f'"{value}" is not one of {", ".join(choices)}'
+        return None
+
+    return check
+
+
+# the regular expression of `colander.Email`
+_EMAIL = re.compile(
+    r"^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9]"
+    r'(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9]'
+    r'(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'
+)
+
+
+def email_check(value):
+    """Check like `colander.Email`."""
+    return None if _EMAIL.match(value) else 'Invalid email address'
+
+
+def function_check(function, message='Invalid value'):
+    """Check like `colander.Function`: `function` returns a truthy value."""
+
+    def check(value):
+        result = function(value)
+        if isinstance(result, str) and result:
+            return result
+        return None if result else message
+
+    return check
 
 
 def _check_str(value, info, spec, item=False):
-    """Check like `colander.String` with a `Length` or `OneOf` validator."""
+    """Check like `colander.String` with its validators."""
     if _str_empty(value):
         raise _required()
     if not isinstance(value, str):
@@ -73,17 +125,11 @@ def _check_str(value, info, spec, item=False):
             '{value} is not a string: {suffix}',
             {'value': str(value), 'suffix': str({name: ''})},
         )
-    if spec.max_length is not None and len(value) > spec.max_length:
+    # all the checks run, like `colander.All`: their messages are joined
+    messages = [m for m in (check(value) for check in spec.checks) if m]
+    if messages:
         raise PydanticCustomError(
-            'too_long',
-            'Longer than maximum length {max_length}',
-            {'max_length': spec.max_length},
-        )
-    if spec.choices is not None and value not in spec.choices:
-        raise PydanticCustomError(
-            'not_one_of',
-            '"{value}" is not one of {choices}',
-            {'value': value, 'choices': ', '.join(spec.choices)},
+            'invalid_string', '{message}', {'message': '; '.join(messages)}
         )
     return value
 
@@ -97,13 +143,19 @@ def _str_type(spec, item=False):
     ]
 
 
-def _check_sequence(value):
+def _check_sequence(value, min_length=None):
     """Check like `colander.Sequence`: a list (a string is not one)."""
     if value is None:
         raise _required()
     if not isinstance(value, (list, tuple)):
         raise PydanticCustomError(
             'not_iterable', '"{value}" is not iterable', {'value': str(value)}
+        )
+    if min_length is not None and len(value) < min_length:
+        raise PydanticCustomError(
+            'too_short',
+            'Shorter than minimum length {min_length}',
+            {'min_length': min_length},
         )
     return list(value)
 
@@ -125,23 +177,32 @@ def check_mapping(value):
 Int = Annotated[int | None, Empty(_int_empty), BeforeValidator(_to_int)]
 
 
-def Str(max_length=None):  # noqa: N802 (used like a type)
-    """Return a string type limited to `max_length` characters."""
-    return _str_type(_StrSpec(max_length=max_length))
+def Str(max_length=None, min_length=None, checks=()):  # noqa: N802 (used like a type)
+    """Return a string type with the given length limits and checks."""
+    all_checks = []
+    if min_length is not None:
+        all_checks.append(min_length_check(min_length))
+    if max_length is not None:
+        all_checks.append(max_length_check(max_length))
+    return _str_type(_StrSpec([*all_checks, *checks]))
 
 
 def OneOf(choices):  # noqa: N802 (used like a type)
     """Return a string type limited to the given choices."""
-    return _str_type(_StrSpec(choices=list(choices)))
+    return _str_type(_StrSpec([one_of_check(list(choices))]))
 
 
-def Seq(item):  # noqa: N802 (used like a type)
-    """Return a list type of `item`."""
+def Seq(item, min_length=None):  # noqa: N802 (used like a type)
+    """Return a list type of `item`, of at least `min_length` items."""
     specs = [arg for arg in get_args(item) if isinstance(arg, _StrSpec)]
     if specs:
         # the items of a list are unnamed nodes in Colander
         item = _str_type(specs[0], item=True)
-    return Annotated[list[item] | None, Empty(_none), BeforeValidator(_check_sequence)]
+    return Annotated[
+        list[item] | None,
+        Empty(_none),
+        BeforeValidator(partial(_check_sequence, min_length=min_length)),
+    ]
 
 
 def Map(schema):  # noqa: N802 (used like a type)
@@ -252,16 +313,21 @@ def _to_datetime(value):
         raise PydanticCustomError('invalid_date', 'Invalid date') from e
 
 
-def _to_finite_float(value):
-    """Convert like `colander_ext.FiniteFloat`: NaN and infinity give null."""
+def _to_float(value):
+    """Convert like `colander.Float`: `float(value)`."""
     if _int_empty(value):
         raise _required()
     try:
-        result = float(value)
+        return float(value)
     except (TypeError, ValueError) as e:
         raise PydanticCustomError(
             'not_a_number', '"{value}" is not a number', {'value': str(value)}
         ) from e
+
+
+def _to_finite_float(value):
+    """Convert like `colander_ext.FiniteFloat`: NaN and infinity give null."""
+    result = _to_float(value)
     return result if math.isfinite(result) else None
 
 
@@ -276,6 +342,7 @@ Date = Annotated[datetime.date | None, Empty(_date_empty), BeforeValidator(_to_d
 DateTime = Annotated[
     datetime.datetime | None, Empty(_date_empty), BeforeValidator(_to_datetime)
 ]
+Float = Annotated[float | None, Empty(_int_empty), BeforeValidator(_to_float)]
 FiniteFloat = Annotated[
     float | None, Empty(_int_empty), BeforeValidator(_to_finite_float)
 ]

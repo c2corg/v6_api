@@ -17,20 +17,17 @@ from c2corg_api.models.common.fields_waypoint import fields_waypoint
 from c2corg_api.models.common.fields_xreport import fields_xreport
 from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
 from c2corg_api.models.image import IMAGE_TYPE, Image
-from c2corg_api.models.outing import OUTING_TYPE, Outing, schema_outing
-from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale, schema_route
-from c2corg_api.models.schema_utils import restrict_schema
+from c2corg_api.models.outing import OUTING_TYPE, Outing
+from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.topo_map import MAP_TYPE, TopoMap
 from c2corg_api.models.user_profile import (
     USERPROFILE_TYPE,
     UserProfile,
-    schema_listing_user_profile,
 )
 from c2corg_api.models.waypoint import (
     WAYPOINT_TYPE,
     Waypoint,
     WaypointLocale,
-    schema_waypoint,
 )
 from c2corg_api.models.xreport import (
     XREPORT_TYPE,
@@ -42,7 +39,11 @@ from c2corg_api.schemas.article import article_listing_schema
 from c2corg_api.schemas.book import book_listing_schema
 from c2corg_api.schemas.coverage import coverage_listing_schema
 from c2corg_api.schemas.image import image_listing_schema
+from c2corg_api.schemas.outing import outing_schema
+from c2corg_api.schemas.route import route_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
+from c2corg_api.schemas.user_profile import user_profile_listing_schema
+from c2corg_api.schemas.waypoint import waypoint_schema
 from c2corg_api.schemas.xreport import xreport_listing_schema
 from c2corg_api.views import set_author
 
@@ -211,7 +212,7 @@ def adapt_outing_schema_for_activities(activities, field_list_type):
         activities = attributes.activities
 
     fields = get_all_fields(fields_outing, activities, field_list_type)
-    return restrict_schema(schema_outing, fields)
+    return outing_schema.restrict(fields)
 
 
 outing_schema_adaptor = make_schema_adaptor(
@@ -224,7 +225,7 @@ outing_listing_schema_adaptor = make_schema_adaptor(
 outing_documents_config = GetDocumentsConfig(
     OUTING_TYPE,
     Outing,
-    schema_outing,
+    outing_schema,
     fields=fields_outing,
     adapt_schema=outing_listing_schema_adaptor,
     set_custom_fields=set_author,
@@ -259,7 +260,7 @@ def adapt_route_schema_for_activities(activities, field_list_type):
         activities = [a for a in attributes.activities if a != 'paragliding']
 
     fields = get_all_fields(fields_route, activities, field_list_type)
-    return restrict_schema(schema_route, fields)
+    return route_schema.restrict(fields)
 
 
 route_schema_adaptor = make_schema_adaptor(
@@ -272,7 +273,7 @@ route_listing_schema_adaptor = make_schema_adaptor(
 route_documents_config = GetDocumentsConfig(
     ROUTE_TYPE,
     Route,
-    schema_route,
+    route_schema,
     clazz_locale=RouteLocale,
     fields=fields_route,
     adapt_schema=route_listing_schema_adaptor,
@@ -296,7 +297,7 @@ topo_map_documents_config = GetDocumentsConfig(
 user_profile_documents_config = GetDocumentsConfig(
     USERPROFILE_TYPE,
     UserProfile,
-    schema_listing_user_profile,
+    user_profile_listing_schema,
     listing_fields=fields_user_profile['listing'],
 )
 
@@ -312,7 +313,7 @@ def adapt_waypoint_schema_for_type(waypoint_type, field_list_type):
     """
     fields = fields_waypoint.get(waypoint_type, {}).get(field_list_type, [])
 
-    schema = restrict_schema(schema_waypoint, fields)
+    schema = waypoint_schema.restrict(fields)
 
     return schema
 
@@ -327,7 +328,7 @@ waypoint_listing_schema_adaptor = make_schema_adaptor(
 waypoint_documents_config = GetDocumentsConfig(
     WAYPOINT_TYPE,
     Waypoint,
-    schema_waypoint,
+    waypoint_schema,
     clazz_locale=WaypointLocale,
     fields=fields_waypoint,
     adapt_schema=waypoint_listing_schema_adaptor,

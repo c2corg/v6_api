@@ -3,7 +3,6 @@ import datetime
 import logging
 import math
 
-from colander import null
 from cornice import Errors
 from cornice.renderer import JSONError
 from cornice.resource import view
@@ -19,7 +18,7 @@ from pyramid.view import view_config
 from sqlalchemy.inspection import inspect
 from sqlalchemy.sql.functions import func
 
-from c2corg_api.ext.colander_ext import geojson_from_wkbelement
+from c2corg_api.ext.wkb import geojson_from_wkbelement
 from c2corg_api.models import DBSession
 from c2corg_api.models.common.attributes import langs_priority
 from c2corg_api.models.document import DocumentGeometry
@@ -217,14 +216,7 @@ def to_json_dict(
 
 
 def serialize(data):
-    """Serialize with Colander for JSON output.
-
-    Colanders `serialize` method is not intended for JSON serialization (it
-    turns everything into a string and keeps colander.null).
-    https://github.com/tisdall/cornice/blob/c18b873/cornice/schemas.py
-    Returns the most agnostic version of specified data.
-    (remove colander notions, datetimes in ISO, ...).
-    """
+    """Turn dictified data into JSON-ready values (ISO dates, GeoJSON...)."""
     if isinstance(data, str):
         return str(data)
     if isinstance(data, collections.abc.Mapping):
@@ -235,8 +227,6 @@ def serialize(data):
         return data.isoformat()
     if isinstance(data, WKBElement):
         return geojson_from_wkbelement(data)
-    if data is null:
-        return None
     if isinstance(data, float) and not math.isfinite(data):
         # NaN/Infinity are not valid JSON
         return None
