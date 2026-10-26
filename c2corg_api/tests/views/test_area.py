@@ -173,6 +173,7 @@ class TestAreaRest(BaseDocumentTestRest):
         links = (
             self.session.query(AreaAssociation)
             .filter(AreaAssociation.area_id == doc.document_id)
+            .order_by(AreaAssociation.document_id)
             .all()
         )
         assert len(links) == 2
@@ -366,6 +367,7 @@ class TestAreaRest(BaseDocumentTestRest):
         links = (
             self.session.query(AreaAssociation)
             .filter(AreaAssociation.area_id == self.area1.document_id)
+            .order_by(AreaAssociation.document_id)
             .all()
         )
         assert len(links) == 2
