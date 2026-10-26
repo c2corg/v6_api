@@ -85,7 +85,8 @@ class TestUserAccountRest(BaseUserTestRest):
         )
 
         # and check that the cache version of the user profile was updated
-        self.check_cache_version(user_id, 2)
+        # (from 2: creating the profile version of the test data bumped it)
+        self.check_cache_version(user_id, 3)
 
         assert search_doc['doc_type'] is not None
         assert search_doc['title_en'] == 'changed contributor'

@@ -15,7 +15,6 @@ from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
-from c2corg_api.views.document import DocumentRest
 
 
 class TestUserProfileRest(BaseDocumentTestRest):
@@ -411,7 +410,6 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self.profile1 = self.session.get(UserProfile, user_id)
         self.locale_en = self.profile1.get_locale('en')
         self.locale_fr = self.profile1.get_locale('fr')
-        DocumentRest.create_new_version(self.profile1, user_id)
 
         self.profile2 = UserProfile(categories=['amateur'])
         self.session.add(self.profile2)
