@@ -1,4 +1,4 @@
-from sqlalchemy.sql.schema import Table, Column, MetaData
+from sqlalchemy.sql.schema import Column, MetaData, Table
 
 # Support for views in SQLAlchemy
 # See: https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/Views
@@ -8,15 +8,15 @@ from sqlalchemy.sql.schema import Table, Column, MetaData
 
 
 def view(name, schema, metadata, selectable):
-    """
-    Create a view for the given select. A table is returned which can be
-    used to query the view.
+    """Create a view for the given select.
+
+    A table is returned which can be used to query the view.
     """
     # a temporary MetaData object is used to avoid that this table is actually
     # created
     t = Table(name, MetaData(), schema=schema)
 
-    for c in selectable.c:
+    for c in selectable.selected_columns:
         t.append_column(Column(c.name, c.type, primary_key=c.primary_key))
 
     return t

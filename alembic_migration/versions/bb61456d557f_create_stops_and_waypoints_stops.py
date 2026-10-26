@@ -23,7 +23,7 @@ def upgrade():
         sa.Column('stoparea_name', sa.String(), nullable=False),
         sa.Column('line', sa.String(), nullable=False),
         sa.Column('operator', sa.String(), nullable=False),
-        sa.Column('geom', geoalchemy2.types.Geometry(geometry_type='POINT', srid=3857, management=True), nullable=True),
+        sa.Column('geom', geoalchemy2.types.Geometry(geometry_type='POINT', srid=3857), nullable=True),
         schema='guidebook'
     )
 

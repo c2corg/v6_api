@@ -1,31 +1,37 @@
 import logging
+from functools import partial
 
 import colander
-from c2corg_api.security.acl import ACLDefault
+from cornice.resource import resource
+from cornice.validators import colander_body_validator
+from pyramid.httpexceptions import HTTPInternalServerError
+
 from c2corg_api import DBSession
 from c2corg_api.emails.email_service import get_email_service
 from c2corg_api.models.cache_version import update_cache_version
-from c2corg_api.models.user import User, Purpose
+from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.models.user import Purpose, User
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
-from c2corg_api.views.user import is_unused_user_attribute, ENCODING, \
-    MINIMUM_PASSWORD_LENGTH, PASSWORD_STRENGTH_ERROR, \
-    VALIDATION_EXPIRE_DAYS, is_password_strong_enough, \
-    validate_forum_username
-from c2corg_api.models.common.attributes import default_langs
-from cornice.resource import resource
-from cornice.validators import colander_body_validator
-from functools import partial
-from pyramid.httpexceptions import HTTPInternalServerError
+from c2corg_api.views.user import (
+    ENCODING,
+    MINIMUM_PASSWORD_LENGTH,
+    PASSWORD_STRENGTH_ERROR,
+    VALIDATION_EXPIRE_DAYS,
+    is_password_strong_enough,
+    is_unused_user_attribute,
+    validate_forum_username,
+)
 
 log = logging.getLogger(__name__)
 
 
 class UpdatePreferredLangSchema(colander.MappingSchema):
     lang = colander.SchemaNode(
-            colander.String(),
-            validator=colander.OneOf(default_langs))
+        colander.String(), validator=colander.OneOf(default_langs)
+    )
 
 
 @resource(path='/users/update_preferred_language', cors_policy=cors_policy)
@@ -33,60 +39,58 @@ class UserPreferredLanguageRest(ACLDefault):
     schema = UpdatePreferredLangSchema()
 
     @restricted_json_view(
-        renderer='json', schema=schema, validators=[colander_body_validator])
+        renderer='json', schema=schema, validators=[colander_body_validator]
+    )
     def post(self):
         request = self.request
         userid = request.authenticated_userid
-        user = DBSession.query(User).get(userid)
+        user = DBSession.get(User, userid)
         user.lang = request.validated['lang']
         return {}
 
 
 class UpdateAccountSchema(colander.MappingSchema):
     email = colander.SchemaNode(
-            colander.String(),
-            missing=colander.drop,
-            validator=colander.All(
-                colander.Email(),
-                colander.Function(
-                    partial(is_unused_user_attribute, 'email'),
-                    'Already used email'
-                )
-            ))
+        colander.String(),
+        missing=colander.drop,
+        validator=colander.All(
+            colander.Email(),
+            colander.Function(
+                partial(is_unused_user_attribute, 'email'), 'Already used email'
+            ),
+        ),
+    )
     name = colander.SchemaNode(
-            colander.String(),
-            missing=colander.drop,
-            validator=colander.Length(min=3))
+        colander.String(), missing=colander.drop, validator=colander.Length(min=3)
+    )
     forum_username = colander.SchemaNode(
-            colander.String(),
-            missing=colander.drop,
-            validator=colander.All(
-                colander.Length(max=25),
-                colander.Function(
-                    partial(is_unused_user_attribute,
-                            'forum_username',
-                            lowercase=True),
-                    'Already used forum name'
-                )
-            ))
+        colander.String(),
+        missing=colander.drop,
+        validator=colander.All(
+            colander.Length(max=25),
+            colander.Function(
+                partial(is_unused_user_attribute, 'forum_username', lowercase=True),
+                'Already used forum name',
+            ),
+        ),
+    )
     # Verifies an *existing* credential, so it must accept whatever was
     # valid when the account was created (e.g. under a looser, older
     # policy) - just needs to be non-empty, not held to today's policy.
     currentpassword = colander.SchemaNode(
-            colander.String(encoding=ENCODING),
-            validator=colander.Length(min=1))
+        colander.String(encoding=ENCODING), validator=colander.Length(min=1)
+    )
     # A *new* password being set: held to the current policy.
     newpassword = colander.SchemaNode(
-            colander.String(encoding=ENCODING),
-            missing=colander.drop,
-            validator=colander.All(
-                colander.Length(min=MINIMUM_PASSWORD_LENGTH),
-                colander.Function(
-                    is_password_strong_enough, PASSWORD_STRENGTH_ERROR)))
+        colander.String(encoding=ENCODING),
+        missing=colander.drop,
+        validator=colander.All(
+            colander.Length(min=MINIMUM_PASSWORD_LENGTH),
+            colander.Function(is_password_strong_enough, PASSWORD_STRENGTH_ERROR),
+        ),
+    )
 
-    is_profile_public = colander.SchemaNode(
-            colander.Boolean(),
-            missing=colander.drop)
+    is_profile_public = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
 
 
 @resource(path='/users/account', cors_policy=cors_policy)
@@ -95,7 +99,7 @@ class UserAccountRest(ACLDefault):
 
     def get_user(self):
         userid = self.request.authenticated_userid
-        return DBSession.query(User).get(userid)
+        return DBSession.get(User, userid)
 
     @restricted_view(renderer='json', http_cache=0)
     def get(self):
@@ -104,14 +108,14 @@ class UserAccountRest(ACLDefault):
             'email': user.email,
             'name': user.name,
             'forum_username': user.forum_username,
-            'is_profile_public': user.is_profile_public
+            'is_profile_public': user.is_profile_public,
         }
 
     @restricted_json_view(
         renderer='json',
         schema=updateschema,
-        validators=[colander_body_validator,
-                    validate_forum_username])
+        validators=[colander_body_validator, validate_forum_username],
+    )
     def post(self):
         user = self.get_user()
         request = self.request
@@ -135,14 +139,13 @@ class UserAccountRest(ACLDefault):
         email_link = None
         if 'email' in validated and validated['email'] != user.email:
             user.email_to_validate = validated['email']
-            user.update_validation_nonce(
-                    Purpose.change_email,
-                    VALIDATION_EXPIRE_DAYS)
+            user.update_validation_nonce(Purpose.change_email, VALIDATION_EXPIRE_DAYS)
             email_service = get_email_service(self.request)
             nonce = user.validation_nonce
             settings = request.registry.settings
             link = settings['mail.validate_change_email_url_template'].format(
-                '#', nonce)
+                '#', nonce
+            )
             email_link = link
             result['email'] = validated['email']
             result['sent_email'] = True
@@ -170,15 +173,15 @@ class UserAccountRest(ACLDefault):
             try:
                 client = get_discourse_client(request.registry.settings)
                 client.sync_sso(user)
-            except Exception:
+            except Exception as e:
                 log.error('Error syncing with discourse', exc_info=True)
-                raise HTTPInternalServerError('Error with Discourse')
+                raise HTTPInternalServerError('Error with Discourse') from e
 
         try:
             DBSession.flush()
-        except Exception:
+        except Exception as e:
             log.warning('Error persisting user', exc_info=True)
-            raise HTTPInternalServerError('Error persisting user')
+            raise HTTPInternalServerError('Error persisting user') from e
 
         if email_link:
             email_service.send_change_email_confirmation(user, link)

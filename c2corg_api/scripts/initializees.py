@@ -1,33 +1,30 @@
 import os
 import sys
 
+from elasticsearch_dsl import Index
+from pyramid.paster import (
+    get_appsettings,
+    setup_logging,
+)
+from pyramid.scripts.common import parse_vars
+
+from c2corg_api.search import configure_es_from_config, elasticsearch_config
+from c2corg_api.search.mapping import analysis_settings
 from c2corg_api.search.mappings.area_mapping import SearchArea
 from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.book_mapping import SearchBook
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
-from c2corg_api.search.mappings.xreport_mapping import SearchXreport
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
-from elasticsearch_dsl import Index
-
-from pyramid.paster import (
-    get_appsettings,
-    setup_logging,
-    )
-
-from pyramid.scripts.common import parse_vars
-
-from c2corg_api.search.mapping import analysis_settings
-from c2corg_api.search import configure_es_from_config, elasticsearch_config
+from c2corg_api.search.mappings.xreport_mapping import SearchXreport
 
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print('usage: %s <config_uri> [var=value]\n'
-          '(example: "%s development.ini")' % (cmd, cmd))
+    print(f'usage: {cmd} <config_uri> [var=value]\n(example: "{cmd} development.ini")')
     sys.exit(1)
 
 
@@ -43,21 +40,24 @@ def main(argv=sys.argv):
 
 
 def setup_es():
-    """Create the ElasticSearch index and configure the mapping.
-    """
+    """Create the ElasticSearch index and configure the mapping."""
     client = elasticsearch_config['client']
     index_name = elasticsearch_config['index']
 
     info = client.info()
-    print('ElasticSearch version: {0}'.format(info['version']['number']))
+    print('ElasticSearch version: {}'.format(info['version']['number']))
 
     if client.indices.exists(index_name):
-        print('Index "{0}" already exists. To re-create the index, manually '
-              'delete the index and run this script again.'.format(index_name))
+        print(
+            f'Index "{index_name}" already exists. To re-create the index, manually '
+            'delete the index and run this script again.'
+        )
         print('To delete the index run:')
-        print('curl -XDELETE \'http://{0}:{1}/{2}/\''.format(
-            elasticsearch_config['host'], elasticsearch_config['port'],
-            index_name))
+        print(
+            "curl -XDELETE 'http://{}:{}/{}/'".format(
+                elasticsearch_config['host'], elasticsearch_config['port'], index_name
+            )
+        )
         sys.exit(0)
 
     index = Index(index_name)
@@ -76,12 +76,11 @@ def setup_es():
 
     index.create()
 
-    print('Index "{0}" created'.format(index_name))
+    print(f'Index "{index_name}" created')
 
 
 def drop_index(silent=True):
-    """Remove the ElasticSearch index.
-    """
+    """Remove the ElasticSearch index."""
     index = Index(elasticsearch_config['index'])
     try:
         index.delete()

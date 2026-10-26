@@ -37,13 +37,9 @@ DEFAULT_FIELDS = [
     'qualification',
     'disable_comments',
     'anonymous',
-    'quality'
+    'quality',
 ]
-DEFAULT_REQUIRED = [
-    'locales',
-    'locales.title',
-    'geometry.geom'
-]
+DEFAULT_REQUIRED = ['locales', 'locales.title', 'geometry.geom']
 DEFAULT_LISTING = [
     'locales',
     'locales.title',
@@ -58,11 +54,11 @@ DEFAULT_LISTING = [
     'avalanche_level',
     'avalanche_slope',
     'severity',
-    'quality'
+    'quality',
 ]
 
 fields_xreport = {
     'fields': DEFAULT_FIELDS,
     'required': DEFAULT_REQUIRED,
-    'listing': DEFAULT_LISTING
+    'listing': DEFAULT_LISTING,
 }

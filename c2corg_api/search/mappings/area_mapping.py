@@ -1,6 +1,6 @@
 from c2corg_api.models.area import AREA_TYPE, Area
-from c2corg_api.search.mapping import SearchDocument, BaseMeta
-from c2corg_api.search.mapping_types import QueryableMixin, QEnum
+from c2corg_api.search.mapping import BaseMeta, SearchDocument
+from c2corg_api.search.mapping_types import QEnum, QueryableMixin
 
 
 class SearchArea(SearchDocument):
@@ -14,13 +14,13 @@ class SearchArea(SearchDocument):
     @staticmethod
     def to_search_document(document, index):
         search_document = SearchDocument.to_search_document(
-            document, index, include_areas=False)
+            document, index, include_areas=False
+        )
 
         if document.redirects_to:
             return search_document
 
-        SearchDocument.copy_fields(
-            search_document, document, SearchArea.FIELDS)
+        SearchDocument.copy_fields(search_document, document, SearchArea.FIELDS)
 
         return search_document
 

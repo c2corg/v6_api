@@ -1,19 +1,17 @@
-from pyramid.httpexceptions import HTTPForbidden
-from pyramid.security import Authenticated
-from pyramid.interfaces import IAuthenticationPolicy
-
-import jwt as pyjwt
-from c2corg_api.models import DBSession
-from c2corg_api.models.user import User
-from c2corg_api.models.token import Token
-
 import datetime
 import logging
 
-log = logging.getLogger(__name__)
+import jwt as pyjwt
+from pyramid.httpexceptions import HTTPForbidden
+from pyramid.interfaces import IAuthenticationPolicy
+from pyramid.security import Authenticated
+from sqlalchemy import and_
 
-# Schedule expired tokens cleanup on application start
-next_expire_cleanup = datetime.datetime.utcnow()
+from c2corg_api.models import DBSession
+from c2corg_api.models.token import Token
+from c2corg_api.models.user import User
+
+log = logging.getLogger(__name__)
 
 # The number of days after which a token is expired
 CONST_EXPIRE_AFTER_DAYS = 14
@@ -29,32 +27,45 @@ def extract_token(request):
 
 
 def groupfinder(userid, request):
-    is_moderator = DBSession.query(User). \
-        filter(User.id == userid, User.moderator). \
-        count() > 0
-    return ['group:moderators'] if is_moderator else [Authenticated]
+    # Pyramid calls this for every read of `request.authenticated_userid`
+    # or `request.effective_principals`, several times per request: query
+    # the database once per request and user.
+    cached = getattr(request, '_c2c_groups', None)
+    if cached is not None and cached[0] == userid:
+        return list(cached[1])
+
+    is_moderator = (
+        DBSession.query(User).filter(User.id == userid, User.moderator).count() > 0
+    )
+    groups = ['group:moderators'] if is_moderator else [Authenticated]
+    if request is not None:
+        request._c2c_groups = (userid, groups)
+    return list(groups)
 
 
 def is_valid_token(token):
-    now = datetime.datetime.utcnow()
-    token = DBSession.query(Token). \
-        filter(Token.value == token, Token.expire > now).first()
+    now = datetime.datetime.now(datetime.UTC)
+    token = (
+        DBSession.query(Token).filter(Token.value == token, Token.expire > now).first()
+    )
 
     if not token:
         return False
     else:
-        user_is_blocked = DBSession. \
-            query(User.blocked). \
-            filter(User.id == token.userid). \
-            scalar()
+        user_is_blocked = (
+            DBSession.query(User.blocked).filter(User.id == token.userid).scalar()
+        )
         if user_is_blocked:
             raise HTTPForbidden('account blocked')
     return True
 
 
 def add_or_retrieve_token(value, expire, userid):
-    token = DBSession.query(Token). \
-        filter(Token.value == value, User.id == userid).first()
+    token = (
+        DBSession.query(Token)
+        .filter(Token.value == value, Token.userid == userid)
+        .first()
+    )
     if not token:
         token = Token(value=value, expire=expire, userid=userid)
         DBSession.add(token)
@@ -64,11 +75,11 @@ def add_or_retrieve_token(value, expire, userid):
 
 
 def remove_token(token):
-    now = datetime.datetime.utcnow()
-    condition = Token.value == token and Token.expire > now
+    now = datetime.datetime.now(datetime.UTC)
+    condition = and_(Token.value == token, Token.expire > now)
     result = DBSession.execute(Token.__table__.delete().where(condition))
     if result.rowcount == 0:
-        log.debug('Failed to remove token %s' % token)
+        log.debug(f'Failed to remove token {token}')
     DBSession.flush()
 
 
@@ -76,7 +87,7 @@ def create_claims(user, exp):
     return {
         'sub': str(user.id),
         'username': user.username,
-        'exp': int((exp - datetime.datetime(1970, 1, 1)).total_seconds())
+        'exp': int(exp.timestamp()),
     }
 
 
@@ -88,7 +99,8 @@ def try_login(user, password, request):
 
 
 def log_validated_user_i_know_what_i_do(user, request):
-    """This method may only be called for validated users.
+    """Thi method may only be called for validated users.
+
     See the try_login function for a safe version.
     """
     assert user.email_validated
@@ -97,11 +109,10 @@ def log_validated_user_i_know_what_i_do(user, request):
         raise HTTPForbidden('account blocked')
 
     policy = request.registry.queryUtility(IAuthenticationPolicy)
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.UTC)
     exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
     claims = create_claims(user, exp)
-    token = pyjwt.encode(
-        claims, key=policy.private_key, algorithm=policy.algorithm)
+    token = pyjwt.encode(claims, key=policy.private_key, algorithm=policy.algorithm)
     return add_or_retrieve_token(token, exp, user.id)
 
 
@@ -110,11 +121,12 @@ def renew_token(user, request):
 
     if is_valid_token(old_token):
         policy = request.registry.queryUtility(IAuthenticationPolicy)
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.UTC)
         exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
         claims = create_claims(user, exp)
         token_value = pyjwt.encode(
-            claims, key=policy.private_key, algorithm=policy.algorithm)
+            claims, key=policy.private_key, algorithm=policy.algorithm
+        )
         return add_or_retrieve_token(token_value, exp, user.id)
 
     return None

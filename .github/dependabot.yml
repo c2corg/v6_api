@@ -5,11 +5,72 @@ updates:
   schedule:
     interval: "weekly"
   open-pull-requests-limit: 99
+  cooldown:
+    default-days: 7
+    semver-major-days: 14
+    semver-minor-days: 7
+    semver-patch-days: 3
+  # Minor and patch updates of libraries that move together come as one PR.
+  # Major updates always get their own PR: they need a changelog review.
+  groups:
+    dev-tools:
+      patterns:
+        - "ruff"
+        - "pre-commit"
+        - "pytest*"
+        - "webtest"
+        - "ipdb"
+        - "httmock"
+      update-types: ["minor", "patch"]
+    sqlalchemy:
+      patterns:
+        - "sqlalchemy"
+        - "geoalchemy2"
+        - "alembic"
+        - "zope-sqlalchemy"
+        - "transaction"
+        - "psycopg2-binary"
+      update-types: ["minor", "patch"]
+    pyramid:
+      patterns:
+        - "pyramid*"
+      update-types: ["minor", "patch"]
+    patch:
+      patterns:
+        - "*"
+      update-types: ["patch"]
+  # Held back on purpose; each one is listed with its reason in the stack
+  # upgrade tracking issue (#2355). Remove the entry when the reason goes away.
+  ignore:
+    # tied to the Elasticsearch 2.4 server (ES 8 migration: #2211)
+    - dependency-name: "elasticsearch"
+      update-types: ["version-update:semver-major"]
+    - dependency-name: "elasticsearch-dsl"
+      update-types: ["version-update:semver-major"]
+    # Pyramid 2 and setuptools >= 81 (no pkg_resources): go away with FastAPI
+    - dependency-name: "pyramid"
+      versions: [">=2"]
+    - dependency-name: "setuptools"
+      versions: [">=81"]
+    # APScheduler 4 is a full API rewrite
+    - dependency-name: "apscheduler"
+      versions: [">=4"]
+    # redis-py >= 7 needs kombu 5.7 (#2358); the kombu 5.7 PR is the signal
+    - dependency-name: "redis"
+      versions: [">=7"]
 - package-ecosystem: docker
   directory: "/"
   schedule:
     interval: "weekly"
+  cooldown:
+    default-days: 7
 - package-ecosystem: github-actions
   directory: '/'
   schedule:
     interval: 'weekly'
+  cooldown:
+    default-days: 7
+  groups:
+    github-actions:
+      patterns:
+        - "*"
