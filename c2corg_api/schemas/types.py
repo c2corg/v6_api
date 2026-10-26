@@ -9,6 +9,9 @@
 # type, and `Schema` removes the empty values of a mapping before validation,
 # so the defaults apply. List items have no default: an empty item is missing.
 
+import datetime
+import re
+from decimal import Decimal
 from functools import partial
 from typing import Annotated, get_args
 
@@ -143,3 +146,102 @@ def Seq(item):  # noqa: N802 (used like a type)
 def Map(schema):  # noqa: N802 (used like a type)
     """Return a type for a nested schema."""
     return Annotated[schema | None, Empty(_none), BeforeValidator(check_mapping)]
+
+
+# the date format of `iso8601.parse_date`, which `colander.Date` used
+_ISO8601 = re.compile(
+    r"""
+    (?P<year>[0-9]{4})
+    (
+        (
+            (-(?P<monthdash>[0-9]{1,2}))
+            |
+            (?P<month>[0-9]{2})
+            (?!$)  # Don't allow YYYYMM
+        )
+        (
+            (
+                (-(?P<daydash>[0-9]{1,2}))
+                |
+                (?P<day>[0-9]{2})
+            )
+            (
+                (
+                    (?P<separator>[ T])
+                    (?P<hour>[0-9]{2})
+                    (:{0,1}(?P<minute>[0-9]{2})){0,1}
+                    (
+                        :{0,1}(?P<second>[0-9]{1,2})
+                        ([.,](?P<second_fraction>[0-9]+)){0,1}
+                    ){0,1}
+                    (?P<timezone>
+                        Z
+                        |
+                        (
+                            (?P<tz_sign>[-+])
+                            (?P<tz_hour>[0-9]{2})
+                            :{0,1}
+                            (?P<tz_minute>[0-9]{2}){0,1}
+                        )
+                    ){0,1}
+                ){0,1}
+            )
+        ){0,1}  # YYYY-MM
+    ){0,1}  # YYYY only
+    $
+    """,
+    re.VERBOSE,
+)
+
+
+def _parse_date(value):
+    """Parse like `colander.Date`: ISO 8601, the date part of a datetime."""
+    match = _ISO8601.match(value)
+    if not match:
+        raise ValueError(value)
+    g = {k: v for k, v in match.groupdict().items() if v is not None}
+    tz = None
+    if 'tz_sign' in g:
+        hours, minutes = int(g['tz_hour']), int(g.get('tz_minute', 0))
+        sign = -1 if g['tz_sign'] == '-' else 1
+        tz = datetime.timezone(sign * datetime.timedelta(hours=hours, minutes=minutes))
+    elif g.get('timezone') == 'Z':
+        tz = datetime.UTC
+    fraction = g.get('second_fraction', '0')
+    result = datetime.datetime(
+        year=int(g['year']),
+        month=int(g.get('month', g.get('monthdash', 1))),
+        day=int(g.get('day', g.get('daydash', 1))),
+        hour=int(g.get('hour', 0)),
+        minute=int(g.get('minute', 0)),
+        second=int(g.get('second', 0)),
+        microsecond=int(Decimal(f'0.{fraction}') * Decimal('1000000.0')),
+        tzinfo=tz,
+    )
+    return result.date()
+
+
+def _date_empty(value):
+    return value is None or not value
+
+
+def _to_date(value):
+    if _date_empty(value):
+        raise _required()
+    if isinstance(value, datetime.date):
+        return value
+    try:
+        return _parse_date(value)
+    except (ValueError, TypeError, ArithmeticError) as e:
+        raise PydanticCustomError('invalid_date', 'Invalid date') from e
+
+
+def _to_bool(value):
+    """Convert like `colander.Boolean`: only 'false' and '0' are false."""
+    if value is None:
+        raise _required()
+    return str(value).lower() not in ('false', '0')
+
+
+Date = Annotated[datetime.date | None, Empty(_date_empty), BeforeValidator(_to_date)]
+Bool = Annotated[bool | None, Empty(_none), BeforeValidator(_to_bool)]

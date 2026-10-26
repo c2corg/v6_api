@@ -66,6 +66,10 @@ def sample(node, full):
         return json.dumps(GEOMETRIES[typ.geometry_types[0]])
     if isinstance(typ, colander.Integer):
         return 12
+    if isinstance(typ, colander.Date):
+        return '2016-01-01'
+    if isinstance(typ, colander.Boolean):
+        return True
     choices = _choices(node)
     if choices:
         return choices[-1]
@@ -93,6 +97,25 @@ def _variants(node):
         ]
     if isinstance(node.typ, colander.Sequence):
         values += [[None], [5], ['x'], [{}]]
+    if isinstance(node.typ, colander.Date):
+        values += [
+            '2016-1-1',
+            '20160101',
+            '2016',
+            '2016-01',
+            '201601',
+            '2016-13-01',
+            '2016-02-30',
+            '01/01/2016',
+            '2016-01-01T10:00:00',
+            '2016-01-01T25:00:00',
+            '2016-01-01T10:00:00+02:00',
+            '2016-01-01T10:00:00+25:00',
+            '2016-01-01 10:00Z',
+            ' 2016-01-01',
+        ]
+    if isinstance(node.typ, colander.Boolean):
+        values += ['false', 'FALSE', '0', 0, 'no', 'off', 1, 'true', False]
     return values
 
 
