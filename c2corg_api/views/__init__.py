@@ -1,5 +1,6 @@
 import collections.abc
 import datetime
+import fnmatch
 import logging
 import math
 
@@ -109,7 +110,19 @@ def http_error_handler(exc, request):
     request.errors = Errors(exc.code)
     request.errors.add('body', exc.title, exc.detail)
 
-    return json_error(request)
+    return with_cors_headers(request, json_error(request))
+
+
+def with_cors_headers(request, response):
+    """Add the CORS headers Cornice gives its views to an error answer."""
+    # The tweens (JWT validation, rate limiting) answer before any Cornice
+    # view: without these headers, a browser hides the error from the UI and
+    # reports a CORS failure instead (#720, #730).
+    origin = request.headers.get('Origin')
+    if origin and any(fnmatch.fnmatchcase(origin, o) for o in cors_policy['origins']):
+        response.headers.setdefault('Access-Control-Allow-Origin', origin)
+    response.headers.setdefault('Access-Control-Expose-Headers', 'Content-Type')
+    return response
 
 
 @view_config(context=Exception)
@@ -125,7 +138,7 @@ def catch_all_error_handler(exc, request):
     request.errors = Errors(500)
     request.errors.add('body', 'unexpected error', 'please consult the server logs')
 
-    return json_error(request)
+    return with_cors_headers(request, json_error(request))
 
 
 @view_config(context=AccountNotValidated)
