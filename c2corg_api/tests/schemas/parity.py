@@ -187,3 +187,29 @@ def assert_parity(colander_node, schema, extra_cases=()):
         )
         + f'\n\n({len(differences)} of {len(all_cases)} cases differ)'
     )
+
+
+def assert_document_type_parity(colander_schemas, schemas, document):
+    """Assert a document type's schemas replace its Colander schemas exactly.
+
+    `colander_schemas` and `schemas` are (create, update, base, listing);
+    `document` is a model instance used to compare dictify and objectify.
+    """
+    from c2corg_api.views import serialize
+
+    colander_create, colander_update, colander_base, colander_listing = colander_schemas
+    create, update, base, listing = schemas
+    assert_parity(colander_create, create)
+    assert_parity(colander_update, update)
+    assert serialize(base.dictify(document)) == serialize(
+        colander_base.dictify(document)
+    )
+    assert serialize(listing.dictify(document)) == serialize(
+        colander_listing.dictify(document)
+    )
+    data = colander_create.deserialize(
+        _none_to_null(copy.deepcopy(sample(colander_create, True)))
+    )
+    assert serialize(base.dictify(base.objectify(data))) == serialize(
+        colander_base.dictify(colander_base.objectify(data))
+    )

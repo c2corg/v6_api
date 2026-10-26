@@ -12,8 +12,7 @@ from c2corg_api.schemas.book import (
     book_listing_schema,
     book_schema,
 )
-from c2corg_api.tests.schemas.parity import assert_parity
-from c2corg_api.views import serialize
+from c2corg_api.tests.schemas.parity import assert_document_type_parity
 
 
 def _book():
@@ -28,35 +27,9 @@ def _book():
     )
 
 
-class TestBookSchemas:
-    def test_create(self):
-        assert_parity(schema_create_book, BookCreateSchema)
-
-    def test_update(self):
-        assert_parity(schema_update_book, BookUpdateSchema)
-
-    def test_dictify(self):
-        book = _book()
-        assert serialize(book_schema.dictify(book)) == serialize(
-            schema_book.dictify(book)
-        )
-
-    def test_listing_dictify(self):
-        book = _book()
-        assert serialize(book_listing_schema.dictify(book)) == serialize(
-            schema_listing_book.dictify(book)
-        )
-
-    def test_objectify(self):
-        data = schema_create_book.deserialize(
-            {
-                'author': 'Author',
-                'nb_pages': 10,
-                'locales': [{'lang': 'en', 'title': 'Title'}],
-            }
-        )
-        expected = schema_book.objectify(data)
-        actual = book_schema.objectify(data)
-        assert serialize(book_schema.dictify(actual)) == serialize(
-            schema_book.dictify(expected)
-        )
+def test_book_parity():
+    assert_document_type_parity(
+        (schema_create_book, schema_update_book, schema_book, schema_listing_book),
+        (BookCreateSchema, BookUpdateSchema, book_schema, book_listing_schema),
+        _book(),
+    )
