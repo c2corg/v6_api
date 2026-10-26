@@ -8,7 +8,7 @@ from a2wsgi import ASGIMiddleware
 from fastapi import FastAPI
 from starlette.routing import Match
 
-from c2corg_api.web import health
+from c2corg_api.web import health, search
 from c2corg_api.web.auth import TokenValidationMiddleware
 from c2corg_api.web.cors import CorsMiddleware
 
@@ -22,6 +22,7 @@ def create_fastapi_app(settings):
     app.add_middleware(TokenValidationMiddleware)
     app.add_middleware(CorsMiddleware)
     health.include(app)
+    search.include(app)
     return app
 
 
