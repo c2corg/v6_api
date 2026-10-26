@@ -12,12 +12,6 @@ RUN set -x \
     && dpkg-reconfigure locales \
     && /usr/sbin/update-locale LANG=en_US.UTF-8
 
-# git: uv fetches the git-sourced dependencies. Compiled wheels (Shapely,
-# pyproj, psycopg2-binary, numpy) bundle their own native libraries.
-RUN set -x \
-    && apt-get -y --no-install-recommends install \
-    git
-
 RUN set -x \
  && apt-get -y purge \
  && apt-get -y --purge autoremove \
