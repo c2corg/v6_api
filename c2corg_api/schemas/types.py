@@ -10,6 +10,7 @@
 # so the defaults apply. List items have no default: an empty item is missing.
 
 import datetime
+import math
 import re
 from decimal import Decimal
 from functools import partial
@@ -194,19 +195,20 @@ _ISO8601 = re.compile(
 )
 
 
-def _parse_date(value):
-    """Parse like `colander.Date`: ISO 8601, the date part of a datetime."""
+def _parse_datetime(value, default_tz=None):
+    """Parse like `iso8601.parse_date`, which Colander used."""
     match = _ISO8601.match(value)
     if not match:
         raise ValueError(value)
     g = {k: v for k, v in match.groupdict().items() if v is not None}
-    tz = None
     if 'tz_sign' in g:
         hours, minutes = int(g['tz_hour']), int(g.get('tz_minute', 0))
         sign = -1 if g['tz_sign'] == '-' else 1
         tz = datetime.timezone(sign * datetime.timedelta(hours=hours, minutes=minutes))
     elif g.get('timezone') == 'Z':
         tz = datetime.UTC
+    else:
+        tz = default_tz
     fraction = g.get('second_fraction', '0')
     result = datetime.datetime(
         year=int(g['year']),
@@ -218,7 +220,7 @@ def _parse_date(value):
         microsecond=int(Decimal(f'0.{fraction}') * Decimal('1000000.0')),
         tzinfo=tz,
     )
-    return result.date()
+    return result
 
 
 def _date_empty(value):
@@ -231,9 +233,36 @@ def _to_date(value):
     if isinstance(value, datetime.date):
         return value
     try:
-        return _parse_date(value)
+        return _parse_datetime(value).date()
     except (ValueError, TypeError, ArithmeticError) as e:
         raise PydanticCustomError('invalid_date', 'Invalid date') from e
+
+
+def _to_datetime(value):
+    """Convert like `colander.DateTime` from ColanderAlchemy: ISO 8601."""
+    # without a time zone, the datetime stays naive (ColanderAlchemy creates
+    # the type without a default time zone)
+    if _date_empty(value):
+        raise _required()
+    if isinstance(value, datetime.datetime):
+        return value
+    try:
+        return _parse_datetime(value)
+    except (ValueError, TypeError, ArithmeticError) as e:
+        raise PydanticCustomError('invalid_date', 'Invalid date') from e
+
+
+def _to_finite_float(value):
+    """Convert like `colander_ext.FiniteFloat`: NaN and infinity give null."""
+    if _int_empty(value):
+        raise _required()
+    try:
+        result = float(value)
+    except (TypeError, ValueError) as e:
+        raise PydanticCustomError(
+            'not_a_number', '"{value}" is not a number', {'value': str(value)}
+        ) from e
+    return result if math.isfinite(result) else None
 
 
 def _to_bool(value):
@@ -244,4 +273,10 @@ def _to_bool(value):
 
 
 Date = Annotated[datetime.date | None, Empty(_date_empty), BeforeValidator(_to_date)]
+DateTime = Annotated[
+    datetime.datetime | None, Empty(_date_empty), BeforeValidator(_to_datetime)
+]
+FiniteFloat = Annotated[
+    float | None, Empty(_int_empty), BeforeValidator(_to_finite_float)
+]
 Bool = Annotated[bool | None, Empty(_none), BeforeValidator(_to_bool)]
