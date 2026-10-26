@@ -2866,6 +2866,29 @@ class TestReachableIdsByGeometry(BaseTestCase):
         )
         assert self.route.document_id not in ids
 
+    def test_get_route_ids_within_geometry_duration_filter_keeps_unknown(self):
+        # a route without a calculated_duration is not hidden by the filter
+        self.session.query(Route).filter(
+            Route.document_id == self.route.document_id
+        ).update({'calculated_duration': None}, synchronize_session=False)
+        self.session.flush()
+
+        ids = self.get_route_ids_within_geometry(
+            self.geom_wkt, max_duration_seconds=3600
+        )
+        assert self.route.document_id in ids
+
+        # ... except if it is declared as taking several days
+        self.session.query(Route).filter(
+            Route.document_id == self.route.document_id
+        ).update({'durations': ['2', '3']}, synchronize_session=False)
+        self.session.flush()
+
+        ids = self.get_route_ids_within_geometry(
+            self.geom_wkt, max_duration_seconds=3600
+        )
+        assert self.route.document_id not in ids
+
     def test_get_waypoint_ids_within_geometry(self):
         ids = self.get_waypoint_ids_within_geometry(self.geom_wkt)
         assert self.access_wp.document_id in ids

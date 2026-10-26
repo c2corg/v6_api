@@ -826,7 +826,9 @@ def get_route_ids_within_geometry(intersection_geom_wkt, max_duration_seconds=No
         If falsy (None or empty), no candidate can intersect it, so an
         empty set is returned without querying the database.
     max_duration_seconds: if given, additionally restrict to routes whose
-        calculated_duration does not exceed this budget. NOTE:
+        calculated_duration does not exceed this budget (routes without a
+        calculated_duration are kept, unless their `durations` is several
+        days only). NOTE:
         Route.calculated_duration is stored in DAYS (see
         c2corg_api/__init__.py::_update_route_duration and the frontend's
         PlanATripSection.vue, which reads it as `durationInDays * 24` for
@@ -873,8 +875,25 @@ def get_route_ids_within_geometry(intersection_geom_wkt, max_duration_seconds=No
     if max_duration_seconds is not None:
         # calculated_duration is stored in DAYS, max_duration_seconds is in
         # SECONDS: convert the budget to days for the comparison.
+        # About half of the routes have no calculated_duration: either it is
+        # unknown (no usable length or height difference), or it is out of
+        # the bounds of calculate_route_duration (over 18 hours: a multi-day
+        # route). The unknown ones are kept (the round trip check treats them
+        # as 0), but not the routes declared as taking several days.
         max_duration_days = max_duration_seconds / 86400.0
-        query = query.filter(Route.calculated_duration <= max_duration_days)
+        query = query.filter(
+            or_(
+                Route.calculated_duration <= max_duration_days,
+                and_(
+                    Route.calculated_duration.is_(None),
+                    or_(
+                        Route.durations.is_(None),
+                        func.cardinality(Route.durations) == 0,
+                        Route.durations.contains(['1']),
+                    ),
+                ),
+            )
+        )
 
     route_ids = {r.document_id for r in query.distinct().all()}
 
