@@ -71,6 +71,44 @@ _CHECKS = {
 }
 
 
+# how deep the positions are nested in the coordinates of each geometry type
+_POSITION_DEPTH = {
+    'POINT': 0,
+    'MULTIPOINT': 1,
+    'LINESTRING': 1,
+    'MULTILINESTRING': 2,
+    'POLYGON': 2,
+    'MULTIPOLYGON': 3,
+}
+
+
+def _positions(coordinates, depth):
+    if depth == 0:
+        yield coordinates
+    else:
+        for item in coordinates:
+            yield from _positions(item, depth - 1)
+
+
+def _truncate(coordinates, depth, dimension):
+    if depth == 0:
+        return coordinates[:dimension]
+    return [_truncate(item, depth - 1, dimension) for item in coordinates]
+
+
+def _same_dimension(data, geom_type):
+    """Give all the positions the lowest dimension found in the geometry."""
+    # A geometry has a single dimension in PostGIS (and geomet fails on
+    # mixed ones): a track mixing 2D and 4D positions becomes 2D. The
+    # values dropped are the trailing ones (z, then m).
+    depth = _POSITION_DEPTH[geom_type]
+    coordinates = data['coordinates']
+    dimensions = {len(p) for p in _positions(coordinates, depth)}
+    if len(dimensions) > 1:
+        data['coordinates'] = _truncate(coordinates, depth, min(dimensions))
+    return data
+
+
 def _to_wkb(value, geometry_types, srid):
     """Convert a GeoJSON string into a `WKBElement`, checking its type."""
     if value is None or value == '':
@@ -92,7 +130,7 @@ def _to_wkb(value, geometry_types, srid):
     check = _CHECKS.get(geom_type)
     if check is None or check(data.get('coordinates')):
         raise _invalid(value)
-    return wkbelement_from_geojson(data, srid)
+    return wkbelement_from_geojson(_same_dimension(data, geom_type), srid)
 
 
 def Geometry(geometry_types, srid=3857):  # noqa: N802 (used like a type)
