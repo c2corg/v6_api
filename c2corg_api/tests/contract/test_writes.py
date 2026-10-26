@@ -96,14 +96,9 @@ class TestDocumentCreate(WriteContractTest):
         )
 
 
-# the profiles of the test users have no archived version (real ones get
-# it at registration): their PUT is covered with the user routes
-UPDATED_TYPES = [t for t in DOCUMENT_TYPES if t != 'profiles']
-
-
 class TestDocumentUpdate(WriteContractTest):
-    @contract(*_routes('PUT', '/{prefix}/{{id}}', UPDATED_TYPES))
-    @pytest.mark.parametrize('prefix', UPDATED_TYPES)
+    @contract(*_routes('PUT', '/{prefix}/{{id}}', DOCUMENT_TYPES))
+    @pytest.mark.parametrize('prefix', DOCUMENT_TYPES)
     def test_update(self, prefix):
         response = self.retitle(prefix)
         check_snapshot(f'{prefix}_update', response)
