@@ -49,8 +49,7 @@ dependencies = [
     "zope.sqlalchemy==4.1",
     "gunicorn==26.2.0",
     "python-dotenv==1.2.4",
-    # needs: https://github.com/mozilla-services/cornice/pull/359
-    "cornice @ git+https://github.com/c2corg/cornice.git@6.1.0+c2corg",
+    "cornice==6.1.0",
     # Discourse API client
     "pydiscourse==1.7.0",
     "pydantic==2.14.1",
