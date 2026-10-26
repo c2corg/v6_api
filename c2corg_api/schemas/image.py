@@ -1,5 +1,6 @@
 """Schemas of the images."""
 
+from c2corg_api.models.common import attributes as a
 from c2corg_api.models.common.attributes import image_types
 from c2corg_api.models.common.fields_image import fields_image
 from c2corg_api.models.image import Image
@@ -32,10 +33,8 @@ class ImageLocaleSchema(LocaleSchema):
 class ImageSchema(DocumentSchema):
     locales: Seq(ImageLocaleSchema) = []
     geometry: Map(ImageGeometrySchema) = None
-    # as with Colander, the items of activities and categories are not
-    # checked against their enum here
-    activities: Seq(Str()) = None
-    categories: Seq(Str()) = None
+    activities: Seq(OneOf(a.activities)) = None
+    categories: Seq(OneOf(a.image_categories)) = None
     image_type: OneOf(image_types) = None
     author: Str(100) = None
     elevation: Int = None

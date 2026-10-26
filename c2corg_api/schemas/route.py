@@ -31,23 +31,21 @@ class RouteSchema(DocumentSchema):
     locales: Seq(RouteLocaleSchema) = []
     geometry: Map(RouteGeometrySchema) = None
     main_waypoint_id: Int = None
-    # as with Colander, the items of the lists are not checked against their
-    # enum here
-    activities: Seq(Str(), min_length=1)
+    activities: Seq(OneOf(a.activities), min_length=1)
     elevation_min: Int = None
     elevation_max: Int = None
     height_diff_up: Int = None
     height_diff_down: Int = None
     route_length: Int = None
-    durations: Seq(Str()) = None
+    durations: Seq(OneOf(a.route_duration_types)) = None
     calculated_duration: Float = None
     difficulties_height: Int = None
     height_diff_access: Int = None
     height_diff_difficulties: Int = None
-    route_types: Seq(Str()) = None
-    orientations: Seq(Str()) = None
+    route_types: Seq(OneOf(a.route_types)) = None
+    orientations: Seq(OneOf(a.orientation_types)) = None
     glacier_gear: OneOf(a.glacier_gear_types) = 'no'
-    configuration: Seq(Str()) = None
+    configuration: Seq(OneOf(a.route_configuration_types)) = None
     lift_access: Bool = None
     ski_rating: OneOf(a.ski_ratings) = None
     ski_exposition: OneOf(a.exposition_ratings) = None
@@ -72,7 +70,7 @@ class RouteSchema(DocumentSchema):
     mtb_length_asphalt: Int = None
     mtb_length_trail: Int = None
     mtb_height_diff_portages: Int = None
-    rock_types: Seq(Str()) = None
+    rock_types: Seq(OneOf(a.rock_types)) = None
     climbing_outdoor_type: OneOf(a.climbing_outdoor_types) = None
     slackline_type: OneOf(a.slackline_types) = None
     slackline_height: Int = None

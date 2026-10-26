@@ -110,11 +110,14 @@ class TestChangesDocumentRest(BaseTestRest):
         self.session.flush()
 
     def test_counts(self):
+        # besides these documents, the profiles of the global test users have
+        # a version per locale (7, the contributor has two) and a history
+        # entry each (6)
         version_count = self.session.query(DocumentVersion).count()
-        assert 4 == version_count
+        assert 4 + 7 == version_count
 
         hist_meta_count = self.session.query(HistoryMetaData).count()
-        assert 5 == hist_meta_count
+        assert 5 + 6 == hist_meta_count
 
     def test_get_changes(self):
         response = self.app.get(self._prefix, status=200)
