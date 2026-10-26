@@ -168,7 +168,7 @@ requires-dist = [
     { name = "alembic", specifier = "==1.20.0" },
     { name = "apscheduler", specifier = "==3.11.3" },
     { name = "bcrypt", specifier = "==5.0.0" },
-    { name = "cornice", git = "https://github.com/c2corg/cornice.git?rev=6.1.0%2Bc2corg" },
+    { name = "cornice", specifier = "==6.1.0" },
     { name = "dogpile-cache", specifier = "==1.5.0" },
     { name = "elasticsearch", specifier = "==2.4.1" },
     { name = "elasticsearch-dsl", specifier = "==2.2.0" },
@@ -312,10 +312,14 @@ wheels = [
 
 [[package]]
 name = "cornice"
-version = "6.1.0+c2corg"
-source = { git = "https://github.com/c2corg/cornice.git?rev=6.1.0%2Bc2corg#27b9d3d842ddc34c2ffaca7cddc33624cfb196c7" }
+version = "6.1.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyramid" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/24/ed/24f0a45b0ae9d1633c8d32d6f14592eab6bcfddd1cb5df5c0073f4f185d1/cornice-6.1.0.tar.gz", hash = "sha256:bfd1b6c2a991a7ccb1b2082b6de9e3b8f198b6a2b4a07ab0800e05df05a45361", size = 146106, upload-time = "2024-02-08T11:28:48.498Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c2/a1/12b4a55223bcdd70e8a494984637782b0453700bbf92ae6665a577322ac1/cornice-6.1.0-py3-none-any.whl", hash = "sha256:320b026998a30099bace43484664eb0a4db37eff0dfc6f7733cec183ec3174ad", size = 28675, upload-time = "2024-02-08T11:28:46.833Z" },
 ]
 
 [[package]]
