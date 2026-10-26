@@ -45,9 +45,10 @@ NON_FILTER_PARAMS = ('zoom',)
 
 
 def _search_params(request):
-    """Returns the url parameters handled as search filters: the same ones
-    as the documents listing, so that the map layers match a search made
-    from the listing.
+    """Return the url parameters handled as search filters.
+
+    They are the same ones as the documents listing, so that the map layers
+    match a search made from the listing.
     """
     return {
         key: request.GET.get(key) for key in request.GET if key not in NON_FILTER_PARAMS
@@ -55,9 +56,10 @@ def _search_params(request):
 
 
 def _expanded_bbox(bbox, ratio=0.5):
-    """Grows the bbox by `ratio` of its size on each side. The search index
-    only knows one point per document, whereas a track can extend far away
-    from this point.
+    """Grow the bbox by `ratio` of its size on each side.
+
+    The search index only knows one point per document, whereas a track can
+    extend far away from this point.
     """
     xmin, ymin, xmax, ymax = bbox
     dx = (xmax - xmin) * ratio
@@ -78,7 +80,7 @@ def _heatmap_precision(zoom):
 
 
 def _geohash_center(geohash):
-    """Returns the `(lon, lat)` center of a geohash cell."""
+    """Return the `(lon, lat)` center of a geohash cell."""
     lat_range = [-90.0, 90.0]
     lon_range = [-180.0, 180.0]
     is_lon = True
@@ -99,10 +101,11 @@ def _lon_lat_to_3857(lon, lat):
 
 
 def _build_search(doc_type, params, bbox, meta_params):
-    """Builds the search query of the documents matching the filters in the
-    given bbox. On top of the filters of the documents listing, an `ids=1,2`
-    parameter restricts the result to the given documents (an empty list
-    matches nothing).
+    """Build the search query of the documents matching the filters in the bbox.
+
+    On top of the filters of the documents listing, an `ids=1,2` parameter
+    restricts the result to the given documents (an empty list matches
+    nothing).
     """
     params = dict(params, bbox=_bbox_param(bbox))
     ids = params.pop('ids', None)
@@ -116,8 +119,9 @@ def _build_search(doc_type, params, bbox, meta_params):
 
 
 def get_heatmap(doc_type, params, bbox, zoom):
-    """Returns the density buckets (`{x, y, count}` in EPSG:3857) of the
-    documents matching the search filters in the given bbox.
+    """Return the density buckets (`{x, y, count}` in EPSG:3857).
+
+    They are those of the documents matching the search filters in the bbox.
     """
     search = _build_search(doc_type, params, bbox, {'limit': 0, 'offset': 0})
     search.aggs.bucket(
@@ -138,9 +142,10 @@ def get_heatmap(doc_type, params, bbox, zoom):
 
 
 def get_track_candidates(doc_type, params, bbox):
-    """Returns `(document_ids, truncated)` for the documents matching the
-    search filters around the given bbox. `truncated` is set when there
-    are more candidates than what is asked to the search index.
+    """Return `(document_ids, truncated)` for the documents matching the filters.
+
+    The documents are searched around the given bbox. `truncated` is set when
+    there are more candidates than what is asked to the search index.
     """
     search = _build_search(
         doc_type,
@@ -164,7 +169,7 @@ def _titles_by_document_id(locale_model, document_ids, lang):
         if best_locale:
             title_prefix = getattr(best_locale, 'title_prefix', None)
             titles[document_id] = (
-                '{} : {}'.format(title_prefix, best_locale.title)
+                f'{title_prefix} : {best_locale.title}'
                 if title_prefix
                 else best_locale.title
             )

@@ -60,7 +60,7 @@ class TestHelpers(BaseTestRest):
 
 
 class TestOutingsHeatmapRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/outings/map/heatmap'
 
@@ -117,7 +117,7 @@ class TestOutingsHeatmapRest(BaseTestRest):
 
 
 class TestOutingsTracksRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
         self._prefix = '/outings/map/tracks'
 
@@ -208,7 +208,7 @@ class TestOutingsTracksRest(BaseTestRest):
 
 
 class TestRoutesMapRest(BaseTestRest):
-    def setUp(self):  # noqa
+    def setUp(self):
         super().setUp()
 
         self.session.add(

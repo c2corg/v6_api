@@ -189,14 +189,15 @@ def validate_token_pagination(request, **kwargs):
 
 
 def validate_zoom(request, **kwargs):
-    """Checks that a required `zoom=...` integer query parameter is given."""
+    """Check that a required `zoom=...` integer query parameter is given."""
     check_get_for_integer_property(request, 'zoom', True)
 
 
 def validate_bbox(request, **kwargs):
-    """Checks and parses a required `bbox=xmin,ymin,xmax,ymax` (EPSG:3857)
-    query parameter into `request.validated['bbox']` as a 4-tuple of
-    floats.
+    """Check and parse a required `bbox=xmin,ymin,xmax,ymax` query parameter.
+
+    The bbox is in EPSG:3857, stored into `request.validated['bbox']` as a
+    4-tuple of floats.
 
     This is distinct from `create_bbox_filter` in
     `c2corg_api.search.search_filters`, which parses the same shape of
