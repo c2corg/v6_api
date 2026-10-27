@@ -137,6 +137,33 @@ class TestSitemaps(DocumentContractTest):
         check_snapshot('sitemaps_xml_waypoints', waypoints)
         assert b'<urlset' in waypoints.body
 
+    @contract(('GET', '/sitemaps'), ('GET', '/sitemaps.xml'))
+    def test_not_modified(self):
+        for url, name in [('/sitemaps', 'sitemaps'), ('/sitemaps.xml', 'sitemaps_xml')]:
+            etag = self.get(url).headers['ETag']
+            response = self.get(url, headers={'If-None-Match': etag}, status=304)
+            check_snapshot(f'{name}_not_modified', response)
+
+    @contract(('GET', '/sitemaps/{doc_type}/{i}'))
+    def test_invalid_page(self):
+        response = self.get('/sitemaps/z/x', status=400)
+        check_snapshot('sitemaps_invalid', response)
+        assert [e['name'] for e in response.json['errors']] == ['i', 'doc_type']
+
+    @contract(('GET', '/sitemaps.xml/{doc_type}/{i}.xml'))
+    def test_invalid_page_xml(self):
+        response = self.get('/sitemaps.xml/z/x.xml', status=400)
+        check_snapshot('sitemaps_xml_invalid', response)
+        assert [e['name'] for e in response.json['errors']] == ['i', 'doc_type']
+
+    @contract(
+        ('GET', '/sitemaps/{doc_type}/{i}'), ('GET', '/sitemaps.xml/{doc_type}/{i}.xml')
+    )
+    def test_page_without_documents(self):
+        check_snapshot('sitemaps_empty_page', self.get('/sitemaps/w/99', status=404))
+        response = self.get('/sitemaps.xml/w/99.xml', status=404)
+        check_snapshot('sitemaps_xml_empty_page', response)
+
 
 class TestCoverageLookup(DocumentContractTest):
     @contract(('GET', '/getcoverage'))
