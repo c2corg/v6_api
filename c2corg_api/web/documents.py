@@ -110,6 +110,11 @@ def include(app):
     from c2corg_api.views.route import RouteInfoRest, RouteRest, RouteVersionRest
     from c2corg_api.views.topo_map import TopoMapInfoRest, TopoMapRest
     from c2corg_api.views.user_profile import UserProfileInfoRest, UserProfileRest
+    from c2corg_api.views.waypoint import (
+        WaypointInfoRest,
+        WaypointRest,
+        WaypointVersionRest,
+    )
     from c2corg_api.views.xreport import (
         XreportInfoRest,
         XreportRest,
@@ -134,6 +139,11 @@ def include(app):
     # /reachableroutes and /routes/update_public_transportation_rating stay on
     # Pyramid
     include_document_type(app, 'routes', RouteRest, RouteVersionRest, RouteInfoRest)
+    # /reachablewaypoints, /waypoints/{id}/stopareas, /waypoints/{id}/isReachable
+    # and /waypoints_stopareas/... stay on Pyramid
+    include_document_type(
+        app, 'waypoints', WaypointRest, WaypointVersionRest, WaypointInfoRest
+    )
     # the listing of the profiles is for the authenticated users, and a private
     # profile shows only the user name to the others; no version route
     include_document_type(
