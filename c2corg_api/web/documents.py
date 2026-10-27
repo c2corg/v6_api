@@ -67,16 +67,19 @@ def include_document_type(
     # read by the route inventory of the contract tests (routes.txt)
     listing.permission = listing_permission
 
+    # Only numeric ids: the other paths (/images/list,
+    # /routes/update_public_transportation_rating...) are other routes, and an
+    # invalid id gets the same 400 from Pyramid.
     methods = ['GET', 'HEAD']
     app.add_api_route(f'/{prefix}', listing, methods=methods)
-    app.add_api_route(f'/{prefix}/{{id}}', document, methods=methods)
+    app.add_api_route(f'/{prefix}/{{id:int}}', document, methods=methods)
 
     if info_rest is not None:
 
         def info(request: Request, user: User):
             return call(request, user, [validate_id, validate_lang], info_rest)
 
-        app.add_api_route(f'/{prefix}/{{id}}/{{lang}}/info', info, methods=methods)
+        app.add_api_route(f'/{prefix}/{{id:int}}/{{lang}}/info', info, methods=methods)
 
     if version_rest is not None:
 
@@ -88,9 +91,8 @@ def include_document_type(
                 version_rest,
             )
 
-        app.add_api_route(
-            f'/{prefix}/{{id}}/{{lang}}/{{version_id}}', version, methods=methods
-        )
+        path = f'/{prefix}/{{id:int}}/{{lang}}/{{version_id:int}}'
+        app.add_api_route(path, version, methods=methods)
 
 
 def include(app):

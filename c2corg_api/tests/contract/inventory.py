@@ -1,6 +1,7 @@
 """Inventory of the public routes of the API, with their methods and permission."""
 
 import os
+import re
 import sys
 
 # the file the inventory is compared with (see test_inventory.py)
@@ -25,7 +26,9 @@ def route_inventory(app):
                 # a FastAPI route checks its permission itself, and tells
                 # which one in the `permission` attribute of its endpoint
                 permission = getattr(route.endpoint, 'permission', None) or PUBLIC
-                rows.add((route.path, method, permission))
+                # without the convertors: {id:int} is {id} for Pyramid
+                path = re.sub(r':\w+}', '}', route.path)
+                rows.add((path, method, permission))
     return sorted(rows)
 
 

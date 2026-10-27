@@ -1,0 +1,18 @@
+{
+  "body": {
+    "errors": [
+      {
+        "description": "null",
+        "location": "str",
+        "name": "str"
+      }
+    ],
+    "status": "str"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  },
+  "status": 405
+}

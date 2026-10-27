@@ -204,6 +204,17 @@ class TestDocumentGet(DocumentContractTest):
     def test_get_unknown_book(self):
         check_snapshot('books_get_not_found', self.get('/books/9999999', status=404))
 
+    @contract(*_routes('GET', '/{prefix}/{{id}}', ['books']))
+    @pytest.mark.parametrize('book_id', ['abc', '-1'])
+    def test_get_invalid_id(self, book_id):
+        response = self.get(f'/books/{book_id}', status=400)
+        check_snapshot('books_get_invalid_id', response)
+
+    @contract(*_routes('GET', '/{prefix}/{{id}}/{{lang}}/{{version_id}}', ['books']))
+    def test_get_invalid_version_id(self):
+        response = self.get(self.url('books', '/en/abc'), status=400)
+        check_snapshot('books_version_invalid_id', response)
+
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['xreports']))
     @pytest.mark.parametrize('user', ['contributor', 'moderator', 'contributor2'])
     def test_get_xreport_as(self, user):
@@ -285,3 +296,22 @@ class TestDocumentListing(DocumentContractTest):
     @contract(('GET', '/profiles'))
     def test_profiles_listing_needs_a_user(self):
         check_snapshot('profiles_listing_anonymous', self.get('/profiles', status=403))
+
+
+class TestPathsLikeADocument(ContractTest):
+    """Paths that look like a document page, with another route."""
+
+    @contract(('POST', '/images/list'))
+    def test_get_image_list(self):
+        # a POST-only route: GET is not allowed (it is not image "list")
+        response = self.get('/images/list', status=405)
+        check_snapshot('images_list_get', response)
+
+    @contract(('GET', '/routes/update_public_transportation_rating'))
+    def test_update_public_transportation_rating_needs_a_moderator(self):
+        response = self.get(
+            '/routes/update_public_transportation_rating',
+            user='contributor',
+            status=403,
+        )
+        check_snapshot('routes_update_public_transportation_rating_forbidden', response)
