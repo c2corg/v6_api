@@ -22,10 +22,12 @@ class _Errors(list):
 
 
 class _Response:
-    """What the views set on request.response: headers only."""
+    """What the views set on request.response: headers and content type."""
 
     def __init__(self):
         self.headers = {}
+        # set by the views answering something else than JSON (the XML sitemaps)
+        self.content_type = None
 
 
 class _Registry:
@@ -109,6 +111,11 @@ def run_view(adapted, view):
         if registry is not None:
             manager.pop()
     headers = adapted.response.headers
+    content_type = adapted.response.content_type
+    if content_type is not None:
+        # a string, with the content type of the Pyramid string renderer
+        headers = {**headers, 'Content-Type': f'{content_type}; charset=UTF-8'}
+        return Response(result, headers=headers)
     if not headers:
         return result
     return JSONResponse(result, headers=headers)
