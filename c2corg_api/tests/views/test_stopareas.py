@@ -29,6 +29,29 @@ class TestStopareaRest(BaseDocumentTestRest):
         assert result['total_results'] >= 0
         assert isinstance(result['documents'], list)
 
+    def test_collection_get_page(self):
+        self.session.add(
+            Stoparea(
+                stoparea_id=2,
+                navitia_id='nav2',
+                stoparea_name='Stop Area 2',
+                line='line2',
+                operator='operator2',
+            )
+        )
+        self.session.flush()
+        response = self.app.get('/stopareas?page_id=2&nb_items=1', status=200)
+        result = response.json
+
+        assert result['total_results'] == 2
+        assert len(result['documents']) == 1
+
+    def test_collection_get_invalid_page(self):
+        response = self.app.get('/stopareas?page_id=0&nb_items=x', status=400)
+        names = [e['name'] for e in response.json['errors']]
+
+        assert names == ['page_id', 'nb_items']
+
     def test_get_stoparea_not_found(self):
         """Test getting a stoparea that doesn't exist."""
         response = self.app.get('/stopareas/999999', status=404)

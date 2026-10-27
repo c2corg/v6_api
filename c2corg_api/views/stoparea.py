@@ -13,6 +13,22 @@ from c2corg_api.views.validation import (
 
 validate_stoparea_create = ['navitia_id', 'stoparea_name', 'line', 'operator', 'geom']
 
+
+def validate_page_params(request, **kwargs):
+    """Check that the optional page_id and nb_items are positive integers."""
+    for key in ('page_id', 'nb_items'):
+        value = request.GET.get(key)
+        if value is None:
+            continue
+        try:
+            number = int(value)
+            if number < 1:
+                raise ValueError
+            request.validated[key] = number
+        except ValueError:
+            request.errors.add('querystring', key, 'invalid ' + key)
+
+
 validate_stoparea_update = validate_stoparea_create
 
 
@@ -21,11 +37,17 @@ class StopareaRest:
     def __init__(self, request, context=None):
         self.request = request
 
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
+    @view(
+        validators=[
+            validate_pagination,
+            validate_preferred_lang_param,
+            validate_page_params,
+        ]
+    )
     def collection_get(self):
         """Get a list of stopareas."""
-        page_id = self.request.GET.get('page_id', 1)
-        nb_items = self.request.GET.get('nb_items', 30)
+        page_id = self.request.validated.get('page_id', 1)
+        nb_items = self.request.validated.get('nb_items', 30)
 
         query = DBSession.query(Stoparea)
         total_results = query.count()
