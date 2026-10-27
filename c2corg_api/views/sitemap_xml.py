@@ -3,7 +3,6 @@ import logging
 from datetime import UTC, datetime
 from math import ceil
 
-from cornice.renderer import JSONError
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPNotFound
 from pyramid.interfaces import IRendererFactory
@@ -52,13 +51,12 @@ def render_errors(request):
     a ``render_errors`` callable
     expected by :meth:`cornice.service.Service.default_error_handler`.
     """
+    # the errors of the JSON routes, without the request headers
     cornicejson = request.registry.queryUtility(
         IRendererFactory,
         name='cornicejson',
     )
-    return JSONError(
-        cornicejson.serializer, cornicejson.kw, request.errors + [dict(request.headers)]
-    )
+    return cornicejson.render_errors(request)
 
 
 string_renderer_factory.render_errors = render_errors

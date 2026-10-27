@@ -54,9 +54,17 @@ class TestSitemapXml(BaseTestRest):
         assert next(filter(route_filter, sitemaps), None) is not None
 
     def test_get_sitemap_invalid_doc_type(self):
-        response = self.app.get(self._prefix + '/z/0.xml', status=400)
-        errors = response.json['errors']
-        self.assertError(errors, 'doc_type', 'invalid doc_type')
+        response = self.app.get(
+            self._prefix + '/z/0.xml', headers={'Cookie': 'a=b'}, status=400
+        )
+        # the errors only, as for the JSON routes: not the request headers
+        assert response.json['errors'] == [
+            {
+                'location': 'querystring',
+                'name': 'doc_type',
+                'description': 'invalid doc_type',
+            }
+        ]
 
     def test_get_sitemap_invalid_page(self):
         response = self.app.get(self._prefix + '/a/-123.xml', status=400)
