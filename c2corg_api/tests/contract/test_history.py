@@ -46,9 +46,9 @@ class TestDocumentChanges(DocumentContractTest):
 
     @contract(CHANGES)
     def test_invalid_parameters(self):
-        response = self.get(
-            '/documents/changes', params={'token': 'abc', 'u': 'x'}, status=400
-        )
+        # an invalid pagination token, not a password
+        params = {'token': 'abc', 'u': 'x'}  # nosec B105
+        response = self.get('/documents/changes', params=params, status=400)
         check_snapshot('documents_changes_invalid', response)
         assert [e['name'] for e in response.json['errors']] == ['token', 'u']
 
