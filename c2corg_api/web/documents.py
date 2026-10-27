@@ -104,6 +104,7 @@ def include(app):
     from c2corg_api.views.book import BookRest, BooksInfoRest, BooksVersionRest
     from c2corg_api.views.coverage import CoverageRest
     from c2corg_api.views.image import ImageInfoRest, ImageRest, ImageVersionRest
+    from c2corg_api.views.outing import OutingInfoRest, OutingRest, OutingVersionRest
     from c2corg_api.views.topo_map import TopoMapInfoRest, TopoMapRest
     from c2corg_api.views.user_profile import UserProfileInfoRest, UserProfileRest
     from c2corg_api.views.xreport import (
@@ -126,6 +127,7 @@ def include(app):
     include_document_type(
         app, 'xreports', XreportRest, XreportVersionRest, XreportInfoRest
     )
+    include_document_type(app, 'outings', OutingRest, OutingVersionRest, OutingInfoRest)
     # the listing of the profiles is for the authenticated users, and a private
     # profile shows only the user name to the others; no version route
     include_document_type(
