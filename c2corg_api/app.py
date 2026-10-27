@@ -11,6 +11,7 @@ from starlette.routing import Match
 from c2corg_api.web import documents, health, search
 from c2corg_api.web.auth import TokenValidationMiddleware
 from c2corg_api.web.cors import CorsMiddleware
+from c2corg_api.web.errors import UnexpectedErrorMiddleware
 
 
 def create_fastapi_app(settings):
@@ -18,7 +19,9 @@ def create_fastapi_app(settings):
     # no generated docs: the API documentation is not served (yet)
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings = settings
-    # the last middleware added runs first: CORS wraps the token errors
+    # the last middleware added runs first: CORS wraps the token errors and
+    # the unexpected errors
+    app.add_middleware(UnexpectedErrorMiddleware)
     app.add_middleware(TokenValidationMiddleware)
     app.add_middleware(CorsMiddleware)
     health.include(app)
