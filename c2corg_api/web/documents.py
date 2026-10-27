@@ -17,8 +17,7 @@ from c2corg_api.views.validation import (
     validate_version_id,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import ValidatedRequest, run_view, validate_query
-from c2corg_api.web.db import request_session
+from c2corg_api.web.compat import ValidatedRequest, serve_view
 from c2corg_api.web.errors import error_response
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
@@ -28,14 +27,6 @@ def include_document_type(
     app, prefix, rest, version_rest=None, info_rest=None, listing_permission=None
 ):
     """Add the read routes of a document type, served by its view classes."""
-
-    def call(request, user, validators, view_class, method='get'):
-        adapted, error = validate_query(request, *validators, user=user)
-        if error is not None:
-            return error
-        with request_session():
-            view = getattr(view_class(adapted), method)
-            return run_view(adapted, view)
 
     def listing(request: Request, user: User):
         # checked before the validators, like the permission of a Pyramid view
@@ -48,7 +39,7 @@ def include_document_type(
                 ' failed permission check'
             )
             return error_response([('body', 'Forbidden', description)], 403)
-        return call(
+        return serve_view(
             request,
             user,
             [validate_pagination, validate_preferred_lang_param],
@@ -57,7 +48,7 @@ def include_document_type(
         )
 
     def document(request: Request, user: User):
-        return call(
+        return serve_view(
             request,
             user,
             [validate_id, validate_lang_param, validate_cook_param],
@@ -77,14 +68,14 @@ def include_document_type(
     if info_rest is not None:
 
         def info(request: Request, user: User):
-            return call(request, user, [validate_id, validate_lang], info_rest)
+            return serve_view(request, user, [validate_id, validate_lang], info_rest)
 
         app.add_api_route(f'/{prefix}/{{id:int}}/{{lang}}/info', info, methods=methods)
 
     if version_rest is not None:
 
         def version(request: Request, user: User):
-            return call(
+            return serve_view(
                 request,
                 user,
                 [validate_id, validate_lang, validate_version_id],
