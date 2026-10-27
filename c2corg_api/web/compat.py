@@ -114,8 +114,15 @@ def run_view(adapted, view):
     return JSONResponse(result, headers=headers)
 
 
-def serve_view(request, user, validators, view_class, method='get'):
+def serve_view(request, user, validators, view_class, method='get', permission=None):
     """Answer a request with a method of a Pyramid view class."""
+    # the permission is checked before the validators, as Pyramid does
+    if permission and not ValidatedRequest(request, user).has_permission(permission):
+        # the message of Pyramid without debug_authorization (production)
+        description = (
+            f'Unauthorized: {view_class.__name__}.{method}__GET failed permission check'
+        )
+        return error_response([('body', 'Forbidden', description)], 403)
     adapted, error = validate_query(request, *validators, user=user)
     if error is not None:
         return error

@@ -17,8 +17,7 @@ from c2corg_api.views.validation import (
     validate_version_id,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import ValidatedRequest, serve_view
-from c2corg_api.web.errors import error_response
+from c2corg_api.web.compat import serve_view
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 
@@ -29,22 +28,13 @@ def include_document_type(
     """Add the read routes of a document type, served by its view classes."""
 
     def listing(request: Request, user: User):
-        # checked before the validators, like the permission of a Pyramid view
-        if listing_permission and not ValidatedRequest(request, user).has_permission(
-            listing_permission
-        ):
-            # the message of Pyramid without debug_authorization (production)
-            description = (
-                f'Unauthorized: {rest.__name__}.collection_get__GET'
-                ' failed permission check'
-            )
-            return error_response([('body', 'Forbidden', description)], 403)
         return serve_view(
             request,
             user,
             [validate_pagination, validate_preferred_lang_param],
             rest,
             'collection_get',
+            permission=listing_permission,
         )
 
     def document(request: Request, user: User):
