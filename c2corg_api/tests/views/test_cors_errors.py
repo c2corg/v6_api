@@ -49,14 +49,17 @@ class TestCorsOnErrors(BaseTestRest):
         self.assert_cors(response, self.origin)
 
     def test_unexpected_error(self):
-        # 500 from the catch-all error view of Pyramid: /sitemaps stays on
-        # Pyramid for now (/health moves to FastAPI, #2365)
+        # 500 from the catch-all error view of Pyramid: /getcoverage stays on
+        # Pyramid for now (/health and /sitemaps moved to FastAPI, #2365)
         with patch(
-            'c2corg_api.views.sitemap._get_cache_key',
+            'c2corg_api.views.coverage.get_coverage',
             side_effect=RuntimeError('boom'),
         ):
             response = self.app.get(
-                '/sitemaps', headers={'Origin': self.origin}, status=500
+                '/getcoverage',
+                params={'lon': 6, 'lat': 45},
+                headers={'Origin': self.origin},
+                status=500,
             )
         self.assert_cors(response, self.origin)
 

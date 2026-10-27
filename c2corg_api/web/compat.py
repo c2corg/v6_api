@@ -22,10 +22,12 @@ class _Errors(list):
 
 
 class _Response:
-    """What the views set on request.response: headers only."""
+    """What the views set on request.response: headers and content type."""
 
     def __init__(self):
         self.headers = {}
+        # set by the views answering something else than JSON (the XML sitemaps)
+        self.content_type = None
 
 
 class _Registry:
@@ -109,13 +111,25 @@ def run_view(adapted, view):
         if registry is not None:
             manager.pop()
     headers = adapted.response.headers
+    content_type = adapted.response.content_type
+    if content_type is not None:
+        # a string, with the content type of the Pyramid string renderer
+        headers = {**headers, 'Content-Type': f'{content_type}; charset=UTF-8'}
+        return Response(result, headers=headers)
     if not headers:
         return result
     return JSONResponse(result, headers=headers)
 
 
-def serve_view(request, user, validators, view_class, method='get'):
+def serve_view(request, user, validators, view_class, method='get', permission=None):
     """Answer a request with a method of a Pyramid view class."""
+    # the permission is checked before the validators, as Pyramid does
+    if permission and not ValidatedRequest(request, user).has_permission(permission):
+        # the message of Pyramid without debug_authorization (production)
+        description = (
+            f'Unauthorized: {view_class.__name__}.{method}__GET failed permission check'
+        )
+        return error_response([('body', 'Forbidden', description)], 403)
     adapted, error = validate_query(request, *validators, user=user)
     if error is not None:
         return error

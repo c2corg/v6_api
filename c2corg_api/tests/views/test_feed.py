@@ -233,7 +233,16 @@ class TestFeedRest(BaseFeedTestRest):
 class TestPersonalFeedRest(BaseFeedTestRest):
     def test_get_feed_unauthenticated(self):
         """Get personal feed unauthenticated."""
-        self.app.get('/personal-feed', status=403)
+        response = self.app.get('/personal-feed', status=403)
+        # the message of Pyramid in production (without debug_authorization)
+        assert response.json['errors'] == [
+            {
+                'location': 'body',
+                'name': 'Forbidden',
+                'description': 'Unauthorized: PersonalFeedRest.get__GET'
+                ' failed permission check',
+            }
+        ]
 
     def test_get_feed(self):
         """Get personal feed without custom filters (same as public feed)."""

@@ -1,0 +1,118 @@
+{
+  "body": {
+    "feed": [
+      {
+        "change_type": "str",
+        "document": {
+          "activities": [
+            "str"
+          ],
+          "areas": [
+            {
+              "area_type": "str",
+              "available_langs": "null",
+              "document_id": "int",
+              "locales": [
+                {
+                  "lang": "str",
+                  "title": "str",
+                  "version": "int"
+                }
+              ],
+              "protected": "bool",
+              "type": "str",
+              "version": "int"
+            }
+          ],
+          "available_langs": [
+            "str"
+          ],
+          "calculated_duration": "float",
+          "document_id": "int",
+          "durations": [
+            "str"
+          ],
+          "elevation_max": "int",
+          "elevation_min": "int",
+          "geometry": {
+            "geom": "str",
+            "has_geom_detail": "bool",
+            "version": "int"
+          },
+          "height_diff_difficulties": "null",
+          "height_diff_down": "int",
+          "height_diff_up": "int",
+          "hiking_mtb_exposition": "null",
+          "hiking_rating": "null",
+          "locales": [
+            {
+              "lang": "str",
+              "summary": "null",
+              "title": "str",
+              "title_prefix": "str",
+              "version": "int"
+            }
+          ],
+          "orientations": "null",
+          "protected": "bool",
+          "public_transportation_rating": "str",
+          "quality": "str",
+          "type": "str",
+          "version": "int"
+        },
+        "id": "int",
+        "image1": "null",
+        "image2": "null",
+        "image3": "null",
+        "more_images": "bool",
+        "participants": [],
+        "time": "str",
+        "user": {
+          "activities": "null",
+          "areas": [
+            {
+              "area_type": "str",
+              "available_langs": "null",
+              "document_id": "int",
+              "locales": [
+                {
+                  "lang": "str",
+                  "title": "str",
+                  "version": "int"
+                }
+              ],
+              "protected": "bool",
+              "type": "str",
+              "version": "int"
+            }
+          ],
+          "available_langs": [
+            "str"
+          ],
+          "categories": [
+            "str"
+          ],
+          "document_id": "int",
+          "forum_username": "str",
+          "locales": [
+            {
+              "lang": "str",
+              "version": "int"
+            }
+          ],
+          "name": "str",
+          "protected": "bool",
+          "type": "str",
+          "version": "int"
+        }
+      }
+    ],
+    "pagination_token": "str"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}
