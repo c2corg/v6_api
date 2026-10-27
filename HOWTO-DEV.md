@@ -200,6 +200,14 @@ pytest
 - Each contract test sends a request and compares the status, the headers clients rely on (CORS, `Cache-Control`, `ETag`…) and the shape of the JSON body (keys and value types) with a snapshot in `snapshots/`. After an intended change of the API, rewrite the snapshots with `CONTRACT_UPDATE=1 pytest c2corg_api/tests/contract` and review their diff.
 - `pending.txt` lists the routes without a contract test yet. A new route needs a contract test (marked with `@contract(...)`) or a line there.
 
+### Load test
+
+`scripts/loadtest.py` replays a mix of read requests (documents, listings, search, history) with a few threads and prints throughput and latency percentiles per kind of request. It compares two versions of the API on the same machine and data; run each version twice to see the noise:
+
+```shell
+python scripts/loadtest.py http://localhost:6543 --threads 8 --duration 60
+```
+
 ## Linting
 
 - Format the code and run the linter (CI checks both; in the devcontainer, VS Code formats on save):
