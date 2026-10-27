@@ -15,8 +15,20 @@ IMPLICIT_METHODS = {'*', 'OPTIONS', 'HEAD'}
 PUBLIC = 'public'
 
 
-def route_inventory(registry):
+def route_inventory(app):
     """Return the routes as sorted (path, method, permission) tuples."""
+    # `app` is the dispatcher: the routes of Pyramid and of FastAPI
+    rows = set(_pyramid_routes(app.registry))
+    for route in app.fastapi_app.router.routes:
+        for method in getattr(route, 'methods', None) or ():
+            if method not in IMPLICIT_METHODS:
+                # the FastAPI routes check permissions in their dependencies
+                # (none needs one yet)
+                rows.add((route.path, method, PUBLIC))
+    return sorted(rows)
+
+
+def _pyramid_routes(registry):
     introspector = registry.introspector
     rows = set()
     for route in introspector.get_category('routes'):
@@ -36,7 +48,7 @@ def route_inventory(registry):
             for method in methods:
                 if method not in IMPLICIT_METHODS:
                     rows.add((pattern, method, permission))
-    return sorted(rows)
+    return rows
 
 
 def format_inventory(rows):
@@ -54,7 +66,7 @@ def main():
 
     app = make_app({}, **settings)
     with open(INVENTORY_FILE, 'w') as f:
-        f.write(format_inventory(route_inventory(app.registry)))
+        f.write(format_inventory(route_inventory(app)))
     sys.stdout.write(f'{INVENTORY_FILE} written\n')
 
 

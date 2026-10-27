@@ -1,7 +1,7 @@
 import json
 from unittest.mock import Mock, patch
 
-from c2corg_api.tests.contract import check_snapshot, contract
+from c2corg_api.tests.contract import ContractTest, check_snapshot, contract
 from c2corg_api.tests.contract.test_documents import POINT, DocumentContractTest
 from c2corg_api.tests.search.__init__ import reset_search_index
 
@@ -37,6 +37,23 @@ class TestMisc(DocumentContractTest):
         # one type only, paginated
         response = self.get('/search', params={'q': 'Mont', 't': 'w', 'limit': 1})
         check_snapshot('search_one_type', response)
+
+
+class TestSearchErrors(ContractTest):
+    @contract(('GET', '/search'))
+    def test_invalid_parameters(self):
+        response = self.get(
+            '/search', params={'q': 'x', 'limit': 'many', 'pl': 'xx'}, status=400
+        )
+        check_snapshot('search_invalid_parameters', response)
+        assert response.json['errors'] == [
+            {
+                'location': 'querystring',
+                'name': 'limit',
+                'description': 'invalid limit',
+            },
+            {'location': 'querystring', 'name': 'lang', 'description': 'invalid lang'},
+        ]
 
 
 class TestFeeds(DocumentContractTest):

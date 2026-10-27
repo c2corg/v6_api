@@ -11,13 +11,13 @@ class TestRouteInventory:
         # methods or permission change must be reflected there, so the
         # change is visible in review. To update it:
         #   python -m c2corg_api.tests.contract.inventory
-        actual = format_inventory(route_inventory(client.app.registry))
+        actual = format_inventory(route_inventory(client.app))
         with open(INVENTORY_FILE) as f:
             expected = f.read()
         assert actual == expected
 
     def test_only_explicit_methods(self, client):
-        rows = route_inventory(client.app.registry)
+        rows = route_inventory(client.app)
         assert rows
         assert {method for _, method, _ in rows} <= {
             'GET',

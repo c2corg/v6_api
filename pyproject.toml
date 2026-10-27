@@ -53,6 +53,8 @@ dependencies = [
     # Discourse API client
     "pydiscourse==1.7.0",
     "pydantic==2.14.1",
+    "fastapi==0.143.0",
+    "a2wsgi==1.10.10",
 ]
 
 [dependency-groups]
@@ -80,6 +82,11 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["c2corg_api*"]
+
+[tool.uv]
+# fastapi's dependency, held to a release older than two weeks (the
+# cooldown we apply to every dependency); drop when the next bump allows it
+constraint-dependencies = ["starlette<=1.7.0"]
 
 [tool.ruff]
 line-length = 88

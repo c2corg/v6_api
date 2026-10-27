@@ -8,6 +8,7 @@ from pyramid.settings import asbool
 from sqlalchemy import engine_from_config, event, exc, text
 from sqlalchemy.pool import Pool
 
+from c2corg_api.app import Dispatcher, create_fastapi_app
 from c2corg_api.caching import configure_caches
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentGeometry
@@ -24,7 +25,7 @@ class RootFactory(ACLDefault):
 
 
 def main(global_config, **settings):
-    """Thi function returns a Pyramid WSGI application."""
+    """Return the WSGI application of the API (see `c2corg_api.app`)."""
     # Configure SQLAlchemy
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
@@ -82,7 +83,7 @@ def main(global_config, **settings):
     # Scan MUST be the last call otherwise ACLs will not be set
     # and the permissions would be bypassed
     config.scan(ignore='c2corg_api.tests')
-    return config.make_wsgi_app()
+    return Dispatcher(create_fastapi_app(settings), config.make_wsgi_app())
 
 
 # validate db connection before using it
