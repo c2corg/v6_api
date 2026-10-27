@@ -1,7 +1,8 @@
 """Run the view logic written for Pyramid on a FastAPI request."""
 # The validators of views/validation.py and the document view classes read a
 # small part of the Pyramid request: GET, matchdict, validated, errors,
-# If-None-Match, the response headers, the user and its permissions. This
+# If-None-Match, Authorization, the response headers, the user and its
+# permissions. This
 # adapter gives them that interface, so the moved routes keep exactly the
 # same logic, checks and messages while they move (#2365).
 
@@ -10,6 +11,7 @@ from pyramid.httpexceptions import HTTPError, HTTPNotModified
 from pyramid.threadlocal import manager
 from webob.etag import ETagMatcher, NoETag
 
+from c2corg_api.web.auth import parse_authorization
 from c2corg_api.web.errors import error_response
 
 
@@ -59,6 +61,8 @@ class ValidatedRequest:
             getattr(request.app.state, 'pyramid_registry', None),
         )
         self._user = user
+        # as WebOb's request.authorization: (type, params), or None
+        self.authorization = parse_authorization(request.headers.get('Authorization'))
 
     @property
     def authenticated_userid(self):

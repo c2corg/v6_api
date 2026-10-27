@@ -88,6 +88,11 @@ def include(app):
     from c2corg_api.views.book import BookRest, BooksInfoRest, BooksVersionRest
     from c2corg_api.views.coverage import CoverageRest
     from c2corg_api.views.topo_map import TopoMapInfoRest, TopoMapRest
+    from c2corg_api.views.xreport import (
+        XreportInfoRest,
+        XreportRest,
+        XreportVersionRest,
+    )
 
     include_document_type(app, 'books', BookRest, BooksVersionRest, BooksInfoRest)
     include_document_type(
@@ -97,3 +102,7 @@ def include(app):
     # maps have no version route, coverages neither version nor info
     include_document_type(app, 'maps', TopoMapRest, info_rest=TopoMapInfoRest)
     include_document_type(app, 'coverages', CoverageRest)
+    # the personal fields of an xreport are for its author and the moderators
+    include_document_type(
+        app, 'xreports', XreportRest, XreportVersionRest, XreportInfoRest
+    )
