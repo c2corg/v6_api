@@ -185,6 +185,20 @@ class TestDocumentGet(DocumentContractTest):
         )
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['waypoints']))
+    def test_get_for_editing(self):
+        # the editing view: no ETag (not cached), no custom associations
+        response = self.get(self.url('waypoints'), params={'e': '1', 'l': 'en'})
+        check_snapshot('waypoints_get_editing', response)
+
+    @contract(*_routes('GET', '/{prefix}/{{id}}', ['waypoints']))
+    @pytest.mark.parametrize(
+        'params', [{'cook': 'en', 'e': '1'}, {'cook': 'en', 'l': 'en'}]
+    )
+    def test_get_cooked_with_other_params(self, params):
+        response = self.get(self.url('waypoints'), params=params, status=400)
+        check_snapshot('waypoints_get_cooked_invalid', response)
+
+    @contract(*_routes('GET', '/{prefix}/{{id}}', ['waypoints']))
     def test_get_not_modified(self):
         etag = self.get(self.url('waypoints')).headers['ETag']
         response = self.get(
