@@ -28,6 +28,8 @@ class _Response:
         self.headers = {}
         # set by the views answering something else than JSON (the XML sitemaps)
         self.content_type = None
+        # set by the views answering another status (the stop areas: 404)
+        self.status = None
 
 
 class _Registry:
@@ -83,8 +85,12 @@ class ValidatedRequest:
 def validate_query(request, *validators, user=None):
     """Run the validators; return (adapted request, error answer or None)."""
     adapted = ValidatedRequest(request, user)
-    for validator in validators:
-        validator(adapted)
+    try:
+        for validator in validators:
+            validator(adapted)
+    except HTTPError as e:
+        # a validator may raise, as the views do (e.g. an invalid waypoint id)
+        return adapted, _http_error(e)
     if adapted.errors:
         return adapted, error_response(adapted.errors)
     return adapted, None
@@ -105,8 +111,7 @@ def run_view(adapted, view):
         headers = {k: v for k, v in e.headers.items() if k in ('ETag', 'Cache-Control')}
         return Response(status_code=304, headers=headers)
     except HTTPError as e:
-        # like views.http_error_handler
-        return error_response([('body', e.title, e.detail)], e.code)
+        return _http_error(e)
     finally:
         if registry is not None:
             manager.pop()
@@ -116,9 +121,20 @@ def run_view(adapted, view):
         # a string, with the content type of the Pyramid string renderer
         headers = {**headers, 'Content-Type': f'{content_type}; charset=UTF-8'}
         return Response(result, headers=headers)
+    status = adapted.response.status
+    if status is not None:
+        # an int, or a status line ('404 Not Found') as WebOb accepts
+        return JSONResponse(
+            result, status_code=int(str(status).split()[0]), headers=headers
+        )
     if not headers:
         return result
     return JSONResponse(result, headers=headers)
+
+
+def _http_error(e):
+    """Answer a Pyramid HTTP error like views.http_error_handler."""
+    return error_response([('body', e.title, e.detail)], e.code)
 
 
 def serve_view(request, user, validators, view_class, method='get', permission=None):
