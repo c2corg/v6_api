@@ -87,6 +87,7 @@ def include(app):
     )
     from c2corg_api.views.book import BookRest, BooksInfoRest, BooksVersionRest
     from c2corg_api.views.coverage import CoverageRest
+    from c2corg_api.views.image import ImageInfoRest, ImageRest, ImageVersionRest
     from c2corg_api.views.topo_map import TopoMapInfoRest, TopoMapRest
     from c2corg_api.views.xreport import (
         XreportInfoRest,
@@ -102,6 +103,8 @@ def include(app):
     # maps have no version route, coverages neither version nor info
     include_document_type(app, 'maps', TopoMapRest, info_rest=TopoMapInfoRest)
     include_document_type(app, 'coverages', CoverageRest)
+    # the image proxy (/images/proxy/{id}) and /images/list stay on Pyramid
+    include_document_type(app, 'images', ImageRest, ImageVersionRest, ImageInfoRest)
     # the personal fields of an xreport are for its author and the moderators
     include_document_type(
         app, 'xreports', XreportRest, XreportVersionRest, XreportInfoRest
