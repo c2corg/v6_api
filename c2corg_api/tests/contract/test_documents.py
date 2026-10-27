@@ -2,6 +2,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from c2corg_api.models.user import User
 from c2corg_api.tests.contract import ContractTest, check_snapshot, contract
 
 POINT = '{"type": "Point", "coordinates": [635956, 5723604]}'
@@ -208,6 +209,24 @@ class TestDocumentGet(DocumentContractTest):
         # the personal fields are for its author and the moderators only
         response = self.get(self.url('xreports'), user=user)
         check_snapshot(f'xreports_get_as_{user}', response)
+
+    @contract(*_routes('GET', '/{prefix}/{{id}}', ['profiles']))
+    def test_get_private_profile_as_user(self):
+        # a private profile is shown to the authenticated users only
+        response = self.get(self.url('profiles'), user='contributor2')
+        check_snapshot('profiles_get_as_user', response)
+
+    @contract(*_routes('GET', '/{prefix}/{{id}}', ['profiles']))
+    def test_get_public_profile(self):
+        user = self.session.get(User, self.global_userids['contributor'])
+        user.is_profile_public = True
+        self.session.flush()
+        check_snapshot('profiles_get_public', self.get(self.url('profiles')))
+
+    @contract(*_routes('GET', '/{prefix}/{{id}}', ['profiles']))
+    def test_get_unknown_profile(self):
+        response = self.get('/profiles/9999999', status=404)
+        check_snapshot('profiles_get_unknown', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}/{{lang}}/info', WITH_INFO))
     @pytest.mark.parametrize('prefix', WITH_INFO)

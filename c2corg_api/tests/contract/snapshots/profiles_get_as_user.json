@@ -1,0 +1,59 @@
+{
+  "body": {
+    "activities": "null",
+    "areas": [
+      {
+        "area_type": "str",
+        "available_langs": "null",
+        "document_id": "int",
+        "locales": [
+          {
+            "lang": "str",
+            "title": "str",
+            "version": "int"
+          }
+        ],
+        "protected": "bool",
+        "type": "str",
+        "version": "int"
+      }
+    ],
+    "associations": {
+      "images": []
+    },
+    "available_langs": [
+      "str"
+    ],
+    "categories": [
+      "str"
+    ],
+    "document_id": "int",
+    "forum_username": "str",
+    "geometry": {
+      "geom": "str",
+      "geom_detail": "null",
+      "version": "int"
+    },
+    "locales": [
+      {
+        "description": "str",
+        "lang": "str",
+        "summary": "null",
+        "topic_id": "null",
+        "version": "int"
+      }
+    ],
+    "name": "str",
+    "protected": "bool",
+    "quality": "str",
+    "type": "str",
+    "version": "int"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json",
+    "ETag": "<etag>"
+  },
+  "status": 200
+}
