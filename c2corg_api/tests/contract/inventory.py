@@ -22,9 +22,10 @@ def route_inventory(app):
     for route in app.fastapi_app.router.routes:
         for method in getattr(route, 'methods', None) or ():
             if method not in IMPLICIT_METHODS:
-                # the FastAPI routes check permissions in their dependencies
-                # (none needs one yet)
-                rows.add((route.path, method, PUBLIC))
+                # a FastAPI route checks its permission itself, and tells
+                # which one in the `permission` attribute of its endpoint
+                permission = getattr(route.endpoint, 'permission', None) or PUBLIC
+                rows.add((route.path, method, permission))
     return sorted(rows)
 
 
