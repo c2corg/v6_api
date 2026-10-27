@@ -1,6 +1,7 @@
 import json
 from unittest.mock import Mock, patch
 
+from c2corg_api.models.user import User
 from c2corg_api.tests.contract import ContractTest, check_snapshot, contract
 from c2corg_api.tests.contract.test_documents import POINT, DocumentContractTest
 from c2corg_api.tests.search.__init__ import reset_search_index
@@ -72,6 +73,53 @@ class TestFeeds(DocumentContractTest):
         params = {'u': self.global_userids['contributor'], 'limit': 3}
         response = self.get('/profile-feed', user='contributor', params=params)
         check_snapshot('profile_feed', response)
+
+    @contract(('GET', '/feed'))
+    def test_feed_next_page(self):
+        token = self.get('/feed', params={'limit': 1}).json['pagination_token']
+        response = self.get('/feed', params={'limit': 1, 'token': token, 'pl': 'en'})
+        check_snapshot('feed_next_page', response)
+
+    @contract(('GET', '/feed'))
+    def test_feed_invalid_parameters(self):
+        # an invalid pagination token, not a password
+        params = {'token': 'abc', 'limit': 'x'}  # nosec B105
+        response = self.get('/feed', params=params, status=400)
+        check_snapshot('feed_invalid', response)
+        assert [e['name'] for e in response.json['errors']] == ['limit', 'token']
+
+    @contract(('GET', '/personal-feed'))
+    def test_personal_feed_needs_a_user(self):
+        response = self.get('/personal-feed', status=403)
+        check_snapshot('personal_feed_anonymous', response)
+
+    @contract(('GET', '/profile-feed'))
+    def test_private_profile_feed_needs_a_user(self):
+        params = {'u': self.global_userids['contributor']}
+        response = self.get('/profile-feed', params=params, status=403)
+        check_snapshot('profile_feed_private', response)
+        assert response.json['errors'][0]['description'] == (
+            'no permission to see the feed'
+        )
+
+    @contract(('GET', '/profile-feed'))
+    def test_public_profile_feed(self):
+        user = self.session.get(User, self.global_userids['contributor'])
+        user.is_profile_public = True
+        self.session.flush()
+        params = {'u': user.id, 'limit': 3}
+        check_snapshot('profile_feed_public', self.get('/profile-feed', params=params))
+
+    @contract(('GET', '/profile-feed'))
+    def test_profile_feed_of_unknown_user(self):
+        response = self.get('/profile-feed', params={'u': 9999999}, status=404)
+        check_snapshot('profile_feed_unknown_user', response)
+
+    @contract(('GET', '/profile-feed'))
+    def test_profile_feed_without_user(self):
+        response = self.get('/profile-feed', status=400)
+        check_snapshot('profile_feed_without_user', response)
+        assert [e['name'] for e in response.json['errors']] == ['u']
 
 
 class TestSitemaps(DocumentContractTest):
