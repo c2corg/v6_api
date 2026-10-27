@@ -78,7 +78,8 @@ def run(base, ids, threads, duration, seed):
     end = time.monotonic() + duration
 
     def worker(n):
-        rng = random.Random(seed + n)
+        # chooses which requests to replay: no security use
+        rng = random.Random(seed + n)  # nosec B311
         local = []
         while time.monotonic() < end:
             kind, path = pick(ids, rng)
