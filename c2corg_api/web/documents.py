@@ -17,13 +17,16 @@ from c2corg_api.views.validation import (
     validate_version_id,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import run_view, validate_query
+from c2corg_api.web.compat import ValidatedRequest, run_view, validate_query
 from c2corg_api.web.db import request_session
+from c2corg_api.web.errors import error_response
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 
 
-def include_document_type(app, prefix, rest, version_rest=None, info_rest=None):
+def include_document_type(
+    app, prefix, rest, version_rest=None, info_rest=None, listing_permission=None
+):
     """Add the read routes of a document type, served by its view classes."""
 
     def call(request, user, validators, view_class, method='get'):
@@ -35,6 +38,16 @@ def include_document_type(app, prefix, rest, version_rest=None, info_rest=None):
             return run_view(adapted, view)
 
     def listing(request: Request, user: User):
+        # checked before the validators, like the permission of a Pyramid view
+        if listing_permission and not ValidatedRequest(request, user).has_permission(
+            listing_permission
+        ):
+            # the message of Pyramid without debug_authorization (production)
+            description = (
+                f'Unauthorized: {rest.__name__}.collection_get__GET'
+                ' failed permission check'
+            )
+            return error_response([('body', 'Forbidden', description)], 403)
         return call(
             request,
             user,
@@ -51,16 +64,22 @@ def include_document_type(app, prefix, rest, version_rest=None, info_rest=None):
             rest,
         )
 
+    # read by the route inventory of the contract tests (routes.txt)
+    listing.permission = listing_permission
+
+    # Only numeric ids: the other paths (/images/list,
+    # /routes/update_public_transportation_rating...) are other routes, and an
+    # invalid id gets the same 400 from Pyramid.
     methods = ['GET', 'HEAD']
     app.add_api_route(f'/{prefix}', listing, methods=methods)
-    app.add_api_route(f'/{prefix}/{{id}}', document, methods=methods)
+    app.add_api_route(f'/{prefix}/{{id:int}}', document, methods=methods)
 
     if info_rest is not None:
 
         def info(request: Request, user: User):
             return call(request, user, [validate_id, validate_lang], info_rest)
 
-        app.add_api_route(f'/{prefix}/{{id}}/{{lang}}/info', info, methods=methods)
+        app.add_api_route(f'/{prefix}/{{id:int}}/{{lang}}/info', info, methods=methods)
 
     if version_rest is not None:
 
@@ -72,9 +91,8 @@ def include_document_type(app, prefix, rest, version_rest=None, info_rest=None):
                 version_rest,
             )
 
-        app.add_api_route(
-            f'/{prefix}/{{id}}/{{lang}}/{{version_id}}', version, methods=methods
-        )
+        path = f'/{prefix}/{{id:int}}/{{lang}}/{{version_id:int}}'
+        app.add_api_route(path, version, methods=methods)
 
 
 def include(app):
@@ -87,7 +105,10 @@ def include(app):
     )
     from c2corg_api.views.book import BookRest, BooksInfoRest, BooksVersionRest
     from c2corg_api.views.coverage import CoverageRest
+    from c2corg_api.views.image import ImageInfoRest, ImageRest, ImageVersionRest
+    from c2corg_api.views.outing import OutingInfoRest, OutingRest, OutingVersionRest
     from c2corg_api.views.topo_map import TopoMapInfoRest, TopoMapRest
+    from c2corg_api.views.user_profile import UserProfileInfoRest, UserProfileRest
     from c2corg_api.views.xreport import (
         XreportInfoRest,
         XreportRest,
@@ -102,7 +123,19 @@ def include(app):
     # maps have no version route, coverages neither version nor info
     include_document_type(app, 'maps', TopoMapRest, info_rest=TopoMapInfoRest)
     include_document_type(app, 'coverages', CoverageRest)
+    # the image proxy (/images/proxy/{id}) and /images/list stay on Pyramid
+    include_document_type(app, 'images', ImageRest, ImageVersionRest, ImageInfoRest)
     # the personal fields of an xreport are for its author and the moderators
     include_document_type(
         app, 'xreports', XreportRest, XreportVersionRest, XreportInfoRest
+    )
+    include_document_type(app, 'outings', OutingRest, OutingVersionRest, OutingInfoRest)
+    # the listing of the profiles is for the authenticated users, and a private
+    # profile shows only the user name to the others; no version route
+    include_document_type(
+        app,
+        'profiles',
+        UserProfileRest,
+        info_rest=UserProfileInfoRest,
+        listing_permission='authenticated',
     )

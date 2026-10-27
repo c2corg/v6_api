@@ -2,7 +2,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from c2corg_api.models.user import User
 from c2corg_api.tests.contract import ContractTest, check_snapshot, contract
+from c2corg_api.tests.search.__init__ import reset_search_index
 
 POINT = '{"type": "Point", "coordinates": [635956, 5723604]}'
 LINE = '{"type": "LineString", "coordinates": [[635956, 5723604], [635966, 5723644]]}'
@@ -202,12 +204,41 @@ class TestDocumentGet(DocumentContractTest):
     def test_get_unknown_book(self):
         check_snapshot('books_get_not_found', self.get('/books/9999999', status=404))
 
+    @contract(*_routes('GET', '/{prefix}/{{id}}', ['books']))
+    @pytest.mark.parametrize('book_id', ['abc', '-1'])
+    def test_get_invalid_id(self, book_id):
+        response = self.get(f'/books/{book_id}', status=400)
+        check_snapshot('books_get_invalid_id', response)
+
+    @contract(*_routes('GET', '/{prefix}/{{id}}/{{lang}}/{{version_id}}', ['books']))
+    def test_get_invalid_version_id(self):
+        response = self.get(self.url('books', '/en/abc'), status=400)
+        check_snapshot('books_version_invalid_id', response)
+
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['xreports']))
     @pytest.mark.parametrize('user', ['contributor', 'moderator', 'contributor2'])
     def test_get_xreport_as(self, user):
         # the personal fields are for its author and the moderators only
         response = self.get(self.url('xreports'), user=user)
         check_snapshot(f'xreports_get_as_{user}', response)
+
+    @contract(*_routes('GET', '/{prefix}/{{id}}', ['profiles']))
+    def test_get_private_profile_as_user(self):
+        # a private profile is shown to the authenticated users only
+        response = self.get(self.url('profiles'), user='contributor2')
+        check_snapshot('profiles_get_as_user', response)
+
+    @contract(*_routes('GET', '/{prefix}/{{id}}', ['profiles']))
+    def test_get_public_profile(self):
+        user = self.session.get(User, self.global_userids['contributor'])
+        user.is_profile_public = True
+        self.session.flush()
+        check_snapshot('profiles_get_public', self.get(self.url('profiles')))
+
+    @contract(*_routes('GET', '/{prefix}/{{id}}', ['profiles']))
+    def test_get_unknown_profile(self):
+        response = self.get('/profiles/9999999', status=404)
+        check_snapshot('profiles_get_unknown', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}/{{lang}}/info', WITH_INFO))
     @pytest.mark.parametrize('prefix', WITH_INFO)
@@ -243,6 +274,44 @@ class TestDocumentListing(DocumentContractTest):
         response = self.get('/waypoints', params={'pl': 'fr', 'offset': 1, 'limit': 1})
         check_snapshot('waypoints_listing_pl', response)
 
+    @contract(*_routes('GET', '/{prefix}', ['outings']))
+    def test_listing_with_filters(self):
+        # filters make the listing search with ElasticSearch; rebuilding the
+        # index is slow, so one test for the filtered listings
+        reset_search_index(self.session)
+        response = self.get(
+            '/outings', params={'act': 'hiking,skitouring', 'pl': 'en', 'limit': 5}
+        )
+        check_snapshot('outings_listing_filtered', response)
+        ids = [d['document_id'] for d in response.json['documents']]
+        assert self.ids['outings'] in ids
+
+    @contract(*_routes('GET', '/{prefix}', ['outings']))
+    def test_listing_beyond_the_search_window(self):
+        response = self.get(
+            '/outings', params={'offset': 9990, 'limit': 20}, status=400
+        )
+        check_snapshot('outings_listing_beyond_window', response)
+
     @contract(('GET', '/profiles'))
     def test_profiles_listing_needs_a_user(self):
         check_snapshot('profiles_listing_anonymous', self.get('/profiles', status=403))
+
+
+class TestPathsLikeADocument(ContractTest):
+    """Paths that look like a document page, with another route."""
+
+    @contract(('POST', '/images/list'))
+    def test_get_image_list(self):
+        # a POST-only route: GET is not allowed (it is not image "list")
+        response = self.get('/images/list', status=405)
+        check_snapshot('images_list_get', response)
+
+    @contract(('GET', '/routes/update_public_transportation_rating'))
+    def test_update_public_transportation_rating_needs_a_moderator(self):
+        response = self.get(
+            '/routes/update_public_transportation_rating',
+            user='contributor',
+            status=403,
+        )
+        check_snapshot('routes_update_public_transportation_rating_forbidden', response)

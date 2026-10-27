@@ -30,7 +30,16 @@ class TestUserProfileRest(BaseDocumentTestRest):
         self._add_test_data()
 
     def test_get_collection_unauthenticated(self):
-        self.app.get(self._prefix, status=403)
+        response = self.app.get(self._prefix, status=403)
+        # the message of Pyramid in production (without debug_authorization)
+        assert response.json['errors'] == [
+            {
+                'location': 'body',
+                'name': 'Forbidden',
+                'description': 'Unauthorized: UserProfileRest.collection_get__GET'
+                ' failed permission check',
+            }
+        ]
 
     def test_get_collection(self):
         body = self.get_collection(user='contributor')
