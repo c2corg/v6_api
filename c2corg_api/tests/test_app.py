@@ -27,7 +27,7 @@ class TestDispatcher:
         assert _client().get('/moved/3').json == {'app': 'fastapi', 'id': 3}
 
     def test_other_routes_go_to_pyramid(self):
-        assert _client().get('/waypoints/3').text == 'pyramid'
+        assert _client().get('/not-moved/3').text == 'pyramid'
 
     def test_other_methods_of_a_moved_path_go_to_pyramid(self):
         # a resource can move one method at a time
