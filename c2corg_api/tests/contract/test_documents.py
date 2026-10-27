@@ -202,6 +202,13 @@ class TestDocumentGet(DocumentContractTest):
     def test_get_unknown_book(self):
         check_snapshot('books_get_not_found', self.get('/books/9999999', status=404))
 
+    @contract(*_routes('GET', '/{prefix}/{{id}}', ['xreports']))
+    @pytest.mark.parametrize('user', ['contributor', 'moderator', 'contributor2'])
+    def test_get_xreport_as(self, user):
+        # the personal fields are for its author and the moderators only
+        response = self.get(self.url('xreports'), user=user)
+        check_snapshot(f'xreports_get_as_{user}', response)
+
     @contract(*_routes('GET', '/{prefix}/{{id}}/{{lang}}/info', WITH_INFO))
     @pytest.mark.parametrize('prefix', WITH_INFO)
     def test_info(self, prefix):
