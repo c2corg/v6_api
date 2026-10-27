@@ -63,11 +63,12 @@ def search_documents(
     # - limit: the results per document type (default 10, at most 50);
     # - t: the document types to search, e.g. t=w,r (default: all; the user
     #   profiles only for an authenticated user).
-    validated, error = validate_query(
+    adapted, error = validate_query(
         request, validate_pagination, validate_preferred_lang_param
     )
     if error is not None:
         return error
+    validated = adapted.validated
     limit = validated.get('limit')
     limit = min(SEARCH_LIMIT_DEFAULT if limit is None else limit, SEARCH_LIMIT_MAX)
     types_in = request.query_params.get('t')

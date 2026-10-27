@@ -1,0 +1,97 @@
+{
+  "body": {
+    "activity_rate": "null",
+    "age": "null",
+    "anonymous": "null",
+    "areas": [
+      {
+        "area_type": "str",
+        "available_langs": "null",
+        "document_id": "int",
+        "locales": [
+          {
+            "lang": "str",
+            "title": "str",
+            "version": "int"
+          }
+        ],
+        "protected": "bool",
+        "type": "str",
+        "version": "int"
+      }
+    ],
+    "associations": {
+      "articles": [],
+      "images": [],
+      "outings": [],
+      "routes": [],
+      "users": [],
+      "waypoints": []
+    },
+    "author": {
+      "name": "str",
+      "user_id": "int"
+    },
+    "author_status": "null",
+    "autonomy": "null",
+    "available_langs": [
+      "str"
+    ],
+    "avalanche_level": "null",
+    "avalanche_slope": "null",
+    "date": "null",
+    "disable_comments": "null",
+    "document_id": "int",
+    "elevation": "null",
+    "event_activity": "str",
+    "event_type": "str",
+    "gender": "null",
+    "geometry": {
+      "geom": "str",
+      "geom_detail": "null",
+      "version": "int"
+    },
+    "locales": [
+      {
+        "conditions": "null",
+        "description": "null",
+        "group_management": "null",
+        "increase_impact": "null",
+        "lang": "str",
+        "modifications": "null",
+        "motivations": "null",
+        "other_comments": "null",
+        "place": "null",
+        "reduce_impact": "null",
+        "risk": "null",
+        "route_study": "null",
+        "safety": "null",
+        "summary": "null",
+        "time_management": "null",
+        "title": "str",
+        "topic_id": "null",
+        "training": "null",
+        "version": "int"
+      }
+    ],
+    "nb_impacted": "null",
+    "nb_participants": "int",
+    "previous_injuries": "null",
+    "protected": "bool",
+    "qualification": "null",
+    "quality": "str",
+    "rescue": "null",
+    "severity": "null",
+    "supervision": "null",
+    "type": "str",
+    "version": "int"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Cache-Control": "private",
+    "Content-Type": "application/json",
+    "ETag": "<etag>"
+  },
+  "status": 200
+}

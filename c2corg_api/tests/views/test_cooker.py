@@ -3,6 +3,7 @@ import re
 from sqlalchemy import event
 
 from c2corg_api.models.article import Article
+from c2corg_api.models.book import Book
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.image import Image
 from c2corg_api.tests.views import BaseTestRest
@@ -149,6 +150,23 @@ class TestCookerRest(BaseTestRest):
             event.remove(self.connection, 'before_cursor_execute', count)
 
         assert [] == statements
+
+    def test_get_cooked_book(self):
+        # served by FastAPI: the image URL comes from the Pyramid registry
+        image = self._add_image('image.jpg')
+        book = Book(activities=['hiking'], book_types=['biography'])
+        book.locales.append(
+            DocumentLocale(
+                lang='en', title='Book', description=f'[img={image.document_id}/]'
+            )
+        )
+        self.session.add(book)
+        self.session.flush()
+
+        response = self.app.get(f'/books/{book.document_id}?cook=en', status=200)
+        html = response.json['cooked']['description']
+
+        assert f'c2c:url="{self.image_url}imageMI.jpg"' in html
 
     def test_get_cooked_document(self):
         image = self._add_image('image.jpg')

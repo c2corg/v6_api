@@ -8,7 +8,6 @@ from pyramid.settings import asbool
 from sqlalchemy import engine_from_config, event, exc, text
 from sqlalchemy.pool import Pool
 
-from c2corg_api.app import Dispatcher, create_fastapi_app
 from c2corg_api.caching import configure_caches
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentGeometry
@@ -83,6 +82,10 @@ def main(global_config, **settings):
     # Scan MUST be the last call otherwise ACLs will not be set
     # and the permissions would be bypassed
     config.scan(ignore='c2corg_api.tests')
+    # imported here: the FastAPI routes import the views, which need the
+    # package initialized
+    from c2corg_api.app import Dispatcher, create_fastapi_app
+
     return Dispatcher(create_fastapi_app(settings), config.make_wsgi_app())
 
 

@@ -52,3 +52,26 @@ class TestDispatcher:
         client = _client()
         for path in ('/docs', '/redoc', '/openapi.json'):
             assert client.get(path).text == 'pyramid'
+
+
+class TestUnexpectedError:
+    def test_logged_and_answered_like_pyramid(self, caplog):
+        fastapi_app = create_fastapi_app({})
+
+        @fastapi_app.get('/boom')
+        def boom():
+            raise RuntimeError('boom')
+
+        client = TestApp(Dispatcher(fastapi_app, _pyramid_app))
+        response = client.get('/boom', status=500)
+        assert response.json == {
+            'status': 'error',
+            'errors': [
+                {
+                    'location': 'body',
+                    'name': 'unexpected error',
+                    'description': 'please consult the server logs',
+                }
+            ],
+        }
+        assert 'Unexpected error: boom' in caplog.text
