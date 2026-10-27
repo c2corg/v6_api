@@ -4,6 +4,7 @@ import pytest
 
 from c2corg_api.models.user import User
 from c2corg_api.tests.contract import ContractTest, check_snapshot, contract
+from c2corg_api.tests.search.__init__ import reset_search_index
 
 POINT = '{"type": "Point", "coordinates": [635956, 5723604]}'
 LINE = '{"type": "LineString", "coordinates": [[635956, 5723604], [635966, 5723644]]}'
@@ -261,6 +262,25 @@ class TestDocumentListing(DocumentContractTest):
     def test_listing_lang_and_pagination(self):
         response = self.get('/waypoints', params={'pl': 'fr', 'offset': 1, 'limit': 1})
         check_snapshot('waypoints_listing_pl', response)
+
+    @contract(*_routes('GET', '/{prefix}', ['outings']))
+    def test_listing_with_filters(self):
+        # filters make the listing search with ElasticSearch; rebuilding the
+        # index is slow, so one test for the filtered listings
+        reset_search_index(self.session)
+        response = self.get(
+            '/outings', params={'act': 'hiking,skitouring', 'pl': 'en', 'limit': 5}
+        )
+        check_snapshot('outings_listing_filtered', response)
+        ids = [d['document_id'] for d in response.json['documents']]
+        assert self.ids['outings'] in ids
+
+    @contract(*_routes('GET', '/{prefix}', ['outings']))
+    def test_listing_beyond_the_search_window(self):
+        response = self.get(
+            '/outings', params={'offset': 9990, 'limit': 20}, status=400
+        )
+        check_snapshot('outings_listing_beyond_window', response)
 
     @contract(('GET', '/profiles'))
     def test_profiles_listing_needs_a_user(self):
