@@ -12,6 +12,7 @@ from pyramid.threadlocal import manager
 from webob.etag import ETagMatcher, NoETag
 
 from c2corg_api.web.auth import parse_authorization
+from c2corg_api.web.db import request_session
 from c2corg_api.web.errors import error_response
 
 
@@ -111,3 +112,12 @@ def run_view(adapted, view):
     if not headers:
         return result
     return JSONResponse(result, headers=headers)
+
+
+def serve_view(request, user, validators, view_class, method='get'):
+    """Answer a request with a method of a Pyramid view class."""
+    adapted, error = validate_query(request, *validators, user=user)
+    if error is not None:
+        return error
+    with request_session():
+        return run_view(adapted, getattr(view_class(adapted), method))
