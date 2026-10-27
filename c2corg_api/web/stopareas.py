@@ -6,7 +6,11 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
-from c2corg_api.views.stoparea import StopareaInfoRest, StopareaRest
+from c2corg_api.views.stoparea import (
+    StopareaInfoRest,
+    StopareaRest,
+    validate_page_params,
+)
 from c2corg_api.views.validation import (
     validate_id,
     validate_lang,
@@ -48,7 +52,11 @@ def include(app):
 
 def stoparea_listing(request: Request, user: User):
     """Return a page of the stop areas."""
-    validators = [validate_pagination, validate_preferred_lang_param]
+    validators = [
+        validate_pagination,
+        validate_preferred_lang_param,
+        validate_page_params,
+    ]
     return serve_view(request, user, validators, StopareaRest, 'collection_get')
 
 
