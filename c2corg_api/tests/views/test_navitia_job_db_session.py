@@ -6,6 +6,7 @@ from sqlalchemy import text
 from c2corg_api.models import DBSession
 from c2corg_api.tests import BaseTestCase, get_engine
 from c2corg_api.views.navitia import (
+    JOB_TTL,
     compute_journey_reachable_routes,
     compute_journey_reachable_waypoints,
 )
@@ -78,7 +79,7 @@ class TestNavitiaJobDbSession(BaseTestCase):
         ):
             state, r = self._run_in_thread(compute_journey_reachable_waypoints, request)
 
-        r.set.assert_any_call('job:job-123:status', 'done')
+        r.set.assert_any_call('job:job-123:status', 'done', ex=JOB_TTL)
         self._assert_connection_released(state)
 
     def test_routes_job_releases_connection_on_error(self):
@@ -90,5 +91,5 @@ class TestNavitiaJobDbSession(BaseTestCase):
         ):
             state, r = self._run_in_thread(compute_journey_reachable_routes, request)
 
-        r.set.assert_any_call('job:job-123:status', 'error')
+        r.set.assert_any_call('job:job-123:status', 'error', ex=JOB_TTL)
         self._assert_connection_released(state)
