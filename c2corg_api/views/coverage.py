@@ -1,6 +1,7 @@
 import functools
 import json
 import logging
+import math
 
 from cornice.resource import resource, view
 from shapely.geometry import Point, shape
@@ -83,16 +84,28 @@ class CoverageRest(DocumentRest):
         return self._put(Coverage, coverage_schema)
 
 
+def validate_lon_lat(request, **kwargs):
+    """Check that the required lon and lat are finite numbers."""
+    for key in ('lon', 'lat'):
+        try:
+            value = float(request.GET[key])
+            if not math.isfinite(value):
+                raise ValueError
+            request.validated[key] = value
+        except KeyError, ValueError:
+            request.errors.add('querystring', key, 'invalid ' + key)
+
+
 @resource(path='/getcoverage', cors_policy=cors_policy)
 class WaypointCoverageRest(DocumentRest):
     def __init__(self, request, context=None):
         self.request = request
 
-    @view(validators=[])
+    @view(validators=[validate_lon_lat])
     def get(self):
         """Return the coverage from a longitude and a latitude."""
-        lon = float(self.request.GET['lon'])
-        lat = float(self.request.GET['lat'])
+        lon = self.request.validated['lon']
+        lat = self.request.validated['lat']
 
         return get_coverage(lon, lat)
 
