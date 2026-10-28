@@ -224,6 +224,65 @@ class TestBlock(UserContractTest):
         )
 
 
+# the GET routes of the users, by permission, and whether they are JSON views
+USER_READS = [
+    ('/users/account', 'authenticated', False),
+    ('/users/preferences', 'authenticated', False),
+    ('/users/mailinglists', 'authenticated', False),
+    ('/users/following', 'authenticated', True),
+    ('/users/following-user/{id}', 'authenticated', True),
+    ('/users/blocked', 'moderator', True),
+    ('/users/blocked/{id}', 'moderator', True),
+]
+
+
+class TestUserReads(UserContractTest):
+    def url(self, path):
+        return path.format(id=self.global_userids['contributor2'])
+
+    @contract(*[('GET', path) for path, _, _ in USER_READS])
+    def test_permissions(self):
+        for path, permission, _ in USER_READS:
+            check_snapshot('users_read_anonymous', self.get(self.url(path), status=403))
+            if permission == 'moderator':
+                response = self.get(self.url(path), user='contributor', status=403)
+                check_snapshot('users_read_not_moderator', response)
+
+    @contract(*[('GET', path) for path, _, json in USER_READS if json])
+    def test_content_type(self):
+        headers = {'Content-Type': 'text/plain'}
+        for path, _, json in USER_READS:
+            if json:
+                response = self.get(
+                    self.url(path), user='moderator', headers=headers, status=415
+                )
+                check_snapshot('users_read_wrong_content_type', response)
+
+    @contract(('GET', '/users/account'))
+    def test_account_is_not_cached(self):
+        response = self.get('/users/account', user='contributor')
+        assert response.headers['Cache-Control'] == (
+            'max-age=0, must-revalidate, no-cache, no-store'
+        )
+        # http_cache=0 of Pyramid
+        assert response.headers['Pragma'] == 'no-cache'
+        assert 'Expires' in response.headers
+        assert 'Last-Modified' in response.headers
+
+    @contract(('GET', '/users/blocked/{id}'))
+    def test_blocked_of_unknown_user(self):
+        response = self.get('/users/blocked/9999999', user='moderator', status=400)
+        check_snapshot('users_blocked_unknown', response)
+        assert response.json['errors'][0]['description'] == 'Unknown user 9999999'
+
+    @contract(('GET', '/users/preferences'))
+    def test_preferences_in_a_lang(self):
+        response = self.get(
+            '/users/preferences', user='contributor', params={'pl': 'fr'}
+        )
+        check_snapshot('users_preferences_fr', response)
+
+
 class TestDocumentUserActions(UserContractTest):
     def setUp(self):
         super().setUp()

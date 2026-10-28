@@ -1,0 +1,14 @@
+{
+  "body": {
+    "activities": [],
+    "areas": [],
+    "followed_only": "bool",
+    "langs": []
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}
