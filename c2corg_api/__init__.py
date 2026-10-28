@@ -88,7 +88,11 @@ def main(global_config, **settings):
     # package initialized
     from c2corg_api.app import Dispatcher, create_fastapi_app
 
-    return Dispatcher(create_fastapi_app(settings), config.make_wsgi_app())
+    return Dispatcher(
+        create_fastapi_app(settings),
+        config.make_wsgi_app(),
+        fastapi_enabled=asbool(settings.get('fastapi.enabled', True)),
+    )
 
 
 # validate db connection before using it
