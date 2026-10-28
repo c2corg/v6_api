@@ -1,4 +1,4 @@
-"""The stop areas of public transports, and those near a waypoint."""
+"""The stop areas of public transports, and the documents they make reachable."""
 # The routes call the view classes of views/ through the adapter of
 # web.compat, as the document routes do (#2365).
 
@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
+from c2corg_api.views.route import ReachableRouteRest
 from c2corg_api.views.stoparea import (
     StopareaInfoRest,
     StopareaRest,
@@ -18,6 +19,7 @@ from c2corg_api.views.validation import (
     validate_pagination,
     validate_preferred_lang_param,
 )
+from c2corg_api.views.waypoint import ReachableWaypointRest
 from c2corg_api.views.waypoint_stoparea import (
     WaypointStopareaInfoRest,
     WaypointStopareasByWaypointRest,
@@ -48,6 +50,8 @@ def include(app):
         waypoint_stoparea_info,
         methods=methods,
     )
+    app.add_api_route('/reachableroutes', reachable_routes, methods=methods)
+    app.add_api_route('/reachablewaypoints', reachable_waypoints, methods=methods)
 
 
 def stoparea_listing(request: Request, user: User):
@@ -89,3 +93,15 @@ def waypoint_stoparea_info(request: Request, user: User):
     """Return the link between a waypoint and a stop area."""
     validators = [validate_id, validate_lang]
     return serve_view(request, user, validators, WaypointStopareaInfoRest)
+
+
+def reachable_routes(request: Request, user: User):
+    """Return the routes with an access waypoint near a stop area."""
+    validators = [validate_pagination, validate_preferred_lang_param]
+    return serve_view(request, user, validators, ReachableRouteRest)
+
+
+def reachable_waypoints(request: Request, user: User):
+    """Return the access waypoints near a stop area."""
+    validators = [validate_pagination, validate_preferred_lang_param]
+    return serve_view(request, user, validators, ReachableWaypointRest)
