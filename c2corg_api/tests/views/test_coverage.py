@@ -53,3 +53,19 @@ class TestCoverageRest(BaseTestRest):
         coverage = self._put(change)
         assert coverage.coverage_type == 'fr-ne'
         assert self._versions() == 0
+
+
+class TestCoverageLookup(BaseTestRest):
+    def test_outside_of_the_coverages(self):
+        response = self.app.get('/getcoverage?lon=0&lat=0', status=200)
+        assert response.json is None
+
+    def test_missing_parameters(self):
+        response = self.app.get('/getcoverage', status=400)
+        names = [e['name'] for e in response.json['errors']]
+        assert names == ['lon', 'lat']
+
+    def test_invalid_parameters(self):
+        response = self.app.get('/getcoverage?lon=x&lat=nan', status=400)
+        names = [e['name'] for e in response.json['errors']]
+        assert names == ['lon', 'lat']
