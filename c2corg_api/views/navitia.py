@@ -13,6 +13,7 @@ from cornice.resource import resource, view
 from pyproj import Transformer
 from pyramid.httpexceptions import (
     HTTPBadRequest,
+    HTTPException,
     HTTPInternalServerError,
     HTTPNotFound,
     HTTPTooManyRequests,
@@ -767,6 +768,10 @@ def navitia_get(url, *, params=None, headers=None, timeout=30):
             timeout=timeout,
         )
         return handle_navitia_response(response)
+
+    except HTTPException:
+        # the errors of Navitia (e.g. 404 no_solution), with their status
+        raise
 
     except requests.exceptions.Timeout as e:
         raise HTTPInternalServerError('Timeout when calling the Navitia API') from e

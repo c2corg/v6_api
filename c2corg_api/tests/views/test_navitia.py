@@ -1542,6 +1542,18 @@ class TestNavitiaRestParams(BaseTestCase):
             result = navitia_get(BASE_URL)
             assert result == {'data': 'some_data'}
 
+    def test_navitia_get_keeps_the_status_of_navitia_errors(self):
+        # an error of Navitia keeps its status (e.g. 404 no_solution), and
+        # does not become a 500
+        with mock.patch('requests.get') as mock_get:
+            mock_response = mock.Mock(status_code=404, ok=False)
+            mock_response.json.return_value = {'error': {'id': 'no_solution'}}
+            mock_get.return_value = mock_response
+
+            with pytest.raises(HTTPNotFound) as error:
+                navitia_get(BASE_URL)
+            assert error.value.detail == 'no_solution'
+
     def test_navitia_get_timeout(self):
         with mock.patch('requests.get') as mock_get:
             mock_get.side_effect = requests.exceptions.Timeout
