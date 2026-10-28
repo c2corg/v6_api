@@ -8,7 +8,8 @@
 #   18  PostgreSQL 18. The resulting dump can only be restored by 18 (pg_dump is not backward compatible).
 #
 # The production dump (custom format, as made by the nightly backup) is only read, never modified.
-# Variables: MEM (memory limit of the container, default 4g), PG96_IMAGE, PG18_IMAGE.
+# Variables: MEM (memory limit of the container, default 4g), PG96_IMAGE, PG18_IMAGE, KEEP=1 to keep the
+# container and its data when the build ends (to inspect a failure).
 
 set -euo pipefail
 
@@ -36,6 +37,10 @@ VOLUME=$NAME-data
 export MSYS_NO_PATHCONV=1 # Git Bash on Windows
 
 cleanup() {
+  if [ -n "${KEEP:-}" ]; then
+    echo "kept for inspection: container $NAME, volume $VOLUME (remove them with docker rm -f / docker volume rm)" >&2
+    return
+  fi
   docker rm -f "$NAME" > /dev/null 2>&1 || true
   docker volume rm "$VOLUME" > /dev/null 2>&1 || true
 }
@@ -55,12 +60,18 @@ docker run -d --name "$NAME" --memory "${MEM:-4g}" --shm-size 512m \
   -c fsync=off -c synchronous_commit=off -c full_page_writes=off \
   -c max_wal_size=8GB -c checkpoint_timeout=30min -c autovacuum=off > /dev/null
 
-# On an empty data directory the entrypoint runs a temporary server to initialize, then restarts:
-# the final server is the second one to announce itself
-for _ in $(seq 1 90); do
-  [ "$(docker logs "$NAME" 2>&1 | grep -c 'ready to accept connections')" -ge 2 ] && break
+# On an empty data directory the entrypoint runs a temporary server, runs the init scripts (which create the
+# role www-data), stops it and starts the final one: wait for the end of the init, then for the final server.
+# (Starting earlier makes the init scripts fail, which stops the container.)
+server_ready() {
+  docker logs "$NAME" 2>&1 | sed -n '/init process complete/,$p' | grep -q 'ready to accept connections'
+}
+for _ in $(seq 1 300); do
+  server_ready && break
+  [ "$(docker inspect -f '{{.State.Running}}' "$NAME")" = true ] || { docker logs "$NAME" 2>&1 | tail -20 >&2; echo "the container stopped" >&2; exit 1; }
   sleep 2
 done
+server_ready || { echo "the server did not start" >&2; exit 1; }
 docker exec "$NAME" pg_isready -U postgres
 
 docker exec -e PGUSER=postgres "$NAME" bash /scripts/dev-database/build.sh "/dump/$(basename "$DUMP")" "/out/$OUT"

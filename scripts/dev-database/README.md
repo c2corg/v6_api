@@ -47,10 +47,22 @@ dump small. Synchronized activities (Strava, Garmin...) are removed.
 | A corpus of edge cases outside of the zones (`10-select.sql`, rule `edge:*`) | every quality level, protected / redirected documents, longest texts, many langs, no geometry, odd titles... |
 | What these documents need (closure): main waypoints, parents, redirect targets, images (max 6 per document), authors | referential integrity |
 | Last version of each document; whole history for the edge cases and a sample | the archives tables are huge |
+| Only the users with a **public profile** | see below |
 | Stop areas of the kept waypoints | public transport |
 
 The zones and the sampling parameters are at the top of `01-setup.sql`. The reason why each document
 is kept is stored in `devdb.keep_doc.reason` during the build.
+
+### Accounts
+
+Only the accounts with a public profile (about 4 % of the accounts) are used. What is linked to the other
+accounts is left out: their profile, the outings and reports they took part in (unless a public user also did),
+and their name in the histories, which is replaced by a single `Former member` account. The documents
+themselves are kept, as they are public content.
+
+The name displayed everywhere (`users.name`) is kept for these public accounts, as it is on the site, unless
+it looks like a real identity (an email, or `Firstname Lastname`): then it becomes `User <id>`. About a
+quarter of the accounts are then switched to private, to exercise the private profiles.
 
 Personal data is removed by `../anonymize-database/anonymize-data.sql`, then `60-verify.sql` fails the
 build if anything is left (emails, passwords, tokens, free texts, profiles...). Its blocking

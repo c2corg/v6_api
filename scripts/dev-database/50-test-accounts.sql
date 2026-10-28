@@ -16,7 +16,8 @@ from (values
         (4, 'unvalidated', false, false, false)
      ) as n(rn, name, moderator, blocked, validated)
 join (select p.document_id as id, row_number() over (order by p.document_id) as rn
-      from guidebook.user_profiles p join users.user x on x.id = p.document_id) picked
+      from guidebook.user_profiles p join users.user x on x.id = p.document_id
+      where x.id > 0) picked
   on picked.rn = n.rn
 where u.id = picked.id;
 
@@ -27,3 +28,16 @@ begin
   end if;
 end
 $$;
+
+-- The anonymization turned the former member into a regular account: lock it again
+update users.user
+set username = 'former-member', forum_username = 'former-member', email = 'former-member@example.com',
+    name = 'Former member', email_validated = false, blocked = true, moderator = false, is_profile_public = false
+where id = -1;
+
+update users.user set name = username where username in ('moderator', 'user', 'blocked', 'unvalidated');
+
+-- Only public accounts were used to build the extract: make a quarter of them private, as on the real
+-- site, to exercise the private profiles (the test accounts stay public)
+update users.user set is_profile_public = false
+where id <> -1 and id % 4 = 0 and username not in ('moderator', 'user', 'blocked', 'unvalidated');

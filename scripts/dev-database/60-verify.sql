@@ -73,8 +73,17 @@ declare
   mention constant text := '(^|[^A-Za-z0-9._%+-])@[A-Za-z0-9_]';
   phone constant text := '(\+|\y00)[0-9]{2}[ .-]?(\(0\)|0)?[ .-]?[0-9]{1,3}([ .-]?[0-9]{2,4}){2,4}|\y0[1-9]([ .-]?[0-9]{2}){4}\y';
 begin
-  select count(*) into n from users.user where name !~ '^User [0-9]+$';
-  if n > 0 then raise exception '% users have a real name', n; end if;
+  -- the accounts for the developers exist, and nobody can log in as the former member
+  select count(*) into n from users.user where username in ('moderator', 'user', 'blocked', 'unvalidated') and id > 0;
+  if n <> 4 then raise exception '% test accounts instead of 4', n; end if;
+  select count(*) into n from users.user where id = -1 and (moderator or not blocked or email_validated);
+  if n > 0 then raise exception 'the former member can log in or moderate'; end if;
+
+  -- the names of the public accounts are kept, unless they look like an identity or an email
+  select count(*) into n from users.user
+    where name !~ '^User [0-9]+$'
+      and (name ~ '@' or name ~ '^[A-ZÀ-Ý][a-zà-ÿ-]+( [A-ZÀ-Ý][a-zà-ÿ-]+)+$');
+  if n > 0 then raise exception '% users have a name which looks real', n; end if;
 
   foreach t in array array['guidebook.images', 'guidebook.images_archives'] loop
     execute format('select count(*) from %s where author <> '''' and author !~ ''^Author [0-9]+$''', t) into n;

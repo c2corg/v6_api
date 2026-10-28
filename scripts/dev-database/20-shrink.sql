@@ -61,6 +61,17 @@ select devdb.shrink('guidebook.feed_document_changes',
 -- Users, only those which are related to kept data
 select devdb.shrink('users.user', 'id in (select user_id from devdb.keep_user)');
 
+-- What private accounts did (history, associations) is attributed to a single former member
+insert into users.user (id, username, name, forum_username, email, email_validated, moderator, password,
+                        last_modified, lang, is_profile_public, blocked, robot, ratelimit_times)
+values (-1, 'former-member', 'Former member', 'former-member', 'former-member@example.com', false, false,
+        '$2b$12$JPOxvA1AUc4LRUE6OJMlLeFoKoTYjfGpnBsC4tSE7VhAh3e/AmeGi', now(), 'en', false, true, false, 0);
+-- (like every user, it needs a profile document)
+insert into guidebook.documents (document_id, version, type, protected, quality) values (-1, 1, 'u', false, 'empty');
+insert into guidebook.user_profiles (document_id) values (-1);
+update guidebook.history_metadata set user_id = -1 where user_id not in (select id from users.user);
+update guidebook.association_log set user_id = -1 where user_id not in (select id from users.user);
+
 -- Forum topics do not exist in a dev environment
 truncate guidebook.documents_topics;
 

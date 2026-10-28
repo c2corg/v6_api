@@ -14,6 +14,13 @@ begin
 end
 $$;
 
+-- Only the accounts with a public profile are used: what is linked to the other accounts (their profile, the
+-- outings and reports they took part in, their name in the histories) is left out. This runs before the
+-- anonymization, which keeps the flag.
+create table devdb.public_user as
+  select id from users.user
+  where is_profile_public and email_validated and not blocked and not robot;
+
 -- 1. Always kept: small document types, referenced from everywhere. All the xreports are kept
 -- as well (a few hundred, and precious edge cases: their free text is replaced by anonymization).
 insert into devdb.keep_doc
@@ -218,6 +225,34 @@ end
 $$;
 select devdb.close_over_documents();
 
+-- Outings and reports whose users are all private are left out (without any user, they are kept)
+delete from devdb.keep_doc k
+using guidebook.documents d
+where d.document_id = k.document_id
+  and d.type in ('o', 'x')
+  and exists (select 1 from guidebook.associations a
+              where a.parent_document_type = 'u' and a.child_document_id = k.document_id)
+  and not exists (select 1 from guidebook.associations a
+                  join devdb.public_user pu on pu.id = a.parent_document_id
+                  where a.parent_document_type = 'u' and a.child_document_id = k.document_id);
+
+-- Documents which redirect to a document which is not kept anymore are left out as well (chains included)
+do $$
+declare
+  removed integer;
+begin
+  loop
+    delete from devdb.keep_doc k
+    using guidebook.documents d
+    where d.document_id = k.document_id
+      and d.redirects_to is not null
+      and not exists (select 1 from devdb.keep_doc t where t.document_id = d.redirects_to);
+    get diagnostics removed = row_count;
+    exit when removed = 0;
+  end loop;
+end
+$$;
+
 -- 5. Images attached to the kept documents (at most `images_per_document` per document, the most
 -- recent ones), and the profiles of the people who took part in the kept outings, xreports, articles.
 insert into devdb.keep_doc
@@ -232,6 +267,7 @@ insert into devdb.keep_doc
 insert into devdb.keep_doc
   select distinct a.parent_document_id, 'profile-of-participant'
   from guidebook.associations a join devdb.keep_doc k on k.document_id = a.child_document_id
+  join devdb.public_user pu on pu.id = a.parent_document_id
   where a.parent_document_type = 'u' and a.child_document_type in ('o', 'x', 'c')
   on conflict do nothing;
 
@@ -259,18 +295,21 @@ begin
        order by v.document_id, v.lang, v.id desc);
 
     insert into devdb.keep_user
-      select h.user_id
-      from devdb.keep_version kv
-      join guidebook.documents_versions v on v.id = kv.id
-      join guidebook.history_metadata h on h.id = v.history_metadata_id
-      union
-      select l.user_id
-      from guidebook.association_log l
-      join devdb.keep_doc p on p.document_id = l.parent_document_id
-      join devdb.keep_doc c on c.document_id = l.child_document_id
-      union
-      select u.id
-      from users.user u join devdb.keep_doc k on k.document_id = u.id;
+      select user_id from (
+        select h.user_id
+        from devdb.keep_version kv
+        join guidebook.documents_versions v on v.id = kv.id
+        join guidebook.history_metadata h on h.id = v.history_metadata_id
+        union
+        select l.user_id
+        from guidebook.association_log l
+        join devdb.keep_doc p on p.document_id = l.parent_document_id
+        join devdb.keep_doc c on c.document_id = l.child_document_id
+        union
+        select u.id
+        from users.user u join devdb.keep_doc k on k.document_id = u.id
+      ) x
+      where user_id in (select id from devdb.public_user);
 
     insert into devdb.keep_doc
       select p.document_id, 'profile-of-author'
@@ -286,4 +325,5 @@ select devdb.select_versions_and_users();
 
 select split_part(reason, ':', 1) as reason, count(*) from devdb.keep_doc group by 1 order by 2 desc;
 select d.type, count(*) from devdb.keep_doc k join guidebook.documents d using (document_id) group by 1 order by 2 desc;
-select (select count(*) from devdb.keep_version) as versions, (select count(*) from devdb.keep_user) as users;
+select (select count(*) from devdb.keep_version) as versions, (select count(*) from devdb.keep_user) as users,
+       (select count(*) from devdb.public_user) as public_users;
