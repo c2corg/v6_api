@@ -87,10 +87,11 @@ def body_validator(schema):
     # `request.errors` with the location `body`.
 
     def validator(request, **kwargs):
-        body = extract_cstruct(request)['body']
+        cstruct = extract_cstruct(request)
         if request.errors:
-            # not a JSON body: extract_cstruct reported it
+            # not a JSON body: extract_cstruct reported it (and returned {})
             return
+        body = cstruct['body']
         validated, errors = validate(schema, body)
         for name, description in errors:
             request.errors.add('body', name, description)
