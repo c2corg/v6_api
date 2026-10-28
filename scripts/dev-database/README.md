@@ -14,10 +14,29 @@ docker build -t c2corg-dev-db scripts/dev-database
 docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=test c2corg-dev-db
 ```
 
-Database `c2corg`, user `www-data` (password `www-data`) or `postgres`. Rebuild the Elasticsearch
-index with `fill_index.py` (a few minutes, a few hundred MB of RAM).
+Database `c2corg`, user `www-data` (password `www-data`) or `postgres`. It is already at the latest
+alembic revision of the code at the time it was built.
 
-Accounts (password `c2c` for all): `moderator`, `user`, `blocked`, `unvalidated`.
+Then create and fill the Elasticsearch index, **in this order** (without the first command,
+Elasticsearch creates the index on its own without the search sub-fields, and the search silently
+returns nothing):
+
+```sh
+initialize_c2corg_api_es development.ini    # creates the index and its mappings
+fill_es_index development.ini               # ~3 minutes, 65,000 documents, 30 MB
+```
+
+Everything (PostgreSQL, Elasticsearch, Redis, the API) fits in about 1.5 GB of memory
+(`ES_HEAP_SIZE=512m` is enough for Elasticsearch).
+
+Accounts (password `c2c` for all): `moderator`, `user`, `blocked`, `unvalidated`. Logging in works
+without a forum; the API only logs `Could not request nonce` when it cannot reach Discourse.
+
+Public transport: the stop areas come from the dump and are served by `/waypoints/{id}/stopareas`.
+
+Tracks: there are no GPX files. The tracks of routes and outings (about a quarter of them have one) are
+geometries with elevation, and they are simplified (tolerance of 10 m, see `20-shrink.sql`) to keep the
+dump small. Synchronized activities (Strava, Garmin...) are removed.
 
 ## What is kept
 
