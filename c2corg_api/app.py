@@ -13,6 +13,7 @@ from c2corg_api.web import (
     feeds,
     health,
     history,
+    misc,
     search,
     sitemaps,
     stopareas,
@@ -39,6 +40,7 @@ def create_fastapi_app(settings):
     feeds.include(app)
     sitemaps.include(app)
     stopareas.include(app)
+    misc.include(app)
     return app
 
 

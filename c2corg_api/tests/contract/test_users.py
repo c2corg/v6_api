@@ -263,6 +263,25 @@ class TestDocumentUserActions(UserContractTest):
             'tags_remove', self.post('/tags/remove', body, user='contributor')
         )
 
+    @contract(('GET', '/tags/has/{document_id}'))
+    def test_tags_has_needs_a_user(self):
+        response = self.get(f'/tags/has/{self.route_id}', status=403)
+        check_snapshot('tags_has_anonymous', response)
+
+    @contract(('GET', '/tags/has/{document_id}'))
+    def test_tags_has_content_type(self):
+        # a JSON view: a Content-Type other than JSON is refused, even before
+        # the permission check
+        url = f'/tags/has/{self.route_id}'
+        for user in (None, 'contributor'):
+            response = self.get(
+                url, user=user, headers={'Content-Type': 'text/plain'}, status=415
+            )
+            check_snapshot('tags_has_wrong_content_type', response)
+        json_type = {'Content-Type': 'application/json; charset=utf-8'}
+        response = self.get(url, user='contributor', headers=json_type)
+        assert response.json == {'todo': False}
+
     @contract(('POST', '/forum/topics'))
     def test_forum_topic(self):
         # the real Discourse client, with the HTTP call faked
