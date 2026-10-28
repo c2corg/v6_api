@@ -6,10 +6,11 @@
 # adapter gives them that interface, so the moved routes keep exactly the
 # same logic, checks and messages while they move (#2365).
 
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pyramid.httpexceptions import HTTPError, HTTPNotModified, HTTPRedirection
 from pyramid.threadlocal import manager
 from webob import Request as WebObRequest
+from webob import Response as WebObResponse
 from webob.etag import ETagMatcher, NoETag
 
 from c2corg_api.web.auth import parse_authorization
@@ -121,6 +122,13 @@ def run_view(adapted, view):
     finally:
         if registry is not None:
             manager.pop()
+    if isinstance(result, WebObResponse):
+        # a response of its own: its body may be a stream (the progress of the
+        # Navitia jobs, text/event-stream)
+        headers = {k: v for k, v in result.headers.items() if k != 'Content-Length'}
+        return StreamingResponse(
+            result.app_iter, status_code=result.status_code, headers=headers
+        )
     headers = adapted.response.headers
     content_type = adapted.response.content_type
     if content_type is not None:
