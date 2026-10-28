@@ -99,6 +99,10 @@ ui.url = {ui_url}
 # (configure_cors_policy).
 cors.allowed_origins = {cors_allowed_origins}
 
+# the routes moved to FastAPI (#2365): false sends them back to Pyramid
+# (except /health and /search, which only FastAPI has)
+fastapi.enabled = {fastapi_enabled}
+
 mail.validate_register_url_template = {mail_validate_register_url_template}
 mail.request_password_change_url_template = {mail_request_password_change_url_template}
 mail.validate_change_email_url_template = {mail_validate_change_email_url_template}

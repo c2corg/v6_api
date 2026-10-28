@@ -12,14 +12,36 @@ def _pyramid_app(environ, start_response):
 _pyramid_app.registry = object()
 
 
-def _client():
+class _Route:
+    def __init__(self, prefix):
+        self.prefix = prefix
+
+    def match(self, path):
+        return {} if path.startswith(self.prefix) else None
+
+
+class _RoutesMapper:
+    """Stand-in for the routes of Pyramid: it has /moved/... only."""
+
+    def get_routes(self):
+        return [_Route('/moved/')]
+
+
+def _client(fastapi_enabled=True):
     fastapi_app = create_fastapi_app({})
 
     @fastapi_app.get('/moved/{id}')
     def get_moved(id: int):
         return {'app': 'fastapi', 'id': id}
 
-    return TestApp(Dispatcher(fastapi_app, _pyramid_app))
+    @fastapi_app.get('/only-fastapi')
+    def get_only_fastapi():
+        return {'app': 'fastapi'}
+
+    _pyramid_app.routes_mapper = _RoutesMapper()
+    return TestApp(
+        Dispatcher(fastapi_app, _pyramid_app, fastapi_enabled=fastapi_enabled)
+    )
 
 
 class TestDispatcher:
@@ -28,6 +50,12 @@ class TestDispatcher:
 
     def test_other_routes_go_to_pyramid(self):
         assert _client().get('/not-moved/3').text == 'pyramid'
+
+    def test_disabled_fastapi_leaves_to_pyramid_its_routes(self):
+        client = _client(fastapi_enabled=False)
+        assert client.get('/moved/3').text == 'pyramid'
+        # the routes Pyramid does not have stay on FastAPI (/health, /search)
+        assert client.get('/only-fastapi').json == {'app': 'fastapi'}
 
     def test_other_methods_of_a_moved_path_go_to_pyramid(self):
         # a resource can move one method at a time

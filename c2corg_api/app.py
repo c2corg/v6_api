@@ -47,9 +47,13 @@ def create_fastapi_app(settings):
 class Dispatcher:
     """WSGI application sending each request to FastAPI or to Pyramid."""
 
-    def __init__(self, fastapi_app, pyramid_app):
+    def __init__(self, fastapi_app, pyramid_app, fastapi_enabled=True):
         self.fastapi_app = fastapi_app
         self.pyramid_app = pyramid_app
+        # false (setting fastapi.enabled): Pyramid answers every request it
+        # has a route for, FastAPI only those it is alone to serve (/health,
+        # /search); a way back to Pyramid without a new image
+        self.fastapi_enabled = fastapi_enabled
         # the moved views read some of its attributes (see web.compat)
         fastapi_app.state.pyramid_registry = getattr(pyramid_app, 'registry', None)
         self._fastapi_wsgi = ASGIMiddleware(fastapi_app)
@@ -63,6 +67,8 @@ class Dispatcher:
         """Tell whether FastAPI has the route of a request (path and method)."""
         method = environ['REQUEST_METHOD']
         path = environ.get('PATH_INFO') or '/'
+        if not self.fastapi_enabled and self._pyramid_has(path):
+            return False
         if method == 'OPTIONS':
             # a CORS preflight goes where the request it announces will go,
             # or to FastAPI if only FastAPI knows the path (it then answers
