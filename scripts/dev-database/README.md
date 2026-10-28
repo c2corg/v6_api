@@ -75,3 +75,22 @@ it is restoring the full dump. The same SQL runs on both versions.
 The production dump contains personal data and must not leave the machine that builds the extract,
 nor be committed (`*.dump` is ignored). Only the resulting dump is meant to be shared, after the
 checks passed.
+
+## Publishing
+
+```sh
+scripts/dev-database/publish.sh c2corg-dev-pg96.dump 2026-07-19
+```
+
+It builds the image, restores it in a throwaway container and runs `60-verify.sql` (nothing is pushed if
+personal data is left), then asks for a confirmation before pushing the tag and `latest` to
+`ghcr.io/c2corg/c2corg-dev-db` (`IMAGE=` to change it, `DRY_RUN=1` to stop before the push). A package
+created by a push is private; making it public is done in its settings on GitHub.
+
+## Licence and attribution
+
+The content comes from camptocamp.org and remains subject to the licence stated in the terms of use of
+the site (`LICENSE` sets the SPDX identifier put in the image labels: check it before publishing).
+The names of the users and the authors of the images are replaced by pseudonyms, but the identifiers of
+the documents are kept: every document can be traced back to its page on the site, where its history
+and its authors are listed. Image files are not part of the dump, only their rows.
