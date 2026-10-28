@@ -1,7 +1,7 @@
-import ast
 import json
 import logging
 import os
+import re
 import threading
 import time
 import uuid
@@ -310,7 +310,7 @@ def compute_journey_reachable_routes(job_id, request):
     except Exception as exc:
         log.exception(str(exc))
         _set_job_value(r, job_id, 'status', 'error')
-        _set_job_value(r, job_id, 'error', str(exc))
+        _set_job_value(r, job_id, 'error', json.dumps(_job_error(exc)))
     finally:
         _end_thread_db_session()
 
@@ -389,7 +389,7 @@ def compute_journey_reachable_waypoints(job_id, request):
     except Exception as exc:
         log.exception('Error computing reachable waypoints')
         _set_job_value(r, job_id, 'status', 'error')
-        _set_job_value(r, job_id, 'error', str(exc))
+        _set_job_value(r, job_id, 'error', json.dumps(_job_error(exc)))
     finally:
         _end_thread_db_session()
 
@@ -853,11 +853,8 @@ def read_result_from_redis(r, job_id):
     if status == 'running':
         return {'status': 'running'}
     if status == 'error':
-        error_msg = r.get(f'job:{job_id}:error')
-        return {
-            'status': 'error',
-            'message': error_msg.decode() if error_msg else 'unknown error',
-        }
+        error = _read_job_error(r.get(f'job:{job_id}:error'))
+        return {'status': 'error', 'message': error['message']}
     if status == 'done':
         data = r.get(f'job:{job_id}:result')
         if not data:
@@ -900,9 +897,8 @@ def progress_stream(r, job_id, poll_interval=0.5, max_duration=STREAM_MAX_DURATI
             yield b'event: done\ndata: done\n\n'
             break
         elif status.decode() == 'error':
-            payload = r.get(f'job:{job_id}:error')
-            json_payload = json.dumps(ast.literal_eval(payload.decode()))
-            yield (f'event: error\ndata: {json_payload}\n\n').encode()
+            error = _read_job_error(r.get(f'job:{job_id}:error'))
+            yield _error_event(error['id'], error['message'])
             break
 
         if time.monotonic() >= deadline:
@@ -910,6 +906,28 @@ def progress_stream(r, job_id, poll_interval=0.5, max_duration=STREAM_MAX_DURATI
             break
 
         time.sleep(poll_interval)
+
+
+def _job_error(exc):
+    """Return the error of a failed job, as the UI reads them: id and message."""
+    # a single word is an error id of Navitia (e.g. date_out_of_bounds), which
+    # the UI may translate; it shows the message of the others
+    message = str(exc)
+    error_id = message if re.fullmatch(r'\w+', message) else 'job_error'
+    return {'id': error_id, 'message': message}
+
+
+def _read_job_error(raw):
+    """Return the stored error of a job (JSON; a plain message before)."""
+    if raw is None:
+        return {'id': 'job_error', 'message': 'unknown error'}
+    try:
+        error = json.loads(raw)
+    except ValueError:
+        error = None
+    if isinstance(error, dict) and 'id' in error and 'message' in error:
+        return error
+    return {'id': 'job_error', 'message': raw.decode(errors='replace')}
 
 
 def _error_event(error_id, message):
