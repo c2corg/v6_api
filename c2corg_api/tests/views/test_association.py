@@ -463,7 +463,9 @@ class TestAssociationRest(BaseTestRest):
             self.session.query(AssociationLog)
             .filter(AssociationLog.parent_document_id == self.waypoint1.document_id)
             .filter(AssociationLog.child_document_id == self.waypoint2.document_id)
-            .order_by(AssociationLog.written_at)
+            # written_at is the start of the transaction (now()): the same for
+            # both logs when the test runs in one transaction, so also by id
+            .order_by(AssociationLog.written_at, AssociationLog.id)
             .all()
         )
         assert logs[0].is_creation is True
