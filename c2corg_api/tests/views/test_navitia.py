@@ -142,7 +142,11 @@ class TestNavitiaRestParams(BaseTestCase):
 
     # individual job handling functions
     def test_get_redis_client(self):
-        assert redis_client() is not None
+        # the Redis of the settings, not a fixed host and database
+        kwargs = redis_client().connection_pool.connection_kwargs
+        url = self.settings['redis.url']
+        assert kwargs['host'] == url.split('//')[1].split(':')[0]
+        assert kwargs['db'] == int(self.settings.get('redis.db_jobs', 0))
 
     def test_start_job(self):
         with mock.patch(NAVITIA_REDIS_CLIENT_PATH) as mock_redis_client:

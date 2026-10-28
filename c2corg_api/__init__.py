@@ -15,6 +15,7 @@ from c2corg_api.models.route import Route
 from c2corg_api.search import configure_es_from_config, get_queue_config
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import configure_cors_policy
+from c2corg_api.views.navitia import configure_jobs_redis
 
 log = logging.getLogger(__name__)
 
@@ -71,6 +72,7 @@ def main(global_config, **settings):
         log.warning('Bypassing authorization')
 
     configure_caches(settings)
+    configure_jobs_redis(settings)
     configure_feed(settings, config)
     configure_anonymous(settings, config)
 

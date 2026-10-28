@@ -39,10 +39,9 @@ MAX_ROUTE_THRESHOLD = 50
 MAX_TRIP_DURATION = 240
 MIN_TRIP_DURATION = 20
 
-# redis to store job's value (progress, result, error...)
-REDIS_HOST = 'redis'
-REDIS_PORT = 6379
-REDIS_DB = 0
+# redis to store job's value (progress, result, error...): see
+# configure_jobs_redis
+_jobs_redis_pool = None
 
 BASE_URL = 'https://api.navitia.io/v1'
 
@@ -769,9 +768,18 @@ def navitia_get(url, *, params=None, headers=None, timeout=30):
         raise HTTPInternalServerError(str(e)) from e
 
 
+def configure_jobs_redis(settings):
+    """Connect the jobs to the Redis of the settings (redis.url, redis.db_jobs)."""
+    global _jobs_redis_pool
+    url = '{}?db={}'.format(settings['redis.url'], settings.get('redis.db_jobs', 0))
+    _jobs_redis_pool = redis.ConnectionPool.from_url(url)
+
+
 def redis_client():
-    """Fast way to get redis client."""
-    return redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+    """Return a client of the Redis of the jobs."""
+    if _jobs_redis_pool is None:
+        raise RuntimeError('configure_jobs_redis was not called')
+    return redis.Redis(connection_pool=_jobs_redis_pool)
 
 
 def start_job_background(target, request):
