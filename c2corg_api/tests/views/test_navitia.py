@@ -24,6 +24,7 @@ from c2corg_api.tests import BaseTestCase
 from c2corg_api.views import to_json_dict
 from c2corg_api.views.navitia import (
     BASE_URL,
+    JOB_TTL,
     MAX_ROUTE_THRESHOLD,
     MAX_TRIP_DURATION,
     MIN_TRIP_DURATION,
@@ -156,8 +157,18 @@ class TestNavitiaRestParams(BaseTestCase):
 
             job_id = result['job_id']
 
-            mock_r.set.assert_any_call(f'job:{job_id}:progress', 0)
-            mock_r.set.assert_any_call(f'job:{job_id}:status', 'running')
+            mock_r.set.assert_any_call(f'job:{job_id}:progress', 0, ex=JOB_TTL)
+            mock_r.set.assert_any_call(f'job:{job_id}:status', 'running', ex=JOB_TTL)
+
+    def test_job_values_expire(self):
+        # in the Redis of the jobs, not a mock
+        job_id = start_job_background(lambda *_: None, request={'a': 1})['job_id']
+        r = redis_client()
+        try:
+            for name in ('progress', 'status'):
+                assert 0 < r.ttl(f'job:{job_id}:{name}') <= JOB_TTL
+        finally:
+            r.delete(f'job:{job_id}:progress', f'job:{job_id}:status')
 
     def test_store_job_progress(self):
         with mock.patch(NAVITIA_REDIS_CLIENT_PATH) as mock_redis_client:
@@ -166,9 +177,9 @@ class TestNavitiaRestParams(BaseTestCase):
 
             _store_job_progress(mock_r, job_id, count=5, found=3, not_found=2)
 
-            mock_r.set.assert_any_call(f'job:{job_id}:progress', 5)
-            mock_r.set.assert_any_call(f'job:{job_id}:found', 3)
-            mock_r.set.assert_any_call(f'job:{job_id}:not_found', 2)
+            mock_r.set.assert_any_call(f'job:{job_id}:progress', 5, ex=JOB_TTL)
+            mock_r.set.assert_any_call(f'job:{job_id}:found', 3, ex=JOB_TTL)
+            mock_r.set.assert_any_call(f'job:{job_id}:not_found', 2, ex=JOB_TTL)
 
             mock_r.publish.assert_any_call(f'job:{job_id}:events', 'progress:5')
             mock_r.publish.assert_any_call(f'job:{job_id}:events', 'found:3')
@@ -977,10 +988,10 @@ class TestNavitiaRestParams(BaseTestCase):
 
             # --- assertions ---
             # Check total
-            mock_redis.set.assert_any_call(f'job:{job_id}:total', 2)
+            mock_redis.set.assert_any_call(f'job:{job_id}:total', 2, ex=JOB_TTL)
 
             # Check Redis was called with correct job status
-            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'done')
+            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'done', ex=JOB_TTL)
 
             # Get the stored result from Redis
             result_json = mock_redis.set.call_args_list
@@ -1061,10 +1072,10 @@ class TestNavitiaRestParams(BaseTestCase):
 
             # --- assertions ---
             # Check total
-            mock_redis.set.assert_any_call(f'job:{job_id}:total', 0)
+            mock_redis.set.assert_any_call(f'job:{job_id}:total', 0, ex=JOB_TTL)
 
             # Check Redis was called with correct job status
-            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'done')
+            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'done', ex=JOB_TTL)
 
             # Get the stored result from Redis
             result_json = mock_redis.set.call_args_list
@@ -1136,11 +1147,12 @@ class TestNavitiaRestParams(BaseTestCase):
 
             compute_journey_reachable_routes(job_id, request)
 
-            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'error')
+            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'error', ex=JOB_TTL)
 
             mock_redis.set.assert_any_call(
                 f'job:{job_id}:error',
                 "Couldn't proceed with computation : Too much routes found.",
+                ex=JOB_TTL,
             )
 
             # Ensure no result was written
@@ -1231,10 +1243,10 @@ class TestNavitiaRestParams(BaseTestCase):
 
             # assertions
             # total waypoints queried
-            mock_redis.set.assert_any_call(f'job:{job_id}:total', 2)
+            mock_redis.set.assert_any_call(f'job:{job_id}:total', 2, ex=JOB_TTL)
 
             # check final status
-            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'done')
+            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'done', ex=JOB_TTL)
 
             # result contains only reachable waypoint
             result_json = next(
@@ -1288,8 +1300,8 @@ class TestNavitiaRestParams(BaseTestCase):
             request.GET = {'a': '1'}
             compute_journey_reachable_waypoints(job_id, request)
 
-            mock_redis.set.assert_any_call(f'job:{job_id}:total', 0)
-            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'done')
+            mock_redis.set.assert_any_call(f'job:{job_id}:total', 0, ex=JOB_TTL)
+            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'done', ex=JOB_TTL)
 
             # result empty
             result_json = next(
@@ -1311,9 +1323,9 @@ class TestNavitiaRestParams(BaseTestCase):
             request.GET = {}
             compute_journey_reachable_waypoints(job_id, request)
 
-            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'error')
+            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'error', ex=JOB_TTL)
             mock_redis.set.assert_any_call(
-                f'job:{job_id}:error', 'Missing filter : area is required'
+                f'job:{job_id}:error', 'Missing filter : area is required', ex=JOB_TTL
             )
 
     def test_compute_journey_reachable_waypoints_multiple_areas(self):
@@ -1325,9 +1337,9 @@ class TestNavitiaRestParams(BaseTestCase):
             request.GET = {'a': '1,2'}  # multiple areas
             compute_journey_reachable_waypoints(job_id, request)
 
-            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'error')
+            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'error', ex=JOB_TTL)
             mock_redis.set.assert_any_call(
-                f'job:{job_id}:error', 'Only one filtering area is allowed'
+                f'job:{job_id}:error', 'Only one filtering area is allowed', ex=JOB_TTL
             )
 
     def test_handle_navitia_response_success(self):
