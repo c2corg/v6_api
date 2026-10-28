@@ -42,6 +42,9 @@ MIN_TRIP_DURATION = 20
 # redis to store job's value (progress, result, error...): see
 # configure_jobs_redis
 _jobs_redis_pool = None
+# the values of a job expire after its last write: long enough for the UI to
+# read the result of a finished job
+JOB_TTL = 3600  # seconds
 
 BASE_URL = 'https://api.navitia.io/v1'
 
@@ -263,7 +266,7 @@ def compute_journey_reachable_routes(job_id, request):
 
         total = len(wp_objects)
         log.info('Number of NAVITIA journey queries : %d', total)
-        r.set(f'job:{job_id}:total', total)
+        _set_job_value(r, job_id, 'total', total)
 
         count = found = not_found = 0
         navitia_wp_map = {}
@@ -295,15 +298,17 @@ def compute_journey_reachable_routes(job_id, request):
             route.areas = json_areas
             routes.append(to_json_dict(route, route_schema, True))
 
-        r.set(
-            f'job:{job_id}:result',
+        _set_job_value(
+            r,
+            job_id,
+            'result',
             json.dumps({'documents': routes, 'total': len(routes)}),
         )
-        r.set(f'job:{job_id}:status', 'done')
+        _set_job_value(r, job_id, 'status', 'done')
     except Exception as exc:
         log.exception(str(exc))
-        r.set(f'job:{job_id}:status', 'error')
-        r.set(f'job:{job_id}:error', str(exc))
+        _set_job_value(r, job_id, 'status', 'error')
+        _set_job_value(r, job_id, 'error', str(exc))
     finally:
         _end_thread_db_session()
 
@@ -348,7 +353,7 @@ def compute_journey_reachable_waypoints(job_id, request):
 
         total = len(results)
         log.info('Number of NAVITIA journey queries : %d', total)
-        r.set(f'job:{job_id}:total', total)
+        _set_job_value(r, job_id, 'total', total)
 
         count = found = not_found = 0
         waypoints = []
@@ -372,15 +377,17 @@ def compute_journey_reachable_waypoints(job_id, request):
                 not_found += 1
             _store_job_progress(r, job_id, count, found, not_found)
 
-        r.set(
-            f'job:{job_id}:result',
+        _set_job_value(
+            r,
+            job_id,
+            'result',
             json.dumps({'documents': waypoints, 'total': len(waypoints)}),
         )
-        r.set(f'job:{job_id}:status', 'done')
+        _set_job_value(r, job_id, 'status', 'done')
     except Exception as exc:
         log.exception('Error computing reachable waypoints')
-        r.set(f'job:{job_id}:status', 'error')
-        r.set(f'job:{job_id}:error', str(exc))
+        _set_job_value(r, job_id, 'status', 'error')
+        _set_job_value(r, job_id, 'error', str(exc))
     finally:
         _end_thread_db_session()
 
@@ -775,6 +782,11 @@ def configure_jobs_redis(settings):
     _jobs_redis_pool = redis.ConnectionPool.from_url(url)
 
 
+def _set_job_value(r, job_id, name, value):
+    """Store a value of a job, which expires after JOB_TTL."""
+    r.set(f'job:{job_id}:{name}', value, ex=JOB_TTL)
+
+
 def redis_client():
     """Return a client of the Redis of the jobs."""
     if _jobs_redis_pool is None:
@@ -791,8 +803,8 @@ def start_job_background(target, request):
     """
     job_id = str(uuid.uuid4())
     r = redis_client()
-    r.set(f'job:{job_id}:progress', 0)
-    r.set(f'job:{job_id}:status', 'running')
+    _set_job_value(r, job_id, 'progress', 0)
+    _set_job_value(r, job_id, 'status', 'running')
     threading.Thread(target=target, args=(job_id, request), daemon=True).start()
     return {'job_id': job_id}
 
@@ -894,9 +906,9 @@ def _store_job_progress(r, job_id, count, found, not_found):
     found : the number of successful queries
     not_found: the number of unsuccessful queries.
     """
-    r.set(f'job:{job_id}:progress', count)
-    r.set(f'job:{job_id}:found', found)
-    r.set(f'job:{job_id}:not_found', not_found)
+    _set_job_value(r, job_id, 'progress', count)
+    _set_job_value(r, job_id, 'found', found)
+    _set_job_value(r, job_id, 'not_found', not_found)
     r.publish(f'job:{job_id}:events', f'progress:{count}')
     r.publish(f'job:{job_id}:events', f'found:{found}')
     r.publish(f'job:{job_id}:events', f'not_found:{not_found}')
