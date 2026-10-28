@@ -390,6 +390,32 @@ class TestNavitiaRestParams(BaseTestCase):
         assert second.startswith(b'event: error')
         assert b'"msg": "error message"' in second
 
+    def test_progress_stream_unknown_job(self):
+        # no status: an unknown job, or one whose values expired
+        r = mock.Mock()
+        r.get.side_effect = [None, None, None, None, None]
+
+        with mock.patch('c2corg_api.views.navitia.time.sleep') as sleep:
+            events = list(progress_stream(r, job_id='123'))
+
+        assert len(events) == 1
+        assert events[0].startswith(b'event: error\n')
+        data = json.loads(events[0].decode().split('data: ')[1])
+        assert data == {'id': 'unknown_job', 'message': 'Unknown job 123'}
+        sleep.assert_not_called()
+
+    def test_progress_stream_timeout(self):
+        # a job still running after max_duration
+        r = mock.Mock()
+        r.get.side_effect = lambda key: b'running' if key.endswith(':status') else None
+
+        with mock.patch('c2corg_api.views.navitia.time.sleep'):
+            events = list(progress_stream(r, job_id='123', max_duration=0))
+
+        assert events[0].startswith(b'data: ')
+        data = json.loads(events[-1].decode().split('data: ')[1])
+        assert data == {'id': 'timeout', 'message': 'The job takes too long'}
+
     # /navitia/journeyreachableroutes endpoints (includes job handling)
     # /navitia/journeyreachableroutes/start endpoint
     # /navitia/journeyreachablewaypoints/start endpoint

@@ -45,6 +45,8 @@ _jobs_redis_pool = None
 # the values of a job expire after its last write: long enough for the UI to
 # read the result of a finished job
 JOB_TTL = 3600  # seconds
+# the longest a progress stream follows a job
+STREAM_MAX_DURATION = 600  # seconds
 
 BASE_URL = 'https://api.navitia.io/v1'
 
@@ -864,13 +866,22 @@ def read_result_from_redis(r, job_id):
     return {'error': 'unknown_status', 'status': status}
 
 
-def progress_stream(r, job_id, poll_interval=0.5):
-    """Yield the job progress."""
+def progress_stream(r, job_id, poll_interval=0.5, max_duration=STREAM_MAX_DURATION):
+    """Yield the job progress, until the job ends, is unknown or takes too long."""
+    # The stream holds a worker of the server: it must end. An unknown job id
+    # (or a job whose values expired, e.g. lost with its worker) ends it at
+    # once, and so does a job running for longer than max_duration.
+    deadline = time.monotonic() + max_duration
     while True:
         raw_progress = r.get(f'job:{job_id}:progress')
         raw_found = r.get(f'job:{job_id}:found')
         raw_not_found = r.get(f'job:{job_id}:not_found')
         raw_total = r.get(f'job:{job_id}:total')
+        status = r.get(f'job:{job_id}:status')
+
+        if status is None:
+            yield _error_event('unknown_job', f'Unknown job {job_id}')
+            break
 
         progress = int(raw_progress) if raw_progress is not None else 0
         found = int(raw_found) if raw_found is not None else 0
@@ -885,17 +896,26 @@ def progress_stream(r, job_id, poll_interval=0.5):
         }
         yield (f'data: {json.dumps(payload)}\n\n').encode()
 
-        status = r.get(f'job:{job_id}:status')
-        if status and status.decode() == 'done':
+        if status.decode() == 'done':
             yield b'event: done\ndata: done\n\n'
             break
-        elif status and status.decode() == 'error':
+        elif status.decode() == 'error':
             payload = r.get(f'job:{job_id}:error')
             json_payload = json.dumps(ast.literal_eval(payload.decode()))
             yield (f'event: error\ndata: {json_payload}\n\n').encode()
             break
 
+        if time.monotonic() >= deadline:
+            yield _error_event('timeout', 'The job takes too long')
+            break
+
         time.sleep(poll_interval)
+
+
+def _error_event(error_id, message):
+    """Return an error event of the progress stream, as the UI reads them."""
+    data = json.dumps({'id': error_id, 'message': message})
+    return (f'event: error\ndata: {data}\n\n').encode()
 
 
 def _store_job_progress(r, job_id, count, found, not_found):
