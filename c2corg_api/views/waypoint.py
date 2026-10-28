@@ -14,7 +14,7 @@ from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
 from c2corg_api.models.common.attributes import waypoint_types
 from c2corg_api.models.common.fields_waypoint import fields_waypoint
-from c2corg_api.models.document import UpdateType
+from c2corg_api.models.document import Document, UpdateType
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.waypoint import (
@@ -601,21 +601,26 @@ def build_reachable_waypoints_query(params, meta_params):
     )
 
     # then query database with the ids from ES, maintaining order with the case
+    # explicit aliases of the joined documents: the documents table of the
+    # waypoint stays unaliased, for its GROUP BY
+    area = aliased(Area, flat=True)
     query = (
         DBSession.query(
             Waypoint,
             func.jsonb_agg(
                 func.distinct(
                     func.jsonb_build_object(
-                        literal_column("'document_id'"), Area.document_id
+                        literal_column("'document_id'"), area.document_id
                     )
                 )
             ).label('areas'),
         )
         .filter(Waypoint.document_id.in_(all_filtered_waypoints_reachable_ids))
         .join(AreaAssociation, AreaAssociation.document_id == Waypoint.document_id)
-        .join(Area, Area.document_id == AreaAssociation.area_id)
-        .group_by(Waypoint)
+        .join(area, area.document_id == AreaAssociation.area_id)
+        # the primary keys of both tables of the model (documents and the
+        # table of the type): PostgreSQL refuses their other columns otherwise
+        .group_by(Document.document_id, Waypoint.document_id)
         .order_by(ordering_case)
     )
 
