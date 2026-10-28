@@ -7,8 +7,9 @@
 # same logic, checks and messages while they move (#2365).
 
 from fastapi.responses import JSONResponse, Response
-from pyramid.httpexceptions import HTTPError, HTTPNotModified
+from pyramid.httpexceptions import HTTPError, HTTPNotModified, HTTPRedirection
 from pyramid.threadlocal import manager
+from webob import Request as WebObRequest
 from webob.etag import ETagMatcher, NoETag
 
 from c2corg_api.web.auth import parse_authorization
@@ -106,10 +107,15 @@ def run_view(adapted, view):
         manager.push({'registry': registry, 'request': None})
     try:
         result = view()
+        if isinstance(result, HTTPRedirection):
+            # returned, not raised (the image proxy)
+            raise result
     except HTTPNotModified as e:
         # only the cache headers, like the Pyramid answer
         headers = {k: v for k, v in e.headers.items() if k in ('ETag', 'Cache-Control')}
         return Response(status_code=304, headers=headers)
+    except HTTPRedirection as e:
+        return _redirection(e)
     except HTTPError as e:
         return _http_error(e)
     finally:
@@ -132,13 +138,35 @@ def run_view(adapted, view):
     return JSONResponse(result, headers=headers)
 
 
+def _redirection(e):
+    """Answer a Pyramid redirection with its status, headers and text body."""
+    rendered = WebObRequest.blank('/').get_response(e)
+    headers = {k: v for k, v in rendered.headers.items() if k != 'Content-Length'}
+    return Response(rendered.body, status_code=rendered.status_code, headers=headers)
+
+
 def _http_error(e):
     """Answer a Pyramid HTTP error like views.http_error_handler."""
     return error_response([('body', e.title, e.detail)], e.code)
 
 
-def serve_view(request, user, validators, view_class, method='get', permission=None):
+def serve_view(
+    request,
+    user,
+    validators,
+    view_class,
+    method='get',
+    permission=None,
+    content_types=None,
+):
     """Answer a request with a method of a Pyramid view class."""
+    # as Cornice: a request with another Content-Type than those of the view
+    # (json_view) is refused, before the permission check; none is accepted
+    if content_types is not None:
+        media_type = request.headers.get('Content-Type', '').split(';')[0].strip()
+        if media_type and media_type not in content_types:
+            description = f'Content-Type header should be one of {content_types}'
+            return error_response([('header', 'Content-Type', description)], 415)
     # the permission is checked before the validators, as Pyramid does
     if permission and not ValidatedRequest(request, user).has_permission(permission):
         # the message of Pyramid without debug_authorization (production)
