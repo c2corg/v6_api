@@ -1,6 +1,7 @@
 from typing import Annotated
 from unittest.mock import patch
 
+from cornice import Errors
 from fastapi import Depends, Request
 from pyramid.httpexceptions import HTTPBadRequest
 
@@ -32,8 +33,15 @@ class _WriteView:
 
 
 def _require_outcome(request, **kwargs):
-    if request.json.get('outcome') == 'invalid':
+    outcome = request.json.get('outcome')
+    if outcome == 'invalid':
         request.errors.add('body', 'outcome', 'invalid outcome')
+    elif outcome == 'not yours':
+        # as some validators: the errors of Cornice, and another status
+        errors = Errors()
+        errors.add('body', 'outcome', 'not yours')
+        request.errors.extend(errors)
+        request.errors.status = 403
 
 
 class TestWrites(BaseTestRest):
@@ -122,6 +130,12 @@ class TestWrites(BaseTestRest):
         # the view did not run, the rate limiting counted the request
         assert user.name == self.name
         assert user.ratelimit_remaining == self.limit - 1
+
+    def test_errors_of_cornice_and_their_status(self):
+        response = self.post({'outcome': 'not yours'}, 403)
+        assert response.json['errors'] == [
+            {'location': 'body', 'name': 'outcome', 'description': 'not yours'}
+        ]
 
     def test_invalid_json_body(self):
         headers = self.add_authorization_header(username='contributor')

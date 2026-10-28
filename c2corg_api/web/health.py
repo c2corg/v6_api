@@ -11,7 +11,9 @@ from fastapi import Request, Response
 from c2corg_api.caching import cache_document_detail
 from c2corg_api.models import es_sync
 from c2corg_api.search import elasticsearch_config
+from c2corg_api.web.cors import origin_allowed
 from c2corg_api.web.db import request_session
+from c2corg_api.web.errors import error_response
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +32,10 @@ def health(request: Request, response: Response):
     """Return the API version and the status of its components."""
     # the git revision, PostgreSQL, the last run of the ES syncer, ES and its
     # number of documents, Redis and its number of keys, the maintenance mode
+    origin = request.headers.get('Origin')
+    if origin and not origin_allowed(origin):
+        # as the other routes (see web.compat.validate_origin)
+        return error_response([('header', 'Origin', f'{origin} not allowed')])
     status = {'version': request.app.state.settings.get('cache_version')}
     with request_session() as session:
         if not _add_database_status(status, session):

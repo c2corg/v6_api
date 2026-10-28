@@ -24,8 +24,13 @@ from c2corg_api.web.errors import error_response
 
 
 class _Errors(list):
-    def add(self, location, name, description):
-        self.append((location, name, description))
+    """The errors of the validators, stored as Cornice does."""
+
+    # the status of the answer, which a validator may change (e.g. 403)
+    status = 400
+
+    def add(self, location, name=None, description=None, **kw):
+        self.append(dict(location=location, name=name, description=description, **kw))
 
 
 class _Response:
@@ -114,17 +119,29 @@ class ValidatedRequest:
         return permission == 'authenticated'
 
 
+def validate_origin(request, **kwargs):
+    """Refuse an origin the CORS policy does not allow, as Cornice."""
+    # Cornice runs it as the first validator of every view: after the token,
+    # the rate limiting, the content type and the permission, and its error
+    # comes with those of the other validators.
+    from c2corg_api.web.cors import origin_allowed
+
+    origin = request.headers.get('Origin')
+    if origin and not origin_allowed(origin):
+        request.errors.add('header', 'Origin', f'{origin} not allowed')
+
+
 def validate_query(request, *validators, user=None):
     """Run the validators; return (adapted request, error answer or None)."""
     adapted = ValidatedRequest(request, user)
     try:
-        for validator in validators:
+        for validator in (validate_origin, *validators):
             validator(adapted)
     except HTTPError as e:
         # a validator may raise, as the views do (e.g. an invalid waypoint id)
         return adapted, _http_error(e)
     if adapted.errors:
-        return adapted, error_response(adapted.errors)
+        return adapted, error_response(adapted.errors, adapted.errors.status)
     return adapted, None
 
 
@@ -287,11 +304,11 @@ def _serve_write(
         if refused is not None:
             return refused
         try:
-            for validator in validators:
+            for validator in (validate_origin, *validators):
                 validator(adapted)
             if adapted.errors:
                 transaction.commit()
-                return error_response(adapted.errors)
+                return error_response(adapted.errors, adapted.errors.status)
             result = _call_view(adapted, getattr(view_class(adapted), method))
         except HTTPRedirection as e:
             return _redirection(e)

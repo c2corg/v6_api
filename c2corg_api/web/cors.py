@@ -2,7 +2,10 @@
 # Cornice answers CORS itself rather than with the usual permissive
 # middleware, and clients see the differences: a request from an origin that
 # is not allowed gets a 400, preflights answer with a JSON `null` body... The
-# contract tests (tests/contract/test_cors.py) pin this behaviour.
+# contract tests (tests/contract/test_cors.py) pin this behaviour. As Cornice,
+# the origin of a request is checked by its first validator (validate_origin
+# of web.compat), after the token and the rate limiting: here, only the
+# preflights.
 
 import fnmatch
 
@@ -17,7 +20,7 @@ from c2corg_api.web.errors import error_response
 SUPPORTED_HEADERS = ['Content-Type']
 
 
-def _origin_allowed(origin):
+def origin_allowed(origin):
     return any(fnmatch.fnmatchcase(origin, o) for o in cors_policy['origins'])
 
 
@@ -38,11 +41,9 @@ class CorsMiddleware(BaseHTTPMiddleware):
         origin = request.headers.get('Origin')
         if request.method == 'OPTIONS':
             response = self._preflight(request, origin)
-        elif origin and not _origin_allowed(origin):
-            response = error_response([('header', 'Origin', f'{origin} not allowed')])
         else:
             response = await call_next(request)
-            if origin:
+            if origin and origin_allowed(origin):
                 response.headers['Access-Control-Allow-Origin'] = origin
         if request.method != 'OPTIONS':
             response.headers['Access-Control-Expose-Headers'] = ', '.join(
@@ -61,7 +62,7 @@ class CorsMiddleware(BaseHTTPMiddleware):
         allowed = False
         if not origin:
             errors.append(('header', 'Origin', 'this header is mandatory'))
-        elif _origin_allowed(origin):
+        elif origin_allowed(origin):
             allowed = True
         else:
             errors.append(('header', 'Origin', f'{origin} not allowed'))

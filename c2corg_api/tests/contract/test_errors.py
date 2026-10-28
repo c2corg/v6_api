@@ -97,6 +97,31 @@ class TestErrors(DocumentContractTest):
         )
         assert 'Access-Control-Allow-Origin' not in response.headers
 
+    @contract(('GET', '/books/{id}'))
+    def test_invalid_token_from_another_origin_on_a_read(self):
+        # the token is checked before the origin, as on the writes above:
+        # on a route served by FastAPI too
+        response = self.app.get(
+            '/books/1',
+            headers={
+                'Authorization': 'JWT token="not-a-token"',
+                'Origin': 'https://evil.example.org',
+            },
+            status=401,
+        )
+        assert 'Access-Control-Allow-Origin' not in response.headers
+
+    @contract(('GET', '/books/{id}'))
+    def test_another_origin_with_an_invalid_lang(self):
+        # the origin is the first validator: its error comes with the others
+        response = self.app.get(
+            '/books/1',
+            params={'l': 'xx'},
+            headers={'Origin': 'https://evil.example.org'},
+            status=400,
+        )
+        assert [e['name'] for e in response.json['errors']] == ['Origin', 'lang']
+
     @contract(('POST', '/waypoints'))
     def test_rate_limited(self):
         user = self.session.get(User, self.global_userids['contributor'])
