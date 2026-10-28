@@ -3,7 +3,7 @@ from itertools import combinations
 from operator import and_
 
 from cornice.resource import resource, view
-from sqlalchemy import case, func, literal_column
+from sqlalchemy import case, func, literal_column, select
 from sqlalchemy.orm import aliased, load_only
 from sqlalchemy.sql.expression import column, or_, text, union
 
@@ -31,7 +31,10 @@ from c2corg_api.models.waypoint_stoparea import WaypointStoparea
 from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.base import body_validator
 from c2corg_api.schemas.route import RouteCreateSchema, RouteUpdateSchema, route_schema
-from c2corg_api.search.advanced_search import get_all_filtered_docs
+from c2corg_api.search.advanced_search import (
+    get_all_filtered_docs,
+    get_filtered_docs_page,
+)
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import (
     cors_policy,
@@ -267,13 +270,8 @@ class ReachableRouteRest(DocumentRest):
 
         query, count = build_reachable_route_query(self.request.GET, meta_params)
 
-        if query is None:
-            results = []
-        else:
-            # route, areas in results
-            results = (
-                query.limit(meta_params['limit']).offset(meta_params['offset']).all()
-            )
+        # route, areas in results: the query is the page already
+        results = [] if query is None else query.all()
 
         areas_id = set()
         for _route, areas in results:
@@ -642,15 +640,18 @@ def build_reachable_route_query(params, meta_params):
     Build the query based on params and meta params.
     this includes every filters on route,
     as well as offset + limit, sort, bbox...
-    returns a list of routes reachable
-    (can be accessible by public transports), filtered with params.
+    returns the page (offset, limit) of the routes reachable
+    (can be accessible by public transports), filtered with params,
+    and their total.
     """
-    all_filtered_routes_reachable_ids, total_hits = get_all_filtered_docs(
+    # ElasticSearch filters, sorts and pages: the database query only loads
+    # the routes of the page
+    all_filtered_routes_reachable_ids, total_hits = get_filtered_docs_page(
         params, meta_params, get_routes_reachable_ids(), ROUTE_TYPE
     )
 
-    if total_hits == 0:
-        return None, 0
+    if not all_filtered_routes_reachable_ids:
+        return None, total_hits
 
     # The order of ids within all_filtered_routes_reachable_ids order matters
     # since a sort may have been applied by ES
@@ -787,33 +788,27 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
 
 
 def get_routes_reachable_ids():
-    """Get all routes reachable ids."""
-    # get all routes reachable (join with waypoint stop area)
-    all_routes_reachable = (
-        DBSession.query(Route)
-        .join(
-            Association,
-            or_(
-                Association.child_document_id == Route.document_id,
-                Association.parent_document_id == Route.document_id,
-            ),
+    """Get the ids of the routes with an access waypoint near a stop area."""
+    # the ids only, through both directions of the associations: a join on
+    # an OR of the two columns cannot use their indexes
+    association = Association.__table__
+    routes = Route.__table__
+    waypoints = Waypoint.__table__
+    stopareas = WaypointStoparea.__table__
+
+    def route_ids(route_id, waypoint_id):
+        return (
+            select(route_id)
+            .select_from(
+                association.join(routes, routes.c.document_id == route_id)
+                .join(waypoints, waypoints.c.document_id == waypoint_id)
+                .join(stopareas, stopareas.c.waypoint_id == waypoints.c.document_id)
+            )
+            .where(waypoints.c.waypoint_type == 'access')
         )
-        .join(
-            Waypoint,
-            and_(
-                or_(
-                    Waypoint.document_id == Association.child_document_id,
-                    Waypoint.document_id == Association.parent_document_id,
-                ),
-                Waypoint.waypoint_type == 'access',
-            ),
-        )
-        .join(WaypointStoparea, WaypointStoparea.waypoint_id == Waypoint.document_id)
-        .distinct()
-        .all()
+
+    query = union(
+        route_ids(association.c.child_document_id, association.c.parent_document_id),
+        route_ids(association.c.parent_document_id, association.c.child_document_id),
     )
-
-    # extract their ids
-    all_routes_reachable_ids = set([r.document_id for r in all_routes_reachable])
-
-    return all_routes_reachable_ids
+    return {route_id for (route_id,) in DBSession.execute(query)}
