@@ -1,8 +1,10 @@
 import collections.abc
 import datetime
 import fnmatch
+import json
 import logging
 import math
+import re
 
 from cornice import Errors
 from cornice.renderer import JSONError
@@ -125,8 +127,28 @@ def with_cors_headers(request, response):
     return response
 
 
+def invalid_json_body(request):
+    """Return why the JSON body of a request is invalid, or None."""
+    content_type = request.content_type or ''
+    if not request.body or not re.match(r'^application/(.*?)json$', content_type):
+        return None
+    try:
+        json.loads(request.body.decode(request.charset or 'utf-8'))
+    except ValueError as e:
+        return str(e)
+    return None
+
+
 @view_config(context=Exception)
 def catch_all_error_handler(exc, request):
+    # A view that reads an invalid JSON body fails on it: that is an error of
+    # the client, answered as Cornice does for the views it validates.
+    reason = invalid_json_body(request)
+    if reason is not None:
+        request.errors = Errors(400)
+        request.errors.add('body', '', f'Invalid JSON: {reason}')
+        return with_cors_headers(request, json_error(request))
+
     log.exception(f'Unexpected error: {exc}')
 
     show_debugger_for_errors = request.registry.settings.get(
