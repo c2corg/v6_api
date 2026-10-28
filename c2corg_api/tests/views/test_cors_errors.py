@@ -49,14 +49,16 @@ class TestCorsOnErrors(BaseTestRest):
         self.assert_cors(response, self.origin)
 
     def test_unexpected_error(self):
-        # 500 from the catch-all error view of Pyramid: /reachableroutes stays
+        # 500 from the catch-all error view of Pyramid: the Navitia routes stay
         # on Pyramid for now (the other GET routes moved to FastAPI, #2365)
         with patch(
-            'c2corg_api.views.route.build_reachable_route_query',
+            'c2corg_api.views.navitia.redis_client',
             side_effect=RuntimeError('boom'),
         ):
             response = self.app.get(
-                '/reachableroutes', headers={'Origin': self.origin}, status=500
+                '/navitia/journeyreachableroutes/result/1',
+                headers={'Origin': self.origin},
+                status=500,
             )
         self.assert_cors(response, self.origin)
 

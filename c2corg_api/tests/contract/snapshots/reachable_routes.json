@@ -1,0 +1,110 @@
+{
+  "body": {
+    "documents": [
+      {
+        "activities": [
+          "str"
+        ],
+        "aid_rating": "null",
+        "areas": [
+          {
+            "area_type": "str",
+            "available_langs": "null",
+            "document_id": "int",
+            "locales": [
+              {
+                "lang": "str",
+                "title": "str",
+                "version": "int"
+              }
+            ],
+            "protected": "bool",
+            "type": "str",
+            "version": "int"
+          }
+        ],
+        "available_langs": "null",
+        "calculated_duration": "float",
+        "climbing_outdoor_type": "null",
+        "configuration": "null",
+        "difficulties_height": "null",
+        "document_id": "int",
+        "durations": [
+          "str"
+        ],
+        "elevation_max": "int",
+        "elevation_min": "int",
+        "engagement_rating": "null",
+        "equipment_rating": "null",
+        "exposition_rock_rating": "null",
+        "geometry": {
+          "geom": "str",
+          "geom_detail": "str",
+          "version": "int"
+        },
+        "glacier_gear": "str",
+        "global_rating": "null",
+        "height_diff_access": "null",
+        "height_diff_difficulties": "null",
+        "height_diff_down": "int",
+        "height_diff_up": "int",
+        "hiking_mtb_exposition": "null",
+        "hiking_rating": "null",
+        "ice_rating": "null",
+        "labande_global_rating": "null",
+        "labande_ski_rating": "null",
+        "lift_access": "null",
+        "locales": [
+          {
+            "description": "null",
+            "external_resources": "null",
+            "gear": "str",
+            "lang": "str",
+            "remarks": "null",
+            "route_history": "null",
+            "slackline_anchor1": "null",
+            "slackline_anchor2": "null",
+            "slope": "null",
+            "summary": "null",
+            "title": "str",
+            "title_prefix": "str",
+            "topic_id": "null",
+            "version": "int"
+          }
+        ],
+        "main_waypoint_id": "int",
+        "mixed_rating": "null",
+        "mtb_down_rating": "null",
+        "mtb_height_diff_portages": "null",
+        "mtb_length_asphalt": "null",
+        "mtb_length_trail": "null",
+        "mtb_up_rating": "null",
+        "orientations": "null",
+        "protected": "bool",
+        "public_transportation_rating": "str",
+        "quality": "str",
+        "risk_rating": "null",
+        "rock_free_rating": "null",
+        "rock_required_rating": "null",
+        "rock_types": "null",
+        "route_length": "null",
+        "route_types": "null",
+        "ski_exposition": "null",
+        "ski_rating": "null",
+        "slackline_height": "null",
+        "slackline_type": "null",
+        "snowshoe_rating": "null",
+        "type": "str",
+        "version": "int",
+        "via_ferrata_rating": "null"
+      }
+    ],
+    "total": "int"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}
