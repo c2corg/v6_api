@@ -17,7 +17,7 @@ from c2corg_api.views.validation import (
     validate_version_id,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_view
+from c2corg_api.web.compat import serve_view, serve_write
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 
@@ -74,6 +74,37 @@ def include_document_type(
 
         path = f'/{prefix}/{{id:int}}/{{lang}}/{{version_id:int}}'
         app.add_api_route(path, version, methods=methods)
+
+
+def cornice_view(view_class, method):
+    """Return the validators, permission and content types of a Cornice view."""
+    # as declared by the @view decorator of the Pyramid view, so that the
+    # FastAPI route checks exactly what Pyramid checked
+    [arguments] = getattr(view_class, method).__views__
+    content_type = arguments.get('content_type')
+    if isinstance(content_type, str):
+        content_type = [content_type]
+    return arguments.get('validators', []), arguments.get('permission'), content_type
+
+
+def include_document_writes(app, prefix, rest):
+    """Add the write routes of a document type: creation and update."""
+
+    def write_route(path, http_method, method):
+        validators, permission, content_types = cornice_view(rest, method)
+
+        async def endpoint(request: Request, user: User):
+            return await serve_write(
+                request, user, validators, rest, method, permission, content_types
+            )
+
+        # read by the route inventory of the contract tests (routes.txt)
+        endpoint.permission = permission
+        app.add_api_route(path, endpoint, methods=[http_method])
+
+    write_route(f'/{prefix}', 'POST', 'collection_post')
+    # a numeric id only, as the read routes
+    write_route(f'/{prefix}/{{id:int}}', 'PUT', 'put')
 
 
 def include(app):
@@ -134,3 +165,5 @@ def include(app):
         info_rest=UserProfileInfoRest,
         listing_permission='authenticated',
     )
+    # the writes moved to FastAPI
+    include_document_writes(app, 'books', BookRest)
