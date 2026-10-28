@@ -2,7 +2,7 @@ import functools
 import logging
 
 from cornice.resource import resource, view
-from sqlalchemy import case, func
+from sqlalchemy import case, func, select
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import aliased, joinedload, load_only
 from sqlalchemy.sql.elements import literal_column
@@ -31,7 +31,10 @@ from c2corg_api.schemas.waypoint import (
     WaypointUpdateSchema,
     waypoint_schema,
 )
-from c2corg_api.search.advanced_search import get_all_filtered_docs
+from c2corg_api.search.advanced_search import (
+    get_all_filtered_docs,
+    get_filtered_docs_page,
+)
 from c2corg_api.views import cors_policy, restricted_json_view, to_json_dict
 from c2corg_api.views.document import (
     LIMIT_DEFAULT,
@@ -458,14 +461,12 @@ class ReachableWaypointRest(DocumentRest):
             'lang': validated.get('lang'),
         }
 
-        query, count = build_reachable_waypoints_query(self.request.GET, meta_params)
+        query, count = build_reachable_waypoints_query(
+            self.request.GET, meta_params, page=True
+        )
 
-        if query is None:
-            results = []
-        else:
-            results = (
-                query.limit(meta_params['limit']).offset(meta_params['offset']).all()
-            )
+        # the query is the page already
+        results = [] if query is None else query.all()
 
         areas_id = set()
         for _wp, areas in results:
@@ -573,21 +574,26 @@ def update_linked_routes_public_transportation_rating(waypoint, update_types):
         update_pt_rating(route)
 
 
-def build_reachable_waypoints_query(params, meta_params):
+def build_reachable_waypoints_query(params, meta_params, page=False):
     """Build the reachable waypoints query from params and meta params.
 
     Build the query based on params and meta params.
     this includes every filters on waypoints,
     as well as offset + limit, sort, bbox...
     returns a list of waypoints reachable
-    (can be accessible by public transports), filtered with params.
+    (can be accessible by public transports), filtered with params,
+    and their total.
     """
-    all_filtered_waypoints_reachable_ids, total_hits = get_all_filtered_docs(
+    # page: only the page (offset, limit) of the waypoints, which
+    # ElasticSearch filters, sorts and pages; otherwise all of them (the
+    # Navitia jobs)
+    get_ids = get_filtered_docs_page if page else get_all_filtered_docs
+    all_filtered_waypoints_reachable_ids, total_hits = get_ids(
         params, meta_params, get_waypoints_reachable_ids(), WAYPOINT_TYPE
     )
 
-    if total_hits == 0:
-        return None, 0
+    if not all_filtered_waypoints_reachable_ids:
+        return None, total_hits
 
     # The order of ids within all_filtered_waypoints_reachable_ids
     #  order matters since a sort may have been applied by ES
@@ -628,16 +634,7 @@ def build_reachable_waypoints_query(params, meta_params):
 
 
 def get_waypoints_reachable_ids():
-    """Get all waypoints reachable ids."""
-    # get all waypoints reachable (join with waypoint stop area)
-    all_routes_reachable = (
-        DBSession.query(Waypoint)
-        .join(WaypointStoparea, WaypointStoparea.waypoint_id == Waypoint.document_id)
-        .distinct()
-        .all()
-    )
-
-    # extract their ids
-    all_waypoints_reachable_ids = set([r.document_id for r in all_routes_reachable])
-
-    return all_waypoints_reachable_ids
+    """Get the ids of the waypoints near a stop area."""
+    # the ids only, not the waypoints
+    query = select(WaypointStoparea.waypoint_id).distinct()
+    return {waypoint_id for (waypoint_id,) in DBSession.execute(query)}

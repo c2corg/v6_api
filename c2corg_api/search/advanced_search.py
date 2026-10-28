@@ -64,6 +64,31 @@ def search_with_ids(url_params, meta_params, doc_type, id_chunk=None):
     return document_ids, total
 
 
+def get_filtered_docs_page(params, meta_params, ids, doc_type):
+    """Get a page of the docs ids (offset, limit), filtered in ES, and the total."""
+    from c2corg_api.views.document import ES_MAX_RESULT_WINDOW
+
+    offset = meta_params.get('offset') or 0
+    limit = meta_params.get('limit')
+    # one query: ElasticSearch filters, sorts and pages the documents
+    query = build_query(params, meta_params, doc_type)
+    query = query.filter('terms', _id=[str(doc_id) for doc_id in ids])
+    if offset + limit <= ES_MAX_RESULT_WINDOW:
+        response = query.execute()
+        return [int(doc.meta.id) for doc in response], response.hits.total
+
+    # beyond the result window of ElasticSearch: scroll through the sorted
+    # documents up to the end of the page
+    doc_ids = []
+    scroll = query.extra(from_=0, size=1000).params(preserve_order=True, scroll='1m')
+    for hit in scroll.scan():
+        doc_ids.append(int(hit.meta.id))
+        if len(doc_ids) >= offset + limit:
+            break
+    total = query.extra(from_=0, size=0).execute().hits.total
+    return doc_ids[offset : offset + limit], total
+
+
 def get_all_filtered_docs(params, meta_params, ids, doc_type):
     """Get all docs ids, taking into account ES filter in params."""
     filtered_doc_ids = []
