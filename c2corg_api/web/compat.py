@@ -6,12 +6,17 @@
 # adapter gives them that interface, so the moved routes keep exactly the
 # same logic, checks and messages while they move (#2365).
 
+import json
+
+import transaction
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pyramid.httpexceptions import HTTPError, HTTPNotModified, HTTPRedirection
 from pyramid.threadlocal import manager
+from starlette.concurrency import run_in_threadpool
 from webob import Request as WebObRequest
 from webob import Response as WebObResponse
 from webob.etag import ETagMatcher, NoETag
+from webob.multidict import MultiDict
 
 from c2corg_api.web.auth import parse_authorization
 from c2corg_api.web.db import request_session
@@ -50,7 +55,12 @@ class _Registry:
 class ValidatedRequest:
     """The part of a Pyramid request the view logic uses."""
 
-    def __init__(self, request, user=None, path_params=None):
+    def __init__(self, request, user=None, path_params=None, body=b''):
+        self.method = request.method
+        self.url = str(request.url)
+        self.path = request.url.path
+        self.remote_addr = request.client.host if request.client else None
+        self.cookies = request.cookies
         self.GET = request.query_params
         self.params = request.query_params
         self.headers = request.headers
@@ -70,6 +80,26 @@ class ValidatedRequest:
         self._user = user
         # as WebOb's request.authorization: (type, params), or None
         self.authorization = parse_authorization(request.headers.get('Authorization'))
+        # the body of a write, read by Cornice (extract_cstruct) and the views
+        # as WebOb gives it: the media type without its parameters, and the
+        # JSON body raising a ValueError when it is not JSON
+        self.body = body
+        content_type, _, parameters = request.headers.get('Content-Type', '').partition(
+            ';'
+        )
+        self.content_type = content_type.strip()
+        charset = parameters.strip().partition('charset=')[2]
+        self.charset = charset.strip().strip('"') or 'UTF-8'
+        # the form fields: the JSON views have none
+        self.POST = MultiDict()
+
+    @property
+    def json_body(self):
+        return json.loads(self.body.decode(self.charset))
+
+    @property
+    def json(self):
+        return self.json_body
 
     @property
     def authenticated_userid(self):
@@ -100,6 +130,21 @@ def validate_query(request, *validators, user=None):
 
 def run_view(adapted, view):
     """Call a view, and turn its Pyramid HTTP exceptions into answers."""
+    try:
+        result = _call_view(adapted, view)
+    except HTTPNotModified as e:
+        # only the cache headers, like the Pyramid answer
+        headers = {k: v for k, v in e.headers.items() if k in ('ETag', 'Cache-Control')}
+        return Response(status_code=304, headers=headers)
+    except HTTPRedirection as e:
+        return _redirection(e)
+    except HTTPError as e:
+        return _http_error(e)
+    return _render(adapted, result)
+
+
+def _call_view(adapted, view):
+    """Call a view, with the Pyramid registry in the thread locals."""
     # Some code reads the Pyramid registry from the thread locals
     # (get_current_registry(), e.g. the image URLs of the markdown cooker):
     # set it for the view, as Pyramid does for its own requests.
@@ -111,17 +156,14 @@ def run_view(adapted, view):
         if isinstance(result, HTTPRedirection):
             # returned, not raised (the image proxy)
             raise result
-    except HTTPNotModified as e:
-        # only the cache headers, like the Pyramid answer
-        headers = {k: v for k, v in e.headers.items() if k in ('ETag', 'Cache-Control')}
-        return Response(status_code=304, headers=headers)
-    except HTTPRedirection as e:
-        return _redirection(e)
-    except HTTPError as e:
-        return _http_error(e)
+        return result
     finally:
         if registry is not None:
             manager.pop()
+
+
+def _render(adapted, result):
+    """Answer what a view returned."""
     if isinstance(result, WebObResponse):
         # a response of its own: its body may be a stream (the progress of the
         # Navitia jobs, text/event-stream)
@@ -168,6 +210,18 @@ def serve_view(
     content_types=None,
 ):
     """Answer a request with a method of a Pyramid view class."""
+    refused = _refused(request, user, view_class, method, permission, content_types)
+    if refused is not None:
+        return refused
+    adapted, error = validate_query(request, *validators, user=user)
+    if error is not None:
+        return error
+    with request_session():
+        return run_view(adapted, getattr(view_class(adapted), method))
+
+
+def _refused(request, user, view_class, method, permission, content_types):
+    """Answer the 415 or the 403 of Pyramid, or None."""
     # as Cornice: a request with another Content-Type than those of the view
     # (json_view) is refused, before the permission check; none is accepted
     if content_types is not None:
@@ -178,12 +232,78 @@ def serve_view(
     # the permission is checked before the validators, as Pyramid does
     if permission and not ValidatedRequest(request, user).has_permission(permission):
         # the message of Pyramid without debug_authorization (production)
-        description = (
-            f'Unauthorized: {view_class.__name__}.{method}__GET failed permission check'
-        )
+        view_name = f'{view_class.__name__}.{method}__{request.method}'
+        description = f'Unauthorized: {view_name} failed permission check'
         return error_response([('body', 'Forbidden', description)], 403)
-    adapted, error = validate_query(request, *validators, user=user)
-    if error is not None:
-        return error
+    return None
+
+
+async def serve_write(
+    request,
+    user,
+    validators,
+    view_class,
+    method,
+    permission=None,
+    content_types=None,
+):
+    """Answer a write request with a method of a Pyramid view class."""
+    # The body is read here, then the view runs in a worker thread, as the
+    # sync views do.
+    body = await request.body()
+    return await run_in_threadpool(
+        _serve_write,
+        request,
+        user,
+        body,
+        validators,
+        view_class,
+        method,
+        permission,
+        content_types,
+    )
+
+
+def _serve_write(
+    request, user, body, validators, view_class, method, permission, content_types
+):
+    # As Pyramid with pyramid_tm, one transaction for the request: what the
+    # request raises is rolled back (the 415 and the 403, an HTTP error of a
+    # validator or of the view, a bug), what it returns is committed (the
+    # validation errors, the answer of the view, and the 429 of the rate
+    # limiting with its counters).
+    from c2corg_api.tweens.rate_limiting import rate_limit_error
+    from c2corg_api.views import invalid_json_body
+
+    adapted = ValidatedRequest(request, user, body=body)
     with request_session():
-        return run_view(adapted, getattr(view_class(adapted), method))
+        # the rate limiting runs first, as its tween did: before the content
+        # type, the permission and the validators
+        error = rate_limit_error(adapted, adapted.registry.settings)
+        if error is not None:
+            transaction.commit()
+            return _http_error(error)
+        refused = _refused(request, user, view_class, method, permission, content_types)
+        if refused is not None:
+            return refused
+        try:
+            for validator in validators:
+                validator(adapted)
+            if adapted.errors:
+                transaction.commit()
+                return error_response(adapted.errors)
+            result = _call_view(adapted, getattr(view_class(adapted), method))
+        except HTTPRedirection as e:
+            return _redirection(e)
+        except HTTPError as e:
+            return _http_error(e)
+        except Exception:
+            # a view reading an invalid JSON body fails on it: an error of the
+            # client, answered as the catch-all error view of Pyramid does
+            reason = invalid_json_body(adapted)
+            if reason is None:
+                raise
+            return error_response([('body', '', f'Invalid JSON: {reason}')])
+        response = _render(adapted, result)
+        transaction.commit()
+        return response
