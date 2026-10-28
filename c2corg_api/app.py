@@ -14,6 +14,7 @@ from c2corg_api.web import (
     health,
     history,
     misc,
+    navitia,
     search,
     sitemaps,
     stopareas,
@@ -43,6 +44,7 @@ def create_fastapi_app(settings):
     stopareas.include(app)
     misc.include(app)
     users.include(app)
+    navitia.include(app)
     return app
 
 

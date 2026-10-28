@@ -49,14 +49,15 @@ class TestCorsOnErrors(BaseTestRest):
         self.assert_cors(response, self.origin)
 
     def test_unexpected_error(self):
-        # 500 from the catch-all error view of Pyramid: the Navitia routes stay
-        # on Pyramid for now (the other GET routes moved to FastAPI, #2365)
+        # 500 from the catch-all error view of Pyramid: the writes stay on
+        # Pyramid for now (the GET routes moved to FastAPI, #2365)
         with patch(
-            'c2corg_api.views.navitia.redis_client',
+            'c2corg_api.views.coverage.get_coverages',
             side_effect=RuntimeError('boom'),
         ):
-            response = self.app.get(
-                '/navitia/journeyreachableroutes/result/1',
+            response = self.app.post_json(
+                '/getpolygoncoverage',
+                {'geom_detail': '{"type": "Point", "coordinates": [6, 45]}'},
                 headers={'Origin': self.origin},
                 status=500,
             )
