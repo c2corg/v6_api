@@ -171,6 +171,12 @@ class TestCoverageLookup(DocumentContractTest):
         response = self.get('/getcoverage', params={'lon': 5.71, 'lat': 45.655})
         check_snapshot('getcoverage', response)
 
+    @contract(('GET', '/getcoverage'))
+    def test_no_coverage(self):
+        response = self.get('/getcoverage', params={'lon': 0, 'lat': 0})
+        check_snapshot('getcoverage_none', response)
+        assert response.json is None
+
     @contract(('POST', '/getpolygoncoverage'))
     def test_coverages_of_a_polygon(self):
         response = self.post('/getpolygoncoverage', {'geom_detail': POLYGON_4326})
@@ -202,3 +208,20 @@ class TestImageRoutes(DocumentContractTest):
             f'/images/proxy/{self.ids["images"]}', params={'size': 'MI'}, status=302
         )
         check_snapshot('images_proxy', response)
+
+    @contract(('GET', '/images/proxy/{id}'))
+    def test_proxy_original(self):
+        response = self.get(f'/images/proxy/{self.ids["images"]}', status=302)
+        check_snapshot('images_proxy_original', response)
+        assert response.body.startswith(b'302 Found\n\nThe resource was found at ')
+
+    @contract(('GET', '/images/proxy/{id}'))
+    def test_proxy_errors(self):
+        check_snapshot(
+            'images_proxy_unknown', self.get('/images/proxy/9999999', status=404)
+        )
+        response = self.get(
+            f'/images/proxy/{self.ids["images"]}', params={'size': 'XX'}, status=400
+        )
+        check_snapshot('images_proxy_invalid_size', response)
+        assert [e['name'] for e in response.json['errors']] == ['size']
