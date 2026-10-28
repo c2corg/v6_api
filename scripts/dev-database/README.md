@@ -1,0 +1,58 @@
+# Lightweight anonymized dev database
+
+A small (~110 MB dump, ~320 MB once restored), anonymized and consistent extract of the production
+database, for development. It keeps the edge cases (see below) and the public transport data
+(`stopareas`), so nothing has to be requested from Navitia.
+
+## Using it
+
+The dump is restored by an image on first start (PostgreSQL 18 + PostGIS):
+
+```sh
+cp c2corg-dev-pg96.dump scripts/dev-database/c2corg-dev.dump   # or pass --build-arg DUMP=...
+docker build -t c2corg-dev-db scripts/dev-database
+docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=test c2corg-dev-db
+```
+
+Database `c2corg`, user `www-data` (password `www-data`) or `postgres`. Rebuild the Elasticsearch
+index with `fill_index.py` (a few minutes, a few hundred MB of RAM).
+
+Accounts (password `c2c` for all): `moderator`, `user`, `blocked`, `unvalidated`.
+
+## What is kept
+
+| Kept | Why |
+|---|---|
+| All areas, articles, books, maps, coverages, xreports | few of them, referenced everywhere |
+| All waypoints and routes of the zones in `01-setup.sql`, their recent outings (+ a sample of older ones) | realistic content, several langs and countries |
+| A corpus of edge cases outside of the zones (`10-select.sql`, rule `edge:*`) | every quality level, protected / redirected documents, longest texts, many langs, no geometry, odd titles... |
+| What these documents need (closure): main waypoints, parents, redirect targets, images (max 6 per document), authors | referential integrity |
+| Last version of each document; whole history for the edge cases and a sample | the archives tables are huge |
+| Stop areas of the kept waypoints | public transport |
+
+The zones and the sampling parameters are at the top of `01-setup.sql`. The reason why each document
+is kept is stored in `devdb.keep_doc.reason` during the build.
+
+Personal data is removed by `../anonymize-database/anonymize-data.sql`, then `60-verify.sql` fails the
+build if anything is left (emails, passwords, tokens, free texts, profiles...). Its blocking
+checks must be extended whenever a table with personal data is added.
+
+## Building it
+
+From a production dump (custom format, as made by the nightly backup: extract
+`c2corg.YYYY-MM-DD.dump` from the tar). It runs in a throwaway container, nothing is installed on the host:
+
+```sh
+scripts/dev-database/run-in-docker.sh 96 /path/to/c2corg.2026-07-19.dump ./out   # PostgreSQL 9.6
+scripts/dev-database/run-in-docker.sh 18 /path/to/c2corg.2026-07-19.dump ./out   # PostgreSQL 18
+```
+
+Needs about 10 GB of disk and 4 GB of memory (`MEM=` to change it), and takes around an hour: most of
+it is restoring the full dump. The same SQL runs on both versions.
+
+**Prefer the `96` build as long as older PostgreSQL versions must be supported**: its dump can be restored by 9.6 *and* by
+18, whereas a dump made by a PostgreSQL 18 server can only be restored by 18.
+
+The production dump contains personal data and must not leave the machine that builds the extract,
+nor be committed (`*.dump` is ignored). Only the resulting dump is meant to be shared, after the
+checks passed.
