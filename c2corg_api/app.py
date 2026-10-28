@@ -17,6 +17,7 @@ from c2corg_api.web import (
     search,
     sitemaps,
     stopareas,
+    users,
 )
 from c2corg_api.web.auth import TokenValidationMiddleware
 from c2corg_api.web.cors import CorsMiddleware
@@ -41,6 +42,7 @@ def create_fastapi_app(settings):
     sitemaps.include(app)
     stopareas.include(app)
     misc.include(app)
+    users.include(app)
     return app
 
 
