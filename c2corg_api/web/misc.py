@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
-from c2corg_api.views.coverage import WaypointCoverageRest
+from c2corg_api.views.coverage import WaypointCoverageRest, validate_lon_lat
 from c2corg_api.views.document_tag import DocumentTaggedRest, validate_document_id
 from c2corg_api.views.image import ImageProxyRest, validate_extension, validate_size
 from c2corg_api.views.validation import validate_id
@@ -27,7 +27,7 @@ def include(app):
 
 def coverage_of_a_point(request: Request, user: User):
     """Return the type of the coverage containing a point."""
-    return serve_view(request, user, [], WaypointCoverageRest)
+    return serve_view(request, user, [validate_lon_lat], WaypointCoverageRest)
 
 
 def image_proxy(request: Request, user: User):
