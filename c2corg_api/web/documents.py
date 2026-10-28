@@ -177,3 +177,6 @@ def include(app):
     include_document_writes(app, 'images', ImageRest)
     # a profile is created with its user: no creation route
     include_document_writes(app, 'profiles', UserProfileRest, create=False)
+    include_document_writes(app, 'outings', OutingRest)
+    include_document_writes(app, 'routes', RouteRest)
+    include_document_writes(app, 'waypoints', WaypointRest)
