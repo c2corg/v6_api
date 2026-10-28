@@ -172,3 +172,8 @@ def include(app):
     include_document_writes(app, 'areas', AreaRest)
     include_document_writes(app, 'maps', TopoMapRest)
     include_document_writes(app, 'coverages', CoverageRest)
+    include_document_writes(app, 'xreports', XreportRest)
+    # the image proxy and /images/list (POST) stay on Pyramid
+    include_document_writes(app, 'images', ImageRest)
+    # a profile is created with its user: no creation route
+    include_document_writes(app, 'profiles', UserProfileRest, create=False)
