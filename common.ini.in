@@ -42,6 +42,8 @@ elasticsearch.batch_size.syncer = {elasticsearch_batch_size_syncer}
 redis.url = {redis_url}
 redis.db_queue = {redis_db_queue}
 redis.db_cache = {redis_db_cache}
+# and for the progress and results of the Navitia jobs
+redis.db_jobs = {redis_db_jobs}
 
 # queue configuration
 redis.exchange = {redis_exchange}
