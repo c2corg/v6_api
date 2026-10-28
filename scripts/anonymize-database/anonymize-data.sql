@@ -16,9 +16,11 @@ create function pg_temp.scrub(t text) returns text language sql immutable as $$
     '(\+|\y00)[0-9]{2}[ .-]?(\(0\)|0)?[ .-]?[0-9]{1,3}([ .-]?[0-9]{2,4}){2,4}|\y0[1-9]([ .-]?[0-9]{2}){4}\y', '00 00 00 00 00', 'g')
 $$;
 
--- Replace users'data by fake data. The name is replaced as well (the contributions keep their author, under a pseudonym).
+-- Replace users'data by fake data. The name is the one displayed to everybody (history of the documents, authors
+-- of the outings...): it is kept for the users whose profile is public, unless it looks like a real identity (an email, or
+-- "Firstname Lastname"), and replaced by `User <id>` for everybody else. The `is_profile_public` flag is kept.
 -- password = c2c
-update users.user set username = 'user' || id, forum_username = 'user' || id, email = 'user' || id || '@example.com', email_validated = true, email_to_validate = null, moderator = false, validation_nonce = null, validation_nonce_expire = null, password = '$2b$12$JPOxvA1AUc4LRUE6OJMlLeFoKoTYjfGpnBsC4tSE7VhAh3e/AmeGi', last_modified = now(), lang = 'en', is_profile_public = false, feed_filter_activities = '{}', feed_followed_only = false,  blocked = false, feed_filter_langs = '{}', name = 'User ' || id, tos_validated = now(), ratelimit_remaining = null, ratelimit_reset = null, ratelimit_last_blocked_window = null, ratelimit_times = 0;
+update users.user set username = 'user' || id, forum_username = 'user' || id, email = 'user' || id || '@example.com', email_validated = true, email_to_validate = null, moderator = false, validation_nonce = null, validation_nonce_expire = null, password = '$2b$12$JPOxvA1AUc4LRUE6OJMlLeFoKoTYjfGpnBsC4tSE7VhAh3e/AmeGi', last_modified = now(), lang = 'en', feed_filter_activities = '{}', feed_followed_only = false,  blocked = false, feed_filter_langs = '{}', name = case when is_profile_public and name !~ '@' and name !~ '^[A-ZÀ-Ý][a-zà-ÿ-]+( [A-ZÀ-Ý][a-zà-ÿ-]+)+$' then name else 'User ' || id end, tos_validated = now(), ratelimit_remaining = null, ratelimit_reset = null, ratelimit_last_blocked_window = null, ratelimit_times = 0;
 
 -- Remove all authentication data
 truncate users.token, users.sso_external_id, users.sso_key;
