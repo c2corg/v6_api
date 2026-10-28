@@ -1,5 +1,7 @@
 import json
 import os
+import threading
+import time as clock
 from datetime import datetime, time
 from unittest import mock
 from unittest.mock import call
@@ -11,6 +13,7 @@ from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPInternalServerError,
     HTTPNotFound,
+    HTTPTooManyRequests,
     HTTPUnauthorized,
 )
 from shapely.geometry import Polygon
@@ -24,8 +27,10 @@ from c2corg_api.tests import BaseTestCase
 from c2corg_api.views import to_json_dict
 from c2corg_api.views.navitia import (
     BASE_URL,
+    JOB_RETRY_AFTER,
     JOB_TTL,
     MAX_ROUTE_THRESHOLD,
+    MAX_RUNNING_JOBS,
     MAX_TRIP_DURATION,
     MIN_TRIP_DURATION,
     _store_job_progress,
@@ -159,6 +164,41 @@ class TestNavitiaRestParams(BaseTestCase):
 
             mock_r.set.assert_any_call(f'job:{job_id}:progress', 0, ex=JOB_TTL)
             mock_r.set.assert_any_call(f'job:{job_id}:status', 'running', ex=JOB_TTL)
+
+    def test_running_jobs_are_limited(self):
+        release = threading.Event()
+        ended = threading.Semaphore(0)
+
+        def job(*_):
+            release.wait(10)
+            ended.release()
+
+        with mock.patch(NAVITIA_REDIS_CLIENT_PATH):
+            for _ in range(MAX_RUNNING_JOBS):
+                start_job_background(job, request=None)
+            with pytest.raises(HTTPTooManyRequests) as error:
+                start_job_background(job, request=None)
+            assert f'retry after {JOB_RETRY_AFTER} seconds' in error.value.detail
+
+            # an ended job frees its place
+            release.set()
+            for _ in range(MAX_RUNNING_JOBS):
+                assert ended.acquire(timeout=10)
+            deadline = clock.monotonic() + 10
+            while True:
+                try:
+                    start_job_background(lambda *_: None, request=None)
+                    break
+                except HTTPTooManyRequests:
+                    # the threads release their place right after the job
+                    assert clock.monotonic() < deadline
+                    clock.sleep(0.01)
+
+    def test_failed_start_frees_its_place(self):
+        with mock.patch(NAVITIA_REDIS_CLIENT_PATH, side_effect=RuntimeError('down')):
+            for _ in range(MAX_RUNNING_JOBS + 1):
+                with pytest.raises(RuntimeError):
+                    start_job_background(lambda *_: None, request=None)
 
     def test_job_values_expire(self):
         # in the Redis of the jobs, not a mock
@@ -379,7 +419,7 @@ class TestNavitiaRestParams(BaseTestCase):
             b'2',  # not_found
             b'10',  # total
             b'error',  # status → terminates loop
-            b"{'msg': 'error message'}",
+            b'{"id": "date_out_of_bounds", "message": "date_out_of_bounds"}',
         ]
 
         with mock.patch('c2corg_api.views.navitia.time.sleep'):
@@ -388,7 +428,55 @@ class TestNavitiaRestParams(BaseTestCase):
             second = next(gen)
 
         assert second.startswith(b'event: error')
-        assert b'"msg": "error message"' in second
+        data = json.loads(second.decode().split('data: ')[1])
+        assert data == {'id': 'date_out_of_bounds', 'message': 'date_out_of_bounds'}
+
+    def test_progress_stream_error_as_a_plain_message(self):
+        # as stored before the errors were JSON: the stream must not break
+        r = mock.Mock()
+        r.get.side_effect = [
+            None,
+            None,
+            None,
+            None,
+            b'error',
+            b'Missing filter : area is required',
+        ]
+
+        with mock.patch('c2corg_api.views.navitia.time.sleep'):
+            events = list(progress_stream(r, job_id='123'))
+
+        data = json.loads(events[-1].decode().split('data: ')[1])
+        assert data == {
+            'id': 'job_error',
+            'message': 'Missing filter : area is required',
+        }
+
+    def test_progress_stream_unknown_job(self):
+        # no status: an unknown job, or one whose values expired
+        r = mock.Mock()
+        r.get.side_effect = [None, None, None, None, None]
+
+        with mock.patch('c2corg_api.views.navitia.time.sleep') as sleep:
+            events = list(progress_stream(r, job_id='123'))
+
+        assert len(events) == 1
+        assert events[0].startswith(b'event: error\n')
+        data = json.loads(events[0].decode().split('data: ')[1])
+        assert data == {'id': 'unknown_job', 'message': 'Unknown job 123'}
+        sleep.assert_not_called()
+
+    def test_progress_stream_timeout(self):
+        # a job still running after max_duration
+        r = mock.Mock()
+        r.get.side_effect = lambda key: b'running' if key.endswith(':status') else None
+
+        with mock.patch('c2corg_api.views.navitia.time.sleep'):
+            events = list(progress_stream(r, job_id='123', max_duration=0))
+
+        assert events[0].startswith(b'data: ')
+        data = json.loads(events[-1].decode().split('data: ')[1])
+        assert data == {'id': 'timeout', 'message': 'The job takes too long'}
 
     # /navitia/journeyreachableroutes endpoints (includes job handling)
     # /navitia/journeyreachableroutes/start endpoint
@@ -1151,7 +1239,13 @@ class TestNavitiaRestParams(BaseTestCase):
 
             mock_redis.set.assert_any_call(
                 f'job:{job_id}:error',
-                "Couldn't proceed with computation : Too much routes found.",
+                json.dumps(
+                    {
+                        'id': 'job_error',
+                        'message': "Couldn't proceed with computation :"
+                        ' Too much routes found.',
+                    }
+                ),
                 ex=JOB_TTL,
             )
 
@@ -1325,7 +1419,11 @@ class TestNavitiaRestParams(BaseTestCase):
 
             mock_redis.set.assert_any_call(f'job:{job_id}:status', 'error', ex=JOB_TTL)
             mock_redis.set.assert_any_call(
-                f'job:{job_id}:error', 'Missing filter : area is required', ex=JOB_TTL
+                f'job:{job_id}:error',
+                json.dumps(
+                    {'id': 'job_error', 'message': 'Missing filter : area is required'}
+                ),
+                ex=JOB_TTL,
             )
 
     def test_compute_journey_reachable_waypoints_multiple_areas(self):
@@ -1339,7 +1437,11 @@ class TestNavitiaRestParams(BaseTestCase):
 
             mock_redis.set.assert_any_call(f'job:{job_id}:status', 'error', ex=JOB_TTL)
             mock_redis.set.assert_any_call(
-                f'job:{job_id}:error', 'Only one filtering area is allowed', ex=JOB_TTL
+                f'job:{job_id}:error',
+                json.dumps(
+                    {'id': 'job_error', 'message': 'Only one filtering area is allowed'}
+                ),
+                ex=JOB_TTL,
             )
 
     def test_handle_navitia_response_success(self):

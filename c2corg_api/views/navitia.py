@@ -1,7 +1,7 @@
-import ast
 import json
 import logging
 import os
+import re
 import threading
 import time
 import uuid
@@ -15,6 +15,7 @@ from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPInternalServerError,
     HTTPNotFound,
+    HTTPTooManyRequests,
     HTTPUnauthorized,
 )
 from pyramid.response import Response
@@ -45,6 +46,12 @@ _jobs_redis_pool = None
 # the values of a job expire after its last write: long enough for the UI to
 # read the result of a finished job
 JOB_TTL = 3600  # seconds
+# the jobs a process runs at once, and the delay before trying again
+MAX_RUNNING_JOBS = 4
+JOB_RETRY_AFTER = 10  # seconds
+_running_jobs = threading.BoundedSemaphore(MAX_RUNNING_JOBS)
+# the longest a progress stream follows a job
+STREAM_MAX_DURATION = 600  # seconds
 
 BASE_URL = 'https://api.navitia.io/v1'
 
@@ -308,7 +315,7 @@ def compute_journey_reachable_routes(job_id, request):
     except Exception as exc:
         log.exception(str(exc))
         _set_job_value(r, job_id, 'status', 'error')
-        _set_job_value(r, job_id, 'error', str(exc))
+        _set_job_value(r, job_id, 'error', json.dumps(_job_error(exc)))
     finally:
         _end_thread_db_session()
 
@@ -387,7 +394,7 @@ def compute_journey_reachable_waypoints(job_id, request):
     except Exception as exc:
         log.exception('Error computing reachable waypoints')
         _set_job_value(r, job_id, 'status', 'error')
-        _set_job_value(r, job_id, 'error', str(exc))
+        _set_job_value(r, job_id, 'error', json.dumps(_job_error(exc)))
     finally:
         _end_thread_db_session()
 
@@ -801,11 +808,28 @@ def start_job_background(target, request):
     target is the query function to execute in bg
     request is the request to pass to the function.
     """
-    job_id = str(uuid.uuid4())
-    r = redis_client()
-    _set_job_value(r, job_id, 'progress', 0)
-    _set_job_value(r, job_id, 'status', 'running')
-    threading.Thread(target=target, args=(job_id, request), daemon=True).start()
+    # each job makes many calls to Navitia: a process runs a few at once only
+    if not _running_jobs.acquire(blocking=False):
+        # the UI retries once, after the delay it reads in the message
+        raise HTTPTooManyRequests(
+            f'Too many searches are running: retry after {JOB_RETRY_AFTER} seconds'
+        )
+    try:
+        job_id = str(uuid.uuid4())
+        r = redis_client()
+        _set_job_value(r, job_id, 'progress', 0)
+        _set_job_value(r, job_id, 'status', 'running')
+
+        def run():
+            try:
+                target(job_id, request)
+            finally:
+                _running_jobs.release()
+
+        threading.Thread(target=run, daemon=True).start()
+    except BaseException:
+        _running_jobs.release()
+        raise
     return {'job_id': job_id}
 
 
@@ -851,11 +875,8 @@ def read_result_from_redis(r, job_id):
     if status == 'running':
         return {'status': 'running'}
     if status == 'error':
-        error_msg = r.get(f'job:{job_id}:error')
-        return {
-            'status': 'error',
-            'message': error_msg.decode() if error_msg else 'unknown error',
-        }
+        error = _read_job_error(r.get(f'job:{job_id}:error'))
+        return {'status': 'error', 'message': error['message']}
     if status == 'done':
         data = r.get(f'job:{job_id}:result')
         if not data:
@@ -864,13 +885,22 @@ def read_result_from_redis(r, job_id):
     return {'error': 'unknown_status', 'status': status}
 
 
-def progress_stream(r, job_id, poll_interval=0.5):
-    """Yield the job progress."""
+def progress_stream(r, job_id, poll_interval=0.5, max_duration=STREAM_MAX_DURATION):
+    """Yield the job progress, until the job ends, is unknown or takes too long."""
+    # The stream holds a worker of the server: it must end. An unknown job id
+    # (or a job whose values expired, e.g. lost with its worker) ends it at
+    # once, and so does a job running for longer than max_duration.
+    deadline = time.monotonic() + max_duration
     while True:
         raw_progress = r.get(f'job:{job_id}:progress')
         raw_found = r.get(f'job:{job_id}:found')
         raw_not_found = r.get(f'job:{job_id}:not_found')
         raw_total = r.get(f'job:{job_id}:total')
+        status = r.get(f'job:{job_id}:status')
+
+        if status is None:
+            yield _error_event('unknown_job', f'Unknown job {job_id}')
+            break
 
         progress = int(raw_progress) if raw_progress is not None else 0
         found = int(raw_found) if raw_found is not None else 0
@@ -885,17 +915,47 @@ def progress_stream(r, job_id, poll_interval=0.5):
         }
         yield (f'data: {json.dumps(payload)}\n\n').encode()
 
-        status = r.get(f'job:{job_id}:status')
-        if status and status.decode() == 'done':
+        if status.decode() == 'done':
             yield b'event: done\ndata: done\n\n'
             break
-        elif status and status.decode() == 'error':
-            payload = r.get(f'job:{job_id}:error')
-            json_payload = json.dumps(ast.literal_eval(payload.decode()))
-            yield (f'event: error\ndata: {json_payload}\n\n').encode()
+        elif status.decode() == 'error':
+            error = _read_job_error(r.get(f'job:{job_id}:error'))
+            yield _error_event(error['id'], error['message'])
+            break
+
+        if time.monotonic() >= deadline:
+            yield _error_event('timeout', 'The job takes too long')
             break
 
         time.sleep(poll_interval)
+
+
+def _job_error(exc):
+    """Return the error of a failed job, as the UI reads them: id and message."""
+    # a single word is an error id of Navitia (e.g. date_out_of_bounds), which
+    # the UI may translate; it shows the message of the others
+    message = str(exc)
+    error_id = message if re.fullmatch(r'\w+', message) else 'job_error'
+    return {'id': error_id, 'message': message}
+
+
+def _read_job_error(raw):
+    """Return the stored error of a job (JSON; a plain message before)."""
+    if raw is None:
+        return {'id': 'job_error', 'message': 'unknown error'}
+    try:
+        error = json.loads(raw)
+    except ValueError:
+        error = None
+    if isinstance(error, dict) and 'id' in error and 'message' in error:
+        return error
+    return {'id': 'job_error', 'message': raw.decode(errors='replace')}
+
+
+def _error_event(error_id, message):
+    """Return an error event of the progress stream, as the UI reads them."""
+    data = json.dumps({'id': error_id, 'message': message})
+    return (f'event: error\ndata: {data}\n\n').encode()
 
 
 def _store_job_progress(r, job_id, count, found, not_found):
