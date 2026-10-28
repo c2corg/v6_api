@@ -87,7 +87,7 @@ def cornice_view(view_class, method):
     return arguments.get('validators', []), arguments.get('permission'), content_type
 
 
-def include_document_writes(app, prefix, rest):
+def include_document_writes(app, prefix, rest, create=True):
     """Add the write routes of a document type: creation and update."""
 
     def write_route(path, http_method, method):
@@ -102,7 +102,8 @@ def include_document_writes(app, prefix, rest):
         endpoint.permission = permission
         app.add_api_route(path, endpoint, methods=[http_method])
 
-    write_route(f'/{prefix}', 'POST', 'collection_post')
+    if create:
+        write_route(f'/{prefix}', 'POST', 'collection_post')
     # a numeric id only, as the read routes
     write_route(f'/{prefix}/{{id:int}}', 'PUT', 'put')
 
@@ -167,3 +168,7 @@ def include(app):
     )
     # the writes moved to FastAPI
     include_document_writes(app, 'books', BookRest)
+    include_document_writes(app, 'articles', ArticleRest)
+    include_document_writes(app, 'areas', AreaRest)
+    include_document_writes(app, 'maps', TopoMapRest)
+    include_document_writes(app, 'coverages', CoverageRest)
