@@ -4,7 +4,7 @@ from operator import and_
 
 from cornice.resource import resource, view
 from sqlalchemy import case, func, literal_column
-from sqlalchemy.orm import load_only
+from sqlalchemy.orm import aliased, load_only
 from sqlalchemy.sql.expression import column, or_, text, union
 
 from c2corg_api.models import DBSession
@@ -16,7 +16,7 @@ from c2corg_api.models.common.attributes import (
     public_transportation_ratings,
 )
 from c2corg_api.models.common.fields_route import fields_route
-from c2corg_api.models.document import DocumentGeometry, DocumentLocale
+from c2corg_api.models.document import Document, DocumentGeometry, DocumentLocale
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.route import (
     ROUTE_TYPE,
@@ -661,13 +661,17 @@ def build_reachable_route_query(params, meta_params):
     )
 
     # Querying database with the ids from ES, mainting the order with the case
+    # explicit aliases of the joined documents: the documents table of the
+    # route stays unaliased, for its GROUP BY
+    area = aliased(Area, flat=True)
+    access = aliased(Waypoint, flat=True)
     query = (
         DBSession.query(
             Route,
             func.jsonb_agg(
                 func.distinct(
                     func.jsonb_build_object(
-                        literal_column("'document_id'"), Area.document_id
+                        literal_column("'document_id'"), area.document_id
                     )
                 )
             ).label('areas'),
@@ -681,19 +685,21 @@ def build_reachable_route_query(params, meta_params):
             ),
         )
         .join(AreaAssociation, AreaAssociation.document_id == Route.document_id)
-        .join(Area, Area.document_id == AreaAssociation.area_id)
+        .join(area, area.document_id == AreaAssociation.area_id)
         .join(
-            Waypoint,
+            access,
             and_(
                 or_(
-                    Waypoint.document_id == Association.child_document_id,
-                    Waypoint.document_id == Association.parent_document_id,
+                    access.document_id == Association.child_document_id,
+                    access.document_id == Association.parent_document_id,
                 ),
-                Waypoint.waypoint_type == 'access',
+                access.waypoint_type == 'access',
             ),
         )
-        .join(WaypointStoparea, WaypointStoparea.waypoint_id == Waypoint.document_id)
-        .group_by(Route)
+        .join(WaypointStoparea, WaypointStoparea.waypoint_id == access.document_id)
+        # the primary keys of both tables of the model (documents and the
+        # table of the type): PostgreSQL refuses their other columns otherwise
+        .group_by(Document.document_id, Route.document_id)
         .order_by(ordering_case)
     )
 
@@ -725,20 +731,24 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
     )
 
     # then query database with the ids from ES
+    # explicit aliases of the joined documents: the documents table of the
+    # route stays unaliased, for its GROUP BY
+    area = aliased(Area, flat=True)
+    access = aliased(Waypoint, flat=True)
     query = (
         DBSession.query(
             Route,
             func.jsonb_agg(
                 func.distinct(
                     func.jsonb_build_object(
-                        literal_column("'document_id'"), Area.document_id
+                        literal_column("'document_id'"), area.document_id
                     )
                 )
             ).label('areas'),
             func.jsonb_agg(
                 func.distinct(
                     func.jsonb_build_object(
-                        literal_column("'document_id'"), Waypoint.document_id
+                        literal_column("'document_id'"), access.document_id
                     )
                 )
             ).label('waypoints'),
@@ -755,19 +765,21 @@ def build_reachable_route_query_with_waypoints(params, meta_params):
             ),
         )
         .join(AreaAssociation, AreaAssociation.document_id == Route.document_id)
-        .join(Area, Area.document_id == AreaAssociation.area_id)
+        .join(area, area.document_id == AreaAssociation.area_id)
         .join(
-            Waypoint,
+            access,
             and_(
                 or_(
-                    Waypoint.document_id == Association.child_document_id,
-                    Waypoint.document_id == Association.parent_document_id,
+                    access.document_id == Association.child_document_id,
+                    access.document_id == Association.parent_document_id,
                 ),
-                Waypoint.waypoint_type == 'access',
+                access.waypoint_type == 'access',
             ),
         )
-        .join(WaypointStoparea, WaypointStoparea.waypoint_id == Waypoint.document_id)
-        .group_by(Route)
+        .join(WaypointStoparea, WaypointStoparea.waypoint_id == access.document_id)
+        # the primary keys of both tables of the model (documents and the
+        # table of the type): PostgreSQL refuses their other columns otherwise
+        .group_by(Document.document_id, Route.document_id)
         .order_by(ordering_case)
     )
 
