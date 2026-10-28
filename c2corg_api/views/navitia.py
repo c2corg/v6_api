@@ -15,6 +15,7 @@ from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPInternalServerError,
     HTTPNotFound,
+    HTTPTooManyRequests,
     HTTPUnauthorized,
 )
 from pyramid.response import Response
@@ -45,6 +46,10 @@ _jobs_redis_pool = None
 # the values of a job expire after its last write: long enough for the UI to
 # read the result of a finished job
 JOB_TTL = 3600  # seconds
+# the jobs a process runs at once, and the delay before trying again
+MAX_RUNNING_JOBS = 4
+JOB_RETRY_AFTER = 10  # seconds
+_running_jobs = threading.BoundedSemaphore(MAX_RUNNING_JOBS)
 # the longest a progress stream follows a job
 STREAM_MAX_DURATION = 600  # seconds
 
@@ -803,11 +808,28 @@ def start_job_background(target, request):
     target is the query function to execute in bg
     request is the request to pass to the function.
     """
-    job_id = str(uuid.uuid4())
-    r = redis_client()
-    _set_job_value(r, job_id, 'progress', 0)
-    _set_job_value(r, job_id, 'status', 'running')
-    threading.Thread(target=target, args=(job_id, request), daemon=True).start()
+    # each job makes many calls to Navitia: a process runs a few at once only
+    if not _running_jobs.acquire(blocking=False):
+        # the UI retries once, after the delay it reads in the message
+        raise HTTPTooManyRequests(
+            f'Too many searches are running: retry after {JOB_RETRY_AFTER} seconds'
+        )
+    try:
+        job_id = str(uuid.uuid4())
+        r = redis_client()
+        _set_job_value(r, job_id, 'progress', 0)
+        _set_job_value(r, job_id, 'status', 'running')
+
+        def run():
+            try:
+                target(job_id, request)
+            finally:
+                _running_jobs.release()
+
+        threading.Thread(target=run, daemon=True).start()
+    except BaseException:
+        _running_jobs.release()
+        raise
     return {'job_id': job_id}
 
 

@@ -1,5 +1,7 @@
 import json
 import os
+import threading
+import time as clock
 from datetime import datetime, time
 from unittest import mock
 from unittest.mock import call
@@ -11,6 +13,7 @@ from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPInternalServerError,
     HTTPNotFound,
+    HTTPTooManyRequests,
     HTTPUnauthorized,
 )
 from shapely.geometry import Polygon
@@ -24,8 +27,10 @@ from c2corg_api.tests import BaseTestCase
 from c2corg_api.views import to_json_dict
 from c2corg_api.views.navitia import (
     BASE_URL,
+    JOB_RETRY_AFTER,
     JOB_TTL,
     MAX_ROUTE_THRESHOLD,
+    MAX_RUNNING_JOBS,
     MAX_TRIP_DURATION,
     MIN_TRIP_DURATION,
     _store_job_progress,
@@ -159,6 +164,41 @@ class TestNavitiaRestParams(BaseTestCase):
 
             mock_r.set.assert_any_call(f'job:{job_id}:progress', 0, ex=JOB_TTL)
             mock_r.set.assert_any_call(f'job:{job_id}:status', 'running', ex=JOB_TTL)
+
+    def test_running_jobs_are_limited(self):
+        release = threading.Event()
+        ended = threading.Semaphore(0)
+
+        def job(*_):
+            release.wait(10)
+            ended.release()
+
+        with mock.patch(NAVITIA_REDIS_CLIENT_PATH):
+            for _ in range(MAX_RUNNING_JOBS):
+                start_job_background(job, request=None)
+            with pytest.raises(HTTPTooManyRequests) as error:
+                start_job_background(job, request=None)
+            assert f'retry after {JOB_RETRY_AFTER} seconds' in error.value.detail
+
+            # an ended job frees its place
+            release.set()
+            for _ in range(MAX_RUNNING_JOBS):
+                assert ended.acquire(timeout=10)
+            deadline = clock.monotonic() + 10
+            while True:
+                try:
+                    start_job_background(lambda *_: None, request=None)
+                    break
+                except HTTPTooManyRequests:
+                    # the threads release their place right after the job
+                    assert clock.monotonic() < deadline
+                    clock.sleep(0.01)
+
+    def test_failed_start_frees_its_place(self):
+        with mock.patch(NAVITIA_REDIS_CLIENT_PATH, side_effect=RuntimeError('down')):
+            for _ in range(MAX_RUNNING_JOBS + 1):
+                with pytest.raises(RuntimeError):
+                    start_job_background(lambda *_: None, request=None)
 
     def test_job_values_expire(self):
         # in the Redis of the jobs, not a mock
