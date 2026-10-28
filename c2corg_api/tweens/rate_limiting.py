@@ -84,7 +84,7 @@ def _is_anonymous_request_rate_limited(redis_client, key, window_span, limit):
     return current > limit
 
 
-def _check_anonymous_rate_limit(request, registry, bucket):
+def _check_anonymous_rate_limit(request, settings, bucket):
     """
     Return True if the anonymous `request` is rate limited.
 
@@ -92,7 +92,6 @@ def _check_anonymous_rate_limit(request, registry, bucket):
     limited if it has exceeded the allowed number of attempts for the
     given `bucket` (e.g. "login") during the current time window.
     """
-    settings = registry.settings
     window_span = int(
         settings.get('rate_limiting.anonymous_window_span')
         or settings.get('rate_limiting.window_span', 900)
@@ -117,83 +116,86 @@ def _check_anonymous_rate_limit(request, registry, bucket):
     return limited
 
 
+def rate_limit_error(request, settings):
+    """Return the error answering a write request over its rate limit, or None."""
+    # Pyramid (the tween below) and FastAPI (web.compat) both call it, in the
+    # transaction of the request: the counters it updates are committed with
+    # the request, also when it answers an error.
+    # Only write requests are considered for rate limiting.
+    if request.method not in ['POST', 'PUT', 'DELETE']:
+        return None
+
+    if request.authorization is None:
+        bucket = ANONYMOUS_RATE_LIMITED_BUCKETS.get(request.path)
+        if bucket is not None and _check_anonymous_rate_limit(
+            request, settings, bucket
+        ):
+            return HTTPTooManyRequests('Rate limit reached')
+        # See comment of similar block in jwt_database_validation tween
+        return None
+
+    user = DBSession.get(User, request.authenticated_userid)
+    if user is None:
+        return HTTPBadRequest('Unknown user')
+
+    now = datetime.datetime.now(datetime.UTC)
+    if user.ratelimit_reset is None or user.ratelimit_reset < now:
+        # No window exists or it is expired: create a new one.
+        span = int(settings.get('rate_limiting.window_span'))
+        limit = int(
+            settings.get(
+                'rate_limiting.limit_robot'
+                if user.robot
+                else 'rate_limiting.limit_moderator'
+                if user.moderator
+                else 'rate_limiting.limit'
+            )
+        )
+        user.ratelimit_reset = now + datetime.timedelta(seconds=span)
+        user.ratelimit_remaining = limit - 1
+        log.debug(f'RATE LIMITING, CREATE WINDOW SPAN : {user.ratelimit_reset}')
+    elif user.ratelimit_remaining:
+        user.ratelimit_remaining -= 1
+        log.info(
+            f'RATE LIMITING, REQUESTS REMAINING FOR {user.id} : '
+            f'{user.ratelimit_remaining}'
+        )
+    else:
+        # User is rate limited
+        log.warning(f'RATE LIMIT REACHED FOR USER {user.id}')
+
+        # Count how many windows the user has been rate limited
+        # and block them if too many.
+        current_window = user.ratelimit_reset
+        if user.ratelimit_last_blocked_window != current_window:
+            user.ratelimit_last_blocked_window = current_window
+            user.ratelimit_times += 1
+
+            max_times = int(settings.get('rate_limiting.max_times'))
+            if user.ratelimit_times > max_times:
+                log.warning(f'RATE LIMIT BLOCK USER {user.id}')
+                user.blocked = True
+
+            # An alert message is sent to the moderators
+            email_service = get_email_service(request)
+            try:
+                email_service.send_rate_limiting_alert(user)
+            except SMTPAuthenticationError:
+                log.error('RATE LIMIT ALERT MAIL : AUTHENTICATION ERROR')
+
+        return HTTPTooManyRequests('Rate limit reached')
+
+    return None
+
+
 def rate_limiting_tween_factory(handler, registry):
     """Add a rate limiting protection on write requests."""
 
     def tween(request):
-
         log.debug('RATE LIMITING FOR METHOD ' + request.method)
-
-        # Only write requests are considered for rate limiting.
-        if request.method not in ['POST', 'PUT', 'DELETE']:
-            return handler(request)
-
-        if request.authorization is None:
-            bucket = ANONYMOUS_RATE_LIMITED_BUCKETS.get(request.path)
-            if bucket is not None and _check_anonymous_rate_limit(
-                request, registry, bucket
-            ):
-                return http_error_handler(
-                    HTTPTooManyRequests('Rate limit reached'), request
-                )
-            # See comment of similar block in jwt_database_validation tween
-            return handler(request)
-
-        user = DBSession.get(User, request.authenticated_userid)
-        if user is None:
-            return http_error_handler(HTTPBadRequest('Unknown user'), request)
-
-        now = datetime.datetime.now(datetime.UTC)
-        if user.ratelimit_reset is None or user.ratelimit_reset < now:
-            # No window exists or it is expired: create a new one.
-            span = int(registry.settings.get('rate_limiting.window_span'))
-            limit = int(
-                registry.settings.get(
-                    'rate_limiting.limit_robot'
-                    if user.robot
-                    else 'rate_limiting.limit_moderator'
-                    if user.moderator
-                    else 'rate_limiting.limit'
-                )
-            )
-            user.ratelimit_reset = now + datetime.timedelta(seconds=span)
-            user.ratelimit_remaining = limit - 1
-            log.debug(f'RATE LIMITING, CREATE WINDOW SPAN : {user.ratelimit_reset}')
-
-        elif user.ratelimit_remaining:
-            user.ratelimit_remaining -= 1
-            log.info(
-                f'RATE LIMITING, REQUESTS REMAINING FOR {user.id} : '
-                f'{user.ratelimit_remaining}'
-            )
-
-        else:
-            # User is rate limited
-            log.warning(f'RATE LIMIT REACHED FOR USER {user.id}')
-
-            # Count how many windows the user has been rate limited
-            # and block them if too many.
-            current_window = user.ratelimit_reset
-            if user.ratelimit_last_blocked_window != current_window:
-                user.ratelimit_last_blocked_window = current_window
-                user.ratelimit_times += 1
-
-                max_times = int(registry.settings.get('rate_limiting.max_times'))
-                if user.ratelimit_times > max_times:
-                    log.warning(f'RATE LIMIT BLOCK USER {user.id}')
-                    user.blocked = True
-
-                # An alert message is sent to the moderators
-                email_service = get_email_service(request)
-                try:
-                    email_service.send_rate_limiting_alert(user)
-                except SMTPAuthenticationError:
-                    log.error('RATE LIMIT ALERT MAIL : AUTHENTICATION ERROR')
-
-            return http_error_handler(
-                HTTPTooManyRequests('Rate limit reached'), request
-            )
-
+        error = rate_limit_error(request, registry.settings)
+        if error is not None:
+            return http_error_handler(error, request)
         return handler(request)
 
     return tween
