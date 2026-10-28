@@ -1,0 +1,108 @@
+{
+  "body": {
+    "documents": [
+      {
+        "access_time": "null",
+        "areas": [
+          {
+            "area_type": "str",
+            "available_langs": "null",
+            "document_id": "int",
+            "locales": [
+              {
+                "lang": "str",
+                "title": "str",
+                "version": "int"
+              }
+            ],
+            "protected": "bool",
+            "type": "str",
+            "version": "int"
+          }
+        ],
+        "available_langs": "null",
+        "best_periods": "null",
+        "blanket_unstaffed": "null",
+        "capacity": "null",
+        "capacity_staffed": "null",
+        "children_proof": "null",
+        "climbing_indoor_types": "null",
+        "climbing_outdoor_types": "null",
+        "climbing_rating_max": "null",
+        "climbing_rating_median": "null",
+        "climbing_rating_min": "null",
+        "climbing_styles": "null",
+        "custodianship": "null",
+        "document_id": "int",
+        "elevation": "int",
+        "elevation_min": "null",
+        "equipment_ratings": "null",
+        "exposition_rating": "null",
+        "gas_unstaffed": "null",
+        "geometry": {
+          "geom": "str",
+          "geom_detail": "null",
+          "version": "int"
+        },
+        "ground_types": "null",
+        "heating_unstaffed": "null",
+        "height_max": "null",
+        "height_median": "null",
+        "height_min": "null",
+        "length": "null",
+        "lift_access": "null",
+        "locales": [
+          {
+            "access": {
+              "any_of": [
+                "\"null\"",
+                "\"str\""
+              ]
+            },
+            "access_period": "null",
+            "description": "null",
+            "external_resources": "null",
+            "lang": "str",
+            "summary": "null",
+            "title": "str",
+            "topic_id": "null",
+            "version": "int"
+          }
+        ],
+        "maps_info": "null",
+        "matress_unstaffed": "null",
+        "orientations": "null",
+        "paragliding_rating": "null",
+        "parking_fee": "null",
+        "phone": "null",
+        "phone_custodian": "null",
+        "product_types": "null",
+        "prominence": "null",
+        "protected": "bool",
+        "public_transportation_rating": "null",
+        "public_transportation_types": "null",
+        "quality": "str",
+        "rain_proof": "null",
+        "rock_types": "null",
+        "routes_quantity": "null",
+        "slackline_length_max": "null",
+        "slackline_length_min": "null",
+        "slackline_types": "null",
+        "slope": "null",
+        "snow_clearance_rating": "null",
+        "type": "str",
+        "url": "null",
+        "version": "int",
+        "waypoint_type": "str",
+        "weather_station_types": "null"
+      }
+    ],
+    "total": "int"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}
