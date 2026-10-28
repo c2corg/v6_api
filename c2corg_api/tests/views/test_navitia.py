@@ -742,6 +742,28 @@ class TestNavitiaRestParams(BaseTestCase):
                 'coordinates': [[[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]],
             }
 
+    def test_navitia_isochrone_errors_are_http_errors(self):
+        # an error answered a 200 with the message as a JSON string, which
+        # the UI could not tell from a result
+        url = (
+            '/navitia/isochronesreachable{}?from=5.73;45.18&datetime=20260116T115100'
+            '&datetime_represents=departure&boundary_duration=3600'
+        )
+        for kind in ('routes', 'waypoints'):
+            with mock.patch(
+                'c2corg_api.views.navitia.get_navitia_isochrone',
+                side_effect=HTTPNotFound('no_solution'),
+            ):
+                response = self.app.get(url.format(kind), status=404)
+            assert response.json['errors'][0]['description'] == 'no_solution'
+
+            with mock.patch(
+                'c2corg_api.views.navitia.get_navitia_isochrone',
+                side_effect=RuntimeError('boom'),
+            ):
+                response = self.app.get(url.format(kind), status=500)
+            assert response.json['errors'][0]['name'] == 'unexpected error'
+
     def test_navitia_isochronereachableroutes_no_result(self):
         with (
             mock.patch(
@@ -1406,6 +1428,25 @@ class TestNavitiaRestParams(BaseTestCase):
             result_data = json.loads(result_json)
             assert result_data['total'] == 0
             assert result_data['documents'] == []
+
+    def test_compute_journey_reachable_waypoints_none_reachable(self):
+        # no reachable waypoint: the job is done, with no result
+        job_id = 'job-123'
+        with (
+            mock.patch('c2corg_api.views.navitia.redis_client') as mock_redis_client,
+            mock.patch(
+                'c2corg_api.views.navitia.build_reachable_waypoints_query',
+                return_value=(None, 0),
+            ),
+            mock.patch('c2corg_api.views.navitia.extract_meta_params'),
+            mock.patch('c2corg_api.views.navitia.extract_journey_params'),
+        ):
+            mock_redis = mock_redis_client.return_value
+            request = mock.Mock()
+            request.GET = {'a': '14067'}
+            compute_journey_reachable_waypoints(job_id, request)
+
+            mock_redis.set.assert_any_call(f'job:{job_id}:status', 'done', ex=JOB_TTL)
 
     def test_compute_journey_reachable_waypoints_missing_area(self):
         job_id = 'job-123'

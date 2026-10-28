@@ -354,7 +354,8 @@ def compute_journey_reachable_waypoints(job_id, request):
             raise HTTPBadRequest('Only one filtering area is allowed')
 
         query, count = build_reachable_waypoints_query(request.GET, meta_params)
-        results = query.all()
+        # no reachable waypoint: no query
+        results = [] if query is None else query.all()
 
         areas_map = collect_areas_from_results(results, 1)
 
@@ -422,69 +423,66 @@ class NavitiaIsochronesReachableRoutesRest:
         The isochron is created by querying navitia api
         with specific parameters, see validate_isochrone_reachable_params func.
         """
-        try:
-            meta_params = extract_meta_params(self.request)
+        meta_params = extract_meta_params(self.request)
 
-            isochrone_params = extract_isochrone_params(self.request)
+        isochrone_params = extract_isochrone_params(self.request)
 
-            query, _ = build_reachable_route_query_with_waypoints(
-                self.request.GET, meta_params
-            )
+        query, _ = build_reachable_route_query_with_waypoints(
+            self.request.GET, meta_params
+        )
 
-            if query is None:
-                results = []
-            else:
-                results = query.all()
+        if query is None:
+            results = []
+        else:
+            results = query.all()
 
-            areas_map = collect_areas_from_results(results, 1)
+        areas_map = collect_areas_from_results(results, 1)
 
-            response = get_navitia_isochrone(isochrone_params)
+        response = get_navitia_isochrone(isochrone_params)
 
-            routes = []
-            geojson = ''
-            # if isochrone found
-            if len(response['isochrones']) > 0:
-                geojson = response['isochrones'][0]['geojson']
-                isochrone_geom = shape(geojson)
+        routes = []
+        geojson = ''
+        # if isochrone found
+        if len(response['isochrones']) > 0:
+            geojson = response['isochrones'][0]['geojson']
+            isochrone_geom = shape(geojson)
 
-                wp_objects = collect_waypoints_from_results(results)
+            wp_objects = collect_waypoints_from_results(results)
 
-                navitia_wp_map = {
-                    wp.document_id: is_wp_in_isochrone(
-                        to_json_dict(wp, waypoint_schema), isochrone_geom
-                    )
-                    for wp in wp_objects
-                }
+            navitia_wp_map = {
+                wp.document_id: is_wp_in_isochrone(
+                    to_json_dict(wp, waypoint_schema), isochrone_geom
+                )
+                for wp in wp_objects
+            }
 
-                for route, areas, waypoints in results:
-                    # check if a journey exists for route
-                    # (at least one wp has a journey associated)
-                    one_wp_in_isochrone = False
-                    for wp in waypoints:
-                        wp_id = wp.get('document_id')
-                        one_wp_in_isochrone |= navitia_wp_map.get(wp_id)
+            for route, areas, waypoints in results:
+                # check if a journey exists for route
+                # (at least one wp has a journey associated)
+                one_wp_in_isochrone = False
+                for wp in waypoints:
+                    wp_id = wp.get('document_id')
+                    one_wp_in_isochrone |= navitia_wp_map.get(wp_id)
 
-                    if one_wp_in_isochrone:
-                        json_areas = []
+                if one_wp_in_isochrone:
+                    json_areas = []
 
-                        if areas is None:
-                            areas = []
+                    if areas is None:
+                        areas = []
 
-                        for area in areas:
-                            area_obj = areas_map.get(area.get('document_id'))
-                            if area_obj:
-                                json_areas.append(
-                                    to_json_dict(area_obj, area_listing_schema)
-                                )
+                    for area in areas:
+                        area_obj = areas_map.get(area.get('document_id'))
+                        if area_obj:
+                            json_areas.append(
+                                to_json_dict(area_obj, area_listing_schema)
+                            )
 
-                        # assign JSON areas to the waypoint
-                        route.areas = json_areas
-                        route_dict = to_json_dict(route, route_schema, True)
-                        routes.append(route_dict)
+                    # assign JSON areas to the waypoint
+                    route.areas = json_areas
+                    route_dict = to_json_dict(route, route_schema, True)
+                    routes.append(route_dict)
 
-            return {'documents': routes, 'total': len(routes), 'isochron_geom': geojson}
-        except Exception as e:
-            return json.dumps(str(e))
+        return {'documents': routes, 'total': len(routes), 'isochron_geom': geojson}
 
 
 @resource(path='/navitia/isochronesreachablewaypoints', cors_policy=cors_policy)
@@ -501,55 +499,53 @@ class NavitiaIsochronesReachableWaypointsRest:
         The isochron is created by querying navitia api
         with specific parameters, see validate_isochrone_reachable_params func.
         """
-        try:
-            meta_params = extract_meta_params(self.request)
+        meta_params = extract_meta_params(self.request)
 
-            isochrone_params = extract_isochrone_params(self.request)
+        isochrone_params = extract_isochrone_params(self.request)
 
-            query, _ = build_reachable_waypoints_query(self.request.GET, meta_params)
+        query, _ = build_reachable_waypoints_query(self.request.GET, meta_params)
 
-            results = query.all()
+        # no reachable waypoint: no query
+        results = [] if query is None else query.all()
 
-            # manage areas for waypoints
-            areas_map = collect_areas_from_results(results, 1)
+        # manage areas for waypoints
+        areas_map = collect_areas_from_results(results, 1)
 
-            response = get_navitia_isochrone(isochrone_params)
+        response = get_navitia_isochrone(isochrone_params)
 
-            waypoints = []
-            geojson = ''
-            # if isochrone found
-            if len(response['isochrones']) > 0:
-                geojson = response['isochrones'][0]['geojson']
-                isochrone_geom = shape(geojson)
+        waypoints = []
+        geojson = ''
+        # if isochrone found
+        if len(response['isochrones']) > 0:
+            geojson = response['isochrones'][0]['geojson']
+            isochrone_geom = shape(geojson)
 
-                for waypoint, areas in results:
-                    # check if wp is in isochrone
-                    if is_wp_in_isochrone(
-                        to_json_dict(waypoint, waypoint_schema), isochrone_geom
-                    ):
-                        json_areas = []
-                        if areas is None:
-                            areas = []
+            for waypoint, areas in results:
+                # check if wp is in isochrone
+                if is_wp_in_isochrone(
+                    to_json_dict(waypoint, waypoint_schema), isochrone_geom
+                ):
+                    json_areas = []
+                    if areas is None:
+                        areas = []
 
-                        for area in areas:
-                            area_obj = areas_map.get(area.get('document_id'))
-                            if area_obj:
-                                json_areas.append(
-                                    to_json_dict(area_obj, area_listing_schema)
-                                )
+                    for area in areas:
+                        area_obj = areas_map.get(area.get('document_id'))
+                        if area_obj:
+                            json_areas.append(
+                                to_json_dict(area_obj, area_listing_schema)
+                            )
 
-                        # assign JSON areas to the waypoint
-                        waypoint.areas = json_areas
-                        wp_dict = to_json_dict(waypoint, waypoint_schema, True)
-                        waypoints.append(wp_dict)
+                    # assign JSON areas to the waypoint
+                    waypoint.areas = json_areas
+                    wp_dict = to_json_dict(waypoint, waypoint_schema, True)
+                    waypoints.append(wp_dict)
 
-            return {
-                'documents': waypoints,
-                'total': len(waypoints),
-                'isochron_geom': geojson,
-            }
-        except Exception as e:
-            return json.dumps(str(e))
+        return {
+            'documents': waypoints,
+            'total': len(waypoints),
+            'isochron_geom': geojson,
+        }
 
 
 def is_wp_journey_reachable(waypoint, journey_params):
