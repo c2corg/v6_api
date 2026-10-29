@@ -25,6 +25,13 @@ class _WriteView:
         user.name = 'renamed'
         DBSession.flush()
         outcome = self.request.json.get('outcome')
+        if outcome == 'refused by the view':
+            # as some views (e.g. a failed login): an error, nothing raised
+            self.request.errors.add('body', 'outcome', 'refused by the view')
+            self.request.errors.status = 401
+            return None
+        if outcome == 'client address':
+            return {'client_addr': self.request.client_addr}
         if outcome == 'http_error':
             raise HTTPBadRequest('refused by the view')
         if outcome == 'bug':
@@ -136,6 +143,28 @@ class TestWrites(BaseTestRest):
         assert response.json['errors'] == [
             {'location': 'body', 'name': 'outcome', 'description': 'not yours'}
         ]
+
+    def test_errors_added_by_the_view(self):
+        # as Cornice: they are the answer, and they are committed
+        response = self.post({'outcome': 'refused by the view'}, 401)
+        assert response.json['errors'] == [
+            {
+                'location': 'body',
+                'name': 'outcome',
+                'description': 'refused by the view',
+            }
+        ]
+        user = self.refreshed()
+        assert user.name == 'renamed'
+
+    def test_client_address(self):
+        # as WebOb: the first address of X-Forwarded-For
+        response = self.post(
+            {'outcome': 'client address'},
+            200,
+            headers={'X-Forwarded-For': '203.0.113.7, 10.0.0.1'},
+        )
+        assert response.json == {'client_addr': '203.0.113.7'}
 
     def test_invalid_json_body(self):
         headers = self.add_authorization_header(username='contributor')

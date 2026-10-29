@@ -99,6 +99,14 @@ class ValidatedRequest:
         self.POST = MultiDict()
 
     @property
+    def client_addr(self):
+        # as WebOb: the first address of X-Forwarded-For, else the peer
+        forwarded_for = self.headers.get('X-Forwarded-For')
+        if forwarded_for is not None:
+            return forwarded_for.split(',')[0].strip()
+        return self.remote_addr
+
+    @property
     def json_body(self):
         return json.loads(self.body.decode(self.charset))
 
@@ -157,6 +165,9 @@ def run_view(adapted, view):
         return _redirection(e)
     except HTTPError as e:
         return _http_error(e)
+    if adapted.errors:
+        # as Cornice: the errors the view itself adds are the answer
+        return error_response(adapted.errors, adapted.errors.status)
     return _render(adapted, result)
 
 
@@ -321,6 +332,11 @@ def _serve_write(
             if reason is None:
                 raise
             return error_response([('body', '', f'Invalid JSON: {reason}')])
+        if adapted.errors:
+            # as Cornice: the errors the view itself adds are the answer
+            # (e.g. a failed login, 401), returned and so committed
+            transaction.commit()
+            return error_response(adapted.errors, adapted.errors.status)
         response = _render(adapted, result)
         transaction.commit()
         return response
