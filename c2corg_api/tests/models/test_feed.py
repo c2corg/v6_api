@@ -1,8 +1,12 @@
+import datetime
+
 import pytest
 
 from c2corg_api.models.area import Area
+from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import CacheVersion
-from c2corg_api.models.feed import DocumentChange
+from c2corg_api.models.feed import DocumentChange, _get_participants_of_outing
+from c2corg_api.models.outing import Outing
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
@@ -184,3 +188,25 @@ class TestDocumentChange(BaseTestCase):
             assert 'still references area id' in exc.orig.pgerror
         else:
             pytest.fail('area is still referenced in change')
+
+
+class TestParticipantsOfOuting(BaseTestCase):
+    def test_in_order(self):
+        # by user id, whatever the order of the associations (the feed
+        # compares and stores them as sorted lists)
+        outing = Outing(
+            activities=['hiking'],
+            date_start=datetime.date(2016, 2, 1),
+            date_end=datetime.date(2016, 2, 1),
+        )
+        self.session.add(outing)
+        self.session.flush()
+        user_ids = sorted(
+            [self.global_userids['contributor'], self.global_userids['contributor2']]
+        )
+        for user_id in reversed(user_ids):
+            profile = self.session.get(User, user_id).profile
+            self.session.add(Association.create(profile, outing))
+            self.session.flush()
+
+        assert _get_participants_of_outing(outing.document_id) == user_ids
