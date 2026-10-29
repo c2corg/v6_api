@@ -69,3 +69,21 @@ class TestCoverageLookup(BaseTestRest):
         response = self.app.get('/getcoverage?lon=x&lat=nan', status=400)
         names = [e['name'] for e in response.json['errors']]
         assert names == ['lon', 'lat']
+
+
+class TestPolygonCoverage(BaseTestRest):
+    def test_invalid_geom_detail(self):
+        # a client error, not an unexpected one
+        for body in ({}, {'geom_detail': 'not geojson'}, {'geom_detail': 42}):
+            response = self.app.post_json('/getpolygoncoverage', body, status=400)
+            assert response.json['errors'] == [
+                {
+                    'location': 'body',
+                    'name': 'geom_detail',
+                    'description': 'invalid geom_detail',
+                }
+            ]
+
+    def test_outside_of_the_coverages(self):
+        body = {'geom_detail': '{"type": "Point", "coordinates": [6, 45]}'}
+        assert self.app.post_json('/getpolygoncoverage', body).json == []

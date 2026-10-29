@@ -189,3 +189,10 @@ class TestCookerRest(BaseTestRest):
         assert 1 == html.count('c2c:url=')
         assert f'c2c:url="{self.image_url}imageMI.jpg"' in html
         assert 'c2c:url-proxy="/images/proxy/999999?size=MI"' in html
+
+    def test_not_an_object(self):
+        # a client error, not an unexpected one
+        response = self.app_post_json('/cooker', ['**bold**'], status=400)
+        assert response.json['errors'] == [
+            {'location': 'body', 'name': '', 'description': 'Should be a JSON object'}
+        ]
