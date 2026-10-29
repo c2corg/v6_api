@@ -52,9 +52,11 @@ class TestCorsOnErrors(BaseTestRest):
         # 500 from the catch-all error view of Pyramid: the routes of the
         # users stay on Pyramid for now (the others moved to FastAPI, #2365)
         with patch('c2corg_api.views.user.try_login', side_effect=RuntimeError('boom')):
+            # a dummy password: try_login fails before checking it
+            body = {'username': 'contributor', 'password': 'not checked'}  # nosec B105
             response = self.app.post_json(
                 '/users/login',
-                {'username': 'contributor', 'password': 'not checked'},
+                body,
                 headers={'Origin': self.origin},
                 status=500,
             )
