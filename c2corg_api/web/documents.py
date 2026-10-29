@@ -87,25 +87,26 @@ def cornice_view(view_class, method):
     return arguments.get('validators', []), arguments.get('permission'), content_type
 
 
+def include_write(app, path, http_method, view_class, method):
+    """Add a write route served by a method of a Pyramid view class."""
+    validators, permission, content_types = cornice_view(view_class, method)
+
+    async def endpoint(request: Request, user: User):
+        return await serve_write(
+            request, user, validators, view_class, method, permission, content_types
+        )
+
+    # read by the route inventory of the contract tests (routes.txt)
+    endpoint.permission = permission
+    app.add_api_route(path, endpoint, methods=[http_method])
+
+
 def include_document_writes(app, prefix, rest, create=True):
     """Add the write routes of a document type: creation and update."""
-
-    def write_route(path, http_method, method):
-        validators, permission, content_types = cornice_view(rest, method)
-
-        async def endpoint(request: Request, user: User):
-            return await serve_write(
-                request, user, validators, rest, method, permission, content_types
-            )
-
-        # read by the route inventory of the contract tests (routes.txt)
-        endpoint.permission = permission
-        app.add_api_route(path, endpoint, methods=[http_method])
-
     if create:
-        write_route(f'/{prefix}', 'POST', 'collection_post')
+        include_write(app, f'/{prefix}', 'POST', rest, 'collection_post')
     # a numeric id only, as the read routes
-    write_route(f'/{prefix}/{{id:int}}', 'PUT', 'put')
+    include_write(app, f'/{prefix}/{{id:int}}', 'PUT', rest, 'put')
 
 
 def include(app):
