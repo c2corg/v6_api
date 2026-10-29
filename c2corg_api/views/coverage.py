@@ -4,6 +4,7 @@ import logging
 import math
 
 from cornice.resource import resource, view
+from shapely.errors import ShapelyError
 from shapely.geometry import Point, shape
 
 from c2corg_api.models import DBSession
@@ -110,21 +111,29 @@ class WaypointCoverageRest(DocumentRest):
         return get_coverage(lon, lat)
 
 
+def validate_geom_detail(request, **kwargs):
+    """Check that geom_detail is a GeoJSON geometry, given as a string."""
+    # an invalid JSON body raises here: the catch-all error view answers it
+    body = request.json_body
+    try:
+        request.validated['polygon'] = shape(json.loads(body['geom_detail']))
+    except KeyError, TypeError, ValueError, AttributeError, ShapelyError:
+        request.errors.add('body', 'geom_detail', 'invalid geom_detail')
+
+
 @resource(path='/getpolygoncoverage', cors_policy=cors_policy)
 class PolygonCoverage(DocumentRest):
     def __init__(self, request, context=None):
         self.request = request
 
-    @view(validators=[])
+    @view(validators=[validate_geom_detail])
     def post(self):
         """Return the coverages for a geom_detail polygon.
 
         Returns the coverages from a geom_detail type polygon
         (geom_detail has to be EPSG 4326 since isochrone is 4326).
         """
-        geom_detail = json.loads(json.loads(self.request.body)['geom_detail'])
-        polygon = shape(geom_detail)
-        return get_coverages(polygon)
+        return get_coverages(self.request.validated['polygon'])
 
 
 def get_coverage(lon, lat):
