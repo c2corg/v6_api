@@ -292,7 +292,7 @@ def _serve_write(
     # validator or of the view, a bug), what it returns is committed (the
     # validation errors, the answer of the view, and the 429 of the rate
     # limiting with its counters).
-    from c2corg_api.tweens.rate_limiting import rate_limit_error
+    from c2corg_api.security.rate_limiting import rate_limit_error
     from c2corg_api.views import invalid_json_body
 
     adapted = ValidatedRequest(request, user, body=body)

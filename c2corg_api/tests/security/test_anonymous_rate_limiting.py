@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from c2corg_api.httpexceptions import HTTPTooManyRequests
-from c2corg_api.tweens.rate_limiting import (
+from c2corg_api.security.rate_limiting import (
     ANONYMOUS_RATE_LIMITED_BUCKETS,
     _check_anonymous_rate_limit,
     _client_ip,
@@ -108,7 +108,7 @@ class TestCheckAnonymousRateLimit:
         request.remote_addr = ip
         return request
 
-    @patch('c2corg_api.tweens.rate_limiting._get_anonymous_rate_limit_redis_client')
+    @patch('c2corg_api.security.rate_limiting._get_anonymous_rate_limit_redis_client')
     def test_blocks_after_the_configured_limit(self, get_client):
         redis_client = FakeRedis()
         get_client.return_value = redis_client
@@ -124,7 +124,7 @@ class TestCheckAnonymousRateLimit:
         assert not _check_anonymous_rate_limit(request, registry.settings, 'login')
         assert _check_anonymous_rate_limit(request, registry.settings, 'login')
 
-    @patch('c2corg_api.tweens.rate_limiting._get_anonymous_rate_limit_redis_client')
+    @patch('c2corg_api.security.rate_limiting._get_anonymous_rate_limit_redis_client')
     def test_different_ips_are_tracked_independently(self, get_client):
         redis_client = FakeRedis()
         get_client.return_value = redis_client
@@ -143,7 +143,7 @@ class TestCheckAnonymousRateLimit:
         assert not _check_anonymous_rate_limit(request_b, registry.settings, 'login')
         assert _check_anonymous_rate_limit(request_a, registry.settings, 'login')
 
-    @patch('c2corg_api.tweens.rate_limiting._get_anonymous_rate_limit_redis_client')
+    @patch('c2corg_api.security.rate_limiting._get_anonymous_rate_limit_redis_client')
     def test_different_buckets_are_tracked_independently(self, get_client):
         redis_client = FakeRedis()
         get_client.return_value = redis_client
@@ -164,7 +164,7 @@ class TestCheckAnonymousRateLimit:
 
 class TestRateLimitingTweenAnonymous:
     """
-    Test that the tween routes anonymous requests correctly.
+    Test that the rate limiting routes anonymous requests correctly.
 
     Requests to the configured protected paths must go through the
     anonymous rate limiter, and every other anonymous request must be
@@ -185,7 +185,7 @@ class TestRateLimitingTweenAnonymous:
             == 'account_recovery'
         )
 
-    @patch('c2corg_api.tweens.rate_limiting._check_anonymous_rate_limit')
+    @patch('c2corg_api.security.rate_limiting._check_anonymous_rate_limit')
     def test_login_is_blocked_when_rate_limited(self, check):
         check.return_value = True
         request = self._make_request('POST', '/users/login')
@@ -195,7 +195,7 @@ class TestRateLimitingTweenAnonymous:
         assert isinstance(error, HTTPTooManyRequests)
         check.assert_called_once_with(request, {}, 'login')
 
-    @patch('c2corg_api.tweens.rate_limiting._check_anonymous_rate_limit')
+    @patch('c2corg_api.security.rate_limiting._check_anonymous_rate_limit')
     def test_login_is_allowed_when_not_rate_limited(self, check):
         check.return_value = False
         request = self._make_request('POST', '/users/login')
@@ -203,14 +203,14 @@ class TestRateLimitingTweenAnonymous:
         assert rate_limit_error(request, {}) is None
         check.assert_called_once()
 
-    @patch('c2corg_api.tweens.rate_limiting._check_anonymous_rate_limit')
+    @patch('c2corg_api.security.rate_limiting._check_anonymous_rate_limit')
     def test_unrelated_anonymous_paths_are_not_rate_limited(self, check):
         request = self._make_request('POST', '/waypoints')
 
         assert rate_limit_error(request, {}) is None
         check.assert_not_called()
 
-    @patch('c2corg_api.tweens.rate_limiting._check_anonymous_rate_limit')
+    @patch('c2corg_api.security.rate_limiting._check_anonymous_rate_limit')
     def test_get_requests_are_never_rate_limited(self, check):
         request = self._make_request('GET', '/users/login')
 

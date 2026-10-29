@@ -23,7 +23,7 @@ class TestCorsOnErrors(BaseTestRest):
         assert response.headers['Access-Control-Expose-Headers'] == 'Content-Type'
 
     def test_invalid_token(self):
-        # 401 from the JWT validation tween
+        # 401 from the token validation (web.auth)
         response = self.app.post_json(
             '/waypoints',
             WAYPOINT,
@@ -33,7 +33,7 @@ class TestCorsOnErrors(BaseTestRest):
         self.assert_cors(response, self.origin)
 
     def test_rate_limited(self):
-        # 429 from the rate limiting tween
+        # 429 from the rate limiting
         user = self.session.get(User, self.global_userids['contributor'])
         user.ratelimit_reset = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
             minutes=5

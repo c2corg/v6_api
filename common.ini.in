@@ -136,7 +136,7 @@ rate_limiting.alert_address = {rate_limiting_alert_address}
 # endpoints: /users/login and /users/request_password_change. These are
 # not tied to a user account (the requester may not even have one yet, or
 # may be trying to guess a password), so they are limited by client IP
-# instead, using Redis (see c2corg_api/tweens/rate_limiting.py).
+# instead, using Redis (see c2corg_api/security/rate_limiting.py).
 # Window timespan in seconds:
 rate_limiting.anonymous_window_span = {rate_limiting_anonymous_window_span}
 # Max number of attempts allowed per IP and per bucket during a window:

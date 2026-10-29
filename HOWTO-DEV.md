@@ -172,6 +172,17 @@ python c2corg_api/scripts/jobs/scheduler.py development.ini
 
 - To check that everything is OK, go to <http://localhost:6543/health> in your browser
 
+## Code layout
+
+The API is a [FastAPI](https://fastapi.tiangolo.com/) application, served by gunicorn through PasteDeploy (`c2corg_api:main`, the settings come from the `.ini` file).
+
+- `c2corg_api/app.py`: the FastAPI application, its middlewares (CORS, token validation, unexpected errors) and the answers to unknown routes and methods.
+- `c2corg_api/web/`: the routes, one module per resource (`documents.py`, `users.py`, `navitia.py`…). They are thin: each one runs a method of a view class through `web/compat.py`, which gives the views the request they expect (`validated`, `errors`, `matchdict`…) and turns what they return or raise into the answer.
+- `c2corg_api/views/`: the view classes and their validators (`views/validation.py`). `@view(...)` in `views/resource.py` declares the validators, permission and content type of a method; the route checks the rate limiting (writes only), then the content type, the permission and the validators, and calls the method.
+- `c2corg_api/schemas/`: the Pydantic schemas of the request bodies; `c2corg_api/models/`: the SQLAlchemy models.
+- `c2corg_api/security/`: tokens (`roles.py`), rate limiting, Discourse client; `c2corg_api/httpexceptions.py`: the HTTP errors the views raise.
+- `c2corg_api/scripts/`: the Elasticsearch syncer, the job scheduler and the maintenance scripts; they read the `.ini` file with `c2corg_api/config.py`.
+
 ## Running tests
 
 - Update the test.ini file:
@@ -198,7 +209,7 @@ pytest
 
 - `routes.txt` lists every route with its methods and permission. After adding, removing or changing a route, regenerate it with `python -m c2corg_api.tests.contract.inventory`.
 - Each contract test sends a request and compares the status, the headers clients rely on (CORS, `Cache-Control`, `ETag`…) and the shape of the JSON body (keys and value types) with a snapshot in `snapshots/`. After an intended change of the API, rewrite the snapshots with `CONTRACT_UPDATE=1 pytest c2corg_api/tests/contract` and review their diff.
-- `pending.txt` lists the routes without a contract test yet. A new route needs a contract test (marked with `@contract(...)`) or a line there.
+- Every route has a contract test (marked with `@contract(...)`); `pending.txt`, empty, would list a route without one. A new route needs its contract test.
 
 ### Load test
 

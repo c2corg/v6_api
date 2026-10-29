@@ -52,7 +52,7 @@ def _require_outcome(request, **kwargs):
 
 
 class TestWrites(BaseTestRest):
-    """The write path of web.compat, as Pyramid with pyramid_tm and its tweens."""
+    """The write path of web.compat: rate limiting, checks, view and transaction."""
 
     def setUp(self):
         super().setUp()

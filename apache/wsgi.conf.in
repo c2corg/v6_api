@@ -6,8 +6,8 @@ WSGIScriptAlias {base_url} {base_dir}/apache/app-c2corg_api.wsgi
 # Required: mod_wsgi strips the `Authorization` header from the WSGI
 # environ by default (it is normally reserved for the web server's own
 # HTTP auth). This API authenticates its own requests using JWT bearer
-# tokens carried in that same header (see c2corg_api/security/jwt_policy.py
-# and the rate limiting tween), so without this directive every
+# tokens carried in that same header (see c2corg_api/web/auth.py and
+# c2corg_api/security/rate_limiting.py), so without this directive every
 # authenticated request would silently look anonymous to the application.
 WSGIPassAuthorization On
 
