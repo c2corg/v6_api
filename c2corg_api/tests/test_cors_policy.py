@@ -1,5 +1,5 @@
 import json
-import subprocess
+import subprocess  # nosec B404 (the Python of the tests, a constant script)
 import sys
 
 # Cornice copies the allowed CORS origins when a @resource is created, that
@@ -24,7 +24,7 @@ print(json.dumps(sorted(
 
 
 def test_every_view_allows_the_configured_origins():
-    result = subprocess.run(
+    result = subprocess.run(  # nosec B603 (sys.executable, a constant script)
         [sys.executable, '-c', SCRIPT],
         capture_output=True,
         text=True,
