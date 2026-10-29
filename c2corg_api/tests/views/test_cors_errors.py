@@ -49,8 +49,8 @@ class TestCorsOnErrors(BaseTestRest):
         self.assert_cors(response, self.origin)
 
     def test_unexpected_error(self):
-        # 500 from the catch-all error view of Pyramid: the routes of the
-        # users stay on Pyramid for now (the others moved to FastAPI, #2365)
+        # 500 of an unexpected error (UnexpectedErrorMiddleware of FastAPI,
+        # as the catch-all error view of Pyramid did)
         with patch('c2corg_api.views.user.try_login', side_effect=RuntimeError('boom')):
             # a dummy password: try_login fails before checking it
             body = {'username': 'contributor', 'password': 'not checked'}  # nosec B105
