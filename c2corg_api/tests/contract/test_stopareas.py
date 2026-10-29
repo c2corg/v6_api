@@ -78,12 +78,15 @@ class TestWaypointStopareas(StopareaContractTest):
 
     @contract(WAYPOINT_STOPAREAS)
     def test_invalid_waypoint_id(self):
-        # the validator raises HTTPBadRequest: its json_body is lost, the
-        # answer is the error of views.http_error_handler
+        # as the other id validators
         response = self.get('/waypoints/abc/stopareas', status=400)
         check_snapshot('waypoint_stopareas_invalid', response)
         assert response.json['errors'] == [
-            {'location': 'body', 'name': 'Bad Request', 'description': None}
+            {
+                'location': 'querystring',
+                'name': 'waypoint_id',
+                'description': 'invalid waypoint_id',
+            }
         ]
 
     @contract(IS_REACHABLE)

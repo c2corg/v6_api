@@ -2,7 +2,7 @@
   "body": {
     "errors": [
       {
-        "description": "null",
+        "description": "str",
         "location": "str",
         "name": "str"
       }
