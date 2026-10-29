@@ -10,17 +10,20 @@ log = logging.getLogger(__name__)
 
 def error_response(errors, status_code=400, headers=None):
     """Return {status: error, errors: [{location, name, description}]}."""
+    # an error is a (location, name, description) tuple, or a dict as Cornice
+    # stores them (a validator may extend the errors with those of Cornice)
     return JSONResponse(
-        {
-            'status': 'error',
-            'errors': [
-                {'location': location, 'name': name, 'description': description}
-                for location, name, description in errors
-            ],
-        },
+        {'status': 'error', 'errors': [_error(error) for error in errors]},
         status_code=status_code,
         headers=headers,
     )
+
+
+def _error(error):
+    if isinstance(error, dict):
+        return dict(error)
+    location, name, description = error
+    return {'location': location, 'name': name, 'description': description}
 
 
 class UnexpectedErrorMiddleware(BaseHTTPMiddleware):

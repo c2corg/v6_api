@@ -111,9 +111,9 @@ class TestCheckAnonymousRateLimit:
         )
         request = self._make_request()
 
-        assert not _check_anonymous_rate_limit(request, registry, 'login')
-        assert not _check_anonymous_rate_limit(request, registry, 'login')
-        assert _check_anonymous_rate_limit(request, registry, 'login')
+        assert not _check_anonymous_rate_limit(request, registry.settings, 'login')
+        assert not _check_anonymous_rate_limit(request, registry.settings, 'login')
+        assert _check_anonymous_rate_limit(request, registry.settings, 'login')
 
     @patch('c2corg_api.tweens.rate_limiting._get_anonymous_rate_limit_redis_client')
     def test_different_ips_are_tracked_independently(self, get_client):
@@ -129,10 +129,10 @@ class TestCheckAnonymousRateLimit:
         request_a = self._make_request('192.0.2.1')
         request_b = self._make_request('192.0.2.2')
 
-        assert not _check_anonymous_rate_limit(request_a, registry, 'login')
+        assert not _check_anonymous_rate_limit(request_a, registry.settings, 'login')
         # request_a is now at the limit, but request_b is a different IP
-        assert not _check_anonymous_rate_limit(request_b, registry, 'login')
-        assert _check_anonymous_rate_limit(request_a, registry, 'login')
+        assert not _check_anonymous_rate_limit(request_b, registry.settings, 'login')
+        assert _check_anonymous_rate_limit(request_a, registry.settings, 'login')
 
     @patch('c2corg_api.tweens.rate_limiting._get_anonymous_rate_limit_redis_client')
     def test_different_buckets_are_tracked_independently(self, get_client):
@@ -146,9 +146,11 @@ class TestCheckAnonymousRateLimit:
         )
         request = self._make_request()
 
-        assert not _check_anonymous_rate_limit(request, registry, 'login')
+        assert not _check_anonymous_rate_limit(request, registry.settings, 'login')
         # a different bucket (account recovery) has its own counter
-        assert not _check_anonymous_rate_limit(request, registry, 'account_recovery')
+        assert not _check_anonymous_rate_limit(
+            request, registry.settings, 'account_recovery'
+        )
 
 
 class TestRateLimitingTweenAnonymous:
