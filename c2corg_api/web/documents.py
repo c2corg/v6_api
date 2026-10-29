@@ -167,6 +167,18 @@ def include(app):
         info_rest=UserProfileInfoRest,
         listing_permission='authenticated',
     )
+    # a GET that writes (the ratings of all the routes, for the moderators):
+    # served as a write, so that it is committed
+    from c2corg_api.views.route import RoutePublicTransportationRatingRest
+
+    for http_method in ('GET', 'HEAD'):
+        include_write(
+            app,
+            '/routes/update_public_transportation_rating',
+            http_method,
+            RoutePublicTransportationRatingRest,
+            'get',
+        )
     # the writes moved to FastAPI
     include_document_writes(app, 'books', BookRest)
     include_document_writes(app, 'articles', ArticleRest)
