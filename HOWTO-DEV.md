@@ -219,6 +219,8 @@ pytest
 python scripts/loadtest.py http://localhost:6543 --threads 8 --duration 60
 ```
 
+For load tests of a staging environment (anonymous and logged-in users, ramp-up, percentiles over time, reports), use the Locust scenarios in [`c2corg_api/scripts/loadtests/`](c2corg_api/scripts/loadtests/README.md).
+
 ## Linting
 
 - Format the code and run the linter (CI checks both; in the devcontainer, VS Code formats on save):
