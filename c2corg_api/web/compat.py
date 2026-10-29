@@ -7,13 +7,11 @@
 # same logic, checks and messages while they move (#2365).
 
 import json
+import re
 
 import transaction
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
-from webob import Response as WebObResponse
-from webob.etag import ETagMatcher, NoETag
-from webob.multidict import MultiDict
 
 from c2corg_api.httpexceptions import HTTPError, HTTPNotModified, HTTPRedirection
 from c2corg_api.models.user import AccountNotValidated
@@ -34,6 +32,29 @@ class _Response:
         self.status = None
 
 
+# an ETag of If-None-Match, weak (W/"...") or strong ("..."), as WebOb read them
+_ETAG = re.compile(r'(?:^|\s)(W/)?"((?:\\"|.)*?)"')
+
+
+class _AnyETag:
+    """If-None-Match: *, which matches any ETag."""
+
+    def __contains__(self, etag):
+        return True
+
+
+def parse_if_none_match(value):
+    """Return the ETags of If-None-Match, weak ones included, as WebOb did."""
+    if value == '*':
+        return _AnyETag()
+    if not value:
+        return ()
+    matches = _ETAG.findall(value)
+    if not matches:
+        return (value,)
+    return tuple(etag for _, etag in matches)
+
+
 class ValidatedRequest:
     """The part of a Pyramid request the view logic uses."""
 
@@ -51,10 +72,7 @@ class ValidatedRequest:
         self.errors = Errors()
         self.response = _Response()
         # as WebOb's request.if_none_match: weak ETags count
-        if_none_match = request.headers.get('If-None-Match')
-        self.if_none_match = (
-            ETagMatcher.parse(if_none_match, strong=False) if if_none_match else NoETag
-        )
+        self.if_none_match = parse_if_none_match(request.headers.get('If-None-Match'))
         self.registry = request.app.state.registry
         self._user = user
         # as WebOb's request.authorization: (type, params), or None
@@ -70,7 +88,7 @@ class ValidatedRequest:
         charset = parameters.strip().partition('charset=')[2]
         self.charset = charset.strip().strip('"') or 'UTF-8'
         # the form fields: the JSON views have none
-        self.POST = MultiDict()
+        self.POST = {}
 
     @property
     def client_addr(self):
@@ -158,13 +176,9 @@ def _call_view(adapted, view):
 
 def _render(adapted, result):
     """Answer what a view returned."""
-    if isinstance(result, WebObResponse):
-        # a response of its own: its body may be a stream (the progress of the
-        # Navitia jobs, text/event-stream)
-        headers = {k: v for k, v in result.headers.items() if k != 'Content-Length'}
-        return StreamingResponse(
-            result.app_iter, status_code=result.status_code, headers=headers
-        )
+    if isinstance(result, Response):
+        # a response of its own: the progress stream of the Navitia jobs
+        return result
     headers = adapted.response.headers
     content_type = adapted.response.content_type
     if content_type is not None:

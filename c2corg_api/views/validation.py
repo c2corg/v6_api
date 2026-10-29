@@ -3,7 +3,6 @@ import urllib
 
 from dateutil import parser as datetime_parser
 from sqlalchemy.sql.expression import and_, exists
-from webob.descriptors import parse_int_safe
 
 from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models import DBSession, article, image
@@ -228,6 +227,16 @@ def validate_body_user_id(request, **kwargs):
 
     if not user_exists:
         request.errors.add('body', 'user_id', f'user {user_id} does not exist')
+
+
+def parse_int_safe(value):
+    """Return the integer of a string, or None (as WebOb's parse_int_safe)."""
+    if value is None or value == '':
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
 
 
 def validate_token(request, **kwargs):

@@ -9,8 +9,8 @@ import uuid
 import redis
 import requests
 import transaction
+from fastapi.responses import StreamingResponse
 from pyproj import Transformer
-from pyramid.response import Response
 from shapely.geometry import Point, shape
 
 from c2corg_api.httpexceptions import (
@@ -211,9 +211,7 @@ class NavitiaJourneyReachableRoutesProgressRest:
         """Monitor progress of job id for journey reachable routes."""
         r = redis_client()
         job_id = self.request.matchdict.get('job_id')
-        return Response(
-            app_iter=progress_stream(r, job_id), content_type='text/event-stream'
-        )
+        return _event_stream(progress_stream(r, job_id))
 
 
 @resource(path='/navitia/journeyreachablewaypoints/progress/{job_id}')
@@ -226,9 +224,7 @@ class NavitiaJourneyReachableWaypointsProgressRest:
         """Monitor progress of job id for journey reachable waypoints."""
         r = redis_client()
         job_id = self.request.matchdict.get('job_id')
-        return Response(
-            app_iter=progress_stream(r, job_id), content_type='text/event-stream'
-        )
+        return _event_stream(progress_stream(r, job_id))
 
 
 def compute_journey_reachable_routes(job_id, request):
@@ -876,6 +872,11 @@ def read_result_from_redis(r, job_id):
             return {'status': 'error', 'message': 'missing_result'}
         return {'status': 'done', 'result': json.loads(data)}
     return {'error': 'unknown_status', 'status': status}
+
+
+def _event_stream(events):
+    """Answer the events of a generator as a stream (text/event-stream)."""
+    return StreamingResponse(events, media_type='text/event-stream; charset=UTF-8')
 
 
 def progress_stream(r, job_id, poll_interval=0.5, max_duration=STREAM_MAX_DURATION):
