@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from c2corg_api.models.user import User
 from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_users import UserContractTest
 
@@ -77,6 +78,23 @@ class TestRegistrationWrites(UserContractTest):
             status=400,
         )
         check_snapshot('users_request_password_change_unknown', response)
+
+    @contract(('POST', '/users/request_password_change'))
+    def test_password_change_of_an_account_not_validated(self):
+        user = self.session.get(User, self.global_userids['contributor2'])
+        user.email_validated = False
+        self.session.flush()
+        response = self.post(
+            '/users/request_password_change', {'email': user.email}, status=400
+        )
+        check_snapshot('users_request_password_change_not_validated', response)
+        assert response.json['errors'] == [
+            {
+                'location': 'body',
+                'name': 'Error',
+                'description': ['Account not validated yet'],
+            }
+        ]
 
     @contract(
         ('POST', '/users/validate_register_email/{nonce}'),
