@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from starlette.routing import Match
 
 from c2corg_api.web import (
+    document_actions,
     documents,
     feeds,
     health,
@@ -47,6 +48,7 @@ def create_fastapi_app(settings):
     users.include(app)
     navitia.include(app)
     user_actions.include(app)
+    document_actions.include(app)
     return app
 
 

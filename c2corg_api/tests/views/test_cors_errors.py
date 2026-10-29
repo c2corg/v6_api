@@ -49,15 +49,14 @@ class TestCorsOnErrors(BaseTestRest):
         self.assert_cors(response, self.origin)
 
     def test_unexpected_error(self):
-        # 500 from the catch-all error view of Pyramid: the writes stay on
-        # Pyramid for now (the GET routes moved to FastAPI, #2365)
-        with patch(
-            'c2corg_api.views.coverage.get_coverages',
-            side_effect=RuntimeError('boom'),
-        ):
+        # 500 from the catch-all error view of Pyramid: the routes of the
+        # users stay on Pyramid for now (the others moved to FastAPI, #2365)
+        with patch('c2corg_api.views.user.try_login', side_effect=RuntimeError('boom')):
+            # a dummy password: try_login fails before checking it
+            body = {'username': 'contributor', 'password': 'not checked'}  # nosec B105
             response = self.app.post_json(
-                '/getpolygoncoverage',
-                {'geom_detail': '{"type": "Point", "coordinates": [6, 45]}'},
+                '/users/login',
+                body,
                 headers={'Origin': self.origin},
                 status=500,
             )
