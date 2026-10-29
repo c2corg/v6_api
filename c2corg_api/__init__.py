@@ -15,7 +15,6 @@ from c2corg_api.models.route import Route
 from c2corg_api.search import configure_es_from_config, get_queue_config
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import configure_cors_policy
-from c2corg_api.views.navitia import configure_jobs_redis
 
 log = logging.getLogger(__name__)
 
@@ -71,15 +70,20 @@ def main(global_config, **settings):
     else:
         log.warning('Bypassing authorization')
 
+    # Must happen before any view module is imported: Cornice captures the
+    # allowed CORS origins from `c2corg_api.views.cors_policy` when each
+    # `@resource` is created, which is a side effect of importing its module
+    # (by the scan below, or by an import like the one of views.navitia).
+    configure_cors_policy(settings)
+
     configure_caches(settings)
+    # imported here, after configure_cors_policy: views.navitia imports view
+    # modules (route, waypoint, coverage...)
+    from c2corg_api.views.navitia import configure_jobs_redis
+
     configure_jobs_redis(settings)
     configure_feed(settings, config)
     configure_anonymous(settings, config)
-
-    # Must happen before `config.scan()`: Cornice captures the allowed CORS
-    # origins from `c2corg_api.views.cors_policy` when each view module is
-    # imported, which is a side effect of the scan below.
-    configure_cors_policy(settings)
 
     # Scan MUST be the last call otherwise ACLs will not be set
     # and the permissions would be bypassed
