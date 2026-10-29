@@ -1,6 +1,6 @@
-from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.sql.expression import exists
 
+from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import (
     Association,

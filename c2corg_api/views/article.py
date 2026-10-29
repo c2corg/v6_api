@@ -1,7 +1,6 @@
 import functools
 
-from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
-
+from c2corg_api.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
 from c2corg_api.models import DBSession
 from c2corg_api.models.article import (
     ARTICLE_TYPE,

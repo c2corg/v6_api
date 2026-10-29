@@ -1,9 +1,9 @@
 import unittest
 from unittest.mock import patch
 
-from pyramid.httpexceptions import HTTPTooManyRequests
 from pyramid.testing import DummyRequest
 
+from c2corg_api.httpexceptions import HTTPTooManyRequests
 from c2corg_api.tweens.rate_limiting import (
     ANONYMOUS_RATE_LIMITED_BUCKETS,
     _check_anonymous_rate_limit,

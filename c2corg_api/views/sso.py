@@ -5,10 +5,10 @@ from os import urandom
 from urllib.parse import urlencode
 
 from pydiscourse.exceptions import DiscourseClientError
-from pyramid.httpexceptions import (
+
+from c2corg_api.httpexceptions import (
     HTTPInternalServerError,
 )
-
 from c2corg_api.models import DBSession
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.document import DocumentLocale

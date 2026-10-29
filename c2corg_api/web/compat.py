@@ -10,13 +10,12 @@ import json
 
 import transaction
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-from pyramid.httpexceptions import HTTPError, HTTPNotModified, HTTPRedirection
 from starlette.concurrency import run_in_threadpool
-from webob import Request as WebObRequest
 from webob import Response as WebObResponse
 from webob.etag import ETagMatcher, NoETag
 from webob.multidict import MultiDict
 
+from c2corg_api.httpexceptions import HTTPError, HTTPNotModified, HTTPRedirection
 from c2corg_api.models.user import AccountNotValidated
 from c2corg_api.views.resource import Errors
 from c2corg_api.web.auth import parse_authorization
@@ -129,7 +128,7 @@ def validate_query(request, *validators, user=None):
 
 
 def run_view(adapted, view):
-    """Call a view, and turn its Pyramid HTTP exceptions into answers."""
+    """Call a view, and turn the HTTP exceptions it raises into answers."""
     try:
         result = _call_view(adapted, view)
     except HTTPNotModified as e:
@@ -184,10 +183,14 @@ def _render(adapted, result):
 
 
 def _redirection(e):
-    """Answer a Pyramid redirection with its status, headers and text body."""
-    rendered = WebObRequest.blank('/').get_response(e)
-    headers = {k: v for k, v in rendered.headers.items() if k != 'Content-Length'}
-    return Response(rendered.body, status_code=rendered.status_code, headers=headers)
+    """Answer a redirection with its status, headers and text body."""
+    # the text body of WebOb, which answered the redirections of Pyramid
+    body = (
+        f'{e.code} {e.title}\n\nThe resource was found at {e.location}; '
+        'you should be redirected automatically.\n\n'
+    )
+    headers = {**e.headers, 'Content-Type': 'text/plain; charset=UTF-8'}
+    return Response(body, status_code=e.code, headers=headers)
 
 
 def _account_not_validated(e):
@@ -199,7 +202,7 @@ def _account_not_validated(e):
 
 
 def _http_error(e):
-    """Answer a Pyramid HTTP error like views.http_error_handler."""
+    """Answer an HTTP error as Pyramid did: its title and detail."""
     return error_response([('body', e.title, e.detail)], e.code)
 
 

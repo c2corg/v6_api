@@ -6,13 +6,13 @@ import math
 import re
 
 from geoalchemy2 import WKBElement
-from pyramid.httpexceptions import (
-    HTTPNotModified,
-)
 from sqlalchemy.inspection import inspect
 from sqlalchemy.sql.functions import func
 
 from c2corg_api.ext.wkb import geojson_from_wkbelement
+from c2corg_api.httpexceptions import (
+    HTTPNotModified,
+)
 from c2corg_api.models import DBSession
 from c2corg_api.models.common.attributes import langs_priority
 from c2corg_api.models.document import DocumentGeometry

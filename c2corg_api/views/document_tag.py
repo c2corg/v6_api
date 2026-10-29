@@ -1,8 +1,7 @@
 import logging
 
-from pyramid.httpexceptions import HTTPBadRequest
-
 from c2corg_api import DBSession
+from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models.document import Document
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.route import ROUTE_TYPE

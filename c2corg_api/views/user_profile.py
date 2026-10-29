@@ -1,6 +1,6 @@
-from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
 from sqlalchemy.orm import load_only
 
+from c2corg_api.httpexceptions import HTTPForbidden, HTTPNotFound
 from c2corg_api.models import DBSession
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile

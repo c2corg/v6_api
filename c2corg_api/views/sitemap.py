@@ -3,11 +3,11 @@ import logging
 from datetime import UTC, datetime
 from math import ceil
 
-from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy.sql.functions import func
 
 from c2corg_api import DBSession, caching
 from c2corg_api.caching import cache_sitemap, get_or_create
+from c2corg_api.httpexceptions import HTTPNotFound
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.route import ROUTE_TYPE, RouteLocale

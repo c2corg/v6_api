@@ -10,7 +10,10 @@ import redis
 import requests
 import transaction
 from pyproj import Transformer
-from pyramid.httpexceptions import (
+from pyramid.response import Response
+from shapely.geometry import Point, shape
+
+from c2corg_api.httpexceptions import (
     HTTPBadRequest,
     HTTPException,
     HTTPInternalServerError,
@@ -18,9 +21,6 @@ from pyramid.httpexceptions import (
     HTTPTooManyRequests,
     HTTPUnauthorized,
 )
-from pyramid.response import Response
-from shapely.geometry import Point, shape
-
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import Area
 from c2corg_api.models.waypoint import Waypoint

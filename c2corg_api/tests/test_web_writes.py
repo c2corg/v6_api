@@ -2,8 +2,8 @@ from typing import Annotated
 from unittest.mock import patch
 
 from fastapi import Depends, Request
-from pyramid.httpexceptions import HTTPBadRequest
 
+from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models import DBSession
 from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest

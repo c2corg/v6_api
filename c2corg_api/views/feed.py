@@ -1,11 +1,11 @@
 from collections import defaultdict
 from urllib import parse as urllib_parse
 
-from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
 from sqlalchemy.orm import load_only, undefer
 from sqlalchemy.sql.expression import and_, or_
 from sqlalchemy.sql.functions import func
 
+from c2corg_api.httpexceptions import HTTPForbidden, HTTPNotFound
 from c2corg_api.models import DBSession
 from c2corg_api.models.feed import DocumentChange, FilterArea, FollowedUser
 from c2corg_api.models.image import IMAGE_TYPE

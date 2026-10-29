@@ -1,8 +1,7 @@
 import functools
 from datetime import UTC, datetime, timedelta
 
-from pyramid.httpexceptions import HTTPForbidden
-
+from c2corg_api.httpexceptions import HTTPForbidden
 from c2corg_api.models.common.attributes import activities
 from c2corg_api.models.common.fields_outing import fields_outing
 from c2corg_api.models.outing import (

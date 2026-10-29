@@ -1,7 +1,6 @@
 import functools
 
-from pyramid.httpexceptions import HTTPBadRequest
-
+from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models.area import (
     AREA_TYPE,
     ArchiveArea,

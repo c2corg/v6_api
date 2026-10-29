@@ -2,10 +2,9 @@ import datetime
 import logging
 from smtplib import SMTPAuthenticationError
 
-from pyramid.httpexceptions import HTTPBadRequest, HTTPTooManyRequests
-
 from c2corg_api.caching import cache_document_detail
 from c2corg_api.emails.email_service import get_email_service
+from c2corg_api.httpexceptions import HTTPBadRequest, HTTPTooManyRequests
 from c2corg_api.models import DBSession
 from c2corg_api.models.user import User
 

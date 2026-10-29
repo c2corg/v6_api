@@ -2,14 +2,14 @@ import functools
 import os
 
 import requests
-from pyramid.httpexceptions import (
+
+from c2corg_api.httpexceptions import (
     HTTPBadRequest,
     HTTPForbidden,
     HTTPFound,
     HTTPInternalServerError,
     HTTPNotFound,
 )
-
 from c2corg_api.models import DBSession
 from c2corg_api.models.common.fields_image import fields_image
 from c2corg_api.models.document import ArchiveDocumentLocale

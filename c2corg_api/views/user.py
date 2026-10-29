@@ -4,11 +4,11 @@ import re
 from functools import partial
 
 import requests
-from pyramid.httpexceptions import HTTPForbidden, HTTPInternalServerError
 from pyramid.settings import asbool
 from sqlalchemy.sql.expression import and_, func
 
 from c2corg_api.emails.email_service import get_email_service
+from c2corg_api.httpexceptions import HTTPForbidden, HTTPInternalServerError
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.user import Purpose, User

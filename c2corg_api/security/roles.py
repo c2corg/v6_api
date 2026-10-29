@@ -2,10 +2,10 @@ import datetime
 import logging
 
 import jwt as pyjwt
-from pyramid.httpexceptions import HTTPForbidden
 from pyramid.security import Authenticated
 from sqlalchemy import and_
 
+from c2corg_api.httpexceptions import HTTPForbidden
 from c2corg_api.models import DBSession
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User

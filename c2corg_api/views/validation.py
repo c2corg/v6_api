@@ -2,10 +2,10 @@ import functools
 import urllib
 
 from dateutil import parser as datetime_parser
-from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.sql.expression import and_, exists
 from webob.descriptors import parse_int_safe
 
+from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.article import ARTICLE_TYPE

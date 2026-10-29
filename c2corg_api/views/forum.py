@@ -1,7 +1,6 @@
 import logging
 
-from pyramid.httpexceptions import HTTPInternalServerError
-
+from c2corg_api.httpexceptions import HTTPInternalServerError
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association, association_keys_for_types
 from c2corg_api.models.cache_version import update_cache_version_direct

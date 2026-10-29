@@ -1,12 +1,6 @@
 import logging
 from functools import partial
 
-from pyramid.httpexceptions import (
-    HTTPBadRequest,
-    HTTPConflict,
-    HTTPForbidden,
-    HTTPNotFound,
-)
 from sqlalchemy.orm import contains_eager, joinedload, load_only, with_polymorphic
 from sqlalchemy.orm.exc import StaleDataError
 
@@ -15,6 +9,12 @@ from c2corg_api.caching import (
     cache_document_cooked,
     cache_document_detail,
     get_or_create,
+)
+from c2corg_api.httpexceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPForbidden,
+    HTTPNotFound,
 )
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE

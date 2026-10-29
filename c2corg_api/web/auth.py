@@ -13,10 +13,10 @@ from dataclasses import dataclass
 
 import jwt
 from fastapi import Request
-from pyramid.httpexceptions import HTTPForbidden
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from c2corg_api.httpexceptions import HTTPForbidden
 from c2corg_api.models.user import User
 from c2corg_api.security.jwt_policy import _TOKEN_RE
 from c2corg_api.security.roles import is_valid_token

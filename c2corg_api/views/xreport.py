@@ -1,7 +1,6 @@
 import functools
 
-from pyramid.httpexceptions import HTTPForbidden
-
+from c2corg_api.httpexceptions import HTTPForbidden
 from c2corg_api.models.common.fields_xreport import fields_xreport
 from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.xreport import (

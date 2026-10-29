@@ -1,9 +1,9 @@
 import logging
 
-from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.sql.expression import and_, exists
 
 from c2corg_api import DBSession
+from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.document_history import DocumentVersion

@@ -1,10 +1,10 @@
 import logging
 
-from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.orm import contains_eager, joinedload, with_polymorphic
 from sqlalchemy.sql.expression import and_, exists
 
 from c2corg_api import DBSession
+from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models.area import AREA_TYPE, ArchiveArea, Area
 from c2corg_api.models.article import ARTICLE_TYPE, ArchiveArticle, Article
 from c2corg_api.models.book import BOOK_TYPE, ArchiveBook, Book

@@ -1,8 +1,7 @@
 import logging
 
-from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError
-
 from c2corg_api import DBSession
+from c2corg_api.httpexceptions import HTTPBadRequest, HTTPInternalServerError
 from c2corg_api.models.user import User
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int

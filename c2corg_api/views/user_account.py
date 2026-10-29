@@ -1,10 +1,9 @@
 import logging
 from functools import partial
 
-from pyramid.httpexceptions import HTTPInternalServerError
-
 from c2corg_api import DBSession
 from c2corg_api.emails.email_service import get_email_service
+from c2corg_api.httpexceptions import HTTPInternalServerError
 from c2corg_api.models.cache_version import update_cache_version
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.user import Purpose, User
