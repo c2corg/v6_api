@@ -1,5 +1,3 @@
-from pyramid.threadlocal import get_current_registry
-
 from c2corg_api.markdown import parse_code
 from c2corg_api.markdown.img import IMG_ID_RE, make_image_url_resolver
 from c2corg_api.models.image import get_image_filenames
@@ -17,6 +15,15 @@ NOT_MARKDOWN_PROPERTY = {
 
 # document ids are postgres integers, larger values can't be queried
 _MAX_DOCUMENT_ID = 2**31 - 1
+
+# the URL of the image server (setting image_url), set by the application
+_image_url = None
+
+
+def configure_image_url(settings):
+    """Link the images of the cooked HTML to the image server, if configured."""
+    global _image_url
+    _image_url = settings.get('image_url') or None
 
 
 def cook(data):
@@ -45,9 +52,7 @@ def _get_image_url_resolver(data):
     if not image_ids:
         return None
 
-    settings = get_current_registry().settings or {}
-    base_url = settings.get('image_url')
-    if not base_url:
+    if not _image_url:
         return None
 
-    return make_image_url_resolver(base_url, get_image_filenames(image_ids))
+    return make_image_url_resolver(_image_url, get_image_filenames(image_ids))

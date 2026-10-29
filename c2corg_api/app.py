@@ -1,11 +1,13 @@
-"""The WSGI application: FastAPI for the routes moved to it, Pyramid for the others."""
-# The routes move from Pyramid to FastAPI one resource at a time (#2365).
-# Meanwhile the server is unchanged (gunicorn sync workers, PasteDeploy): the
-# FastAPI application runs behind an ASGI-to-WSGI bridge, and the dispatcher
-# sends each request to the application that has its route.
+"""The WSGI application of the API: the FastAPI application."""
+# The server is unchanged (gunicorn sync workers, PasteDeploy) until #2449:
+# the FastAPI application runs behind an ASGI-to-WSGI bridge.
+
+import re
 
 from a2wsgi import ASGIMiddleware
 from fastapi import FastAPI
+from fastapi.routing import APIRoute
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import Match
 
 from c2corg_api.web import (
@@ -24,14 +26,30 @@ from c2corg_api.web import (
 )
 from c2corg_api.web.auth import TokenValidationMiddleware
 from c2corg_api.web.cors import CorsMiddleware
-from c2corg_api.web.errors import UnexpectedErrorMiddleware
+from c2corg_api.web.errors import UnexpectedErrorMiddleware, error_response
 
 
-def create_fastapi_app(settings):
-    """Return the FastAPI application, with the routes moved to it."""
-    # no generated docs: the API documentation is not served (yet)
-    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+class Registry:
+    """The settings and the configuration the views read (request.registry)."""
+
+    def __init__(self, settings, **attributes):
+        self.settings = settings
+        # queue_config, feed_admin_user_account_id, anonymous_user_id
+        for name, value in attributes.items():
+            setattr(self, name, value)
+
+
+def create_fastapi_app(settings, registry=None):
+    """Return the FastAPI application of the API."""
+    # no generated docs: the API documentation is not served (yet); no
+    # redirection of a path with a trailing slash: it is not found, as on
+    # Pyramid
+    app = FastAPI(
+        docs_url=None, redoc_url=None, openapi_url=None, redirect_slashes=False
+    )
     app.state.settings = settings
+    app.state.registry = registry or Registry(settings)
+    app.add_exception_handler(StarletteHTTPException, _http_exception)
     # the last middleware added runs first: CORS wraps the token errors and
     # the unexpected errors
     app.add_middleware(UnexpectedErrorMiddleware)
@@ -49,58 +67,77 @@ def create_fastapi_app(settings):
     navitia.include(app)
     user_actions.include(app)
     document_actions.include(app)
+    _include_non_numeric_ids(app)
     return app
 
 
-class Dispatcher:
-    """WSGI application sending each request to FastAPI or to Pyramid."""
+async def _http_exception(request, exc):
+    """Answer an unknown route (404) or method (405) like Pyramid did."""
+    # Pyramid: the path as description of a 404; Cornice: no description
+    # for a 405
+    description = request.url.path if exc.status_code == 404 else None
+    return error_response(
+        [('body', _REASONS.get(exc.status_code, exc.detail), description)],
+        exc.status_code,
+    )
 
-    def __init__(self, fastapi_app, pyramid_app, fastapi_enabled=True):
+
+_REASONS = {404: 'Not Found', 405: 'Method Not Allowed'}
+
+
+class _NonNumericIdRoute(APIRoute):
+    """A route with ids that are not numbers: its validators refuse them."""
+
+    # Pyramid matched any id and the validators answered 400 'invalid id'.
+    # The routes match numbers only ({id:int}), so that a fixed path such as
+    # /routes/update_public_transportation_rating is not taken for an id.
+    # This copy, added after every other route, gives the other ids to the
+    # same endpoint, unless a fixed path matches (any method: 405 then).
+
+    fixed_routes = ()
+
+    def matches(self, scope):
+        match, child_scope = super().matches(scope)
+        if match != Match.NONE and any(
+            route.matches(scope)[0] != Match.NONE for route in self.fixed_routes
+        ):
+            return Match.NONE, {}
+        return match, child_scope
+
+
+_INT_PARAM = re.compile(r'{(\w+):int}')
+
+
+def _include_non_numeric_ids(app):
+    numeric = [
+        r
+        for r in app.router.routes
+        if isinstance(r, APIRoute) and _INT_PARAM.search(r.path)
+    ]
+    fixed = [
+        r for r in app.router.routes if isinstance(r, APIRoute) and '{' not in r.path
+    ]
+    for route in numeric:
+        copy = _NonNumericIdRoute(
+            _INT_PARAM.sub(r'{\1}', route.path),
+            route.endpoint,
+            methods=route.methods,
+        )
+        copy.fixed_routes = fixed
+        app.router.routes.append(copy)
+
+
+class Application:
+    """The WSGI application: the FastAPI application behind a bridge."""
+
+    def __init__(self, fastapi_app):
         self.fastapi_app = fastapi_app
-        self.pyramid_app = pyramid_app
-        # false (setting fastapi.enabled): Pyramid answers every request it
-        # has a route for, FastAPI only those it is alone to serve (/health,
-        # /search); a way back to Pyramid without a new image
-        self.fastapi_enabled = fastapi_enabled
-        # the moved views read some of its attributes (see web.compat)
-        fastapi_app.state.pyramid_registry = getattr(pyramid_app, 'registry', None)
-        self._fastapi_wsgi = ASGIMiddleware(fastapi_app)
+        self._wsgi = ASGIMiddleware(fastapi_app)
 
     @property
     def registry(self):
-        """The Pyramid registry (settings, queue configuration...)."""
-        return self.pyramid_app.registry
-
-    def handles(self, environ):
-        """Tell whether FastAPI has the route of a request (path and method)."""
-        method = environ['REQUEST_METHOD']
-        path = environ.get('PATH_INFO') or '/'
-        if not self.fastapi_enabled and self._pyramid_has(path):
-            return False
-        if method == 'OPTIONS':
-            # a CORS preflight goes where the request it announces will go,
-            # or to FastAPI if only FastAPI knows the path (it then answers
-            # that the method is not allowed)
-            requested = environ.get('HTTP_ACCESS_CONTROL_REQUEST_METHOD')
-            match = self._fastapi_match(path, requested or method)
-            return match == Match.FULL or (
-                match == Match.PARTIAL and not self._pyramid_has(path)
-            )
-        # a partial match is the right path with another method: that method
-        # may still be served by Pyramid
-        return self._fastapi_match(path, method) == Match.FULL
-
-    def _fastapi_match(self, path, method):
-        scope = {'type': 'http', 'path': path, 'root_path': '', 'method': method}
-        matches = [route.matches(scope)[0] for route in self.fastapi_app.router.routes]
-        return max(matches, key=lambda m: m.value, default=Match.NONE)
-
-    def _pyramid_has(self, path):
-        mapper = getattr(self.pyramid_app, 'routes_mapper', None)
-        if mapper is None:
-            return True
-        return any(route.match(path) is not None for route in mapper.get_routes())
+        """The settings and configuration (queue_config...)."""
+        return self.fastapi_app.state.registry
 
     def __call__(self, environ, start_response):
-        app = self._fastapi_wsgi if self.handles(environ) else self.pyramid_app
-        return app(environ, start_response)
+        return self._wsgi(environ, start_response)

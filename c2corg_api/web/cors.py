@@ -39,13 +39,17 @@ class CorsMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request, call_next):
         origin = request.headers.get('Origin')
-        if request.method == 'OPTIONS':
+        preflight = request.method == 'OPTIONS' and _route_methods(
+            request.app, request.url.path
+        )
+        if preflight:
             response = self._preflight(request, origin)
         else:
             response = await call_next(request)
             if origin and origin_allowed(origin):
                 response.headers['Access-Control-Allow-Origin'] = origin
-        if request.method != 'OPTIONS':
+        if not preflight:
+            # also on the 404 of a preflight to an unknown path
             response.headers['Access-Control-Expose-Headers'] = ', '.join(
                 SUPPORTED_HEADERS
             )

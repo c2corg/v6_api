@@ -11,7 +11,6 @@ import json
 import transaction
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pyramid.httpexceptions import HTTPError, HTTPNotModified, HTTPRedirection
-from pyramid.threadlocal import manager
 from starlette.concurrency import run_in_threadpool
 from webob import Request as WebObRequest
 from webob import Response as WebObResponse
@@ -45,19 +44,6 @@ class _Response:
         self.status = None
 
 
-class _Registry:
-    """The settings, and the attributes of the Pyramid registry."""
-
-    def __init__(self, settings, pyramid_registry=None):
-        self.settings = settings
-        self._pyramid_registry = pyramid_registry
-
-    def __getattr__(self, name):
-        if self._pyramid_registry is None:
-            raise AttributeError(name)
-        return getattr(self._pyramid_registry, name)
-
-
 class ValidatedRequest:
     """The part of a Pyramid request the view logic uses."""
 
@@ -79,10 +65,7 @@ class ValidatedRequest:
         self.if_none_match = (
             ETagMatcher.parse(if_none_match, strong=False) if if_none_match else NoETag
         )
-        self.registry = _Registry(
-            request.app.state.settings,
-            getattr(request.app.state, 'pyramid_registry', None),
-        )
+        self.registry = request.app.state.registry
         self._user = user
         # as WebOb's request.authorization: (type, params), or None
         self.authorization = parse_authorization(request.headers.get('Authorization'))
@@ -175,22 +158,12 @@ def run_view(adapted, view):
 
 
 def _call_view(adapted, view):
-    """Call a view, with the Pyramid registry in the thread locals."""
-    # Some code reads the Pyramid registry from the thread locals
-    # (get_current_registry(), e.g. the image URLs of the markdown cooker):
-    # set it for the view, as Pyramid does for its own requests.
-    registry = adapted.registry._pyramid_registry
-    if registry is not None:
-        manager.push({'registry': registry, 'request': None})
-    try:
-        result = view()
-        if isinstance(result, HTTPRedirection):
-            # returned, not raised (the image proxy)
-            raise result
-        return result
-    finally:
-        if registry is not None:
-            manager.pop()
+    """Call a view, and raise the redirection it may return."""
+    result = view()
+    if isinstance(result, HTTPRedirection):
+        # returned, not raised (the image proxy)
+        raise result
+    return result
 
 
 def _render(adapted, result):

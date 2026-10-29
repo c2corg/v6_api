@@ -83,9 +83,9 @@ def wsgi_app(test_database):
 @pytest.fixture
 def client(wsgi_app):
     """Return the HTTP client the tests use to call the API."""
-    # Today a WebTest TestApp around the Pyramid application. This is the
-    # single place to swap in another client (e.g. an adapter over FastAPI's
-    # TestClient with the same interface) when the web framework changes.
+    # A WebTest TestApp around the WSGI application. This is the single place
+    # to swap in another client (e.g. an adapter over FastAPI's TestClient
+    # with the same interface) when the server changes (#2449).
     from webtest import TestApp
 
     return TestApp(wsgi_app)

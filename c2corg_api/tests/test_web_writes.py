@@ -62,8 +62,7 @@ class TestWrites(BaseTestRest):
         DBSession.remove()
         self.session_factory_kw = dict(DBSession.session_factory.kw)
         DBSession.configure(join_transaction_mode='create_savepoint')
-        dispatcher = self.app.app
-        self.fastapi_app = dispatcher.fastapi_app
+        self.fastapi_app = self.app.app.fastapi_app
 
         async def endpoint(
             request: Request,

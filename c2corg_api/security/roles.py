@@ -3,7 +3,6 @@ import logging
 
 import jwt as pyjwt
 from pyramid.httpexceptions import HTTPForbidden
-from pyramid.interfaces import IAuthenticationPolicy
 from pyramid.security import Authenticated
 from sqlalchemy import and_
 
@@ -108,25 +107,28 @@ def log_validated_user_i_know_what_i_do(user, request):
     if user.blocked:
         raise HTTPForbidden('account blocked')
 
-    policy = request.registry.queryUtility(IAuthenticationPolicy)
     now = datetime.datetime.now(datetime.UTC)
     exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
     claims = create_claims(user, exp)
-    token = pyjwt.encode(claims, key=policy.private_key, algorithm=policy.algorithm)
+    token = _encode(claims, request)
     return add_or_retrieve_token(token, exp, user.id)
+
+
+def _encode(claims, request):
+    """Sign the claims of a token with the key of the settings."""
+    return pyjwt.encode(
+        claims, key=request.registry.settings['jwt.private_key'], algorithm='HS256'
+    )
 
 
 def renew_token(user, request):
     old_token = extract_token(request)
 
     if is_valid_token(old_token):
-        policy = request.registry.queryUtility(IAuthenticationPolicy)
         now = datetime.datetime.now(datetime.UTC)
         exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
         claims = create_claims(user, exp)
-        token_value = pyjwt.encode(
-            claims, key=policy.private_key, algorithm=policy.algorithm
-        )
+        token_value = _encode(claims, request)
         return add_or_retrieve_token(token_value, exp, user.id)
 
     return None

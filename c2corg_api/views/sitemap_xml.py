@@ -5,8 +5,6 @@ from math import ceil
 
 from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPNotFound
-from pyramid.interfaces import IRendererFactory
-from pyramid.renderers import string_renderer_factory
 from slugify import slugify
 from sqlalchemy.sql.functions import func
 
@@ -42,24 +40,6 @@ UI_ENTRY_POINTS = {
 }
 
 validate_page = create_int_validator('i')
-
-
-def render_errors(request):
-    """Return an HTTPError with the given status and message.
-
-    Patch :func:`pyramid.renderers.string_renderer_factory` to add
-    a ``render_errors`` callable
-    expected by :meth:`cornice.service.Service.default_error_handler`.
-    """
-    # the errors of the JSON routes, without the request headers
-    cornicejson = request.registry.queryUtility(
-        IRendererFactory,
-        name='cornicejson',
-    )
-    return cornicejson.render_errors(request)
-
-
-string_renderer_factory.render_errors = render_errors
 
 
 @resource(

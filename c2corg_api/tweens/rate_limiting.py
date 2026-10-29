@@ -8,7 +8,6 @@ from c2corg_api.caching import cache_document_detail
 from c2corg_api.emails.email_service import get_email_service
 from c2corg_api.models import DBSession
 from c2corg_api.models.user import User
-from c2corg_api.views import http_error_handler
 
 log = logging.getLogger(__name__)
 
@@ -118,9 +117,8 @@ def _check_anonymous_rate_limit(request, settings, bucket):
 
 def rate_limit_error(request, settings):
     """Return the error answering a write request over its rate limit, or None."""
-    # Pyramid (the tween below) and FastAPI (web.compat) both call it, in the
-    # transaction of the request: the counters it updates are committed with
-    # the request, also when it answers an error.
+    # web.compat calls it in the transaction of the request: the counters it
+    # updates are committed with the request, also when it answers an error.
     # Only write requests are considered for rate limiting.
     if request.method not in ['POST', 'PUT', 'DELETE']:
         return None
@@ -131,7 +129,6 @@ def rate_limit_error(request, settings):
             request, settings, bucket
         ):
             return HTTPTooManyRequests('Rate limit reached')
-        # See comment of similar block in jwt_database_validation tween
         return None
 
     user = DBSession.get(User, request.authenticated_userid)
@@ -186,16 +183,3 @@ def rate_limit_error(request, settings):
         return HTTPTooManyRequests('Rate limit reached')
 
     return None
-
-
-def rate_limiting_tween_factory(handler, registry):
-    """Add a rate limiting protection on write requests."""
-
-    def tween(request):
-        log.debug('RATE LIMITING FOR METHOD ' + request.method)
-        error = rate_limit_error(request, registry.settings)
-        if error is not None:
-            return http_error_handler(error, request)
-        return handler(request)
-
-    return tween
