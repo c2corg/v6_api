@@ -1,5 +1,4 @@
 from cornice.resource import resource, view
-from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy import exists, func
 
 from c2corg_api.models import DBSession
@@ -44,11 +43,11 @@ class WaypointStopareaInfoRest(DocumentInfoRest):
 
 
 def validate_waypoint_id(request, *args, **kwargs):
-    """Check if waypoint_stoparea_id is valid."""
+    """Check that the waypoint id is a number, as the other id validators."""
     try:
         request.matchdict['waypoint_id'] = int(request.matchdict['waypoint_id'])
-    except (KeyError, ValueError) as e:
-        raise HTTPBadRequest(json_body={'error': 'Invalid waypoint_id'}) from e
+    except KeyError, ValueError:
+        request.errors.add('querystring', 'waypoint_id', 'invalid waypoint_id')
 
 
 @resource(path='/waypoints/{waypoint_id}/stopareas', cors_policy=cors_policy)
