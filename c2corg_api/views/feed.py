@@ -1,7 +1,6 @@
 from collections import defaultdict
 from urllib import parse as urllib_parse
 
-from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
 from sqlalchemy.orm import load_only, undefer
 from sqlalchemy.sql.expression import and_, or_
@@ -13,9 +12,10 @@ from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_view
+from c2corg_api.views import restricted_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import document_configs
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import (
     validate_preferred_lang_param,
     validate_token_pagination,
@@ -26,7 +26,7 @@ DEFAULT_PAGE_LIMIT = 10
 MAX_PAGE_LIMIT = 50
 
 
-@resource(path='/feed', cors_policy=cors_policy)
+@resource(path='/feed')
 class FeedRest(ACLDefault):
     @view(validators=[validate_preferred_lang_param, validate_token_pagination])
     def get(self):
@@ -61,7 +61,7 @@ class FeedRest(ACLDefault):
         return load_feed(changes, lang)
 
 
-@resource(path='/personal-feed', cors_policy=cors_policy)
+@resource(path='/personal-feed')
 class PersonalFeedRest(ACLDefault):
     @restricted_view(
         validators=[validate_preferred_lang_param, validate_token_pagination]
@@ -84,7 +84,7 @@ class PersonalFeedRest(ACLDefault):
         return load_feed(changes, lang)
 
 
-@resource(path='/profile-feed', cors_policy=cors_policy)
+@resource(path='/profile-feed')
 class ProfileFeedRest(ACLDefault):
     @view(
         validators=[

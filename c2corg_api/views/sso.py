@@ -4,7 +4,6 @@ from datetime import UTC, datetime, timedelta
 from os import urandom
 from urllib.parse import urlencode
 
-from cornice.resource import resource, view
 from pydiscourse.exceptions import DiscourseClientError
 from pyramid.httpexceptions import (
     HTTPInternalServerError,
@@ -25,9 +24,9 @@ from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import log_validated_user_i_know_what_i_do
 from c2corg_api.views import (
-    cors_policy,
     json_view,
 )
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.user import (
     token_to_response,
     validate_forum_username,
@@ -109,7 +108,7 @@ def sso_sync_validator(request, **kwargs):
     request.validated['sso_user'] = user
 
 
-@resource(path='/sso_sync', cors_policy=cors_policy)
+@resource(path='/sso_sync')
 class SsoSyncRest(ACLDefault):
     @json_view(
         validators=[
@@ -253,7 +252,7 @@ def validate_token(request, **kwargs):
     request.validated['sso_user'] = sso_external_id.user
 
 
-@resource(path='/sso_login', cors_policy=cors_policy)
+@resource(path='/sso_login')
 class SsoLoginRest(ACLDefault):
     @view(validators=[body_validator(SsoLoginSchema), validate_token])
     def post(self):

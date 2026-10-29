@@ -76,8 +76,8 @@ def include_document_type(
         app.add_api_route(path, version, methods=methods)
 
 
-def cornice_view(view_class, method):
-    """Return the validators, permission and content types of a Cornice view."""
+def view_arguments(view_class, method):
+    """Return the validators, permission and content types of a view method."""
     # as declared by the @view decorator of the Pyramid view, so that the
     # FastAPI route checks exactly what Pyramid checked
     [arguments] = getattr(view_class, method).__views__
@@ -89,7 +89,7 @@ def cornice_view(view_class, method):
 
 def include_write(app, path, http_method, view_class, method):
     """Add a write route served by a method of a Pyramid view class."""
-    validators, permission, content_types = cornice_view(view_class, method)
+    validators, permission, content_types = view_arguments(view_class, method)
 
     async def endpoint(request: Request, user: User):
         return await serve_write(

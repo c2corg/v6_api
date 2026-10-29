@@ -1,7 +1,6 @@
 import functools
 import logging
 
-from cornice.resource import resource, view
 from sqlalchemy import case, func, select
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import aliased, joinedload, load_only
@@ -35,7 +34,7 @@ from c2corg_api.search.advanced_search import (
     get_all_filtered_docs,
     get_filtered_docs_page,
 )
-from c2corg_api.views import cors_policy, restricted_json_view, to_json_dict
+from c2corg_api.views import restricted_json_view, to_json_dict
 from c2corg_api.views.document import (
     LIMIT_DEFAULT,
     NUM_RECENT_OUTINGS,
@@ -53,6 +52,7 @@ from c2corg_api.views.document_schemas import (
     waypoint_schema_adaptor,
 )
 from c2corg_api.views.document_version import DocumentVersionRest
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.route import set_route_title_prefix, update_pt_rating
 from c2corg_api.views.validation import (
     validate_associations,
@@ -84,7 +84,7 @@ validate_associations_update = functools.partial(
 )
 
 
-@resource(collection_path='/waypoints', path='/waypoints/{id}', cors_policy=cors_policy)
+@resource(collection_path='/waypoints', path='/waypoints/{id}')
 class WaypointRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
@@ -419,7 +419,7 @@ def _get_select_children(waypoint):
     ).cte('select_all_waypoints')
 
 
-@resource(path='/waypoints/{id}/{lang}/{version_id}', cors_policy=cors_policy)
+@resource(path='/waypoints/{id}/{lang}/{version_id}')
 class WaypointVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
@@ -432,14 +432,14 @@ class WaypointVersionRest(DocumentVersionRest):
         )
 
 
-@resource(path='/waypoints/{id}/{lang}/info', cors_policy=cors_policy)
+@resource(path='/waypoints/{id}/{lang}/info')
 class WaypointInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):
         return self._get_document_info(waypoint_documents_config)
 
 
-@resource(path='/reachablewaypoints', cors_policy=cors_policy)
+@resource(path='/reachablewaypoints')
 class ReachableWaypointRest(DocumentRest):
     def __init__(self, request, context=None):
         self.request = request

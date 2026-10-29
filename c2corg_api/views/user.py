@@ -4,7 +4,6 @@ import re
 from functools import partial
 
 import requests
-from cornice.resource import resource
 from pyramid.httpexceptions import HTTPForbidden, HTTPInternalServerError
 from pyramid.settings import asbool
 from sqlalchemy.sql.expression import and_, func
@@ -28,13 +27,13 @@ from c2corg_api.security.roles import (
     try_login,
 )
 from c2corg_api.views import (
-    cors_policy,
     json_view,
     restricted_json_view,
     restricted_view,
     to_json_dict,
 )
 from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.resource import resource
 from c2corg_api.views.validation import validate_required_json_string
 
 log = logging.getLogger(__name__)
@@ -235,7 +234,7 @@ def validate_captcha(request, **kwargs):
         return
 
 
-@resource(path='/users/register', cors_policy=cors_policy)
+@resource(path='/users/register')
 class UserRegistrationRest(ACLDefault):
     @json_view(
         validators=[
@@ -304,7 +303,7 @@ def validate_user_from_nonce(purpose, request, **kwargs):
             request.validated['user'] = user
 
 
-@resource(path='/users/validate_new_password/{nonce}', cors_policy=cors_policy)
+@resource(path='/users/validate_new_password/{nonce}')
 class UserValidateNewPasswordRest(ACLDefault):
     """Set a new password for a user who forgot theirs.
 
@@ -365,7 +364,7 @@ def validate_required_user_from_email(request, **kwargs):
         request.errors.add('body', 'email', 'No user with this email')
 
 
-@resource(path='/users/request_password_change', cors_policy=cors_policy)
+@resource(path='/users/request_password_change')
 class UserRequestChangePasswordRest(ACLDefault):
     """This web-service is used when a user has forgotten their password.
 
@@ -399,7 +398,7 @@ class UserRequestChangePasswordRest(ACLDefault):
         return {}
 
 
-@resource(path='/users/validate_register_email/{nonce}', cors_policy=cors_policy)
+@resource(path='/users/validate_register_email/{nonce}')
 class UserNonceValidationRest(ACLDefault):
     @json_view(validators=[partial(validate_user_from_nonce, Purpose.registration)])
     def post(self):
@@ -442,7 +441,7 @@ class UserNonceValidationRest(ACLDefault):
             return None
 
 
-@resource(path='/users/validate_change_email/{nonce}', cors_policy=cors_policy)
+@resource(path='/users/validate_change_email/{nonce}')
 class UserChangeEmailNonceValidationRest(ACLDefault):
     @json_view(validators=[partial(validate_user_from_nonce, Purpose.change_email)])
     def post(self):
@@ -490,7 +489,7 @@ def token_to_response(user, token, request):
     }
 
 
-@resource(path='/users/login', cors_policy=cors_policy)
+@resource(path='/users/login')
 class UserLoginRest(ACLDefault):
     @json_view(
         validators=[
@@ -563,7 +562,7 @@ class DiscourseRedirectSchema(Schema):
     sig: Str()
 
 
-@resource(path='/users/discourse-redirect', cors_policy=cors_policy)
+@resource(path='/users/discourse-redirect')
 class UserDiscourseRedirectRest(ACLDefault):
     """Answer a Discourse SSO handshake for an already logged-in user."""
 
@@ -586,7 +585,7 @@ class UserDiscourseRedirectRest(ACLDefault):
         return {'redirect': client.redirect(user, sso, sig)}
 
 
-@resource(path='/users/renew', cors_policy=cors_policy)
+@resource(path='/users/renew')
 class UserRenewRest(ACLDefault):
     @restricted_view(renderer='json')
     def post(self):
@@ -600,7 +599,7 @@ class UserRenewRest(ACLDefault):
             raise HTTPInternalServerError('Error renewing token')
 
 
-@resource(path='/users/logout', cors_policy=cors_policy)
+@resource(path='/users/logout')
 class UserLogoutRest(ACLDefault):
     @restricted_json_view(renderer='json')
     def post(self):

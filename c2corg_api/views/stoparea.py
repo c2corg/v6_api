@@ -1,8 +1,6 @@
-from cornice.resource import resource, view
-
 from c2corg_api.models import DBSession
 from c2corg_api.models.stoparea import Stoparea
-from c2corg_api.views import cors_policy
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import (
     validate_id,
     validate_lang,
@@ -32,7 +30,7 @@ def validate_page_params(request, **kwargs):
 validate_stoparea_update = validate_stoparea_create
 
 
-@resource(collection_path='/stopareas', path='/stopareas/{id}', cors_policy=cors_policy)
+@resource(collection_path='/stopareas', path='/stopareas/{id}')
 class StopareaRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -72,7 +70,7 @@ class StopareaRest:
         return stoparea.to_dict()
 
 
-@resource(path='/stopareas/{id}/{lang}/info', cors_policy=cors_policy)
+@resource(path='/stopareas/{id}/{lang}/info')
 class StopareaInfoRest:
     def __init__(self, request, context=None):
         self.request = request

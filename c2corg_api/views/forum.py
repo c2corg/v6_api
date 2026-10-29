@@ -1,6 +1,5 @@
 import logging
 
-from cornice.resource import resource
 from pyramid.httpexceptions import HTTPInternalServerError
 
 from c2corg_api.models import DBSession
@@ -14,7 +13,8 @@ from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, Str
 from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
-from c2corg_api.views import cors_policy, restricted_view
+from c2corg_api.views import restricted_view
+from c2corg_api.views.resource import resource
 
 log = logging.getLogger(__name__)
 
@@ -58,11 +58,8 @@ def validate_topic_create(request, **kwargs):
         )
 
 
-# Here path is required by cornice but related routes are not implemented
-# as far as we only need collection_post to create topic in discourse
-@resource(
-    collection_path='/forum/topics', path='/forum/topics/{id}', cors_policy=cors_policy
-)
+# only collection_post: it creates the topic in Discourse
+@resource(collection_path='/forum/topics', path='/forum/topics/{id}')
 class ForumTopicRest(ACLDefault):
     @restricted_view(
         validators=[body_validator(TopicCreateSchema), validate_topic_create],

@@ -151,7 +151,6 @@ dependencies = [
     { name = "alembic" },
     { name = "apscheduler" },
     { name = "bcrypt" },
-    { name = "cornice" },
     { name = "dogpile-cache" },
     { name = "elasticsearch" },
     { name = "elasticsearch-dsl" },
@@ -204,7 +203,6 @@ requires-dist = [
     { name = "alembic", specifier = "==1.20.0" },
     { name = "apscheduler", specifier = "==3.11.3" },
     { name = "bcrypt", specifier = "==5.0.0" },
-    { name = "cornice", specifier = "==6.1.0" },
     { name = "dogpile-cache", specifier = "==1.5.0" },
     { name = "elasticsearch", specifier = "==2.4.1" },
     { name = "elasticsearch-dsl", specifier = "==2.2.0" },
@@ -345,18 +343,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93a6792e2acffb9d9d5cb0a5cfd8802644b7b1c9a02e4/colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44", size = 27697, upload-time = "2022-10-25T02:36:22.414Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335, upload-time = "2022-10-25T02:36:20.889Z" },
-]
-
-[[package]]
-name = "cornice"
-version = "6.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyramid" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/24/ed/24f0a45b0ae9d1633c8d32d6f14592eab6bcfddd1cb5df5c0073f4f185d1/cornice-6.1.0.tar.gz", hash = "sha256:bfd1b6c2a991a7ccb1b2082b6de9e3b8f198b6a2b4a07ab0800e05df05a45361", size = 146106, upload-time = "2024-02-08T11:28:48.498Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c2/a1/12b4a55223bcdd70e8a494984637782b0453700bbf92ae6665a577322ac1/cornice-6.1.0-py3-none-any.whl", hash = "sha256:320b026998a30099bace43484664eb0a4db37eff0dfc6f7733cec183ec3174ad", size = 28675, upload-time = "2024-02-08T11:28:46.833Z" },
 ]
 
 [[package]]

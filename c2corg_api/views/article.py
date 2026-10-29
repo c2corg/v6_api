@@ -1,6 +1,5 @@
 import functools
 
-from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
 
 from c2corg_api.models import DBSession
@@ -18,7 +17,7 @@ from c2corg_api.schemas.article import (
     article_schema,
 )
 from c2corg_api.schemas.base import body_validator
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
     DocumentRest,
@@ -28,6 +27,7 @@ from c2corg_api.views.document import (
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import article_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_cook_param,
@@ -49,7 +49,7 @@ validate_associations_update = functools.partial(
 )
 
 
-@resource(collection_path='/articles', path='/articles/{id}', cors_policy=cors_policy)
+@resource(collection_path='/articles', path='/articles/{id}')
 class ArticleRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
@@ -101,7 +101,7 @@ class ArticleRest(DocumentRest):
         return self._put(Article, article_schema)
 
 
-@resource(path='/articles/{id}/{lang}/{version_id}', cors_policy=cors_policy)
+@resource(path='/articles/{id}/{lang}/{version_id}')
 class ArticlesVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
@@ -110,7 +110,7 @@ class ArticlesVersionRest(DocumentVersionRest):
         )
 
 
-@resource(path='/articles/{id}/{lang}/info', cors_policy=cors_policy)
+@resource(path='/articles/{id}/{lang}/info')
 class ArticlesInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):

@@ -1,6 +1,5 @@
-"""Schema base class, Cornice validator, and the mapping to SQLAlchemy models."""
+"""Schema base class, body validator, and the mapping to SQLAlchemy models."""
 
-from cornice.validators import extract_cstruct
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -17,6 +16,7 @@ from c2corg_api.models.schema_utils import (
     split_fields,
 )
 from c2corg_api.schemas.types import Empty, Map, Str, check_mapping
+from c2corg_api.views.resource import extract_body
 
 
 class Schema(BaseModel):
@@ -81,17 +81,16 @@ def validate(schema, data):
 
 
 def body_validator(schema):
-    """Return a Cornice validator of the JSON body against `schema`."""
+    """Return a validator of the JSON body against `schema`."""
     # It replaces `schema=...` with `colander_body_validator` in a view: the
     # validated fields go into `request.validated`, the errors into
     # `request.errors` with the location `body`.
 
     def validator(request, **kwargs):
-        cstruct = extract_cstruct(request)
+        body = extract_body(request)
         if request.errors:
-            # not a JSON body: extract_cstruct reported it (and returned {})
+            # not a JSON body: extract_body reported it (and returned {})
             return
-        body = cstruct['body']
         validated, errors = validate(schema, body)
         for name, description in errors:
             request.errors.add('body', name, description)

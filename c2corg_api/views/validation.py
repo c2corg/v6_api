@@ -1,7 +1,6 @@
 import functools
 import urllib
 
-from cornice.errors import Errors
 from dateutil import parser as datetime_parser
 from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.sql.expression import and_, exists
@@ -29,6 +28,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.views.document_associations import get_first_column
+from c2corg_api.views.resource import Errors
 
 # Validation functions
 

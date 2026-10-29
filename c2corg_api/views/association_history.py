@@ -1,4 +1,3 @@
-from cornice.resource import resource, view
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 
@@ -7,7 +6,7 @@ from c2corg_api.models.association import AssociationLog
 from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.views import cors_policy
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import (
     validate_document_id_not_required,
     validate_pagination,
@@ -19,7 +18,7 @@ LIMIT_MAX = 500
 LIMIT_DEFAULT = 50
 
 
-@resource(path='/associations-history', cors_policy=cors_policy)
+@resource(path='/associations-history')
 class HistoryAssociationRest:
     """Unique class for returning history of a document's associations."""
 

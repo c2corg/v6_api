@@ -2,7 +2,6 @@ import functools
 import os
 
 import requests
-from cornice.resource import resource, view
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPForbidden,
@@ -31,7 +30,7 @@ from c2corg_api.schemas.image import (
 )
 from c2corg_api.search.notify_sync import run_on_successful_transaction
 from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
     DocumentRest,
@@ -42,6 +41,7 @@ from c2corg_api.views.document import (
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import image_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_associations_in,
@@ -210,7 +210,7 @@ def delete_all_files_for_image(document_id, request):
     run_on_successful_transaction(send_delete_request)
 
 
-@resource(collection_path='/images', path='/images/{id}', cors_policy=cors_policy)
+@resource(collection_path='/images', path='/images/{id}')
 class ImageRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
@@ -268,11 +268,8 @@ class ImageRest(DocumentRest):
         )
 
 
-# `path` is required by cornice but related routes are not implemented
-# because we only need `collection_post` to post a list of images
-@resource(
-    collection_path='/images/list', path='/images/list/{id}', cors_policy=cors_policy
-)
+# only `collection_post`: it posts a list of images
+@resource(collection_path='/images/list', path='/images/list/{id}')
 class ImageListRest(DocumentRest):
     @restricted_json_view(
         validators=[
@@ -296,7 +293,7 @@ class ImageListRest(DocumentRest):
         return {'images': image_ids}
 
 
-@resource(path='/images/{id}/{lang}/info', cors_policy=cors_policy)
+@resource(path='/images/{id}/{lang}/info')
 class ImageInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):
@@ -322,7 +319,7 @@ def validate_extension(request, **kwargs):
         request.errors.add('querystring', 'extension', 'invalid extension')
 
 
-@resource(path='/images/proxy/{id}', cors_policy=cors_policy)
+@resource(path='/images/proxy/{id}')
 class ImageProxyRest(ACLDefault):
     @view(validators=[validate_id, validate_size, validate_extension])
     def get(self):
@@ -351,7 +348,7 @@ def set_creator(image):
     set_creator_on_documents([image], 'creator')
 
 
-@resource(path='/images/{id}/{lang}/{version_id}', cors_policy=cors_policy)
+@resource(path='/images/{id}/{lang}/{version_id}')
 class ImageVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):

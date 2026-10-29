@@ -18,19 +18,10 @@ from webob.etag import ETagMatcher, NoETag
 from webob.multidict import MultiDict
 
 from c2corg_api.models.user import AccountNotValidated
+from c2corg_api.views.resource import Errors
 from c2corg_api.web.auth import parse_authorization
 from c2corg_api.web.db import request_session
 from c2corg_api.web.errors import error_response
-
-
-class _Errors(list):
-    """The errors of the validators, stored as Cornice does."""
-
-    # the status of the answer, which a validator may change (e.g. 403)
-    status = 400
-
-    def add(self, location, name=None, description=None, **kw):
-        self.append(dict(location=location, name=name, description=description, **kw))
 
 
 class _Response:
@@ -58,7 +49,7 @@ class ValidatedRequest:
         self.headers = request.headers
         self.matchdict = dict(path_params or request.path_params)
         self.validated = {}
-        self.errors = _Errors()
+        self.errors = Errors()
         self.response = _Response()
         # as WebOb's request.if_none_match: weak ETags count
         if_none_match = request.headers.get('If-None-Match')
@@ -69,7 +60,7 @@ class ValidatedRequest:
         self._user = user
         # as WebOb's request.authorization: (type, params), or None
         self.authorization = parse_authorization(request.headers.get('Authorization'))
-        # the body of a write, read by Cornice (extract_cstruct) and the views
+        # the body of a write, read by the validators (extract_body) and the views
         # as WebOb gives it: the media type without its parameters, and the
         # JSON body raising a ValueError when it is not JSON
         self.body = body

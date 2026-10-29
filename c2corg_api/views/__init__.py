@@ -5,7 +5,6 @@ import logging
 import math
 import re
 
-from cornice.resource import view
 from geoalchemy2 import WKBElement
 from pyramid.httpexceptions import (
     HTTPNotModified,
@@ -22,6 +21,7 @@ from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import AccountNotValidated as AccountNotValidated
 from c2corg_api.views.markdown import cook
+from c2corg_api.views.resource import view
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 # local dev. server started without going through `make load-env`).
 DEFAULT_CORS_ORIGINS = ('http://localhost:6553',)
 
-# NB: `origins` is deliberately not "*". Cornice's CORS support allows
+# NB: `origins` is deliberately not "*". The CORS support (web.cors) allows
 # requests carrying the `Authorization` header (used here for JWT bearer
 # tokens) to be echoed back with `Access-Control-Allow-Origin` set to the
 # requesting origin whenever it matches an allowed entry; with a wildcard,

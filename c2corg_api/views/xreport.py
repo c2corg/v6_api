@@ -1,6 +1,5 @@
 import functools
 
-from cornice.resource import resource, view
 from pyramid.httpexceptions import HTTPForbidden
 
 from c2corg_api.models.common.fields_xreport import fields_xreport
@@ -19,7 +18,7 @@ from c2corg_api.schemas.xreport import (
     xreport_schema,
     xreport_without_personal_schema,
 )
-from c2corg_api.views import cors_policy, restricted_json_view, set_private_cache_header
+from c2corg_api.views import restricted_json_view, set_private_cache_header
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
     DocumentRest,
@@ -29,6 +28,7 @@ from c2corg_api.views.document import (
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import xreport_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import (
     is_associated_user,
     validate_associations,
@@ -51,7 +51,7 @@ validate_associations_update = functools.partial(
 )
 
 
-@resource(collection_path='/xreports', path='/xreports/{id}', cors_policy=cors_policy)
+@resource(collection_path='/xreports', path='/xreports/{id}')
 class XreportRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
@@ -126,7 +126,7 @@ def _has_permission(request, xreport_id):
     return False
 
 
-@resource(path='/xreports/{id}/{lang}/{version_id}', cors_policy=cors_policy)
+@resource(path='/xreports/{id}/{lang}/{version_id}')
 class XreportVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
@@ -138,7 +138,7 @@ class XreportVersionRest(DocumentVersionRest):
         )
 
 
-@resource(path='/xreports/{id}/{lang}/info', cors_policy=cors_policy)
+@resource(path='/xreports/{id}/{lang}/info')
 class XreportInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):

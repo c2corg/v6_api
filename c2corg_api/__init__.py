@@ -24,13 +24,11 @@ def main(global_config, **settings):
     # Configure ElasticSearch
     configure_es_from_config(settings)
 
-    # Must happen before any view module is imported: the views read the
-    # allowed CORS origins from `c2corg_api.views.cors_policy`.
+    # the allowed CORS origins, read by web.cors for each request
     configure_cors_policy(settings)
 
     configure_caches(settings)
-    # imported here, after configure_cors_policy: views.navitia imports view
-    # modules (route, waypoint, coverage...)
+    # imported here: the view modules need the package initialized
     from c2corg_api.views.markdown import configure_image_url
     from c2corg_api.views.navitia import configure_jobs_redis
 

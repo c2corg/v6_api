@@ -1,12 +1,11 @@
-from cornice.resource import resource, view
 from sqlalchemy import exists, func
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.stoparea import Stoparea
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
-from c2corg_api.views import cors_policy
 from c2corg_api.views.document import make_validator_create, make_validator_update
 from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import validate_id, validate_lang
 
 validate_waypoint_stoparea_create = make_validator_create(
@@ -17,7 +16,7 @@ validate_waypoint_stoparea_update = make_validator_update(
 )
 
 
-@resource(path='/waypoints_stopareas/{id}/{lang}/info', cors_policy=cors_policy)
+@resource(path='/waypoints_stopareas/{id}/{lang}/info')
 class WaypointStopareaInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):
@@ -50,7 +49,7 @@ def validate_waypoint_id(request, *args, **kwargs):
         request.errors.add('querystring', 'waypoint_id', 'invalid waypoint_id')
 
 
-@resource(path='/waypoints/{waypoint_id}/stopareas', cors_policy=cors_policy)
+@resource(path='/waypoints/{waypoint_id}/stopareas')
 class WaypointStopareasByWaypointRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -86,7 +85,7 @@ class WaypointStopareasByWaypointRest:
         return {'waypoint_id': waypoint_id, 'stopareas': stopareas_data}
 
 
-@resource(path='/waypoints/{waypoint_id}/isReachable', cors_policy=cors_policy)
+@resource(path='/waypoints/{waypoint_id}/isReachable')
 class WaypointStopareasReachableRest:
     def __init__(self, request, context=None):
         self.request = request

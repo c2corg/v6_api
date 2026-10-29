@@ -49,7 +49,6 @@ dependencies = [
     "zope.sqlalchemy==4.1",
     "gunicorn==26.2.0",
     "python-dotenv==1.2.4",
-    "cornice==6.1.0",
     # Discourse API client
     "pydiscourse==1.7.0",
     "pydantic==2.14.1",

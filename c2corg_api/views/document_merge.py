@@ -1,4 +1,3 @@
-from cornice.resource import resource
 from sqlalchemy import not_
 from sqlalchemy.sql.expression import and_, or_
 from sqlalchemy.sql.functions import func
@@ -20,9 +19,10 @@ from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.image import delete_all_files_for_image
+from c2corg_api.views.resource import resource
 from c2corg_api.views.waypoint import update_linked_route_titles
 
 
@@ -109,7 +109,7 @@ def validate_documents(request, **kwargs):
         request.errors.add('body', 'types', 'merging user accounts is not supported')
 
 
-@resource(path='/documents/merge', cors_policy=cors_policy)
+@resource(path='/documents/merge')
 class MergeDocumentRest(ACLDefault):
     @restricted_json_view(
         permission='moderator',

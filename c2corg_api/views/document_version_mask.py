@@ -1,6 +1,5 @@
 import logging
 
-from cornice.resource import resource
 from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.sql.expression import and_, exists
 
@@ -11,7 +10,8 @@ from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, OneOf
 from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import restricted_json_view
+from c2corg_api.views.resource import resource
 
 log = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ def _get_version(request):
     return version
 
 
-@resource(path='/versions/mask', cors_policy=cors_policy)
+@resource(path='/versions/mask')
 class VersionMaskRest(ACLDefault):
     @restricted_json_view(
         permission='moderator',
@@ -101,7 +101,7 @@ class VersionMaskRest(ACLDefault):
         return {}
 
 
-@resource(path='/versions/unmask', cors_policy=cors_policy)
+@resource(path='/versions/unmask')
 class VersionUnmaskRest(ACLDefault):
     @restricted_json_view(
         permission='moderator',

@@ -1,6 +1,5 @@
 import logging
 
-from cornice.resource import resource
 from pyramid.httpexceptions import HTTPBadRequest
 
 from c2corg_api import DBSession
@@ -11,7 +10,8 @@ from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import restricted_json_view
+from c2corg_api.views.resource import resource
 from c2corg_api.views.validation import create_int_validator
 
 log = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ def validate_document(request, **kwargs):
         )
 
 
-@resource(path='/tags/add', cors_policy=cors_policy)
+@resource(path='/tags/add')
 class DocumentTagRest(ACLDefault):
     @restricted_json_view(
         validators=[body_validator(DocumentTagSchema), validate_document],
@@ -99,7 +99,7 @@ class DocumentTagRest(ACLDefault):
         return {}
 
 
-@resource(path='/tags/remove', cors_policy=cors_policy)
+@resource(path='/tags/remove')
 class DocumentUntagRest(ACLDefault):
     @restricted_json_view(
         validators=[body_validator(DocumentTagSchema), validate_document],
@@ -140,7 +140,7 @@ class DocumentUntagRest(ACLDefault):
         return {}
 
 
-@resource(path='/tags/has/{document_id}', cors_policy=cors_policy)
+@resource(path='/tags/has/{document_id}')
 class DocumentTaggedRest(ACLDefault):
     @restricted_json_view(validators=[validate_document_id])
     def get(self):

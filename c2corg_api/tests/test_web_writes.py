@@ -1,13 +1,13 @@
 from typing import Annotated
 from unittest.mock import patch
 
-from cornice import Errors
 from fastapi import Depends, Request
 from pyramid.httpexceptions import HTTPBadRequest
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.views.resource import Errors
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.compat import serve_write
 
@@ -137,7 +137,7 @@ class TestWrites(BaseTestRest):
         assert user.name == self.name
         assert user.ratelimit_remaining == self.limit - 1
 
-    def test_errors_of_cornice_and_their_status(self):
+    def test_errors_of_the_validators_and_their_status(self):
         response = self.post({'outcome': 'not yours'}, 403)
         assert response.json['errors'] == [
             {'location': 'body', 'name': 'outcome', 'description': 'not yours'}

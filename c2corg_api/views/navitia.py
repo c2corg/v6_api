@@ -9,7 +9,6 @@ import uuid
 import redis
 import requests
 import transaction
-from cornice.resource import resource, view
 from pyproj import Transformer
 from pyramid.httpexceptions import (
     HTTPBadRequest,
@@ -28,8 +27,9 @@ from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.route import route_schema
 from c2corg_api.schemas.waypoint import waypoint_schema
-from c2corg_api.views import cors_policy, to_json_dict
+from c2corg_api.views import to_json_dict
 from c2corg_api.views.coverage import get_coverage
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.route import build_reachable_route_query_with_waypoints
 from c2corg_api.views.waypoint import build_reachable_waypoints_query
 
@@ -66,7 +66,7 @@ def validate_navitia_params(request, **kwargs):
             request.errors.add('querystring', param, f'Parameter {param} required')
 
 
-@resource(path='/navitia/journeys', cors_policy=cors_policy)
+@resource(path='/navitia/journeys')
 class NavitiaRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -145,7 +145,7 @@ def validate_journey_reachable_params(request, **kwargs):
             request.errors.add('querystring', param, f'Parameter {param} required')
 
 
-@resource(path='/navitia/journeyreachableroutes/start', cors_policy=cors_policy)
+@resource(path='/navitia/journeyreachableroutes/start')
 class StartNavitiaJourneyReachableRoutesRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -156,7 +156,7 @@ class StartNavitiaJourneyReachableRoutesRest:
         return start_job_background(compute_journey_reachable_routes, self.request)
 
 
-@resource(path='/navitia/journeyreachablewaypoints/start', cors_policy=cors_policy)
+@resource(path='/navitia/journeyreachablewaypoints/start')
 class StartNavitiaJourneyReachableWaypointsRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -167,9 +167,7 @@ class StartNavitiaJourneyReachableWaypointsRest:
         return start_job_background(compute_journey_reachable_waypoints, self.request)
 
 
-@resource(
-    path='/navitia/journeyreachableroutes/result/{job_id}', cors_policy=cors_policy
-)
+@resource(path='/navitia/journeyreachableroutes/result/{job_id}')
 class NavitiaJourneyReachableRoutesResultRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -186,9 +184,7 @@ class NavitiaJourneyReachableRoutesResultRest:
         return read_result_from_redis(r, job_id)
 
 
-@resource(
-    path='/navitia/journeyreachablewaypoints/result/{job_id}', cors_policy=cors_policy
-)
+@resource(path='/navitia/journeyreachablewaypoints/result/{job_id}')
 class NavitiaJourneyReachableWaypointsResultRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -205,9 +201,7 @@ class NavitiaJourneyReachableWaypointsResultRest:
         return read_result_from_redis(r, job_id)
 
 
-@resource(
-    path='/navitia/journeyreachableroutes/progress/{job_id}', cors_policy=cors_policy
-)
+@resource(path='/navitia/journeyreachableroutes/progress/{job_id}')
 class NavitiaJourneyReachableRoutesProgressRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -222,9 +216,7 @@ class NavitiaJourneyReachableRoutesProgressRest:
         )
 
 
-@resource(
-    path='/navitia/journeyreachablewaypoints/progress/{job_id}', cors_policy=cors_policy
-)
+@resource(path='/navitia/journeyreachablewaypoints/progress/{job_id}')
 class NavitiaJourneyReachableWaypointsProgressRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -410,7 +402,7 @@ def validate_isochrone_reachable_params(request, **kwargs):
             request.errors.add('querystring', param, f'Parameter {param} required')
 
 
-@resource(path='/navitia/isochronesreachableroutes', cors_policy=cors_policy)
+@resource(path='/navitia/isochronesreachableroutes')
 class NavitiaIsochronesReachableRoutesRest:
     def __init__(self, request, context=None):
         self.request = request
@@ -486,7 +478,7 @@ class NavitiaIsochronesReachableRoutesRest:
         return {'documents': routes, 'total': len(routes), 'isochron_geom': geojson}
 
 
-@resource(path='/navitia/isochronesreachablewaypoints', cors_policy=cors_policy)
+@resource(path='/navitia/isochronesreachablewaypoints')
 class NavitiaIsochronesReachableWaypointsRest:
     def __init__(self, request, context=None):
         self.request = request

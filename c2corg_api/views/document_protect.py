@@ -1,6 +1,5 @@
 import logging
 
-from cornice.resource import resource
 from pyramid.httpexceptions import HTTPBadRequest
 
 from c2corg_api import DBSession
@@ -9,8 +8,9 @@ from c2corg_api.models.document import Document, UpdateType
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
 from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.resource import resource
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ def _get_document(document_id):
     return document
 
 
-@resource(path='/documents/protect', cors_policy=cors_policy)
+@resource(path='/documents/protect')
 class DocumentProtectRest(ACLDefault):
     @restricted_json_view(
         permission='moderator',
@@ -63,7 +63,7 @@ class DocumentProtectRest(ACLDefault):
         return {}
 
 
-@resource(path='/documents/unprotect', cors_policy=cors_policy)
+@resource(path='/documents/unprotect')
 class DocumentUnprotectRest(ACLDefault):
     @restricted_json_view(
         permission='moderator',

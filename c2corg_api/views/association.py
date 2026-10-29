@@ -1,4 +1,3 @@
-from cornice.resource import resource
 from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.sql.expression import exists
 
@@ -19,7 +18,8 @@ from c2corg_api.schemas.base import body_validator
 from c2corg_api.scripts.es import sync
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import restricted_json_view
+from c2corg_api.views.resource import resource
 from c2corg_api.views.validation import (
     check_permission_for_association_removal,
     validate_association_permission,
@@ -82,9 +82,7 @@ def validate_association(request, **kwargs):
             )
 
 
-@resource(
-    collection_path='/associations', path='/associations/{id}', cors_policy=cors_policy
-)
+@resource(collection_path='/associations', path='/associations/{id}')
 class AssociationRest(ACLDefault):
     @restricted_json_view(
         validators=[body_validator(AssociationSchema), validate_association],
