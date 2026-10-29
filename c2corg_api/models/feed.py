@@ -207,7 +207,7 @@ def update_feed_document_create(document, user_id):
     user_ids = [user_id]
     if document.type == OUTING_TYPE:
         participant_ids = _get_participants_of_outing(document.document_id)
-        user_ids = list(set(user_ids).union(participant_ids))
+        user_ids = sorted(set(user_ids).union(participant_ids))
 
     area_ids = []
     if document.type != ARTICLE_TYPE:
@@ -393,7 +393,7 @@ def update_feed_images_upload(images, images_in, user_id):
             change = change.copy()
             change.change_type = 'added_photos'
             change.user_id = user_id
-            change.user_ids = list(set(change.user_ids).union([user_id]))
+            change.user_ids = sorted(set(change.user_ids).union([user_id]))
 
     _update_images(change, image1_id, image2_id, image3_id, more_images)
 
@@ -424,6 +424,8 @@ def _get_participants_of_outing(outing_id):
         DBSession.query(Association.parent_document_id)
         .filter(Association.child_document_id == outing_id)
         .filter(Association.parent_document_type == USERPROFILE_TYPE)
+        # in order, as the other user_ids (see update_participants_of_outing)
+        .order_by(Association.parent_document_id)
         .all()
     )
     return [user_id for (user_id,) in participant_ids]
