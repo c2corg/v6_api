@@ -5,6 +5,11 @@ from c2corg_api.tests.contract.test_users import UserContractTest
 
 ANONYMOUS_LIMIT = 'c2corg_api.tweens.rate_limiting._is_anonymous_request_rate_limited'
 
+# dummy credentials of the tests, refused or never checked
+WRONG_PASSWORD = 'wrong'  # nosec B105
+NEW_PASSWORD = 'a new password'  # nosec B105
+WRONG_SSO_SECRET = 'wrong'  # nosec B105
+
 
 class TestLoginWrites(UserContractTest):
     @contract(('POST', '/users/login'))
@@ -13,7 +18,7 @@ class TestLoginWrites(UserContractTest):
         with patch(ANONYMOUS_LIMIT, return_value=True) as limited:
             response = self.post(
                 '/users/login',
-                {'username': 'contributor', 'password': 'wrong'},
+                {'username': 'contributor', 'password': WRONG_PASSWORD},
                 headers={'X-Forwarded-For': '203.0.113.7, 10.0.0.1'},
                 status=429,
             )
@@ -43,7 +48,7 @@ class TestLoginWrites(UserContractTest):
 class TestAccountWrites(UserContractTest):
     @contract(('POST', '/users/account'))
     def test_wrong_current_password(self):
-        body = {'currentpassword': 'wrong', 'name': 'Other name'}
+        body = {'currentpassword': WRONG_PASSWORD, 'name': 'Other name'}
         response = self.post('/users/account', body, user='contributor', status=400)
         check_snapshot('users_account_wrong_password', response)
 
@@ -84,7 +89,7 @@ class TestRegistrationWrites(UserContractTest):
             '/users/validate_new_password/not-a-nonce',
             '/users/validate_change_email/not-a-nonce',
         ):
-            body = {'password': 'a new password'} if 'password' in path else {}
+            body = {'password': NEW_PASSWORD} if 'password' in path else {}
             response = self.post(path, body, status=400)
             check_snapshot('users_invalid_nonce', response)
 
@@ -93,8 +98,8 @@ class TestSsoWrites(UserContractTest):
     @contract(('POST', '/sso_sync'), ('POST', '/sso_login'))
     def test_refused(self):
         response = self.post(
-            '/sso_sync', {'sso_key': 'wrong', 'external_id': '1'}, status=403
+            '/sso_sync', {'sso_key': WRONG_SSO_SECRET, 'external_id': '1'}, status=403
         )
         check_snapshot('sso_sync_wrong_key', response)
-        response = self.post('/sso_login', {'token': 'wrong'}, status=403)
+        response = self.post('/sso_login', {'token': WRONG_SSO_SECRET}, status=403)
         check_snapshot('sso_login_wrong_token', response)
