@@ -4,7 +4,7 @@ from c2corg_api.models.user import User
 from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_users import UserContractTest
 
-ANONYMOUS_LIMIT = 'c2corg_api.tweens.rate_limiting._is_anonymous_request_rate_limited'
+ANONYMOUS_LIMIT = 'c2corg_api.security.rate_limiting._is_anonymous_request_rate_limited'
 
 # dummy credentials of the tests, refused or never checked
 WRONG_PASSWORD = 'wrong'  # nosec B105

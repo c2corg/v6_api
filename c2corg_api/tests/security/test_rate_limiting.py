@@ -16,7 +16,7 @@ class _Clock:
         self.now += datetime.timedelta(seconds=seconds)
 
     def datetime_module(self):
-        # stands in for the `datetime` module imported by the tween: only
+        # stands in for the `datetime` module imported by the rate limiting: only
         # `datetime.now()` is redirected to this clock
         clock = self
 
@@ -36,10 +36,10 @@ class TestRateLimiting(BaseTestRest):
 
         # The rate limiting window is a few seconds long in the tests: with
         # the real clock it could expire in the middle of a test on a slow
-        # run, so the tween reads the time from a clock the test controls.
+        # run, so the rate limiting reads the time from a clock the test controls.
         self.clock = _Clock()
         clock_patch = patch(
-            'c2corg_api.tweens.rate_limiting.datetime', self.clock.datetime_module()
+            'c2corg_api.security.rate_limiting.datetime', self.clock.datetime_module()
         )
         clock_patch.start()
         self._clock_patch = clock_patch
