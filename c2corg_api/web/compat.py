@@ -18,6 +18,7 @@ from webob import Response as WebObResponse
 from webob.etag import ETagMatcher, NoETag
 from webob.multidict import MultiDict
 
+from c2corg_api.models.user import AccountNotValidated
 from c2corg_api.web.auth import parse_authorization
 from c2corg_api.web.db import request_session
 from c2corg_api.web.errors import error_response
@@ -165,6 +166,8 @@ def run_view(adapted, view):
         return _redirection(e)
     except HTTPError as e:
         return _http_error(e)
+    except AccountNotValidated as e:
+        return _account_not_validated(e)
     if adapted.errors:
         # as Cornice: the errors the view itself adds are the answer
         return error_response(adapted.errors, adapted.errors.status)
@@ -221,6 +224,14 @@ def _redirection(e):
     rendered = WebObRequest.blank('/').get_response(e)
     headers = {k: v for k, v in rendered.headers.items() if k != 'Content-Length'}
     return Response(rendered.body, status_code=rendered.status_code, headers=headers)
+
+
+def _account_not_validated(e):
+    """Answer like the exception view of Pyramid for AccountNotValidated."""
+    # e.g. the password change of an account whose email is not validated
+    return error_response(
+        [{'location': 'body', 'name': 'Error', 'description': list(e.args)}]
+    )
 
 
 def _http_error(e):
@@ -325,6 +336,8 @@ def _serve_write(
             return _redirection(e)
         except HTTPError as e:
             return _http_error(e)
+        except AccountNotValidated as e:
+            return _account_not_validated(e)
         except Exception:
             # a view reading an invalid JSON body fails on it: an error of the
             # client, answered as the catch-all error view of Pyramid does
