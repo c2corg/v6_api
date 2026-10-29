@@ -1,8 +1,6 @@
 import functools
 
-from cornice.resource import resource, view
-from pyramid.httpexceptions import HTTPBadRequest
-
+from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models.area import (
     AREA_TYPE,
     ArchiveArea,
@@ -14,7 +12,7 @@ from c2corg_api.models.common.fields_area import fields_area
 from c2corg_api.models.document import ArchiveDocumentLocale, UpdateType
 from c2corg_api.schemas.area import AreaCreateSchema, AreaUpdateSchema, area_schema
 from c2corg_api.schemas.base import body_validator
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
     DocumentRest,
     make_validator_create,
@@ -23,6 +21,7 @@ from c2corg_api.views.document import (
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import area_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_cook_param,
@@ -42,7 +41,7 @@ validate_associations_update = functools.partial(
 )
 
 
-@resource(collection_path='/areas', path='/areas/{id}', cors_policy=cors_policy)
+@resource(collection_path='/areas', path='/areas/{id}')
 class AreaRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
@@ -83,7 +82,7 @@ class AreaRest(DocumentRest):
         return self._put(Area, area_schema, after_update=update_associations)
 
 
-@resource(path='/areas/{id}/{lang}/info', cors_policy=cors_policy)
+@resource(path='/areas/{id}/{lang}/info')
 class AreaInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):
@@ -109,7 +108,7 @@ def update_associations(area, update_types, user_id):
         update_area(area, reset=True)
 
 
-@resource(path='/areas/{id}/{lang}/{version_id}', cors_policy=cors_policy)
+@resource(path='/areas/{id}/{lang}/{version_id}')
 class AreaVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):

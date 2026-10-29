@@ -1,9 +1,7 @@
 import functools
 from datetime import UTC, datetime, timedelta
 
-from cornice.resource import resource, view
-from pyramid.httpexceptions import HTTPForbidden
-
+from c2corg_api.httpexceptions import HTTPForbidden
 from c2corg_api.models.common.attributes import activities
 from c2corg_api.models.common.fields_outing import fields_outing
 from c2corg_api.models.outing import (
@@ -20,7 +18,6 @@ from c2corg_api.schemas.outing import (
     outing_schema,
 )
 from c2corg_api.views import (
-    cors_policy,
     restricted_json_view,
     set_default_geom_from_associations,
 )
@@ -35,6 +32,7 @@ from c2corg_api.views.document_schemas import (
     outing_schema_adaptor,
 )
 from c2corg_api.views.document_version import DocumentVersionRest
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import (
     has_permission_for_outing,
     validate_associations,
@@ -137,7 +135,7 @@ def validate_required_associations(request, **kwargs):
         request.errors.add('body', 'associations.routes', 'at least one route required')
 
 
-@resource(collection_path='/outings', path='/outings/{id}', cors_policy=cors_policy)
+@resource(collection_path='/outings', path='/outings/{id}')
 class OutingRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
@@ -182,7 +180,7 @@ class OutingRest(DocumentRest):
         return self._put(Outing, outing_schema, before_update=update_default_geometry)
 
 
-@resource(path='/outings/{id}/{lang}/info', cors_policy=cors_policy)
+@resource(path='/outings/{id}/{lang}/info')
 class OutingInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):
@@ -221,7 +219,7 @@ def update_default_geometry(outing, outing_in):
         geometry_in.geom = get_mid_point(geometry_in.geom_detail)
 
 
-@resource(path='/outings/{id}/{lang}/{version_id}', cors_policy=cors_policy)
+@resource(path='/outings/{id}/{lang}/{version_id}')
 class OutingVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):

@@ -7,7 +7,8 @@ from urllib.parse import parse_qs, urlparse
 
 import requests
 from pydiscourse.client import DiscourseClient
-from pyramid.httpexceptions import HTTPBadRequest
+
+from c2corg_api.httpexceptions import HTTPBadRequest
 
 log = logging.getLogger(__name__)
 

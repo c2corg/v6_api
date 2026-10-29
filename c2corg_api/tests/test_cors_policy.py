@@ -2,28 +2,29 @@ import json
 import subprocess  # nosec B404 (the Python of the tests, a constant script)
 import sys
 
-# Cornice copies the allowed CORS origins when a @resource is created, that
-# is when its view module is imported: once per process. The check runs in a
-# new process, with an origin that is not the default one, else a view module
-# imported before configure_cors_policy keeps the default origin unnoticed.
+# The allowed CORS origins are a setting, read at start-up into a module
+# dict: the check runs in a new process, with an origin that is not the
+# default one (the origin of the tests), else a setting that is not applied
+# goes unnoticed.
 SCRIPT = """
 import json
-from cornice.service import get_services
+from webtest import TestApp
 from c2corg_api import main
 from c2corg_api.tests import settings
 
 settings = dict(settings)
 settings['cors.allowed_origins'] = 'https://www.example.org'
-main({}, **settings)
-print(json.dumps(sorted(
-    service.name
-    for service in get_services()
-    if 'https://www.example.org' not in (service.cors_origins or ())
-)))
+app = TestApp(main({}, **settings))
+print(json.dumps([
+    app.get('/health', headers={'Origin': origin}, status='*').headers.get(
+        'Access-Control-Allow-Origin'
+    )
+    for origin in ('https://www.example.org', 'http://localhost:6553')
+]))
 """
 
 
-def test_every_view_allows_the_configured_origins():
+def test_the_configured_origins_are_allowed():
     result = subprocess.run(  # nosec B603 (sys.executable, a constant script)
         [sys.executable, '-c', SCRIPT],
         capture_output=True,
@@ -31,5 +32,6 @@ def test_every_view_allows_the_configured_origins():
         timeout=300,
         check=True,
     )
-    without_origin = json.loads(result.stdout.strip().splitlines()[-1])
-    assert without_origin == []
+    allowed = json.loads(result.stdout.strip().splitlines()[-1])
+    # the configured origin, and no longer the default one
+    assert allowed == ['https://www.example.org', None]

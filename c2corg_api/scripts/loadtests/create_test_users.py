@@ -3,11 +3,11 @@ import os
 import sys
 
 import transaction
-from pyramid.paster import get_appsettings
 from sqlalchemy import engine_from_config
 from sqlalchemy.orm import sessionmaker
 from zope.sqlalchemy import register
 
+from c2corg_api.config import get_appsettings
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user import User

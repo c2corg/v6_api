@@ -1,30 +1,14 @@
 ###
 # app configuration
-# http://docs.pylonsproject.org/projects/pyramid/en/1.5-branch/narr/environment.html
 ###
 
 [app:main]
 use = config:common.ini
 
-pyramid.reload_templates = false
-pyramid.debug_authorization = false
-pyramid.debug_notfound = false
-pyramid.debug_routematch = false
-pyramid.default_locale_name = en
-pyramid.includes =
-    pyramid_mailer
-    pyramid_tm
-
 sqlalchemy.url = postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}
-
-[server:main]
-use = egg:waitress#main
-host = 0.0.0.0
-port = 6543
 
 ###
 # logging configuration
-# http://docs.pylonsproject.org/projects/pyramid/en/1.5-branch/narr/logging.html
 ###
 
 [loggers]

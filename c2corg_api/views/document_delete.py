@@ -1,4 +1,3 @@
-from cornice.resource import resource
 from sqlalchemy.sql.expression import and_, exists, or_, over
 from sqlalchemy.sql.functions import func
 
@@ -59,9 +58,9 @@ from c2corg_api.models.xreport import (
     XreportLocale,
 )
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import restricted_json_view
 from c2corg_api.views.image import delete_all_files_for_image
+from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.validation import validate_id, validate_lang
 
 
@@ -255,7 +254,7 @@ def validate_requestor(request, **kwargs):
     )
 
 
-class DeleteBase(ACLDefault):
+class DeleteBase(BaseView):
     def _delete(self, document_id, document_type):
         if document_type == IMAGE_TYPE:
             # Files are actually removed only if the transaction succeeds
@@ -308,7 +307,7 @@ class DeleteBase(ACLDefault):
             self._delete_document(merged_document_id, document_type, True)
 
 
-@resource(path='/documents/delete/{id}', cors_policy=cors_policy)
+@resource(path='/documents/delete/{id}')
 class DeleteDocumentRest(DeleteBase):
     @restricted_json_view(
         permission='authenticated',
@@ -335,7 +334,7 @@ class DeleteDocumentRest(DeleteBase):
         return self._delete(document_id, document_type)
 
 
-@resource(path='/documents/delete/{id}/{lang}', cors_policy=cors_policy)
+@resource(path='/documents/delete/{id}/{lang}')
 class DeleteDocumentLocaleRest(DeleteBase):
     @restricted_json_view(
         permission='moderator',

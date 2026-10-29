@@ -49,7 +49,18 @@ class TestErrors(DocumentContractTest):
 
     def test_unknown_route(self):
         # not a route of the API: the answer of the web framework itself
-        check_snapshot('error_unknown_route', self.get('/no-such-route', status=404))
+        response = self.get('/no-such-route', status=404)
+        check_snapshot('error_unknown_route', response)
+        assert response.json['errors'] == [
+            {'location': 'body', 'name': 'Not Found', 'description': '/no-such-route'}
+        ]
+        # also for a CORS preflight
+        response = self.request('OPTIONS', '/no-such-route', status=404)
+        assert response.json['errors'][0]['description'] == '/no-such-route'
+        # no redirection to the path without its trailing slash
+        for path in ('/', '/books/', self.url('books', '/')):
+            response = self.get(path, status=404)
+            assert response.json['errors'][0]['description'] == path
 
     def test_method_not_allowed(self):
         # a route without a view for the method (not a route of routes.txt)
@@ -57,6 +68,51 @@ class TestErrors(DocumentContractTest):
             'error_method_not_allowed',
             self.request('DELETE', '/waypoints', status=405),
         )
+        for method, path in (
+            ('PATCH', '/waypoints'),
+            ('DELETE', self.url('books')),
+            ('GET', '/images/list'),
+            # a fixed path, not a document id
+            ('PUT', '/routes/update_public_transportation_rating'),
+            ('POST', '/routes/update_public_transportation_rating'),
+        ):
+            response = self.request(method, path, status=405)
+            assert response.json['errors'] == [
+                {'location': 'body', 'name': 'Method Not Allowed', 'description': None}
+            ]
+
+    def test_invalid_ids(self):
+        # the ids of the paths are numbers: anything else is an invalid id,
+        # not an unknown route
+        for method, path, name in (
+            ('GET', '/books/abc', 'id'),
+            ('GET', '/books/abc/en/info', 'id'),
+            ('GET', '/books/abc/en/12', 'id'),
+            ('GET', self.url('books', '/en/abc'), 'version_id'),
+            ('GET', '/document/abc/history/en', 'id'),
+            ('GET', '/images/proxy/abc', 'id'),
+            ('GET', '/stopareas/abc', 'id'),
+            ('GET', '/stopareas/abc/en/info', 'id'),
+            ('GET', '/waypoints_stopareas/abc/en/info', 'id'),
+        ):
+            response = self.request(method, path, status=400)
+            assert response.json['errors'] == [
+                {
+                    'location': 'querystring',
+                    'name': name,
+                    'description': f'invalid {name}',
+                }
+            ], path
+        # the permission is checked first
+        for method, path in (
+            ('PUT', '/books/abc'),
+            ('DELETE', '/documents/delete/abc'),
+            ('DELETE', '/documents/delete/abc/en'),
+            ('GET', '/users/following-user/abc'),
+            ('GET', '/users/blocked/abc'),
+        ):
+            response = self.request(method, path, status=403)
+            assert response.json['errors'][0]['name'] == 'Forbidden', path
 
     @contract(('PUT', '/maps/{id}'))
     def test_forbidden(self):

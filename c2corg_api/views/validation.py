@@ -1,12 +1,10 @@
 import functools
 import urllib
 
-from cornice.errors import Errors
 from dateutil import parser as datetime_parser
-from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.sql.expression import and_, exists
-from webob.descriptors import parse_int_safe
 
+from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.article import ARTICLE_TYPE
@@ -29,6 +27,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.views.document_associations import get_first_column
+from c2corg_api.views.resource import Errors
 
 # Validation functions
 
@@ -228,6 +227,16 @@ def validate_body_user_id(request, **kwargs):
 
     if not user_exists:
         request.errors.add('body', 'user_id', f'user {user_id} does not exist')
+
+
+def parse_int_safe(value):
+    """Return the integer of a string, or None (as WebOb's parse_int_safe)."""
+    if value is None or value == '':
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
 
 
 def validate_token(request, **kwargs):

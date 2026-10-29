@@ -7,31 +7,18 @@
 # same logic, checks and messages while they move (#2365).
 
 import json
+import re
 
 import transaction
-from fastapi.responses import JSONResponse, Response, StreamingResponse
-from pyramid.httpexceptions import HTTPError, HTTPNotModified, HTTPRedirection
-from pyramid.threadlocal import manager
+from fastapi.responses import JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
-from webob import Request as WebObRequest
-from webob import Response as WebObResponse
-from webob.etag import ETagMatcher, NoETag
-from webob.multidict import MultiDict
 
+from c2corg_api.httpexceptions import HTTPError, HTTPNotModified, HTTPRedirection
 from c2corg_api.models.user import AccountNotValidated
+from c2corg_api.views.resource import Errors
 from c2corg_api.web.auth import parse_authorization
 from c2corg_api.web.db import request_session
 from c2corg_api.web.errors import error_response
-
-
-class _Errors(list):
-    """The errors of the validators, stored as Cornice does."""
-
-    # the status of the answer, which a validator may change (e.g. 403)
-    status = 400
-
-    def add(self, location, name=None, description=None, **kw):
-        self.append(dict(location=location, name=name, description=description, **kw))
 
 
 class _Response:
@@ -45,17 +32,27 @@ class _Response:
         self.status = None
 
 
-class _Registry:
-    """The settings, and the attributes of the Pyramid registry."""
+# an ETag of If-None-Match, weak (W/"...") or strong ("..."), as WebOb read them
+_ETAG = re.compile(r'(?:^|\s)(W/)?"((?:\\"|.)*?)"')
 
-    def __init__(self, settings, pyramid_registry=None):
-        self.settings = settings
-        self._pyramid_registry = pyramid_registry
 
-    def __getattr__(self, name):
-        if self._pyramid_registry is None:
-            raise AttributeError(name)
-        return getattr(self._pyramid_registry, name)
+class _AnyETag:
+    """If-None-Match: *, which matches any ETag."""
+
+    def __contains__(self, etag):
+        return True
+
+
+def parse_if_none_match(value):
+    """Return the ETags of If-None-Match, weak ones included, as WebOb did."""
+    if value == '*':
+        return _AnyETag()
+    if not value:
+        return ()
+    matches = _ETAG.findall(value)
+    if not matches:
+        return (value,)
+    return tuple(etag for _, etag in matches)
 
 
 class ValidatedRequest:
@@ -72,21 +69,15 @@ class ValidatedRequest:
         self.headers = request.headers
         self.matchdict = dict(path_params or request.path_params)
         self.validated = {}
-        self.errors = _Errors()
+        self.errors = Errors()
         self.response = _Response()
         # as WebOb's request.if_none_match: weak ETags count
-        if_none_match = request.headers.get('If-None-Match')
-        self.if_none_match = (
-            ETagMatcher.parse(if_none_match, strong=False) if if_none_match else NoETag
-        )
-        self.registry = _Registry(
-            request.app.state.settings,
-            getattr(request.app.state, 'pyramid_registry', None),
-        )
+        self.if_none_match = parse_if_none_match(request.headers.get('If-None-Match'))
+        self.registry = request.app.state.registry
         self._user = user
         # as WebOb's request.authorization: (type, params), or None
         self.authorization = parse_authorization(request.headers.get('Authorization'))
-        # the body of a write, read by Cornice (extract_cstruct) and the views
+        # the body of a write, read by the validators (extract_body) and the views
         # as WebOb gives it: the media type without its parameters, and the
         # JSON body raising a ValueError when it is not JSON
         self.body = body
@@ -97,7 +88,7 @@ class ValidatedRequest:
         charset = parameters.strip().partition('charset=')[2]
         self.charset = charset.strip().strip('"') or 'UTF-8'
         # the form fields: the JSON views have none
-        self.POST = MultiDict()
+        self.POST = {}
 
     @property
     def client_addr(self):
@@ -155,7 +146,7 @@ def validate_query(request, *validators, user=None):
 
 
 def run_view(adapted, view):
-    """Call a view, and turn its Pyramid HTTP exceptions into answers."""
+    """Call a view, and turn the HTTP exceptions it raises into answers."""
     try:
         result = _call_view(adapted, view)
     except HTTPNotModified as e:
@@ -175,33 +166,19 @@ def run_view(adapted, view):
 
 
 def _call_view(adapted, view):
-    """Call a view, with the Pyramid registry in the thread locals."""
-    # Some code reads the Pyramid registry from the thread locals
-    # (get_current_registry(), e.g. the image URLs of the markdown cooker):
-    # set it for the view, as Pyramid does for its own requests.
-    registry = adapted.registry._pyramid_registry
-    if registry is not None:
-        manager.push({'registry': registry, 'request': None})
-    try:
-        result = view()
-        if isinstance(result, HTTPRedirection):
-            # returned, not raised (the image proxy)
-            raise result
-        return result
-    finally:
-        if registry is not None:
-            manager.pop()
+    """Call a view, and raise the redirection it may return."""
+    result = view()
+    if isinstance(result, HTTPRedirection):
+        # returned, not raised (the image proxy)
+        raise result
+    return result
 
 
 def _render(adapted, result):
     """Answer what a view returned."""
-    if isinstance(result, WebObResponse):
-        # a response of its own: its body may be a stream (the progress of the
-        # Navitia jobs, text/event-stream)
-        headers = {k: v for k, v in result.headers.items() if k != 'Content-Length'}
-        return StreamingResponse(
-            result.app_iter, status_code=result.status_code, headers=headers
-        )
+    if isinstance(result, Response):
+        # a response of its own: the progress stream of the Navitia jobs
+        return result
     headers = adapted.response.headers
     content_type = adapted.response.content_type
     if content_type is not None:
@@ -220,10 +197,14 @@ def _render(adapted, result):
 
 
 def _redirection(e):
-    """Answer a Pyramid redirection with its status, headers and text body."""
-    rendered = WebObRequest.blank('/').get_response(e)
-    headers = {k: v for k, v in rendered.headers.items() if k != 'Content-Length'}
-    return Response(rendered.body, status_code=rendered.status_code, headers=headers)
+    """Answer a redirection with its status, headers and text body."""
+    # the text body of WebOb, which answered the redirections of Pyramid
+    body = (
+        f'{e.code} {e.title}\n\nThe resource was found at {e.location}; '
+        'you should be redirected automatically.\n\n'
+    )
+    headers = {**e.headers, 'Content-Type': 'text/plain; charset=UTF-8'}
+    return Response(body, status_code=e.code, headers=headers)
 
 
 def _account_not_validated(e):
@@ -235,7 +216,7 @@ def _account_not_validated(e):
 
 
 def _http_error(e):
-    """Answer a Pyramid HTTP error like views.http_error_handler."""
+    """Answer an HTTP error as Pyramid did: its title and detail."""
     return error_response([('body', e.title, e.detail)], e.code)
 
 

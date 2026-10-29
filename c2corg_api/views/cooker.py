@@ -1,9 +1,7 @@
 import logging
 
-from cornice.resource import resource, view
-
-from c2corg_api.views import cors_policy
 from c2corg_api.views.markdown import cook
+from c2corg_api.views.resource import resource, view
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +13,7 @@ def validate_markdowns(request, **kwargs):
         request.errors.add('body', '', 'Should be a JSON object')
 
 
-@resource(path='/cooker', cors_policy=cors_policy)
+@resource(path='/cooker')
 class CookerRest:
     def __init__(self, request, **kwargs):
         self.request = request

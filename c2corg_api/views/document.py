@@ -1,12 +1,6 @@
 import logging
 from functools import partial
 
-from pyramid.httpexceptions import (
-    HTTPBadRequest,
-    HTTPConflict,
-    HTTPForbidden,
-    HTTPNotFound,
-)
 from sqlalchemy.orm import contains_eager, joinedload, load_only, with_polymorphic
 from sqlalchemy.orm.exc import StaleDataError
 
@@ -15,6 +9,12 @@ from c2corg_api.caching import (
     cache_document_cooked,
     cache_document_detail,
     get_or_create,
+)
+from c2corg_api.httpexceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPForbidden,
+    HTTPNotFound,
 )
 from c2corg_api.models import DBSession
 from c2corg_api.models.area import AREA_TYPE
@@ -48,13 +48,13 @@ from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.search import advanced_search
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import etag_cache, set_best_locale, to_json_dict
 from c2corg_api.views.document_listings import (
     add_load_for_locales,
     add_load_for_profiles,
     get_documents,
 )
+from c2corg_api.views.resource import BaseView
 from c2corg_api.views.validation import (
     association_permission_checker,
     association_permission_removal_checker,
@@ -78,7 +78,7 @@ NUM_RECENT_OUTINGS = 10
 ES_MAX_RESULT_WINDOW = 10000
 
 
-class DocumentRest(ACLDefault):
+class DocumentRest(BaseView):
     # TODO: remove doc_type, it's in documents_config
     def _collection_get(self, doc_type, documents_config):
         validated = self.request.validated

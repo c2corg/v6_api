@@ -2,12 +2,12 @@ import os
 import sys
 
 from elasticsearch_dsl import Index
-from pyramid.paster import (
+
+from c2corg_api.config import (
     get_appsettings,
+    parse_vars,
     setup_logging,
 )
-from pyramid.scripts.common import parse_vars
-
 from c2corg_api.search import configure_es_from_config, elasticsearch_config
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 

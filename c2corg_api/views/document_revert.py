@@ -1,11 +1,10 @@
 import logging
 
-from cornice.resource import resource
-from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.orm import contains_eager, joinedload, with_polymorphic
 from sqlalchemy.sql.expression import and_, exists
 
 from c2corg_api import DBSession
+from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models.area import AREA_TYPE, ArchiveArea, Area
 from c2corg_api.models.article import ARTICLE_TYPE, ArchiveArticle, Article
 from c2corg_api.models.book import BOOK_TYPE, ArchiveBook, Book
@@ -43,10 +42,10 @@ from c2corg_api.models.xreport import (
 )
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, OneOf
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import restricted_json_view
 from c2corg_api.views.area import update_associations
 from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.route import update_linked_attributes
 from c2corg_api.views.waypoint import update_linked_route_titles
 
@@ -94,8 +93,8 @@ def validate_version(request, **kwargs):
         )
 
 
-@resource(path='/documents/revert', cors_policy=cors_policy)
-class DocumentRevertRest(ACLDefault):
+@resource(path='/documents/revert')
+class DocumentRevertRest(BaseView):
     @restricted_json_view(
         permission='moderator',
         validators=[body_validator(RevertSchema), validate_version],

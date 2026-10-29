@@ -13,7 +13,7 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
-    # Navitia settings, read with os.getenv() by the API (pserve does not load .env, only the tests do)
+    # Navitia settings, read with os.getenv() by the API (the server does not load .env, only the tests do)
     env_file: ../.env
     environment:
       # Point services to their container hostnames

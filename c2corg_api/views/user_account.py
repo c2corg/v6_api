@@ -1,20 +1,18 @@
 import logging
 from functools import partial
 
-from cornice.resource import resource
-from pyramid.httpexceptions import HTTPInternalServerError
-
 from c2corg_api import DBSession
 from c2corg_api.emails.email_service import get_email_service
+from c2corg_api.httpexceptions import HTTPInternalServerError
 from c2corg_api.models.cache_version import update_cache_version
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.user import Purpose, User
 from c2corg_api.schemas.base import DROP, Schema, body_validator
 from c2corg_api.schemas.types import Bool, OneOf, Str, email_check, function_check
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
-from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
+from c2corg_api.views import restricted_json_view, restricted_view
+from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.user import (
     MINIMUM_PASSWORD_LENGTH,
     PASSWORD_STRENGTH_ERROR,
@@ -31,8 +29,8 @@ class UpdatePreferredLangSchema(Schema):
     lang: OneOf(default_langs)
 
 
-@resource(path='/users/update_preferred_language', cors_policy=cors_policy)
-class UserPreferredLanguageRest(ACLDefault):
+@resource(path='/users/update_preferred_language')
+class UserPreferredLanguageRest(BaseView):
     @restricted_json_view(
         renderer='json', validators=[body_validator(UpdatePreferredLangSchema)]
     )
@@ -76,8 +74,8 @@ class UpdateAccountSchema(Schema):
     is_profile_public: Bool = DROP
 
 
-@resource(path='/users/account', cors_policy=cors_policy)
-class UserAccountRest(ACLDefault):
+@resource(path='/users/account')
+class UserAccountRest(BaseView):
     def get_user(self):
         userid = self.request.authenticated_userid
         return DBSession.get(User, userid)

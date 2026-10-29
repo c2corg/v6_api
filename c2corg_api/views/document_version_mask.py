@@ -1,17 +1,16 @@
 import logging
 
-from cornice.resource import resource
-from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.sql.expression import and_, exists
 
 from c2corg_api import DBSession
+from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, OneOf
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import restricted_json_view
+from c2corg_api.views.resource import BaseView, resource
 
 log = logging.getLogger(__name__)
 
@@ -73,8 +72,8 @@ def _get_version(request):
     return version
 
 
-@resource(path='/versions/mask', cors_policy=cors_policy)
-class VersionMaskRest(ACLDefault):
+@resource(path='/versions/mask')
+class VersionMaskRest(BaseView):
     @restricted_json_view(
         permission='moderator',
         validators=[body_validator(MaskSchema), validate_version],
@@ -101,8 +100,8 @@ class VersionMaskRest(ACLDefault):
         return {}
 
 
-@resource(path='/versions/unmask', cors_policy=cors_policy)
-class VersionUnmaskRest(ACLDefault):
+@resource(path='/versions/unmask')
+class VersionUnmaskRest(BaseView):
     @restricted_json_view(
         permission='moderator',
         validators=[body_validator(MaskSchema), validate_version],

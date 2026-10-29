@@ -1,4 +1,3 @@
-from cornice.resource import resource
 from sqlalchemy.orm import joinedload, load_only
 
 from c2corg_api import DBSession
@@ -10,14 +9,13 @@ from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.document import AssociatedDocument
 from c2corg_api.schemas.types import Bool, OneOf, Seq
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import (
-    cors_policy,
     restricted_json_view,
     restricted_view,
     set_best_locale,
     to_json_dict,
 )
+from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.validation import validate_preferred_lang_param
 
 
@@ -28,8 +26,8 @@ class FilterPreferencesSchema(Schema):
     followed_only: Bool
 
 
-@resource(path='/users/preferences', cors_policy=cors_policy)
-class UserFilterPreferencesRest(ACLDefault):
+@resource(path='/users/preferences')
+class UserFilterPreferencesRest(BaseView):
     def get_user(self, with_area_locales=True):
         user_id = self.request.authenticated_userid
 

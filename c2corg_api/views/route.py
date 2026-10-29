@@ -2,7 +2,6 @@ import functools
 from itertools import combinations
 from operator import and_
 
-from cornice.resource import resource, view
 from sqlalchemy import case, func, literal_column, select
 from sqlalchemy.orm import aliased, load_only
 from sqlalchemy.sql.expression import column, or_, text, union
@@ -35,9 +34,7 @@ from c2corg_api.search.advanced_search import (
     get_all_filtered_docs,
     get_filtered_docs_page,
 )
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import (
-    cors_policy,
     get_best_locale,
     restricted_json_view,
     restricted_view,
@@ -60,6 +57,7 @@ from c2corg_api.views.document_schemas import (
     route_schema_adaptor,
 )
 from c2corg_api.views.document_version import DocumentVersionRest
+from c2corg_api.views.resource import BaseView, resource, view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_cook_param,
@@ -120,7 +118,7 @@ def validate_required_associations(request, **kwargs):
         )
 
 
-@resource(collection_path='/routes', path='/routes/{id}', cors_policy=cors_policy)
+@resource(collection_path='/routes', path='/routes/{id}')
 class RouteRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
@@ -202,7 +200,7 @@ class RouteRest(DocumentRest):
         )
 
 
-@resource(path='/routes/{id}/{lang}/{version_id}', cors_policy=cors_policy)
+@resource(path='/routes/{id}/{lang}/{version_id}')
 class RouteVersionRest(DocumentVersionRest):
     @view(validators=[validate_id, validate_lang, validate_version_id])
     def get(self):
@@ -215,15 +213,15 @@ class RouteVersionRest(DocumentVersionRest):
         )
 
 
-@resource(path='/routes/{id}/{lang}/info', cors_policy=cors_policy)
+@resource(path='/routes/{id}/{lang}/info')
 class RouteInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):
         return self._get_document_info(route_documents_config)
 
 
-@resource(path='/routes/update_public_transportation_rating', cors_policy=cors_policy)
-class RoutePublicTransportationRatingRest(ACLDefault):
+@resource(path='/routes/update_public_transportation_rating')
+class RoutePublicTransportationRatingRest(BaseView):
     """
     Update all route public transportation rating.
 
@@ -246,7 +244,7 @@ class RoutePublicTransportationRatingRest(ACLDefault):
         update_all_pt_rating(waypoint_extrapolation)
 
 
-@resource(path='/reachableroutes', cors_policy=cors_policy)
+@resource(path='/reachableroutes')
 class ReachableRouteRest(DocumentRest):
     def __init__(self, request, context=None):
         self.request = request

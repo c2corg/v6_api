@@ -1,19 +1,19 @@
-from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy import column
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import union
 
 from c2corg_api.caching import cache_document_version, get_or_create
+from c2corg_api.httpexceptions import HTTPNotFound
 from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user import User
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import etag_cache, to_json_dict
+from c2corg_api.views.resource import BaseView
 
 
-class DocumentVersionRest(ACLDefault):
+class DocumentVersionRest(BaseView):
     """Base class for all views that return a specific version of a document."""
 
     def _get_version(

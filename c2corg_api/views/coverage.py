@@ -3,7 +3,6 @@ import json
 import logging
 import math
 
-from cornice.resource import resource, view
 from shapely.errors import ShapelyError
 from shapely.geometry import Point, shape
 
@@ -20,13 +19,14 @@ from c2corg_api.schemas.coverage import (
     CoverageUpdateSchema,
     coverage_schema,
 )
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
     DocumentRest,
     make_validator_create,
     make_validator_update,
 )
 from c2corg_api.views.document_schemas import coverage_documents_config
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_cook_param,
@@ -48,7 +48,7 @@ validate_associations_update = functools.partial(
 )
 
 
-@resource(collection_path='/coverages', path='/coverages/{id}', cors_policy=cors_policy)
+@resource(collection_path='/coverages', path='/coverages/{id}')
 class CoverageRest(DocumentRest):
     def __init__(self, request, context=None):
         self.request = request
@@ -97,7 +97,7 @@ def validate_lon_lat(request, **kwargs):
             request.errors.add('querystring', key, 'invalid ' + key)
 
 
-@resource(path='/getcoverage', cors_policy=cors_policy)
+@resource(path='/getcoverage')
 class WaypointCoverageRest(DocumentRest):
     def __init__(self, request, context=None):
         self.request = request
@@ -121,7 +121,7 @@ def validate_geom_detail(request, **kwargs):
         request.errors.add('body', 'geom_detail', 'invalid geom_detail')
 
 
-@resource(path='/getpolygoncoverage', cors_policy=cors_policy)
+@resource(path='/getpolygoncoverage')
 class PolygonCoverage(DocumentRest):
     def __init__(self, request, context=None):
         self.request = request

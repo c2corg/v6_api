@@ -4,15 +4,15 @@ import sys
 from datetime import UTC, datetime, timedelta
 
 import transaction
-from pyramid.paster import (
-    get_appsettings,
-    setup_logging,
-)
-from pyramid.scripts.common import parse_vars
 from sqlalchemy import engine_from_config
 from sqlalchemy.orm.session import sessionmaker
 from zope.sqlalchemy import register
 
+from c2corg_api.config import (
+    get_appsettings,
+    parse_vars,
+    setup_logging,
+)
 from c2corg_api.models import document_types, es_sync
 from c2corg_api.models.document import Document
 from c2corg_api.scripts.es import sync

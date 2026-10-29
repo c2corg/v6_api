@@ -1,7 +1,6 @@
-from cornice.resource import resource, view
-from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
 from sqlalchemy.orm import load_only
 
+from c2corg_api.httpexceptions import HTTPForbidden, HTTPNotFound
 from c2corg_api.models import DBSession
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
@@ -11,10 +10,11 @@ from c2corg_api.schemas.user_profile import (
     internal_user_profile_schema,
     user_profile_schema,
 )
-from c2corg_api.views import cors_policy, restricted_json_view, restricted_view
+from c2corg_api.views import restricted_json_view, restricted_view
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import user_profile_documents_config
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import (
     validate_cook_param,
     validate_id,
@@ -25,7 +25,7 @@ from c2corg_api.views.validation import (
 )
 
 
-@resource(collection_path='/profiles', path='/profiles/{id}', cors_policy=cors_policy)
+@resource(collection_path='/profiles', path='/profiles/{id}')
 class UserProfileRest(DocumentRest):
     @restricted_view(validators=[validate_pagination, validate_preferred_lang_param])
     def collection_get(self):
@@ -86,7 +86,7 @@ class UserProfileRest(DocumentRest):
                 locale['title'] = ''
 
 
-@resource(path='/profiles/{id}/{lang}/info', cors_policy=cors_policy)
+@resource(path='/profiles/{id}/{lang}/info')
 class UserProfileInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):

@@ -1,4 +1,3 @@
-from cornice.resource import resource, view
 from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.sql.expression import desc
 
@@ -8,15 +7,15 @@ from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.views import cors_policy
 from c2corg_api.views.feed import get_params
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import (
     validate_simple_token_pagination,
     validate_user_id_not_required,
 )
 
 
-@resource(path='/documents/changes', cors_policy=cors_policy)
+@resource(path='/documents/changes')
 class ChangesDocumentRest:
     """Unique class for returning history of changes in documents."""
 

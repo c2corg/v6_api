@@ -7,10 +7,9 @@ import sys
 # the file the inventory is compared with (see test_inventory.py)
 INVENTORY_FILE = os.path.join(os.path.dirname(__file__), 'routes.txt')
 
-# methods every route answers without a view of its own: Cornice adds a
-# catch-all view ('*', 405) and the CORS preflight (OPTIONS), Pyramid
-# answers HEAD with the GET view
-IMPLICIT_METHODS = {'*', 'OPTIONS', 'HEAD'}
+# methods every route answers without a view of its own: the CORS preflight
+# (OPTIONS), and HEAD with the GET view
+IMPLICIT_METHODS = {'OPTIONS', 'HEAD'}
 
 # the permission of a view that has none
 PUBLIC = 'public'
@@ -18,41 +17,17 @@ PUBLIC = 'public'
 
 def route_inventory(app):
     """Return the routes as sorted (path, method, permission) tuples."""
-    # `app` is the dispatcher: the routes of Pyramid and of FastAPI
-    rows = set(_pyramid_routes(app.registry))
+    rows = set()
     for route in app.fastapi_app.router.routes:
         for method in getattr(route, 'methods', None) or ():
             if method not in IMPLICIT_METHODS:
                 # a FastAPI route checks its permission itself, and tells
                 # which one in the `permission` attribute of its endpoint
                 permission = getattr(route.endpoint, 'permission', None) or PUBLIC
-                # without the convertors: {id:int} is {id} for Pyramid
+                # without the convertors: {id:int} is {id}
                 path = re.sub(r':\w+}', '}', route.path)
                 rows.add((path, method, permission))
     return sorted(rows)
-
-
-def _pyramid_routes(registry):
-    introspector = registry.introspector
-    rows = set()
-    for route in introspector.get_category('routes'):
-        pattern = route['introspectable']['pattern']
-        for view in route['related']:
-            if view.category_name != 'views':
-                continue
-            methods = view['request_methods'] or ('*',)
-            if isinstance(methods, str):
-                methods = (methods,)
-            permissions = [
-                p['value']
-                for p in introspector.related(view)
-                if p.category_name == 'permissions'
-            ]
-            permission = permissions[0] if permissions else PUBLIC
-            for method in methods:
-                if method not in IMPLICIT_METHODS:
-                    rows.add((pattern, method, permission))
-    return rows
 
 
 def format_inventory(rows):

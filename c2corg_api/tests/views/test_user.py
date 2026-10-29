@@ -8,7 +8,8 @@ from unittest.mock import MagicMock, Mock, patch
 from urllib.parse import quote, urlencode, urlparse
 
 import pytest
-from pyramid.httpexceptions import HTTPBadRequest
+
+from c2corg_api.httpexceptions import HTTPBadRequest
 
 # from pytest import mark
 from c2corg_api.models.token import Token

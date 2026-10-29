@@ -9,15 +9,15 @@ from unittest.mock import call
 import pytest
 import requests
 from dotenv import load_dotenv
-from pyramid.httpexceptions import (
+from shapely.geometry import Polygon
+
+from c2corg_api.httpexceptions import (
     HTTPBadRequest,
     HTTPInternalServerError,
     HTTPNotFound,
     HTTPTooManyRequests,
     HTTPUnauthorized,
 )
-from shapely.geometry import Polygon
-
 from c2corg_api.models.area import Area
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route

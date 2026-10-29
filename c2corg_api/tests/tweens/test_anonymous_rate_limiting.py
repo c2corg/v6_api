@@ -1,16 +1,25 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
-from pyramid.httpexceptions import HTTPTooManyRequests
-from pyramid.testing import DummyRequest
-
+from c2corg_api.httpexceptions import HTTPTooManyRequests
 from c2corg_api.tweens.rate_limiting import (
     ANONYMOUS_RATE_LIMITED_BUCKETS,
     _check_anonymous_rate_limit,
     _client_ip,
     _is_anonymous_request_rate_limited,
-    rate_limiting_tween_factory,
+    rate_limit_error,
 )
+
+
+class _Request:
+    """The part of a request the rate limiting reads."""
+
+    def __init__(self):
+        self.method = 'GET'
+        self.path = '/'
+        self.headers = {}
+        self.remote_addr = None
+        self.authorization = None
 
 
 class FakeRedis:
@@ -48,12 +57,12 @@ class DummyRegistry:
 
 class TestClientIp:
     def test_uses_x_forwarded_for_when_present(self):
-        request = DummyRequest()
+        request = _Request()
         request.headers['X-Forwarded-For'] = '203.0.113.5, 10.0.0.1'
         assert _client_ip(request) == '203.0.113.5'
 
     def test_falls_back_to_remote_addr(self):
-        request = DummyRequest()
+        request = _Request()
         request.remote_addr = '198.51.100.7'
         assert _client_ip(request) == '198.51.100.7'
 
@@ -95,7 +104,7 @@ class TestIsAnonymousRequestRateLimited:
 
 class TestCheckAnonymousRateLimit:
     def _make_request(self, ip='192.0.2.1'):
-        request = DummyRequest()
+        request = _Request()
         request.remote_addr = ip
         return request
 
@@ -163,7 +172,7 @@ class TestRateLimitingTweenAnonymous:
     """
 
     def _make_request(self, method, path):
-        request = DummyRequest()
+        request = _Request()
         request.method = method
         request.path = path
         request.authorization = None
@@ -176,57 +185,37 @@ class TestRateLimitingTweenAnonymous:
             == 'account_recovery'
         )
 
-    @patch('c2corg_api.tweens.rate_limiting.http_error_handler')
     @patch('c2corg_api.tweens.rate_limiting._check_anonymous_rate_limit')
-    def test_login_is_blocked_when_rate_limited(self, check, error_handler):
+    def test_login_is_blocked_when_rate_limited(self, check):
         check.return_value = True
-        error_handler.return_value = 'too many requests'
-        handler = Mock()
-        tween = rate_limiting_tween_factory(handler, DummyRegistry({}))
-
         request = self._make_request('POST', '/users/login')
-        response = tween(request)
 
-        handler.assert_not_called()
-        assert error_handler.call_count == 1
-        (exc, req), _ = error_handler.call_args
-        assert isinstance(exc, HTTPTooManyRequests)
-        assert req is request
-        assert response == 'too many requests'
+        error = rate_limit_error(request, {})
+
+        assert isinstance(error, HTTPTooManyRequests)
+        check.assert_called_once_with(request, {}, 'login')
 
     @patch('c2corg_api.tweens.rate_limiting._check_anonymous_rate_limit')
     def test_login_is_allowed_when_not_rate_limited(self, check):
         check.return_value = False
-        handler = Mock(return_value='handled')
-        tween = rate_limiting_tween_factory(handler, DummyRegistry({}))
-
         request = self._make_request('POST', '/users/login')
-        response = tween(request)
 
-        handler.assert_called_once_with(request)
-        assert response == 'handled'
+        assert rate_limit_error(request, {}) is None
+        check.assert_called_once()
 
     @patch('c2corg_api.tweens.rate_limiting._check_anonymous_rate_limit')
     def test_unrelated_anonymous_paths_are_not_rate_limited(self, check):
-        handler = Mock(return_value='handled')
-        tween = rate_limiting_tween_factory(handler, DummyRegistry({}))
-
         request = self._make_request('POST', '/waypoints')
-        response = tween(request)
 
+        assert rate_limit_error(request, {}) is None
         check.assert_not_called()
-        handler.assert_called_once_with(request)
-        assert response == 'handled'
 
-    def test_get_requests_are_never_rate_limited(self):
-        handler = Mock(return_value='handled')
-        tween = rate_limiting_tween_factory(handler, DummyRegistry({}))
-
+    @patch('c2corg_api.tweens.rate_limiting._check_anonymous_rate_limit')
+    def test_get_requests_are_never_rate_limited(self, check):
         request = self._make_request('GET', '/users/login')
-        response = tween(request)
 
-        handler.assert_called_once_with(request)
-        assert response == 'handled'
+        assert rate_limit_error(request, {}) is None
+        check.assert_not_called()
 
 
 if __name__ == '__main__':

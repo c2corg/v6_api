@@ -2,7 +2,6 @@ import abc
 import enum
 
 from geoalchemy2 import Geometry, WKBElement
-from pyramid.httpexceptions import HTTPInternalServerError
 from shapely import wkt
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, func
 from sqlalchemy.dialects import postgresql
@@ -10,6 +9,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import column_property, declared_attr, relationship
 from sqlalchemy.sql.schema import UniqueConstraint
 
+from c2corg_api.httpexceptions import HTTPInternalServerError
 from c2corg_api.models import Base, DBSession, enums, schema
 from c2corg_api.models.common import document_types
 from c2corg_api.models.common.attributes import quality_types

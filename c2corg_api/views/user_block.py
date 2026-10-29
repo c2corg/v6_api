@@ -1,17 +1,15 @@
 import logging
 
-from cornice.resource import resource
-from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError
-
 from c2corg_api import DBSession
+from c2corg_api.httpexceptions import HTTPBadRequest, HTTPInternalServerError
 from c2corg_api.models.user import User
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import user_profile_documents_config
+from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.validation import validate_body_user_id, validate_id
 
 log = logging.getLogger(__name__)
@@ -30,8 +28,8 @@ def _get_user(user_id):
     return user
 
 
-@resource(path='/users/block', cors_policy=cors_policy)
-class UserBlockRest(ACLDefault):
+@resource(path='/users/block')
+class UserBlockRest(BaseView):
     @restricted_json_view(
         permission='moderator',
         validators=[body_validator(BlockSchema), validate_body_user_id],
@@ -65,8 +63,8 @@ class UserBlockRest(ACLDefault):
         return {}
 
 
-@resource(path='/users/unblock', cors_policy=cors_policy)
-class UserUnblockRest(ACLDefault):
+@resource(path='/users/unblock')
+class UserUnblockRest(BaseView):
     @restricted_json_view(
         permission='moderator',
         validators=[body_validator(BlockSchema), validate_body_user_id],
@@ -102,8 +100,8 @@ class UserUnblockRest(ACLDefault):
         return {}
 
 
-@resource(path='/users/blocked/{id}', cors_policy=cors_policy)
-class UserBlockedRest(ACLDefault):
+@resource(path='/users/blocked/{id}')
+class UserBlockedRest(BaseView):
     @restricted_json_view(permission='moderator', validators=[validate_id])
     def get(self):
         """Check if the given user is blocked.
@@ -121,8 +119,8 @@ class UserBlockedRest(ACLDefault):
         return {'blocked': user.blocked}
 
 
-@resource(path='/users/blocked', cors_policy=cors_policy)
-class UserBlockedAllRest(ACLDefault):
+@resource(path='/users/blocked')
+class UserBlockedAllRest(BaseView):
     @restricted_json_view(permission='moderator')
     def get(self):
         """Get the blocked users.

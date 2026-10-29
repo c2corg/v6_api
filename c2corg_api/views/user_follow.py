@@ -1,15 +1,13 @@
 import logging
 
-from cornice.resource import resource
-
 from c2corg_api import DBSession
 from c2corg_api.models.feed import FollowedUser
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import user_profile_documents_config
+from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.validation import (
     validate_body_user_id,
     validate_id,
@@ -32,8 +30,8 @@ def get_follower_relation(followed_user_id, follower_user_id):
     )
 
 
-@resource(path='/users/follow', cors_policy=cors_policy)
-class UserFollowRest(ACLDefault):
+@resource(path='/users/follow')
+class UserFollowRest(BaseView):
     @restricted_json_view(
         validators=[body_validator(FollowSchema), validate_body_user_id],
     )
@@ -64,8 +62,8 @@ class UserFollowRest(ACLDefault):
         return {}
 
 
-@resource(path='/users/unfollow', cors_policy=cors_policy)
-class UserUnfollowRest(ACLDefault):
+@resource(path='/users/unfollow')
+class UserUnfollowRest(BaseView):
     @restricted_json_view(
         validators=[body_validator(FollowSchema), validate_body_user_id],
     )
@@ -94,8 +92,8 @@ class UserUnfollowRest(ACLDefault):
         return {}
 
 
-@resource(path='/users/following-user/{id}', cors_policy=cors_policy)
-class UserFollowingUserRest(ACLDefault):
+@resource(path='/users/following-user/{id}')
+class UserFollowingUserRest(BaseView):
     @restricted_json_view(validators=[validate_id])
     def get(self):
         """Check if the authenticated user follows the given user.
@@ -115,8 +113,8 @@ class UserFollowingUserRest(ACLDefault):
         return {'is_following': follower_relation is not None}
 
 
-@resource(path='/users/following', cors_policy=cors_policy)
-class UserFollowingRest(ACLDefault):
+@resource(path='/users/following')
+class UserFollowingRest(BaseView):
     @restricted_json_view(validators=[validate_preferred_lang_param])
     def get(self):
         """Get the users that the authenticated user is following.

@@ -151,7 +151,6 @@ dependencies = [
     { name = "alembic" },
     { name = "apscheduler" },
     { name = "bcrypt" },
-    { name = "cornice" },
     { name = "dogpile-cache" },
     { name = "elasticsearch" },
     { name = "elasticsearch-dsl" },
@@ -163,27 +162,21 @@ dependencies = [
     { name = "kombu" },
     { name = "markdown" },
     { name = "nh3" },
+    { name = "pastedeploy" },
     { name = "psycopg2-binary" },
     { name = "pydantic" },
     { name = "pydiscourse" },
     { name = "pyjwt" },
     { name = "pymdown-extensions" },
     { name = "pyproj" },
-    { name = "pyramid" },
-    { name = "pyramid-debugtoolbar" },
-    { name = "pyramid-jwt" },
-    { name = "pyramid-mailer" },
-    { name = "pyramid-tm" },
     { name = "python-dotenv" },
     { name = "python-json-logger" },
     { name = "python-slugify" },
     { name = "redis" },
     { name = "requests" },
-    { name = "setuptools" },
     { name = "shapely" },
     { name = "sqlalchemy" },
     { name = "transaction" },
-    { name = "waitress" },
     { name = "zope-sqlalchemy" },
 ]
 
@@ -204,7 +197,6 @@ requires-dist = [
     { name = "alembic", specifier = "==1.20.0" },
     { name = "apscheduler", specifier = "==3.11.3" },
     { name = "bcrypt", specifier = "==5.0.0" },
-    { name = "cornice", specifier = "==6.1.0" },
     { name = "dogpile-cache", specifier = "==1.5.0" },
     { name = "elasticsearch", specifier = "==2.4.1" },
     { name = "elasticsearch-dsl", specifier = "==2.2.0" },
@@ -216,27 +208,21 @@ requires-dist = [
     { name = "kombu", specifier = "==5.6.2" },
     { name = "markdown", specifier = "==3.10.3" },
     { name = "nh3", specifier = "==0.3.7" },
+    { name = "pastedeploy", specifier = "==3.1.0" },
     { name = "psycopg2-binary", specifier = "==2.9.13" },
     { name = "pydantic", specifier = "==2.14.1" },
     { name = "pydiscourse", specifier = "==1.7.0" },
     { name = "pyjwt", specifier = "==2.15.1" },
     { name = "pymdown-extensions", specifier = "==12.1" },
     { name = "pyproj", specifier = "==3.8.0" },
-    { name = "pyramid", specifier = "==1.10.8" },
-    { name = "pyramid-debugtoolbar", specifier = "==4.12.1" },
-    { name = "pyramid-jwt", specifier = "==1.6.1" },
-    { name = "pyramid-mailer", specifier = "==0.15.1" },
-    { name = "pyramid-tm", specifier = "==2.6" },
     { name = "python-dotenv", specifier = "==1.2.4" },
     { name = "python-json-logger", specifier = "==4.2.0" },
     { name = "python-slugify", specifier = "==9.1.3" },
     { name = "redis", specifier = "==6.4.0" },
     { name = "requests", specifier = "==2.34.2" },
-    { name = "setuptools", specifier = "==78.1.1" },
     { name = "shapely", specifier = "==2.2.0" },
     { name = "sqlalchemy", specifier = "==2.1.4" },
     { name = "transaction", specifier = "==5.1" },
-    { name = "waitress", specifier = "==3.0.2" },
     { name = "zope-sqlalchemy", specifier = "==4.1" },
 ]
 
@@ -345,18 +331,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93a6792e2acffb9d9d5cb0a5cfd8802644b7b1c9a02e4/colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44", size = 27697, upload-time = "2022-10-25T02:36:22.414Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335, upload-time = "2022-10-25T02:36:20.889Z" },
-]
-
-[[package]]
-name = "cornice"
-version = "6.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyramid" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/24/ed/24f0a45b0ae9d1633c8d32d6f14592eab6bcfddd1cb5df5c0073f4f185d1/cornice-6.1.0.tar.gz", hash = "sha256:bfd1b6c2a991a7ccb1b2082b6de9e3b8f198b6a2b4a07ab0800e05df05a45361", size = 146106, upload-time = "2024-02-08T11:28:48.498Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c2/a1/12b4a55223bcdd70e8a494984637782b0453700bbf92ae6665a577322ac1/cornice-6.1.0-py3-none-any.whl", hash = "sha256:320b026998a30099bace43484664eb0a4db37eff0dfc6f7733cec183ec3174ad", size = 28675, upload-time = "2024-02-08T11:28:46.833Z" },
 ]
 
 [[package]]
@@ -543,15 +517,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e0/35/d881561984239dcf507625ec86f9653ba5526213ed94138a9ea6b0305169/httmock-1.4.0.tar.gz", hash = "sha256:44eaf4bb59cc64cd6f5d8bf8700b46aa3097cc5651b9bc85c527dfbc71792f41", size = 4795, upload-time = "2020-10-28T12:01:30.325Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ce/99/f950e23335affb58ae116aaf32565258a732b2b570aa961764df2ac0540d/httmock-1.4.0-py3-none-any.whl", hash = "sha256:13e6c63f135a928e15d386af789a2890efb03e0e280f29bdc9961f3f0dc34cb9", size = 4754, upload-time = "2020-10-28T12:01:29.1Z" },
-]
-
-[[package]]
-name = "hupper"
-version = "1.12.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/bd/e6/bb064537288eee2be97f3e0fcad8e7242bc5bbe9664ae57c7d29b3fa18c2/hupper-1.12.1.tar.gz", hash = "sha256:06bf54170ff4ecf4c84ad5f188dee3901173ab449c2608ad05b9bfd6b13e32eb", size = 43231, upload-time = "2024-01-26T09:14:57.294Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/86/7d/3888833e4f5ea56af4a9935066ec09a83228e533d7b8877f65889d706ee4/hupper-1.12.1-py3-none-any.whl", hash = "sha256:e872b959f09d90be5fb615bd2e62de89a0b57efc037bdf9637fb09cdf8552b19", size = 22830, upload-time = "2024-01-26T09:14:55.176Z" },
 ]
 
 [[package]]
@@ -854,28 +819,6 @@ wheels = [
 ]
 
 [[package]]
-name = "plaster"
-version = "1.1.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/26/93/66df0f87f1442d8afea8531ae8a4a9eca656006a54eac2b4489427e92c10/plaster-1.1.2.tar.gz", hash = "sha256:f8befc54bf8c1147c10ab40297ec84c2676fa2d4ea5d6f524d9436a80074ef98", size = 33232, upload-time = "2022-11-21T01:44:54.49Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e7/8b/3f98db1448e3b4d2d142716874a7e02f6101685fdaa0f55a8668e9ffa048/plaster-1.1.2-py2.py3-none-any.whl", hash = "sha256:42992ab1f4865f1278e2ad740e8ad145683bb4022e03534265528f0c23c0df2d", size = 11554, upload-time = "2022-11-21T01:44:52.984Z" },
-]
-
-[[package]]
-name = "plaster-pastedeploy"
-version = "1.0.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pastedeploy" },
-    { name = "plaster" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c7/af/01a22f73ce97c6375c88d7ceaf6f5f4f345e940da93c94f98833d898a449/plaster_pastedeploy-1.0.1.tar.gz", hash = "sha256:be262e6d2e41a7264875daa2fe2850cbb0615728bcdc92828fdc72736e381412", size = 20915, upload-time = "2022-11-07T01:23:05.348Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bd/30/2d4cf89035c22a89bf0e34dbc50fdc07c42c9bdc90fd972d495257ad2b6e/plaster_pastedeploy-1.0.1-py2.py3-none-any.whl", hash = "sha256:ad3550cc744648969ed3b810f33c9344f515ee8d8a8cec18e8f2c4a643c2181f", size = 7823, upload-time = "2022-11-07T01:23:03.23Z" },
-]
-
-[[package]]
 name = "platformdirs"
 version = "4.13.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1103,93 +1046,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pyramid"
-version = "1.10.8"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "hupper" },
-    { name = "plaster" },
-    { name = "plaster-pastedeploy" },
-    { name = "setuptools" },
-    { name = "translationstring" },
-    { name = "venusian" },
-    { name = "webob" },
-    { name = "zope-deprecation" },
-    { name = "zope-interface" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/72/c3/095f0b37069c6122c8411807f0e1bf482fe79e997b8747750eaab2613ddb/pyramid-1.10.8.tar.gz", hash = "sha256:b7cd66595bef92f81764b976ddde2b2fa8e4f5f325e02f65f6ec7f3708b29cf6", size = 2710967, upload-time = "2021-03-01T02:44:58.3Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3c/0b/6a56fe7dd5ccb1dc9188c3f337c776d7bc6d3f2fc6044c458b0799d37b0d/pyramid-1.10.8-py2.py3-none-any.whl", hash = "sha256:06e99d3174586921490203288e2cc9cd43d12992306f924ca32a2c59233386a9", size = 327105, upload-time = "2021-03-01T02:44:56.249Z" },
-]
-
-[[package]]
-name = "pyramid-debugtoolbar"
-version = "4.12.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pygments" },
-    { name = "pyramid" },
-    { name = "pyramid-mako" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/1c/09/c2757fa0d1dd4d3f748e5160453bf5a50918f2fbeb22913e184998989644/pyramid_debugtoolbar-4.12.1.tar.gz", hash = "sha256:71e888d349c85fcca12b3e6dc4c7ae8e3f02a1d5acc05154fd9ba8c7f661b43d", size = 3081467, upload-time = "2024-02-05T03:40:32.556Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/35/00/45969d152de9389e932c6e345846c97069b42987ef1388840db507d9f557/pyramid_debugtoolbar-4.12.1-py3-none-any.whl", hash = "sha256:1d13a82444b3396d5a76d1e611d0de1b38da096f04440041e8e889536103864b", size = 350810, upload-time = "2024-02-05T03:40:27.724Z" },
-]
-
-[[package]]
-name = "pyramid-jwt"
-version = "1.6.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyjwt" },
-    { name = "pyramid" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/44/25/ed2fea7add4aa146ffbe45f485c22c5f581c823518d25c78a17e578574e8/pyramid_jwt-1.6.1.tar.gz", hash = "sha256:16f70a2fb0501f5493038f2d99d2afb98059b612e096354f9bc24a37ecdac7c0", size = 23203, upload-time = "2020-10-09T08:00:30.138Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/a5/57b8f488ea5890f47c90a8af829ddd833a29a90bbdd208ab33c25ea5f3de/pyramid_jwt-1.6.1-py2.py3-none-any.whl", hash = "sha256:1f309299b5fbb40e094a20c7161684fd645005f813b9aafd1efea042f16b43a2", size = 12242, upload-time = "2020-10-09T08:00:28.85Z" },
-]
-
-[[package]]
-name = "pyramid-mailer"
-version = "0.15.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyramid" },
-    { name = "repoze-sendmail" },
-    { name = "transaction" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a0/f2/6febf5459dff4d7e653314d575469ad2e11b9d2af2c3606360e1c67202f2/pyramid_mailer-0.15.1.tar.gz", hash = "sha256:ec0aff54d9179b2aa2922ff82c2016a4dc8d1da5dc3408d6594f0e2096446f9b", size = 46836, upload-time = "2016-12-13T20:49:52.806Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ea/c3/0ce593179a8da8e1ab7fe178b0ae096a046246bd44a5787f72940d6dd5b2/pyramid_mailer-0.15.1-py2.py3-none-any.whl", hash = "sha256:28d4a7829ebc19dd40e712d8cb1998cec03c296ba675b2c112a503539738bdc1", size = 19041, upload-time = "2016-12-13T20:48:50.069Z" },
-]
-
-[[package]]
-name = "pyramid-mako"
-version = "1.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "mako" },
-    { name = "pyramid" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/63/7b/5e2af68f675071a6bad148c1c393928f0ef5fcd94e95cbf53b89d6471a83/pyramid_mako-1.1.0.tar.gz", hash = "sha256:0066c863441f1c3ddea60cee1ccc50d00a91a317a8052ca44131da1a12a840e2", size = 31236, upload-time = "2019-08-18T23:47:55.719Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/57/ce/bc0aec2166cff2b2a9d061b02b07bfaa2413f31a5f828987038e5e99d53c/pyramid_mako-1.1.0-py2.py3-none-any.whl", hash = "sha256:76104592d292b6974cf7080aa52405c51f396a621535f01e274d7fe546e85a43", size = 14145, upload-time = "2019-08-18T23:47:53.863Z" },
-]
-
-[[package]]
-name = "pyramid-tm"
-version = "2.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyramid" },
-    { name = "transaction" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/cf/b3/d6db704d25fc7b03d96a753fcc7e63f4ea2f93aedeb7c072472744d33267/pyramid_tm-2.6.tar.gz", hash = "sha256:8148d2191285280c9a0c23e6df1018b3514b4cef02115b872dd0350a4d78709c", size = 40028, upload-time = "2024-11-14T07:30:54.256Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/68/78/77ac3fbfb73339bd09f4c33a6d79947ad58c5d4d8062fbdbc2be1ddcac57/pyramid_tm-2.6-py3-none-any.whl", hash = "sha256:665a4ee1d6f41f0c7ffa5e54d9b01d70cd3e8e5bd76277529acbdd6b6bd6fe9e", size = 10792, upload-time = "2024-11-14T07:30:52.428Z" },
-]
-
-[[package]]
 name = "pytest"
 version = "9.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1289,20 +1145,6 @@ wheels = [
 ]
 
 [[package]]
-name = "repoze-sendmail"
-version = "4.4.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "setuptools" },
-    { name = "transaction" },
-    { name = "zope-interface" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/12/4e/8ef1fd5c42765d712427b9c391419a77bd48877886d2cbc5e9f23c8cad9b/repoze.sendmail-4.4.1.tar.gz", hash = "sha256:7a8ea37914a5d38bad38052a83eac1d867b171ff4cc8b4d4994e892c05b0d424", size = 41006, upload-time = "2017-04-21T15:30:15.833Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/25/98/c5c64dc045b7c45858c391d04673a0f2748acef8e0eea4f2989b22220f97/repoze.sendmail-4.4.1-py2.py3-none-any.whl", hash = "sha256:f1396893d3aa43502624e88941a441233c06679ae50b1966ffbfccba05da6347", size = 41013, upload-time = "2017-04-21T15:30:18.381Z" },
-]
-
-[[package]]
 name = "requests"
 version = "2.34.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1340,15 +1182,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/0a/e8/1e186578076aff7a80735f625005fde678412ab609cd323ed182eb7d6b87/ruff-0.17.1-py3-none-win32.whl", hash = "sha256:1de0030a8aa78c65c5fecb84b2e5c390ac684c0452875a02afc7c083d49a496a", size = 9895093, upload-time = "2026-10-15T15:23:10.582Z" },
     { url = "https://files.pythonhosted.org/packages/6a/2e/da3d9589bae8e8b58f3a48bd5bc0b980232fb14a83bf02c3be7660f87c1b/ruff-0.17.1-py3-none-win_amd64.whl", hash = "sha256:5df76f16580fab58d0f6c98a3ac254a4abceb7b2489b8b678335869cff77b3d7", size = 10097955, upload-time = "2026-10-15T15:23:13.309Z" },
     { url = "https://files.pythonhosted.org/packages/df/c9/0f2a4dea06a5e12c1191ee3d96b1e1233797d0d5e18f97a2b909a95a9836/ruff-0.17.1-py3-none-win_arm64.whl", hash = "sha256:42400b9a6ff8515ff27796f07f92e0195be011c86e81e381606f58ea5502fef4", size = 9853542, upload-time = "2026-10-15T15:23:16.05Z" },
-]
-
-[[package]]
-name = "setuptools"
-version = "78.1.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/81/9c/42314ee079a3e9c24b27515f9fbc7a3c1d29992c33451779011c74488375/setuptools-78.1.1.tar.gz", hash = "sha256:fcc17fd9cd898242f6b4adfaca46137a9edef687f43e6f78469692a5e70d851d", size = 1368163, upload-time = "2025-04-19T18:23:36.68Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/90/99/158ad0609729111163fc1f674a5a42f2605371a4cf036d0441070e2f7455/setuptools-78.1.1-py3-none-any.whl", hash = "sha256:c3a9c4211ff4c309edb8b8c4f1cbfa7ae324c4ba9f91ff254e3d305b9fd54561", size = 1256462, upload-time = "2025-04-19T18:23:34.525Z" },
 ]
 
 [[package]]
@@ -1496,15 +1329,6 @@ wheels = [
 ]
 
 [[package]]
-name = "translationstring"
-version = "1.4"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/14/39/32325add93da9439775d7fe4b4887eb7986dbc1d5675b0431f4531f560e5/translationstring-1.4.tar.gz", hash = "sha256:bf947538d76e69ba12ab17283b10355a9ecfbc078e6123443f43f2107f6376f3", size = 24199, upload-time = "2020-07-09T11:58:32.041Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/98/36187601a15e3d37e9bfcf0e0e1055532b39d044353b06861c3a519737a9/translationstring-1.4-py2.py3-none-any.whl", hash = "sha256:5f4dc4d939573db851c8d840551e1a0fb27b946afe3b95aafc22577eed2d6262", size = 15028, upload-time = "2020-07-09T11:58:30.995Z" },
-]
-
-[[package]]
 name = "typing-extensions"
 version = "4.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1553,15 +1377,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e4/e8/6ff5e6bc22095cfc59b6ea711b687e2b7ed4bdb373f7eeec370a97d7392f/urllib3-1.26.20.tar.gz", hash = "sha256:40c2dc0c681e47eb8f90e7e27bf6ff7df2e677421fd46756da1161c39ca70d32", size = 307380, upload-time = "2024-08-29T15:43:11.37Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/33/cf/8435d5a7159e2a9c83a95896ed596f68cf798005fe107cc655b5c5c14704/urllib3-1.26.20-py2.py3-none-any.whl", hash = "sha256:0ed14ccfbf1c30a9072c7ca157e4319b70d65f623e91e7b32fadb2853431016e", size = 144225, upload-time = "2024-08-29T15:43:08.921Z" },
-]
-
-[[package]]
-name = "venusian"
-version = "3.1.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/70/4c/eefa68085c555dc11e6744b9c6fbe5966b1c9378c47267776a448923e9a5/venusian-3.1.1.tar.gz", hash = "sha256:534fb3b355669283eb3954581931e5d1d071fce61d029d58f3219a5e3a6f0c41", size = 39269, upload-time = "2024-12-02T02:35:04.033Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5a/4b/34d926eba40db81b204066a60b4efdc5d8867a8efcbfe44d69b634b1c907/venusian-3.1.1-py3-none-any.whl", hash = "sha256:0845808a985976acbceaa1fbb871c7fac4fb28ae75453232970e9c2c2866dbf4", size = 14026, upload-time = "2024-12-02T02:35:03.056Z" },
 ]
 
 [[package]]
@@ -1650,18 +1465,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/20/85/73877efb10ba4ef02364d5671724b1326d482dc928eace5fe114215443b7/webtest-3.0.7.tar.gz", hash = "sha256:7aeab50f970d46c068e7a36dd162cb242591edf72a1d04efd21374772b931741", size = 80260, upload-time = "2025-10-06T20:38:59.293Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/73/74/cb337bb1758254589b6fdc0aeeb91fa987ac1e6877a79b75edbd214fc0a9/webtest-3.0.7-py3-none-any.whl", hash = "sha256:2f51a0844f3a8beaef89bc23d225fe05ad816f7e429ffcc655a13013a799ac6c", size = 32393, upload-time = "2025-10-06T20:38:57.728Z" },
-]
-
-[[package]]
-name = "zope-deprecation"
-version = "6.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "setuptools" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/56/05/8eaa04876e1fde656f1bfd8f62a4140d7ac23bcf16db67dd4036698dae1f/zope_deprecation-6.0.tar.gz", hash = "sha256:18727ebda8e63a6d4bd28a290e8b46852e9f14473debb5cc40a0a2dccfadf15f", size = 24480, upload-time = "2025-09-12T07:06:06.779Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e9/ed/da7f8b1c73caf989a0ff7096cc73c59e6c36f35a8f967c51104098602e2d/zope_deprecation-6.0-py3-none-any.whl", hash = "sha256:ff72d51c88b516b9ddf2cfb826381cc49f99a6a89b7d35c97faca7bee3b46da6", size = 9512, upload-time = "2025-09-12T07:06:05.847Z" },
 ]
 
 [[package]]
