@@ -18,6 +18,7 @@ from c2corg_api.web import (
     search,
     sitemaps,
     stopareas,
+    user_actions,
     users,
 )
 from c2corg_api.web.auth import TokenValidationMiddleware
@@ -45,6 +46,7 @@ def create_fastapi_app(settings):
     misc.include(app)
     users.include(app)
     navitia.include(app)
+    user_actions.include(app)
     return app
 
 
