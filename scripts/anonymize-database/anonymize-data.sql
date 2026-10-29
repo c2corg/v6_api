@@ -12,15 +12,15 @@ $$;
 create function pg_temp.scrub(t text) returns text language sql immutable as $$
   select regexp_replace(regexp_replace(
     regexp_replace(t, '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', 'email@example.com', 'g'),
-    '(^|[^A-Za-z0-9._%+-])@[A-Za-z0-9_][A-Za-z0-9_.-]*', '\1@user', 'g'),
+    '(^|[^A-Za-z0-9._%+-])@[A-Za-z_][A-Za-z0-9_.-]*', '\1@user', 'g'),
     '(\+|\y00)[0-9]{2}[ .-]?(\(0\)|0)?[ .-]?[0-9]{1,3}([ .-]?[0-9]{2,4}){2,4}|\y0[1-9]([ .-]?[0-9]{2}){4}\y', '00 00 00 00 00', 'g')
 $$;
 
 -- Replace users'data by fake data. The name is the one displayed to everybody (history of the documents, authors
--- of the outings...): it is kept for the users whose profile is public, unless it looks like a real identity (an email, or
--- "Firstname Lastname"), and replaced by `User <id>` for everybody else. The `is_profile_public` flag is kept.
+-- of the outings...): it is kept for the users whose profile is public if it is a single word (a pseudonym), and replaced
+-- by `User <id>` for everybody else (a name with several words, an email...). The `is_profile_public` flag is kept.
 -- password = c2c
-update users.user set username = 'user' || id, forum_username = 'user' || id, email = 'user' || id || '@example.com', email_validated = true, email_to_validate = null, moderator = false, validation_nonce = null, validation_nonce_expire = null, password = '$2b$12$JPOxvA1AUc4LRUE6OJMlLeFoKoTYjfGpnBsC4tSE7VhAh3e/AmeGi', last_modified = now(), lang = 'en', feed_filter_activities = '{}', feed_followed_only = false,  blocked = false, feed_filter_langs = '{}', name = case when is_profile_public and name !~ '@' and name !~ '^[A-ZÀ-Ý][a-zà-ÿ-]+( [A-ZÀ-Ý][a-zà-ÿ-]+)+$' then name else 'User ' || id end, tos_validated = now(), ratelimit_remaining = null, ratelimit_reset = null, ratelimit_last_blocked_window = null, ratelimit_times = 0;
+update users.user set username = 'user' || id, forum_username = 'user' || id, email = 'user' || id || '@example.com', email_validated = true, email_to_validate = null, moderator = false, validation_nonce = null, validation_nonce_expire = null, password = '$2b$12$JPOxvA1AUc4LRUE6OJMlLeFoKoTYjfGpnBsC4tSE7VhAh3e/AmeGi', last_modified = now(), lang = 'en', feed_filter_activities = '{}', feed_followed_only = false,  blocked = false, feed_filter_langs = '{}', name = case when is_profile_public and name ~ '^[^[:space:]@]+$' then name else 'User ' || id end, tos_validated = now(), ratelimit_remaining = null, ratelimit_reset = null, ratelimit_last_blocked_window = null, ratelimit_times = 0;
 
 -- Remove all authentication data
 truncate users.token, users.sso_external_id, users.sso_key;
@@ -76,28 +76,31 @@ update guidebook.waypoints set phone_custodian = '00 00 00 00 00' where phone_cu
 update guidebook.waypoints_archives set phone = '00 00 00 00 00' where phone <> '';
 update guidebook.waypoints_archives set phone_custodian = '00 00 00 00 00' where phone_custodian <> '';
 
--- Remove the emails, the phone numbers and the @mentions which people wrote in the free texts
-do $$
+-- Remove the emails, the phone numbers and the @mentions which people wrote in the free texts. A replacement can be
+-- longer than what it replaces (a short email), so the result is cut to the length of the column.
+create function pg_temp.scrub_column(t text, c text) returns void language plpgsql as $$
 declare
-  t text;
-  c text;
+  maxlen integer;
 begin
-  for t, c in
-    select tbl || suffix, col
-    from (values
-      ('guidebook.documents_locales', 'title'), ('guidebook.documents_locales', 'summary'), ('guidebook.documents_locales', 'description'),
-      ('guidebook.waypoints_locales', 'access'), ('guidebook.waypoints_locales', 'access_period'), ('guidebook.waypoints_locales', 'external_resources'),
-      ('guidebook.routes_locales', 'slope'), ('guidebook.routes_locales', 'remarks'), ('guidebook.routes_locales', 'gear'),
-      ('guidebook.routes_locales', 'external_resources'), ('guidebook.routes_locales', 'route_history'),
-      ('guidebook.routes_locales', 'slackline_anchor1'), ('guidebook.routes_locales', 'slackline_anchor2'),
-      ('guidebook.outings_locales', 'access_comment'), ('guidebook.outings_locales', 'weather'), ('guidebook.outings_locales', 'timing'),
-      ('guidebook.outings_locales', 'conditions_levels'), ('guidebook.outings_locales', 'conditions'), ('guidebook.outings_locales', 'avalanches'),
-      ('guidebook.outings_locales', 'hut_comment'), ('guidebook.outings_locales', 'route_description')
-    ) as v(tbl, col)
-    cross join (values (''), ('_archives')) as s(suffix)
-  loop
-    execute format('update %1$s set %2$I = pg_temp.scrub(%2$I) where %2$I is distinct from pg_temp.scrub(%2$I)', t, c);
-  end loop;
+  select character_maximum_length into maxlen
+  from information_schema.columns
+  where table_schema || '.' || table_name = t and column_name = c;
+  execute format(
+    'update %1$s set %2$I = left(pg_temp.scrub(%2$I), %3$s) where %2$I is distinct from left(pg_temp.scrub(%2$I), %3$s)',
+    t, c, coalesce(maxlen, 1000000000));
 end
 $$;
-update guidebook.history_metadata set comment = pg_temp.scrub(comment) where comment is distinct from pg_temp.scrub(comment);
+
+select count(pg_temp.scrub_column(tbl || suffix, col))
+from (values
+  ('guidebook.documents_locales', 'title'), ('guidebook.documents_locales', 'summary'), ('guidebook.documents_locales', 'description'),
+  ('guidebook.waypoints_locales', 'access'), ('guidebook.waypoints_locales', 'access_period'), ('guidebook.waypoints_locales', 'external_resources'),
+  ('guidebook.routes_locales', 'slope'), ('guidebook.routes_locales', 'remarks'), ('guidebook.routes_locales', 'gear'),
+  ('guidebook.routes_locales', 'external_resources'), ('guidebook.routes_locales', 'route_history'),
+  ('guidebook.routes_locales', 'slackline_anchor1'), ('guidebook.routes_locales', 'slackline_anchor2'),
+  ('guidebook.outings_locales', 'access_comment'), ('guidebook.outings_locales', 'weather'), ('guidebook.outings_locales', 'timing'),
+  ('guidebook.outings_locales', 'conditions_levels'), ('guidebook.outings_locales', 'conditions'), ('guidebook.outings_locales', 'avalanches'),
+  ('guidebook.outings_locales', 'hut_comment'), ('guidebook.outings_locales', 'route_description')
+) as v(tbl, col)
+cross join (values (''), ('_archives')) as s(suffix);
+select pg_temp.scrub_column('guidebook.history_metadata', 'comment');
