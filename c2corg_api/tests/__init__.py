@@ -10,10 +10,10 @@ import transaction
 from alembic.command import downgrade
 from alembic.config import Config
 from dotenv import load_dotenv
-from pyramid.paster import get_appsettings
 from sqlalchemy import engine_from_config
 
 from c2corg_api import caching as caching_common
+from c2corg_api.config import get_appsettings
 from c2corg_api.models import DBSession, sessionmaker
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.sso import SsoExternalId, SsoKey
@@ -35,9 +35,6 @@ settings = get_appsettings(configfile)
 alembic_scripts_folder = os.path.realpath(
     os.path.join(curdir, '../../alembic_migration')
 )
-
-if settings['noauthorization']:
-    log.warning('Authorization disabled for these tests')
 
 
 def get_engine():
@@ -263,7 +260,6 @@ class BaseTestCase(AssertionsMixin):
         self,
         client,
         db_connection,
-        pyramid_config,
         email_service,
         queue_config,
         app_state,
@@ -279,7 +275,6 @@ class BaseTestCase(AssertionsMixin):
         # the session used in the test code, bound to the test's connection
         # (the views use DBSession, bound to the same connection)
         self.session = sessionmaker()(bind=db_connection)
-        self.config = pyramid_config
         self.email_service = email_service
         self.queue_config = queue_config
         # pytest does not call setUp/tearDown on plain classes: the

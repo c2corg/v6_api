@@ -2,7 +2,6 @@ import datetime
 import logging
 
 import jwt as pyjwt
-from pyramid.security import Authenticated
 from sqlalchemy import and_
 
 from c2corg_api.httpexceptions import HTTPForbidden
@@ -23,23 +22,6 @@ def extract_token(request):
         splitted = params.split('"')
         return splitted[1] if len(splitted) >= 2 else None
     return params
-
-
-def groupfinder(userid, request):
-    # Pyramid calls this for every read of `request.authenticated_userid`
-    # or `request.effective_principals`, several times per request: query
-    # the database once per request and user.
-    cached = getattr(request, '_c2c_groups', None)
-    if cached is not None and cached[0] == userid:
-        return list(cached[1])
-
-    is_moderator = (
-        DBSession.query(User).filter(User.id == userid, User.moderator).count() > 0
-    )
-    groups = ['group:moderators'] if is_moderator else [Authenticated]
-    if request is not None:
-        request._c2c_groups = (userid, groups)
-    return list(groups)
 
 
 def is_valid_token(token):

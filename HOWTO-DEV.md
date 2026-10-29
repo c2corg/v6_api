@@ -159,7 +159,7 @@ docker compose up -d
 - Run the API (this command will not exit so you should run it in a separate terminal):
 
 ```shell
-pserve development.ini --reload
+gunicorn --paste development.ini --reload --bind 0.0.0.0:6543
 ```
 
 - Run background jobs (run each of these commands in a separate terminal, as they will not exit):

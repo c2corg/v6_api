@@ -1,8 +1,6 @@
 import unittest
 from unittest.mock import patch
 
-from pyramid.testing import DummyRequest
-
 from c2corg_api.httpexceptions import HTTPTooManyRequests
 from c2corg_api.tweens.rate_limiting import (
     ANONYMOUS_RATE_LIMITED_BUCKETS,
@@ -11,6 +9,17 @@ from c2corg_api.tweens.rate_limiting import (
     _is_anonymous_request_rate_limited,
     rate_limit_error,
 )
+
+
+class _Request:
+    """The part of a request the rate limiting reads."""
+
+    def __init__(self):
+        self.method = 'GET'
+        self.path = '/'
+        self.headers = {}
+        self.remote_addr = None
+        self.authorization = None
 
 
 class FakeRedis:
@@ -48,12 +57,12 @@ class DummyRegistry:
 
 class TestClientIp:
     def test_uses_x_forwarded_for_when_present(self):
-        request = DummyRequest()
+        request = _Request()
         request.headers['X-Forwarded-For'] = '203.0.113.5, 10.0.0.1'
         assert _client_ip(request) == '203.0.113.5'
 
     def test_falls_back_to_remote_addr(self):
-        request = DummyRequest()
+        request = _Request()
         request.remote_addr = '198.51.100.7'
         assert _client_ip(request) == '198.51.100.7'
 
@@ -95,7 +104,7 @@ class TestIsAnonymousRequestRateLimited:
 
 class TestCheckAnonymousRateLimit:
     def _make_request(self, ip='192.0.2.1'):
-        request = DummyRequest()
+        request = _Request()
         request.remote_addr = ip
         return request
 
@@ -163,7 +172,7 @@ class TestRateLimitingTweenAnonymous:
     """
 
     def _make_request(self, method, path):
-        request = DummyRequest()
+        request = _Request()
         request.method = method
         request.path = path
         request.authorization = None

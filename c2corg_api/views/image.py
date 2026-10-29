@@ -29,7 +29,6 @@ from c2corg_api.schemas.image import (
     image_schema,
 )
 from c2corg_api.search.notify_sync import run_on_successful_transaction
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
@@ -41,7 +40,7 @@ from c2corg_api.views.document import (
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import image_documents_config
 from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.resource import BaseView, resource, view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_associations_in,
@@ -320,7 +319,7 @@ def validate_extension(request, **kwargs):
 
 
 @resource(path='/images/proxy/{id}')
-class ImageProxyRest(ACLDefault):
+class ImageProxyRest(BaseView):
     @view(validators=[validate_id, validate_size, validate_extension])
     def get(self):
         document_id = self.request.validated['id']

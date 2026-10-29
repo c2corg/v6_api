@@ -10,10 +10,9 @@ from c2corg_api.models.user import Purpose, User
 from c2corg_api.schemas.base import DROP, Schema, body_validator
 from c2corg_api.schemas.types import Bool, OneOf, Str, email_check, function_check
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import restricted_json_view, restricted_view
-from c2corg_api.views.resource import resource
+from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.user import (
     MINIMUM_PASSWORD_LENGTH,
     PASSWORD_STRENGTH_ERROR,
@@ -31,7 +30,7 @@ class UpdatePreferredLangSchema(Schema):
 
 
 @resource(path='/users/update_preferred_language')
-class UserPreferredLanguageRest(ACLDefault):
+class UserPreferredLanguageRest(BaseView):
     @restricted_json_view(
         renderer='json', validators=[body_validator(UpdatePreferredLangSchema)]
     )
@@ -76,7 +75,7 @@ class UpdateAccountSchema(Schema):
 
 
 @resource(path='/users/account')
-class UserAccountRest(ACLDefault):
+class UserAccountRest(BaseView):
     def get_user(self):
         userid = self.request.authenticated_userid
         return DBSession.get(User, userid)

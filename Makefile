@@ -61,7 +61,7 @@ stop:
 		$(DOCKER_COMPOSE) stop
 
 serve:
-		pserve development.ini --reload
+		gunicorn --paste development.ini --reload --bind 0.0.0.0:6543
 
 .PHONY: format
 format:

@@ -43,7 +43,7 @@ ruff format c2corg_api es_migration
 ruff check c2corg_api es_migration
 
 # Start the API server (with auto-reload)
-pserve development.ini --reload
+gunicorn --paste development.ini --reload --bind 0.0.0.0:6543
 
 # Or use make targets
 make test

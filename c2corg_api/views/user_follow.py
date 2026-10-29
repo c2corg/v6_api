@@ -4,11 +4,10 @@ from c2corg_api import DBSession
 from c2corg_api.models.feed import FollowedUser
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import user_profile_documents_config
-from c2corg_api.views.resource import resource
+from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.validation import (
     validate_body_user_id,
     validate_id,
@@ -32,7 +31,7 @@ def get_follower_relation(followed_user_id, follower_user_id):
 
 
 @resource(path='/users/follow')
-class UserFollowRest(ACLDefault):
+class UserFollowRest(BaseView):
     @restricted_json_view(
         validators=[body_validator(FollowSchema), validate_body_user_id],
     )
@@ -64,7 +63,7 @@ class UserFollowRest(ACLDefault):
 
 
 @resource(path='/users/unfollow')
-class UserUnfollowRest(ACLDefault):
+class UserUnfollowRest(BaseView):
     @restricted_json_view(
         validators=[body_validator(FollowSchema), validate_body_user_id],
     )
@@ -94,7 +93,7 @@ class UserUnfollowRest(ACLDefault):
 
 
 @resource(path='/users/following-user/{id}')
-class UserFollowingUserRest(ACLDefault):
+class UserFollowingUserRest(BaseView):
     @restricted_json_view(validators=[validate_id])
     def get(self):
         """Check if the authenticated user follows the given user.
@@ -115,7 +114,7 @@ class UserFollowingUserRest(ACLDefault):
 
 
 @resource(path='/users/following')
-class UserFollowingRest(ACLDefault):
+class UserFollowingRest(BaseView):
     @restricted_json_view(validators=[validate_preferred_lang_param])
     def get(self):
         """Get the users that the authenticated user is following.

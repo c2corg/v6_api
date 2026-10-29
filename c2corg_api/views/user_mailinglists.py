@@ -2,9 +2,8 @@ from c2corg_api import DBSession
 from c2corg_api.models.common.attributes import mailinglists as valid_mailinglists
 from c2corg_api.models.mailinglist import Mailinglist
 from c2corg_api.models.user import User
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import restricted_json_view, restricted_view
-from c2corg_api.views.resource import resource
+from c2corg_api.views.resource import BaseView, resource
 
 
 def validate_mailinglist_statuses(request, **kwargs):
@@ -25,7 +24,7 @@ def validate_mailinglist_statuses(request, **kwargs):
 
 
 @resource(path='/users/mailinglists')
-class UserMailinglistsRest(ACLDefault):
+class UserMailinglistsRest(BaseView):
     @restricted_view()
     def get(self):
         """Get the mailinglists subscriptions of the authenticated user.

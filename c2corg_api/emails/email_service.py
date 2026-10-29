@@ -3,7 +3,7 @@ import transaction  # NOQA
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from functools import cache
-from pyramid.settings import asbool
+from c2corg_api.config import asbool
 import smtplib
 
 from c2corg_api.models.common.attributes import default_langs

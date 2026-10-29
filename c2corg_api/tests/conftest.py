@@ -92,16 +92,6 @@ def client(wsgi_app):
 
 
 @pytest.fixture
-def pyramid_config():
-    """Set up a Pyramid testing configuration for the test."""
-    from pyramid import testing
-
-    config = testing.setUp()
-    yield config
-    testing.tearDown()
-
-
-@pytest.fixture
 def email_service():
     """Return a new email service and reset the shared one."""
     from c2corg_api.emails.email_service import EmailService

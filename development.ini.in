@@ -1,20 +1,9 @@
 ###
 # app configuration
-# http://docs.pylonsproject.org/projects/pyramid/en/1.5-branch/narr/environment.html
 ###
 
 [app:main]
 use = config:common.ini
-
-pyramid.reload_templates = true
-pyramid.debug_authorization = true
-pyramid.debug_notfound = false
-pyramid.debug_routematch = false
-pyramid.default_locale_name = en
-pyramid.includes =
-    pyramid_mailer
-    pyramid_debugtoolbar
-    pyramid_tm
 
 # in dev. mode, append the timestamp to the cache key, so that the cache is
 # invalidated when the debug server reloads
@@ -22,24 +11,11 @@ cache_version_timestamp = True
 
 sqlalchemy.url = postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}
 
-# By default, the toolbar only appears for clients from IP addresses
-# '127.0.0.1' and '::1'.
-debugtoolbar.hosts = 0.0.0.0/0
 
 show_debugger_for_errors = {show_debugger_for_errors}
 
 ###
-# wsgi server configuration
-###
-
-[server:main]
-use = egg:waitress#main
-host = 0.0.0.0
-port = {debug_port}
-
-###
 # logging configuration
-# http://docs.pylonsproject.org/projects/pyramid/en/1.5-branch/narr/logging.html
 ###
 
 [loggers]

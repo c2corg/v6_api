@@ -34,7 +34,6 @@ from c2corg_api.search.advanced_search import (
     get_all_filtered_docs,
     get_filtered_docs_page,
 )
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import (
     get_best_locale,
     restricted_json_view,
@@ -58,7 +57,7 @@ from c2corg_api.views.document_schemas import (
     route_schema_adaptor,
 )
 from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.resource import BaseView, resource, view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_cook_param,
@@ -222,7 +221,7 @@ class RouteInfoRest(DocumentInfoRest):
 
 
 @resource(path='/routes/update_public_transportation_rating')
-class RoutePublicTransportationRatingRest(ACLDefault):
+class RoutePublicTransportationRatingRest(BaseView):
     """
     Update all route public transportation rating.
 

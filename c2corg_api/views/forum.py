@@ -10,10 +10,9 @@ from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.user import User
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, Str
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import restricted_view
-from c2corg_api.views.resource import resource
+from c2corg_api.views.resource import BaseView, resource
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +58,7 @@ def validate_topic_create(request, **kwargs):
 
 # only collection_post: it creates the topic in Discourse
 @resource(collection_path='/forum/topics', path='/forum/topics/{id}')
-class ForumTopicRest(ACLDefault):
+class ForumTopicRest(BaseView):
     @restricted_view(
         validators=[body_validator(TopicCreateSchema), validate_topic_create],
     )

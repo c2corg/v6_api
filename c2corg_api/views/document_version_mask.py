@@ -9,9 +9,8 @@ from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, OneOf
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import restricted_json_view
-from c2corg_api.views.resource import resource
+from c2corg_api.views.resource import BaseView, resource
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +73,7 @@ def _get_version(request):
 
 
 @resource(path='/versions/mask')
-class VersionMaskRest(ACLDefault):
+class VersionMaskRest(BaseView):
     @restricted_json_view(
         permission='moderator',
         validators=[body_validator(MaskSchema), validate_version],
@@ -102,7 +101,7 @@ class VersionMaskRest(ACLDefault):
 
 
 @resource(path='/versions/unmask')
-class VersionUnmaskRest(ACLDefault):
+class VersionUnmaskRest(BaseView):
     @restricted_json_view(
         permission='moderator',
         validators=[body_validator(MaskSchema), validate_version],

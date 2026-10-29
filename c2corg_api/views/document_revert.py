@@ -42,11 +42,10 @@ from c2corg_api.models.xreport import (
 )
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, OneOf
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.area import update_associations
 from c2corg_api.views.document import DocumentRest
-from c2corg_api.views.resource import resource
+from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.route import update_linked_attributes
 from c2corg_api.views.waypoint import update_linked_route_titles
 
@@ -95,7 +94,7 @@ def validate_version(request, **kwargs):
 
 
 @resource(path='/documents/revert')
-class DocumentRevertRest(ACLDefault):
+class DocumentRevertRest(BaseView):
     @restricted_json_view(
         permission='moderator',
         validators=[body_validator(RevertSchema), validate_version],

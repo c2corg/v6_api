@@ -1,14 +1,15 @@
-"""Authentication of the FastAPI routes, the same as the Pyramid one."""
-# Two checks, like on the Pyramid side, so that a token works the same on
-# both while the routes move (#2365):
-# - TokenValidationMiddleware, like the jwt_database_validation tween: a
+"""Authentication of the routes, as the Pyramid application did it."""
+# Two checks (#2365):
+# - TokenValidationMiddleware, as the former jwt_database_validation tween: a
 #   request with an Authorization header must carry a token known to the
 #   database and not expired (401 'Invalid token'), of a user who is not
 #   blocked (403 'account blocked'), whatever the route;
-# - current_user(), like IntegerSubJWTAuthenticationPolicy and the
-#   groupfinder: the user of a valid `JWT` token, None for an anonymous one.
+# - current_user(), as the former JWT policy of Pyramid: the user of a valid
+#   `JWT` token (`JWT token="<token>"` or `JWT <token>`, its `sub` claim an
+#   integer as a string), None for an anonymous one.
 # The token rework of the review comes at the end of the step.
 
+import re
 from dataclasses import dataclass
 
 import jwt
@@ -18,13 +19,15 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from c2corg_api.httpexceptions import HTTPForbidden
 from c2corg_api.models.user import User
-from c2corg_api.security.jwt_policy import _TOKEN_RE
 from c2corg_api.security.roles import is_valid_token
 from c2corg_api.web.db import request_session
 from c2corg_api.web.errors import error_response
 
 AUTH_TYPE = 'JWT'
 ALGORITHM = 'HS256'
+
+# the token of the Authorization params: token="<value>"
+_TOKEN_RE = re.compile(r'token="([^"]+)"')
 
 
 def parse_authorization(value):

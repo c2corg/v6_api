@@ -7,6 +7,14 @@
 import re
 
 
+class BaseView:
+    """A view class: its methods answer the requests of its routes."""
+
+    def __init__(self, request, context=None, **kwargs):
+        self.request = request
+        self.context = context
+
+
 def resource(**kw):
     """Declare a view class (collection_path, path): the routes are in web/."""
 

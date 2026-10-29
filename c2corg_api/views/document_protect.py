@@ -6,10 +6,9 @@ from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.document import Document, UpdateType
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import DocumentRest
-from c2corg_api.views.resource import resource
+from c2corg_api.views.resource import BaseView, resource
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ def _get_document(document_id):
 
 
 @resource(path='/documents/protect')
-class DocumentProtectRest(ACLDefault):
+class DocumentProtectRest(BaseView):
     @restricted_json_view(
         permission='moderator',
         validators=[body_validator(ProtectSchema)],
@@ -63,7 +62,7 @@ class DocumentProtectRest(ACLDefault):
 
 
 @resource(path='/documents/unprotect')
-class DocumentUnprotectRest(ACLDefault):
+class DocumentUnprotectRest(BaseView):
     @restricted_json_view(
         permission='moderator',
         validators=[body_validator(ProtectSchema)],

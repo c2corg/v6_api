@@ -20,13 +20,12 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import OneOf, Str
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import log_validated_user_i_know_what_i_do
 from c2corg_api.views import (
     json_view,
 )
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.resource import BaseView, resource, view
 from c2corg_api.views.user import (
     token_to_response,
     validate_forum_username,
@@ -109,7 +108,7 @@ def sso_sync_validator(request, **kwargs):
 
 
 @resource(path='/sso_sync')
-class SsoSyncRest(ACLDefault):
+class SsoSyncRest(BaseView):
     @json_view(
         validators=[
             body_validator(SsoSyncSchema),
@@ -253,7 +252,7 @@ def validate_token(request, **kwargs):
 
 
 @resource(path='/sso_login')
-class SsoLoginRest(ACLDefault):
+class SsoLoginRest(BaseView):
     @view(validators=[body_validator(SsoLoginSchema), validate_token])
     def post(self):
         user = self.request.validated['sso_user']

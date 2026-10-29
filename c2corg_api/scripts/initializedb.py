@@ -4,13 +4,13 @@ import sys
 import transaction
 from alembic.command import upgrade
 from alembic.config import Config
-from pyramid.paster import (
-    get_appsettings,
-    setup_logging,
-)
-from pyramid.scripts.common import parse_vars
 from sqlalchemy import engine_from_config
 
+from c2corg_api.config import (
+    get_appsettings,
+    parse_vars,
+    setup_logging,
+)
 from c2corg_api.models import DBSession, document
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.es_sync import ESSyncStatus

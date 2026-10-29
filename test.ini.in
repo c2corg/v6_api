@@ -1,11 +1,6 @@
 [app:main]
 use = config:common.ini
-pyramid.includes =
-    pyramid_mailer.testing
-    pyramid_tm
 sqlalchemy.url = postgresql+psycopg2://{tests_db_user}:{tests_db_password}@{tests_db_host}:{tests_db_port}/{tests_db_name}
-noauthorization = False
-debug_authorization = True
 jwt.private_key = {jwt_secret_key}
 elasticsearch.host = {tests_elasticsearch_host}
 elasticsearch.port = {tests_elasticsearch_port}

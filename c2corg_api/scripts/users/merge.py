@@ -4,11 +4,11 @@ import os
 import sys
 
 import transaction
-from pyramid.paster import get_appsettings
 from sqlalchemy import engine_from_config
 from sqlalchemy.sql.expression import and_, any_, or_
 from sqlalchemy.sql.functions import func
 
+from c2corg_api.config import get_appsettings
 from c2corg_api.models import DBSession
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import AssociationLog

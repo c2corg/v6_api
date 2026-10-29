@@ -152,7 +152,7 @@ class TestCookerRest(BaseTestRest):
         assert [] == statements
 
     def test_get_cooked_book(self):
-        # served by FastAPI: the image URL comes from the Pyramid registry
+        # the image URL comes from the image_url setting
         image = self._add_image('image.jpg')
         book = Book(activities=['hiking'], book_types=['biography'])
         book.locales.append(

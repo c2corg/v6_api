@@ -3,17 +3,6 @@
 [app:main]
 use = egg:c2corg_api
 
-# Disable the authorization checks if True
-noauthorization = {noauthorization}
-
-pyramid.default_locale_name = en
-
-# pyramid_tm >= 2.4 annotates each transaction with
-# `request.authenticated_userid`, which runs the auth policy callback
-# (`groupfinder`, one database query) on every authenticated request. The
-# annotation is only useful for transaction logs (ZODB), not for SQLAlchemy.
-tm.annotate_user = false
-
 # size of the connection pool for the database. note that this number is
 # per application instance.
 # With gunicorn sync workers, each process serves one request at a time, so

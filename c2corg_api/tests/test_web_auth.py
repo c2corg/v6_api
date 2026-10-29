@@ -1,4 +1,4 @@
-"""The FastAPI routes accept and reject the same tokens as the Pyramid ones."""
+"""current_user() accepts and rejects the same tokens as the view routes."""
 
 import datetime
 from typing import Annotated
@@ -56,29 +56,29 @@ class TestAuthParity(BaseTestRest):
 
     def answers(self, header):
         headers = {} if header is None else {'Authorization': header}
-        pyramid_user = self.app.get('/users/account', headers=headers, status='*')
-        pyramid_moderator = self.app.get('/users/blocked', headers=headers, status='*')
+        view_user = self.app.get('/users/account', headers=headers, status='*')
+        view_moderator = self.app.get('/users/blocked', headers=headers, status='*')
         fastapi = self.app.get(PROBE, headers=headers, status='*')
-        return pyramid_user, pyramid_moderator, fastapi
+        return view_user, view_moderator, fastapi
 
     def test_same_answers(self):
         for name, header in self.headers_cases():
-            pyramid_user, pyramid_moderator, fastapi = self.answers(header)
-            if pyramid_user.status_int in (401, 403) and 'errors' in pyramid_user.json:
-                rejected = pyramid_user.json['errors'][0]['description']
+            view_user, view_moderator, fastapi = self.answers(header)
+            if view_user.status_int in (401, 403) and 'errors' in view_user.json:
+                rejected = view_user.json['errors'][0]['description']
             else:
                 rejected = None
             if rejected in ('Invalid token', 'account blocked'):
                 # refused before any view, on both sides
-                assert fastapi.status_int == pyramid_user.status_int, name
-                assert fastapi.json['errors'] == pyramid_user.json['errors'], name
+                assert fastapi.status_int == view_user.status_int, name
+                assert fastapi.json['errors'] == view_user.json['errors'], name
                 continue
             assert fastapi.status_int == 200, name
             user = fastapi.json['user']
-            if pyramid_user.status_int == 200:
+            if view_user.status_int == 200:
                 assert user is not None, name
-                assert user[0] == self.user_of(pyramid_user), name
-                assert user[1] == (pyramid_moderator.status_int == 200), name
+                assert user[0] == self.user_of(view_user), name
+                assert user[1] == (view_moderator.status_int == 200), name
             else:
                 assert user is None, name
 
@@ -91,9 +91,9 @@ class TestAuthParity(BaseTestRest):
         user.blocked = True
         self.session.flush()
         header = f'JWT token="{self.global_tokens["contributor"]}"'
-        pyramid_user, _, fastapi = self.answers(header)
-        assert pyramid_user.status_int == fastapi.status_int == 403
-        assert fastapi.json['errors'] == pyramid_user.json['errors']
+        view_user, _, fastapi = self.answers(header)
+        assert view_user.status_int == fastapi.status_int == 403
+        assert fastapi.json['errors'] == view_user.json['errors']
 
     @pytest.mark.parametrize('header', [None, 'JWT token="not-a-token"'])
     def test_errors_keep_cors_headers(self, header):

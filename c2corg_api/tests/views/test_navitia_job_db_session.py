@@ -31,7 +31,7 @@ def _query_using_db(fail=False):
 class TestNavitiaJobDbSession(BaseTestCase):
     """Background jobs must give their connection back to the pool."""
 
-    # The jobs run in their own thread, outside of pyramid_tm: they must end
+    # The jobs run in their own thread, outside of the request session: they end
     # their transaction and remove their scoped session themselves.
 
     def setUp(self):

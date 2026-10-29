@@ -4,9 +4,9 @@ import re
 from functools import partial
 
 import requests
-from pyramid.settings import asbool
 from sqlalchemy.sql.expression import and_, func
 
+from c2corg_api.config import asbool
 from c2corg_api.emails.email_service import get_email_service
 from c2corg_api.httpexceptions import HTTPForbidden, HTTPInternalServerError
 from c2corg_api.models import DBSession
@@ -17,7 +17,6 @@ from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Bool, Str, email_check
 from c2corg_api.schemas.user import UserCreateSchema, user_create_schema, user_schema
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import (
     extract_token,
@@ -33,7 +32,7 @@ from c2corg_api.views import (
     to_json_dict,
 )
 from c2corg_api.views.document import DocumentRest
-from c2corg_api.views.resource import resource
+from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.validation import validate_required_json_string
 
 log = logging.getLogger(__name__)
@@ -235,7 +234,7 @@ def validate_captcha(request, **kwargs):
 
 
 @resource(path='/users/register')
-class UserRegistrationRest(ACLDefault):
+class UserRegistrationRest(BaseView):
     @json_view(
         validators=[
             body_validator(UserCreateSchema),
@@ -304,7 +303,7 @@ def validate_user_from_nonce(purpose, request, **kwargs):
 
 
 @resource(path='/users/validate_new_password/{nonce}')
-class UserValidateNewPasswordRest(ACLDefault):
+class UserValidateNewPasswordRest(BaseView):
     """Set a new password for a user who forgot theirs.
 
     This service allows to set a new password in case a user has forgotten
@@ -365,7 +364,7 @@ def validate_required_user_from_email(request, **kwargs):
 
 
 @resource(path='/users/request_password_change')
-class UserRequestChangePasswordRest(ACLDefault):
+class UserRequestChangePasswordRest(BaseView):
     """This web-service is used when a user has forgotten their password.
 
     It will send out an email containing a link to a page on which the user can enter a
@@ -399,7 +398,7 @@ class UserRequestChangePasswordRest(ACLDefault):
 
 
 @resource(path='/users/validate_register_email/{nonce}')
-class UserNonceValidationRest(ACLDefault):
+class UserNonceValidationRest(BaseView):
     @json_view(validators=[partial(validate_user_from_nonce, Purpose.registration)])
     def post(self):
         request = self.request
@@ -442,7 +441,7 @@ class UserNonceValidationRest(ACLDefault):
 
 
 @resource(path='/users/validate_change_email/{nonce}')
-class UserChangeEmailNonceValidationRest(ACLDefault):
+class UserChangeEmailNonceValidationRest(BaseView):
     @json_view(validators=[partial(validate_user_from_nonce, Purpose.change_email)])
     def post(self):
         request = self.request
@@ -490,7 +489,7 @@ def token_to_response(user, token, request):
 
 
 @resource(path='/users/login')
-class UserLoginRest(ACLDefault):
+class UserLoginRest(BaseView):
     @json_view(
         validators=[
             body_validator(LoginSchema),
@@ -563,7 +562,7 @@ class DiscourseRedirectSchema(Schema):
 
 
 @resource(path='/users/discourse-redirect')
-class UserDiscourseRedirectRest(ACLDefault):
+class UserDiscourseRedirectRest(BaseView):
     """Answer a Discourse SSO handshake for an already logged-in user."""
 
     # The browser asks the forum for a nonce (`<forum>/session/sso`), gets
@@ -586,7 +585,7 @@ class UserDiscourseRedirectRest(ACLDefault):
 
 
 @resource(path='/users/renew')
-class UserRenewRest(ACLDefault):
+class UserRenewRest(BaseView):
     @restricted_view(renderer='json')
     def post(self):
         request = self.request
@@ -600,7 +599,7 @@ class UserRenewRest(ACLDefault):
 
 
 @resource(path='/users/logout')
-class UserLogoutRest(ACLDefault):
+class UserLogoutRest(BaseView):
     @restricted_json_view(renderer='json')
     def post(self):
         request = self.request

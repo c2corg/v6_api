@@ -8,9 +8,8 @@ from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import restricted_json_view
-from c2corg_api.views.resource import resource
+from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.validation import create_int_validator
 
 log = logging.getLogger(__name__)
@@ -55,7 +54,7 @@ def validate_document(request, **kwargs):
 
 
 @resource(path='/tags/add')
-class DocumentTagRest(ACLDefault):
+class DocumentTagRest(BaseView):
     @restricted_json_view(
         validators=[body_validator(DocumentTagSchema), validate_document],
     )
@@ -99,7 +98,7 @@ class DocumentTagRest(ACLDefault):
 
 
 @resource(path='/tags/remove')
-class DocumentUntagRest(ACLDefault):
+class DocumentUntagRest(BaseView):
     @restricted_json_view(
         validators=[body_validator(DocumentTagSchema), validate_document],
     )
@@ -140,7 +139,7 @@ class DocumentUntagRest(ACLDefault):
 
 
 @resource(path='/tags/has/{document_id}')
-class DocumentTaggedRest(ACLDefault):
+class DocumentTaggedRest(BaseView):
     @restricted_json_view(validators=[validate_document_id])
     def get(self):
         """

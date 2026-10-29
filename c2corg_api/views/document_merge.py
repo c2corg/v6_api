@@ -18,11 +18,10 @@ from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.image import delete_all_files_for_image
-from c2corg_api.views.resource import resource
+from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.waypoint import update_linked_route_titles
 
 
@@ -110,7 +109,7 @@ def validate_documents(request, **kwargs):
 
 
 @resource(path='/documents/merge')
-class MergeDocumentRest(ACLDefault):
+class MergeDocumentRest(BaseView):
     @restricted_json_view(
         permission='moderator',
         validators=[body_validator(MergeSchema), validate_documents],

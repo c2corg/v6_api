@@ -58,10 +58,9 @@ from c2corg_api.models.xreport import (
     XreportLocale,
 )
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.image import delete_all_files_for_image
-from c2corg_api.views.resource import resource
+from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.validation import validate_id, validate_lang
 
 
@@ -255,7 +254,7 @@ def validate_requestor(request, **kwargs):
     )
 
 
-class DeleteBase(ACLDefault):
+class DeleteBase(BaseView):
     def _delete(self, document_id, document_type):
         if document_type == IMAGE_TYPE:
             # Files are actually removed only if the transaction succeeds

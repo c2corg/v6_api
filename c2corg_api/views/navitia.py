@@ -827,10 +827,10 @@ def _end_thread_db_session():
     Release the database session used by a background job thread.
 
     `DBSession` is a scoped session, so each job thread gets its own session
-    and connection. pyramid_tm only manages the request thread, so the job
-    has to end its transaction and remove its session itself; otherwise the
-    connection stays checked out of the pool (possibly "idle in
-    transaction") for the lifetime of the worker process.
+    and connection. The request session (web.db) only covers the request
+    thread, so the job has to end its transaction and remove its session
+    itself; otherwise the connection stays checked out of the pool (possibly
+    "idle in transaction") for the lifetime of the worker process.
 
     The jobs only read from the database, so the transaction is aborted
     (rolled back) rather than committed.
