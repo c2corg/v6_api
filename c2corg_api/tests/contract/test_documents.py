@@ -329,3 +329,15 @@ class TestPathsLikeADocument(ContractTest):
             status=403,
         )
         check_snapshot('routes_update_public_transportation_rating_forbidden', response)
+
+    @contract(('GET', '/routes/update_public_transportation_rating'))
+    def test_update_public_transportation_rating(self):
+        # a GET that writes: the ratings of the routes are updated
+        with patch(
+            'c2corg_api.views.route.update_all_pt_rating'
+        ) as update_all_pt_rating:
+            response = self.get(
+                '/routes/update_public_transportation_rating', user='moderator'
+            )
+        check_snapshot('routes_update_public_transportation_rating', response)
+        update_all_pt_rating.assert_called_once_with(True)

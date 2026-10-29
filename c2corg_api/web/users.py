@@ -1,4 +1,4 @@
-"""The read routes of the users: account, preferences, follows, blocks."""
+"""The routes of the users: account, preferences, follows, blocks, login, SSO..."""
 # The routes call the view classes of views/ through the adapter of
 # web.compat, as the document routes do (#2365).
 
@@ -8,7 +8,19 @@ from typing import Annotated
 from fastapi import Depends, Request
 from fastapi.responses import JSONResponse, Response
 
-from c2corg_api.views.user_account import UserAccountRest
+from c2corg_api.views.sso import SsoLoginRest, SsoSyncRest
+from c2corg_api.views.user import (
+    UserChangeEmailNonceValidationRest,
+    UserDiscourseRedirectRest,
+    UserLoginRest,
+    UserLogoutRest,
+    UserNonceValidationRest,
+    UserRegistrationRest,
+    UserRenewRest,
+    UserRequestChangePasswordRest,
+    UserValidateNewPasswordRest,
+)
+from c2corg_api.views.user_account import UserAccountRest, UserPreferredLanguageRest
 from c2corg_api.views.user_block import UserBlockedAllRest, UserBlockedRest
 from c2corg_api.views.user_follow import UserFollowingRest, UserFollowingUserRest
 from c2corg_api.views.user_mailinglists import UserMailinglistsRest
@@ -16,10 +28,31 @@ from c2corg_api.views.user_preferences import UserFilterPreferencesRest
 from c2corg_api.views.validation import validate_id, validate_preferred_lang_param
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.compat import serve_view
+from c2corg_api.web.documents import include_write
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 
 JSON = ['application/json']
+
+
+# the writes: (path, view class), the post method of the view class, with
+# the checks of its Cornice decorator (see web.documents.include_write); the
+# tokens and the Discourse SSO are the same as with Pyramid
+WRITES = [
+    ('/users/register', UserRegistrationRest),
+    ('/users/validate_register_email/{nonce}', UserNonceValidationRest),
+    ('/users/request_password_change', UserRequestChangePasswordRest),
+    ('/users/validate_new_password/{nonce}', UserValidateNewPasswordRest),
+    ('/users/validate_change_email/{nonce}', UserChangeEmailNonceValidationRest),
+    ('/users/login', UserLoginRest),
+    ('/users/renew', UserRenewRest),
+    ('/users/logout', UserLogoutRest),
+    ('/users/account', UserAccountRest),
+    ('/users/update_preferred_language', UserPreferredLanguageRest),
+    ('/users/discourse-redirect', UserDiscourseRedirectRest),
+    ('/sso_sync', SsoSyncRest),
+    ('/sso_login', SsoLoginRest),
+]
 
 
 def include(app):
@@ -35,6 +68,8 @@ def include(app):
     )
     app.add_api_route('/users/blocked', blocked_users, methods=methods)
     app.add_api_route('/users/blocked/{id:int}', is_blocked, methods=methods)
+    for path, view_class in WRITES:
+        include_write(app, path, 'POST', view_class, 'post')
 
 
 def account(request: Request, user: User):
