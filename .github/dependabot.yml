@@ -43,10 +43,6 @@ updates:
       update-types: ["version-update:semver-major"]
     - dependency-name: "elasticsearch-dsl"
       update-types: ["version-update:semver-major"]
-    # setuptools >= 81 has no pkg_resources, which Pyramid 1.10 needed: the
-    # runtime pin can go now that Pyramid is gone (#2366)
-    - dependency-name: "setuptools"
-      versions: [">=81"]
     # APScheduler 4 is a full API rewrite
     - dependency-name: "apscheduler"
       versions: [">=4"]
