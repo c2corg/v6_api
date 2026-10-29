@@ -23,6 +23,7 @@ insert into devdb.params values
   ('outing_since', '2024-01-01'),  -- outings of the zones at least this recent are kept...
   ('outing_sample_pct', '3'),      -- ...plus this percentage of the older ones (deterministic, by id)
   ('history_sample_pct', '2'),     -- percentage of documents which keep their whole version history
+  ('history_max_versions', '30'), -- but at most this many (the last ones) per document and lang
   ('edge_per_rule', '8'),          -- documents kept per edge case rule (see 10-select.sql)
   ('images_per_document', '6');    -- max number of images kept per parent document
 

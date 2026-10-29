@@ -70,7 +70,7 @@ declare
   t text;
   c text;
   email constant text := '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}';
-  mention constant text := '(^|[^A-Za-z0-9._%+-])@[A-Za-z0-9_]';
+  mention constant text := '(^|[^A-Za-z0-9._%+-])@[A-Za-z_]';
   phone constant text := '(\+|\y00)[0-9]{2}[ .-]?(\(0\)|0)?[ .-]?[0-9]{1,3}([ .-]?[0-9]{2,4}){2,4}|\y0[1-9]([ .-]?[0-9]{2}){4}\y';
 begin
   -- the accounts for the developers exist, and nobody can log in as the former member
@@ -79,11 +79,10 @@ begin
   select count(*) into n from users.user where id = -1 and (moderator or not blocked or email_validated);
   if n > 0 then raise exception 'the former member can log in or moderate'; end if;
 
-  -- the names of the public accounts are kept, unless they look like an identity or an email
+  -- a name is a pseudonym (a single word) or `User <id>`: any space or @ may be an identity or an email
   select count(*) into n from users.user
-    where name !~ '^User [0-9]+$'
-      and (name ~ '@' or name ~ '^[A-ZÀ-Ý][a-zà-ÿ-]+( [A-ZÀ-Ý][a-zà-ÿ-]+)+$');
-  if n > 0 then raise exception '% users have a name which looks real', n; end if;
+    where id <> -1 and name !~ '^User [0-9]+$' and name ~ '[[:space:]@]';
+  if n > 0 then raise exception '% users have a name which may be an identity', n; end if;
 
   foreach t in array array['guidebook.images', 'guidebook.images_archives'] loop
     execute format('select count(*) from %s where author <> '''' and author !~ ''^Author [0-9]+$''', t) into n;
@@ -110,6 +109,7 @@ begin
       ('guidebook.outings_locales', 'hut_comment'), ('guidebook.outings_locales', 'route_description')
     ) as v(tbl, col)
     cross join (values (''), ('_archives')) as s(suffix)
+    union all select 'guidebook.history_metadata', 'comment'
   loop
     -- fake emails (and the ones which already were examples) are fine
     execute format('select count(*) from %1$s where regexp_replace(%2$I, ''[A-Za-z0-9._%%+-]+@example\.com'', '''', ''g'') ~* %3$L', t, c, email) into n;
@@ -119,10 +119,6 @@ begin
     execute format('select count(*) from %1$s where regexp_replace(%2$I, ''00 00 00 00 00'', '''', ''g'') ~ %3$L', t, c, phone) into n;
     if n > 0 then raise exception '%.% has % phone numbers', t, c, n; end if;
   end loop;
-
-  execute 'select count(*) from guidebook.history_metadata where comment ~* ' || quote_literal(email)
-    || ' and comment !~* ''@example\.com''' into n;
-  if n > 0 then raise exception 'history_metadata.comment has % emails', n; end if;
 end
 $$;
 

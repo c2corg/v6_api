@@ -21,16 +21,9 @@ create table devdb.public_user as
   select id from users.user
   where is_profile_public and email_validated and not blocked and not robot;
 
--- 1. Always kept: small document types, referenced from everywhere. All the xreports are kept
--- as well (a few hundred, and precious edge cases: their free text is replaced by anonymization).
-insert into devdb.keep_doc
-  select document_id, 'always:' || type from guidebook.documents
-  where type in ('a', 'b', 'c', 'm', 'v', 'x')
-  on conflict do nothing;
-
 -- 2. Edge cases, outside of the zones too. Each rule keeps `edge_per_rule` documents, picked in a
 -- deterministic but arbitrary way (document_id % 1009 mixes the ids) so that the result is stable.
--- Edge cases keep their whole history (see below).
+-- Edge cases keep their history (see below).
 
 -- 2.1 every quality level of each type
 insert into devdb.keep_doc
@@ -150,6 +143,15 @@ insert into devdb.keep_doc
         group by parent_document_id) s
   where rn <= devdb.p('edge_per_rule')::int
   on conflict do nothing;
+
+-- 2.12 Always kept: small document types, referenced from everywhere. All the xreports are kept
+-- as well (a few hundred, and precious edge cases: their free text is replaced by anonymization).
+insert into devdb.keep_doc
+  select document_id, 'always:' || type from guidebook.documents
+  where type in ('a', 'b', 'c', 'm', 'v', 'x')
+  on conflict do nothing;
+-- (this comes after the edge rules, so that the edge cases of these types keep their `edge:` reason, and
+-- therefore their history)
 
 -- 3. Zones: all the waypoints and routes, and the recent outings (plus a sample of older ones)
 create table devdb.zone_doc as
@@ -272,7 +274,7 @@ insert into devdb.keep_doc
   on conflict do nothing;
 
 -- 6. Versions and users. Only the last version of each (document, lang) is kept, except for the
--- edge cases and for a sample of the documents, which keep their whole history. Users are those
+-- edge cases and for a sample of the documents, which keep their last versions. Users are those
 -- who wrote the kept versions, the kept associations, or whose profile is kept; their profile
 -- (which is a document, with a history) is kept in turn, hence the loop.
 create table devdb.keep_version (id integer primary key);
@@ -285,14 +287,17 @@ begin
   loop
     truncate devdb.keep_version, devdb.keep_user;
 
+    -- the last version of each (document, lang); and the last `history_max_versions` ones for the edge cases and
+    -- a sample of documents (some pages have more than a thousand versions of a long text)
     insert into devdb.keep_version
-      select v.id
-      from guidebook.documents_versions v join devdb.keep_doc k using (document_id)
-      where k.reason like 'edge:%' or (v.document_id % 100) < devdb.p('history_sample_pct')::int
-      union
-      (select distinct on (v.document_id, v.lang) v.id
-       from guidebook.documents_versions v join devdb.keep_doc k using (document_id)
-       order by v.document_id, v.lang, v.id desc);
+      select id from (
+        select v.id, v.document_id, k.reason,
+               row_number() over (partition by v.document_id, v.lang order by v.id desc) as rn
+        from guidebook.documents_versions v join devdb.keep_doc k using (document_id)
+      ) x
+      where rn = 1
+         or (rn <= devdb.p('history_max_versions')::int
+             and (reason like 'edge:%' or (document_id % 100) < devdb.p('history_sample_pct')::int));
 
     insert into devdb.keep_user
       select user_id from (

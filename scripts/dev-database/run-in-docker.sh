@@ -63,8 +63,11 @@ docker run -d --name "$NAME" --memory "${MEM:-4g}" --shm-size 512m \
 # On an empty data directory the entrypoint runs a temporary server, runs the init scripts (which create the
 # role www-data), stops it and starts the final one: wait for the end of the init, then for the final server.
 # (Starting earlier makes the init scripts fail, which stops the container.)
-server_ready() {
-  docker logs "$NAME" 2>&1 | sed -n '/init process complete/,$p' | grep -q 'ready to accept connections'
+server_ready() { # the logs are captured first: `grep -q` in a pipeline would kill it with a SIGPIPE
+  local log
+  log=$(docker logs "$NAME" 2>&1) || true
+  case "$log" in *"init process complete"*) log=${log#*init process complete} ;; *) return 1 ;; esac
+  case "$log" in *"ready to accept connections"*) return 0 ;; *) return 1 ;; esac
 }
 for _ in $(seq 1 300); do
   server_ready && break

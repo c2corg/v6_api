@@ -31,8 +31,9 @@ if [ -z "${SKIP_RESTORE:-}" ]; then
     || psql -X -q -d postgres -c 'create role "www-data" login'
   psql -X -q -d postgres -c "create database $DB owner \"www-data\""
 
-  # `schema "public" already exists` is expected: the database comes with it
-  pg_restore --section=pre-data --no-owner --no-acl -d "$DB" "$DUMP" || true
+  # The schema `public` comes with every database: it is left out, and any other error stops the build
+  pg_restore -l "$DUMP" | grep -v ' SCHEMA - public ' > "$WORK/pre.list"
+  pg_restore --section=pre-data --exit-on-error --no-owner --no-acl -L "$WORK/pre.list" -d "$DB" "$DUMP"
 
   # The data of our schemas only: the PostGIS / tiger tables are already there
   pg_restore -l "$DUMP" | awk -v re="^($SCHEMAS)$" \

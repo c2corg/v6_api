@@ -40,11 +40,18 @@ docker build -q -t "$IMAGE:$TAG" \
 
 echo "=== checking that no personal data is left"
 docker run -d --name "$NAME" --memory 1g -e POSTGRES_PASSWORD=verify "$IMAGE:$TAG" > /dev/null
-# the first server is the temporary one of the initialization: the final one is the second
-for _ in $(seq 1 120); do
-  [ "$(docker logs "$NAME" 2>&1 | grep -c 'ready to accept connections')" -ge 2 ] && break
+# the first server is the temporary one of the initialization (which ends with a message): wait for the final one
+server_ready() { # the logs are captured first: `grep -q` in a pipeline would kill it with a SIGPIPE
+  local log
+  log=$(docker logs "$NAME" 2>&1) || true
+  case "$log" in *"init process complete"*) log=${log#*init process complete} ;; *) return 1 ;; esac
+  case "$log" in *"ready to accept connections"*) return 0 ;; *) return 1 ;; esac
+}
+for _ in $(seq 1 200); do
+  server_ready && break
   sleep 3
 done
+server_ready || { echo "the server of the image did not start" >&2; exit 1; }
 docker exec -i "$NAME" psql -U postgres -d c2corg -X -q -v ON_ERROR_STOP=1 < "$HERE/60-verify.sql"
 
 if [ -n "${DRY_RUN:-}" ]; then

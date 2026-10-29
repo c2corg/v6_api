@@ -46,7 +46,7 @@ dump small. Synchronized activities (Strava, Garmin...) are removed.
 | All waypoints and routes of the zones in `01-setup.sql`, their recent outings (+ a sample of older ones) | realistic content, several langs and countries |
 | A corpus of edge cases outside of the zones (`10-select.sql`, rule `edge:*`) | every quality level, protected / redirected documents, longest texts, many langs, no geometry, odd titles... |
 | What these documents need (closure): main waypoints, parents, redirect targets, images (max 6 per document), authors | referential integrity |
-| Last version of each document; whole history for the edge cases and a sample | the archives tables are huge |
+| Last version of each document; the last 30 versions for the edge cases and a sample | the archives tables are huge (some pages have more than a thousand versions of a long text) |
 | Only the users with a **public profile** | see below |
 | Stop areas of the kept waypoints | public transport |
 
