@@ -21,6 +21,9 @@ TYPES = ['waypoints', 'routes', 'outings', 'images', 'areas', 'articles']
 WORDS = ['mont', 'aiguille', 'col', 'lac', 'pointe', 'refuge', 'arete', 'face']
 LANGS = ['fr', 'en', 'it', 'de', 'es']
 
+# picks the requests of the load test, not a secret
+_random = random.Random()  # nosec B311
+
 # the test accounts of create_test_users.py: testuserc2c<n>, password = username
 USERNAME = os.environ.get('C2C_USERNAME', 'testuserc2c')
 USERS = int(os.environ.get('C2C_USERS', '1000'))
@@ -47,8 +50,8 @@ def read_document_ids(environment, **kwargs):
 
 def _document():
     """Return (type, id) of a document to read."""
-    doc_type = random.choice(list(DOCUMENTS))
-    return doc_type, random.choice(DOCUMENTS[doc_type])
+    doc_type = _random.choice(list(DOCUMENTS))
+    return doc_type, _random.choice(DOCUMENTS[doc_type])
 
 
 class Reader(HttpUser):
@@ -63,7 +66,7 @@ class Reader(HttpUser):
     def document(self):
         doc_type, document_id = _document()
         self.client.get(
-            f'/{doc_type}/{document_id}?l={random.choice(LANGS)}',
+            f'/{doc_type}/{document_id}?l={_random.choice(LANGS)}',
             name=f'/{doc_type}/[id]',
             headers=self.headers(),
         )
@@ -72,17 +75,17 @@ class Reader(HttpUser):
     def cooked_document(self):
         doc_type, document_id = _document()
         self.client.get(
-            f'/{doc_type}/{document_id}?cook={random.choice(LANGS)}',
+            f'/{doc_type}/{document_id}?cook={_random.choice(LANGS)}',
             name=f'/{doc_type}/[id]?cook',
             headers=self.headers(),
         )
 
     @task(25)
     def listing(self):
-        doc_type = random.choice(list(DOCUMENTS))
-        offset = random.choice([0, 0, 0, 30, 60])
+        doc_type = _random.choice(list(DOCUMENTS))
+        offset = _random.choice([0, 0, 0, 30, 60])
         self.client.get(
-            f'/{doc_type}?limit=30&offset={offset}&pl={random.choice(LANGS)}',
+            f'/{doc_type}?limit=30&offset={offset}&pl={_random.choice(LANGS)}',
             name=f'/{doc_type}',
             headers=self.headers(),
         )
@@ -90,7 +93,7 @@ class Reader(HttpUser):
     @task(15)
     def search(self):
         self.client.get(
-            f'/search?q={random.choice(WORDS)}&pl={random.choice(LANGS)}',
+            f'/search?q={_random.choice(WORDS)}&pl={_random.choice(LANGS)}',
             name='/search',
             headers=self.headers(),
         )
@@ -107,7 +110,7 @@ class Reader(HttpUser):
     @task(5)
     def feed(self):
         self.client.get(
-            f'/feed?pl={random.choice(LANGS)}', name='/feed', headers=self.headers()
+            f'/feed?pl={_random.choice(LANGS)}', name='/feed', headers=self.headers()
         )
 
 
@@ -125,7 +128,7 @@ class Contributor(Reader):
     wait_time = between(2, 8)
 
     def on_start(self):
-        username = f'{USERNAME}{random.randint(1, USERS)}'
+        username = f'{USERNAME}{_random.randint(1, USERS)}'
         response = self.client.post(
             '/users/login',
             json={'username': username, 'password': username},
@@ -163,6 +166,6 @@ class Contributor(Reader):
         others = [u for u in USER_IDS if u != self.user_id]
         if not (WRITES and self.token and others):
             return
-        body = {'user_id': random.choice(others)}
+        body = {'user_id': _random.choice(others)}
         self.client.post('/users/follow', json=body, headers=self.headers())
         self.client.post('/users/unfollow', json=body, headers=self.headers())
