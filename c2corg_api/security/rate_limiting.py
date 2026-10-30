@@ -29,18 +29,10 @@ ANONYMOUS_RATE_LIMITED_BUCKETS = {
 
 
 def _client_ip(request):
-    """
-    Best-effort client IP resolution.
-
-    In production the application is served behind a reverse proxy /
-    load balancer (see apache/wsgi.conf.in), which is expected to set
-    `X-Forwarded-For`; fall back to the direct peer address otherwise
-    (e.g. local development).
-    """
-    forwarded_for = request.headers.get('X-Forwarded-For')
-    if forwarded_for:
-        # the left-most entry is the original client address
-        return forwarded_for.split(',')[0].strip()
+    """Return the address of the client, as the server received it."""
+    # not X-Forwarded-For, which any client can send: the server sets the
+    # address from the load balancer (PROXY protocol, or the proxy headers
+    # it trusts)
     return request.remote_addr or 'unknown'
 
 
