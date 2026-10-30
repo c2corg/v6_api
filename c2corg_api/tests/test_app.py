@@ -1,6 +1,9 @@
+import asyncio
+
+from anyio import to_thread
 from webtest import TestApp
 
-from c2corg_api.app import Application, Registry, create_fastapi_app
+from c2corg_api.app import Application, Registry, create_fastapi_app, threads
 
 
 def _client():
@@ -77,3 +80,23 @@ class TestUnexpectedError:
             ],
         }
         assert 'Unexpected error: boom' in caplog.text
+
+
+class TestThreads:
+    def test_the_setting(self):
+        assert threads({'server.threads': '3', 'sqlalchemy.pool_size': '5'}) == 3
+
+    def test_the_database_pool_by_default(self):
+        assert threads({'sqlalchemy.pool_size': '7'}) == 7
+
+    def test_without_settings(self):
+        assert threads({}) == 5
+
+    def test_applied_when_the_app_starts(self):
+        app = create_fastapi_app({'server.threads': '3'})
+
+        async def tokens_while_running():
+            async with app.router.lifespan_context(app):
+                return to_thread.current_default_thread_limiter().total_tokens
+
+        assert asyncio.run(tokens_while_running()) == 3

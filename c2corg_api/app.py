@@ -3,8 +3,10 @@
 # the FastAPI application runs behind an ASGI-to-WSGI bridge.
 
 import re
+from contextlib import asynccontextmanager
 
 from a2wsgi import ASGIMiddleware
+from anyio import to_thread
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -39,13 +41,39 @@ class Registry:
             setattr(self, name, value)
 
 
+def threads(settings):
+    """Return how many requests a uvicorn worker serves at once."""
+    # `server.threads`, else the size of the database pool of the worker
+    return int(
+        settings.get('server.threads') or settings.get('sqlalchemy.pool_size') or 5
+    )
+
+
+def _lifespan(threads):
+    @asynccontextmanager
+    async def lifespan(app):
+        # The routes are plain functions: on uvicorn workers, each request
+        # runs in a thread, 40 at once by default. That many requests at once
+        # overload the database and Elasticsearch (see #2448): the others
+        # wait here for a thread instead. Gunicorn's sync workers serve one
+        # request at a time, and do not run this.
+        to_thread.current_default_thread_limiter().total_tokens = threads
+        yield
+
+    return lifespan
+
+
 def create_fastapi_app(settings, registry=None):
     """Return the FastAPI application of the API."""
     # no generated docs: the API documentation is not served (yet); no
     # redirection of a path with a trailing slash: it is not found, as on
     # Pyramid
     app = FastAPI(
-        docs_url=None, redoc_url=None, openapi_url=None, redirect_slashes=False
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+        redirect_slashes=False,
+        lifespan=_lifespan(threads(settings)),
     )
     app.state.settings = settings
     app.state.registry = registry or Registry(settings)
