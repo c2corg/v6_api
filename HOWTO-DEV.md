@@ -176,6 +176,12 @@ python c2corg_api/scripts/jobs/scheduler.py development.ini
 
 The API is a [FastAPI](https://fastapi.tiangolo.com/) application, served by gunicorn through PasteDeploy (`c2corg_api:main`, the settings come from the `.ini` file).
 
+It can also run on uvicorn workers, without the WSGI bridge: `c2corg_api/asgi.py` reads the `.ini` file named by `C2C_API_CONFIG` (`production.ini` by default).
+
+```shell
+C2C_API_CONFIG=development.ini gunicorn -k uvicorn_worker.UvicornWorker c2corg_api.asgi:app --reload --bind 0.0.0.0:6543
+```
+
 - `c2corg_api/app.py`: the FastAPI application, its middlewares (CORS, token validation, unexpected errors) and the answers to unknown routes and methods.
 - `c2corg_api/web/`: the routes, one module per resource (`documents.py`, `users.py`, `navitia.py`…). They are thin: each one runs a method of a view class through `web/compat.py`, which gives the views the request they expect (`validated`, `errors`, `matchdict`…) and turns what they return or raise into the answer.
 - `c2corg_api/views/`: the view classes and their validators (`views/validation.py`). `@view(...)` in `views/resource.py` declares the validators, permission and content type of a method; the route checks the rate limiting (writes only), then the content type, the permission and the validators, and calls the method.

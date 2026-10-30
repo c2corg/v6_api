@@ -12,7 +12,7 @@ sqlalchemy.url = postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_por
 ###
 
 [loggers]
-keys = root, c2corg_api, sqlalchemy, c2corg_api_syncer, c2corg_api_sync, c2corg_api_background_jobs, kombu, gunicorn.error, gunicorn.access
+keys = root, c2corg_api, sqlalchemy, c2corg_api_syncer, c2corg_api_sync, c2corg_api_background_jobs, kombu, gunicorn.error, gunicorn.access, c2corg_api_access, uvicorn.error
 
 [handlers]
 keys = console
@@ -66,6 +66,18 @@ qualname=gunicorn.access
 level = INFO
 handlers =
 qualname=gunicorn.error
+
+# the access log of the uvicorn workers (c2corg_api.asgi)
+[logger_c2corg_api_access]
+level = INFO
+handlers =
+qualname = c2corg_api.access
+
+# the messages of the uvicorn workers, in JSON like the others
+[logger_uvicorn.error]
+level = INFO
+handlers =
+qualname = uvicorn.error
 
 [handler_console]
 class = StreamHandler

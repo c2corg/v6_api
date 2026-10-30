@@ -17,6 +17,15 @@ log = logging.getLogger(__name__)
 
 def main(global_config, **settings):
     """Return the WSGI application of the API (see `c2corg_api.app`)."""
+    # imported here: the FastAPI routes import the views, which need the
+    # package initialized
+    from c2corg_api.app import Application
+
+    return Application(create_app(settings))
+
+
+def create_app(settings):
+    """Return the FastAPI application of the API, configured by `settings`."""
     # Configure SQLAlchemy
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
@@ -37,7 +46,7 @@ def main(global_config, **settings):
 
     # imported here: the FastAPI routes import the views, which need the
     # package initialized
-    from c2corg_api.app import Application, Registry, create_fastapi_app
+    from c2corg_api.app import Registry, create_fastapi_app
 
     registry = Registry(
         settings,
@@ -45,7 +54,7 @@ def main(global_config, **settings):
         feed_admin_user_account_id=_account_id(settings, 'feed.admin_user_account'),
         anonymous_user_id=_account_id(settings, 'guidebook.anonymous_user_account'),
     )
-    return Application(create_fastapi_app(settings, registry))
+    return create_fastapi_app(settings, registry)
 
 
 def _account_id(settings, name):
