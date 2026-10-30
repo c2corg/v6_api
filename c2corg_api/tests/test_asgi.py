@@ -16,6 +16,7 @@ from c2corg_api.asgi import app
 client = TestApp(ASGIMiddleware(app))
 print(json.dumps({
     'type': type(app).__name__,
+    'middlewares': [m.cls.__name__ for m in app.user_middleware],
     'db': app.state.registry.settings['sqlalchemy.url'],
     'unknown': client.get('/nothing/here', status='*').status_int,
     'origin': client.get(
@@ -43,6 +44,13 @@ def test_the_app_of_the_configured_ini_file():
     result = _run({'C2C_API_CONFIG': configfile})
     assert result == {
         'type': 'FastAPI',
+        # the access log first, so that it sees every answer
+        'middlewares': [
+            'AccessLogMiddleware',
+            'CorsMiddleware',
+            'TokenValidationMiddleware',
+            'UnexpectedErrorMiddleware',
+        ],
         'db': settings['sqlalchemy.url'],
         'unknown': 404,
         'origin': 'http://localhost:6553',
