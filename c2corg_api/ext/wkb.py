@@ -1,5 +1,6 @@
 """Conversions between GeoJSON and the WKB of the geometry columns."""
 
+import math
 import struct
 
 import geojson
@@ -38,8 +39,25 @@ def _to_ewkb(wkb_bytes, srid):
 
 
 def geojson_from_wkbelement(wkb_element):
-    geometry = wkb.loads(bytes(wkb_element.data))
+    data = bytes(wkb_element.data)
+    if is_empty_wkb(data):
+        # geomet cannot read empty geometries, answer them like missing ones
+        return None
+    geometry = wkb.loads(data)
     return geojson.dumps(geometry)
+
+
+def is_empty_wkb(wkb_bytes):
+    """Tell if a (E)WKB geometry is empty, e.g. `MULTILINESTRING Z EMPTY`."""
+    fmt = '<' if wkb_bytes[0] == 1 else '>'
+    geom_type = struct.unpack(fmt + 'I', wkb_bytes[1:5])[0]
+    offset = 9 if geom_type & _EWKB_SRID_FLAG else 5
+    if (geom_type & 0x0FFFFFFF) % 1000 == 1:
+        # an empty point is stored with NaN coordinates
+        x, y = struct.unpack(fmt + 'dd', wkb_bytes[offset : offset + 16])
+        return math.isnan(x) and math.isnan(y)
+    # other types start with their number of points, rings or parts
+    return struct.unpack(fmt + 'I', wkb_bytes[offset : offset + 4])[0] == 0
 
 
 def from_wkb(wkb, srid=-1):

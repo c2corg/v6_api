@@ -4,6 +4,7 @@ import json
 import pytest
 from shapely.geometry import LineString, shape
 from shapely.geometry.point import Point
+from sqlalchemy import text
 
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
@@ -172,6 +173,20 @@ class TestRouteRest(BaseDocumentTestRest):
         topo_map = body.get('maps')[0]
         assert topo_map.get('code') == '3232ET'
         assert topo_map.get('locales')[0].get('title') == 'Belley'
+
+    def test_get_empty_geom_detail(self):
+        # an empty geometry is answered like a missing one (#2526)
+        self.session.execute(
+            text(
+                'UPDATE guidebook.documents_geometries '
+                "SET geom_detail = ST_GeomFromText('MULTILINESTRING Z EMPTY', 3857) "
+                'WHERE document_id = :id'
+            ),
+            {'id': self.route.document_id},
+        )
+        self.session.flush()
+        body = self.get(self.route)
+        assert body['geometry']['geom_detail'] is None
 
     def test_get_version(self):
         self.get_version(self.route, self.route_version)
