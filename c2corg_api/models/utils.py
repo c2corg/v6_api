@@ -4,10 +4,12 @@ import sqlalchemy as sa
 from geoalchemy2 import WKBElement
 from geoalchemy2 import shape as ga_shape
 from geomet import wkb
-from shapely.geometry import LineString, MultiLineString, shape
+from shapely.geometry import GeometryCollection, LineString, MultiLineString, shape
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql.expression import and_
 from sqlalchemy.sql.functions import func
+
+from c2corg_api.ext.wkb import is_empty_wkb
 
 
 def copy_attributes(obj_from, obj_to, attributes):
@@ -88,7 +90,11 @@ def wkb_to_shape(wkb_element):
     """
     if not isinstance(wkb_element, WKBElement):
         raise TypeError(f'expected a WKBElement, got {type(wkb_element).__name__}')
-    geometry = wkb.loads(bytes(wkb_element.data))
+    data = bytes(wkb_element.data)
+    if is_empty_wkb(data):
+        # geomet cannot read empty geometries
+        return GeometryCollection()
+    geometry = wkb.loads(data)
     return shape(_force_2d(geometry))
 
 
