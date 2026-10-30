@@ -29,7 +29,8 @@ USERNAME = os.environ.get('C2C_USERNAME', 'testuserc2c')
 USERS = int(os.environ.get('C2C_USERS', '1000'))
 WRITES = os.environ.get('C2C_WRITES') == '1'
 
-# {type: [document ids]}, read from the listings when the test starts
+# {type: [(document id, available langs)]}, read from the listings when
+# the test starts
 DOCUMENTS = {}
 # user ids of the test accounts that logged in, to follow one another
 USER_IDS = []
@@ -43,15 +44,18 @@ def read_document_ids(environment, **kwargs):
         with urllib.request.urlopen(url, timeout=60) as response:  # nosec B310
             documents = json.load(response).get('documents', [])
         if documents:
-            DOCUMENTS[doc_type] = [d['document_id'] for d in documents]
+            DOCUMENTS[doc_type] = [
+                (d['document_id'], d.get('available_langs') or ['fr'])
+                for d in documents
+            ]
     if not DOCUMENTS:
         raise RuntimeError(f'no document found in the listings of {environment.host}')
 
 
 def _document():
-    """Return (type, id) of a document to read."""
+    """Return (type, id, available langs) of a document to read."""
     doc_type = _random.choice(list(DOCUMENTS))
-    return doc_type, _random.choice(DOCUMENTS[doc_type])
+    return (doc_type, *_random.choice(DOCUMENTS[doc_type]))
 
 
 class Reader(HttpUser):
@@ -64,7 +68,7 @@ class Reader(HttpUser):
 
     @task(40)
     def document(self):
-        doc_type, document_id = _document()
+        doc_type, document_id, _ = _document()
         self.client.get(
             f'/{doc_type}/{document_id}?l={_random.choice(LANGS)}',
             name=f'/{doc_type}/[id]',
@@ -73,7 +77,7 @@ class Reader(HttpUser):
 
     @task(10)
     def cooked_document(self):
-        doc_type, document_id = _document()
+        doc_type, document_id, _ = _document()
         self.client.get(
             f'/{doc_type}/{document_id}?cook={_random.choice(LANGS)}',
             name=f'/{doc_type}/[id]?cook',
@@ -100,9 +104,10 @@ class Reader(HttpUser):
 
     @task(5)
     def history(self):
-        _, document_id = _document()
+        _, document_id, langs = _document()
+        # the history of a language the document has
         self.client.get(
-            f'/document/{document_id}/history/fr',
+            f'/document/{document_id}/history/{_random.choice(langs)}',
             name='/document/[id]/history/[lang]',
             headers=self.headers(),
         )
