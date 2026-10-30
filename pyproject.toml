@@ -41,6 +41,9 @@ dependencies = [
     "transaction==5.1",
     "zope.sqlalchemy==4.1",
     "gunicorn==26.2.0",
+    # the ASGI server, run by gunicorn: -k uvicorn_worker.UvicornWorker
+    "uvicorn==0.54.0",
+    "uvicorn-worker==0.4.0",
     # loads the application and the settings of the .ini files
     "PasteDeploy==3.1.0",
     "python-dotenv==1.2.4",
