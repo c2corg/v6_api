@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import func
 
 from c2corg_api.ext.wkb import (
     geojson_from_wkbelement,
@@ -50,12 +50,11 @@ class TestWkb(BaseTestCase):
         self.session.add(document)
         self.session.flush()
         self.session.execute(
-            text(
-                'INSERT INTO guidebook.documents_geometries '
-                '(document_id, version, ' + field + ') '
-                'VALUES (:id, 1, ST_GeomFromText(:wkt, 3857))'
-            ),
-            {'id': document.document_id, 'wkt': wkt},
+            DocumentGeometry.__table__.insert().values(
+                document_id=document.document_id,
+                version=1,
+                **{field: func.ST_GeomFromText(wkt, 3857)},
+            )
         )
         return self.session.get(DocumentGeometry, document.document_id)
 
