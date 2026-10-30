@@ -15,17 +15,19 @@ WRONG_SSO_SECRET = 'wrong'  # nosec B105
 class TestLoginWrites(UserContractTest):
     @contract(('POST', '/users/login'))
     def test_anonymous_rate_limit(self):
-        # the login is rate limited by client IP, read from X-Forwarded-For
+        # the login is rate limited by the client address the server got,
+        # not by an X-Forwarded-For the client sent
         with patch(ANONYMOUS_LIMIT, return_value=True) as limited:
             response = self.post(
                 '/users/login',
                 {'username': 'contributor', 'password': WRONG_PASSWORD},
                 headers={'X-Forwarded-For': '203.0.113.7, 10.0.0.1'},
+                extra_environ={'REMOTE_ADDR': '198.51.100.7', 'REMOTE_PORT': '50000'},
                 status=429,
             )
         check_snapshot('users_login_rate_limited', response)
         key = limited.call_args.args[1]
-        assert key.endswith(':ratelimit:anon:login:203.0.113.7')
+        assert key.endswith(':ratelimit:anon:login:198.51.100.7')
 
     @contract(
         ('POST', '/users/renew'),
