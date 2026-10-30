@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import sys
@@ -59,9 +60,11 @@ def main(argv=sys.argv):
                 password=password,
                 profile=profile,
             )
-            # make sure user account is directly validated
+            # make sure user account is directly validated, with the terms of
+            # service accepted (else the login answers 403)
             user.clear_validation_nonce()
             user.email_validated = True
+            user.tos_validated = datetime.datetime.now(datetime.UTC)
 
             session.add(user)
             session.flush()

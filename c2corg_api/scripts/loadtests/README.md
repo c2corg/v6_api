@@ -1,50 +1,44 @@
-Tools for load testing with Gatling
-===================================
+Load tests with Locust
+======================
 
-Load tests are done using [Gatling](http://gatling.io/).
+`locustfile.py` holds the load test scenarios of the API for [Locust](https://locust.io/). The test users are of two kinds:
+- **Visitor** (9 in 10): an anonymous visitor reading the guidebook (documents, cooked documents, listings, search, history, the feed).
+- **Contributor** (1 in 10): a logged-in user who also reads their account, preferences and personal feed. With `C2C_WRITES=1`, the contributor also follows and unfollows other test users; these writes leave no trace.
 
-Using Gatling for load testing
-------------------------------
+The document ids come from the listings of the API when the test starts.
 
-* Download the [Gatling bundle](http://gatling.io/#/resources/download).
-* Paste (or symlink) dir `gatling/user-files/` into the Gatling bundle.
-* Read the [documentation](http://gatling.io/docs/2.2.3/quickstart.html#running-gatling).
-* See also the [additional command line options](http://gatling.io/docs/2.2.3/general/configuration.html#command-line-options).
+Run them against a staging copy of the API with production-like data, never against production.
 
-Run Gatling and choose what scenario to test (`users` is the number of concurrent users and `ramp` the time in seconds during which those users will be introduced):
+Running
+-------
 
-    JAVA_OPTS="-Dusers=500 -Dramp=3600" bin/gatling.sh
+Locust runs in its own environment: the project holds urllib3 below 2 (Elasticsearch 2.4), which Locust does not support. With [uv](https://docs.astral.sh/uv/), from the root of the repository:
 
+    uvx --from locust==2.46.7 locust -f c2corg_api/scripts/loadtests/locustfile.py --host https://api.staging.example
 
-Adding test user accounts
--------------------------
+Then open <http://localhost:8089> to start a test, and watch the statistics and charts as it runs.
 
-This script creates 1000 user accounts with usernames/passwords of the form
-`testuserc2c<1 to 1000>`.
+Without the web UI, e.g. 200 users, 10 more per second, for 10 minutes, with the results in CSV files and an HTML report:
 
-Run:
+    uvx --from locust==2.46.7 locust -f c2corg_api/scripts/loadtests/locustfile.py --host https://api.staging.example \
+        --headless -u 200 -r 10 -t 10m --csv results/run1 --html results/run1.html
 
-    .build/venv/bin/python c2corg_api/scripts/loadtests/create_test_users.py
+Settings, through environment variables:
+- `C2C_USERNAME` (default `testuserc2c`) and `C2C_USERS` (default `1000`): the test accounts, `<C2C_USERNAME><1 to C2C_USERS>`, whose password is their username.
+- `C2C_WRITES=1`: also send the writes of the contributors.
 
+To compare two versions of the API, run the same test twice against each version, on the same data, and compare the percentiles.
 
-Creating lists of document URLs
--------------------------------
+Setting up the target
+---------------------
 
-Run:
+- **Test accounts:** `create_test_users.py` creates 1000 validated accounts, `testuserc2c1` to `testuserc2c1000`, with their username as password. It reads the database URL from `loadtests.ini`, made from `loadtests.ini.in` like the other `.ini` files. Then run:
 
-    cd gatling/user-files/data
-    psql -d <dbname> -A -F, -c "select document_id as id, lang as lang from guidebook.outings join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" | egrep -v '\(.*rows\)' > outings.csv
-    psql <dbname> -A -F, -c "select document_id as id, lang as lang from guidebook.routes join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" | egrep -v '\(.*rows\)' > routes.csv
-    psql <dbname> -A -F, -c "select document_id as id, lang as lang from guidebook.waypoints join guidebook.documents_locales using (document_id) order by document_id desc limit 100;" | egrep -v '\(.*rows\)' > waypoints.csv
+      python c2corg_api/scripts/loadtests/create_test_users.py
 
-You might need to prefix these commands with on of these:
-    sudo -u postgres
-    docker -H $DOCKER_HOST exec -i -u postgres postgresql_postgresql_1
+- **Rate limiting:** the logins are rate limited per client IP (`rate_limiting.anonymous_limit` per `rate_limiting.anonymous_window_span` seconds, 20 per 15 minutes by default). All the Locust users come from the same IP, so raise the limit on the target. With `C2C_WRITES=1`, the writes of each account are also rate limited (`rate_limiting.limit`).
 
-Creating a list of test usernames and passwords
------------------------------------------------
+Quick comparisons
+-----------------
 
-Run:
-
-    cd gatling/user-files/data
-    sh users.sh > users.csv
+`scripts/loadtest.py` (standard library only) replays a mix of reads with a few threads, to compare two versions of the API on a development machine (see HOWTO-DEV).
