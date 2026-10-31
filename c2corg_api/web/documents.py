@@ -5,21 +5,31 @@
 
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends, Path, Query, Request
 
 from c2corg_api.views.validation import (
-    validate_cook_param,
     validate_id,
     validate_lang,
-    validate_lang_param,
     validate_pagination,
     validate_preferred_lang_param,
     validate_version_id,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.compat import serve_view, serve_write
+from c2corg_api.web.params import Id, Lang
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
+
+
+def _set_validated(values):
+    """Return a validator giving the views the typed parameters."""
+
+    # the views read them in request.validated, where the validators of
+    # views/validation.py put them: only those given
+    def validator(request, **kwargs):
+        request.validated.update((k, v) for k, v in values.items() if v is not None)
+
+    return validator
 
 
 def include_document_type(
@@ -37,13 +47,35 @@ def include_document_type(
             permission=listing_permission,
         )
 
-    def document(request: Request, user: User):
-        return serve_view(
-            request,
-            user,
-            [validate_id, validate_lang_param, validate_cook_param],
-            rest,
-        )
+    def document(
+        request: Request,
+        user: User,
+        id: Annotated[Id, Path(description='The document id.')],
+        lang: Annotated[
+            Lang | None,
+            Query(alias='l', description='Only the locale of this language.'),
+        ] = None,
+        cook: Annotated[
+            Lang | None,
+            Query(
+                description='Only one locale, in this language if it exists, else '
+                'in the best other one, with its Markdown rendered as HTML.'
+            ),
+        ] = None,
+        e: Annotated[
+            str,
+            Query(
+                description='Any other value than 0: the document as stored, for '
+                'the edit form, not cached.'
+            ),
+        ] = '0',
+    ):
+        # `e` is read by the view
+        validated = {'id': id, 'lang': lang, 'cook': cook}
+        return serve_view(request, user, [_set_validated(validated)], rest)
+
+    # described in the OpenAPI document (see web.openapi)
+    document.described = True
 
     # read by the route inventory of the contract tests (routes.txt)
     listing.permission = listing_permission
@@ -53,7 +85,14 @@ def include_document_type(
     # invalid id gets the same 400 from Pyramid.
     methods = ['GET', 'HEAD']
     app.add_api_route(f'/{prefix}', listing, methods=methods)
-    app.add_api_route(f'/{prefix}/{{id:int}}', document, methods=methods)
+    app.add_api_route(
+        f'/{prefix}/{{id:int}}',
+        document,
+        methods=methods,
+        operation_id=f'get_{prefix}_document',
+        summary='A document, with its locales and associations.',
+        tags=[prefix],
+    )
 
     if info_rest is not None:
 
