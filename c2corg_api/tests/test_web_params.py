@@ -49,6 +49,29 @@ class TestTypedParameterErrors:
             response = _client().get(path, status=400)
             assert response.json['errors'] == errors, path
 
+    def test_listing(self):
+        response = _client().get(
+            '/routes', params={'offset': 'x', 'limit': '1.5', 'pl': 'xx'}, status=400
+        )
+        assert response.json['errors'] == [
+            _error('offset', 'invalid offset'),
+            _error('limit', 'invalid limit'),
+            _error('lang', 'invalid lang'),
+        ]
+
+    def test_permission_first(self):
+        # the listing of the profiles is for the authenticated users: the
+        # permission is checked before the parameters, as Pyramid did
+        response = _client().get('/profiles', params={'limit': 'x'}, status=403)
+        assert response.json['errors'] == [
+            _error(
+                'Forbidden',
+                'Unauthorized: UserProfileRest.collection_get__GET failed '
+                'permission check',
+                'body',
+            )
+        ]
+
     def test_origin_first(self):
         response = _client().get(
             '/routes/1',
@@ -77,7 +100,7 @@ class TestOpenApi:
         assert '/routes/{id}/{lang}/{version_id}' in document['paths']
         # maps have no version route
         assert '/maps/{id}/{lang}/{version_id}' not in document['paths']
-        assert '/routes' not in document['paths']
+        assert '/routes' in document['paths']
         assert '/health' not in document['paths']
         assert all(':' not in path for path in document['paths'])
 
@@ -103,3 +126,11 @@ class TestOpenApi:
         assert 'en' in parameters['lang']['schema']['enum']
         assert parameters['version_id']['schema']['minimum'] == 0
         assert operation['operationId'] == 'get_routes_version'
+
+    def test_listing_parameters(self):
+        document = _client({'api.openapi': 'true'}).get('/openapi.json').json
+        operation = document['paths']['/routes']['get']
+        parameters = {p['name']: p for p in operation['parameters']}
+        assert set(parameters) == {'offset', 'limit', 'pl', 'q', 'bbox', 'sort'}
+        assert not any(p['required'] for p in parameters.values())
+        assert operation['operationId'] == 'list_routes'
