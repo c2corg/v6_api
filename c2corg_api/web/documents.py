@@ -11,6 +11,7 @@ from c2corg_api.views.document import LIMIT_DEFAULT, LIMIT_MAX
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.compat import permission_check, serve_view, serve_write
 from c2corg_api.web.params import Id, Lang, Limit, Offset, VersionId
+from c2corg_api.web.search_parameters import search_filter_parameters
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 DocumentId = Annotated[Id, Path(description='The document id.')]
@@ -29,7 +30,13 @@ def _set_validated(values):
 
 
 def include_document_type(
-    app, prefix, rest, version_rest=None, info_rest=None, listing_permission=None
+    app,
+    prefix,
+    rest,
+    version_rest=None,
+    info_rest=None,
+    listing_permission=None,
+    doc_type=None,
 ):
     """Add the read routes of a document type, served by its view classes."""
 
@@ -128,8 +135,9 @@ def include_document_type(
         operation_id=f'list_{prefix}',
         summary='A page of documents, with their total.',
         description='Without search parameters, the latest documents first. '
-        'The search filters of the document type are not described yet.',
+        'With any other parameter, a search in Elasticsearch.',
         tags=[prefix],
+        openapi_extra={'parameters': search_filter_parameters(doc_type)},
     )
     app.add_api_route(
         f'/{prefix}/{{id:int}}',
@@ -220,6 +228,19 @@ def include_document_writes(app, prefix, rest, create=True):
 
 def include(app):
     """Add the document routes moved to FastAPI."""
+    from c2corg_api.models.common.document_types import (
+        AREA_TYPE,
+        ARTICLE_TYPE,
+        BOOK_TYPE,
+        COVERAGE_TYPE,
+        IMAGE_TYPE,
+        MAP_TYPE,
+        OUTING_TYPE,
+        ROUTE_TYPE,
+        USERPROFILE_TYPE,
+        WAYPOINT_TYPE,
+        XREPORT_TYPE,
+    )
     from c2corg_api.views.area import AreaInfoRest, AreaRest, AreaVersionRest
     from c2corg_api.views.article import (
         ArticleRest,
@@ -244,28 +265,60 @@ def include(app):
         XreportVersionRest,
     )
 
-    include_document_type(app, 'books', BookRest, BooksVersionRest, BooksInfoRest)
     include_document_type(
-        app, 'articles', ArticleRest, ArticlesVersionRest, ArticlesInfoRest
+        app, 'books', BookRest, BooksVersionRest, BooksInfoRest, doc_type=BOOK_TYPE
     )
-    include_document_type(app, 'areas', AreaRest, AreaVersionRest, AreaInfoRest)
+    include_document_type(
+        app,
+        'articles',
+        ArticleRest,
+        ArticlesVersionRest,
+        ArticlesInfoRest,
+        doc_type=ARTICLE_TYPE,
+    )
+    include_document_type(
+        app, 'areas', AreaRest, AreaVersionRest, AreaInfoRest, doc_type=AREA_TYPE
+    )
     # maps have no version route, coverages neither version nor info
-    include_document_type(app, 'maps', TopoMapRest, info_rest=TopoMapInfoRest)
-    include_document_type(app, 'coverages', CoverageRest)
+    include_document_type(
+        app, 'maps', TopoMapRest, info_rest=TopoMapInfoRest, doc_type=MAP_TYPE
+    )
+    include_document_type(app, 'coverages', CoverageRest, doc_type=COVERAGE_TYPE)
     # the image proxy (/images/proxy/{id}) and /images/list stay on Pyramid
-    include_document_type(app, 'images', ImageRest, ImageVersionRest, ImageInfoRest)
+    include_document_type(
+        app, 'images', ImageRest, ImageVersionRest, ImageInfoRest, doc_type=IMAGE_TYPE
+    )
     # the personal fields of an xreport are for its author and the moderators
     include_document_type(
-        app, 'xreports', XreportRest, XreportVersionRest, XreportInfoRest
+        app,
+        'xreports',
+        XreportRest,
+        XreportVersionRest,
+        XreportInfoRest,
+        doc_type=XREPORT_TYPE,
     )
-    include_document_type(app, 'outings', OutingRest, OutingVersionRest, OutingInfoRest)
+    include_document_type(
+        app,
+        'outings',
+        OutingRest,
+        OutingVersionRest,
+        OutingInfoRest,
+        doc_type=OUTING_TYPE,
+    )
     # /reachableroutes and /routes/update_public_transportation_rating stay on
     # Pyramid
-    include_document_type(app, 'routes', RouteRest, RouteVersionRest, RouteInfoRest)
+    include_document_type(
+        app, 'routes', RouteRest, RouteVersionRest, RouteInfoRest, doc_type=ROUTE_TYPE
+    )
     # /reachablewaypoints, /waypoints/{id}/stopareas, /waypoints/{id}/isReachable
     # and /waypoints_stopareas/... stay on Pyramid
     include_document_type(
-        app, 'waypoints', WaypointRest, WaypointVersionRest, WaypointInfoRest
+        app,
+        'waypoints',
+        WaypointRest,
+        WaypointVersionRest,
+        WaypointInfoRest,
+        doc_type=WAYPOINT_TYPE,
     )
     # the listing of the profiles is for the authenticated users, and a private
     # profile shows only the user name to the others; no version route
@@ -275,6 +328,7 @@ def include(app):
         UserProfileRest,
         info_rest=UserProfileInfoRest,
         listing_permission='authenticated',
+        doc_type=USERPROFILE_TYPE,
     )
     # a GET that writes (the ratings of all the routes, for the moderators):
     # served as a write, so that it is committed

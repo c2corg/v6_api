@@ -131,6 +131,39 @@ class TestOpenApi:
         document = _client({'api.openapi': 'true'}).get('/openapi.json').json
         operation = document['paths']['/routes']['get']
         parameters = {p['name']: p for p in operation['parameters']}
-        assert set(parameters) == {'offset', 'limit', 'pl', 'q', 'bbox', 'sort'}
+        assert {'offset', 'limit', 'pl', 'q', 'bbox', 'sort'} < set(parameters)
         assert not any(p['required'] for p in parameters.values())
         assert operation['operationId'] == 'list_routes'
+
+    def test_search_filters(self):
+        document = _client({'api.openapi': 'true'}).get('/openapi.json').json
+        operation = document['paths']['/waypoints']['get']
+        parameters = {p['name']: p for p in operation['parameters']}
+        # the typed parameters, then the filters of the waypoint search mapping
+        assert {'offset', 'limit', 'pl', 'q', 'bbox', 'sort'} < set(parameters)
+        assert parameters['wtyp']['schema']['items']['enum'][:1] == ['summit']
+        assert parameters['wtyp']['explode'] is False
+        assert parameters['plift']['schema'] == {'type': 'boolean'}
+        assert (
+            '`climbing_rating_min` and `climbing_rating_max`'
+            in (parameters['crat']['description'])
+        )
+        # the filters differ by document type
+        outings = document['paths']['/outings']['get']['parameters']
+        assert 'date' in {p['name'] for p in outings}
+        assert 'date' not in parameters
+
+
+class TestSearchFilterParameters:
+    def test_every_filter_described(self):
+        from c2corg_api.search import search_documents
+        from c2corg_api.web.search_parameters import search_filter_parameters
+
+        for doc_type, search_model in search_documents.items():
+            names = {p['name'] for p in search_filter_parameters(doc_type)}
+            assert names == set(search_model.queryable_fields), doc_type
+
+    def test_without_search_mapping(self):
+        from c2corg_api.web.search_parameters import search_filter_parameters
+
+        assert search_filter_parameters('v') == []
