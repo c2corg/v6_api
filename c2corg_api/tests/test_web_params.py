@@ -113,6 +113,40 @@ class TestTypedParameterErrors:
             _error('lang', 'invalid lang'),
         ]
 
+    def test_search(self):
+        response = _client().get(
+            '/search', params={'q': 'x', 'limit': 'many', 'pl': 'xx'}, status=400
+        )
+        assert response.json['errors'] == [
+            _error('limit', 'invalid limit'),
+            _error('lang', 'invalid lang'),
+        ]
+
+    def test_sitemaps(self):
+        # the page first, then the document type, as their validators
+        for path in ('/sitemaps/zz/-1', '/sitemaps.xml/zz/-1.xml'):
+            response = _client().get(path, status=400)
+            assert response.json['errors'] == [
+                _error('i', 'invalid i'),
+                _error('doc_type', 'invalid doc_type'),
+            ], path
+
+    def test_stopareas(self):
+        response = _client().get(
+            '/stopareas', params={'page_id': '0', 'nb_items': 'x'}, status=400
+        )
+        assert response.json['errors'] == [
+            _error('page_id', 'invalid page_id'),
+            _error('nb_items', 'invalid nb_items'),
+        ]
+        for path in ('/waypoints/x/stopareas', '/waypoints/x/isReachable'):
+            response = _client().get(path, status=400)
+            assert response.json['errors'] == [
+                _error('waypoint_id', 'invalid waypoint_id')
+            ], path
+        response = _client().get('/reachableroutes', params={'offset': 'x'}, status=400)
+        assert response.json['errors'] == [_error('offset', 'invalid offset')]
+
     def test_origin_first(self):
         response = _client().get(
             '/routes/1',
@@ -226,3 +260,17 @@ class TestTokens:
 
         assert _token(parse_int_safe)('12') == 12
         assert _token(parse_int_safe)(None) is None
+
+
+class TestEveryReadDescribed:
+    def test_routes(self):
+        document = _client({'api.openapi': 'true'}).get('/openapi.json').json
+        for path in (
+            '/search',
+            '/sitemaps/{doc_type}/{i}',
+            '/sitemaps.xml/{doc_type}/{i}.xml',
+            '/stopareas',
+            '/waypoints/{waypoint_id}/stopareas',
+            '/reachableroutes',
+        ):
+            assert path in document['paths'], path

@@ -12,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import BeforeValidator, WithJsonSchema
 from pydantic_core import PydanticCustomError
 
+from c2corg_api.models.common import document_types
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.views.validation import parse_datetime, parse_int_safe
 from c2corg_api.web.errors import error_response
@@ -73,6 +74,46 @@ def integer(name):
     return Annotated[
         int, BeforeValidator(_int(name)), WithJsonSchema({'type': 'integer'})
     ]
+
+
+def natural(name):
+    """Return the type of an integer parameter from 0, `invalid <name>` if not."""
+    # as the validators of create_int_validator
+    return Annotated[
+        int,
+        BeforeValidator(_id(name)),
+        WithJsonSchema({'type': 'integer', 'minimum': 0}),
+    ]
+
+
+def positive(name):
+    """Return the type of an integer parameter from 1, `invalid <name>` if not."""
+
+    def parse(value):
+        value = _int(name)(value)
+        if value < 1:
+            raise PydanticCustomError('c2corg', f'invalid {name}')
+        return value
+
+    return Annotated[
+        int,
+        BeforeValidator(parse),
+        WithJsonSchema({'type': 'integer', 'minimum': 1}),
+    ]
+
+
+def _doc_type(value):
+    if value not in document_types.ALL:
+        raise PydanticCustomError('c2corg', 'invalid doc_type')
+    return value
+
+
+# a document type (`w`, `r`...), as validate_document_type checked it
+DocType = Annotated[
+    str,
+    BeforeValidator(_doc_type),
+    WithJsonSchema({'type': 'string', 'enum': list(document_types.ALL)}),
+]
 
 
 def _token(parse):
