@@ -20,6 +20,10 @@ sqlalchemy.max_overflow=10
 # Elasticsearch. The size of the database pool if empty.
 server.threads = {server_threads}
 
+# serve the OpenAPI document of the routes with typed parameters at
+# /openapi.json (#2512)
+# api.openapi = false
+
 elasticsearch.host = {elasticsearch_host}
 elasticsearch.port = {elasticsearch_port}
 elasticsearch.index = {elasticsearch_index}
