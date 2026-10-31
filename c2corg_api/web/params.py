@@ -37,6 +37,11 @@ def _lang(value):
 Id = Annotated[
     int, BeforeValidator(_id('id')), WithJsonSchema({'type': 'integer', 'minimum': 0})
 ]
+VersionId = Annotated[
+    int,
+    BeforeValidator(_id('version_id')),
+    WithJsonSchema({'type': 'integer', 'minimum': 0}),
+]
 Lang = Annotated[
     str,
     BeforeValidator(_lang),

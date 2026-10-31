@@ -8,17 +8,16 @@ from typing import Annotated
 from fastapi import Depends, Path, Query, Request
 
 from c2corg_api.views.validation import (
-    validate_id,
-    validate_lang,
     validate_pagination,
     validate_preferred_lang_param,
-    validate_version_id,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.compat import serve_view, serve_write
-from c2corg_api.web.params import Id, Lang
+from c2corg_api.web.params import Id, Lang, VersionId
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
+DocumentId = Annotated[Id, Path(description='The document id.')]
+PathLang = Annotated[Lang, Path(description='The language of the locale.')]
 
 
 def _set_validated(values):
@@ -50,7 +49,7 @@ def include_document_type(
     def document(
         request: Request,
         user: User,
-        id: Annotated[Id, Path(description='The document id.')],
+        id: DocumentId,
         lang: Annotated[
             Lang | None,
             Query(alias='l', description='Only the locale of this language.'),
@@ -96,23 +95,47 @@ def include_document_type(
 
     if info_rest is not None:
 
-        def info(request: Request, user: User):
-            return serve_view(request, user, [validate_id, validate_lang], info_rest)
+        def info(request: Request, user: User, id: DocumentId, lang: PathLang):
+            validated = {'id': id, 'lang': lang}
+            return serve_view(request, user, [_set_validated(validated)], info_rest)
 
-        app.add_api_route(f'/{prefix}/{{id:int}}/{{lang}}/info', info, methods=methods)
+        info.described = True
+        app.add_api_route(
+            f'/{prefix}/{{id:int}}/{{lang}}/info',
+            info,
+            methods=methods,
+            operation_id=f'get_{prefix}_info',
+            summary='The title of a document in a language, for its URL.',
+            description='The locale in this language, else in the best other one. '
+            'For a redirected document: the id and languages of the document it '
+            'redirects to.',
+            tags=[prefix],
+        )
 
     if version_rest is not None:
 
-        def version(request: Request, user: User):
-            return serve_view(
-                request,
-                user,
-                [validate_id, validate_lang, validate_version_id],
-                version_rest,
-            )
+        def version(
+            request: Request,
+            user: User,
+            id: DocumentId,
+            lang: PathLang,
+            version_id: Annotated[
+                VersionId, Path(description='The id of the version.')
+            ],
+        ):
+            validated = {'id': id, 'lang': lang, 'version_id': version_id}
+            return serve_view(request, user, [_set_validated(validated)], version_rest)
 
+        version.described = True
         path = f'/{prefix}/{{id:int}}/{{lang}}/{{version_id:int}}'
-        app.add_api_route(path, version, methods=methods)
+        app.add_api_route(
+            path,
+            version,
+            methods=methods,
+            operation_id=f'get_{prefix}_version',
+            summary='A version of a document, with the locale of a language.',
+            tags=[prefix],
+        )
 
 
 def view_arguments(view_class, method):
