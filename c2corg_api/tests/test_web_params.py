@@ -73,9 +73,9 @@ class TestTypedParameterErrors:
         ]
 
     def test_feeds(self):
-        response = _client().get(
-            '/feed', params={'pl': 'xx', 'limit': 'x', 'token': '12'}, status=400
-        )
+        # an invalid pagination token, not a secret
+        params = {'pl': 'xx', 'limit': 'x', 'token': '12'}  # nosec B105
+        response = _client().get('/feed', params=params, status=400)
         assert response.json['errors'] == [
             _error('lang', 'invalid lang'),
             _error('limit', 'invalid limit'),
@@ -93,9 +93,9 @@ class TestTypedParameterErrors:
         assert response.json['errors'][0]['name'] == 'Forbidden'
 
     def test_histories(self):
-        response = _client().get(
-            '/documents/changes', params={'token': '1,2', 'u': 'x'}, status=400
-        )
+        # an invalid pagination token, not a secret
+        params = {'token': '1,2', 'u': 'x'}  # nosec B105
+        response = _client().get('/documents/changes', params=params, status=400)
         assert response.json['errors'] == [
             _error('token', 'invalid format'),
             _error('u', 'invalid u'),
