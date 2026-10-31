@@ -9,24 +9,23 @@ from fastapi import Depends, Path, Query, Request
 
 from c2corg_api.views.document import LIMIT_DEFAULT, LIMIT_MAX
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import permission_check, serve_view, serve_write
-from c2corg_api.web.params import Id, Lang, Limit, Offset, VersionId
+from c2corg_api.web.compat import (
+    permission_check,
+    serve_view,
+    serve_write,
+    typed_values,
+)
+from c2corg_api.web.params import (
+    DocumentId,
+    Lang,
+    Limit,
+    Offset,
+    PathLang,
+    VersionId,
+)
 from c2corg_api.web.search_parameters import search_filter_parameters
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
-DocumentId = Annotated[Id, Path(description='The document id.')]
-PathLang = Annotated[Lang, Path(description='The language of the locale.')]
-
-
-def _set_validated(values):
-    """Return a validator giving the views the typed parameters."""
-
-    # the views read them in request.validated, where the validators of
-    # views/validation.py put them: only those given
-    def validator(request, **kwargs):
-        request.validated.update((k, v) for k, v in values.items() if v is not None)
-
-    return validator
 
 
 def include_document_type(
@@ -86,7 +85,7 @@ def include_document_type(
         # `q`, `bbox`, `sort` and the search filters are read by the view
         validated = {'offset': offset, 'limit': limit, 'lang': lang}
         return serve_view(
-            request, user, [_set_validated(validated)], rest, 'collection_get'
+            request, user, [typed_values(validated)], rest, 'collection_get'
         )
 
     listing.described = True
@@ -116,7 +115,7 @@ def include_document_type(
     ):
         # `e` is read by the view
         validated = {'id': id, 'lang': lang, 'cook': cook}
-        return serve_view(request, user, [_set_validated(validated)], rest)
+        return serve_view(request, user, [typed_values(validated)], rest)
 
     # described in the OpenAPI document (see web.openapi)
     document.described = True
@@ -152,7 +151,7 @@ def include_document_type(
 
         def info(request: Request, user: User, id: DocumentId, lang: PathLang):
             validated = {'id': id, 'lang': lang}
-            return serve_view(request, user, [_set_validated(validated)], info_rest)
+            return serve_view(request, user, [typed_values(validated)], info_rest)
 
         info.described = True
         app.add_api_route(
@@ -179,7 +178,7 @@ def include_document_type(
             ],
         ):
             validated = {'id': id, 'lang': lang, 'version_id': version_id}
-            return serve_view(request, user, [_set_validated(validated)], version_rest)
+            return serve_view(request, user, [typed_values(validated)], version_rest)
 
         version.described = True
         path = f'/{prefix}/{{id:int}}/{{lang}}/{{version_id:int}}'

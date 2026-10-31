@@ -72,6 +72,47 @@ class TestTypedParameterErrors:
             )
         ]
 
+    def test_feeds(self):
+        # an invalid pagination token, not a secret
+        params = {'pl': 'xx', 'limit': 'x', 'token': '12'}  # nosec B105
+        response = _client().get('/feed', params=params, status=400)
+        assert response.json['errors'] == [
+            _error('lang', 'invalid lang'),
+            _error('limit', 'invalid limit'),
+            _error('token', 'invalid format'),
+        ]
+        # the user of a profile feed is required, and its error comes last
+        response = _client().get('/profile-feed', params={'pl': 'xx'}, status=400)
+        assert response.json['errors'] == [
+            _error('lang', 'invalid lang'),
+            _error('u', 'invalid u'),
+        ]
+        # the personal feed is for the authenticated users: before the
+        # parameters
+        response = _client().get('/personal-feed', params={'limit': 'x'}, status=403)
+        assert response.json['errors'][0]['name'] == 'Forbidden'
+
+    def test_histories(self):
+        # an invalid pagination token, not a secret
+        params = {'token': '1,2', 'u': 'x'}  # nosec B105
+        response = _client().get('/documents/changes', params=params, status=400)
+        assert response.json['errors'] == [
+            _error('token', 'invalid format'),
+            _error('u', 'invalid u'),
+        ]
+        response = _client().get(
+            '/associations-history', params={'d': 'x', 'offset': 'y'}, status=400
+        )
+        assert response.json['errors'] == [
+            _error('d', 'invalid d'),
+            _error('offset', 'invalid offset'),
+        ]
+        response = _client().get('/document/abc/history/xx', status=400)
+        assert response.json['errors'] == [
+            _error('id', 'invalid id'),
+            _error('lang', 'invalid lang'),
+        ]
+
     def test_origin_first(self):
         response = _client().get(
             '/routes/1',
@@ -167,3 +208,21 @@ class TestSearchFilterParameters:
         from c2corg_api.web.search_parameters import search_filter_parameters
 
         assert search_filter_parameters('v') == []
+
+
+class TestTokens:
+    def test_feed_token(self):
+        from c2corg_api.web.params import _feed_token, _token
+
+        parse = _token(_feed_token)
+        assert parse('') is None
+        id, time = parse('12,2026-10-31T10:00:00')
+        assert id == 12
+        assert time.year == 2026
+
+    def test_changes_token(self):
+        from c2corg_api.views.validation import parse_int_safe
+        from c2corg_api.web.params import _token
+
+        assert _token(parse_int_safe)('12') == 12
+        assert _token(parse_int_safe)(None) is None
