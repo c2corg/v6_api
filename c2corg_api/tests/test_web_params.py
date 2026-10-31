@@ -31,6 +31,24 @@ class TestTypedParameterErrors:
         response = _client().get('/routes/1', params={'cook': 'xx'}, status=400)
         assert response.json['errors'] == [_error('cook', 'invalid lang')]
 
+    def test_info_and_version(self):
+        # the languages of the paths, and the version ids
+        for path, errors in (
+            ('/routes/abc/en/info', [_error('id', 'invalid id')]),
+            ('/routes/1/xx/info', [_error('lang', 'invalid lang')]),
+            (
+                '/routes/abc/xx/12',
+                [
+                    _error('id', 'invalid id'),
+                    _error('lang', 'invalid lang'),
+                ],
+            ),
+            ('/routes/1/en/abc', [_error('version_id', 'invalid version_id')]),
+            ('/routes/1/en/-2', [_error('version_id', 'invalid version_id')]),
+        ):
+            response = _client().get(path, status=400)
+            assert response.json['errors'] == errors, path
+
     def test_origin_first(self):
         response = _client().get(
             '/routes/1',
@@ -54,7 +72,11 @@ class TestOpenApi:
         assert document['info']['title'] == 'camptocamp.org API'
         # the document routes of each type, once: not the copies for the
         # other ids, nor the routes without typed parameters yet
-        assert '/routes/{id}' in document['paths']
+        for path in ('/routes/{id}', '/routes/{id}/{lang}/info'):
+            assert path in document['paths']
+        assert '/routes/{id}/{lang}/{version_id}' in document['paths']
+        # maps have no version route
+        assert '/maps/{id}/{lang}/{version_id}' not in document['paths']
         assert '/routes' not in document['paths']
         assert '/health' not in document['paths']
         assert all(':' not in path for path in document['paths'])
@@ -71,3 +93,13 @@ class TestOpenApi:
         assert set(document['paths']['/routes/{id}']) == {'get'}
         assert 'en' in parameters['l']['schema']['anyOf'][0]['enum']
         assert parameters['cook']['in'] == 'query'
+
+    def test_path_parameters(self):
+        document = _client({'api.openapi': 'true'}).get('/openapi.json').json
+        operation = document['paths']['/routes/{id}/{lang}/{version_id}']['get']
+        parameters = {p['name']: p for p in operation['parameters']}
+        assert set(parameters) == {'id', 'lang', 'version_id'}
+        assert all(p['in'] == 'path' and p['required'] for p in parameters.values())
+        assert 'en' in parameters['lang']['schema']['enum']
+        assert parameters['version_id']['schema']['minimum'] == 0
+        assert operation['operationId'] == 'get_routes_version'
