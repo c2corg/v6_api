@@ -36,6 +36,14 @@ class TestCoverageRest(BaseTestRest):
             .count()
         )
 
+    def test_listing_with_search_parameters(self):
+        # the coverages are not indexed: the listing reads the database, it
+        # used to look for a search mapping and answer 500
+        for params in ({'q': 'South'}, {'pl': 'en', 'bbox': '0,0,1,1'}):
+            response = self.app.get('/coverages', params=params, status=200)
+            ids = [doc['document_id'] for doc in response.json['documents']]
+            assert self.document_id in ids, params
+
     def test_update_locale_only(self):
         # coverages have no history: an update used to look for the previous
         # archive and answer 500

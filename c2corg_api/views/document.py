@@ -47,6 +47,7 @@ from c2corg_api.models.topo_map_association import get_maps, update_maps_for_doc
 from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.search import advanced_search
+from c2corg_api.search import search_documents as search_mappings
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import etag_cache, set_best_locale, to_json_dict
 from c2corg_api.views.document_listings import (
@@ -94,7 +95,11 @@ class DocumentRest(BaseView):
             # https://www.elastic.co/guide/en/elasticsearch/reference/master/search-request-from-size.html
             raise HTTPBadRequest('offset + limit greater than 10000')
 
-        if advanced_search.contains_search_params(self.request.GET):
+        # the coverages are not indexed (see scripts/es/fill_index.py): their
+        # listing reads the database, whatever the search parameters
+        if doc_type in search_mappings and advanced_search.contains_search_params(
+            self.request.GET
+        ):
             # search with ElasticSearch
             search_documents = advanced_search.get_search_documents(
                 self.request.GET, meta_params, doc_type
