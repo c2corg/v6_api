@@ -34,6 +34,16 @@ def _lang(value):
     return value
 
 
+def _int(name):
+    def parse(value):
+        try:
+            return int(value)
+        except TypeError, ValueError:
+            raise PydanticCustomError('c2corg', f'invalid {name}') from None
+
+    return parse
+
+
 Id = Annotated[
     int, BeforeValidator(_id('id')), WithJsonSchema({'type': 'integer', 'minimum': 0})
 ]
@@ -46,6 +56,13 @@ Lang = Annotated[
     str,
     BeforeValidator(_lang),
     WithJsonSchema({'type': 'string', 'enum': list(default_langs)}),
+]
+
+Offset = Annotated[
+    int, BeforeValidator(_int('offset')), WithJsonSchema({'type': 'integer'})
+]
+Limit = Annotated[
+    int, BeforeValidator(_int('limit')), WithJsonSchema({'type': 'integer'})
 ]
 
 # the name of a parameter in the errors, when it is not the parameter itself

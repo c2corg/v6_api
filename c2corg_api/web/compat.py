@@ -8,8 +8,10 @@
 
 import json
 import re
+from typing import Annotated
 
 import transaction
+from fastapi import Depends, Request
 from fastapi.responses import JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
 
@@ -238,6 +240,34 @@ def serve_view(
         return error
     with request_session():
         return run_view(adapted, getattr(view_class(adapted), method))
+
+
+class Refused(Exception):
+    """A request refused before its parameters are checked: the answer."""
+
+    def __init__(self, response):
+        super().__init__(response.status_code)
+        self.response = response
+
+
+async def refused_response(request, exc: Refused):
+    return exc.response
+
+
+def permission_check(view_class, method, permission):
+    """Return a dependency answering the 403 of Pyramid, or None."""
+    # a dependency runs before FastAPI checks the typed parameters: the
+    # permission is checked first, as Pyramid did
+    from c2corg_api.web.auth import CurrentUser, current_user
+
+    def check(
+        request: Request, user: Annotated[CurrentUser | None, Depends(current_user)]
+    ):
+        refused = _refused(request, user, view_class, method, permission, None)
+        if refused is not None:
+            raise Refused(refused)
+
+    return check
 
 
 def _refused(request, user, view_class, method, permission, content_types):

@@ -7,13 +7,10 @@ from typing import Annotated
 
 from fastapi import Depends, Path, Query, Request
 
-from c2corg_api.views.validation import (
-    validate_pagination,
-    validate_preferred_lang_param,
-)
+from c2corg_api.views.document import LIMIT_DEFAULT, LIMIT_MAX
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_view, serve_write
-from c2corg_api.web.params import Id, Lang, VersionId
+from c2corg_api.web.compat import permission_check, serve_view, serve_write
+from c2corg_api.web.params import Id, Lang, Limit, Offset, VersionId
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 DocumentId = Annotated[Id, Path(description='The document id.')]
@@ -36,15 +33,56 @@ def include_document_type(
 ):
     """Add the read routes of a document type, served by its view classes."""
 
-    def listing(request: Request, user: User):
+    def listing(
+        request: Request,
+        user: User,
+        _: Annotated[
+            None, Depends(permission_check(rest, 'collection_get', listing_permission))
+        ],
+        offset: Annotated[
+            Offset | None, Query(description='The first document, from 0.')
+        ] = None,
+        limit: Annotated[
+            Limit | None,
+            Query(
+                description=f'How many documents: {LIMIT_DEFAULT} by default, '
+                f'{LIMIT_MAX} at most. With `offset`, 10000 at most.'
+            ),
+        ] = None,
+        lang: Annotated[
+            Lang | None,
+            Query(
+                alias='pl',
+                description='The preferred language: the locale of each document '
+                'in this language if it exists, else in the best other one.',
+            ),
+        ] = None,
+        q: Annotated[
+            str | None,
+            Query(description='Search the titles: in the preferred language if set.'),
+        ] = None,
+        bbox: Annotated[
+            str | None,
+            Query(
+                description='Only the documents in this box: '
+                '`xmin,ymin,xmax,ymax`, in EPSG:3857.'
+            ),
+        ] = None,
+        sort: Annotated[
+            str | None,
+            Query(
+                description='Sort on these fields, comma separated; `-` before a '
+                'field for the descending order. With a search only.'
+            ),
+        ] = None,
+    ):
+        # `q`, `bbox`, `sort` and the search filters are read by the view
+        validated = {'offset': offset, 'limit': limit, 'lang': lang}
         return serve_view(
-            request,
-            user,
-            [validate_pagination, validate_preferred_lang_param],
-            rest,
-            'collection_get',
-            permission=listing_permission,
+            request, user, [_set_validated(validated)], rest, 'collection_get'
         )
+
+    listing.described = True
 
     def document(
         request: Request,
@@ -83,7 +121,16 @@ def include_document_type(
     # /routes/update_public_transportation_rating...) are other routes, and an
     # invalid id gets the same 400 from Pyramid.
     methods = ['GET', 'HEAD']
-    app.add_api_route(f'/{prefix}', listing, methods=methods)
+    app.add_api_route(
+        f'/{prefix}',
+        listing,
+        methods=methods,
+        operation_id=f'list_{prefix}',
+        summary='A page of documents, with their total.',
+        description='Without search parameters, the latest documents first. '
+        'The search filters of the document type are not described yet.',
+        tags=[prefix],
+    )
     app.add_api_route(
         f'/{prefix}/{{id:int}}',
         document,
