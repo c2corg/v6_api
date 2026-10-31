@@ -121,6 +121,17 @@ class ValidatedRequest:
         return permission == 'authenticated'
 
 
+def typed_values(values):
+    """Return a validator giving the views the typed parameters of a route."""
+
+    # the views read them in request.validated, where the validators of
+    # views/validation.py put them: only those given
+    def validator(request, **kwargs):
+        request.validated.update((k, v) for k, v in values.items() if v is not None)
+
+    return validator
+
+
 def validate_origin(request, **kwargs):
     """Refuse an origin the CORS policy does not allow, as Cornice."""
     # Cornice runs it as the first validator of every view: after the token,

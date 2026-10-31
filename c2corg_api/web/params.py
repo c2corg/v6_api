@@ -5,13 +5,15 @@
 # `querystring` (also for the path parameters), the same names and messages
 # (#2512).
 
-from typing import Annotated
+from typing import Annotated, Any
 
+from fastapi import Path
 from fastapi.exceptions import RequestValidationError
 from pydantic import BeforeValidator, WithJsonSchema
 from pydantic_core import PydanticCustomError
 
 from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.views.validation import parse_datetime, parse_int_safe
 from c2corg_api.web.errors import error_response
 
 
@@ -65,6 +67,53 @@ Limit = Annotated[
     int, BeforeValidator(_int('limit')), WithJsonSchema({'type': 'integer'})
 ]
 
+
+def integer(name):
+    """Return the type of an integer parameter, `invalid <name>` if it is not."""
+    return Annotated[
+        int, BeforeValidator(_int(name)), WithJsonSchema({'type': 'integer'})
+    ]
+
+
+def _token(parse):
+    # an empty token is no token, as validate_token did
+    def validator(value):
+        if not value:
+            return None
+        parsed = parse(value)
+        if parsed is None:
+            raise PydanticCustomError('c2corg', 'invalid format')
+        return parsed
+
+    return validator
+
+
+def _feed_token(value):
+    # `{id},{date and time}`, as validate_token read it
+    parts = value.split(',')
+    if len(parts) == 2:
+        id, time = parse_int_safe(parts[0]), parse_datetime(parts[1])
+        if id is not None and time:
+            return id, time
+    return None
+
+
+# the token of the next page of a feed, or of the document changes: an empty
+# token is none; parsed by the validators of views/validation.py
+FeedToken = Annotated[
+    Any,
+    BeforeValidator(_token(_feed_token)),
+    WithJsonSchema({'type': 'string'}),
+]
+ChangesToken = Annotated[
+    Any,
+    BeforeValidator(_token(parse_int_safe)),
+    WithJsonSchema({'type': 'integer'}),
+]
+
+DocumentId = Annotated[Id, Path(description='The document id.')]
+PathLang = Annotated[Lang, Path(description='The language of the locale.')]
+
 # the name of a parameter in the errors, when it is not the parameter itself
 _ERROR_NAMES = {'l': 'lang', 'pl': 'lang'}
 
@@ -81,5 +130,8 @@ async def validation_error(request, exc: RequestValidationError):
         errors.append(('header', 'Origin', f'{origin} not allowed'))
     for error in exc.errors():
         name = str(error['loc'][-1])
-        errors.append(('querystring', _ERROR_NAMES.get(name, name), error['msg']))
+        # a required integer that is missing: `invalid <name>`, as
+        # check_get_for_integer_property answered
+        message = f'invalid {name}' if error['type'] == 'missing' else error['msg']
+        errors.append(('querystring', _ERROR_NAMES.get(name, name), message))
     return error_response(errors)
