@@ -89,6 +89,9 @@ class TestThreads:
     def test_the_database_pool_by_default(self):
         assert threads({'sqlalchemy.pool_size': '7'}) == 7
 
+    def test_the_database_pool_if_empty(self):
+        assert threads({'server.threads': '', 'sqlalchemy.pool_size': '7'}) == 7
+
     def test_without_settings(self):
         assert threads({}) == 5
 

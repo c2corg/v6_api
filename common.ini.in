@@ -17,8 +17,8 @@ sqlalchemy.max_overflow=10
 
 # requests a uvicorn worker serves at once (c2corg_api.asgi), the others
 # wait for one of them to end: more overloads the database and
-# Elasticsearch. The size of the database pool if not set.
-# server.threads = 5
+# Elasticsearch. The size of the database pool if empty.
+server.threads = {server_threads}
 
 elasticsearch.host = {elasticsearch_host}
 elasticsearch.port = {elasticsearch_port}
