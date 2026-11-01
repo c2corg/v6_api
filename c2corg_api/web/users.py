@@ -5,7 +5,7 @@
 from email.utils import formatdate
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends, Path, Query, Request
 from fastapi.responses import JSONResponse, Response
 
 from c2corg_api.views.sso import SsoLoginRest, SsoSyncRest
@@ -25,10 +25,10 @@ from c2corg_api.views.user_block import UserBlockedAllRest, UserBlockedRest
 from c2corg_api.views.user_follow import UserFollowingRest, UserFollowingUserRest
 from c2corg_api.views.user_mailinglists import UserMailinglistsRest
 from c2corg_api.views.user_preferences import UserFilterPreferencesRest
-from c2corg_api.views.validation import validate_id, validate_preferred_lang_param
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_view
+from c2corg_api.web.compat import permission_check, serve_view, typed_values
 from c2corg_api.web.documents import include_write
+from c2corg_api.web.params import Id, Lang
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 
@@ -58,16 +58,23 @@ WRITES = [
 def include(app):
     """Add the routes of this module to the FastAPI application."""
     methods = ['GET', 'HEAD']
-    app.add_api_route('/users/account', account, methods=methods)
-    app.add_api_route('/users/preferences', preferences, methods=methods)
-    app.add_api_route('/users/mailinglists', mailinglists, methods=methods)
-    app.add_api_route('/users/following', following, methods=methods)
     # a numeric id only, as the document routes (see web.documents)
-    app.add_api_route(
-        '/users/following-user/{id:int}', is_following_user, methods=methods
-    )
-    app.add_api_route('/users/blocked', blocked_users, methods=methods)
-    app.add_api_route('/users/blocked/{id:int}', is_blocked, methods=methods)
+    for path, endpoint in (
+        ('/users/account', account),
+        ('/users/preferences', preferences),
+        ('/users/mailinglists', mailinglists),
+        ('/users/following', following),
+        ('/users/following-user/{id:int}', is_following_user),
+        ('/users/blocked', blocked_users),
+        ('/users/blocked/{id:int}', is_blocked),
+    ):
+        app.add_api_route(
+            path,
+            endpoint,
+            methods=methods,
+            operation_id=f'user_{endpoint.__name__}',
+            tags=['users'],
+        )
     for path, view_class in WRITES:
         include_write(app, path, 'POST', view_class, 'post')
 
@@ -90,15 +97,34 @@ def account(request: Request, user: User):
     return JSONResponse(response, headers=headers)
 
 
-def preferences(request: Request, user: User):
+def _checks(view_class, permission, content_types=None):
+    # the content type and the permission are checked before the parameters,
+    # as Cornice and Pyramid did
+    check = permission_check(view_class, 'get', permission, content_types)
+    return Annotated[None, Depends(check)]
+
+
+PreferredLang = Annotated[
+    Lang | None,
+    Query(
+        alias='pl',
+        description='The locale of each document in this language if it exists, '
+        'else in the best other one.',
+    ),
+]
+UserId = Annotated[Id, Path(description='The user id.')]
+
+
+def preferences(
+    request: Request,
+    user: User,
+    _: _checks(UserFilterPreferencesRest, 'authenticated'),
+    lang: PreferredLang = None,
+):
     """Return the feed filter preferences of the authenticated user."""
-    return serve_view(
-        request,
-        user,
-        [validate_preferred_lang_param],
-        UserFilterPreferencesRest,
-        permission='authenticated',
-    )
+    validated = {'lang': lang}
+    view = UserFilterPreferencesRest
+    return serve_view(request, user, [typed_values(validated)], view)
 
 
 def mailinglists(request: Request, user: User):
@@ -108,28 +134,29 @@ def mailinglists(request: Request, user: User):
     )
 
 
-def following(request: Request, user: User):
+def following(
+    request: Request,
+    user: User,
+    _: _checks(UserFollowingRest, 'authenticated', JSON),
+    lang: Annotated[
+        Lang | None, Query(alias='pl', description='Checked, not used.')
+    ] = None,
+):
     """Return the users the authenticated user follows."""
-    return serve_view(
-        request,
-        user,
-        [validate_preferred_lang_param],
-        UserFollowingRest,
-        permission='authenticated',
-        content_types=JSON,
-    )
+    validated = {'lang': lang}
+    return serve_view(request, user, [typed_values(validated)], UserFollowingRest)
 
 
-def is_following_user(request: Request, user: User):
+def is_following_user(
+    request: Request,
+    user: User,
+    _: _checks(UserFollowingUserRest, 'authenticated', JSON),
+    id: UserId,
+):
     """Tell whether the authenticated user follows a user."""
-    return serve_view(
-        request,
-        user,
-        [validate_id],
-        UserFollowingUserRest,
-        permission='authenticated',
-        content_types=JSON,
-    )
+    validated = {'id': id}
+    view = UserFollowingUserRest
+    return serve_view(request, user, [typed_values(validated)], view)
 
 
 def blocked_users(request: Request, user: User):
@@ -144,16 +171,15 @@ def blocked_users(request: Request, user: User):
     )
 
 
-def is_blocked(request: Request, user: User):
+def is_blocked(
+    request: Request,
+    user: User,
+    _: _checks(UserBlockedRest, 'moderator', JSON),
+    id: UserId,
+):
     """Tell whether a user is blocked."""
-    return serve_view(
-        request,
-        user,
-        [validate_id],
-        UserBlockedRest,
-        permission='moderator',
-        content_types=JSON,
-    )
+    validated = {'id': id}
+    return serve_view(request, user, [typed_values(validated)], UserBlockedRest)
 
 
 # read by the route inventory of the contract tests (routes.txt)
@@ -161,3 +187,14 @@ for _endpoint in (account, preferences, mailinglists, following, is_following_us
     _endpoint.permission = 'authenticated'
 for _endpoint in (blocked_users, is_blocked):
     _endpoint.permission = 'moderator'
+for _endpoint in (
+    account,
+    preferences,
+    mailinglists,
+    following,
+    is_following_user,
+    blocked_users,
+    is_blocked,
+):
+    # described in the OpenAPI document (see web.openapi)
+    _endpoint.described = True

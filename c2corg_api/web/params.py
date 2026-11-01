@@ -5,6 +5,7 @@
 # `querystring` (also for the path parameters), the same names and messages
 # (#2512).
 
+import math
 from typing import Annotated, Any
 
 from fastapi import Path
@@ -116,6 +117,32 @@ DocType = Annotated[
 ]
 
 
+def _finite(name):
+    def parse(value):
+        try:
+            value = float(value)
+        except TypeError, ValueError:
+            value = math.inf
+        if not math.isfinite(value):
+            raise PydanticCustomError('c2corg', f'invalid {name}')
+        return value
+
+    return parse
+
+
+def finite(name):
+    """Return the type of a finite number parameter, `invalid <name>` if not."""
+    return Annotated[
+        float, BeforeValidator(_finite(name)), WithJsonSchema({'type': 'number'})
+    ]
+
+
+def described(schema):
+    """Return a parameter type FastAPI does not check, described with a schema."""
+    # for the parameters still checked by the validators of the view
+    return Annotated[Any, WithJsonSchema(schema)]
+
+
 def _token(parse):
     # an empty token is no token, as validate_token did
     def validator(value):
@@ -164,6 +191,8 @@ async def validation_error(request, exc: RequestValidationError):
     from c2corg_api.web.cors import origin_allowed
 
     errors = []
+    endpoint = request.scope.get('endpoint')
+    missing = getattr(endpoint, 'missing_message', 'invalid {name}')
     # the origin is checked first, as Cornice did, and its error comes with
     # those of the parameters
     origin = request.headers.get('Origin')
@@ -171,8 +200,10 @@ async def validation_error(request, exc: RequestValidationError):
         errors.append(('header', 'Origin', f'{origin} not allowed'))
     for error in exc.errors():
         name = str(error['loc'][-1])
-        # a required integer that is missing: `invalid <name>`, as
-        # check_get_for_integer_property answered
-        message = f'invalid {name}' if error['type'] == 'missing' else error['msg']
+        # a required parameter that is missing: `invalid <name>`, as
+        # check_get_for_integer_property answered, or the message of its route
+        message = error['msg']
+        if error['type'] == 'missing':
+            message = missing.format(name=name)
         errors.append(('querystring', _ERROR_NAMES.get(name, name), message))
     return error_response(errors)

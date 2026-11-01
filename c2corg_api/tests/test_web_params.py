@@ -147,6 +147,46 @@ class TestTypedParameterErrors:
         response = _client().get('/reachableroutes', params={'offset': 'x'}, status=400)
         assert response.json['errors'] == [_error('offset', 'invalid offset')]
 
+    def test_users(self):
+        # the permission before the parameters, as Pyramid did
+        for path in ('/users/preferences?pl=xx', '/users/following-user/abc'):
+            response = _client().get(path, status=403)
+            assert response.json['errors'][0]['name'] == 'Forbidden', path
+        # the content type before the permission, as Cornice did
+        response = _client().get(
+            '/users/blocked/abc', headers={'Content-Type': 'text/plain'}, status=415
+        )
+        assert response.json['errors'][0]['name'] == 'Content-Type'
+
+    def test_coverage_of_a_point(self):
+        response = _client().get('/getcoverage', params={'lon': 'nan'}, status=400)
+        assert response.json['errors'] == [
+            _error('lon', 'invalid lon'),
+            _error('lat', 'invalid lat'),
+        ]
+
+    def test_image_proxy(self):
+        # still checked by the validators of the view: the extension depends
+        # on the size
+        response = _client().get(
+            '/images/proxy/abc', params={'size': 'XL', 'extension': 'gif'}, status=400
+        )
+        assert response.json['errors'] == [
+            _error('id', 'invalid id'),
+            _error('size', 'invalid size'),
+            _error('extension', 'invalid extension'),
+        ]
+
+    def test_navitia(self):
+        # the required parameters are only checked for their presence
+        response = _client().get(
+            '/navitia/journeys', params={'to': '', 'datetime': 'x'}, status=400
+        )
+        assert response.json['errors'] == [
+            _error('from', 'Parameter from required'),
+            _error('datetime_represents', 'Parameter datetime_represents required'),
+        ]
+
     def test_origin_first(self):
         response = _client().get(
             '/routes/1',
@@ -272,5 +312,17 @@ class TestEveryReadDescribed:
             '/stopareas',
             '/waypoints/{waypoint_id}/stopareas',
             '/reachableroutes',
+            '/users/following-user/{id}',
+            '/getcoverage',
+            '/images/proxy/{id}',
+            '/navitia/journeys',
+            '/navitia/journeyreachableroutes/result/{job_id}',
         ):
             assert path in document['paths'], path
+
+    def test_navitia_parameters(self):
+        document = _client({'api.openapi': 'true'}).get('/openapi.json').json
+        operation = document['paths']['/navitia/journeys']['get']
+        parameters = {p['name']: p for p in operation['parameters']}
+        assert parameters['from']['required'] is True
+        assert parameters['wheelchair']['required'] is False

@@ -265,8 +265,8 @@ async def refused_response(request, exc: Refused):
     return exc.response
 
 
-def permission_check(view_class, method, permission):
-    """Return a dependency answering the 403 of Pyramid, or None."""
+def permission_check(view_class, method, permission, content_types=None):
+    """Return a dependency answering the 415 of Cornice or the 403 of Pyramid."""
     # a dependency runs before FastAPI checks the typed parameters: the
     # permission is checked first, as Pyramid did
     from c2corg_api.web.auth import CurrentUser, current_user
@@ -274,7 +274,7 @@ def permission_check(view_class, method, permission):
     def check(
         request: Request, user: Annotated[CurrentUser | None, Depends(current_user)]
     ):
-        refused = _refused(request, user, view_class, method, permission, None)
+        refused = _refused(request, user, view_class, method, permission, content_types)
         if refused is not None:
             raise Refused(refused)
 
