@@ -1,3 +1,5 @@
+import re
+
 from webtest import TestApp
 
 from c2corg_api.app import Application, create_fastapi_app
@@ -209,14 +211,14 @@ class TestOpenApi:
         document = _client({'api.openapi': 'true'}).get('/openapi.json').json
         assert document['info']['title'] == 'camptocamp.org API'
         # the document routes of each type, once: not the copies for the
-        # other ids, nor the routes without typed parameters yet
+        # other ids, nor the writes (not described yet)
         for path in ('/routes/{id}', '/routes/{id}/{lang}/info'):
             assert path in document['paths']
         assert '/routes/{id}/{lang}/{version_id}' in document['paths']
         # maps have no version route
         assert '/maps/{id}/{lang}/{version_id}' not in document['paths']
         assert '/routes' in document['paths']
-        assert '/health' not in document['paths']
+        assert '/users/login' not in document['paths']
         assert all(':' not in path for path in document['paths'])
 
     def test_parameters(self):
@@ -326,3 +328,15 @@ class TestEveryReadDescribed:
         parameters = {p['name']: p for p in operation['parameters']}
         assert parameters['from']['required'] is True
         assert parameters['wheelchair']['required'] is False
+
+    def test_every_get_route(self):
+        # all but a GET that writes, described with the writes later
+        document = _client({'api.openapi': 'true'}).get('/openapi.json').json
+        app = create_fastapi_app({})
+        paths = {
+            re.sub(r':\w+}', '}', route.path)
+            for route in app.router.routes
+            if 'GET' in getattr(route, 'methods', ())
+        }
+        missing = paths - set(document['paths'])
+        assert missing == {'/routes/update_public_transportation_rating'}
