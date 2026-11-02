@@ -210,13 +210,28 @@ def update_default_geometry(outing, outing_in):
     """Update the default geometry of an outing.
 
     When updating an outing, set the default geometry to the middle point
-    of a new track if proovided.
+    of a new track if provided, unless the default geometry was moved.
     """
+    geometry = outing.geometry
     geometry_in = outing_in.geometry
 
-    if geometry_in is not None and geometry_in.geom_detail is not None:
-        # update the default geom with the new track
-        geometry_in.geom = get_mid_point(geometry_in.geom_detail)
+    if geometry_in is None or geometry_in.geom_detail is None:
+        return
+
+    if (
+        geometry is not None
+        and geometry.geom is not None
+        and geometry_in.geom is not None
+    ):
+        if not geometry._almost_equals(geometry.geom, geometry_in.geom):
+            # the default geom was placed by the user, keep it
+            return
+        if geometry._almost_equals(geometry.geom_detail, geometry_in.geom_detail):
+            # the track has not changed, keep the current default geom
+            return
+
+    # update the default geom with the new track
+    geometry_in.geom = get_mid_point(geometry_in.geom_detail)
 
 
 @resource(path='/outings/{id}/{lang}/{version_id}')
