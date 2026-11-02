@@ -340,3 +340,34 @@ class TestEveryReadDescribed:
         }
         missing = paths - set(document['paths'])
         assert missing == {'/routes/update_public_transportation_rating'}
+
+
+class TestOpenApiErrors:
+    def test_400_not_422(self):
+        # the API answers invalid parameters with a 400 and its envelope,
+        # not FastAPI's 422 (until #2546)
+        document = _client({'api.openapi': 'true'}).get('/openapi.json').json
+        for path, operations in document['paths'].items():
+            for method, operation in operations.items():
+                assert '422' not in operation['responses'], (path, method)
+        responses = document['paths']['/routes/{id}']['get']['responses']
+        assert responses['400']['content']['application/json']['schema'] == {
+            '$ref': '#/components/schemas/Errors'
+        }
+        schemas = document['components']['schemas']
+        assert 'HTTPValidationError' not in schemas
+        assert schemas['Errors']['properties']['status']['enum'] == ['error']
+        # a route without parameters can not be invalid
+        assert '400' not in document['paths']['/health']['get']['responses']
+
+    def test_envelope_matches_the_answers(self):
+        response = _client().get('/routes/abc', status=400)
+        properties = (
+            _client({'api.openapi': 'true'})
+            .get('/openapi.json')
+            .json['components']['schemas']['Errors']['properties']
+        )
+        assert set(response.json) == set(properties)
+        assert set(response.json['errors'][0]) == set(
+            properties['errors']['items']['properties']
+        )
