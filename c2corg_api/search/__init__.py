@@ -41,9 +41,6 @@ elasticsearch_config = {
     'index': None,
     'host': None,
     'port': None,
-    'scheme': None,
-    'user': None,
-    'passwd': None,
 }
 
 
@@ -68,9 +65,6 @@ def configure_es_from_config(settings):
     elasticsearch_config['index'] = settings['elasticsearch.index']
     elasticsearch_config['host'] = settings['elasticsearch.host']
     elasticsearch_config['port'] = int(settings['elasticsearch.port'])
-    elasticsearch_config['scheme'] = settings.get('elasticsearch.scheme') or 'http'
-    elasticsearch_config['user'] = settings.get('elasticsearch.user')
-    elasticsearch_config['passwd'] = settings.get('elasticsearch.passwd')
 
 
 def index_prefix():
