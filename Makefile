@@ -77,13 +77,9 @@ lint:
 # reason goes away:
 # - urllib3 1.26: elasticsearch 2.4.1 requires urllib3<2 (goes away with the
 #   Elasticsearch 8 migration). The API only talks to trusted hosts with it.
-# - virtualenv 21.14.12 (dev only, via pre-commit): the fix (21.14.13,
-#   2026-10-22) is inside the 2-week cooldown; bump it after 2026-11-05. The
-#   issue needs a crafted `--prompt` passed to the bash activator.
 AUDIT_IGNORE = \
 		PYSEC-2026-141 PYSEC-2026-1994 PYSEC-2026-1996 PYSEC-2026-1998 \
-		PYSEC-2026-1999 PYSEC-2026-4175 PYSEC-2026-4177 \
-		GHSA-cx6f-vjhg-g3cc
+		PYSEC-2026-1999 PYSEC-2026-4175 PYSEC-2026-4177
 
 .PHONY: audit
 audit:
