@@ -1047,6 +1047,112 @@ class TestOutingRest(BaseDocumentTestRest):
         )
         self._assert_default_geometry(body, x=635000, y=5723000)
 
+    def test_put_keep_moved_default_geom(self):
+        """Tests that a moved default geometry is kept with an unchanged track."""
+        body = self._put_geometry_body(
+            {
+                'version': self.outing.geometry.version,
+                'geom_detail': self._track_json,
+                'geom': '{"type": "Point", "coordinates": [635000, 5723000]}',
+            }
+        )
+        (body, outing) = self.put_success_figures_only(
+            body, self.outing, user='moderator'
+        )
+        self._assert_default_geometry(body, x=635000, y=5723000)
+
+    def test_put_keep_default_geom_same_track(self):
+        """Tests that a saved default geometry is kept when saving again."""
+        headers = self.add_authorization_header(username='moderator')
+        url = self._prefix + '/' + str(self.outing.document_id)
+        geom = '{"type": "Point", "coordinates": [635000, 5723000]}'
+
+        body = self._put_geometry_body(
+            {
+                'version': self.outing.geometry.version,
+                'geom_detail': self._track_json,
+                'geom': geom,
+            }
+        )
+        self.app_put_json(url, body, headers=headers, status=200)
+
+        # save again, with the geometry returned by the API
+        outing = self.app.get(url, headers=headers, status=200).json
+        body = self._put_geometry_body(outing['geometry'])
+        body['document']['version'] = outing['version']
+        body['document']['elevation_max'] = 1700
+        body['document']['locales'][0]['version'] = outing['locales'][0]['version']
+        self.app_put_json(url, body, headers=headers, status=200)
+
+        body = self.app.get(url, headers=headers, status=200).json
+        assert body['elevation_max'] == 1700
+        self._assert_default_geometry(body, x=635000, y=5723000)
+
+    def test_put_new_track_updates_default_geom(self):
+        """Tests that a new track moves an unchanged default geometry."""
+        body = self._put_geometry_body(
+            {
+                'version': self.outing.geometry.version,
+                'geom_detail': '{"type": "LineString", "coordinates": '
+                + '[[635956, 5723604], [635976, 5723654]]}',
+                'geom': '{"type": "Point", "coordinates": [635961, 5723624]}',
+            }
+        )
+        (body, outing) = self.put_success_figures_only(
+            body, self.outing, user='moderator'
+        )
+        self._assert_default_geometry(body, x=635966, y=5723629)
+
+    def test_put_new_track_with_moved_default_geom(self):
+        """Tests that a moved default geometry is kept with a new track."""
+        body = self._put_geometry_body(
+            {
+                'version': self.outing.geometry.version,
+                'geom_detail': '{"type": "LineString", "coordinates": '
+                + '[[635956, 5723604], [635976, 5723654]]}',
+                'geom': '{"type": "Point", "coordinates": [635000, 5723000]}',
+            }
+        )
+        (body, outing) = self.put_success_figures_only(
+            body, self.outing, user='moderator'
+        )
+        self._assert_default_geometry(body, x=635000, y=5723000)
+
+    _track_json = (
+        '{"type": "LineString", "coordinates": [[635956, 5723604], [635966, 5723644]]}'
+    )
+
+    def _put_geometry_body(self, geometry):
+        return {
+            'message': 'Changing figures',
+            'document': {
+                'document_id': self.outing.document_id,
+                'version': self.outing.version,
+                'quality': quality_types[1],
+                'activities': ['skitouring'],
+                'date_start': '2016-01-01',
+                'date_end': '2016-01-01',
+                'elevation_min': 700,
+                'elevation_max': 1600,
+                'height_diff_up': 800,
+                'height_diff_down': 800,
+                'locales': [
+                    {
+                        'lang': 'en',
+                        'title': 'Mont Blanc from the air',
+                        'description': '...',
+                        'weather': 'sunny',
+                        'version': self.locale_en.version,
+                    }
+                ],
+                'geometry': geometry,
+                'associations': {
+                    'users': [{'document_id': self.global_userids['contributor']}],
+                    'routes': [{'document_id': self.route.document_id}],
+                },
+            },
+        }
+
     def test_put_success_lang_only(self):
         body = {
             'message': 'Changing lang',
@@ -1287,7 +1393,8 @@ class TestOutingRest(BaseDocumentTestRest):
         self.outing.locales.append(self.locale_fr)
 
         self.outing.geometry = DocumentGeometry(
-            geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)'
+            geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
+            geom='SRID=3857;POINT(635961 5723624)',
         )
 
         self.session.add(self.outing)
