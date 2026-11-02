@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from a2wsgi import ASGIMiddleware
 from anyio import to_thread
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import Match
@@ -20,6 +21,8 @@ from c2corg_api.web import (
     history,
     misc,
     navitia,
+    openapi,
+    params,
     search,
     sitemaps,
     stopareas,
@@ -27,6 +30,7 @@ from c2corg_api.web import (
     users,
 )
 from c2corg_api.web.auth import TokenValidationMiddleware
+from c2corg_api.web.compat import Refused, refused_response
 from c2corg_api.web.cors import CorsMiddleware
 from c2corg_api.web.errors import UnexpectedErrorMiddleware, error_response
 
@@ -78,6 +82,8 @@ def create_fastapi_app(settings, registry=None):
     app.state.settings = settings
     app.state.registry = registry or Registry(settings)
     app.add_exception_handler(StarletteHTTPException, _http_exception)
+    app.add_exception_handler(RequestValidationError, params.validation_error)
+    app.add_exception_handler(Refused, refused_response)
     # the last middleware added runs first: CORS wraps the token errors and
     # the unexpected errors
     app.add_middleware(UnexpectedErrorMiddleware)
@@ -96,6 +102,9 @@ def create_fastapi_app(settings, registry=None):
     user_actions.include(app)
     document_actions.include(app)
     _include_non_numeric_ids(app)
+    if openapi.enabled(settings):
+        # without the copies for the other ids: the same routes
+        openapi.include(app, excluded=(_NonNumericIdRoute,))
     return app
 
 

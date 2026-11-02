@@ -8,8 +8,10 @@
 
 import json
 import re
+from typing import Annotated
 
 import transaction
+from fastapi import Depends, Request
 from fastapi.responses import JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
 
@@ -117,6 +119,17 @@ class ValidatedRequest:
         if permission == 'moderator':
             return self._user.is_moderator
         return permission == 'authenticated'
+
+
+def typed_values(values):
+    """Return a validator giving the views the typed parameters of a route."""
+
+    # the views read them in request.validated, where the validators of
+    # views/validation.py put them: only those given
+    def validator(request, **kwargs):
+        request.validated.update((k, v) for k, v in values.items() if v is not None)
+
+    return validator
 
 
 def validate_origin(request, **kwargs):
@@ -238,6 +251,34 @@ def serve_view(
         return error
     with request_session():
         return run_view(adapted, getattr(view_class(adapted), method))
+
+
+class Refused(Exception):
+    """A request refused before its parameters are checked: the answer."""
+
+    def __init__(self, response):
+        super().__init__(response.status_code)
+        self.response = response
+
+
+async def refused_response(request, exc: Refused):
+    return exc.response
+
+
+def permission_check(view_class, method, permission, content_types=None):
+    """Return a dependency answering the 415 of Cornice or the 403 of Pyramid."""
+    # a dependency runs before FastAPI checks the typed parameters: the
+    # permission is checked first, as Pyramid did
+    from c2corg_api.web.auth import CurrentUser, current_user
+
+    def check(
+        request: Request, user: Annotated[CurrentUser | None, Depends(current_user)]
+    ):
+        refused = _refused(request, user, view_class, method, permission, content_types)
+        if refused is not None:
+            raise Refused(refused)
+
+    return check
 
 
 def _refused(request, user, view_class, method, permission, content_types):

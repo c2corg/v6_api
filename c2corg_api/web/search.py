@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends, Query, Request
 
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.article import ARTICLE_TYPE
@@ -23,15 +23,12 @@ from c2corg_api.views.outing import outing_documents_config
 from c2corg_api.views.route import route_documents_config
 from c2corg_api.views.topo_map import topo_map_documents_config
 from c2corg_api.views.user_profile import user_profile_documents_config
-from c2corg_api.views.validation import (
-    validate_pagination,
-    validate_preferred_lang_param,
-)
 from c2corg_api.views.waypoint import waypoint_documents_config
 from c2corg_api.views.xreport import xreport_documents_config
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.compat import validate_query
 from c2corg_api.web.db import request_session
+from c2corg_api.web.params import Lang, Limit, Offset
 
 # the result keys and the document types, in the order of the answer
 SEARCH_TYPES = [
@@ -49,30 +46,54 @@ SEARCH_TYPES = [
 
 def include(app):
     """Add the routes of this module to the FastAPI application."""
-    app.add_api_route('/search', search_documents, methods=['GET', 'HEAD'])
+    app.add_api_route(
+        '/search',
+        search_documents,
+        methods=['GET', 'HEAD'],
+        operation_id='search',
+        summary='The documents of all (or some) types matching a word.',
+        tags=['search'],
+    )
 
 
 def search_documents(
-    request: Request, user: Annotated[CurrentUser | None, Depends(current_user)]
+    request: Request,
+    user: Annotated[CurrentUser | None, Depends(current_user)],
+    offset: Annotated[
+        Offset | None, Query(description='Checked, not used: no paging.')
+    ] = None,
+    limit: Annotated[
+        Limit | None,
+        Query(
+            description=f'The results per document type: {SEARCH_LIMIT_DEFAULT} '
+            f'by default, {SEARCH_LIMIT_MAX} at most.'
+        ),
+    ] = None,
+    lang: Annotated[
+        Lang | None,
+        Query(
+            alias='pl',
+            description='Matches in this language first; the documents in the '
+            'other languages are still returned.',
+        ),
+    ] = None,
+    q: Annotated[str | None, Query(description='The word.')] = None,
+    t: Annotated[
+        str | None,
+        Query(
+            description='The document types to search, comma separated (e.g. '
+            '`w,r`): all by default; the profiles (`u`) for an authenticated '
+            'user only.'
+        ),
+    ] = None,
 ):
     """Search for a word in the documents of all (or some) types."""
-    # GET /search?q=...[&pl=...][&limit=...][&t=...]
-    # - q: the word;
-    # - pl: matches in this language are ranked first (the documents in other
-    #   languages are still returned);
-    # - limit: the results per document type (default 10, at most 50);
-    # - t: the document types to search, e.g. t=w,r (default: all; the user
-    #   profiles only for an authenticated user).
-    adapted, error = validate_query(
-        request, validate_pagination, validate_preferred_lang_param
-    )
+    # the origin is checked as the views do: by validate_query
+    _, error = validate_query(request, user=user)
     if error is not None:
         return error
-    validated = adapted.validated
-    limit = validated.get('limit')
     limit = min(SEARCH_LIMIT_DEFAULT if limit is None else limit, SEARCH_LIMIT_MAX)
-    types_in = request.query_params.get('t')
-    types_to_include = types_in.split(',') if types_in else None
+    types_to_include = t.split(',') if t else None
 
     def included(doc_type):
         return not types_to_include or doc_type in types_to_include
@@ -84,9 +105,8 @@ def search_documents(
         search_types.append(('users', user_profile_documents_config))
 
     with request_session():
-        return search.search_for_types(
-            search_types,
-            request.query_params.get('q'),
-            limit,
-            validated.get('lang'),
-        )
+        return search.search_for_types(search_types, q, limit, lang)
+
+
+# described in the OpenAPI document (see web.openapi)
+search_documents.described = True

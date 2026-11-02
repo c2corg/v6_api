@@ -5,45 +5,120 @@
 
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends, Path, Query, Request
 
-from c2corg_api.views.validation import (
-    validate_cook_param,
-    validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-    validate_version_id,
-)
+from c2corg_api.views.document import LIMIT_DEFAULT, LIMIT_MAX
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_view, serve_write
+from c2corg_api.web.compat import (
+    permission_check,
+    serve_view,
+    serve_write,
+    typed_values,
+)
+from c2corg_api.web.params import (
+    DocumentId,
+    Lang,
+    Limit,
+    Offset,
+    PathLang,
+    VersionId,
+)
+from c2corg_api.web.search_parameters import search_filter_parameters
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 
 
 def include_document_type(
-    app, prefix, rest, version_rest=None, info_rest=None, listing_permission=None
+    app,
+    prefix,
+    rest,
+    version_rest=None,
+    info_rest=None,
+    listing_permission=None,
+    doc_type=None,
 ):
     """Add the read routes of a document type, served by its view classes."""
 
-    def listing(request: Request, user: User):
+    def listing(
+        request: Request,
+        user: User,
+        _: Annotated[
+            None, Depends(permission_check(rest, 'collection_get', listing_permission))
+        ],
+        offset: Annotated[
+            Offset | None, Query(description='The first document, from 0.')
+        ] = None,
+        limit: Annotated[
+            Limit | None,
+            Query(
+                description=f'How many documents: {LIMIT_DEFAULT} by default, '
+                f'{LIMIT_MAX} at most. With `offset`, 10000 at most.'
+            ),
+        ] = None,
+        lang: Annotated[
+            Lang | None,
+            Query(
+                alias='pl',
+                description='The preferred language: the locale of each document '
+                'in this language if it exists, else in the best other one.',
+            ),
+        ] = None,
+        q: Annotated[
+            str | None,
+            Query(description='Search the titles: in the preferred language if set.'),
+        ] = None,
+        bbox: Annotated[
+            str | None,
+            Query(
+                description='Only the documents in this box: '
+                '`xmin,ymin,xmax,ymax`, in EPSG:3857.'
+            ),
+        ] = None,
+        sort: Annotated[
+            str | None,
+            Query(
+                description='Sort on these fields, comma separated; `-` before a '
+                'field for the descending order. With a search only.'
+            ),
+        ] = None,
+    ):
+        # `q`, `bbox`, `sort` and the search filters are read by the view
+        validated = {'offset': offset, 'limit': limit, 'lang': lang}
         return serve_view(
-            request,
-            user,
-            [validate_pagination, validate_preferred_lang_param],
-            rest,
-            'collection_get',
-            permission=listing_permission,
+            request, user, [typed_values(validated)], rest, 'collection_get'
         )
 
-    def document(request: Request, user: User):
-        return serve_view(
-            request,
-            user,
-            [validate_id, validate_lang_param, validate_cook_param],
-            rest,
-        )
+    listing.described = True
+
+    def document(
+        request: Request,
+        user: User,
+        id: DocumentId,
+        lang: Annotated[
+            Lang | None,
+            Query(alias='l', description='Only the locale of this language.'),
+        ] = None,
+        cook: Annotated[
+            Lang | None,
+            Query(
+                description='Only one locale, in this language if it exists, else '
+                'in the best other one, with its Markdown rendered as HTML.'
+            ),
+        ] = None,
+        e: Annotated[
+            str,
+            Query(
+                description='Any other value than 0: the document as stored, for '
+                'the edit form, not cached.'
+            ),
+        ] = '0',
+    ):
+        # `e` is read by the view
+        validated = {'id': id, 'lang': lang, 'cook': cook}
+        return serve_view(request, user, [typed_values(validated)], rest)
+
+    # described in the OpenAPI document (see web.openapi)
+    document.described = True
 
     # read by the route inventory of the contract tests (routes.txt)
     listing.permission = listing_permission
@@ -52,28 +127,69 @@ def include_document_type(
     # /routes/update_public_transportation_rating...) are other routes, and an
     # invalid id gets the same 400 from Pyramid.
     methods = ['GET', 'HEAD']
-    app.add_api_route(f'/{prefix}', listing, methods=methods)
-    app.add_api_route(f'/{prefix}/{{id:int}}', document, methods=methods)
+    app.add_api_route(
+        f'/{prefix}',
+        listing,
+        methods=methods,
+        operation_id=f'list_{prefix}',
+        summary='A page of documents, with their total.',
+        description='Without search parameters, the latest documents first. '
+        'With any other parameter, a search in Elasticsearch.',
+        tags=[prefix],
+        openapi_extra={'parameters': search_filter_parameters(doc_type)},
+    )
+    app.add_api_route(
+        f'/{prefix}/{{id:int}}',
+        document,
+        methods=methods,
+        operation_id=f'get_{prefix}_document',
+        summary='A document, with its locales and associations.',
+        tags=[prefix],
+    )
 
     if info_rest is not None:
 
-        def info(request: Request, user: User):
-            return serve_view(request, user, [validate_id, validate_lang], info_rest)
+        def info(request: Request, user: User, id: DocumentId, lang: PathLang):
+            validated = {'id': id, 'lang': lang}
+            return serve_view(request, user, [typed_values(validated)], info_rest)
 
-        app.add_api_route(f'/{prefix}/{{id:int}}/{{lang}}/info', info, methods=methods)
+        info.described = True
+        app.add_api_route(
+            f'/{prefix}/{{id:int}}/{{lang}}/info',
+            info,
+            methods=methods,
+            operation_id=f'get_{prefix}_info',
+            summary='The title of a document in a language, for its URL.',
+            description='The locale in this language, else in the best other one. '
+            'For a redirected document: the id and languages of the document it '
+            'redirects to.',
+            tags=[prefix],
+        )
 
     if version_rest is not None:
 
-        def version(request: Request, user: User):
-            return serve_view(
-                request,
-                user,
-                [validate_id, validate_lang, validate_version_id],
-                version_rest,
-            )
+        def version(
+            request: Request,
+            user: User,
+            id: DocumentId,
+            lang: PathLang,
+            version_id: Annotated[
+                VersionId, Path(description='The id of the version.')
+            ],
+        ):
+            validated = {'id': id, 'lang': lang, 'version_id': version_id}
+            return serve_view(request, user, [typed_values(validated)], version_rest)
 
+        version.described = True
         path = f'/{prefix}/{{id:int}}/{{lang}}/{{version_id:int}}'
-        app.add_api_route(path, version, methods=methods)
+        app.add_api_route(
+            path,
+            version,
+            methods=methods,
+            operation_id=f'get_{prefix}_version',
+            summary='A version of a document, with the locale of a language.',
+            tags=[prefix],
+        )
 
 
 def view_arguments(view_class, method):
@@ -111,6 +227,19 @@ def include_document_writes(app, prefix, rest, create=True):
 
 def include(app):
     """Add the document routes moved to FastAPI."""
+    from c2corg_api.models.common.document_types import (
+        AREA_TYPE,
+        ARTICLE_TYPE,
+        BOOK_TYPE,
+        COVERAGE_TYPE,
+        IMAGE_TYPE,
+        MAP_TYPE,
+        OUTING_TYPE,
+        ROUTE_TYPE,
+        USERPROFILE_TYPE,
+        WAYPOINT_TYPE,
+        XREPORT_TYPE,
+    )
     from c2corg_api.views.area import AreaInfoRest, AreaRest, AreaVersionRest
     from c2corg_api.views.article import (
         ArticleRest,
@@ -135,28 +264,60 @@ def include(app):
         XreportVersionRest,
     )
 
-    include_document_type(app, 'books', BookRest, BooksVersionRest, BooksInfoRest)
     include_document_type(
-        app, 'articles', ArticleRest, ArticlesVersionRest, ArticlesInfoRest
+        app, 'books', BookRest, BooksVersionRest, BooksInfoRest, doc_type=BOOK_TYPE
     )
-    include_document_type(app, 'areas', AreaRest, AreaVersionRest, AreaInfoRest)
+    include_document_type(
+        app,
+        'articles',
+        ArticleRest,
+        ArticlesVersionRest,
+        ArticlesInfoRest,
+        doc_type=ARTICLE_TYPE,
+    )
+    include_document_type(
+        app, 'areas', AreaRest, AreaVersionRest, AreaInfoRest, doc_type=AREA_TYPE
+    )
     # maps have no version route, coverages neither version nor info
-    include_document_type(app, 'maps', TopoMapRest, info_rest=TopoMapInfoRest)
-    include_document_type(app, 'coverages', CoverageRest)
+    include_document_type(
+        app, 'maps', TopoMapRest, info_rest=TopoMapInfoRest, doc_type=MAP_TYPE
+    )
+    include_document_type(app, 'coverages', CoverageRest, doc_type=COVERAGE_TYPE)
     # the image proxy (/images/proxy/{id}) and /images/list stay on Pyramid
-    include_document_type(app, 'images', ImageRest, ImageVersionRest, ImageInfoRest)
+    include_document_type(
+        app, 'images', ImageRest, ImageVersionRest, ImageInfoRest, doc_type=IMAGE_TYPE
+    )
     # the personal fields of an xreport are for its author and the moderators
     include_document_type(
-        app, 'xreports', XreportRest, XreportVersionRest, XreportInfoRest
+        app,
+        'xreports',
+        XreportRest,
+        XreportVersionRest,
+        XreportInfoRest,
+        doc_type=XREPORT_TYPE,
     )
-    include_document_type(app, 'outings', OutingRest, OutingVersionRest, OutingInfoRest)
+    include_document_type(
+        app,
+        'outings',
+        OutingRest,
+        OutingVersionRest,
+        OutingInfoRest,
+        doc_type=OUTING_TYPE,
+    )
     # /reachableroutes and /routes/update_public_transportation_rating stay on
     # Pyramid
-    include_document_type(app, 'routes', RouteRest, RouteVersionRest, RouteInfoRest)
+    include_document_type(
+        app, 'routes', RouteRest, RouteVersionRest, RouteInfoRest, doc_type=ROUTE_TYPE
+    )
     # /reachablewaypoints, /waypoints/{id}/stopareas, /waypoints/{id}/isReachable
     # and /waypoints_stopareas/... stay on Pyramid
     include_document_type(
-        app, 'waypoints', WaypointRest, WaypointVersionRest, WaypointInfoRest
+        app,
+        'waypoints',
+        WaypointRest,
+        WaypointVersionRest,
+        WaypointInfoRest,
+        doc_type=WAYPOINT_TYPE,
     )
     # the listing of the profiles is for the authenticated users, and a private
     # profile shows only the user name to the others; no version route
@@ -166,6 +327,7 @@ def include(app):
         UserProfileRest,
         info_rest=UserProfileInfoRest,
         listing_permission='authenticated',
+        doc_type=USERPROFILE_TYPE,
     )
     # a GET that writes (the ratings of all the routes, for the moderators):
     # served as a write, so that it is committed
