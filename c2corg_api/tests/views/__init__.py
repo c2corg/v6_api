@@ -13,7 +13,7 @@ from c2corg_api.models.route import Route
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
 from c2corg_api.scripts.es.sync import sync_es
-from c2corg_api.search import elasticsearch_config, search_documents
+from c2corg_api.search import index_name, search_documents
 from c2corg_api.tests import BaseTestCase
 
 
@@ -634,11 +634,11 @@ class BaseDocumentTestRest(BaseTestRest):
         # check updates to the search index
         self.sync_es()
         search_doc = search_documents[self._doc_type].get(
-            id=doc.document_id, index=elasticsearch_config['index']
+            id=doc.document_id, index=index_name(self._doc_type)
         )
 
-        assert search_doc['doc_type'] is not None
-        assert search_doc['doc_type'] == doc.type
+        assert search_doc['c2corg_doc_type'] is not None
+        assert search_doc['c2corg_doc_type'] == doc.type
 
         if isinstance(doc, Route):
             title = waypoint_locale_en.title_prefix + ' : ' + waypoint_locale_en.title
@@ -821,10 +821,10 @@ class BaseDocumentTestRest(BaseTestRest):
             sync_es(self.session)
             # check updates to the search index
             search_doc = search_documents[self._doc_type].get(
-                id=document.document_id, index=elasticsearch_config['index']
+                id=document.document_id, index=index_name(self._doc_type)
             )
 
-            assert search_doc['doc_type'] == document.type
+            assert search_doc['c2corg_doc_type'] == document.type
             assert search_doc['title_en'] == archive_locale.title
             assert search_doc['title_fr'] == archive_locale_fr.title
 
@@ -907,10 +907,10 @@ class BaseDocumentTestRest(BaseTestRest):
         # check updates to the search index
         sync_es(self.session)
         search_doc = search_documents[self._doc_type].get(
-            id=document.document_id, index=elasticsearch_config['index']
+            id=document.document_id, index=index_name(self._doc_type)
         )
 
-        assert search_doc['doc_type'] == document.type
+        assert search_doc['c2corg_doc_type'] == document.type
 
         if isinstance(document, Route) and document.main_waypoint_id:
             locale_en = document.get_locale('en')
@@ -1010,10 +1010,10 @@ class BaseDocumentTestRest(BaseTestRest):
         if check_es:
             sync_es(self.session)
             search_doc = search_documents[self._doc_type].get(
-                id=document.document_id, index=elasticsearch_config['index']
+                id=document.document_id, index=index_name(self._doc_type)
             )
 
-            assert search_doc['doc_type'] == document.type
+            assert search_doc['c2corg_doc_type'] == document.type
             assert search_doc['title_en'] == document.get_locale('en').title
             assert search_doc['title_fr'] == document.get_locale('fr').title
 
@@ -1109,10 +1109,10 @@ class BaseDocumentTestRest(BaseTestRest):
         if check_es:
             sync_es(self.session)
             search_doc = search_documents[self._doc_type].get(
-                id=document.document_id, index=elasticsearch_config['index']
+                id=document.document_id, index=index_name(self._doc_type)
             )
 
-            assert search_doc['doc_type'] == document.type
+            assert search_doc['c2corg_doc_type'] == document.type
             assert search_doc['title_en'] == document.get_locale('en').title
             assert search_doc['title_fr'] == document.get_locale('fr').title
             assert search_doc['title_es'] == document.get_locale('es').title

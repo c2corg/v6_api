@@ -36,18 +36,28 @@ SEARCH_LIMIT_MAX = 50
 # document type in a search request)
 SEARCH_LIMIT_DEFAULT = 10
 
-elasticsearch_config = {'client': None, 'index': None, 'host': None, 'port': None}
+elasticsearch_config = {
+    'client': None,
+    'index': None,
+    'host': None,
+    'port': None,
+    'scheme': None,
+    'user': None,
+    'passwd': None,
+}
 
 
 def client_from_config(settings):
+    user = settings.get('elasticsearch.user')
+    passwd = settings.get('elasticsearch.passwd')
+    scheme = settings.get('elasticsearch.scheme') or 'http'
     return Elasticsearch(
         [
-            {
-                'host': settings['elasticsearch.host'],
-                'port': int(settings['elasticsearch.port']),
-            }
+            f'{scheme}://{settings["elasticsearch.host"]}:{settings["elasticsearch.port"]}'
         ],
-        maxsize=int(settings['elasticsearch.pool']),
+        # ElasticSearch 8 refuses anonymous requests unless security is disabled
+        basic_auth=(user, passwd or '') if user else None,
+        connections_per_node=int(settings['elasticsearch.pool']),
     )
 
 
@@ -58,6 +68,31 @@ def configure_es_from_config(settings):
     elasticsearch_config['index'] = settings['elasticsearch.index']
     elasticsearch_config['host'] = settings['elasticsearch.host']
     elasticsearch_config['port'] = int(settings['elasticsearch.port'])
+    elasticsearch_config['scheme'] = settings.get('elasticsearch.scheme') or 'http'
+    elasticsearch_config['user'] = settings.get('elasticsearch.user')
+    elasticsearch_config['passwd'] = settings.get('elasticsearch.passwd')
+
+
+def index_prefix():
+    """Return the prefix shared by the indices, e.g. `c2corg`.
+
+    The configured name may be given as a pattern (`c2corg_*`).
+    """
+    return elasticsearch_config['index'].rstrip('*').rstrip('_')
+
+
+def index_name(document_type):
+    """Return the name of the index of a document type, e.g. `c2corg_w`.
+
+    Since ElasticSearch 6 an index holds a single mapping type, so there is
+    one index per document type.
+    """
+    return f'{index_prefix()}_{document_type}'
+
+
+def index_pattern():
+    """Return the pattern matching the indices of all document types."""
+    return f'{index_prefix()}_*'
 
 
 def get_queue_config(settings):
@@ -78,8 +113,7 @@ def get_queue_config(settings):
 def create_search(document_type):
     return Search(
         using=elasticsearch_config['client'],
-        index=elasticsearch_config['index'],
-        doc_type=search_documents[document_type],
+        index=index_name(document_type),
     )
 
 

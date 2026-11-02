@@ -11,7 +11,7 @@ from c2corg_api.models.user_profile import (
     UserProfile,
 )
 from c2corg_api.scripts.es.sync import sync_es
-from c2corg_api.search import elasticsearch_config
+from c2corg_api.search import index_name
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
@@ -397,9 +397,9 @@ class TestUserProfileRest(BaseDocumentTestRest):
     def _check_es_index(self):
         sync_es(self.session)
         search_doc = SearchUser.get(
-            id=self.profile1.document_id, index=elasticsearch_config['index']
+            id=self.profile1.document_id, index=index_name(self.profile1.type)
         )
-        assert search_doc['doc_type'] == self.profile1.type
+        assert search_doc['c2corg_doc_type'] == self.profile1.type
         assert search_doc['title_en'] == 'Contributor contributor'
         assert search_doc['title_fr'] == 'Contributor contributor'
         return search_doc

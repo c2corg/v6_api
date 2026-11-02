@@ -98,14 +98,16 @@ jobs:
           PGPORT: 5432
       - name: Create config from templates
         run: make CONFIG=config/env.test load-env
-      - name: Run (old) elasticsearch
-        # Elasticsearch 2.4 as in production, with the ICU analysis plugin
-        # the index settings need. Started here rather than as a service
-        # container, because a service cannot install the plugin first.
+      - name: Run elasticsearch
+        # Elasticsearch 8 with the ICU analysis plugin the index settings
+        # need. Built here rather than started as a service container,
+        # because a service cannot install the plugin first.
         run: |
+          docker build --tag c2corg_es --file docker/Dockerfile.elasticsearch docker
           docker run --detach --name elasticsearch --publish 9200:9200 \
-            elasticsearch:2.4.6-alpine \
-            sh -c 'bin/plugin install --batch analysis-icu && exec /docker-entrypoint.sh elasticsearch'
+            --env discovery.type=single-node --env xpack.security.enabled=false \
+            --env ES_JAVA_OPTS='-Xms512m -Xmx512m' \
+            c2corg_es
           for i in $(seq 1 90); do
             if curl -sf http://localhost:9200; then exit 0; fi
             sleep 1

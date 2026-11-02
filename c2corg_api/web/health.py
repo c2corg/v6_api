@@ -10,7 +10,7 @@ from fastapi import Request, Response
 
 from c2corg_api.caching import cache_document_detail
 from c2corg_api.models import es_sync
-from c2corg_api.search import elasticsearch_config
+from c2corg_api.search import elasticsearch_config, index_pattern
 from c2corg_api.web.cors import origin_allowed
 from c2corg_api.web.db import request_session
 from c2corg_api.web.errors import error_response
@@ -74,9 +74,9 @@ def _add_es_status(status):
     success = False
     try:
         client = elasticsearch_config['client']
-        index = elasticsearch_config['index']
-        stats = client.indices.stats(index, metric='docs')
-        es_docs = stats['indices'][index]['total']['docs']['count']
+        # one index per document type
+        stats = client.indices.stats(index=index_pattern(), metric='docs')
+        es_docs = stats['_all']['total']['docs']['count']
         success = True
     except Exception:
         log.exception('Getting indexed docs count failed')

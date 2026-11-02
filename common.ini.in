@@ -27,6 +27,10 @@ server.threads = {server_threads}
 elasticsearch.host = {elasticsearch_host}
 elasticsearch.port = {elasticsearch_port}
 elasticsearch.index = {elasticsearch_index}
+# empty user: no authentication
+elasticsearch.scheme = {elasticsearch_scheme}
+elasticsearch.user = {elasticsearch_user}
+elasticsearch.passwd = {elasticsearch_passwd}
 elasticsearch.pool = 50
 
 # batch size for fill_index
