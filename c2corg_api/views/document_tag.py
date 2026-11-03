@@ -9,7 +9,6 @@ from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import restricted_json_view
-from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.validation import create_int_validator
 
 log = logging.getLogger(__name__)
@@ -140,23 +139,24 @@ def untag_document(request):
 untag_document.view_name = 'DocumentUntagRest.post'
 
 
-@resource(path='/tags/has/{document_id}')
-class DocumentTaggedRest(BaseView):
-    @restricted_json_view(validators=[validate_document_id])
-    def get(self):
-        """
-        Check if the authenticated user has tagged the given document as todo.
+@restricted_json_view(validators=[validate_document_id])
+def read_todo_tag(request):
+    """
+    Check if the authenticated user has tagged the given document as todo.
 
-        Request:
-            `GET` `tags/has/{document_id}`
+    Request:
+        `GET` `tags/has/{document_id}`
 
-        Example response:
+    Example response:
 
-            {'todo': true}
+        {'todo': true}
 
-        """
-        document_id = self.request.validated['document_id']
-        user_id = self.request.authenticated_userid
-        tag_relation = get_tag_relation(user_id, document_id)
+    """
+    document_id = request.validated['document_id']
+    user_id = request.authenticated_userid
+    tag_relation = get_tag_relation(user_id, document_id)
 
-        return {'todo': tag_relation is not None}
+    return {'todo': tag_relation is not None}
+
+
+read_todo_tag.view_name = 'DocumentTaggedRest.get'

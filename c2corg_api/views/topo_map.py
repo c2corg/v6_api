@@ -18,9 +18,9 @@ from c2corg_api.views.document import (
     put_document,
     read_document,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import topo_map_documents_config
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.resource import view
 from c2corg_api.views.validation import (
     validate_cook_param,
     validate_id,
@@ -78,11 +78,12 @@ def get_topo_map(request):
 get_topo_map.view_name = 'TopoMapRest.get'
 
 
-@resource(path='/maps/{id}/{lang}/info')
-class TopoMapInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(topo_map_documents_config)
+@view(validators=[validate_id, validate_lang])
+def get_topo_map_info(request):
+    return document_info(request, topo_map_documents_config)
+
+
+get_topo_map_info.view_name = 'TopoMapInfoRest.get'
 
 
 def insert_associations(topo_map, user_id):

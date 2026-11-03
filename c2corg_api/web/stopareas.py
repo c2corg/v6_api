@@ -7,16 +7,20 @@ from typing import Annotated
 
 from fastapi import Depends, Path, Query, Request
 
-from c2corg_api.views.route import ReachableRouteRest
-from c2corg_api.views.stoparea import StopareaInfoRest, StopareaRest
-from c2corg_api.views.waypoint import ReachableWaypointRest
+from c2corg_api.views.route import list_reachable_routes
+from c2corg_api.views.stoparea import (
+    list_stopareas,
+    read_stoparea,
+    read_stoparea_info,
+)
+from c2corg_api.views.waypoint import list_reachable_waypoints
 from c2corg_api.views.waypoint_stoparea import (
-    WaypointStopareaInfoRest,
-    WaypointStopareasByWaypointRest,
-    WaypointStopareasReachableRest,
+    get_waypoint_stoparea_info,
+    read_waypoint_reachability,
+    read_waypoint_stopareas,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_view, typed_values
+from c2corg_api.web.compat import serve_read, typed_values
 from c2corg_api.web.params import (
     DocumentId,
     Lang,
@@ -95,8 +99,7 @@ def stoparea_listing(
         'page_id': page_id,
         'nb_items': nb_items,
     }
-    view = StopareaRest
-    return serve_view(request, user, [typed_values(validated)], view, 'collection_get')
+    return serve_read(request, user, [typed_values(validated)], list_stopareas)
 
 
 def stoparea(
@@ -107,13 +110,13 @@ def stoparea(
 ):
     """Return a stop area."""
     validated = {'id': id, 'lang': lang}
-    return serve_view(request, user, [typed_values(validated)], StopareaRest)
+    return serve_read(request, user, [typed_values(validated)], read_stoparea)
 
 
 def stoparea_info(request: Request, user: User, id: DocumentId, lang: PathLang):
     """Return the attributes of a stop area."""
     validated = {'id': id, 'lang': lang}
-    return serve_view(request, user, [typed_values(validated)], StopareaInfoRest)
+    return serve_read(request, user, [typed_values(validated)], read_stoparea_info)
 
 
 def _waypoint(waypoint_id):
@@ -126,14 +129,14 @@ def _waypoint(waypoint_id):
 
 def waypoint_stopareas(request: Request, user: User, waypoint_id: WaypointId):
     """Return the stop areas near a waypoint, with their distance."""
-    view = WaypointStopareasByWaypointRest
-    return serve_view(request, user, [_waypoint(waypoint_id)], view)
+    return serve_read(request, user, [_waypoint(waypoint_id)], read_waypoint_stopareas)
 
 
 def waypoint_is_reachable(request: Request, user: User, waypoint_id: WaypointId):
     """Return whether a waypoint has a stop area near it."""
-    view = WaypointStopareasReachableRest
-    return serve_view(request, user, [_waypoint(waypoint_id)], view)
+    return serve_read(
+        request, user, [_waypoint(waypoint_id)], read_waypoint_reachability
+    )
 
 
 def waypoint_stoparea_info(
@@ -141,8 +144,9 @@ def waypoint_stoparea_info(
 ):
     """Return the link between a waypoint and a stop area."""
     validated = {'id': id, 'lang': lang}
-    view = WaypointStopareaInfoRest
-    return serve_view(request, user, [typed_values(validated)], view)
+    return serve_read(
+        request, user, [typed_values(validated)], get_waypoint_stoparea_info
+    )
 
 
 def reachable_routes(
@@ -155,7 +159,7 @@ def reachable_routes(
     """Return the routes with an access waypoint near a stop area."""
     # the search filters of the routes are read by the view
     validated = {'offset': offset, 'limit': limit, 'lang': lang}
-    return serve_view(request, user, [typed_values(validated)], ReachableRouteRest)
+    return serve_read(request, user, [typed_values(validated)], list_reachable_routes)
 
 
 def reachable_waypoints(
@@ -168,7 +172,9 @@ def reachable_waypoints(
     """Return the access waypoints near a stop area."""
     # the search filters of the waypoints are read by the view
     validated = {'offset': offset, 'limit': limit, 'lang': lang}
-    return serve_view(request, user, [typed_values(validated)], ReachableWaypointRest)
+    return serve_read(
+        request, user, [typed_values(validated)], list_reachable_waypoints
+    )
 
 
 for endpoint in (

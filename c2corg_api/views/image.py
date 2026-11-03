@@ -40,10 +40,10 @@ from c2corg_api.views.document import (
     read_document,
     validate_document,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import image_documents_config
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import BaseView, resource, view
+from c2corg_api.views.document_version import document_version
+from c2corg_api.views.resource import view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_associations_in,
@@ -313,11 +313,12 @@ def create_images(request):
 create_images.view_name = 'ImageListRest.collection_post'
 
 
-@resource(path='/images/{id}/{lang}/info')
-class ImageInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(image_documents_config)
+@view(validators=[validate_id, validate_lang])
+def get_image_info(request):
+    return document_info(request, image_documents_config)
+
+
+get_image_info.view_name = 'ImageInfoRest.get'
 
 
 def validate_size(request, **kwargs):
@@ -339,28 +340,29 @@ def validate_extension(request, **kwargs):
         request.errors.add('querystring', 'extension', 'invalid extension')
 
 
-@resource(path='/images/proxy/{id}')
-class ImageProxyRest(BaseView):
-    @view(validators=[validate_id, validate_size, validate_extension])
-    def get(self):
-        document_id = self.request.validated['id']
-        size = self.request.validated['size']
-        extension = self.request.validated['extension']
-        # follows merged images to their target, whose files still exist
-        filename = get_image_filenames([document_id]).get(document_id)
-        if filename is None:
-            raise HTTPNotFound()
-        image_url = self.request.registry.settings['image_url']
-        if size is None:
-            location = f'{image_url}{filename}'
+@view(validators=[validate_id, validate_size, validate_extension])
+def redirect_to_image(request):
+    document_id = request.validated['id']
+    size = request.validated['size']
+    extension = request.validated['extension']
+    # follows merged images to their target, whose files still exist
+    filename = get_image_filenames([document_id]).get(document_id)
+    if filename is None:
+        raise HTTPNotFound()
+    image_url = request.registry.settings['image_url']
+    if size is None:
+        location = f'{image_url}{filename}'
+    else:
+        base, ext = os.path.splitext(filename)
+        if extension is None:
+            ext = '.jpg' if ext == '.svg' else ext
         else:
-            base, ext = os.path.splitext(filename)
-            if extension is None:
-                ext = '.jpg' if ext == '.svg' else ext
-            else:
-                ext = '.' + extension
-            location = f'{image_url}{base}{size}{ext}'
-        return HTTPFound(location, headers={'Cache-Control': PROXY_CACHE_CONTROL})
+            ext = '.' + extension
+        location = f'{image_url}{base}{size}{ext}'
+    return HTTPFound(location, headers={'Cache-Control': PROXY_CACHE_CONTROL})
+
+
+redirect_to_image.view_name = 'ImageProxyRest.get'
 
 
 def set_creator(image):
@@ -368,10 +370,11 @@ def set_creator(image):
     set_creator_on_documents([image], 'creator')
 
 
-@resource(path='/images/{id}/{lang}/{version_id}')
-class ImageVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveImage, IMAGE_TYPE, ArchiveDocumentLocale, image_schema
-        )
+@view(validators=[validate_id, validate_lang, validate_version_id])
+def get_image_version(request):
+    return document_version(
+        request, ArchiveImage, IMAGE_TYPE, ArchiveDocumentLocale, image_schema
+    )
+
+
+get_image_version.view_name = 'ImageVersionRest.get'

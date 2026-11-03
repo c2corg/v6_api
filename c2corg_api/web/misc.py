@@ -8,18 +8,21 @@ from typing import Annotated
 from fastapi import Depends, Path, Query, Request
 
 from c2corg_api.views.cooker import cook_markdown
-from c2corg_api.views.coverage import WaypointCoverageRest, coverage_of_a_polygon
-from c2corg_api.views.document_tag import DocumentTaggedRest
+from c2corg_api.views.coverage import (
+    coverage_of_a_polygon,
+    find_coverage,
+)
+from c2corg_api.views.document_tag import read_todo_tag
 from c2corg_api.views.forum import create_topic
 from c2corg_api.views.image import (
-    ImageProxyRest,
     create_images,
+    redirect_to_image,
     validate_extension,
     validate_size,
 )
 from c2corg_api.views.validation import validate_id
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import permission_check, serve_view, typed_values
+from c2corg_api.web.compat import permission_check, serve_read, typed_values
 from c2corg_api.web.documents import handler_arguments, include_handler_write
 from c2corg_api.web.params import described, finite, natural
 
@@ -64,7 +67,7 @@ def coverage_of_a_point(
 ):
     """Return the type of the coverage containing a point."""
     validated = {'lon': lon, 'lat': lat}
-    return serve_view(request, user, [typed_values(validated)], WaypointCoverageRest)
+    return serve_read(request, user, [typed_values(validated)], find_coverage)
 
 
 def image_proxy(
@@ -89,7 +92,7 @@ def image_proxy(
 ):
     """Redirect to an image file, in a size."""
     validators = [validate_id, validate_size, validate_extension]
-    return serve_view(request, user, validators, ImageProxyRest)
+    return serve_read(request, user, validators, redirect_to_image)
 
 
 def has_todo_tag(
@@ -109,7 +112,7 @@ def has_todo_tag(
 ):
     """Tell whether the authenticated user tagged a document as todo."""
     validated = {'document_id': document_id}
-    return serve_view(request, user, [typed_values(validated)], DocumentTaggedRest)
+    return serve_read(request, user, [typed_values(validated)], read_todo_tag)
 
 
 # read by the route inventory of the contract tests (routes.txt)

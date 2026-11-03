@@ -28,7 +28,7 @@ from c2corg_api.schemas.route import route_schema
 from c2corg_api.schemas.waypoint import waypoint_schema
 from c2corg_api.views import to_json_dict
 from c2corg_api.views.coverage import get_coverage
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.resource import view
 from c2corg_api.views.route import build_reachable_route_query_with_waypoints
 from c2corg_api.views.waypoint import build_reachable_waypoints_query
 
@@ -65,68 +65,66 @@ def validate_navitia_params(request, **kwargs):
             request.errors.add('querystring', param, f'Parameter {param} required')
 
 
-@resource(path='/navitia/journeys')
-class NavitiaRest:
-    def __init__(self, request, context=None):
-        self.request = request
+@view(validators=[validate_navitia_params])
+def read_journeys(request):
+    """
+    Endpoint to retrieve trips from the Navitia API.
 
-    @view(validators=[validate_navitia_params])
-    def get(self):
-        """
-        Endpoint to retrieve trips from the Navitia API.
+    Required query string parameters:
+    - from: starting coordinates (format: longitude;latitude)
+    - to: arrival coordinates (format: longitude;latitude)
+    - datetime: date and hour (format ISO 8601)
+    - datetime_represents: 'departure' or 'arrival'
+    """
+    # Retrieve navitia API Key from env var
+    api_key = os.getenv('NAVITIA_API_KEY')
+    if not api_key:
+        raise HTTPInternalServerError('Navitia API config is missing')
 
-        Required query string parameters:
-        - from: starting coordinates (format: longitude;latitude)
-        - to: arrival coordinates (format: longitude;latitude)
-        - datetime: date and hour (format ISO 8601)
-        - datetime_represents: 'departure' or 'arrival'
-        """
-        # Retrieve navitia API Key from env var
-        api_key = os.getenv('NAVITIA_API_KEY')
-        if not api_key:
-            raise HTTPInternalServerError('Navitia API config is missing')
+    # Build journey api parameters
+    params = {
+        'from': request.params.get('from'),
+        'to': request.params.get('to'),
+        'datetime': request.params.get('datetime'),
+        'datetime_represents': request.params.get('datetime_represents'),
+    }
 
-        # Build journey api parameters
-        params = {
-            'from': self.request.params.get('from'),
-            'to': self.request.params.get('to'),
-            'datetime': self.request.params.get('datetime'),
-            'datetime_represents': self.request.params.get('datetime_represents'),
-        }
+    # Add optional params
+    optional_params = [
+        'max_duration_to_pt',
+        'walking_speed',
+        'bike_speed',
+        'bss_speed',
+        'car_speed',
+        'forbidden_uris',
+        'allowed_id',
+        'first_section_mode',
+        'last_section_mode',
+        'max_walking_duration_to_pt',
+        'max_nb_transfers',
+        'min_nb_journeys',
+        'max_bike_duration_to_pt',
+        'max_bss_duration_to_pt',
+        'max_car_duration_to_pt',
+        'timeframe_duration',
+        'max_walking_direct_path_duration',
+        'wheelchair',
+        'traveler_type',
+        'data_freshness',
+    ]
 
-        # Add optional params
-        optional_params = [
-            'max_duration_to_pt',
-            'walking_speed',
-            'bike_speed',
-            'bss_speed',
-            'car_speed',
-            'forbidden_uris',
-            'allowed_id',
-            'first_section_mode',
-            'last_section_mode',
-            'max_walking_duration_to_pt',
-            'max_nb_transfers',
-            'min_nb_journeys',
-            'max_bike_duration_to_pt',
-            'max_bss_duration_to_pt',
-            'max_car_duration_to_pt',
-            'timeframe_duration',
-            'max_walking_direct_path_duration',
-            'wheelchair',
-            'traveler_type',
-            'data_freshness',
-        ]
+    for param in optional_params:
+        if param in request.params:
+            params[param] = request.params.get(param)
 
-        for param in optional_params:
-            if param in self.request.params:
-                params[param] = self.request.params.get(param)
+    return navitia_get(
+        BASE_URL + '/journeys',
+        params=params,
+        headers={'Authorization': api_key},
+    )
 
-        return navitia_get(
-            BASE_URL + '/journeys',
-            params=params,
-            headers={'Authorization': api_key},
-        )
+
+read_journeys.view_name = 'NavitiaRest.get'
 
 
 def validate_journey_reachable_params(request, **kwargs):
@@ -144,86 +142,84 @@ def validate_journey_reachable_params(request, **kwargs):
             request.errors.add('querystring', param, f'Parameter {param} required')
 
 
-@resource(path='/navitia/journeyreachableroutes/start')
-class StartNavitiaJourneyReachableRoutesRest:
-    def __init__(self, request, context=None):
-        self.request = request
-
-    @view(validators=[validate_journey_reachable_params])
-    def get(self):
-        """Start a job finding the journey-reachable routes, return its id."""
-        return start_job_background(compute_journey_reachable_routes, self.request)
+@view(validators=[validate_journey_reachable_params])
+def start_journey_reachable_routes(request):
+    """Start a job finding the journey-reachable routes, return its id."""
+    return start_job_background(compute_journey_reachable_routes, request)
 
 
-@resource(path='/navitia/journeyreachablewaypoints/start')
-class StartNavitiaJourneyReachableWaypointsRest:
-    def __init__(self, request, context=None):
-        self.request = request
-
-    @view(validators=[validate_journey_reachable_params])
-    def get(self):
-        """Start a job finding the journey-reachable waypoints, return its id."""
-        return start_job_background(compute_journey_reachable_waypoints, self.request)
+start_journey_reachable_routes.view_name = 'StartNavitiaJourneyReachableRoutesRest.get'
 
 
-@resource(path='/navitia/journeyreachableroutes/result/{job_id}')
-class NavitiaJourneyReachableRoutesResultRest:
-    def __init__(self, request, context=None):
-        self.request = request
-
-    @view()
-    def get(self):
-        """Get the result of a reachable-routes job.
-
-        Get the result of the job : get journey reachable routes
-        returns the result.
-        """
-        r = redis_client()
-        job_id = self.request.matchdict.get('job_id')
-        return read_result_from_redis(r, job_id)
+@view(validators=[validate_journey_reachable_params])
+def start_journey_reachable_waypoints(request):
+    """Start a job finding the journey-reachable waypoints, return its id."""
+    return start_job_background(compute_journey_reachable_waypoints, request)
 
 
-@resource(path='/navitia/journeyreachablewaypoints/result/{job_id}')
-class NavitiaJourneyReachableWaypointsResultRest:
-    def __init__(self, request, context=None):
-        self.request = request
-
-    @view()
-    def get(self):
-        """Get the result of a reachable-waypoints job.
-
-        Get the result of the job : get journey reachable waypoints
-        returns the result.
-        """
-        r = redis_client()
-        job_id = self.request.matchdict.get('job_id')
-        return read_result_from_redis(r, job_id)
+start_journey_reachable_waypoints.view_name = (
+    'StartNavitiaJourneyReachableWaypointsRest.get'
+)
 
 
-@resource(path='/navitia/journeyreachableroutes/progress/{job_id}')
-class NavitiaJourneyReachableRoutesProgressRest:
-    def __init__(self, request, context=None):
-        self.request = request
+@view()
+def read_journey_reachable_routes_result(request):
+    """Get the result of a reachable-routes job.
 
-    @view()
-    def get(self):
-        """Monitor progress of job id for journey reachable routes."""
-        r = redis_client()
-        job_id = self.request.matchdict.get('job_id')
-        return _event_stream(progress_stream(r, job_id))
+    Get the result of the job : get journey reachable routes
+    returns the result.
+    """
+    r = redis_client()
+    job_id = request.matchdict.get('job_id')
+    return read_result_from_redis(r, job_id)
 
 
-@resource(path='/navitia/journeyreachablewaypoints/progress/{job_id}')
-class NavitiaJourneyReachableWaypointsProgressRest:
-    def __init__(self, request, context=None):
-        self.request = request
+read_journey_reachable_routes_result.view_name = (
+    'NavitiaJourneyReachableRoutesResultRest.get'
+)
 
-    @view()
-    def get(self):
-        """Monitor progress of job id for journey reachable waypoints."""
-        r = redis_client()
-        job_id = self.request.matchdict.get('job_id')
-        return _event_stream(progress_stream(r, job_id))
+
+@view()
+def read_journey_reachable_waypoints_result(request):
+    """Get the result of a reachable-waypoints job.
+
+    Get the result of the job : get journey reachable waypoints
+    returns the result.
+    """
+    r = redis_client()
+    job_id = request.matchdict.get('job_id')
+    return read_result_from_redis(r, job_id)
+
+
+read_journey_reachable_waypoints_result.view_name = (
+    'NavitiaJourneyReachableWaypointsResultRest.get'
+)
+
+
+@view()
+def read_journey_reachable_routes_progress(request):
+    """Monitor progress of job id for journey reachable routes."""
+    r = redis_client()
+    job_id = request.matchdict.get('job_id')
+    return _event_stream(progress_stream(r, job_id))
+
+
+read_journey_reachable_routes_progress.view_name = (
+    'NavitiaJourneyReachableRoutesProgressRest.get'
+)
+
+
+@view()
+def read_journey_reachable_waypoints_progress(request):
+    """Monitor progress of job id for journey reachable waypoints."""
+    r = redis_client()
+    job_id = request.matchdict.get('job_id')
+    return _event_stream(progress_stream(r, job_id))
+
+
+read_journey_reachable_waypoints_progress.view_name = (
+    'NavitiaJourneyReachableWaypointsProgressRest.get'
+)
 
 
 def compute_journey_reachable_routes(job_id, request):
@@ -397,143 +393,135 @@ def validate_isochrone_reachable_params(request, **kwargs):
             request.errors.add('querystring', param, f'Parameter {param} required')
 
 
-@resource(path='/navitia/isochronesreachableroutes')
-class NavitiaIsochronesReachableRoutesRest:
-    def __init__(self, request, context=None):
-        self.request = request
+@view(validators=[validate_isochrone_reachable_params])
+def read_isochrone_reachable_routes(request):
+    """Get the routes with an access waypoint inside the isochron.
 
-    @view(validators=[validate_isochrone_reachable_params])
-    def get(self):
-        """Get the routes with an access waypoint inside the isochron.
+    Get all routes matching filters in params, that have at least
+    one waypoint of type access that is inside the isochron.
+    The isochron is created by querying navitia api
+    with specific parameters, see validate_isochrone_reachable_params func.
+    """
+    meta_params = extract_meta_params(request)
 
-        Get all routes matching filters in params, that have at least
-        one waypoint of type access that is inside the isochron.
-        The isochron is created by querying navitia api
-        with specific parameters, see validate_isochrone_reachable_params func.
-        """
-        meta_params = extract_meta_params(self.request)
+    isochrone_params = extract_isochrone_params(request)
 
-        isochrone_params = extract_isochrone_params(self.request)
+    query, _ = build_reachable_route_query_with_waypoints(request.GET, meta_params)
 
-        query, _ = build_reachable_route_query_with_waypoints(
-            self.request.GET, meta_params
-        )
+    if query is None:
+        results = []
+    else:
+        results = query.all()
 
-        if query is None:
-            results = []
-        else:
-            results = query.all()
+    areas_map = collect_areas_from_results(results, 1)
 
-        areas_map = collect_areas_from_results(results, 1)
+    response = get_navitia_isochrone(isochrone_params)
 
-        response = get_navitia_isochrone(isochrone_params)
+    routes = []
+    geojson = ''
+    # if isochrone found
+    if len(response['isochrones']) > 0:
+        geojson = response['isochrones'][0]['geojson']
+        isochrone_geom = shape(geojson)
 
-        routes = []
-        geojson = ''
-        # if isochrone found
-        if len(response['isochrones']) > 0:
-            geojson = response['isochrones'][0]['geojson']
-            isochrone_geom = shape(geojson)
+        wp_objects = collect_waypoints_from_results(results)
 
-            wp_objects = collect_waypoints_from_results(results)
-
-            navitia_wp_map = {
-                wp.document_id: is_wp_in_isochrone(
-                    to_json_dict(wp, waypoint_schema), isochrone_geom
-                )
-                for wp in wp_objects
-            }
-
-            for route, areas, waypoints in results:
-                # check if a journey exists for route
-                # (at least one wp has a journey associated)
-                one_wp_in_isochrone = False
-                for wp in waypoints:
-                    wp_id = wp.get('document_id')
-                    one_wp_in_isochrone |= navitia_wp_map.get(wp_id)
-
-                if one_wp_in_isochrone:
-                    json_areas = []
-
-                    if areas is None:
-                        areas = []
-
-                    for area in areas:
-                        area_obj = areas_map.get(area.get('document_id'))
-                        if area_obj:
-                            json_areas.append(
-                                to_json_dict(area_obj, area_listing_schema)
-                            )
-
-                    # assign JSON areas to the waypoint
-                    route.areas = json_areas
-                    route_dict = to_json_dict(route, route_schema, True)
-                    routes.append(route_dict)
-
-        return {'documents': routes, 'total': len(routes), 'isochron_geom': geojson}
-
-
-@resource(path='/navitia/isochronesreachablewaypoints')
-class NavitiaIsochronesReachableWaypointsRest:
-    def __init__(self, request, context=None):
-        self.request = request
-
-    @view(validators=[validate_isochrone_reachable_params])
-    def get(self):
-        """Get the waypoints inside the isochron.
-
-        Get all waypoints matching filters in params,
-        that are inside the isochron.
-        The isochron is created by querying navitia api
-        with specific parameters, see validate_isochrone_reachable_params func.
-        """
-        meta_params = extract_meta_params(self.request)
-
-        isochrone_params = extract_isochrone_params(self.request)
-
-        query, _ = build_reachable_waypoints_query(self.request.GET, meta_params)
-
-        # no reachable waypoint: no query
-        results = [] if query is None else query.all()
-
-        # manage areas for waypoints
-        areas_map = collect_areas_from_results(results, 1)
-
-        response = get_navitia_isochrone(isochrone_params)
-
-        waypoints = []
-        geojson = ''
-        # if isochrone found
-        if len(response['isochrones']) > 0:
-            geojson = response['isochrones'][0]['geojson']
-            isochrone_geom = shape(geojson)
-
-            for waypoint, areas in results:
-                # check if wp is in isochrone
-                if is_wp_in_isochrone(
-                    to_json_dict(waypoint, waypoint_schema), isochrone_geom
-                ):
-                    json_areas = []
-                    if areas is None:
-                        areas = []
-
-                    for area in areas:
-                        area_obj = areas_map.get(area.get('document_id'))
-                        if area_obj:
-                            json_areas.append(
-                                to_json_dict(area_obj, area_listing_schema)
-                            )
-
-                    # assign JSON areas to the waypoint
-                    waypoint.areas = json_areas
-                    wp_dict = to_json_dict(waypoint, waypoint_schema, True)
-                    waypoints.append(wp_dict)
-
-        return {
-            'documents': waypoints,
-            'total': len(waypoints),
-            'isochron_geom': geojson,
+        navitia_wp_map = {
+            wp.document_id: is_wp_in_isochrone(
+                to_json_dict(wp, waypoint_schema), isochrone_geom
+            )
+            for wp in wp_objects
         }
+
+        for route, areas, waypoints in results:
+            # check if a journey exists for route
+            # (at least one wp has a journey associated)
+            one_wp_in_isochrone = False
+            for wp in waypoints:
+                wp_id = wp.get('document_id')
+                one_wp_in_isochrone |= navitia_wp_map.get(wp_id)
+
+            if one_wp_in_isochrone:
+                json_areas = []
+
+                if areas is None:
+                    areas = []
+
+                for area in areas:
+                    area_obj = areas_map.get(area.get('document_id'))
+                    if area_obj:
+                        json_areas.append(to_json_dict(area_obj, area_listing_schema))
+
+                # assign JSON areas to the waypoint
+                route.areas = json_areas
+                route_dict = to_json_dict(route, route_schema, True)
+                routes.append(route_dict)
+
+    return {'documents': routes, 'total': len(routes), 'isochron_geom': geojson}
+
+
+read_isochrone_reachable_routes.view_name = 'NavitiaIsochronesReachableRoutesRest.get'
+
+
+@view(validators=[validate_isochrone_reachable_params])
+def read_isochrone_reachable_waypoints(request):
+    """Get the waypoints inside the isochron.
+
+    Get all waypoints matching filters in params,
+    that are inside the isochron.
+    The isochron is created by querying navitia api
+    with specific parameters, see validate_isochrone_reachable_params func.
+    """
+    meta_params = extract_meta_params(request)
+
+    isochrone_params = extract_isochrone_params(request)
+
+    query, _ = build_reachable_waypoints_query(request.GET, meta_params)
+
+    # no reachable waypoint: no query
+    results = [] if query is None else query.all()
+
+    # manage areas for waypoints
+    areas_map = collect_areas_from_results(results, 1)
+
+    response = get_navitia_isochrone(isochrone_params)
+
+    waypoints = []
+    geojson = ''
+    # if isochrone found
+    if len(response['isochrones']) > 0:
+        geojson = response['isochrones'][0]['geojson']
+        isochrone_geom = shape(geojson)
+
+        for waypoint, areas in results:
+            # check if wp is in isochrone
+            if is_wp_in_isochrone(
+                to_json_dict(waypoint, waypoint_schema), isochrone_geom
+            ):
+                json_areas = []
+                if areas is None:
+                    areas = []
+
+                for area in areas:
+                    area_obj = areas_map.get(area.get('document_id'))
+                    if area_obj:
+                        json_areas.append(to_json_dict(area_obj, area_listing_schema))
+
+                # assign JSON areas to the waypoint
+                waypoint.areas = json_areas
+                wp_dict = to_json_dict(waypoint, waypoint_schema, True)
+                waypoints.append(wp_dict)
+
+    return {
+        'documents': waypoints,
+        'total': len(waypoints),
+        'isochron_geom': geojson,
+    }
+
+
+read_isochrone_reachable_waypoints.view_name = (
+    'NavitiaIsochronesReachableWaypointsRest.get'
+)
 
 
 def is_wp_journey_reachable(waypoint, journey_params):

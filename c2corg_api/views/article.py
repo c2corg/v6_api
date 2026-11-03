@@ -26,10 +26,10 @@ from c2corg_api.views.document import (
     put_document,
     read_document,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import article_documents_config
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.document_version import document_version
+from c2corg_api.views.resource import view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_cook_param,
@@ -117,20 +117,22 @@ def get_article(request):
 get_article.view_name = 'ArticleRest.get'
 
 
-@resource(path='/articles/{id}/{lang}/{version_id}')
-class ArticlesVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveArticle, ARTICLE_TYPE, ArchiveDocumentLocale, article_schema
-        )
+@view(validators=[validate_id, validate_lang, validate_version_id])
+def get_article_version(request):
+    return document_version(
+        request, ArchiveArticle, ARTICLE_TYPE, ArchiveDocumentLocale, article_schema
+    )
 
 
-@resource(path='/articles/{id}/{lang}/info')
-class ArticlesInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(article_documents_config)
+get_article_version.view_name = 'ArticlesVersionRest.get'
+
+
+@view(validators=[validate_id, validate_lang])
+def get_article_info(request):
+    return document_info(request, article_documents_config)
+
+
+get_article_info.view_name = 'ArticlesInfoRest.get'
 
 
 def set_author(article):

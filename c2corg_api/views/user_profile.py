@@ -16,9 +16,9 @@ from c2corg_api.views.document import (
     put_document,
     read_document,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import user_profile_documents_config
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.resource import view
 from c2corg_api.views.validation import (
     validate_cook_param,
     validate_id,
@@ -87,11 +87,12 @@ def get_user_profile(request):
 get_user_profile.view_name = 'UserProfileRest.get'
 
 
-@resource(path='/profiles/{id}/{lang}/info')
-class UserProfileInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(user_profile_documents_config)
+@view(validators=[validate_id, validate_lang])
+def get_user_profile_info(request):
+    return document_info(request, user_profile_documents_config)
+
+
+get_user_profile_info.view_name = 'UserProfileInfoRest.get'
 
 
 def reset_title(request):

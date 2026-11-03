@@ -9,7 +9,6 @@ from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import user_profile_documents_config
-from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.validation import validate_body_user_id, validate_id
 
 log = logging.getLogger(__name__)
@@ -96,50 +95,52 @@ def unblock_user(request):
 unblock_user.view_name = 'UserUnblockRest.post'
 
 
-@resource(path='/users/blocked/{id}')
-class UserBlockedRest(BaseView):
-    @restricted_json_view(permission='moderator', validators=[validate_id])
-    def get(self):
-        """Check if the given user is blocked.
+@restricted_json_view(permission='moderator', validators=[validate_id])
+def read_blocked_user(request):
+    """Check if the given user is blocked.
 
-        Request:
-            `GET` `users/blocked/{user_id}`
+    Request:
+        `GET` `users/blocked/{user_id}`
 
-        Example response:
+    Example response:
 
-            {'blocked': true}
+        {'blocked': true}
 
-        """
-        user = _get_user(self.request.validated['id'])
+    """
+    user = _get_user(request.validated['id'])
 
-        return {'blocked': user.blocked}
+    return {'blocked': user.blocked}
 
 
-@resource(path='/users/blocked')
-class UserBlockedAllRest(BaseView):
-    @restricted_json_view(permission='moderator')
-    def get(self):
-        """Get the blocked users.
+read_blocked_user.view_name = 'UserBlockedRest.get'
 
-        Request:
-            `GET` `/users/blocked`
 
-        Example response:
+@restricted_json_view(permission='moderator')
+def read_blocked_users(request):
+    """Get the blocked users.
 
-            {
-                'blocked': [
-                    {
-                        'document_id': 123,
-                        ...
-                    }
-                ]
-            }
-        """
-        blocked_user_ids = DBSession.query(User.id).filter(User.blocked).all()
-        blocked_user_ids = [user_id for (user_id,) in blocked_user_ids]
+    Request:
+        `GET` `/users/blocked`
 
-        blocked_users = get_documents_for_ids(
-            blocked_user_ids, None, user_profile_documents_config
-        ).get('documents')
+    Example response:
 
-        return {'blocked': blocked_users}
+        {
+            'blocked': [
+                {
+                    'document_id': 123,
+                    ...
+                }
+            ]
+        }
+    """
+    blocked_user_ids = DBSession.query(User.id).filter(User.blocked).all()
+    blocked_user_ids = [user_id for (user_id,) in blocked_user_ids]
+
+    blocked_users = get_documents_for_ids(
+        blocked_user_ids, None, user_profile_documents_config
+    ).get('documents')
+
+    return {'blocked': blocked_users}
+
+
+read_blocked_users.view_name = 'UserBlockedAllRest.get'

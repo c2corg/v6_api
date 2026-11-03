@@ -8,50 +8,48 @@ from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.views.feed import get_params
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.resource import view
 from c2corg_api.views.validation import (
     validate_simple_token_pagination,
     validate_user_id_not_required,
 )
 
+# Unique class for returning history of changes in documents.
 
-@resource(path='/documents/changes')
-class ChangesDocumentRest:
-    """Unique class for returning history of changes in documents."""
 
-    def __init__(self, request, **kwargs):
-        self.request = request
+@view(validators=[validate_simple_token_pagination, validate_user_id_not_required])
+def read_document_changes(request):
+    """Get the public document changes feed.
 
-    @view(validators=[validate_simple_token_pagination, validate_user_id_not_required])
-    def get(self):
-        """Get the public document changes feed.
+    Request:
+        `GET` `/document/changes[&limit=...][&token=...][&u=]`
 
-        Request:
-            `GET` `/document/changes[&limit=...][&token=...][&u=]`
+    Parameters:
+        `limit=...` (optional)
+        How many entries should be returned (default: 30).
+        The maximum is 50.
 
-        Parameters:
-            `limit=...` (optional)
-            How many entries should be returned (default: 30).
-            The maximum is 50.
+        `token=...` (optional)
+        The pagination token. When requesting a feed, the response includes
+        a `pagination_token`. This token is to be used to request the next
+        page.
 
-            `token=...` (optional)
-            The pagination token. When requesting a feed, the response includes
-            a `pagination_token`. This token is to be used to request the next
-            page.
+        `u=...` (optional)
+        Changes made by one user.
 
-            `u=...` (optional)
-            Changes made by one user.
+        For more information about "continuation token pagination", see:
+        http://www.servicedenuages.fr/pagination-continuation-token (fr)
+    """
+    user_id = request.validated.get('u')
+    lang, token_id, _, limit = get_params(request, 30)
 
-            For more information about "continuation token pagination", see:
-            http://www.servicedenuages.fr/pagination-continuation-token (fr)
-        """
-        user_id = self.request.validated.get('u')
-        lang, token_id, _, limit = get_params(self.request, 30)
+    changes = get_changes_of_feed(token_id, limit, user_id)
+    doc_ids = [change.history_metadata_id for change in changes]
 
-        changes = get_changes_of_feed(token_id, limit, user_id)
-        doc_ids = [change.history_metadata_id for change in changes]
+    return load_feed(doc_ids, limit, user_id)
 
-        return load_feed(doc_ids, limit, user_id)
+
+read_document_changes.view_name = 'ChangesDocumentRest.get'
 
 
 def get_changes_of_feed(token_id, limit, user_id=None):
