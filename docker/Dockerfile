@@ -36,4 +36,6 @@ RUN chown -R root:root /var/www \
 EXPOSE 8080
 ENTRYPOINT ["./docker/scripts/entrypoint.sh"]
 
-CMD ["gunicorn", "--paste", "production.ini", "-u", "www-data", "-g", "www-data", "-b", ":8080", "--timeout", "120"]
+# uvicorn workers, as in production; the composition adds the addresses of
+# the load balancers it trusts for X-Forwarded-For (--forwarded-allow-ips)
+CMD ["gunicorn", "-k", "uvicorn_worker.UvicornWorker", "-w", "3", "c2corg_api.asgi:app", "-u", "www-data", "-g", "www-data", "-b", ":8080", "--timeout", "120", "--keep-alive", "5"]

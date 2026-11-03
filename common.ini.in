@@ -1,7 +1,6 @@
 # common configuration between production.ini and development.ini
 
 [app:main]
-use = egg:c2corg_api
 
 # size of the connection pool for the database. note that this number is
 # per application instance.

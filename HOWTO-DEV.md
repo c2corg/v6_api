@@ -159,7 +159,7 @@ docker compose up -d
 - Run the API (this command will not exit so you should run it in a separate terminal):
 
 ```shell
-gunicorn --paste development.ini --reload --bind 0.0.0.0:6543
+C2C_API_CONFIG=development.ini uvicorn c2corg_api.asgi:app --reload --host 0.0.0.0 --port 6543
 ```
 
 - Run background jobs (run each of these commands in a separate terminal, as they will not exit):
@@ -174,9 +174,9 @@ python c2corg_api/scripts/jobs/scheduler.py development.ini
 
 ## Code layout
 
-The API is a [FastAPI](https://fastapi.tiangolo.com/) application, served by gunicorn through PasteDeploy (`c2corg_api:main`, the settings come from the `.ini` file).
+The API is a [FastAPI](https://fastapi.tiangolo.com/) application, served by uvicorn: `c2corg_api/asgi.py` reads the `.ini` file named by `C2C_API_CONFIG` (`production.ini` by default). In production, gunicorn runs uvicorn workers (`gunicorn -k uvicorn_worker.UvicornWorker c2corg_api.asgi:app`).
 
-It can also run on uvicorn workers, without the WSGI bridge: `c2corg_api/asgi.py` reads the `.ini` file named by `C2C_API_CONFIG` (`production.ini` by default).
+`c2corg_api.config` reads the settings of the `.ini` files, for the application and the scripts. The tests drive the application through a WSGI bridge (`c2corg_api:main`).
 
 ```shell
 C2C_API_CONFIG=development.ini gunicorn -k uvicorn_worker.UvicornWorker c2corg_api.asgi:app --reload --bind 0.0.0.0:6543
