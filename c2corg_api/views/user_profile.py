@@ -11,7 +11,11 @@ from c2corg_api.schemas.user_profile import (
     user_profile_schema,
 )
 from c2corg_api.views import restricted_json_view, restricted_view
-from c2corg_api.views.document import DocumentRest, put_document
+from c2corg_api.views.document import (
+    collection_get,
+    put_document,
+    read_document,
+)
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import user_profile_documents_config
 from c2corg_api.views.resource import resource, view
@@ -43,39 +47,44 @@ def update_user_profile(request):
 update_user_profile.view_name = 'UserProfileRest.put'
 
 
-@resource(collection_path='/profiles', path='/profiles/{id}')
-class UserProfileRest(DocumentRest):
-    @restricted_view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(USERPROFILE_TYPE, user_profile_documents_config)
+@restricted_view(validators=[validate_pagination, validate_preferred_lang_param])
+def list_user_profiles(request):
+    return collection_get(request, USERPROFILE_TYPE, user_profile_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        # load the requested user
-        requested_user_id = self.request.validated['id']
-        requested_user = (
-            DBSession.query(User)
-            .filter(User.id == requested_user_id)
-            .filter(User.email_validated)
-            .options(load_only(User.id, User.is_profile_public, User.name))
-            .first()
+
+list_user_profiles.view_name = 'UserProfileRest.collection_get'
+
+
+@view(validators=[validate_id, validate_lang_param, validate_cook_param])
+def get_user_profile(request):
+    # load the requested user
+    requested_user_id = request.validated['id']
+    requested_user = (
+        DBSession.query(User)
+        .filter(User.id == requested_user_id)
+        .filter(User.email_validated)
+        .options(load_only(User.id, User.is_profile_public, User.name))
+        .first()
+    )
+
+    if not requested_user:
+        raise HTTPNotFound('user not found')
+    elif requested_user.is_profile_public or request.has_permission('authenticated'):
+        # only show the full profile if authenticated or if the user marked
+        # the profile as public
+        return read_document(
+            request, user_profile_documents_config, user_profile_schema
         )
+    else:
+        # otherwise only return the user name
+        return {
+            'not_authorized': True,
+            'document_id': requested_user.id,
+            'name': requested_user.name,
+        }
 
-        if not requested_user:
-            raise HTTPNotFound('user not found')
-        elif requested_user.is_profile_public or self.request.has_permission(
-            'authenticated'
-        ):
-            # only show the full profile if authenticated or if the user marked
-            # the profile as public
-            return self._get(user_profile_documents_config, user_profile_schema)
-        else:
-            # otherwise only return the user name
-            return {
-                'not_authorized': True,
-                'document_id': requested_user.id,
-                'name': requested_user.name,
-            }
+
+get_user_profile.view_name = 'UserProfileRest.get'
 
 
 @resource(path='/profiles/{id}/{lang}/info')

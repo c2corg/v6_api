@@ -22,11 +22,12 @@ from c2corg_api.views import (
     set_default_geom_from_associations,
 )
 from c2corg_api.views.document import (
-    DocumentRest,
+    collection_get,
     create_document,
     make_validator_create,
     make_validator_update,
     put_document,
+    read_document,
 )
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import (
@@ -179,17 +180,25 @@ def update_outing(request):
 update_outing.view_name = 'OutingRest.put'
 
 
-@resource(collection_path='/outings', path='/outings/{id}')
-class OutingRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(OUTING_TYPE, outing_documents_config)
+@view(validators=[validate_pagination, validate_preferred_lang_param])
+def list_outings(request):
+    return collection_get(request, OUTING_TYPE, outing_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        return self._get(
-            outing_documents_config, outing_schema, adapt_schema=outing_schema_adaptor
-        )
+
+list_outings.view_name = 'OutingRest.collection_get'
+
+
+@view(validators=[validate_id, validate_lang_param, validate_cook_param])
+def get_outing(request):
+    return read_document(
+        request,
+        outing_documents_config,
+        outing_schema,
+        adapt_schema=outing_schema_adaptor,
+    )
+
+
+get_outing.view_name = 'OutingRest.get'
 
 
 @resource(path='/outings/{id}/{lang}/info')

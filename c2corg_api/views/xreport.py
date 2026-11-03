@@ -20,11 +20,12 @@ from c2corg_api.schemas.xreport import (
 from c2corg_api.views import restricted_json_view, set_private_cache_header
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
-    DocumentRest,
+    collection_get,
     create_document,
     make_validator_create,
     make_validator_update,
     put_document,
+    read_document,
 )
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import xreport_documents_config
@@ -84,32 +85,39 @@ def update_xreport(request):
 update_xreport.view_name = 'XreportRest.put'
 
 
-@resource(collection_path='/xreports', path='/xreports/{id}')
-class XreportRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(XREPORT_TYPE, xreport_documents_config)
+@view(validators=[validate_pagination, validate_preferred_lang_param])
+def list_xreports(request):
+    return collection_get(request, XREPORT_TYPE, xreport_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        set_private_cache_header(self.request)
-        if not _has_permission(self.request, self.request.validated['id']):
-            # only moderators and the author of a xreport can access the full
-            # xreport (including personal information)
-            return self._get(
-                xreport_documents_config,
-                xreport_without_personal_schema,
-                clazz_locale=XreportLocale,
-                set_custom_fields=set_author,
-            )
 
-        return self._get(
+list_xreports.view_name = 'XreportRest.collection_get'
+
+
+@view(validators=[validate_id, validate_lang_param, validate_cook_param])
+def get_xreport(request):
+    set_private_cache_header(request)
+    if not _has_permission(request, request.validated['id']):
+        # only moderators and the author of a xreport can access the full
+        # xreport (including personal information)
+        return read_document(
+            request,
             xreport_documents_config,
-            xreport_schema,
+            xreport_without_personal_schema,
             clazz_locale=XreportLocale,
-            custom_cache_key='private',
             set_custom_fields=set_author,
         )
+
+    return read_document(
+        request,
+        xreport_documents_config,
+        xreport_schema,
+        clazz_locale=XreportLocale,
+        custom_cache_key='private',
+        set_custom_fields=set_author,
+    )
+
+
+get_xreport.view_name = 'XreportRest.get'
 
 
 def _has_permission(request, xreport_id):

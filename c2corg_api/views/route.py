@@ -45,10 +45,12 @@ from c2corg_api.views.document import (
     LIMIT_DEFAULT,
     NUM_RECENT_OUTINGS,
     DocumentRest,
+    collection_get,
     create_document,
     make_validator_create,
     make_validator_update,
     put_document,
+    read_document,
 )
 from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.views.document_info import DocumentInfoRest
@@ -165,49 +167,55 @@ def update_route(request):
 update_route.view_name = 'RouteRest.put'
 
 
-@resource(collection_path='/routes', path='/routes/{id}')
-class RouteRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(ROUTE_TYPE, route_documents_config)
+@view(validators=[validate_pagination, validate_preferred_lang_param])
+def list_routes(request):
+    return collection_get(request, ROUTE_TYPE, route_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        return self._get(
-            route_documents_config,
-            route_schema,
-            clazz_locale=RouteLocale,
-            adapt_schema=route_schema_adaptor,
-            include_maps=True,
-            set_custom_associations=RouteRest.set_recent_outings,
-        )
 
-    @staticmethod
-    def set_recent_outings(route, lang):
-        """Set last 10 outings on the given route."""
-        recent_outing_ids = get_first_column(
-            DBSession.query(Outing.document_id, Outing.date_end)
-            .filter(Outing.redirects_to.is_(None))
-            .join(Association, Outing.document_id == Association.child_document_id)
-            .filter(Association.parent_document_id == route.document_id)
-            .distinct()
-            .order_by(Outing.date_end.desc())
-            .limit(NUM_RECENT_OUTINGS)
-            .all()
-        )
+list_routes.view_name = 'RouteRest.collection_get'
 
-        total = (
-            DBSession.query(Outing.document_id)
-            .filter(Outing.redirects_to.is_(None))
-            .join(Association, Outing.document_id == Association.child_document_id)
-            .filter(Association.parent_document_id == route.document_id)
-            .distinct()
-            .count()
-        )
 
-        route.associations['recent_outings'] = get_documents_for_ids(
-            recent_outing_ids, lang, outing_documents_config, total
-        )
+@view(validators=[validate_id, validate_lang_param, validate_cook_param])
+def get_route(request):
+    return read_document(
+        request,
+        route_documents_config,
+        route_schema,
+        clazz_locale=RouteLocale,
+        adapt_schema=route_schema_adaptor,
+        include_maps=True,
+        set_custom_associations=set_recent_outings,
+    )
+
+
+get_route.view_name = 'RouteRest.get'
+
+
+def set_recent_outings(route, lang):
+    """Set last 10 outings on the given route."""
+    recent_outing_ids = get_first_column(
+        DBSession.query(Outing.document_id, Outing.date_end)
+        .filter(Outing.redirects_to.is_(None))
+        .join(Association, Outing.document_id == Association.child_document_id)
+        .filter(Association.parent_document_id == route.document_id)
+        .distinct()
+        .order_by(Outing.date_end.desc())
+        .limit(NUM_RECENT_OUTINGS)
+        .all()
+    )
+
+    total = (
+        DBSession.query(Outing.document_id)
+        .filter(Outing.redirects_to.is_(None))
+        .join(Association, Outing.document_id == Association.child_document_id)
+        .filter(Association.parent_document_id == route.document_id)
+        .distinct()
+        .count()
+    )
+
+    route.associations['recent_outings'] = get_documents_for_ids(
+        recent_outing_ids, lang, outing_documents_config, total
+    )
 
 
 @resource(path='/routes/{id}/{lang}/{version_id}')

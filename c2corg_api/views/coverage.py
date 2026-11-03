@@ -22,10 +22,12 @@ from c2corg_api.schemas.coverage import (
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
     DocumentRest,
+    collection_get,
     create_document,
     make_validator_create,
     make_validator_update,
     put_document,
+    read_document,
 )
 from c2corg_api.views.document_schemas import coverage_documents_config
 from c2corg_api.views.resource import resource, view
@@ -79,20 +81,22 @@ def update_coverage(request):
 update_coverage.view_name = 'CoverageRest.put'
 
 
-@resource(collection_path='/coverages', path='/coverages/{id}')
-class CoverageRest(DocumentRest):
-    def __init__(self, request, context=None):
-        self.request = request
+@view(validators=[validate_pagination, validate_preferred_lang_param])
+def list_coverages(request):
+    return collection_get(request, COVERAGE_TYPE, coverage_documents_config)
 
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(COVERAGE_TYPE, coverage_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        return self._get(
-            coverage_documents_config, coverage_schema, include_areas=False
-        )
+list_coverages.view_name = 'CoverageRest.collection_get'
+
+
+@view(validators=[validate_id, validate_lang_param, validate_cook_param])
+def get_coverage_document(request):
+    return read_document(
+        request, coverage_documents_config, coverage_schema, include_areas=False
+    )
+
+
+get_coverage_document.view_name = 'CoverageRest.get'
 
 
 def validate_lon_lat(request, **kwargs):

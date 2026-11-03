@@ -104,7 +104,7 @@ def account(request: Request, user: User):
 def _checks(view_class, permission, content_types=None):
     # the content type and the permission are checked before the parameters,
     # as Cornice and Pyramid did
-    check = permission_check(view_class, 'get', permission, content_types)
+    check = permission_check(f'{view_class.__name__}.get', permission, content_types)
     return Annotated[None, Depends(check)]
 
 

@@ -7,11 +7,12 @@ from c2corg_api.schemas.base import body_validator
 from c2corg_api.schemas.book import BookCreateSchema, BookUpdateSchema, book_schema
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
-    DocumentRest,
+    collection_get,
     create_document,
     make_validator_create,
     make_validator_update,
     put_document,
+    read_document,
 )
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import book_documents_config
@@ -65,15 +66,22 @@ def update_book(request):
 update_book.view_name = 'BookRest.put'
 
 
-@resource(collection_path='/books', path='/books/{id}')
-class BookRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(BOOK_TYPE, book_documents_config)
+@view(validators=[validate_pagination, validate_preferred_lang_param])
+def list_books(request):
+    return collection_get(request, BOOK_TYPE, book_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        return self._get(book_documents_config, book_schema, include_areas=False)
+
+list_books.view_name = 'BookRest.collection_get'
+
+
+@view(validators=[validate_id, validate_lang_param, validate_cook_param])
+def get_book(request):
+    return read_document(
+        request, book_documents_config, book_schema, include_areas=False
+    )
+
+
+get_book.view_name = 'BookRest.get'
 
 
 @resource(path='/books/{id}/{lang}/{version_id}')

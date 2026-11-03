@@ -11,11 +11,12 @@ from c2corg_api.schemas.topo_map import (
 )
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
-    DocumentRest,
+    collection_get,
     create_document,
     make_validator_create,
     make_validator_update,
     put_document,
+    read_document,
 )
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import topo_map_documents_config
@@ -61,15 +62,20 @@ def update_topo_map(request):
 update_topo_map.view_name = 'TopoMapRest.put'
 
 
-@resource(collection_path='/maps', path='/maps/{id}')
-class TopoMapRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(MAP_TYPE, topo_map_documents_config)
+@view(validators=[validate_pagination, validate_preferred_lang_param])
+def list_topo_maps(request):
+    return collection_get(request, MAP_TYPE, topo_map_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        return self._get(topo_map_documents_config, topo_map_schema)
+
+list_topo_maps.view_name = 'TopoMapRest.collection_get'
+
+
+@view(validators=[validate_id, validate_lang_param, validate_cook_param])
+def get_topo_map(request):
+    return read_document(request, topo_map_documents_config, topo_map_schema)
+
+
+get_topo_map.view_name = 'TopoMapRest.get'
 
 
 @resource(path='/maps/{id}/{lang}/info')

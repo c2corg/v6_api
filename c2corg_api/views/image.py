@@ -32,11 +32,12 @@ from c2corg_api.search.notify_sync import run_on_successful_transaction
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
-    DocumentRest,
+    collection_get,
     insert_document,
     make_validator_create,
     make_validator_update,
     put_document,
+    read_document,
     validate_document,
 )
 from c2corg_api.views.document_info import DocumentInfoRest
@@ -269,17 +270,22 @@ def update_image(request):
 update_image.view_name = 'ImageRest.put'
 
 
-@resource(collection_path='/images', path='/images/{id}')
-class ImageRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(IMAGE_TYPE, image_documents_config)
+@view(validators=[validate_pagination, validate_preferred_lang_param])
+def list_images(request):
+    return collection_get(request, IMAGE_TYPE, image_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        return self._get(
-            image_documents_config, image_schema, set_custom_fields=set_creator
-        )
+
+list_images.view_name = 'ImageRest.collection_get'
+
+
+@view(validators=[validate_id, validate_lang_param, validate_cook_param])
+def get_image(request):
+    return read_document(
+        request, image_documents_config, image_schema, set_custom_fields=set_creator
+    )
+
+
+get_image.view_name = 'ImageRest.get'
 
 
 @restricted_json_view(
