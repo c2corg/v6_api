@@ -99,7 +99,7 @@ def has_todo_tag(
         None,
         Depends(
             permission_check(
-                DocumentTaggedRest, 'get', 'authenticated', ['application/json']
+                'DocumentTaggedRest.get', 'authenticated', ['application/json']
             )
         ),
     ],

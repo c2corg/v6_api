@@ -19,11 +19,12 @@ from c2corg_api.schemas.base import body_validator
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
-    DocumentRest,
+    collection_get,
     create_document,
     make_validator_create,
     make_validator_update,
     put_document,
+    read_document,
 )
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import article_documents_config
@@ -94,20 +95,26 @@ def update_article(request):
 update_article.view_name = 'ArticleRest.put'
 
 
-@resource(collection_path='/articles', path='/articles/{id}')
-class ArticleRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(ARTICLE_TYPE, article_documents_config)
+@view(validators=[validate_pagination, validate_preferred_lang_param])
+def list_articles(request):
+    return collection_get(request, ARTICLE_TYPE, article_documents_config)
 
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        return self._get(
-            article_documents_config,
-            article_schema,
-            include_areas=False,
-            set_custom_fields=set_author,
-        )
+
+list_articles.view_name = 'ArticleRest.collection_get'
+
+
+@view(validators=[validate_id, validate_lang_param, validate_cook_param])
+def get_article(request):
+    return read_document(
+        request,
+        article_documents_config,
+        article_schema,
+        include_areas=False,
+        set_custom_fields=set_author,
+    )
+
+
+get_article.view_name = 'ArticleRest.get'
 
 
 @resource(path='/articles/{id}/{lang}/{version_id}')

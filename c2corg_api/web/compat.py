@@ -243,15 +243,33 @@ def serve_view(
     content_types=None,
 ):
     """Answer a request with a method of a Pyramid view class."""
-    view_name = f'{view_class.__name__}.{method}'
-    refused = _refused(request, user, view_name, permission, content_types)
+    # for the read routes not converted to functions yet (#2512)
+    handler = class_method(view_class, method)
+    return serve_read(request, user, validators, handler, permission, content_types)
+
+
+def class_method(view_class, method):
+    """Return a handler calling a method of a Pyramid view class."""
+
+    def handler(request):
+        return getattr(view_class(request), method)()
+
+    handler.view_name = f'{view_class.__name__}.{method}'
+    return handler
+
+
+def serve_read(request, user, validators, handler, permission=None, content_types=None):
+    """Answer a read request with a handler of the validated request."""
+    # `handler(request)` returns the answer; its `view_name` names it in the
+    # 403 answers, as Pyramid named the view
+    refused = _refused(request, user, handler.view_name, permission, content_types)
     if refused is not None:
         return refused
     adapted, error = validate_query(request, *validators, user=user)
     if error is not None:
         return error
     with request_session():
-        return run_view(adapted, getattr(view_class(adapted), method))
+        return run_view(adapted, lambda: handler(adapted))
 
 
 class Refused(Exception):
@@ -266,7 +284,7 @@ async def refused_response(request, exc: Refused):
     return exc.response
 
 
-def permission_check(view_class, method, permission, content_types=None):
+def permission_check(view_name, permission, content_types=None):
     """Return a dependency answering the 415 of Cornice or the 403 of Pyramid."""
     # a dependency runs before FastAPI checks the typed parameters: the
     # permission is checked first, as Pyramid did
@@ -275,7 +293,6 @@ def permission_check(view_class, method, permission, content_types=None):
     def check(
         request: Request, user: Annotated[CurrentUser | None, Depends(current_user)]
     ):
-        view_name = f'{view_class.__name__}.{method}'
         refused = _refused(request, user, view_name, permission, content_types)
         if refused is not None:
             raise Refused(refused)

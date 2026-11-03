@@ -81,184 +81,14 @@ ES_MAX_RESULT_WINDOW = 10000
 
 
 class DocumentRest(BaseView):
-    # TODO: remove doc_type, it's in documents_config
     def _collection_get(self, doc_type, documents_config):
-        validated = self.request.validated
-        meta_params = {
-            'offset': validated.get('offset', 0),
-            'limit': min(validated.get('limit', LIMIT_DEFAULT), LIMIT_MAX),
-            'lang': validated.get('lang'),
-        }
+        return collection_get(self.request, doc_type, documents_config)
 
-        if meta_params['offset'] + meta_params['limit'] > ES_MAX_RESULT_WINDOW:
-            # ES does not process requests where offset + limit is greater
-            # than 10000, see:
-            # https://www.elastic.co/guide/en/elasticsearch/reference/master/search-request-from-size.html
-            raise HTTPBadRequest('offset + limit greater than 10000')
+    def _get(self, document_config, schema, **kwargs):
+        return read_document(self.request, document_config, schema, **kwargs)
 
-        # the coverages are not indexed (see scripts/es/fill_index.py): their
-        # listing reads the database, whatever the search parameters
-        if doc_type in search_mappings and advanced_search.contains_search_params(
-            self.request.GET
-        ):
-            # search with ElasticSearch
-            search_documents = advanced_search.get_search_documents(
-                self.request.GET, meta_params, doc_type
-            )
-        else:
-            # if no search parameters, directly load documents from the db
-            search_documents = partial(self._search_documents_paginated, meta_params)
-
-        return get_documents(documents_config, meta_params, search_documents)
-
-    def _search_documents_paginated(self, meta_params, base_query, base_total_query):
-        """Return a batch of document ids with the given `offset` and `limit`."""
-        offset = meta_params['offset']
-        limit = meta_params['limit']
-        documents = (
-            base_query.options(
-                load_only(Document.document_id, Document.type, Document.version)
-            )
-            .slice(offset, offset + limit)
-            .limit(limit)
-            .all()
-        )
-        total = base_total_query.count()
-
-        document_ids = [doc.document_id for doc in documents]
-
-        return document_ids, total
-
-    def _get(
-        self,
-        document_config,
-        schema,
-        clazz_locale=None,
-        adapt_schema=None,
-        include_maps=False,
-        include_areas=True,
-        set_custom_associations=None,
-        set_custom_fields=None,
-        custom_cache_key=None,
-    ):
-        id = self.request.validated['id']
-        lang = self.request.validated.get('lang')
-        editing_view = self.request.GET.get('e', '0') != '0'
-        cook = self.request.validated.get('cook')
-
-        if cook and lang:
-            raise HTTPBadRequest("You can't use cook service with explicit lang query")
-
-        if cook and editing_view:
-            raise HTTPBadRequest("You can't use cook service with edition mode")
-
-        if cook:
-            lang = cook
-
-        cache = cache_document_cooked if cook else cache_document_detail
-
-        def create_response():
-            return self._get_in_lang(
-                id,
-                lang,
-                document_config.clazz,
-                schema,
-                editing_view,
-                clazz_locale,
-                adapt_schema,
-                include_maps,
-                include_areas,
-                set_custom_associations,
-                set_custom_fields,
-                cook_locale=cook,
-            )
-
-        if not editing_view:
-            cache_key = get_cache_key(
-                id,
-                lang,
-                document_type=document_config.document_type,
-                custom_cache_key=custom_cache_key,
-            )
-
-            if cache_key:
-                # set and check the etag: if the etag value provided in the
-                # request equals the current etag, return 'NotModified'
-                etag_cache(self.request, cache_key)
-
-                return get_or_create(cache, cache_key, create_response)
-
-        # don't cache if requesting a document for editing
-        return create_response()
-
-    def _get_in_lang(
-        self,
-        id,
-        lang,
-        clazz,
-        schema,
-        editing_view,
-        clazz_locale=None,
-        adapt_schema=None,
-        include_maps=True,
-        include_areas=True,
-        set_custom_associations=None,
-        set_custom_fields=None,
-        cook_locale=False,
-    ):
-
-        if cook_locale:
-            document = self._get_document_for_cooking(
-                clazz, id, clazz_locale=clazz_locale, lang=lang
-            )
-        else:
-            document = self._get_document(
-                clazz, id, clazz_locale=clazz_locale, lang=lang
-            )
-
-        if document.redirects_to:
-            return {
-                'redirects_to': document.redirects_to,
-                'available_langs': get_available_langs(document.redirects_to),
-            }
-
-        set_available_langs([document])
-
-        self._set_associations(document, lang, editing_view)
-
-        if not editing_view and set_custom_associations:
-            set_custom_associations(document, lang)
-
-        if not editing_view and include_areas:
-            self._set_areas(document, lang)
-
-        if include_maps:
-            self._set_maps(document, lang)
-
-        if set_custom_fields:
-            set_custom_fields(document)
-
-        if adapt_schema:
-            schema = adapt_schema(schema, document)
-
-        doc_dict = to_json_dict(
-            document, schema, with_special_locales_attrs=True, cook_locale=cook_locale
-        )
-        doc_dict['license'] = get_license(document.type, doc_dict)
-        return doc_dict
-
-    def _set_associations(self, document, lang, editing_view):
-        document.associations = doc_associations.get_associations(
-            document, lang, editing_view
-        )
-
-    def _set_maps(self, document, lang):
-        topo_maps = get_maps(document, lang)
-        document.maps = [to_json_dict(m, topo_map_listing_schema) for m in topo_maps]
-
-    def _set_areas(self, document, lang):
-        areas = get_areas(document, lang)
-        document.areas = [to_json_dict(m, area_listing_schema) for m in areas]
+    def _get_in_lang(self, id, lang, clazz, schema, editing_view, **kwargs):
+        return document_in_lang(id, lang, clazz, schema, editing_view, **kwargs)
 
     def _collection_post(
         self, schema, before_add=None, after_add=None, allow_anonymous=False
@@ -808,3 +638,194 @@ def check_versions(document, document_in):
     if document.geometry and document_in.geometry:
         if document.geometry.version != document_in.geometry.version:
             raise HTTPConflict('version of geometry has changed')
+
+
+# The logic of the document reads, as functions (#2512).
+
+
+# TODO: remove doc_type, it's in documents_config
+def collection_get(request, doc_type, documents_config):
+    """Return a page of the documents of a type, searched or from the database."""
+    validated = request.validated
+    meta_params = {
+        'offset': validated.get('offset', 0),
+        'limit': min(validated.get('limit', LIMIT_DEFAULT), LIMIT_MAX),
+        'lang': validated.get('lang'),
+    }
+
+    if meta_params['offset'] + meta_params['limit'] > ES_MAX_RESULT_WINDOW:
+        # ES does not process requests where offset + limit is greater
+        # than 10000, see:
+        # https://www.elastic.co/guide/en/elasticsearch/reference/master/search-request-from-size.html
+        raise HTTPBadRequest('offset + limit greater than 10000')
+
+    # the coverages are not indexed (see scripts/es/fill_index.py): their
+    # listing reads the database, whatever the search parameters
+    if doc_type in search_mappings and advanced_search.contains_search_params(
+        request.GET
+    ):
+        # search with ElasticSearch
+        search_documents = advanced_search.get_search_documents(
+            request.GET, meta_params, doc_type
+        )
+    else:
+        # if no search parameters, directly load documents from the db
+        search_documents = partial(search_documents_paginated, meta_params)
+
+    return get_documents(documents_config, meta_params, search_documents)
+
+
+def search_documents_paginated(meta_params, base_query, base_total_query):
+    """Return a batch of document ids with the given `offset` and `limit`."""
+    offset = meta_params['offset']
+    limit = meta_params['limit']
+    documents = (
+        base_query.options(
+            load_only(Document.document_id, Document.type, Document.version)
+        )
+        .slice(offset, offset + limit)
+        .limit(limit)
+        .all()
+    )
+    total = base_total_query.count()
+
+    document_ids = [doc.document_id for doc in documents]
+
+    return document_ids, total
+
+
+def read_document(
+    request,
+    document_config,
+    schema,
+    clazz_locale=None,
+    adapt_schema=None,
+    include_maps=False,
+    include_areas=True,
+    set_custom_associations=None,
+    set_custom_fields=None,
+    custom_cache_key=None,
+):
+    """Return a document in a language, cached, with its associations."""
+    id = request.validated['id']
+    lang = request.validated.get('lang')
+    editing_view = request.GET.get('e', '0') != '0'
+    cook = request.validated.get('cook')
+
+    if cook and lang:
+        raise HTTPBadRequest("You can't use cook service with explicit lang query")
+
+    if cook and editing_view:
+        raise HTTPBadRequest("You can't use cook service with edition mode")
+
+    if cook:
+        lang = cook
+
+    cache = cache_document_cooked if cook else cache_document_detail
+
+    def create_response():
+        return document_in_lang(
+            id,
+            lang,
+            document_config.clazz,
+            schema,
+            editing_view,
+            clazz_locale,
+            adapt_schema,
+            include_maps,
+            include_areas,
+            set_custom_associations,
+            set_custom_fields,
+            cook_locale=cook,
+        )
+
+    if not editing_view:
+        cache_key = get_cache_key(
+            id,
+            lang,
+            document_type=document_config.document_type,
+            custom_cache_key=custom_cache_key,
+        )
+
+        if cache_key:
+            # set and check the etag: if the etag value provided in the
+            # request equals the current etag, return 'NotModified'
+            etag_cache(request, cache_key)
+
+            return get_or_create(cache, cache_key, create_response)
+
+    # don't cache if requesting a document for editing
+    return create_response()
+
+
+def document_in_lang(
+    id,
+    lang,
+    clazz,
+    schema,
+    editing_view,
+    clazz_locale=None,
+    adapt_schema=None,
+    include_maps=True,
+    include_areas=True,
+    set_custom_associations=None,
+    set_custom_fields=None,
+    cook_locale=False,
+):
+    """Return a document in a language, with its associations, areas and maps."""
+    if cook_locale:
+        document = DocumentRest._get_document_for_cooking(
+            clazz, id, clazz_locale=clazz_locale, lang=lang
+        )
+    else:
+        document = get_document(clazz, id, clazz_locale=clazz_locale, lang=lang)
+
+    if document.redirects_to:
+        return {
+            'redirects_to': document.redirects_to,
+            'available_langs': get_available_langs(document.redirects_to),
+        }
+
+    set_available_langs([document])
+
+    set_associations(document, lang, editing_view)
+
+    if not editing_view and set_custom_associations:
+        set_custom_associations(document, lang)
+
+    if not editing_view and include_areas:
+        set_areas(document, lang)
+
+    if include_maps:
+        set_maps(document, lang)
+
+    if set_custom_fields:
+        set_custom_fields(document)
+
+    if adapt_schema:
+        schema = adapt_schema(schema, document)
+
+    doc_dict = to_json_dict(
+        document, schema, with_special_locales_attrs=True, cook_locale=cook_locale
+    )
+    doc_dict['license'] = get_license(document.type, doc_dict)
+    return doc_dict
+
+
+def set_associations(document, lang, editing_view):
+    """Set the associations of a document."""
+    document.associations = doc_associations.get_associations(
+        document, lang, editing_view
+    )
+
+
+def set_maps(document, lang):
+    """Set the maps of a document."""
+    topo_maps = get_maps(document, lang)
+    document.maps = [to_json_dict(m, topo_map_listing_schema) for m in topo_maps]
+
+
+def set_areas(document, lang):
+    """Set the areas of a document."""
+    areas = get_areas(document, lang)
+    document.areas = [to_json_dict(m, area_listing_schema) for m in areas]
