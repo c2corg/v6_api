@@ -19,6 +19,11 @@
       "editor": "null",
       "isbn": "null",
       "langs": "null",
+      "license": {
+        "attribution_url": "str",
+        "id": "str",
+        "url": "str"
+      },
       "locales": [
         {
           "description": "null",

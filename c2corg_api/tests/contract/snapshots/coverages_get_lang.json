@@ -11,6 +11,7 @@
       "geom_detail": "str",
       "version": "int"
     },
+    "license": "null",
     "locales": [
       {
         "description": "null",

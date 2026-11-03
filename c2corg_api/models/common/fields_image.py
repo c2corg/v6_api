@@ -22,7 +22,7 @@ DEFAULT_FIELDS = [
 
 DEFAULT_REQUIRED = ['locales', 'image_type']
 
-LISTING_FIELDS = ['locales.title', 'geometry.geom', 'filename', 'author']
+LISTING_FIELDS = ['locales.title', 'geometry.geom', 'filename', 'author', 'image_type']
 
 fields_image = {
     'fields': DEFAULT_FIELDS,

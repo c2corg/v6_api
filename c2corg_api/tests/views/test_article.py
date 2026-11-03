@@ -30,6 +30,13 @@ class TestArticleRest(BaseDocumentTestRest):
         doc = body['documents'][0]
         assert 'geometry' not in doc
 
+        # the licence depends on the article type
+        licenses = {
+            doc['document_id']: doc['license']['id'] for doc in body['documents']
+        }
+        assert licenses[self.article1.document_id] == 'CC-BY-SA-3.0'
+        assert licenses[self.article4.document_id] == 'CC-BY-NC-ND-3.0'
+
     def test_get_collection_paginated(self):
         self.app.get('/articles?offset=invalid', status=400)
 

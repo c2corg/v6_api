@@ -126,6 +126,10 @@ class TestUserProfileRest(BaseDocumentTestRest):
     def test_get(self):
         body = self.get(self.profile1, user='contributor', check_title=False)
         self._assert_geometry(body)
+        assert body['license']['id'] == 'CC-BY-NC-ND-3.0'
+        assert body['license']['attribution_url'].startswith(
+            f'http://localhost:6553/profiles/history/{self.profile1.document_id}/'
+        )
         assert body['locales'][0].get('title') is None
         assert 'maps' not in body
         assert 'username' not in body

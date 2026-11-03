@@ -67,6 +67,11 @@
             "height_diff_up": "null",
             "hiking_rating": "null",
             "img_count": "int",
+            "license": {
+              "attribution_url": "str",
+              "id": "str",
+              "url": "str"
+            },
             "locales": [
               {
                 "lang": "str",
@@ -113,6 +118,11 @@
             "geom": "str",
             "version": "int"
           },
+          "license": {
+            "attribution_url": "str",
+            "id": "str",
+            "url": "str"
+          },
           "locales": [
             {
               "lang": "str",
@@ -152,6 +162,11 @@
     "height_diff_up": "int",
     "hiking_mtb_exposition": "null",
     "hiking_rating": "null",
+    "license": {
+      "attribution_url": "str",
+      "id": "str",
+      "url": "str"
+    },
     "lift_access": "null",
     "locales": [
       {

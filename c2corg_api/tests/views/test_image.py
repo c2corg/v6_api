@@ -239,6 +239,15 @@ class TestImageRest(BaseTestImage):
         assert 'filename' in doc
         assert 'file_size' not in doc
 
+        # the image type is in the listing, to tell the licence
+        docs = {doc['document_id']: doc for doc in body['documents']}
+        image = docs[self.image.document_id]
+        assert image['image_type'] == 'collaborative'
+        assert image['license']['id'] == 'CC-BY-SA-3.0'
+        image4 = docs[self.image4.document_id]
+        assert image4['image_type'] == 'personal'
+        assert image4['license']['id'] == 'CC-BY-NC-ND-3.0'
+
     def test_get_collection_paginated(self):
         self.app.get('/images?offset=invalid', status=400)
 
@@ -284,6 +293,10 @@ class TestImageRest(BaseTestImage):
     def test_get(self):
         body = self.get(self.image)
         self._assert_geometry(body)
+        assert body['license']['id'] == 'CC-BY-SA-3.0'
+        assert body['license']['attribution_url'].startswith(
+            f'http://localhost:6553/images/history/{self.image.document_id}/'
+        )
         assert 'maps' not in body
         locale_en = self.get_locale('en', body.get('locales'))
         assert 1 == locale_en.get('topic_id')

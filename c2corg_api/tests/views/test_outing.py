@@ -146,6 +146,7 @@ class TestOutingRest(BaseDocumentTestRest):
         assert body.get('activities') == self.outing.activities
         self._assert_geometry(body)
         assert 'frequentation' in body
+        assert body['license']['id'] == 'CC-BY-NC-ND-3.0'
         assert 'maps' not in body
 
         assert 'associations' in body

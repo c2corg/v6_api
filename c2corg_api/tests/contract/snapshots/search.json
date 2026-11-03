@@ -67,6 +67,11 @@
           "height_diff_up": "int",
           "hiking_mtb_exposition": "null",
           "hiking_rating": "null",
+          "license": {
+            "attribution_url": "str",
+            "id": "str",
+            "url": "str"
+          },
           "locales": [
             {
               "lang": "str",
@@ -114,6 +119,11 @@
           "geometry": {
             "geom": "str",
             "version": "int"
+          },
+          "license": {
+            "attribution_url": "str",
+            "id": "str",
+            "url": "str"
           },
           "locales": [
             {
