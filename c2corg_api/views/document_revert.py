@@ -43,7 +43,7 @@ from c2corg_api.models.xreport import (
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, OneOf
 from c2corg_api.views.area import update_associations
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import update_document
 from c2corg_api.views.resource import write
 from c2corg_api.views.route import update_linked_attributes
 from c2corg_api.views.waypoint import update_linked_route_titles
@@ -140,7 +140,7 @@ def revert_document(request):
 
     request.validated['message'] = f'Revert to version {version_id}'
 
-    update_types = DocumentRest.update_document(
+    update_types = update_document(
         document,
         document_in,
         request,

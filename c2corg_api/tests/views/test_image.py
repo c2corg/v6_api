@@ -25,7 +25,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest, BaseTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version
 
 
 class BaseTestImage(BaseDocumentTestRest):
@@ -78,7 +78,7 @@ class BaseTestImage(BaseDocumentTestRest):
             user_id,
         )
 
-        DocumentRest.create_new_version(self.image, user_id)
+        create_new_version(self.image, user_id)
 
         self.image_version = (
             self.session.query(DocumentVersion)
@@ -111,10 +111,8 @@ class BaseTestImage(BaseDocumentTestRest):
         )
         self.session.add(self.image4)
         self.session.flush()
-        DocumentRest.create_new_version(
-            self.image3, self.global_userids['contributor2']
-        )
-        DocumentRest.create_new_version(self.image4, user_id)
+        create_new_version(self.image3, self.global_userids['contributor2'])
+        create_new_version(self.image4, user_id)
 
         self._add_association(
             Association.create(parent_document=self.image, child_document=self.image2),

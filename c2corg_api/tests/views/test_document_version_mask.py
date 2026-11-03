@@ -5,7 +5,7 @@ from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version, update_version
 
 
 class BaseMaskTest(BaseTestRest):
@@ -22,13 +22,13 @@ class BaseMaskTest(BaseTestRest):
         self.session.add(self.route)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.route, contributor_id)
+        create_new_version(self.route, contributor_id)
         self.session.flush()
 
         self.route.activities = ['skitouring', 'hiking']
         self.session.flush()
 
-        DocumentRest.update_version(
+        update_version(
             self.route, contributor_id, 'new version', [UpdateType.FIGURES], []
         )
         self.session.flush()

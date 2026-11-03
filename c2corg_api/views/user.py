@@ -28,7 +28,7 @@ from c2corg_api.security.roles import (
 from c2corg_api.views import (
     to_json_dict,
 )
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version
 from c2corg_api.views.resource import write
 from c2corg_api.views.validation import validate_required_json_string
 
@@ -265,7 +265,7 @@ def register_user(request):
         raise HTTPInternalServerError('Error persisting user') from e
 
     # also create a version for the profile
-    DocumentRest.create_new_version(user.profile, user.id)
+    create_new_version(user.profile, user.id)
 
     # The user needs validation
     email_service = get_email_service(request)

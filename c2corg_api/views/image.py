@@ -137,7 +137,7 @@ def insert_image(request, document_in):
 def before_image_update(request, document, document_in):
     """Check filename updates and publish them on the image backend.
 
-    Callback sent to DocumentRest.update_document()
+    Callback sent to update_document()
     check update of filename, and publish on image backend if needed.
     """
     old_filename = document.filename

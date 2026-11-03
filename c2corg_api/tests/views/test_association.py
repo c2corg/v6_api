@@ -11,7 +11,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.models.xreport import Xreport, XreportLocale
 from c2corg_api.tests.views import BaseTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version
 
 
 class TestAssociationRest(BaseTestRest):
@@ -739,7 +739,7 @@ class TestAssociationRest(BaseTestRest):
         )
         self.session.add(self.image1)
         self.session.flush()
-        DocumentRest.create_new_version(self.image1, user_id)
+        create_new_version(self.image1, user_id)
 
         self.article1 = Article(
             categories=['site_info'],
@@ -749,7 +749,7 @@ class TestAssociationRest(BaseTestRest):
         )
         self.session.add(self.article1)
         self.session.flush()
-        DocumentRest.create_new_version(self.article1, user_id)
+        create_new_version(self.article1, user_id)
 
         self.article2 = Article(
             categories=['site_info'],
@@ -759,7 +759,7 @@ class TestAssociationRest(BaseTestRest):
         )
         self.session.add(self.article2)
         self.session.flush()
-        DocumentRest.create_new_version(self.article2, user_id)
+        create_new_version(self.article2, user_id)
 
         self.report1 = Xreport(
             event_activity='alpine_climbing',
@@ -767,7 +767,7 @@ class TestAssociationRest(BaseTestRest):
         )
         self.session.add(self.report1)
         self.session.flush()
-        DocumentRest.create_new_version(self.report1, user_id)
+        create_new_version(self.report1, user_id)
 
         self.outing = Outing(
             activities=['skitouring'],

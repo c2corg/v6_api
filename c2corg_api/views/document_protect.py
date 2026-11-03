@@ -6,7 +6,7 @@ from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.document import Document, UpdateType
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import update_version
 from c2corg_api.views.resource import write
 
 log = logging.getLogger(__name__)
@@ -46,9 +46,7 @@ def protect_document(request):
     document.protected = True
 
     user_id = request.authenticated_userid
-    DocumentRest.update_version(
-        document, user_id, 'Protected document', [UpdateType.FIGURES], []
-    )
+    update_version(document, user_id, 'Protected document', [UpdateType.FIGURES], [])
 
     update_cache_version_direct(document_id)
 
@@ -76,9 +74,7 @@ def unprotect_document(request):
     document.protected = False
 
     user_id = request.authenticated_userid
-    DocumentRest.update_version(
-        document, user_id, 'Unprotected document', [UpdateType.FIGURES], []
-    )
+    update_version(document, user_id, 'Unprotected document', [UpdateType.FIGURES], [])
 
     update_cache_version_direct(document_id)
 

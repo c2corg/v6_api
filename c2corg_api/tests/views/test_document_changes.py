@@ -8,7 +8,7 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.tests.views.test_feed import get_document_ids
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version
 
 
 class TestChangesDocumentRest(BaseTestRest):
@@ -33,7 +33,7 @@ class TestChangesDocumentRest(BaseTestRest):
         )
         self.session.add(self.waypoint1)
         self.session.flush()
-        DocumentRest.create_new_version(self.waypoint1, contributor_id)
+        create_new_version(self.waypoint1, contributor_id)
         self.session.flush()
 
         self.waypoint2 = Waypoint(
@@ -51,7 +51,7 @@ class TestChangesDocumentRest(BaseTestRest):
         )
         self.session.add(self.waypoint2)
         self.session.flush()
-        DocumentRest.create_new_version(self.waypoint2, contributor_id)
+        create_new_version(self.waypoint2, contributor_id)
         self.session.flush()
 
         self.waypoint3 = Waypoint(
@@ -69,7 +69,7 @@ class TestChangesDocumentRest(BaseTestRest):
         )
         self.session.add(self.waypoint3)
         self.session.flush()
-        DocumentRest.create_new_version(self.waypoint3, contributor_id)
+        create_new_version(self.waypoint3, contributor_id)
         self.session.flush()
 
         self.route1 = Route(
@@ -88,7 +88,7 @@ class TestChangesDocumentRest(BaseTestRest):
         )
         self.session.add(self.route1)
         self.session.flush()
-        DocumentRest.create_new_version(self.route1, contributor_id)
+        create_new_version(self.route1, contributor_id)
         self.session.flush()
 
         self.outing = Outing(
@@ -102,7 +102,7 @@ class TestChangesDocumentRest(BaseTestRest):
         )
         self.session.add(self.outing)
         self.session.flush()
-        DocumentRest.create_new_version(self.outing, contributor_id)
+        create_new_version(self.outing, contributor_id)
         self.session.flush()
 
         self.profile2 = UserProfile(categories=['amateur'])

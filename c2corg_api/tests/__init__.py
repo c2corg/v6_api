@@ -166,10 +166,10 @@ def _add_global_test_data(session):
 
     # like a registration (UserRegistrationRest.post), give the profiles their
     # first version, so that they can be updated
-    from c2corg_api.views.document import DocumentRest
+    from c2corg_api.views.document import create_new_version
 
     for user in users:
-        DocumentRest.create_new_version(user.profile, user.id)
+        create_new_version(user.profile, user.id)
 
     domain = 'www.somewhere.com'
     sso_key = SsoKey(domain=domain, key=domain)

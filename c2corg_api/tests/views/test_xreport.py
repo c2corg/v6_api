@@ -23,7 +23,7 @@ from c2corg_api.models.xreport import (
 )
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version
 
 
 class TestXreportRest(BaseDocumentTestRest):
@@ -820,7 +820,7 @@ class TestXreportRest(BaseDocumentTestRest):
         self.session.flush()
 
         user_id = self.global_userids['contributor']
-        DocumentRest.create_new_version(self.xreport1, user_id)
+        create_new_version(self.xreport1, user_id)
         self.xreport1_version = (
             self.session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.xreport1.document_id)

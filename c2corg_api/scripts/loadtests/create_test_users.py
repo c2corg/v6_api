@@ -68,7 +68,7 @@ def main(argv=sys.argv):
             session.flush()
 
             # also create a version for the profile
-            # code from DocumentRest.create_new_version
+            # code from views.document.create_new_version
             archive = user.profile.to_archive()
             archive_locales = user.profile.get_archive_locales()
             archive_geometry = user.profile.get_archive_geometry()
