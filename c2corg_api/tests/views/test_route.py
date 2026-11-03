@@ -28,7 +28,7 @@ from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version
 from c2corg_api.views.route import (
     _find_starting_and_ending_points,
     _pt_rating,
@@ -1212,7 +1212,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.session.flush()
 
         user_id = self.global_userids['contributor']
-        DocumentRest.create_new_version(self.route, user_id)
+        create_new_version(self.route, user_id)
         self.route_version = (
             self.session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.route.document_id)
@@ -1264,7 +1264,7 @@ class TestRouteRest(BaseDocumentTestRest):
         )
         self.session.add(self.route2)
         self.session.flush()
-        DocumentRest.create_new_version(self.route2, user_id)
+        create_new_version(self.route2, user_id)
 
         self.route3 = Route(
             activities=['skitouring'],
@@ -1292,7 +1292,7 @@ class TestRouteRest(BaseDocumentTestRest):
         self.route3.geometry = DocumentGeometry(geom='SRID=3857;POINT(0 0)')
         self.session.add(self.route3)
         self.session.flush()
-        DocumentRest.create_new_version(self.route3, user_id)
+        create_new_version(self.route3, user_id)
 
         self.route4 = Route(
             activities=['rock_climbing'],

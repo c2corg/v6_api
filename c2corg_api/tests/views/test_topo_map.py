@@ -14,7 +14,7 @@ from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version
 
 
 class TestTopoMapRest(BaseDocumentTestRest):
@@ -401,7 +401,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         self.session.flush()
 
         user_id = self.global_userids['contributor']
-        DocumentRest.create_new_version(self.map1, user_id)
+        create_new_version(self.map1, user_id)
 
         self.map2 = TopoMap(editor='IGN', scale='25000', code='3432OT')
         self.session.add(self.map2)

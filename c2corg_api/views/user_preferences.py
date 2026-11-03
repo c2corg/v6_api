@@ -10,12 +10,10 @@ from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.document import AssociatedDocument
 from c2corg_api.schemas.types import Bool, OneOf, Seq
 from c2corg_api.views import (
-    restricted_json_view,
-    restricted_view,
     set_best_locale,
     to_json_dict,
 )
-from c2corg_api.views.validation import validate_preferred_lang_param
+from c2corg_api.views.resource import write
 
 
 class FilterPreferencesSchema(Schema):
@@ -41,7 +39,11 @@ def get_user(request, with_area_locales=True):
     return DBSession.get(User, user_id, options=[area_joinedload])
 
 
-@restricted_json_view(validators=[body_validator(FilterPreferencesSchema)])
+@write(
+    validators=[body_validator(FilterPreferencesSchema)],
+    permission='authenticated',
+    json=True,
+)
 def update_preferences(request):
     user = get_user(request, with_area_locales=False)
 
@@ -67,7 +69,6 @@ def update_preferences(request):
     return {}
 
 
-@restricted_view(validators=[validate_preferred_lang_param])
 def read_preferences(request):
     """Get the filter preferences of the authenticated user.
 

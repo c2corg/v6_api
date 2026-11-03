@@ -34,7 +34,7 @@ from c2corg_api.search.advanced_search import (
     get_all_filtered_docs,
     get_filtered_docs_page,
 )
-from c2corg_api.views import restricted_json_view, to_json_dict
+from c2corg_api.views import to_json_dict
 from c2corg_api.views.document import (
     LIMIT_DEFAULT,
     NUM_RECENT_OUTINGS,
@@ -55,17 +55,11 @@ from c2corg_api.views.document_schemas import (
     waypoint_schema_adaptor,
 )
 from c2corg_api.views.document_version import document_version
-from c2corg_api.views.resource import view
+from c2corg_api.views.resource import write
 from c2corg_api.views.route import set_route_title_prefix, update_pt_rating
 from c2corg_api.views.validation import (
     validate_associations,
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-    validate_version_id,
 )
 
 log = logging.getLogger(__name__)
@@ -87,12 +81,14 @@ validate_associations_update = functools.partial(
 )
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(WaypointCreateSchema),
         validate_waypoint_create,
         validate_associations_create,
     ],
+    permission='authenticated',
+    json=True,
 )
 def create_waypoint(request):
     """
@@ -127,13 +123,15 @@ def create_waypoint(request):
     return create_document(request, waypoint_schema)
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(WaypointUpdateSchema),
         validate_id,
         validate_waypoint_update,
         validate_associations_update,
     ],
+    permission='authenticated',
+    json=True,
 )
 def update_waypoint(request):
     """
@@ -185,7 +183,6 @@ def update_waypoint(request):
     )
 
 
-@view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_waypoints(request):
     """Get a list of documents, optionally matching search filters.
 
@@ -252,7 +249,6 @@ def list_waypoints(request):
     return collection_get(request, WAYPOINT_TYPE, waypoint_documents_config)
 
 
-@view(validators=[validate_id, validate_lang_param, validate_cook_param])
 def get_waypoint(request):
     """
     Get a single document.
@@ -426,7 +422,6 @@ def _get_select_children(waypoint):
     ).cte('select_all_waypoints')
 
 
-@view(validators=[validate_id, validate_lang, validate_version_id])
 def get_waypoint_version(request):
     return document_version(
         request,
@@ -438,12 +433,10 @@ def get_waypoint_version(request):
     )
 
 
-@view(validators=[validate_id, validate_lang])
 def get_waypoint_info(request):
     return document_info(request, waypoint_documents_config)
 
 
-@view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_reachable_waypoints(request):
     """Return the reachable waypoints and their total.
 

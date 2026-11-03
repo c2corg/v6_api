@@ -13,8 +13,7 @@ from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.route import ROUTE_TYPE, RouteLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.views import etag_cache
-from c2corg_api.views.resource import resource, view
-from c2corg_api.views.validation import create_int_validator, validate_document_type
+from c2corg_api.views.validation import create_int_validator
 
 log = logging.getLogger(__name__)
 
@@ -28,11 +27,6 @@ PAGES_PER_SITEMAP = 45000
 validate_page = create_int_validator('i')
 
 
-@resource(
-    collection_path='/sitemaps',
-    path='/sitemaps/{doc_type}/{i}',
-)
-@view()
 def list_sitemaps(request):
     """Return the information needed to generate a sitemap index file.
 
@@ -63,7 +57,6 @@ def list_sitemaps(request):
     return get_or_create(cache_sitemap, cache_key, _get_sitemap_index)
 
 
-@view(validators=[validate_page, validate_document_type])
 def read_sitemap(request):
     """Return the information to build a sitemap page.
 

@@ -25,7 +25,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version
 
 
 class TestOutingRest(BaseDocumentTestRest):
@@ -1402,7 +1402,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self.session.flush()
 
         user_id = self.global_userids['contributor']
-        DocumentRest.create_new_version(self.outing, user_id)
+        create_new_version(self.outing, user_id)
         self.outing_version = (
             self.session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.outing.document_id)
@@ -1431,7 +1431,7 @@ class TestOutingRest(BaseDocumentTestRest):
         )
         self.session.add(self.outing2)
         self.session.flush()
-        DocumentRest.create_new_version(self.outing2, user_id)
+        create_new_version(self.outing2, user_id)
 
         self.outing3 = Outing(
             activities=['skitouring'],

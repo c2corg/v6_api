@@ -18,7 +18,7 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint, WaypointLocale
 from c2corg_api.tests import BaseTestCase
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version
 
 
 class TestCacheVersion(BaseTestCase):
@@ -227,7 +227,7 @@ class TestCacheVersion(BaseTestCase):
         self.session.add_all([waypoint, user_profile, user])
         self.session.flush()
 
-        DocumentRest.create_new_version(waypoint, user.id)
+        create_new_version(waypoint, user.id)
 
         update_cache_version(user_profile)
         cache_version_user_profile = self.session.get(

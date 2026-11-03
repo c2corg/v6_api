@@ -8,16 +8,10 @@ from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.views.feed import get_params
-from c2corg_api.views.resource import view
-from c2corg_api.views.validation import (
-    validate_simple_token_pagination,
-    validate_user_id_not_required,
-)
 
 # Unique class for returning history of changes in documents.
 
 
-@view(validators=[validate_simple_token_pagination, validate_user_id_not_required])
 def read_document_changes(request):
     """Get the public document changes feed.
 

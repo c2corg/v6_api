@@ -194,13 +194,8 @@ def include_document_type(
 
 def handler_arguments(function):
     """Return the validators, permission and content types of a write function."""
-    # as declared by its @view decorator (views.resource.view), so that the
-    # FastAPI route checks exactly what Pyramid checked
-    [arguments] = function.__views__
-    content_type = arguments.get('content_type')
-    if isinstance(content_type, str):
-        content_type = [content_type]
-    return arguments.get('validators', []), arguments.get('permission'), content_type
+    # as declared by its @write decorator (views.resource.write)
+    return function.checks
 
 
 def include_handler_write(

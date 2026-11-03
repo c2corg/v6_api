@@ -8,13 +8,10 @@ from c2corg_api.models.document import DOCUMENT_TYPE, DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.views import etag_cache
 from c2corg_api.views.document_version import serialize_version
-from c2corg_api.views.resource import view
-from c2corg_api.views.validation import validate_id, validate_lang
 
 # Unique class for returning history of a document.
 
 
-@view(validators=[validate_id, validate_lang])
 def read_document_history(request):
     document_id = request.validated['id']
     lang = request.validated['lang']

@@ -19,7 +19,6 @@ from c2corg_api.schemas.coverage import (
     CoverageUpdateSchema,
     coverage_schema,
 )
-from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
     collection_get,
     create_document,
@@ -29,14 +28,10 @@ from c2corg_api.views.document import (
     read_document,
 )
 from c2corg_api.views.document_schemas import coverage_documents_config
-from c2corg_api.views.resource import view
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     validate_associations,
-    validate_cook_param,
     validate_id,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
 )
 
 log = logging.getLogger(__name__)
@@ -51,35 +46,37 @@ validate_associations_update = functools.partial(
 )
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(CoverageCreateSchema),
         validate_coverage_create,
         validate_associations_create,
     ],
+    permission='authenticated',
+    json=True,
 )
 def create_coverage(request):
     return create_document(request, coverage_schema, allow_anonymous=False)
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(CoverageUpdateSchema),
         validate_id,
         validate_coverage_update,
         validate_associations_update,
     ],
+    permission='authenticated',
+    json=True,
 )
 def update_coverage(request):
     return put_document(request, Coverage, coverage_schema)
 
 
-@view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_coverages(request):
     return collection_get(request, COVERAGE_TYPE, coverage_documents_config)
 
 
-@view(validators=[validate_id, validate_lang_param, validate_cook_param])
 def get_coverage_document(request):
     return read_document(
         request, coverage_documents_config, coverage_schema, include_areas=False
@@ -98,7 +95,6 @@ def validate_lon_lat(request, **kwargs):
             request.errors.add('querystring', key, 'invalid ' + key)
 
 
-@view(validators=[validate_lon_lat])
 def find_coverage(request):
     """Return the coverage from a longitude and a latitude."""
     lon = request.validated['lon']
@@ -117,7 +113,7 @@ def validate_geom_detail(request, **kwargs):
         request.errors.add('body', 'geom_detail', 'invalid geom_detail')
 
 
-@view(validators=[validate_geom_detail])
+@write(validators=[validate_geom_detail], json=False)
 def coverage_of_a_polygon(request):
     """Return the coverages for a geom_detail polygon.
 

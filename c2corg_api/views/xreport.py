@@ -17,8 +17,8 @@ from c2corg_api.schemas.xreport import (
     xreport_schema,
     xreport_without_personal_schema,
 )
-from c2corg_api.views import restricted_json_view, set_private_cache_header
 from c2corg_api.views import set_creator as set_creator_on_documents
+from c2corg_api.views import set_private_cache_header
 from c2corg_api.views.document import (
     collection_get,
     create_document,
@@ -30,17 +30,11 @@ from c2corg_api.views.document import (
 from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import xreport_documents_config
 from c2corg_api.views.document_version import document_version
-from c2corg_api.views.resource import view
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     is_associated_user,
     validate_associations,
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-    validate_version_id,
 )
 
 validate_xreport_create = make_validator_create(fields_xreport.get('required'))
@@ -53,24 +47,28 @@ validate_associations_update = functools.partial(
 )
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(XreportCreateSchema),
         validate_xreport_create,
         validate_associations_create,
     ],
+    permission='authenticated',
+    json=True,
 )
 def create_xreport(request):
     return create_document(request, xreport_schema, allow_anonymous=True)
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(XreportUpdateSchema),
         validate_id,
         validate_xreport_update,
         validate_associations_update,
     ],
+    permission='authenticated',
+    json=True,
 )
 def update_xreport(request):
     if not _has_permission(request, request.validated['id']):
@@ -79,12 +77,10 @@ def update_xreport(request):
     return put_document(request, Xreport, xreport_schema)
 
 
-@view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_xreports(request):
     return collection_get(request, XREPORT_TYPE, xreport_documents_config)
 
 
-@view(validators=[validate_id, validate_lang_param, validate_cook_param])
 def get_xreport(request):
     set_private_cache_header(request)
     if not _has_permission(request, request.validated['id']):
@@ -131,7 +127,6 @@ def _has_permission(request, xreport_id):
     return False
 
 
-@view(validators=[validate_id, validate_lang, validate_version_id])
 def get_xreport_version(request):
     return document_version(
         request,
@@ -142,7 +137,6 @@ def get_xreport_version(request):
     )
 
 
-@view(validators=[validate_id, validate_lang])
 def get_xreport_info(request):
     return document_info(request, xreport_documents_config)
 

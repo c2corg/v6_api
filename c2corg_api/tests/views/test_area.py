@@ -17,7 +17,7 @@ from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version
 
 
 class TestAreaRest(BaseDocumentTestRest):
@@ -492,7 +492,7 @@ class TestAreaRest(BaseDocumentTestRest):
         self.session.flush()
 
         user_id = self.global_userids['contributor']
-        DocumentRest.create_new_version(self.area1, user_id)
+        create_new_version(self.area1, user_id)
 
         self.area1_version = (
             self.session.query(DocumentVersion)

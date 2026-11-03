@@ -14,7 +14,7 @@ from c2corg_api.models.user import User
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, Str
 from c2corg_api.security.discourse_client import get_discourse_client
-from c2corg_api.views import restricted_view
+from c2corg_api.views.resource import write
 
 log = logging.getLogger(__name__)
 
@@ -59,8 +59,10 @@ def validate_topic_create(request, **kwargs):
 
 
 # only collection_post: it creates the topic in Discourse
-@restricted_view(
+@write(
     validators=[body_validator(TopicCreateSchema), validate_topic_create],
+    permission='authenticated',
+    json=False,
 )
 def create_topic(request):
     settings = request.registry.settings

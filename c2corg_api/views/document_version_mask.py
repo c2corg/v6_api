@@ -9,7 +9,7 @@ from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, OneOf
-from c2corg_api.views import restricted_json_view
+from c2corg_api.views.resource import write
 
 log = logging.getLogger(__name__)
 
@@ -71,9 +71,10 @@ def _get_version(request):
     return version
 
 
-@restricted_json_view(
-    permission='moderator',
+@write(
     validators=[body_validator(MaskSchema), validate_version],
+    permission='moderator',
+    json=True,
 )
 def mask_version(request):
     """Mask the given document version.
@@ -97,9 +98,10 @@ def mask_version(request):
     return {}
 
 
-@restricted_json_view(
-    permission='moderator',
+@write(
     validators=[body_validator(MaskSchema), validate_version],
+    permission='moderator',
+    json=True,
 )
 def unmask_version(request):
     """Unmask the given version.

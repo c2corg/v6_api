@@ -58,8 +58,8 @@ from c2corg_api.models.xreport import (
     XreportLocale,
 )
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.views import restricted_json_view
 from c2corg_api.views.image import delete_all_files_for_image
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import validate_id, validate_lang
 
 
@@ -307,14 +307,15 @@ def _remove_merged_documents(request, document_id, document_type):
         _delete_document(request, merged_document_id, document_type, True)
 
 
-@restricted_json_view(
-    permission='authenticated',
+@write(
     validators=[
         validate_id,
         validate_document_type,
         validate_requestor,
         validate_document,
     ],
+    permission='authenticated',
+    json=True,
 )
 def delete_document(request):
     """
@@ -332,14 +333,15 @@ def delete_document(request):
     return _delete(request, document_id, document_type)
 
 
-@restricted_json_view(
-    permission='moderator',
+@write(
     validators=[
         validate_id,
         validate_lang,
         validate_document_type,
         validate_document,
     ],
+    permission='moderator',
+    json=True,
 )
 def delete_document_locale(request):
     """

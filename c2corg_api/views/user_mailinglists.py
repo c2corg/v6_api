@@ -2,7 +2,7 @@ from c2corg_api import DBSession
 from c2corg_api.models.common.attributes import mailinglists as valid_mailinglists
 from c2corg_api.models.mailinglist import Mailinglist
 from c2corg_api.models.user import User
-from c2corg_api.views import restricted_json_view, restricted_view
+from c2corg_api.views.resource import write
 
 
 def validate_mailinglist_statuses(request, **kwargs):
@@ -22,7 +22,9 @@ def validate_mailinglist_statuses(request, **kwargs):
     request.validated['mailinglists'] = mailinglists
 
 
-@restricted_json_view(validators=[validate_mailinglist_statuses])
+@write(
+    validators=[validate_mailinglist_statuses], permission='authenticated', json=True
+)
 def update_mailinglists(request):
     """Update mailinglist subscription statuses.
 
@@ -64,7 +66,6 @@ def update_mailinglists(request):
     return {}
 
 
-@restricted_view()
 def read_mailinglists(request):
     """Get the mailinglists subscriptions of the authenticated user.
 

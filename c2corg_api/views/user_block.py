@@ -6,10 +6,10 @@ from c2corg_api.models.user import User
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
 from c2corg_api.security.discourse_client import get_discourse_client
-from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import user_profile_documents_config
-from c2corg_api.views.validation import validate_body_user_id, validate_id
+from c2corg_api.views.resource import write
+from c2corg_api.views.validation import validate_body_user_id
 
 log = logging.getLogger(__name__)
 
@@ -27,9 +27,10 @@ def _get_user(user_id):
     return user
 
 
-@restricted_json_view(
-    permission='moderator',
+@write(
     validators=[body_validator(BlockSchema), validate_body_user_id],
+    permission='moderator',
+    json=True,
 )
 def block_user(request):
     """Block the given user.
@@ -56,9 +57,10 @@ def block_user(request):
     return {}
 
 
-@restricted_json_view(
-    permission='moderator',
+@write(
     validators=[body_validator(BlockSchema), validate_body_user_id],
+    permission='moderator',
+    json=True,
 )
 def unblock_user(request):
     """Unblock the given user.
@@ -89,7 +91,6 @@ def unblock_user(request):
     return {}
 
 
-@restricted_json_view(permission='moderator', validators=[validate_id])
 def read_blocked_user(request):
     """Check if the given user is blocked.
 
@@ -106,7 +107,6 @@ def read_blocked_user(request):
     return {'blocked': user.blocked}
 
 
-@restricted_json_view(permission='moderator')
 def read_blocked_users(request):
     """Get the blocked users.
 

@@ -14,7 +14,7 @@ from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version
 
 
 class TestArticleRest(BaseDocumentTestRest):
@@ -641,7 +641,7 @@ class TestArticleRest(BaseDocumentTestRest):
         self.session.flush()
 
         user_id = self.global_userids['contributor']
-        DocumentRest.create_new_version(self.article1, user_id)
+        create_new_version(self.article1, user_id)
         self.article1_version = (
             self.session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.article1.document_id)
@@ -665,7 +665,7 @@ class TestArticleRest(BaseDocumentTestRest):
         self.session.add(self.article4)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.article4, user_id)
+        create_new_version(self.article4, user_id)
         self.article4_version = (
             self.session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.article4.document_id)

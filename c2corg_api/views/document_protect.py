@@ -6,8 +6,8 @@ from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.document import Document, UpdateType
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
-from c2corg_api.views import restricted_json_view
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import update_version
+from c2corg_api.views.resource import write
 
 log = logging.getLogger(__name__)
 
@@ -25,10 +25,7 @@ def _get_document(document_id):
     return document
 
 
-@restricted_json_view(
-    permission='moderator',
-    validators=[body_validator(ProtectSchema)],
-)
+@write(validators=[body_validator(ProtectSchema)], permission='moderator', json=True)
 def protect_document(request):
     """Mark the given document as not editable.
 
@@ -49,19 +46,14 @@ def protect_document(request):
     document.protected = True
 
     user_id = request.authenticated_userid
-    DocumentRest.update_version(
-        document, user_id, 'Protected document', [UpdateType.FIGURES], []
-    )
+    update_version(document, user_id, 'Protected document', [UpdateType.FIGURES], [])
 
     update_cache_version_direct(document_id)
 
     return {}
 
 
-@restricted_json_view(
-    permission='moderator',
-    validators=[body_validator(ProtectSchema)],
-)
+@write(validators=[body_validator(ProtectSchema)], permission='moderator', json=True)
 def unprotect_document(request):
     """Mark the given document as editable.
 
@@ -82,9 +74,7 @@ def unprotect_document(request):
     document.protected = False
 
     user_id = request.authenticated_userid
-    DocumentRest.update_version(
-        document, user_id, 'Unprotected document', [UpdateType.FIGURES], []
-    )
+    update_version(document, user_id, 'Unprotected document', [UpdateType.FIGURES], [])
 
     update_cache_version_direct(document_id)
 

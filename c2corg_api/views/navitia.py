@@ -28,7 +28,6 @@ from c2corg_api.schemas.route import route_schema
 from c2corg_api.schemas.waypoint import waypoint_schema
 from c2corg_api.views import to_json_dict
 from c2corg_api.views.coverage import get_coverage
-from c2corg_api.views.resource import view
 from c2corg_api.views.route import build_reachable_route_query_with_waypoints
 from c2corg_api.views.waypoint import build_reachable_waypoints_query
 
@@ -65,7 +64,6 @@ def validate_navitia_params(request, **kwargs):
             request.errors.add('querystring', param, f'Parameter {param} required')
 
 
-@view(validators=[validate_navitia_params])
 def read_journeys(request):
     """
     Endpoint to retrieve trips from the Navitia API.
@@ -139,19 +137,16 @@ def validate_journey_reachable_params(request, **kwargs):
             request.errors.add('querystring', param, f'Parameter {param} required')
 
 
-@view(validators=[validate_journey_reachable_params])
 def start_journey_reachable_routes(request):
     """Start a job finding the journey-reachable routes, return its id."""
     return start_job_background(compute_journey_reachable_routes, request)
 
 
-@view(validators=[validate_journey_reachable_params])
 def start_journey_reachable_waypoints(request):
     """Start a job finding the journey-reachable waypoints, return its id."""
     return start_job_background(compute_journey_reachable_waypoints, request)
 
 
-@view()
 def read_journey_reachable_routes_result(request):
     """Get the result of a reachable-routes job.
 
@@ -163,7 +158,6 @@ def read_journey_reachable_routes_result(request):
     return read_result_from_redis(r, job_id)
 
 
-@view()
 def read_journey_reachable_waypoints_result(request):
     """Get the result of a reachable-waypoints job.
 
@@ -175,7 +169,6 @@ def read_journey_reachable_waypoints_result(request):
     return read_result_from_redis(r, job_id)
 
 
-@view()
 def read_journey_reachable_routes_progress(request):
     """Monitor progress of job id for journey reachable routes."""
     r = redis_client()
@@ -183,7 +176,6 @@ def read_journey_reachable_routes_progress(request):
     return _event_stream(progress_stream(r, job_id))
 
 
-@view()
 def read_journey_reachable_waypoints_progress(request):
     """Monitor progress of job id for journey reachable waypoints."""
     r = redis_client()
@@ -362,7 +354,6 @@ def validate_isochrone_reachable_params(request, **kwargs):
             request.errors.add('querystring', param, f'Parameter {param} required')
 
 
-@view(validators=[validate_isochrone_reachable_params])
 def read_isochrone_reachable_routes(request):
     """Get the routes with an access waypoint inside the isochron.
 
@@ -429,7 +420,6 @@ def read_isochrone_reachable_routes(request):
     return {'documents': routes, 'total': len(routes), 'isochron_geom': geojson}
 
 
-@view(validators=[validate_isochrone_reachable_params])
 def read_isochrone_reachable_waypoints(request):
     """Get the waypoints inside the isochron.
 

@@ -24,7 +24,7 @@ from c2corg_api.scripts.es.sync import (
     sync_documents,
 )
 from c2corg_api.tests import BaseTestCase, global_userids
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version
 
 
 class TestSync(BaseTestCase):
@@ -340,11 +340,11 @@ class TestSync(BaseTestCase):
         self.session.flush()
 
         user_id = self.global_userids['contributor']
-        DocumentRest.create_new_version(self.waypoint1, user_id)
-        DocumentRest.create_new_version(self.waypoint2, user_id)
-        DocumentRest.create_new_version(self.waypoint3, user_id)
-        DocumentRest.create_new_version(self.route1, user_id)
-        DocumentRest.create_new_version(self.outing1, user_id)
+        create_new_version(self.waypoint1, user_id)
+        create_new_version(self.waypoint2, user_id)
+        create_new_version(self.waypoint3, user_id)
+        create_new_version(self.route1, user_id)
+        create_new_version(self.outing1, user_id)
 
         association_wr = Association.create(self.waypoint1, self.route1)
         association_ww = Association.create(self.waypoint2, self.waypoint1)
