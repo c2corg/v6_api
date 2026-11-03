@@ -59,9 +59,6 @@ def follow_user(request):
     return {}
 
 
-follow_user.view_name = 'UserFollowRest.post'
-
-
 @restricted_json_view(
     validators=[body_validator(FollowSchema), validate_body_user_id],
 )
@@ -90,9 +87,6 @@ def unfollow_user(request):
     return {}
 
 
-unfollow_user.view_name = 'UserUnfollowRest.post'
-
-
 @restricted_json_view(validators=[validate_id])
 def read_following_user(request):
     """Check if the authenticated user follows the given user.
@@ -110,9 +104,6 @@ def read_following_user(request):
     follower_relation = get_follower_relation(followed_user_id, follower_user_id)
 
     return {'is_following': follower_relation is not None}
-
-
-read_following_user.view_name = 'UserFollowingUserRest.get'
 
 
 @restricted_json_view(validators=[validate_preferred_lang_param])
@@ -147,6 +138,3 @@ def read_following(request):
     ).get('documents')
 
     return {'following': followed_users}
-
-
-read_following.view_name = 'UserFollowingRest.get'

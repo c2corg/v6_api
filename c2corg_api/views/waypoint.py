@@ -127,9 +127,6 @@ def create_waypoint(request):
     return create_document(request, waypoint_schema)
 
 
-create_waypoint.view_name = 'WaypointRest.collection_post'
-
-
 @restricted_json_view(
     validators=[
         body_validator(WaypointUpdateSchema),
@@ -186,9 +183,6 @@ def update_waypoint(request):
     return put_document(
         request, Waypoint, waypoint_schema, after_update=update_linked_routes
     )
-
-
-update_waypoint.view_name = 'WaypointRest.put'
 
 
 @view(validators=[validate_pagination, validate_preferred_lang_param])
@@ -258,9 +252,6 @@ def list_waypoints(request):
     return collection_get(request, WAYPOINT_TYPE, waypoint_documents_config)
 
 
-list_waypoints.view_name = 'WaypointRest.collection_get'
-
-
 @view(validators=[validate_id, validate_lang_param, validate_cook_param])
 def get_waypoint(request):
     """
@@ -292,9 +283,6 @@ def get_waypoint(request):
         include_maps=True,
         set_custom_associations=set_custom_associations,
     )
-
-
-get_waypoint.view_name = 'WaypointRest.get'
 
 
 def set_custom_associations(waypoint, lang):
@@ -450,15 +438,9 @@ def get_waypoint_version(request):
     )
 
 
-get_waypoint_version.view_name = 'WaypointVersionRest.get'
-
-
 @view(validators=[validate_id, validate_lang])
 def get_waypoint_info(request):
     return document_info(request, waypoint_documents_config)
-
-
-get_waypoint_info.view_name = 'WaypointInfoRest.get'
 
 
 @view(validators=[validate_pagination, validate_preferred_lang_param])
@@ -513,9 +495,6 @@ def list_reachable_waypoints(request):
         waypoints.append(wp_dict)
 
     return {'documents': waypoints, 'total': count}
-
-
-list_reachable_waypoints.view_name = 'ReachableWaypointRest.get'
 
 
 def update_linked_routes(waypoint, update_types, user_id):

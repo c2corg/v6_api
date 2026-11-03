@@ -174,9 +174,6 @@ def merge_documents(request):
     return {}
 
 
-merge_documents.view_name = 'MergeDocumentRest.post'
-
-
 def transfer_associations(source_document_id, target_document_id):
     # get the document ids the target is already associated with
     target_child_ids_result = (

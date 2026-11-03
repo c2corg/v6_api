@@ -114,9 +114,6 @@ def create_topic(request):
     return response
 
 
-create_topic.view_name = 'ForumTopicRest.collection_post'
-
-
 def invite_participants(request, client, locale, topic_id):
     participants = (
         DBSession.query(User.forum_username)

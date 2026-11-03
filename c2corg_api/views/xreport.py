@@ -64,9 +64,6 @@ def create_xreport(request):
     return create_document(request, xreport_schema, allow_anonymous=True)
 
 
-create_xreport.view_name = 'XreportRest.collection_post'
-
-
 @restricted_json_view(
     validators=[
         body_validator(XreportUpdateSchema),
@@ -82,15 +79,9 @@ def update_xreport(request):
     return put_document(request, Xreport, xreport_schema)
 
 
-update_xreport.view_name = 'XreportRest.put'
-
-
 @view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_xreports(request):
     return collection_get(request, XREPORT_TYPE, xreport_documents_config)
-
-
-list_xreports.view_name = 'XreportRest.collection_get'
 
 
 @view(validators=[validate_id, validate_lang_param, validate_cook_param])
@@ -115,9 +106,6 @@ def get_xreport(request):
         custom_cache_key='private',
         set_custom_fields=set_author,
     )
-
-
-get_xreport.view_name = 'XreportRest.get'
 
 
 def _has_permission(request, xreport_id):
@@ -154,15 +142,9 @@ def get_xreport_version(request):
     )
 
 
-get_xreport_version.view_name = 'XreportVersionRest.get'
-
-
 @view(validators=[validate_id, validate_lang])
 def get_xreport_info(request):
     return document_info(request, xreport_documents_config)
-
-
-get_xreport_info.view_name = 'XreportInfoRest.get'
 
 
 def set_author(xreport):

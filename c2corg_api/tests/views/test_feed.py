@@ -239,8 +239,7 @@ class TestPersonalFeedRest(BaseFeedTestRest):
             {
                 'location': 'body',
                 'name': 'Forbidden',
-                'description': 'Unauthorized: PersonalFeedRest.get__GET'
-                ' failed permission check',
+                'description': 'Authentication required',
             }
         ]
 

@@ -67,9 +67,6 @@ def update_preferences(request):
     return {}
 
 
-update_preferences.view_name = 'UserFilterPreferencesRest.post'
-
-
 @restricted_view(validators=[validate_preferred_lang_param])
 def read_preferences(request):
     """Get the filter preferences of the authenticated user.
@@ -98,6 +95,3 @@ def read_preferences(request):
         'langs': user.feed_filter_langs,
         'areas': [to_json_dict(a, area_listing_schema) for a in areas],
     }
-
-
-read_preferences.view_name = 'UserFilterPreferencesRest.get'

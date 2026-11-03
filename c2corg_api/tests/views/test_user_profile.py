@@ -36,8 +36,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             {
                 'location': 'body',
                 'name': 'Forbidden',
-                'description': 'Unauthorized: UserProfileRest.collection_get__GET'
-                ' failed permission check',
+                'description': 'Authentication required',
             }
         ]
 

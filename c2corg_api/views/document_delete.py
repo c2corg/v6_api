@@ -332,9 +332,6 @@ def delete_document(request):
     return _delete(request, document_id, document_type)
 
 
-delete_document.view_name = 'DeleteDocumentRest.delete'
-
-
 @restricted_json_view(
     permission='moderator',
     validators=[
@@ -378,9 +375,6 @@ def delete_document_locale(request):
     notify_es_syncer(request.registry.queue_config)
 
     return {}
-
-
-delete_document_locale.view_name = 'DeleteDocumentLocaleRest.delete'
 
 
 def remove_whole_document(

@@ -63,9 +63,6 @@ def list_sitemaps(request):
     return get_or_create(cache_sitemap, cache_key, _get_sitemap_index)
 
 
-list_sitemaps.view_name = 'SitemapRest.collection_get'
-
-
 @view(validators=[validate_page, validate_document_type])
 def read_sitemap(request):
     """Return the information to build a sitemap page.
@@ -82,9 +79,6 @@ def read_sitemap(request):
     return get_or_create(
         cache_sitemap, cache_key, functools.partial(_get_sitemap, doc_type, i)
     )
-
-
-read_sitemap.view_name = 'SitemapRest.get'
 
 
 def _get_cache_key(doc_type=None, i=None):

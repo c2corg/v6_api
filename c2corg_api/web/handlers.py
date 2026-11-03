@@ -49,9 +49,8 @@ def validate_query(request, *validators, user=None):
 
 def serve_read(request, user, validators, handler, permission=None, content_types=None):
     """Answer a read request with a handler of the validated request."""
-    # `handler(request)` returns the answer; its `view_name` names it in the
-    # 403 answers, as Pyramid named the view
-    refused = refusal(request, user, handler.view_name, permission, content_types)
+    # `handler(request)` returns the answer
+    refused = refusal(request, user, permission, content_types)
     if refused is not None:
         return refused
     adapted, error = validate_query(request, *validators, user=user)
@@ -70,8 +69,7 @@ async def serve_write(
     content_types=None,
 ):
     """Answer a write request with a handler of the validated request."""
-    # `handler(request)` returns the answer; its `view_name` names it in the
-    # 403 answers, as Pyramid named the view
+    # `handler(request)` returns the answer
     # The body is read here, then the view runs in a worker thread, as the
     # sync views do.
     body = await request.body()
@@ -104,7 +102,7 @@ def _serve_write(request, user, body, validators, handler, permission, content_t
         if error is not None:
             DBSession.commit()
             return http_error(error)
-        refused = refusal(request, user, handler.view_name, permission, content_types)
+        refused = refusal(request, user, permission, content_types)
         if refused is not None:
             return refused
         try:

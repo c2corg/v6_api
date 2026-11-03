@@ -48,9 +48,6 @@ def create_book(request):
     return create_document(request, book_schema)
 
 
-create_book.view_name = 'BookRest.collection_post'
-
-
 @restricted_json_view(
     validators=[
         body_validator(BookUpdateSchema),
@@ -63,15 +60,9 @@ def update_book(request):
     return put_document(request, Book, book_schema)
 
 
-update_book.view_name = 'BookRest.put'
-
-
 @view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_books(request):
     return collection_get(request, BOOK_TYPE, book_documents_config)
-
-
-list_books.view_name = 'BookRest.collection_get'
 
 
 @view(validators=[validate_id, validate_lang_param, validate_cook_param])
@@ -81,9 +72,6 @@ def get_book(request):
     )
 
 
-get_book.view_name = 'BookRest.get'
-
-
 @view(validators=[validate_id, validate_lang, validate_version_id])
 def get_book_version(request):
     return document_version(
@@ -91,12 +79,6 @@ def get_book_version(request):
     )
 
 
-get_book_version.view_name = 'BooksVersionRest.get'
-
-
 @view(validators=[validate_id, validate_lang])
 def get_book_info(request):
     return document_info(request, book_documents_config)
-
-
-get_book_info.view_name = 'BooksInfoRest.get'

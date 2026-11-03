@@ -23,6 +23,3 @@ def cook_markdown(request):
       c2corg_api.views.markdown.NOT_MARKDOWN_PROPERTY
     """
     return cook(request.json)
-
-
-cook_markdown.view_name = 'CookerRest.post'

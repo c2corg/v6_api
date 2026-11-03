@@ -35,9 +35,6 @@ def read_document_history(request):
         return get_or_create(cache_document_history, cache_key, create_response)
 
 
-read_document_history.view_name = 'HistoryDocumentRest.get'
-
-
 def _get_history(request, document_id, lang):
     # FIXME conditional permission check (when outings implemented)
     # is_outing = DBSession.query(Outing) \

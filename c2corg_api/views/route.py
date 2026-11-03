@@ -140,9 +140,6 @@ def create_route(request):
     )
 
 
-create_route.view_name = 'RouteRest.collection_post'
-
-
 @restricted_json_view(
     validators=[
         body_validator(RouteUpdateSchema),
@@ -163,15 +160,9 @@ def update_route(request):
     )
 
 
-update_route.view_name = 'RouteRest.put'
-
-
 @view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_routes(request):
     return collection_get(request, ROUTE_TYPE, route_documents_config)
-
-
-list_routes.view_name = 'RouteRest.collection_get'
 
 
 @view(validators=[validate_id, validate_lang_param, validate_cook_param])
@@ -185,9 +176,6 @@ def get_route(request):
         include_maps=True,
         set_custom_associations=set_recent_outings,
     )
-
-
-get_route.view_name = 'RouteRest.get'
 
 
 def set_recent_outings(route, lang):
@@ -229,9 +217,6 @@ def get_route_version(request):
     )
 
 
-get_route_version.view_name = 'RouteVersionRest.get'
-
-
 @view(validators=[validate_id, validate_lang])
 def get_route_info(request):
     return document_info(request, route_documents_config)
@@ -250,18 +235,10 @@ def get_route_info(request):
 # set to true by default
 
 
-get_route_info.view_name = 'RouteInfoRest.get'
-
-
 @restricted_view(permission='moderator')
 def update_public_transportation_ratings(request):
     waypoint_extrapolation = request.params.get('waypoint_extrapolation') or True
     update_all_pt_rating(waypoint_extrapolation)
-
-
-update_public_transportation_ratings.view_name = (
-    'RoutePublicTransportationRatingRest.get'
-)
 
 
 @view(validators=[validate_pagination, validate_preferred_lang_param])
@@ -316,9 +293,6 @@ def list_reachable_routes(request):
         routes.append(wp_dict)
 
     return {'documents': routes, 'total': count}
-
-
-list_reachable_routes.view_name = 'ReachableRouteRest.get'
 
 
 def set_default_geometry(linked_waypoints, route, user_id):

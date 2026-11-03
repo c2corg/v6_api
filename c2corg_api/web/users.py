@@ -108,10 +108,10 @@ def account(request: Request, user: User):
     return JSONResponse(response, headers=headers)
 
 
-def _checks(view, permission, content_types=None):
+def _checks(permission, content_types=None):
     # the content type and the permission are checked before the parameters,
     # as Cornice and Pyramid did
-    check = permission_check(view.view_name, permission, content_types)
+    check = permission_check(permission, content_types)
     return Annotated[None, Depends(check)]
 
 
@@ -129,7 +129,7 @@ UserId = Annotated[Id, Path(description='The user id.')]
 def preferences(
     request: Request,
     user: User,
-    _: _checks(read_preferences, 'authenticated'),
+    _: _checks('authenticated'),
     lang: PreferredLang = None,
 ):
     """Return the feed filter preferences of the authenticated user."""
@@ -145,7 +145,7 @@ def mailinglists(request: Request, user: User):
 def following(
     request: Request,
     user: User,
-    _: _checks(read_following, 'authenticated', JSON),
+    _: _checks('authenticated', JSON),
     lang: Annotated[
         Lang | None, Query(alias='pl', description='Checked, not used.')
     ] = None,
@@ -158,7 +158,7 @@ def following(
 def is_following_user(
     request: Request,
     user: User,
-    _: _checks(read_following_user, 'authenticated', JSON),
+    _: _checks('authenticated', JSON),
     id: UserId,
 ):
     """Tell whether the authenticated user follows a user."""
@@ -181,7 +181,7 @@ def blocked_users(request: Request, user: User):
 def is_blocked(
     request: Request,
     user: User,
-    _: _checks(read_blocked_user, 'moderator', JSON),
+    _: _checks('moderator', JSON),
     id: UserId,
 ):
     """Tell whether a user is blocked."""

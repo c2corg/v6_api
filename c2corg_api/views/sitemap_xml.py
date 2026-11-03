@@ -82,9 +82,6 @@ def list_sitemaps_xml(request):
     return get_or_create(cache_sitemap_xml, cache_key, _get_sitemap_index)
 
 
-list_sitemaps_xml.view_name = 'SitemapXml.collection_get'
-
-
 @view(validators=[validate_page, validate_document_type])
 def read_sitemap_xml(request):
     """Return a sitemap file for a given type and sitemap page number."""
@@ -99,9 +96,6 @@ def read_sitemap_xml(request):
     return get_or_create(
         cache_sitemap_xml, cache_key, functools.partial(_get_sitemap, doc_type, i)
     )
-
-
-read_sitemap_xml.view_name = 'SitemapXml.get'
 
 
 def _get_cache_key(doc_type=None, i=None):

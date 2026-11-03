@@ -38,9 +38,6 @@ def get_waypoint_stoparea_info(request):
     }
 
 
-get_waypoint_stoparea_info.view_name = 'WaypointStopareaInfoRest.get'
-
-
 def validate_waypoint_id(request, *args, **kwargs):
     """Check that the waypoint id is a number, as the other id validators."""
     try:
@@ -78,9 +75,6 @@ def read_waypoint_stopareas(request):
     return {'waypoint_id': waypoint_id, 'stopareas': stopareas_data}
 
 
-read_waypoint_stopareas.view_name = 'WaypointStopareasByWaypointRest.get'
-
-
 @view(validators=[validate_waypoint_id])
 def read_waypoint_reachability(request):
     """Return whether the waypoint has at least one stoparea.
@@ -95,6 +89,3 @@ def read_waypoint_reachability(request):
     ).scalar()
 
     return has_stopareas
-
-
-read_waypoint_reachability.view_name = 'WaypointStopareasReachableRest.get'

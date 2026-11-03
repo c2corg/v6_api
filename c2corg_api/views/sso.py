@@ -199,9 +199,6 @@ def sso_sync(request):
     }
 
 
-sso_sync.view_name = 'SsoSyncRest.post'
-
-
 def get_discourse_userid(client, userid):
     """Get discourse user id with 404 handling."""
     try:
@@ -270,6 +267,3 @@ def sso_login(request):
             # Any error with discourse should not prevent login
             log.warning('Error logging into discourse for %d', user.id, exc_info=True)
     return response
-
-
-sso_login.view_name = 'SsoLoginRest.post'

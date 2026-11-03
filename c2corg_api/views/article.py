@@ -62,9 +62,6 @@ def create_article(request):
     return create_document(request, article_schema)
 
 
-create_article.view_name = 'ArticleRest.collection_post'
-
-
 @restricted_json_view(
     validators=[
         body_validator(ArticleUpdateSchema),
@@ -92,15 +89,9 @@ def update_article(request):
     return put_document(request, Article, article_schema)
 
 
-update_article.view_name = 'ArticleRest.put'
-
-
 @view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_articles(request):
     return collection_get(request, ARTICLE_TYPE, article_documents_config)
-
-
-list_articles.view_name = 'ArticleRest.collection_get'
 
 
 @view(validators=[validate_id, validate_lang_param, validate_cook_param])
@@ -114,9 +105,6 @@ def get_article(request):
     )
 
 
-get_article.view_name = 'ArticleRest.get'
-
-
 @view(validators=[validate_id, validate_lang, validate_version_id])
 def get_article_version(request):
     return document_version(
@@ -124,15 +112,9 @@ def get_article_version(request):
     )
 
 
-get_article_version.view_name = 'ArticlesVersionRest.get'
-
-
 @view(validators=[validate_id, validate_lang])
 def get_article_info(request):
     return document_info(request, article_documents_config)
-
-
-get_article_info.view_name = 'ArticlesInfoRest.get'
 
 
 def set_author(article):

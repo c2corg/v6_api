@@ -32,8 +32,15 @@ async def refused_response(request, exc: Refused):
     return exc.response
 
 
-def permission_check(view_name, permission, content_types=None):
-    """Return a dependency answering the 415 of Cornice or the 403 of Pyramid."""
+# the description of the 403 answer, by the permission the route requires
+REQUIRED = {
+    'authenticated': 'Authentication required',
+    'moderator': 'Moderator role required',
+}
+
+
+def permission_check(permission, content_types=None):
+    """Return a dependency answering the 415 or the 403 of a route."""
     # a dependency runs before FastAPI checks the typed parameters: the
     # permission is checked first, as Pyramid did
     from c2corg_api.web.auth import CurrentUser, current_user
@@ -41,15 +48,15 @@ def permission_check(view_name, permission, content_types=None):
     def check(
         request: Request, user: Annotated[CurrentUser | None, Depends(current_user)]
     ):
-        refused = refusal(request, user, view_name, permission, content_types)
+        refused = refusal(request, user, permission, content_types)
         if refused is not None:
             raise Refused(refused)
 
     return check
 
 
-def refusal(request, user, view_name, permission, content_types):
-    """Answer the 415 or the 403 of Pyramid, or None."""
+def refusal(request, user, permission, content_types):
+    """Answer the 415 or the 403 of a route, or None."""
     # as Cornice: a request with another Content-Type than those of the view
     # (json_view) is refused, before the permission check; none is accepted
     if content_types is not None:
@@ -59,9 +66,6 @@ def refusal(request, user, view_name, permission, content_types):
             return error_response([('header', 'Content-Type', description)], 415)
     # the permission is checked before the validators, as Pyramid does
     if permission and not ValidatedRequest(request, user).has_permission(permission):
-        # the message of Pyramid without debug_authorization (production)
-        description = (
-            f'Unauthorized: {view_name}__{request.method} failed permission check'
-        )
+        description = REQUIRED[permission]
         return error_response([('body', 'Forbidden', description)], 403)
     return None

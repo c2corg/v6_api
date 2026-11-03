@@ -154,9 +154,6 @@ def create_outing(request):
     return create_document(request, outing_schema, before_add=set_default_geom)
 
 
-create_outing.view_name = 'OutingRest.collection_post'
-
-
 @restricted_json_view(
     validators=[
         body_validator(OutingUpdateSchema),
@@ -177,15 +174,9 @@ def update_outing(request):
     )
 
 
-update_outing.view_name = 'OutingRest.put'
-
-
 @view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_outings(request):
     return collection_get(request, OUTING_TYPE, outing_documents_config)
-
-
-list_outings.view_name = 'OutingRest.collection_get'
 
 
 @view(validators=[validate_id, validate_lang_param, validate_cook_param])
@@ -198,15 +189,9 @@ def get_outing(request):
     )
 
 
-get_outing.view_name = 'OutingRest.get'
-
-
 @view(validators=[validate_id, validate_lang])
 def get_outing_info(request):
     return document_info(request, outing_documents_config)
-
-
-get_outing_info.view_name = 'OutingInfoRest.get'
 
 
 def set_default_geometry(linked_routes, outing, user_id):
@@ -266,6 +251,3 @@ def get_outing_version(request):
         outing_schema,
         outing_schema_adaptor,
     )
-
-
-get_outing_version.view_name = 'OutingVersionRest.get'

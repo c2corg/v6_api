@@ -38,9 +38,6 @@ def update_preferred_language(request):
     return {}
 
 
-update_preferred_language.view_name = 'UserPreferredLanguageRest.post'
-
-
 class UpdateAccountSchema(Schema):
     email: Str(
         checks=[
@@ -159,9 +156,6 @@ def update_account(request):
     return result
 
 
-update_account.view_name = 'UserAccountRest.post'
-
-
 @restricted_view(renderer='json', http_cache=0)
 def read_account(request):
     user = get_user(request)
@@ -171,6 +165,3 @@ def read_account(request):
         'forum_username': user.forum_username,
         'is_profile_public': user.is_profile_public,
     }
-
-
-read_account.view_name = 'UserAccountRest.get'

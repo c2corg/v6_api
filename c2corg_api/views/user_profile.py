@@ -44,15 +44,9 @@ def update_user_profile(request):
     return put_document(request, UserProfile, internal_user_profile_schema)
 
 
-update_user_profile.view_name = 'UserProfileRest.put'
-
-
 @restricted_view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_user_profiles(request):
     return collection_get(request, USERPROFILE_TYPE, user_profile_documents_config)
-
-
-list_user_profiles.view_name = 'UserProfileRest.collection_get'
 
 
 @view(validators=[validate_id, validate_lang_param, validate_cook_param])
@@ -84,15 +78,9 @@ def get_user_profile(request):
         }
 
 
-get_user_profile.view_name = 'UserProfileRest.get'
-
-
 @view(validators=[validate_id, validate_lang])
 def get_user_profile_info(request):
     return document_info(request, user_profile_documents_config)
-
-
-get_user_profile_info.view_name = 'UserProfileInfoRest.get'
 
 
 def reset_title(request):

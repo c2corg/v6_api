@@ -85,9 +85,7 @@ def feed(
 def personal_feed(
     request: Request,
     user: User,
-    _: Annotated[
-        None, Depends(permission_check('PersonalFeedRest.get', 'authenticated'))
-    ],
+    _: Annotated[None, Depends(permission_check('authenticated'))],
     lang: PreferredLang = None,
     limit: PageLimit = None,
     token: Token = None,
