@@ -4,9 +4,12 @@
 # the view classes, so FastAPI knows nothing of them (#2512).
 
 import copy
+import re
+import warnings
 
 from fastapi.openapi.utils import get_openapi
 from fastapi.routing import APIRoute
+from pydantic.json_schema import PydanticJsonSchemaWarning, models_json_schema
 
 
 def enabled(settings):
@@ -87,17 +90,79 @@ def error_responses(document):
     return document
 
 
+_PATH_PARAMETER = re.compile(r'{(\w+)(?::(\w+))?}')
+
+
+def request_bodies(document, routes):
+    """Describe the bodies of the write routes, and their path parameters."""
+    # The write routes still read their body and their path parameters in
+    # the view classes (web.compat): their body comes from the schema of
+    # their body validator, set as `body_schema` on the endpoint.
+    with_body = [r for r in routes if getattr(r.endpoint, 'body_schema', None)]
+    schemas = document.setdefault('components', {}).setdefault('schemas', {})
+    if with_body:
+        with warnings.catch_warnings():
+            # the DROP default of the schemas (schemas.base) has no JSON
+            # value: left out of the document, as pydantic says
+            warnings.simplefilter('ignore', PydanticJsonSchemaWarning)
+            keys, definitions = models_json_schema(
+                [(r.endpoint.body_schema, 'validation') for r in with_body],
+                ref_template='#/components/schemas/{model}',
+            )
+        schemas.update(definitions.get('$defs', {}))
+    for route in with_body:
+        schema = keys[(route.endpoint.body_schema, 'validation')]
+        for method in route.methods:
+            operation = document['paths'][route.path_format][method.lower()]
+            operation['requestBody'] = {
+                'required': True,
+                'content': {'application/json': {'schema': schema}},
+            }
+            operation.setdefault('parameters', []).extend(
+                _path_parameters(route, operation)
+            )
+            responses = operation['responses']
+            responses['400'] = _INVALID
+            if route.endpoint.permission:
+                responses['403'] = {
+                    'description': 'Not allowed: authentication or a role '
+                    f'(`{route.endpoint.permission}`) is required.',
+                    'content': {
+                        'application/json': {
+                            'schema': {'$ref': '#/components/schemas/Errors'}
+                        }
+                    },
+                }
+    return document
+
+
+def _path_parameters(route, operation):
+    declared = {p['name'] for p in operation.get('parameters', [])}
+    for name, convertor in _PATH_PARAMETER.findall(route.path):
+        if name not in declared:
+            schema = (
+                {'type': 'integer', 'minimum': 0}
+                if convertor == 'int'
+                else {'type': 'string'}
+            )
+            yield {'name': name, 'in': 'path', 'required': True, 'schema': schema}
+
+
 def include(app, excluded=()):
     """Serve /openapi.json, with the described routes only."""
 
     def openapi():
         if app.openapi_schema is None:
-            app.openapi_schema = error_responses(
-                get_openapi(
-                    title='camptocamp.org API',
-                    version=str(app.state.settings.get('cache_version') or '0'),
-                    routes=described_routes(app, excluded),
-                )
+            routes = described_routes(app, excluded)
+            app.openapi_schema = request_bodies(
+                error_responses(
+                    get_openapi(
+                        title='camptocamp.org API',
+                        version=str(app.state.settings.get('cache_version') or '0'),
+                        routes=routes,
+                    )
+                ),
+                routes,
             )
         return app.openapi_schema
 

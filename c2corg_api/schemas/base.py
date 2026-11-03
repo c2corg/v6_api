@@ -97,6 +97,8 @@ def body_validator(schema):
         if validated is not None:
             request.validated.update(validated)
 
+    # read by the OpenAPI document: the body of the route
+    validator.schema = schema
     return validator
 
 
