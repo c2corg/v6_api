@@ -38,10 +38,15 @@ class TestApplication:
 
     def test_method_not_allowed(self):
         response = _client().delete('/health', status=405)
+        assert response.headers['Allow'] == 'GET'
         assert response.json == {
             'status': 'error',
             'errors': [
-                {'location': 'body', 'name': 'Method Not Allowed', 'description': None}
+                {
+                    'location': 'body',
+                    'name': 'Method Not Allowed',
+                    'description': 'DELETE is not allowed here: use GET',
+                }
             ],
         }
 

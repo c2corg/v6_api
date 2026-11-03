@@ -68,17 +68,26 @@ class TestErrors(DocumentContractTest):
             'error_method_not_allowed',
             self.request('DELETE', '/waypoints', status=405),
         )
-        for method, path in (
-            ('PATCH', '/waypoints'),
-            ('DELETE', self.url('books')),
-            ('GET', '/images/list'),
+        # the description and the Allow header give the methods of the path,
+        # whatever route of the path has them
+        for method, path, allowed in (
+            ('DELETE', '/waypoints', 'GET, POST'),
+            ('PATCH', '/waypoints', 'GET, POST'),
+            ('DELETE', self.url('books'), 'GET, PUT'),
+            ('GET', '/images/list', 'POST'),
             # a fixed path, not a document id
-            ('PUT', '/routes/update_public_transportation_rating'),
-            ('POST', '/routes/update_public_transportation_rating'),
+            ('PUT', '/routes/update_public_transportation_rating', 'POST'),
+            # a write: GET is not allowed
+            ('GET', '/routes/update_public_transportation_rating', 'POST'),
         ):
             response = self.request(method, path, status=405)
+            assert response.headers['Allow'] == allowed
             assert response.json['errors'] == [
-                {'location': 'body', 'name': 'Method Not Allowed', 'description': None}
+                {
+                    'location': 'body',
+                    'name': 'Method Not Allowed',
+                    'description': f'{method} is not allowed here: use {allowed}',
+                }
             ]
 
     def test_invalid_ids(self):

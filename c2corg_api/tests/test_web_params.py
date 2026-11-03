@@ -315,7 +315,7 @@ class TestEveryReadDescribed:
         assert parameters['wheelchair']['required'] is False
 
     def test_every_get_route(self):
-        # all but a GET that writes, described with the writes later
+        # every GET route is described
         document = _client({'api.openapi': 'true'}).get('/openapi.json').json
         app = create_fastapi_app({})
         paths = {
@@ -324,7 +324,7 @@ class TestEveryReadDescribed:
             if 'GET' in getattr(route, 'methods', ())
         }
         missing = paths - set(document['paths'])
-        assert missing == {'/routes/update_public_transportation_rating'}
+        assert missing == set()
 
 
 class TestOpenApiErrors:

@@ -1689,11 +1689,11 @@ class TestRouteRest(BaseDocumentTestRest):
         # Test case 1: collaborators cannot update all routes:
         headers = self.add_authorization_header(username='contributor')
         prefix = '/routes/update_public_transportation_rating'
-        self.app.get(prefix, headers=headers, status=403)
+        self.app.post(prefix, headers=headers, status=403)
 
         # Test case 2: Moderators can, with waypoints_extrapolation
         headers = self.add_authorization_header(username='moderator')
-        self.app.get(prefix, headers=headers, status=200)
+        self.app.post(prefix, headers=headers, status=200)
         self.session.flush()
         self.session.refresh(self.route)
         assert self.route.public_transportation_rating == 'poor service'
@@ -1701,7 +1701,7 @@ class TestRouteRest(BaseDocumentTestRest):
         # Test case 3: Moderators can, without waypoints_extrapolation
         self.route.route_types = ['traverse']
         self.session.flush()
-        self.app.get(
+        self.app.post(
             prefix + '?waypoint_extrapolation=false', headers=headers, status=200
         )
         self.session.flush()
