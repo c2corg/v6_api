@@ -44,7 +44,6 @@ PreferredLang = Annotated[
         'else in the best other one.',
     ),
 ]
-UNUSED = 'Checked, not used.'
 WaypointId = Annotated[integer('waypoint_id'), Path(description='The waypoint id.')]
 
 
@@ -82,11 +81,6 @@ def include(app):
 def stoparea_listing(
     request: Request,
     user: User,
-    # checked as the other listings do, but not used: the stop areas are paged
-    # with page_id and nb_items
-    offset: Annotated[Offset | None, Query(description=UNUSED)] = None,
-    limit: Annotated[Limit | None, Query(description=UNUSED)] = None,
-    lang: Annotated[Lang | None, Query(alias='pl', description=UNUSED)] = None,
     page_id: Annotated[
         positive('page_id') | None, Query(description='The page, from 1.')
     ] = None,
@@ -96,13 +90,8 @@ def stoparea_listing(
     ] = None,
 ):
     """Return a page of the stop areas."""
-    validated = {
-        'offset': offset,
-        'limit': limit,
-        'lang': lang,
-        'page_id': page_id,
-        'nb_items': nb_items,
-    }
+    # the stop areas are paged with page_id and nb_items
+    validated = {'page_id': page_id, 'nb_items': nb_items}
     return serve_read(request, user, [typed_values(validated)], list_stopareas)
 
 
@@ -110,10 +99,9 @@ def stoparea(
     request: Request,
     user: User,
     id: DocumentId,
-    lang: Annotated[Lang | None, Query(alias='l', description=UNUSED)] = None,
 ):
     """Return a stop area."""
-    validated = {'id': id, 'lang': lang}
+    validated = {'id': id}
     return serve_read(request, user, [typed_values(validated)], read_stoparea)
 
 
