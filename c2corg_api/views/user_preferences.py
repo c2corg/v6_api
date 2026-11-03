@@ -26,22 +26,53 @@ class FilterPreferencesSchema(Schema):
     followed_only: Bool
 
 
-@resource(path='/users/preferences')
-class UserFilterPreferencesRest(BaseView):
-    def get_user(self, with_area_locales=True):
-        user_id = self.request.authenticated_userid
+def get_user(request, with_area_locales=True):
+    """Return the authenticated user, with the areas of their feed filter."""
+    user_id = request.authenticated_userid
 
-        area_joinedload = joinedload(User.feed_filter_areas).load_only(
-            Area.document_id, Area.area_type, Area.version, Area.protected, Area.type
+    area_joinedload = joinedload(User.feed_filter_areas).load_only(
+        Area.document_id, Area.area_type, Area.version, Area.protected, Area.type
+    )
+
+    if with_area_locales:
+        area_joinedload = area_joinedload.joinedload(Area.locales).load_only(
+            DocumentLocale.lang, DocumentLocale.title, DocumentLocale.version
         )
 
-        if with_area_locales:
-            area_joinedload = area_joinedload.joinedload(Area.locales).load_only(
-                DocumentLocale.lang, DocumentLocale.title, DocumentLocale.version
-            )
+    return DBSession.get(User, user_id, options=[area_joinedload])
 
-        return DBSession.get(User, user_id, options=[area_joinedload])
 
+@restricted_json_view(validators=[body_validator(FilterPreferencesSchema)])
+def update_preferences(request):
+    user = get_user(request, with_area_locales=False)
+
+    validated = request.validated
+    user.feed_followed_only = validated['followed_only']
+    user.feed_filter_activities = validated['activities']
+    user.feed_filter_langs = validated['langs']
+
+    # update filter areas: get all areas given in the request and
+    # then set on `user.feed_filter_areas`
+    area_ids = [a['document_id'] for a in validated['areas']]
+    areas = []
+    if area_ids:
+        areas = (
+            DBSession.query(Area)
+            .filter(Area.document_id.in_(area_ids))
+            .options(load_only(Area.document_id, Area.version, Area.type))
+            .all()
+        )
+
+    user.feed_filter_areas = areas
+
+    return {}
+
+
+update_preferences.view_name = 'UserFilterPreferencesRest.post'
+
+
+@resource(path='/users/preferences')
+class UserFilterPreferencesRest(BaseView):
     @restricted_view(validators=[validate_preferred_lang_param])
     def get(self):
         """Get the filter preferences of the authenticated user.
@@ -54,7 +85,7 @@ class UserFilterPreferencesRest(BaseView):
             When set only the given locale will be included (if available).
             Otherwise the default locale of the user will be used.
         """
-        user = self.get_user()
+        user = get_user(self.request)
 
         lang = self.request.validated.get('lang')
         if not lang:
@@ -70,28 +101,3 @@ class UserFilterPreferencesRest(BaseView):
             'langs': user.feed_filter_langs,
             'areas': [to_json_dict(a, area_listing_schema) for a in areas],
         }
-
-    @restricted_json_view(validators=[body_validator(FilterPreferencesSchema)])
-    def post(self):
-        user = self.get_user(with_area_locales=False)
-
-        validated = self.request.validated
-        user.feed_followed_only = validated['followed_only']
-        user.feed_filter_activities = validated['activities']
-        user.feed_filter_langs = validated['langs']
-
-        # update filter areas: get all areas given in the request and
-        # then set on `user.feed_filter_areas`
-        area_ids = [a['document_id'] for a in validated['areas']]
-        areas = []
-        if area_ids:
-            areas = (
-                DBSession.query(Area)
-                .filter(Area.document_id.in_(area_ids))
-                .options(load_only(Area.document_id, Area.version, Area.type))
-                .all()
-            )
-
-        user.feed_filter_areas = areas
-
-        return {}

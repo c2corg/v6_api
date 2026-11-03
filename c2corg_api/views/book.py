@@ -8,8 +8,10 @@ from c2corg_api.schemas.book import BookCreateSchema, BookUpdateSchema, book_sch
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
     DocumentRest,
+    create_document,
     make_validator_create,
     make_validator_update,
+    put_document,
 )
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import book_documents_config
@@ -34,6 +36,35 @@ validate_associations_update = functools.partial(
 )
 
 
+@restricted_json_view(
+    validators=[
+        body_validator(BookCreateSchema),
+        validate_book_create,
+        validate_associations_create,
+    ],
+)
+def create_book(request):
+    return create_document(request, book_schema)
+
+
+create_book.view_name = 'BookRest.collection_post'
+
+
+@restricted_json_view(
+    validators=[
+        body_validator(BookUpdateSchema),
+        validate_id,
+        validate_book_update,
+        validate_associations_update,
+    ],
+)
+def update_book(request):
+    return put_document(request, Book, book_schema)
+
+
+update_book.view_name = 'BookRest.put'
+
+
 @resource(collection_path='/books', path='/books/{id}')
 class BookRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
@@ -43,27 +74,6 @@ class BookRest(DocumentRest):
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(book_documents_config, book_schema, include_areas=False)
-
-    @restricted_json_view(
-        validators=[
-            body_validator(BookCreateSchema),
-            validate_book_create,
-            validate_associations_create,
-        ],
-    )
-    def collection_post(self):
-        return self._collection_post(book_schema)
-
-    @restricted_json_view(
-        validators=[
-            body_validator(BookUpdateSchema),
-            validate_id,
-            validate_book_update,
-            validate_associations_update,
-        ],
-    )
-    def put(self):
-        return self._put(Book, book_schema)
 
 
 @resource(path='/books/{id}/{lang}/{version_id}')

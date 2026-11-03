@@ -195,24 +195,27 @@ def include_document_type(
         )
 
 
-def view_arguments(view_class, method):
-    """Return the validators, permission and content types of a view method."""
-    # as declared by the @view decorator of the Pyramid view, so that the
+def handler_arguments(function):
+    """Return the validators, permission and content types of a write function."""
+    # as declared by its @view decorator (views.resource.view), so that the
     # FastAPI route checks exactly what Pyramid checked
-    [arguments] = getattr(view_class, method).__views__
+    [arguments] = function.__views__
     content_type = arguments.get('content_type')
     if isinstance(content_type, str):
         content_type = [content_type]
     return arguments.get('validators', []), arguments.get('permission'), content_type
 
 
-def include_write(app, path, http_method, view_class, method):
-    """Add a write route served by a method of a Pyramid view class."""
-    validators, permission, content_types = view_arguments(view_class, method)
+def include_handler_write(
+    app, path, http_method, handler, validators, permission, content_types
+):
+    """Add a write route served by a handler of the validated request."""
+    # the checks run in this order: rate limiting, content type, permission,
+    # validators (web.compat.serve_write)
 
     async def endpoint(request: Request, user: User):
         return await serve_write(
-            request, user, validators, view_class, method, permission, content_types
+            request, user, validators, handler, permission, content_types
         )
 
     # read by the route inventory of the contract tests (routes.txt)
@@ -226,7 +229,7 @@ def include_write(app, path, http_method, view_class, method):
         path,
         endpoint,
         methods=[http_method],
-        operation_id=f'{view_class.__name__}_{method}',
+        operation_id=handler.view_name.replace('.', '_'),
         tags=[path.strip('/').split('/')[0]],
     )
 
@@ -237,12 +240,16 @@ def _body_schema(validators):
     return next((v.schema for v in validators if hasattr(v, 'schema')), None)
 
 
-def include_document_writes(app, prefix, rest, create=True):
-    """Add the write routes of a document type: creation and update."""
-    if create:
-        include_write(app, f'/{prefix}', 'POST', rest, 'collection_post')
-    # a numeric id only, as the read routes
-    include_write(app, f'/{prefix}/{{id:int}}', 'PUT', rest, 'put')
+def include_document_writes(app, prefix, create, update):
+    """Add the write routes of a document type, served by its functions."""
+    # a numeric id only, as the read routes; no creation route if `create`
+    # is None
+    routes = [(f'/{prefix}', 'POST', create), (f'/{prefix}/{{id:int}}', 'PUT', update)]
+    for path, http_method, function in routes:
+        if function is not None:
+            include_handler_write(
+                app, path, http_method, function, *handler_arguments(function)
+            )
 
 
 def include(app):
@@ -351,27 +358,51 @@ def include(app):
     )
     # a GET that writes (the ratings of all the routes, for the moderators):
     # served as a write, so that it is committed
-    from c2corg_api.views.route import RoutePublicTransportationRatingRest
+    from c2corg_api.views.route import update_public_transportation_ratings
 
     for http_method in ('GET', 'HEAD'):
-        include_write(
+        include_handler_write(
             app,
             '/routes/update_public_transportation_rating',
             http_method,
-            RoutePublicTransportationRatingRest,
-            'get',
+            update_public_transportation_ratings,
+            *handler_arguments(update_public_transportation_ratings),
         )
-    # the writes moved to FastAPI
-    include_document_writes(app, 'books', BookRest)
-    include_document_writes(app, 'articles', ArticleRest)
-    include_document_writes(app, 'areas', AreaRest)
-    include_document_writes(app, 'maps', TopoMapRest)
-    include_document_writes(app, 'coverages', CoverageRest)
-    include_document_writes(app, 'xreports', XreportRest)
+    # the writes, served by the functions of the views
+    from c2corg_api.views import (
+        area,
+        article,
+        book,
+        coverage,
+        image,
+        outing,
+        route,
+        topo_map,
+        user_profile,
+        waypoint,
+        xreport,
+    )
+
+    include_document_writes(app, 'books', book.create_book, book.update_book)
+    include_document_writes(
+        app, 'articles', article.create_article, article.update_article
+    )
+    include_document_writes(app, 'areas', area.create_area, area.update_area)
+    include_document_writes(
+        app, 'maps', topo_map.create_topo_map, topo_map.update_topo_map
+    )
+    include_document_writes(
+        app, 'coverages', coverage.create_coverage, coverage.update_coverage
+    )
+    include_document_writes(
+        app, 'xreports', xreport.create_xreport, xreport.update_xreport
+    )
     # the image proxy and /images/list (POST) stay on Pyramid
-    include_document_writes(app, 'images', ImageRest)
+    include_document_writes(app, 'images', image.create_image, image.update_image)
     # a profile is created with its user: no creation route
-    include_document_writes(app, 'profiles', UserProfileRest, create=False)
-    include_document_writes(app, 'outings', OutingRest)
-    include_document_writes(app, 'routes', RouteRest)
-    include_document_writes(app, 'waypoints', WaypointRest)
+    include_document_writes(app, 'profiles', None, user_profile.update_user_profile)
+    include_document_writes(app, 'outings', outing.create_outing, outing.update_outing)
+    include_document_writes(app, 'routes', route.create_route, route.update_route)
+    include_document_writes(
+        app, 'waypoints', waypoint.create_waypoint, waypoint.update_waypoint
+    )

@@ -21,8 +21,10 @@ from c2corg_api.views import restricted_json_view, set_private_cache_header
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
     DocumentRest,
+    create_document,
     make_validator_create,
     make_validator_update,
+    put_document,
 )
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import xreport_documents_config
@@ -48,6 +50,38 @@ validate_associations_create = functools.partial(
 validate_associations_update = functools.partial(
     validate_associations, XREPORT_TYPE, False
 )
+
+
+@restricted_json_view(
+    validators=[
+        body_validator(XreportCreateSchema),
+        validate_xreport_create,
+        validate_associations_create,
+    ],
+)
+def create_xreport(request):
+    return create_document(request, xreport_schema, allow_anonymous=True)
+
+
+create_xreport.view_name = 'XreportRest.collection_post'
+
+
+@restricted_json_view(
+    validators=[
+        body_validator(XreportUpdateSchema),
+        validate_id,
+        validate_xreport_update,
+        validate_associations_update,
+    ],
+)
+def update_xreport(request):
+    if not _has_permission(request, request.validated['id']):
+        raise HTTPForbidden('No permission to change this xreport')
+
+    return put_document(request, Xreport, xreport_schema)
+
+
+update_xreport.view_name = 'XreportRest.put'
 
 
 @resource(collection_path='/xreports', path='/xreports/{id}')
@@ -76,30 +110,6 @@ class XreportRest(DocumentRest):
             custom_cache_key='private',
             set_custom_fields=set_author,
         )
-
-    @restricted_json_view(
-        validators=[
-            body_validator(XreportCreateSchema),
-            validate_xreport_create,
-            validate_associations_create,
-        ],
-    )
-    def collection_post(self):
-        return self._collection_post(xreport_schema, allow_anonymous=True)
-
-    @restricted_json_view(
-        validators=[
-            body_validator(XreportUpdateSchema),
-            validate_id,
-            validate_xreport_update,
-            validate_associations_update,
-        ],
-    )
-    def put(self):
-        if not _has_permission(self.request, self.request.validated['id']):
-            raise HTTPForbidden('No permission to change this xreport')
-
-        return self._put(Xreport, xreport_schema)
 
 
 def _has_permission(request, xreport_id):

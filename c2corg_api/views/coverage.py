@@ -22,8 +22,10 @@ from c2corg_api.schemas.coverage import (
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
     DocumentRest,
+    create_document,
     make_validator_create,
     make_validator_update,
+    put_document,
 )
 from c2corg_api.views.document_schemas import coverage_documents_config
 from c2corg_api.views.resource import resource, view
@@ -48,6 +50,35 @@ validate_associations_update = functools.partial(
 )
 
 
+@restricted_json_view(
+    validators=[
+        body_validator(CoverageCreateSchema),
+        validate_coverage_create,
+        validate_associations_create,
+    ],
+)
+def create_coverage(request):
+    return create_document(request, coverage_schema, allow_anonymous=False)
+
+
+create_coverage.view_name = 'CoverageRest.collection_post'
+
+
+@restricted_json_view(
+    validators=[
+        body_validator(CoverageUpdateSchema),
+        validate_id,
+        validate_coverage_update,
+        validate_associations_update,
+    ],
+)
+def update_coverage(request):
+    return put_document(request, Coverage, coverage_schema)
+
+
+update_coverage.view_name = 'CoverageRest.put'
+
+
 @resource(collection_path='/coverages', path='/coverages/{id}')
 class CoverageRest(DocumentRest):
     def __init__(self, request, context=None):
@@ -62,27 +93,6 @@ class CoverageRest(DocumentRest):
         return self._get(
             coverage_documents_config, coverage_schema, include_areas=False
         )
-
-    @restricted_json_view(
-        validators=[
-            body_validator(CoverageCreateSchema),
-            validate_coverage_create,
-            validate_associations_create,
-        ],
-    )
-    def collection_post(self):
-        return self._collection_post(coverage_schema, allow_anonymous=False)
-
-    @restricted_json_view(
-        validators=[
-            body_validator(CoverageUpdateSchema),
-            validate_id,
-            validate_coverage_update,
-            validate_associations_update,
-        ],
-    )
-    def put(self):
-        return self._put(Coverage, coverage_schema)
 
 
 def validate_lon_lat(request, **kwargs):
@@ -121,19 +131,17 @@ def validate_geom_detail(request, **kwargs):
         request.errors.add('body', 'geom_detail', 'invalid geom_detail')
 
 
-@resource(path='/getpolygoncoverage')
-class PolygonCoverage(DocumentRest):
-    def __init__(self, request, context=None):
-        self.request = request
+@view(validators=[validate_geom_detail])
+def coverage_of_a_polygon(request):
+    """Return the coverages for a geom_detail polygon.
 
-    @view(validators=[validate_geom_detail])
-    def post(self):
-        """Return the coverages for a geom_detail polygon.
+    Returns the coverages from a geom_detail type polygon
+    (geom_detail has to be EPSG 4326 since isochrone is 4326).
+    """
+    return get_coverages(request.validated['polygon'])
 
-        Returns the coverages from a geom_detail type polygon
-        (geom_detail has to be EPSG 4326 since isochrone is 4326).
-        """
-        return get_coverages(self.request.validated['polygon'])
+
+coverage_of_a_polygon.view_name = 'PolygonCoverage.post'
 
 
 def get_coverage(lon, lat):

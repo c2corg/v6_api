@@ -30,66 +30,68 @@ def get_follower_relation(followed_user_id, follower_user_id):
     )
 
 
-@resource(path='/users/follow')
-class UserFollowRest(BaseView):
-    @restricted_json_view(
-        validators=[body_validator(FollowSchema), validate_body_user_id],
-    )
-    def post(self):
-        """Follow the given user.
+@restricted_json_view(
+    validators=[body_validator(FollowSchema), validate_body_user_id],
+)
+def follow_user(request):
+    """Follow the given user.
 
-        Creates a follower relation, so that the authenticated user is following the
-        given user.
+    Creates a follower relation, so that the authenticated user is following the
+    given user.
 
 
-        Request:
-            `POST` `/users/follow`
+    Request:
+        `POST` `/users/follow`
 
-        Request body:
-            {'user_id': @user_id@}
-        """
-        followed_user_id = self.request.validated['user_id']
-        follower_user_id = self.request.authenticated_userid
-        follower_relation = get_follower_relation(followed_user_id, follower_user_id)
+    Request body:
+        {'user_id': @user_id@}
+    """
+    followed_user_id = request.validated['user_id']
+    follower_user_id = request.authenticated_userid
+    follower_relation = get_follower_relation(followed_user_id, follower_user_id)
 
-        if not follower_relation:
-            DBSession.add(
-                FollowedUser(
-                    followed_user_id=followed_user_id, follower_user_id=follower_user_id
-                )
+    if not follower_relation:
+        DBSession.add(
+            FollowedUser(
+                followed_user_id=followed_user_id, follower_user_id=follower_user_id
             )
+        )
 
-        return {}
+    return {}
 
 
-@resource(path='/users/unfollow')
-class UserUnfollowRest(BaseView):
-    @restricted_json_view(
-        validators=[body_validator(FollowSchema), validate_body_user_id],
-    )
-    def post(self):
-        """Unfollow the given user.
+follow_user.view_name = 'UserFollowRest.post'
 
-        Request:
-            `POST` `/users/unfollow`
 
-        Request body:
-            {'user_id': @user_id@}
+@restricted_json_view(
+    validators=[body_validator(FollowSchema), validate_body_user_id],
+)
+def unfollow_user(request):
+    """Unfollow the given user.
 
-        """
-        followed_user_id = self.request.validated['user_id']
-        follower_user_id = self.request.authenticated_userid
-        follower_relation = get_follower_relation(followed_user_id, follower_user_id)
+    Request:
+        `POST` `/users/unfollow`
 
-        if follower_relation:
-            DBSession.delete(follower_relation)
-        else:
-            log.warning(
-                f'tried to delete not existing follower relation ({followed_user_id}, '
-                f'{follower_user_id})'
-            )
+    Request body:
+        {'user_id': @user_id@}
 
-        return {}
+    """
+    followed_user_id = request.validated['user_id']
+    follower_user_id = request.authenticated_userid
+    follower_relation = get_follower_relation(followed_user_id, follower_user_id)
+
+    if follower_relation:
+        DBSession.delete(follower_relation)
+    else:
+        log.warning(
+            f'tried to delete not existing follower relation ({followed_user_id}, '
+            f'{follower_user_id})'
+        )
+
+    return {}
+
+
+unfollow_user.view_name = 'UserUnfollowRest.post'
 
 
 @resource(path='/users/following-user/{id}')
