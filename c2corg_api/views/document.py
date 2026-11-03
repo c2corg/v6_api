@@ -55,6 +55,7 @@ from c2corg_api.views.document_listings import (
     add_load_for_profiles,
     get_documents,
 )
+from c2corg_api.views.license import get_license
 from c2corg_api.views.resource import BaseView
 from c2corg_api.views.validation import (
     association_permission_checker,
@@ -240,9 +241,11 @@ class DocumentRest(BaseView):
         if adapt_schema:
             schema = adapt_schema(schema, document)
 
-        return to_json_dict(
+        doc_dict = to_json_dict(
             document, schema, with_special_locales_attrs=True, cook_locale=cook_locale
         )
+        doc_dict['license'] = get_license(document.type, doc_dict)
+        return doc_dict
 
     def _set_associations(self, document, lang, editing_view):
         document.associations = doc_associations.get_associations(

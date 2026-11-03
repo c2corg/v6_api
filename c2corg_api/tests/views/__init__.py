@@ -153,6 +153,7 @@ class BaseDocumentTestRest(BaseTestRest):
             assert sorted(available_langs) == ['en', 'fr']
             assert 'protected' in doc
             assert 'type' in doc
+            assert 'license' in doc
 
         if limit is None:
             if self._model == UserProfile:
@@ -226,6 +227,7 @@ class BaseDocumentTestRest(BaseTestRest):
         assert body.get('document_id') == reference.document_id
         assert body.get('version') is not None
         assert 'type' in body
+        assert 'license' in body
         assert body.get('associations') is not None
 
         locales = body.get('locales')
@@ -289,6 +291,7 @@ class BaseDocumentTestRest(BaseTestRest):
         assert 'cooked' in body['document']
         assert 'lang' in body['document']['cooked']
         assert body['document']['cooked']['lang'] == 'en'
+        assert 'license' in body['document']
 
         assert 'version' in body
         assert 'previous_version_id' in body

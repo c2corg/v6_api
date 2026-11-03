@@ -42,6 +42,11 @@
         "height_diff_up": "null",
         "hiking_rating": "null",
         "img_count": "int",
+        "license": {
+          "attribution_url": "str",
+          "id": "str",
+          "url": "str"
+        },
         "locales": [
           {
             "lang": "str",

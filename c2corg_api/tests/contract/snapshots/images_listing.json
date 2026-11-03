@@ -29,6 +29,12 @@
           "geom": "str",
           "version": "int"
         },
+        "image_type": "str",
+        "license": {
+          "attribution_url": "str",
+          "id": "str",
+          "url": "str"
+        },
         "locales": [
           {
             "lang": "str",

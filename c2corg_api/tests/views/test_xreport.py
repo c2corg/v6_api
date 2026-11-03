@@ -86,6 +86,7 @@ class TestXreportRest(BaseDocumentTestRest):
     def test_get(self):
         body = self.get(self.xreport1, user='moderator')
         assert 'xreport' not in body
+        assert body['license']['id'] == 'CC-BY-NC-ND-3.0'
         assert 'geometry' in body
         assert body.get('geometry') is None
 
