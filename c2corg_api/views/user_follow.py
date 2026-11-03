@@ -7,7 +7,6 @@ from c2corg_api.schemas.types import Int
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import user_profile_documents_config
-from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.validation import (
     validate_body_user_id,
     validate_id,
@@ -94,58 +93,60 @@ def unfollow_user(request):
 unfollow_user.view_name = 'UserUnfollowRest.post'
 
 
-@resource(path='/users/following-user/{id}')
-class UserFollowingUserRest(BaseView):
-    @restricted_json_view(validators=[validate_id])
-    def get(self):
-        """Check if the authenticated user follows the given user.
+@restricted_json_view(validators=[validate_id])
+def read_following_user(request):
+    """Check if the authenticated user follows the given user.
 
-        Request:
-            `GET` `users/following-user/{user_id}`
+    Request:
+        `GET` `users/following-user/{user_id}`
 
-        Example response:
+    Example response:
 
-            {'is_following': true}
+        {'is_following': true}
 
-        """
-        followed_user_id = self.request.validated['id']
-        follower_user_id = self.request.authenticated_userid
-        follower_relation = get_follower_relation(followed_user_id, follower_user_id)
+    """
+    followed_user_id = request.validated['id']
+    follower_user_id = request.authenticated_userid
+    follower_relation = get_follower_relation(followed_user_id, follower_user_id)
 
-        return {'is_following': follower_relation is not None}
+    return {'is_following': follower_relation is not None}
 
 
-@resource(path='/users/following')
-class UserFollowingRest(BaseView):
-    @restricted_json_view(validators=[validate_preferred_lang_param])
-    def get(self):
-        """Get the users that the authenticated user is following.
+read_following_user.view_name = 'UserFollowingUserRest.get'
 
-        Request:
-            `GET` `/users/following`
 
-        Example response:
+@restricted_json_view(validators=[validate_preferred_lang_param])
+def read_following(request):
+    """Get the users that the authenticated user is following.
 
-            {
-                'following': [
-                    {
-                        'document_id': 123,
-                        ...
-                    }
-                ]
-            }
-        """
-        follower_user_id = self.request.authenticated_userid
+    Request:
+        `GET` `/users/following`
 
-        followed_user_ids = (
-            DBSession.query(FollowedUser.followed_user_id)
-            .filter(FollowedUser.follower_user_id == follower_user_id)
-            .all()
-        )
-        followed_user_ids = [user_id for (user_id,) in followed_user_ids]
+    Example response:
 
-        followed_users = get_documents_for_ids(
-            followed_user_ids, None, user_profile_documents_config
-        ).get('documents')
+        {
+            'following': [
+                {
+                    'document_id': 123,
+                    ...
+                }
+            ]
+        }
+    """
+    follower_user_id = request.authenticated_userid
 
-        return {'following': followed_users}
+    followed_user_ids = (
+        DBSession.query(FollowedUser.followed_user_id)
+        .filter(FollowedUser.follower_user_id == follower_user_id)
+        .all()
+    )
+    followed_user_ids = [user_id for (user_id,) in followed_user_ids]
+
+    followed_users = get_documents_for_ids(
+        followed_user_ids, None, user_profile_documents_config
+    ).get('documents')
+
+    return {'following': followed_users}
+
+
+read_following.view_name = 'UserFollowingRest.get'

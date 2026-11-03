@@ -43,7 +43,7 @@ from c2corg_api.views.document import (
 from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import image_documents_config
 from c2corg_api.views.document_version import document_version
-from c2corg_api.views.resource import BaseView, resource, view
+from c2corg_api.views.resource import view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_associations_in,
@@ -340,28 +340,29 @@ def validate_extension(request, **kwargs):
         request.errors.add('querystring', 'extension', 'invalid extension')
 
 
-@resource(path='/images/proxy/{id}')
-class ImageProxyRest(BaseView):
-    @view(validators=[validate_id, validate_size, validate_extension])
-    def get(self):
-        document_id = self.request.validated['id']
-        size = self.request.validated['size']
-        extension = self.request.validated['extension']
-        # follows merged images to their target, whose files still exist
-        filename = get_image_filenames([document_id]).get(document_id)
-        if filename is None:
-            raise HTTPNotFound()
-        image_url = self.request.registry.settings['image_url']
-        if size is None:
-            location = f'{image_url}{filename}'
+@view(validators=[validate_id, validate_size, validate_extension])
+def redirect_to_image(request):
+    document_id = request.validated['id']
+    size = request.validated['size']
+    extension = request.validated['extension']
+    # follows merged images to their target, whose files still exist
+    filename = get_image_filenames([document_id]).get(document_id)
+    if filename is None:
+        raise HTTPNotFound()
+    image_url = request.registry.settings['image_url']
+    if size is None:
+        location = f'{image_url}{filename}'
+    else:
+        base, ext = os.path.splitext(filename)
+        if extension is None:
+            ext = '.jpg' if ext == '.svg' else ext
         else:
-            base, ext = os.path.splitext(filename)
-            if extension is None:
-                ext = '.jpg' if ext == '.svg' else ext
-            else:
-                ext = '.' + extension
-            location = f'{image_url}{base}{size}{ext}'
-        return HTTPFound(location, headers={'Cache-Control': PROXY_CACHE_CONTROL})
+            ext = '.' + extension
+        location = f'{image_url}{base}{size}{ext}'
+    return HTTPFound(location, headers={'Cache-Control': PROXY_CACHE_CONTROL})
+
+
+redirect_to_image.view_name = 'ImageProxyRest.get'
 
 
 def set_creator(image):

@@ -44,7 +44,6 @@ from c2corg_api.views import (
 from c2corg_api.views.document import (
     LIMIT_DEFAULT,
     NUM_RECENT_OUTINGS,
-    DocumentRest,
     collection_get,
     create_document,
     make_validator_create,
@@ -61,7 +60,7 @@ from c2corg_api.views.document_schemas import (
     route_schema_adaptor,
 )
 from c2corg_api.views.document_version import document_version
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.resource import view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_cook_param,
@@ -265,65 +264,61 @@ update_public_transportation_ratings.view_name = (
 )
 
 
-@resource(path='/reachableroutes')
-class ReachableRouteRest(DocumentRest):
-    def __init__(self, request, context=None):
-        self.request = request
+@view(validators=[validate_pagination, validate_preferred_lang_param])
+def list_reachable_routes(request):
+    """Return the reachable routes and their total.
 
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def get(self):
-        """Return the reachable routes and their total.
+    Returns a list of object {documents: Route[], total: Integer} ->
+    documents: routes reachable within offset and limit
+    total: number of documents returned by query,
+    without offset and limit.
+    """
+    validated = request.validated
 
-        Returns a list of object {documents: Route[], total: Integer} ->
-        documents: routes reachable within offset and limit
-        total: number of documents returned by query,
-        without offset and limit.
-        """
-        validated = self.request.validated
+    meta_params = {
+        'offset': validated.get('offset', 0),
+        'limit': validated.get('limit', LIMIT_DEFAULT),
+        'lang': validated.get('lang'),
+    }
 
-        meta_params = {
-            'offset': validated.get('offset', 0),
-            'limit': validated.get('limit', LIMIT_DEFAULT),
-            'lang': validated.get('lang'),
-        }
+    query, count = build_reachable_route_query(request.GET, meta_params)
 
-        query, count = build_reachable_route_query(self.request.GET, meta_params)
+    # route, areas in results: the query is the page already
+    results = [] if query is None else query.all()
 
-        # route, areas in results: the query is the page already
-        results = [] if query is None else query.all()
+    areas_id = set()
+    for _route, areas in results:
+        if areas is None:
+            continue
+        for area in areas:
+            area_id = area.get('document_id')
+            if area_id is not None:
+                areas_id.add(area_id)
 
-        areas_id = set()
-        for _route, areas in results:
-            if areas is None:
-                continue
-            for area in areas:
-                area_id = area.get('document_id')
-                if area_id is not None:
-                    areas_id.add(area_id)
+    areas_objects = DBSession.query(Area).filter(Area.document_id.in_(areas_id)).all()
 
-        areas_objects = (
-            DBSession.query(Area).filter(Area.document_id.in_(areas_id)).all()
-        )
+    areas_map = {area.document_id: area for area in areas_objects}
 
-        areas_map = {area.document_id: area for area in areas_objects}
+    routes = []
+    for route, areas in results:
+        json_areas = []
+        if areas is None:
+            areas = []
 
-        routes = []
-        for route, areas in results:
-            json_areas = []
-            if areas is None:
-                areas = []
+        for area in areas:
+            area_obj = areas_map.get(area.get('document_id'))
+            if area_obj:
+                json_areas.append(to_json_dict(area_obj, area_listing_schema))
 
-            for area in areas:
-                area_obj = areas_map.get(area.get('document_id'))
-                if area_obj:
-                    json_areas.append(to_json_dict(area_obj, area_listing_schema))
+        # assign JSON areas to the route
+        route.areas = json_areas
+        wp_dict = to_json_dict(route, route_schema, True)
+        routes.append(wp_dict)
 
-            # assign JSON areas to the route
-            route.areas = json_areas
-            wp_dict = to_json_dict(route, route_schema, True)
-            routes.append(wp_dict)
+    return {'documents': routes, 'total': count}
 
-        return {'documents': routes, 'total': count}
+
+list_reachable_routes.view_name = 'ReachableRouteRest.get'
 
 
 def set_default_geometry(linked_waypoints, route, user_id):

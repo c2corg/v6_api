@@ -21,7 +21,6 @@ from c2corg_api.schemas.coverage import (
 )
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
-    DocumentRest,
     collection_get,
     create_document,
     make_validator_create,
@@ -30,7 +29,7 @@ from c2corg_api.views.document import (
     read_document,
 )
 from c2corg_api.views.document_schemas import coverage_documents_config
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.resource import view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_cook_param,
@@ -111,18 +110,16 @@ def validate_lon_lat(request, **kwargs):
             request.errors.add('querystring', key, 'invalid ' + key)
 
 
-@resource(path='/getcoverage')
-class WaypointCoverageRest(DocumentRest):
-    def __init__(self, request, context=None):
-        self.request = request
+@view(validators=[validate_lon_lat])
+def find_coverage(request):
+    """Return the coverage from a longitude and a latitude."""
+    lon = request.validated['lon']
+    lat = request.validated['lat']
 
-    @view(validators=[validate_lon_lat])
-    def get(self):
-        """Return the coverage from a longitude and a latitude."""
-        lon = self.request.validated['lon']
-        lat = self.request.validated['lat']
+    return get_coverage(lon, lat)
 
-        return get_coverage(lon, lat)
+
+find_coverage.view_name = 'WaypointCoverageRest.get'
 
 
 def validate_geom_detail(request, **kwargs):

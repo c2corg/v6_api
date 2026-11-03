@@ -3,7 +3,6 @@ from c2corg_api.models.common.attributes import mailinglists as valid_mailinglis
 from c2corg_api.models.mailinglist import Mailinglist
 from c2corg_api.models.user import User
 from c2corg_api.views import restricted_json_view, restricted_view
-from c2corg_api.views.resource import BaseView, resource
 
 
 def validate_mailinglist_statuses(request, **kwargs):
@@ -68,26 +67,27 @@ def update_mailinglists(request):
 update_mailinglists.view_name = 'UserMailinglistsRest.post'
 
 
-@resource(path='/users/mailinglists')
-class UserMailinglistsRest(BaseView):
-    @restricted_view()
-    def get(self):
-        """Get the mailinglists subscriptions of the authenticated user.
+@restricted_view()
+def read_mailinglists(request):
+    """Get the mailinglists subscriptions of the authenticated user.
 
-        Request:
-            `GET` `/users/mailinglists`
+    Request:
+        `GET` `/users/mailinglists`
 
-        Example response:
+    Example response:
 
-            {'avalanche': False, 'lawinen': True, 'valanghe': False, ...}
+        {'avalanche': False, 'lawinen': True, 'valanghe': False, ...}
 
-        """
-        user_id = self.request.authenticated_userid
-        res = (
-            DBSession.query(Mailinglist.listname)
-            .filter(Mailinglist.user_id == user_id)
-            .all()
-        )
-        subscribed_mailinglists = [list[0] for list in res]
+    """
+    user_id = request.authenticated_userid
+    res = (
+        DBSession.query(Mailinglist.listname)
+        .filter(Mailinglist.user_id == user_id)
+        .all()
+    )
+    subscribed_mailinglists = [list[0] for list in res]
 
-        return {ml: ml in subscribed_mailinglists for ml in valid_mailinglists}
+    return {ml: ml in subscribed_mailinglists for ml in valid_mailinglists}
+
+
+read_mailinglists.view_name = 'UserMailinglistsRest.get'

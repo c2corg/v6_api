@@ -7,10 +7,10 @@ from typing import Annotated
 
 from fastapi import Depends, Path, Request
 
-from c2corg_api.views.sitemap import SitemapRest
-from c2corg_api.views.sitemap_xml import SitemapXml
+from c2corg_api.views.sitemap import list_sitemaps, read_sitemap
+from c2corg_api.views.sitemap_xml import list_sitemaps_xml, read_sitemap_xml
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_view, typed_values
+from c2corg_api.web.compat import serve_read, typed_values
 from c2corg_api.web.params import DocType, natural
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
@@ -39,25 +39,25 @@ def include(app):
 
 def sitemap_index(request: Request, user: User):
     """Return the URLs of the sitemaps."""
-    return serve_view(request, user, [], SitemapRest, 'collection_get')
+    return serve_read(request, user, [], list_sitemaps)
 
 
 # `i` before `doc_type`: its error comes first, as its validator did
 def sitemap(request: Request, user: User, i: Page, doc_type: DocumentType):
     """Return the pages of a sitemap."""
     validated = {'i': i, 'doc_type': doc_type}
-    return serve_view(request, user, [typed_values(validated)], SitemapRest)
+    return serve_read(request, user, [typed_values(validated)], read_sitemap)
 
 
 def sitemap_index_xml(request: Request, user: User):
     """Return the sitemap index file."""
-    return serve_view(request, user, [], SitemapXml, 'collection_get')
+    return serve_read(request, user, [], list_sitemaps_xml)
 
 
 def sitemap_xml(request: Request, user: User, i: Page, doc_type: DocumentType):
     """Return a sitemap file."""
     validated = {'i': i, 'doc_type': doc_type}
-    return serve_view(request, user, [typed_values(validated)], SitemapXml)
+    return serve_read(request, user, [typed_values(validated)], read_sitemap_xml)
 
 
 for endpoint in (sitemap_index, sitemap, sitemap_index_xml, sitemap_xml):

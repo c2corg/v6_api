@@ -10,13 +10,13 @@ from fastapi import Depends, Query, Request
 from c2corg_api.views.association_history import (
     LIMIT_DEFAULT,
     LIMIT_MAX,
-    HistoryAssociationRest,
+    read_association_history,
 )
-from c2corg_api.views.document_changes import ChangesDocumentRest
-from c2corg_api.views.document_history import HistoryDocumentRest
+from c2corg_api.views.document_changes import read_document_changes
+from c2corg_api.views.document_history import read_document_history
 from c2corg_api.views.feed import MAX_PAGE_LIMIT
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_view, typed_values
+from c2corg_api.web.compat import serve_read, typed_values
 from c2corg_api.web.params import (
     ChangesToken,
     DocumentId,
@@ -62,7 +62,7 @@ def include(app):
 def document_history(request: Request, user: User, id: DocumentId, lang: PathLang):
     """Return the versions of a document in a language."""
     validated = {'id': id, 'lang': lang}
-    return serve_view(request, user, [typed_values(validated)], HistoryDocumentRest)
+    return serve_read(request, user, [typed_values(validated)], read_document_history)
 
 
 def document_changes(
@@ -83,7 +83,7 @@ def document_changes(
     """Return the last changes of the documents, or of the documents of a user."""
     # outings and profiles are left out
     validated = {'limit': limit, 'token_id': token, 'u': u}
-    return serve_view(request, user, [typed_values(validated)], ChangesDocumentRest)
+    return serve_read(request, user, [typed_values(validated)], read_document_changes)
 
 
 def associations_history(
@@ -107,7 +107,9 @@ def associations_history(
 ):
     """Return the last changes of the associations, of a document or a user."""
     validated = {'d': d, 'offset': offset, 'limit': limit, 'u': u}
-    return serve_view(request, user, [typed_values(validated)], HistoryAssociationRest)
+    return serve_read(
+        request, user, [typed_values(validated)], read_association_history
+    )
 
 
 for endpoint in (document_history, document_changes, associations_history):

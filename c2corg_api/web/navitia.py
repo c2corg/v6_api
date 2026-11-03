@@ -10,18 +10,18 @@ from typing import Annotated
 from fastapi import Depends, Path, Query, Request
 
 from c2corg_api.views.navitia import (
-    NavitiaIsochronesReachableRoutesRest,
-    NavitiaIsochronesReachableWaypointsRest,
-    NavitiaJourneyReachableRoutesProgressRest,
-    NavitiaJourneyReachableRoutesResultRest,
-    NavitiaJourneyReachableWaypointsProgressRest,
-    NavitiaJourneyReachableWaypointsResultRest,
-    NavitiaRest,
-    StartNavitiaJourneyReachableRoutesRest,
-    StartNavitiaJourneyReachableWaypointsRest,
+    read_isochrone_reachable_routes,
+    read_isochrone_reachable_waypoints,
+    read_journey_reachable_routes_progress,
+    read_journey_reachable_routes_result,
+    read_journey_reachable_waypoints_progress,
+    read_journey_reachable_waypoints_result,
+    read_journeys,
+    start_journey_reachable_routes,
+    start_journey_reachable_waypoints,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_view
+from c2corg_api.web.compat import serve_read
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 
@@ -57,55 +57,55 @@ JOURNEY_REACHABLE = [
     'max_walking_duration_to_pt',
 ]
 
-# (path, view class, required parameters, optional parameters)
+# (path, function, required parameters, optional parameters)
 ROUTES = [
-    ('/navitia/journeys', NavitiaRest, JOURNEY, JOURNEY_OPTIONAL),
+    ('/navitia/journeys', read_journeys, JOURNEY, JOURNEY_OPTIONAL),
     (
         '/navitia/isochronesreachableroutes',
-        NavitiaIsochronesReachableRoutesRest,
+        read_isochrone_reachable_routes,
         ISOCHRONE,
         [],
     ),
     (
         '/navitia/isochronesreachablewaypoints',
-        NavitiaIsochronesReachableWaypointsRest,
+        read_isochrone_reachable_waypoints,
         ISOCHRONE,
         [],
     ),
     (
         '/navitia/journeyreachableroutes/start',
-        StartNavitiaJourneyReachableRoutesRest,
+        start_journey_reachable_routes,
         JOURNEY_REACHABLE,
         [],
     ),
     (
         '/navitia/journeyreachablewaypoints/start',
-        StartNavitiaJourneyReachableWaypointsRest,
+        start_journey_reachable_waypoints,
         JOURNEY_REACHABLE,
         [],
     ),
     (
         '/navitia/journeyreachableroutes/result/{job_id}',
-        NavitiaJourneyReachableRoutesResultRest,
+        read_journey_reachable_routes_result,
         [],
         [],
     ),
     (
         '/navitia/journeyreachablewaypoints/result/{job_id}',
-        NavitiaJourneyReachableWaypointsResultRest,
+        read_journey_reachable_waypoints_result,
         [],
         [],
     ),
     # the progress is a stream of server-sent events, until the job ends
     (
         '/navitia/journeyreachableroutes/progress/{job_id}',
-        NavitiaJourneyReachableRoutesProgressRest,
+        read_journey_reachable_routes_progress,
         [],
         [],
     ),
     (
         '/navitia/journeyreachablewaypoints/progress/{job_id}',
-        NavitiaJourneyReachableWaypointsProgressRest,
+        read_journey_reachable_waypoints_progress,
         [],
         [],
     ),
@@ -114,21 +114,22 @@ ROUTES = [
 
 def include(app):
     """Add the routes of this module to the FastAPI application."""
-    for path, view_class, required, optional in ROUTES:
+    for path, function, required, optional in ROUTES:
         app.add_api_route(
             path,
-            _endpoint(view_class, required, optional, '{job_id}' in path),
+            _endpoint(function, required, optional, '{job_id}' in path),
             methods=['GET', 'HEAD'],
-            operation_id=view_class.__name__,
+            # the name of the view class it was
+            operation_id=function.view_name.split('.')[0],
             tags=['navitia'],
         )
 
 
-def _endpoint(view_class, required, optional, job):
+def _endpoint(function, required, optional, job):
     def endpoint(request: Request, user: User, **parameters):
-        return serve_view(request, user, [], view_class)
+        return serve_read(request, user, [], function)
 
-    endpoint.__name__ = view_class.__name__
+    endpoint.__name__ = function.view_name.split('.')[0]
     endpoint.__signature__ = Signature(
         [
             Parameter('request', Parameter.POSITIONAL_OR_KEYWORD, annotation=Request),

@@ -12,7 +12,6 @@ from c2corg_api.schemas.types import Bool, OneOf, Str, email_check, function_che
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import restricted_json_view, restricted_view
-from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.user import (
     MINIMUM_PASSWORD_LENGTH,
     PASSWORD_STRENGTH_ERROR,
@@ -163,14 +162,15 @@ def update_account(request):
 update_account.view_name = 'UserAccountRest.post'
 
 
-@resource(path='/users/account')
-class UserAccountRest(BaseView):
-    @restricted_view(renderer='json', http_cache=0)
-    def get(self):
-        user = get_user(self.request)
-        return {
-            'email': user.email,
-            'name': user.name,
-            'forum_username': user.forum_username,
-            'is_profile_public': user.is_profile_public,
-        }
+@restricted_view(renderer='json', http_cache=0)
+def read_account(request):
+    user = get_user(request)
+    return {
+        'email': user.email,
+        'name': user.name,
+        'forum_username': user.forum_username,
+        'is_profile_public': user.is_profile_public,
+    }
+
+
+read_account.view_name = 'UserAccountRest.get'

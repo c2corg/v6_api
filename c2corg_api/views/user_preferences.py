@@ -15,7 +15,6 @@ from c2corg_api.views import (
     set_best_locale,
     to_json_dict,
 )
-from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.validation import validate_preferred_lang_param
 
 
@@ -71,33 +70,34 @@ def update_preferences(request):
 update_preferences.view_name = 'UserFilterPreferencesRest.post'
 
 
-@resource(path='/users/preferences')
-class UserFilterPreferencesRest(BaseView):
-    @restricted_view(validators=[validate_preferred_lang_param])
-    def get(self):
-        """Get the filter preferences of the authenticated user.
+@restricted_view(validators=[validate_preferred_lang_param])
+def read_preferences(request):
+    """Get the filter preferences of the authenticated user.
 
-        Request:
-            `GET` `/users/preferences[?pl=...]`
+    Request:
+        `GET` `/users/preferences[?pl=...]`
 
-        Parameters:
-            `pl=...` (optional)
-            When set only the given locale will be included (if available).
-            Otherwise the default locale of the user will be used.
-        """
-        user = get_user(self.request)
+    Parameters:
+        `pl=...` (optional)
+        When set only the given locale will be included (if available).
+        Otherwise the default locale of the user will be used.
+    """
+    user = get_user(request)
 
-        lang = self.request.validated.get('lang')
-        if not lang:
-            lang = user.lang
+    lang = request.validated.get('lang')
+    if not lang:
+        lang = user.lang
 
-        areas = user.feed_filter_areas
-        if lang is not None:
-            set_best_locale(areas, lang)
+    areas = user.feed_filter_areas
+    if lang is not None:
+        set_best_locale(areas, lang)
 
-        return {
-            'followed_only': user.feed_followed_only,
-            'activities': user.feed_filter_activities,
-            'langs': user.feed_filter_langs,
-            'areas': [to_json_dict(a, area_listing_schema) for a in areas],
-        }
+    return {
+        'followed_only': user.feed_followed_only,
+        'activities': user.feed_filter_activities,
+        'langs': user.feed_filter_langs,
+        'areas': [to_json_dict(a, area_listing_schema) for a in areas],
+    }
+
+
+read_preferences.view_name = 'UserFilterPreferencesRest.get'
