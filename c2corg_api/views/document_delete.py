@@ -60,7 +60,6 @@ from c2corg_api.models.xreport import (
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.image import delete_all_files_for_image
-from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.validation import validate_id, validate_lang
 
 
@@ -254,131 +253,134 @@ def validate_requestor(request, **kwargs):
     )
 
 
-class DeleteBase(BaseView):
-    def _delete(self, document_id, document_type):
-        if document_type == IMAGE_TYPE:
-            # Files are actually removed only if the transaction succeeds
-            delete_all_files_for_image(document_id, self.request)
+def _delete(request, document_id, document_type):
+    if document_type == IMAGE_TYPE:
+        # Files are actually removed only if the transaction succeeds
+        delete_all_files_for_image(document_id, request)
 
-        self._delete_document(document_id, document_type)
+    _delete_document(request, document_id, document_type)
 
-        update_deleted_documents_list(document_id, document_type)
-        notify_es_syncer(self.request.registry.queue_config)
+    update_deleted_documents_list(document_id, document_type)
+    notify_es_syncer(request.registry.queue_config)
 
-        return {}
-
-    def _delete_document(self, document_id, document_type, redirecting=False):
-        # Check if documents are redirecting (merged) to the document to delete
-        # If yes, delete them first.
-        self._remove_merged_documents(document_id, document_type)
-
-        remove_from_cache(document_id)
-
-        # Remove associations and update cache of formerly associated docs
-        update_cache_version_full(document_id, document_type)
-        _remove_associations(document_id)
-        _remove_tags(document_id)
-
-        clazz, clazz_locale, archive_clazz, archive_clazz_locale = _get_models(
-            document_type
-        )
-
-        if not redirecting:
-            _remove_from_feed(document_id)
-
-        if not redirecting and document_type == IMAGE_TYPE:
-            # Remove the references of this image from the feed
-            _remove_image_from_feed(document_id)
-
-        if document_type == WAYPOINT_TYPE:
-            _remove_waypoint_from_routes_archives_main_waypoint_id(document_id)
-        remove_whole_document(
-            document_id, clazz, clazz_locale, archive_clazz, archive_clazz_locale
-        )
-
-    def _remove_merged_documents(self, document_id, document_type):
-        merged_document_ids = [
-            row[0]
-            for row in DBSession.query(ArchiveDocument.document_id)
-            .filter(ArchiveDocument.redirects_to == document_id)
-            .all()
-        ]
-        for merged_document_id in merged_document_ids:
-            self._delete_document(merged_document_id, document_type, True)
+    return {}
 
 
-@resource(path='/documents/delete/{id}')
-class DeleteDocumentRest(DeleteBase):
-    @restricted_json_view(
-        permission='authenticated',
-        validators=[
-            validate_id,
-            validate_document_type,
-            validate_requestor,
-            validate_document,
-        ],
+def _delete_document(request, document_id, document_type, redirecting=False):
+    # Check if documents are redirecting (merged) to the document to delete
+    # If yes, delete them first.
+    _remove_merged_documents(request, document_id, document_type)
+
+    remove_from_cache(document_id)
+
+    # Remove associations and update cache of formerly associated docs
+    update_cache_version_full(document_id, document_type)
+    _remove_associations(document_id)
+    _remove_tags(document_id)
+
+    clazz, clazz_locale, archive_clazz, archive_clazz_locale = _get_models(
+        document_type
     )
-    def delete(self):
-        """
-        Delete a document.
 
-        Request:
-            `DELETE` `/documents/delete/{id}`
-        """
-        document_id = self.request.validated['id']
-        document_type = self.request.validated['document_type']
+    if not redirecting:
+        _remove_from_feed(document_id)
 
-        # Note: if an error occurs while deleting, SqlAlchemy will
-        # automatically cancel all DB changes.
+    if not redirecting and document_type == IMAGE_TYPE:
+        # Remove the references of this image from the feed
+        _remove_image_from_feed(document_id)
 
-        return self._delete(document_id, document_type)
-
-
-@resource(path='/documents/delete/{id}/{lang}')
-class DeleteDocumentLocaleRest(DeleteBase):
-    @restricted_json_view(
-        permission='moderator',
-        validators=[
-            validate_id,
-            validate_lang,
-            validate_document_type,
-            validate_document,
-        ],
+    if document_type == WAYPOINT_TYPE:
+        _remove_waypoint_from_routes_archives_main_waypoint_id(document_id)
+    remove_whole_document(
+        document_id, clazz, clazz_locale, archive_clazz, archive_clazz_locale
     )
-    def delete(self):
-        """
-        Delete a document locale.
 
-        Request:
-            `DELETE` `/documents/delete/{id}/{lang}`
-        """
-        document_id = self.request.validated['id']
-        document_type = self.request.validated['document_type']
-        lang = self.request.validated['lang']
 
-        # Note: if an error occurs while deleting, SqlAlchemy will
-        # automatically cancel all DB changes.
+def _remove_merged_documents(request, document_id, document_type):
+    merged_document_ids = [
+        row[0]
+        for row in DBSession.query(ArchiveDocument.document_id)
+        .filter(ArchiveDocument.redirects_to == document_id)
+        .all()
+    ]
+    for merged_document_id in merged_document_ids:
+        _delete_document(request, merged_document_id, document_type, True)
 
-        # If only one locale is available, deleting it implies to remove
-        # the whole document.
-        if self.request.validated['is_only_locale']:
-            return self._delete(document_id, document_type)
 
-        clazz, clazz_locale, archive_clazz, archive_clazz_locale = _get_models(
-            document_type
-        )
+@restricted_json_view(
+    permission='authenticated',
+    validators=[
+        validate_id,
+        validate_document_type,
+        validate_requestor,
+        validate_document,
+    ],
+)
+def delete_document(request):
+    """
+    Delete a document.
 
-        _remove_locale_versions(document_id, lang)
-        _remove_archive_locale(archive_clazz_locale, document_id, lang)
-        _remove_locale(clazz_locale, document_id, lang)
-        update_langs_of_changes(document_id)
+    Request:
+        `DELETE` `/documents/delete/{id}`
+    """
+    document_id = request.validated['id']
+    document_type = request.validated['document_type']
 
-        update_cache_version_full(document_id, document_type)
+    # Note: if an error occurs while deleting, SqlAlchemy will
+    # automatically cancel all DB changes.
 
-        update_deleted_locales_list(document_id, document_type, lang)
-        notify_es_syncer(self.request.registry.queue_config)
+    return _delete(request, document_id, document_type)
 
-        return {}
+
+delete_document.view_name = 'DeleteDocumentRest.delete'
+
+
+@restricted_json_view(
+    permission='moderator',
+    validators=[
+        validate_id,
+        validate_lang,
+        validate_document_type,
+        validate_document,
+    ],
+)
+def delete_document_locale(request):
+    """
+    Delete a document locale.
+
+    Request:
+        `DELETE` `/documents/delete/{id}/{lang}`
+    """
+    document_id = request.validated['id']
+    document_type = request.validated['document_type']
+    lang = request.validated['lang']
+
+    # Note: if an error occurs while deleting, SqlAlchemy will
+    # automatically cancel all DB changes.
+
+    # If only one locale is available, deleting it implies to remove
+    # the whole document.
+    if request.validated['is_only_locale']:
+        return _delete(request, document_id, document_type)
+
+    clazz, clazz_locale, archive_clazz, archive_clazz_locale = _get_models(
+        document_type
+    )
+
+    _remove_locale_versions(document_id, lang)
+    _remove_archive_locale(archive_clazz_locale, document_id, lang)
+    _remove_locale(clazz_locale, document_id, lang)
+    update_langs_of_changes(document_id)
+
+    update_cache_version_full(document_id, document_type)
+
+    update_deleted_locales_list(document_id, document_type, lang)
+    notify_es_syncer(request.registry.queue_config)
+
+    return {}
+
+
+delete_document_locale.view_name = 'DeleteDocumentLocaleRest.delete'
 
 
 def remove_whole_document(

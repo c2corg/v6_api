@@ -45,7 +45,6 @@ from c2corg_api.schemas.types import Int, OneOf
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.area import update_associations
 from c2corg_api.views.document import DocumentRest
-from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.route import update_linked_attributes
 from c2corg_api.views.waypoint import update_linked_route_titles
 
@@ -93,165 +92,166 @@ def validate_version(request, **kwargs):
         )
 
 
-@resource(path='/documents/revert')
-class DocumentRevertRest(BaseView):
-    @restricted_json_view(
-        permission='moderator',
-        validators=[body_validator(RevertSchema), validate_version],
+@restricted_json_view(
+    permission='moderator',
+    validators=[body_validator(RevertSchema), validate_version],
+)
+def revert_document(request):
+    """Create a new version of the document based upon an old one.
+
+    Request:
+        `POST` `/documents/revert`
+
+    Request body:
+        {
+            'document_id': @document_id@,
+            'lang': @lang@,
+            'version_id': @version_id@
+        }
+
+    """
+    document_id = request.validated['document_id']
+    lang = request.validated['lang']
+    version_id = request.validated['version_id']
+
+    clazz, locale_clazz, archive_clazz, archive_locale_clazz, document_type = (
+        _get_models(request, document_id)
     )
-    def post(self):
-        """Create a new version of the document based upon an old one.
 
-        Request:
-            `POST` `/documents/revert`
+    document = _get_current_document(request, document_id, lang, clazz, locale_clazz)
+    document_in = _get_archive_document(
+        request, document_id, lang, version_id, archive_clazz, archive_locale_clazz
+    )
 
-        Request body:
-            {
-                'document_id': @document_id@,
-                'lang': @lang@,
-                'version_id': @version_id@
-            }
+    # 'before_update' callbacks as in _put() are generally not required
+    # when reverting, except maybe if associated WP/routes have changed.
+    before_update = None
+    after_update = _get_after_update(request, document_type)
 
-        """
-        document_id = self.request.validated['document_id']
-        lang = self.request.validated['lang']
-        version_id = self.request.validated['version_id']
+    def manage_versions(document, old_versions):
+        # After the target document object has been updated,
+        # set the versions back to the versions of the current document
+        # because we are basing our changes on the lastest version.
+        document.version = old_versions['document']
+        document.locales[0].version = old_versions['locales'][lang]
+        if document.geometry:
+            document.geometry.version = old_versions['geometry']
 
-        clazz, locale_clazz, archive_clazz, archive_locale_clazz, document_type = (
-            self._get_models(document_id)
+    request.validated['message'] = f'Revert to version {version_id}'
+
+    update_types = DocumentRest.update_document(
+        document,
+        document_in,
+        request,
+        before_update,
+        after_update,
+        manage_versions,
+    )
+
+    if not update_types:
+        raise HTTPBadRequest('No change to apply when reverting to this version')
+
+    return {}
+
+
+revert_document.view_name = 'DocumentRevertRest.post'
+
+
+def _get_models(request, document_id):
+    (document_type,) = (
+        DBSession.query(Document.type)
+        .filter(Document.document_id == document_id)
+        .first()
+    )
+
+    if document_type == WAYPOINT_TYPE:
+        return (
+            Waypoint,
+            WaypointLocale,
+            ArchiveWaypoint,
+            ArchiveWaypointLocale,
+            document_type,
         )
-
-        document = self._get_current_document(document_id, lang, clazz, locale_clazz)
-        document_in = self._get_archive_document(
-            document_id, lang, version_id, archive_clazz, archive_locale_clazz
+    if document_type == ROUTE_TYPE:
+        return Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale, document_type
+    if document_type == OUTING_TYPE:
+        return (
+            Outing,
+            OutingLocale,
+            ArchiveOuting,
+            ArchiveOutingLocale,
+            document_type,
         )
-
-        # 'before_update' callbacks as in _put() are generally not required
-        # when reverting, except maybe if associated WP/routes have changed.
-        before_update = None
-        after_update = self._get_after_update(document_type)
-
-        def manage_versions(document, old_versions):
-            # After the target document object has been updated,
-            # set the versions back to the versions of the current document
-            # because we are basing our changes on the lastest version.
-            document.version = old_versions['document']
-            document.locales[0].version = old_versions['locales'][lang]
-            if document.geometry:
-                document.geometry.version = old_versions['geometry']
-
-        self.request.validated['message'] = f'Revert to version {version_id}'
-
-        update_types = DocumentRest.update_document(
-            document,
-            document_in,
-            self.request,
-            before_update,
-            after_update,
-            manage_versions,
+    if document_type == IMAGE_TYPE:
+        return Image, None, ArchiveImage, ArchiveDocumentLocale, document_type
+    if document_type == ARTICLE_TYPE:
+        return Article, None, ArchiveArticle, ArchiveDocumentLocale, document_type
+    if document_type == BOOK_TYPE:
+        return Book, None, ArchiveBook, ArchiveDocumentLocale, document_type
+    if document_type == XREPORT_TYPE:
+        return (
+            Xreport,
+            XreportLocale,
+            ArchiveXreport,
+            ArchiveXreportLocale,
+            document_type,
         )
+    if document_type == AREA_TYPE:
+        return Area, None, ArchiveArea, ArchiveDocumentLocale, document_type
+    raise AssertionError(f'unexpected document type {document_type}')
 
-        if not update_types:
-            raise HTTPBadRequest('No change to apply when reverting to this version')
 
-        return {}
-
-    def _get_models(self, document_id):
-        (document_type,) = (
-            DBSession.query(Document.type)
-            .filter(Document.document_id == document_id)
-            .first()
-        )
-
-        if document_type == WAYPOINT_TYPE:
-            return (
-                Waypoint,
-                WaypointLocale,
-                ArchiveWaypoint,
-                ArchiveWaypointLocale,
-                document_type,
+def _get_archive_document(
+    request, document_id, lang, version_id, archive_clazz, archive_locale_clazz
+):
+    version = (
+        DBSession.query(DocumentVersion)
+        .options(joinedload(DocumentVersion.document_archive.of_type(archive_clazz)))
+        .options(
+            joinedload(
+                DocumentVersion.document_locales_archive.of_type(archive_locale_clazz)
             )
-        if document_type == ROUTE_TYPE:
-            return Route, RouteLocale, ArchiveRoute, ArchiveRouteLocale, document_type
-        if document_type == OUTING_TYPE:
-            return (
-                Outing,
-                OutingLocale,
-                ArchiveOuting,
-                ArchiveOutingLocale,
-                document_type,
-            )
-        if document_type == IMAGE_TYPE:
-            return Image, None, ArchiveImage, ArchiveDocumentLocale, document_type
-        if document_type == ARTICLE_TYPE:
-            return Article, None, ArchiveArticle, ArchiveDocumentLocale, document_type
-        if document_type == BOOK_TYPE:
-            return Book, None, ArchiveBook, ArchiveDocumentLocale, document_type
-        if document_type == XREPORT_TYPE:
-            return (
-                Xreport,
-                XreportLocale,
-                ArchiveXreport,
-                ArchiveXreportLocale,
-                document_type,
-            )
-        if document_type == AREA_TYPE:
-            return Area, None, ArchiveArea, ArchiveDocumentLocale, document_type
-        raise AssertionError(f'unexpected document type {document_type}')
-
-    def _get_archive_document(
-        self, document_id, lang, version_id, archive_clazz, archive_locale_clazz
-    ):
-        version = (
-            DBSession.query(DocumentVersion)
-            .options(
-                joinedload(DocumentVersion.document_archive.of_type(archive_clazz))
-            )
-            .options(
-                joinedload(
-                    DocumentVersion.document_locales_archive.of_type(
-                        archive_locale_clazz
-                    )
-                )
-            )
-            .options(joinedload(DocumentVersion.document_geometry_archive))
-            .filter(DocumentVersion.id == version_id)
-            .filter(DocumentVersion.document_id == document_id)
-            .filter(DocumentVersion.lang == lang)
-            .first()
         )
+        .options(joinedload(DocumentVersion.document_geometry_archive))
+        .filter(DocumentVersion.id == version_id)
+        .filter(DocumentVersion.document_id == document_id)
+        .filter(DocumentVersion.lang == lang)
+        .first()
+    )
 
-        archive_document = version.document_archive
-        archive_document.geometry = version.document_geometry_archive
-        archive_document.locales = [version.document_locales_archive]
-        return archive_document
+    archive_document = version.document_archive
+    archive_document.geometry = version.document_geometry_archive
+    archive_document.locales = [version.document_locales_archive]
+    return archive_document
 
-    def _get_current_document(self, document_id, lang, clazz, clazz_locale):
-        locales_type = (
-            with_polymorphic(DocumentLocale, clazz_locale)
-            if clazz_locale
-            else DocumentLocale
-        )
-        locales_attr = clazz.locales
-        locales_type_eager = (
-            locales_attr.of_type(clazz_locale) if clazz_locale else locales_attr
-        )
 
-        document_query = (
-            DBSession.query(clazz)
-            .join(locales_type)
-            .filter(clazz.document_id == document_id)
-            .filter(DocumentLocale.lang == lang)
-            .options(joinedload(clazz.geometry))
-            .options(contains_eager(locales_type_eager, alias=locales_type))
-        )
-        return document_query.first()
+def _get_current_document(request, document_id, lang, clazz, clazz_locale):
+    locales_type = (
+        with_polymorphic(DocumentLocale, clazz_locale)
+        if clazz_locale
+        else DocumentLocale
+    )
+    locales_attr = clazz.locales
+    locales_type_eager = (
+        locales_attr.of_type(clazz_locale) if clazz_locale else locales_attr
+    )
 
-    def _get_after_update(self, document_type):
-        if document_type == WAYPOINT_TYPE:
-            return update_linked_route_titles
-        if document_type == ROUTE_TYPE:
-            return update_linked_attributes
-        if document_type == AREA_TYPE:
-            return update_associations
-        return None
+    document_query = (
+        DBSession.query(clazz)
+        .join(locales_type)
+        .filter(clazz.document_id == document_id)
+        .filter(DocumentLocale.lang == lang)
+        .options(joinedload(clazz.geometry))
+        .options(contains_eager(locales_type_eager, alias=locales_type))
+    )
+    return document_query.first()
+
+
+def _get_after_update(request, document_type):
+    if document_type == WAYPOINT_TYPE:
+        return update_linked_route_titles
+    if document_type == ROUTE_TYPE:
+        return update_linked_attributes
+    if document_type == AREA_TYPE:
+        return update_associations
+    return None
