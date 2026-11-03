@@ -1,13 +1,5 @@
 from c2corg_api.models import DBSession
 from c2corg_api.models.stoparea import Stoparea
-from c2corg_api.views.resource import view
-from c2corg_api.views.validation import (
-    validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-)
 
 validate_stoparea_create = ['navitia_id', 'stoparea_name', 'line', 'operator', 'geom']
 
@@ -30,13 +22,6 @@ def validate_page_params(request, **kwargs):
 validate_stoparea_update = validate_stoparea_create
 
 
-@view(
-    validators=[
-        validate_pagination,
-        validate_preferred_lang_param,
-        validate_page_params,
-    ]
-)
 def list_stopareas(request):
     """Get a list of stopareas."""
     page_id = request.validated.get('page_id', 1)
@@ -53,7 +38,6 @@ def list_stopareas(request):
     }
 
 
-@view(validators=[validate_id, validate_lang_param])
 def read_stoparea(request):
     """Get a single stoparea."""
     stoparea_id = request.matchdict['id']
@@ -66,7 +50,6 @@ def read_stoparea(request):
     return stoparea.to_dict()
 
 
-@view(validators=[validate_id, validate_lang])
 def read_stoparea_info(request):
     stoparea_id = request.matchdict['id']
     stoparea = DBSession.query(Stoparea).filter_by(stoparea_id=stoparea_id).first()

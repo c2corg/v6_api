@@ -23,10 +23,7 @@ from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import OneOf, Str
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import log_validated_user_i_know_what_i_do
-from c2corg_api.views import (
-    json_view,
-)
-from c2corg_api.views.resource import view
+from c2corg_api.views.resource import write
 from c2corg_api.views.user import (
     token_to_response,
     validate_forum_username,
@@ -108,11 +105,12 @@ def sso_sync_validator(request, **kwargs):
     request.validated['sso_user'] = user
 
 
-@json_view(
+@write(
     validators=[
         body_validator(SsoSyncSchema),
         sso_sync_validator,
     ],
+    json=True,
 )
 def sso_sync(request):
     """Synchronize user details and return authentication url.
@@ -253,7 +251,7 @@ def validate_token(request, **kwargs):
     request.validated['sso_user'] = sso_external_id.user
 
 
-@view(validators=[body_validator(SsoLoginSchema), validate_token])
+@write(validators=[body_validator(SsoLoginSchema), validate_token], json=False)
 def sso_login(request):
     user = request.validated['sso_user']
     token = log_validated_user_i_know_what_i_do(user, request)

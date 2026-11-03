@@ -29,7 +29,6 @@ from c2corg_api.schemas.image import (
     image_schema,
 )
 from c2corg_api.search.notify_sync import run_on_successful_transaction
-from c2corg_api.views import restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
     collection_get,
@@ -43,17 +42,11 @@ from c2corg_api.views.document import (
 from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import image_documents_config
 from c2corg_api.views.document_version import document_version
-from c2corg_api.views.resource import view
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     validate_associations,
     validate_associations_in,
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-    validate_version_id,
 )
 
 # Let browsers cache the redirect to the media server: the image filename
@@ -213,12 +206,14 @@ def delete_all_files_for_image(document_id, request):
     run_on_successful_transaction(send_delete_request)
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(ImageCreateSchema),
         validate_image_create,
         validate_associations_create,
     ],
+    permission='authenticated',
+    json=True,
 )
 def create_image(request):
     document_in = request.validated
@@ -226,13 +221,15 @@ def create_image(request):
     return {'document_id': document.document_id}
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(ImageUpdateSchema),
         validate_id,
         validate_image_update,
         validate_associations_update,
     ],
+    permission='authenticated',
+    json=True,
 )
 def update_image(request):
     if not request.has_permission('moderator'):
@@ -264,24 +261,24 @@ def update_image(request):
 # only `collection_post`: it posts a list of images
 
 
-@view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_images(request):
     return collection_get(request, IMAGE_TYPE, image_documents_config)
 
 
-@view(validators=[validate_id, validate_lang_param, validate_cook_param])
 def get_image(request):
     return read_document(
         request, image_documents_config, image_schema, set_custom_fields=set_creator
     )
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(ImageListCreateSchema),
         validate_list_image_create,
         validate_list_associations_create,
     ],
+    permission='authenticated',
+    json=True,
 )
 def create_images(request):
     images_in = request.validated['images']
@@ -298,7 +295,6 @@ def create_images(request):
     return {'images': image_ids}
 
 
-@view(validators=[validate_id, validate_lang])
 def get_image_info(request):
     return document_info(request, image_documents_config)
 
@@ -322,7 +318,6 @@ def validate_extension(request, **kwargs):
         request.errors.add('querystring', 'extension', 'invalid extension')
 
 
-@view(validators=[validate_id, validate_size, validate_extension])
 def redirect_to_image(request):
     document_id = request.validated['id']
     size = request.validated['size']
@@ -349,7 +344,6 @@ def set_creator(image):
     set_creator_on_documents([image], 'creator')
 
 
-@view(validators=[validate_id, validate_lang, validate_version_id])
 def get_image_version(request):
     return document_version(
         request, ArchiveImage, IMAGE_TYPE, ArchiveDocumentLocale, image_schema

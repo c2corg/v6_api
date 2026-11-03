@@ -21,7 +21,6 @@ from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.user import AccountNotValidated as AccountNotValidated
 from c2corg_api.views.markdown import cook
-from c2corg_api.views.resource import view
 
 log = logging.getLogger(__name__)
 
@@ -85,35 +84,6 @@ def invalid_json_body(request):
     except ValueError as e:
         return str(e)
     return None
-
-
-def json_view(**kw):
-    """Cornice view that expects 'application/json' as content-type.
-
-    A Cornice view that expects 'application/json' as content-type.
-    """
-    kw['content_type'] = 'application/json'
-    return view(**kw)
-
-
-def restricted_json_view(**kw):
-    """Cornice view for restricted JSON resources.
-
-    A Cornice view that handles restricted json resources.
-    """
-    if 'permission' not in kw:
-        kw['permission'] = 'authenticated'
-    return json_view(**kw)
-
-
-def restricted_view(**kw):
-    """Cornice view for restricted resources.
-
-    A Cornice view that handles restricted resources.
-    """
-    if 'permission' not in kw:
-        kw['permission'] = 'authenticated'
-    return view(**kw)
 
 
 def to_json_dict(

@@ -36,8 +36,6 @@ from c2corg_api.search.advanced_search import (
 )
 from c2corg_api.views import (
     get_best_locale,
-    restricted_json_view,
-    restricted_view,
     set_default_geom_from_associations,
     to_json_dict,
 )
@@ -60,16 +58,10 @@ from c2corg_api.views.document_schemas import (
     route_schema_adaptor,
 )
 from c2corg_api.views.document_version import document_version
-from c2corg_api.views.resource import view
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     validate_associations,
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-    validate_version_id,
 )
 
 validate_route_create = make_validator_create(fields_route, 'activities', activities)
@@ -121,7 +113,7 @@ def validate_required_associations(request, **kwargs):
         )
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(RouteCreateSchema),
         validate_route_create,
@@ -129,6 +121,8 @@ def validate_required_associations(request, **kwargs):
         validate_required_associations,
         functools.partial(validate_main_waypoint, True),
     ],
+    permission='authenticated',
+    json=True,
 )
 def create_route(request):
     linked_waypoints = request.validated.get('associations', {}).get('waypoints', [])
@@ -140,7 +134,7 @@ def create_route(request):
     )
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(RouteUpdateSchema),
         validate_id,
@@ -149,6 +143,8 @@ def create_route(request):
         validate_required_associations,
         functools.partial(validate_main_waypoint, False),
     ],
+    permission='authenticated',
+    json=True,
 )
 def update_route(request):
     return put_document(
@@ -160,12 +156,10 @@ def update_route(request):
     )
 
 
-@view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_routes(request):
     return collection_get(request, ROUTE_TYPE, route_documents_config)
 
 
-@view(validators=[validate_id, validate_lang_param, validate_cook_param])
 def get_route(request):
     return read_document(
         request,
@@ -205,7 +199,6 @@ def set_recent_outings(route, lang):
     )
 
 
-@view(validators=[validate_id, validate_lang, validate_version_id])
 def get_route_version(request):
     return document_version(
         request,
@@ -217,7 +210,6 @@ def get_route_version(request):
     )
 
 
-@view(validators=[validate_id, validate_lang])
 def get_route_info(request):
     return document_info(request, route_documents_config)
 
@@ -235,13 +227,12 @@ def get_route_info(request):
 # set to true by default
 
 
-@restricted_view(permission='moderator')
+@write(permission='moderator', json=False)
 def update_public_transportation_ratings(request):
     waypoint_extrapolation = request.params.get('waypoint_extrapolation') or True
     update_all_pt_rating(waypoint_extrapolation)
 
 
-@view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_reachable_routes(request):
     """Return the reachable routes and their total.
 

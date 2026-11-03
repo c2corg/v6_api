@@ -26,12 +26,10 @@ from c2corg_api.security.roles import (
     try_login,
 )
 from c2corg_api.views import (
-    json_view,
-    restricted_json_view,
-    restricted_view,
     to_json_dict,
 )
 from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import validate_required_json_string
 
 log = logging.getLogger(__name__)
@@ -232,7 +230,7 @@ def validate_captcha(request, **kwargs):
         return
 
 
-@json_view(
+@write(
     validators=[
         body_validator(UserCreateSchema),
         validate_json_password,
@@ -242,6 +240,7 @@ def validate_captcha(request, **kwargs):
         validate_forum_username,
         validate_captcha,
     ],
+    json=True,
 )
 def register_user(request):
     user = user_create_schema.objectify(request.validated)
@@ -306,11 +305,12 @@ def validate_user_from_nonce(purpose, request, **kwargs):
 # `/users/request_password_change` service (see below).
 
 
-@json_view(
+@write(
     validators=[
         partial(validate_user_from_nonce, Purpose.new_password),
         validate_json_password,
-    ]
+    ],
+    json=True,
 )
 def validate_new_password(request):
     user = request.validated['user']
@@ -364,7 +364,7 @@ def validate_required_user_from_email(request, **kwargs):
 # `/users/validate_new_password/{nonce}` (see above).
 
 
-@json_view(validators=[validate_required_user_from_email])
+@write(validators=[validate_required_user_from_email], json=True)
 def request_password_change(request):
     user = request.validated['user']
 
@@ -388,7 +388,7 @@ def request_password_change(request):
     return {}
 
 
-@json_view(validators=[partial(validate_user_from_nonce, Purpose.registration)])
+@write(validators=[partial(validate_user_from_nonce, Purpose.registration)], json=True)
 def validate_register_email(request):
     user = request.validated['user']
     user.clear_validation_nonce()
@@ -428,7 +428,7 @@ def validate_register_email(request):
         return None
 
 
-@json_view(validators=[partial(validate_user_from_nonce, Purpose.change_email)])
+@write(validators=[partial(validate_user_from_nonce, Purpose.change_email)], json=True)
 def validate_change_email(request):
     user = request.validated['user']
     user.clear_validation_nonce()
@@ -473,11 +473,12 @@ def token_to_response(user, token, request):
     }
 
 
-@json_view(
+@write(
     validators=[
         body_validator(LoginSchema),
         partial(validate_json_password, require_strength=False),
     ],
+    json=True,
 )
 def login_user(request):
     username = request.validated['username']
@@ -554,7 +555,11 @@ class DiscourseRedirectSchema(Schema):
 # # in the browser.
 
 
-@restricted_json_view(validators=[body_validator(DiscourseRedirectSchema)])
+@write(
+    validators=[body_validator(DiscourseRedirectSchema)],
+    permission='authenticated',
+    json=True,
+)
 def discourse_redirect(request):
     """Return the signed `sso_login` URL to send the browser to."""
     user = DBSession.get(User, request.authenticated_userid)
@@ -564,7 +569,7 @@ def discourse_redirect(request):
     return {'redirect': client.redirect(user, sso, sig)}
 
 
-@restricted_view(renderer='json')
+@write(permission='authenticated', json=False)
 def renew_login(request):
     userid = request.authenticated_userid
     user = DBSession.query(User).filter(User.id == userid).first()
@@ -575,7 +580,7 @@ def renew_login(request):
         raise HTTPInternalServerError('Error renewing token')
 
 
-@restricted_json_view(renderer='json')
+@write(permission='authenticated', json=True)
 def logout_user(request):
     userid = request.authenticated_userid
     result = {'user': userid}

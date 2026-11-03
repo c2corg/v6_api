@@ -18,7 +18,6 @@ from c2corg_api.schemas.outing import (
     outing_schema,
 )
 from c2corg_api.views import (
-    restricted_json_view,
     set_default_geom_from_associations,
 )
 from c2corg_api.views.document import (
@@ -35,17 +34,11 @@ from c2corg_api.views.document_schemas import (
     outing_schema_adaptor,
 )
 from c2corg_api.views.document_version import document_version
-from c2corg_api.views.resource import view
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     has_permission_for_outing,
     validate_associations,
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-    validate_version_id,
 )
 
 validate_outing_create = make_validator_create(fields_outing, 'activities', activities)
@@ -138,7 +131,7 @@ def validate_required_associations(request, **kwargs):
         request.errors.add('body', 'associations.routes', 'at least one route required')
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(OutingCreateSchema),
         validate_outing_create,
@@ -146,6 +139,8 @@ def validate_required_associations(request, **kwargs):
         validate_required_associations,
         validate_dates_on_creation,
     ],
+    permission='authenticated',
+    json=True,
 )
 def create_outing(request):
     set_default_geom = functools.partial(
@@ -154,7 +149,7 @@ def create_outing(request):
     return create_document(request, outing_schema, before_add=set_default_geom)
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(OutingUpdateSchema),
         validate_id,
@@ -163,6 +158,8 @@ def create_outing(request):
         validate_required_associations,
         validate_dates_on_update,
     ],
+    permission='authenticated',
+    json=True,
 )
 def update_outing(request):
     if not has_permission_for_outing(request, request.validated['id']):
@@ -174,12 +171,10 @@ def update_outing(request):
     )
 
 
-@view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_outings(request):
     return collection_get(request, OUTING_TYPE, outing_documents_config)
 
 
-@view(validators=[validate_id, validate_lang_param, validate_cook_param])
 def get_outing(request):
     return read_document(
         request,
@@ -189,7 +184,6 @@ def get_outing(request):
     )
 
 
-@view(validators=[validate_id, validate_lang])
 def get_outing_info(request):
     return document_info(request, outing_documents_config)
 
@@ -241,7 +235,6 @@ def update_default_geometry(outing, outing_in):
     geometry_in.geom = get_mid_point(geometry_in.geom_detail)
 
 
-@view(validators=[validate_id, validate_lang, validate_version_id])
 def get_outing_version(request):
     return document_version(
         request,

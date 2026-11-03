@@ -6,12 +6,6 @@ from c2corg_api.models.association import AssociationLog
 from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.views.resource import view
-from c2corg_api.views.validation import (
-    validate_document_id_not_required,
-    validate_pagination,
-    validate_user_id_not_required,
-)
 
 # max/default sizes of requests
 LIMIT_MAX = 500
@@ -21,13 +15,6 @@ LIMIT_DEFAULT = 50
 # Unique class for returning history of a document's associations.
 
 
-@view(
-    validators=[
-        validate_document_id_not_required,
-        validate_pagination,
-        validate_user_id_not_required,
-    ]
-)
 def read_association_history(request):
     validated = request.validated
     document_id = validated.get('d', None)

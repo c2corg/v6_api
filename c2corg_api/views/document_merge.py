@@ -18,9 +18,9 @@ from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.image import delete_all_files_for_image
+from c2corg_api.views.resource import write
 from c2corg_api.views.waypoint import update_linked_route_titles
 
 
@@ -107,9 +107,10 @@ def validate_documents(request, **kwargs):
         request.errors.add('body', 'types', 'merging user accounts is not supported')
 
 
-@restricted_json_view(
-    permission='moderator',
+@write(
     validators=[body_validator(MergeSchema), validate_documents],
+    permission='moderator',
+    json=True,
 )
 def merge_documents(request):
     """Merge a document into another document.

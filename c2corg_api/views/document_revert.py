@@ -42,9 +42,9 @@ from c2corg_api.models.xreport import (
 )
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, OneOf
-from c2corg_api.views import restricted_json_view
 from c2corg_api.views.area import update_associations
 from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.resource import write
 from c2corg_api.views.route import update_linked_attributes
 from c2corg_api.views.waypoint import update_linked_route_titles
 
@@ -92,9 +92,10 @@ def validate_version(request, **kwargs):
         )
 
 
-@restricted_json_view(
-    permission='moderator',
+@write(
     validators=[body_validator(RevertSchema), validate_version],
+    permission='moderator',
+    json=True,
 )
 def revert_document(request):
     """Create a new version of the document based upon an old one.

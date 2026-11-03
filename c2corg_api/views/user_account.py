@@ -11,7 +11,7 @@ from c2corg_api.schemas.base import DROP, Schema, body_validator
 from c2corg_api.schemas.types import Bool, OneOf, Str, email_check, function_check
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.discourse_client import get_discourse_client
-from c2corg_api.views import restricted_json_view, restricted_view
+from c2corg_api.views.resource import write
 from c2corg_api.views.user import (
     MINIMUM_PASSWORD_LENGTH,
     PASSWORD_STRENGTH_ERROR,
@@ -28,8 +28,10 @@ class UpdatePreferredLangSchema(Schema):
     lang: OneOf(default_langs)
 
 
-@restricted_json_view(
-    renderer='json', validators=[body_validator(UpdatePreferredLangSchema)]
+@write(
+    validators=[body_validator(UpdatePreferredLangSchema)],
+    permission='authenticated',
+    json=True,
 )
 def update_preferred_language(request):
     userid = request.authenticated_userid
@@ -75,9 +77,10 @@ def get_user(request):
     return DBSession.get(User, request.authenticated_userid)
 
 
-@restricted_json_view(
-    renderer='json',
+@write(
     validators=[body_validator(UpdateAccountSchema), validate_forum_username],
+    permission='authenticated',
+    json=True,
 )
 def update_account(request):
     user = get_user(request)
@@ -156,7 +159,6 @@ def update_account(request):
     return result
 
 
-@restricted_view(renderer='json', http_cache=0)
 def read_account(request):
     user = get_user(request)
     return {

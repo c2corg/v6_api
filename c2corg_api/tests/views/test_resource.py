@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from c2corg_api.views.resource import Errors, extract_body, resource, view
+from c2corg_api.views.resource import JSON, Errors, extract_body, write
 
 
 class _Request:
@@ -21,16 +21,20 @@ class _Request:
 
 
 class TestDeclarations:
-    def test_view_keeps_its_arguments(self):
-        @resource(path='/things/{id}')
-        class Things:
-            @view(permission='authenticated', validators=[len])
-            def put(self):
-                pass
+    def test_write_keeps_its_checks(self):
+        @write(validators=[len], permission='authenticated', json=True)
+        def put_thing(request):
+            pass
 
-        assert Things.put.__views__ == [
-            {'permission': 'authenticated', 'validators': [len]}
-        ]
+        assert put_thing.checks == ([len], 'authenticated', JSON)
+
+    def test_defaults(self):
+        @write()
+        def post_thing(request):
+            pass
+
+        # no validator, no permission, any content type
+        assert post_thing.checks == ([], None, None)
 
 
 class TestErrors:

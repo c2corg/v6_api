@@ -14,8 +14,7 @@ from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.route import ROUTE_TYPE, RouteLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.views import etag_cache
-from c2corg_api.views.resource import resource, view
-from c2corg_api.views.validation import create_int_validator, validate_document_type
+from c2corg_api.views.validation import create_int_validator
 
 log = logging.getLogger(__name__)
 
@@ -41,12 +40,6 @@ UI_ENTRY_POINTS = {
 validate_page = create_int_validator('i')
 
 
-@resource(
-    collection_path='/sitemaps.xml',
-    path='/sitemaps.xml/{doc_type}/{i}.xml',
-    renderer='string',
-)
-@view()
 def list_sitemaps_xml(request):
     """Return a sitemap index file.
 
@@ -82,7 +75,6 @@ def list_sitemaps_xml(request):
     return get_or_create(cache_sitemap_xml, cache_key, _get_sitemap_index)
 
 
-@view(validators=[validate_page, validate_document_type])
 def read_sitemap_xml(request):
     """Return a sitemap file for a given type and sitemap page number."""
     doc_type = request.validated['doc_type']

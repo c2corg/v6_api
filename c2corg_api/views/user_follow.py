@@ -4,13 +4,11 @@ from c2corg_api import DBSession
 from c2corg_api.models.feed import FollowedUser
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
-from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import user_profile_documents_config
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     validate_body_user_id,
-    validate_id,
-    validate_preferred_lang_param,
 )
 
 log = logging.getLogger(__name__)
@@ -29,8 +27,10 @@ def get_follower_relation(followed_user_id, follower_user_id):
     )
 
 
-@restricted_json_view(
+@write(
     validators=[body_validator(FollowSchema), validate_body_user_id],
+    permission='authenticated',
+    json=True,
 )
 def follow_user(request):
     """Follow the given user.
@@ -59,8 +59,10 @@ def follow_user(request):
     return {}
 
 
-@restricted_json_view(
+@write(
     validators=[body_validator(FollowSchema), validate_body_user_id],
+    permission='authenticated',
+    json=True,
 )
 def unfollow_user(request):
     """Unfollow the given user.
@@ -87,7 +89,6 @@ def unfollow_user(request):
     return {}
 
 
-@restricted_json_view(validators=[validate_id])
 def read_following_user(request):
     """Check if the authenticated user follows the given user.
 
@@ -106,7 +107,6 @@ def read_following_user(request):
     return {'is_following': follower_relation is not None}
 
 
-@restricted_json_view(validators=[validate_preferred_lang_param])
 def read_following(request):
     """Get the users that the authenticated user is following.
 

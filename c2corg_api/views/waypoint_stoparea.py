@@ -4,8 +4,6 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.stoparea import Stoparea
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
 from c2corg_api.views.document import make_validator_create, make_validator_update
-from c2corg_api.views.resource import view
-from c2corg_api.views.validation import validate_id, validate_lang
 
 validate_waypoint_stoparea_create = make_validator_create(
     ['waypoint_id', 'stoparea_id', 'distance'], 'waypoint_id'
@@ -15,7 +13,6 @@ validate_waypoint_stoparea_update = make_validator_update(
 )
 
 
-@view(validators=[validate_id, validate_lang])
 def get_waypoint_stoparea_info(request):
     waypoint_stoparea_id = request.matchdict['id']
     waypoint_stoparea = (
@@ -46,7 +43,6 @@ def validate_waypoint_id(request, *args, **kwargs):
         request.errors.add('querystring', 'waypoint_id', 'invalid waypoint_id')
 
 
-@view(validators=[validate_waypoint_id])
 def read_waypoint_stopareas(request):
     """Return the stopareas of a waypoint with their distance.
 
@@ -75,7 +71,6 @@ def read_waypoint_stopareas(request):
     return {'waypoint_id': waypoint_id, 'stopareas': stopareas_data}
 
 
-@view(validators=[validate_waypoint_id])
 def read_waypoint_reachability(request):
     """Return whether the waypoint has at least one stoparea.
 

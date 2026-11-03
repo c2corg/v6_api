@@ -11,21 +11,13 @@ from c2corg_api.models.feed import DocumentChange, FilterArea, FollowedUser
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.views import restricted_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import document_configs
-from c2corg_api.views.resource import view
-from c2corg_api.views.validation import (
-    validate_preferred_lang_param,
-    validate_token_pagination,
-    validate_user_id,
-)
 
 DEFAULT_PAGE_LIMIT = 10
 MAX_PAGE_LIMIT = 50
 
 
-@view(validators=[validate_preferred_lang_param, validate_token_pagination])
 def read_feed(request):
     """Get the public homepage feed.
 
@@ -58,7 +50,6 @@ def read_feed(request):
     return load_feed(changes, lang)
 
 
-@restricted_view(validators=[validate_preferred_lang_param, validate_token_pagination])
 def read_personal_feed(request):
     """Get the personal homepage feed for the authenticated user.
 
@@ -77,13 +68,6 @@ def read_personal_feed(request):
     return load_feed(changes, lang)
 
 
-@view(
-    validators=[
-        validate_preferred_lang_param,
-        validate_token_pagination,
-        validate_user_id,
-    ]
-)
 def read_profile_feed(request):
     """Get the user profile feed for a user.
 

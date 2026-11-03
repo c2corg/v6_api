@@ -9,7 +9,6 @@ from c2corg_api.schemas.topo_map import (
     TopoMapUpdateSchema,
     topo_map_schema,
 )
-from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
     collection_get,
     create_document,
@@ -20,35 +19,32 @@ from c2corg_api.views.document import (
 )
 from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import topo_map_documents_config
-from c2corg_api.views.resource import view
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
 )
 
 validate_map_create = make_validator_create(fields_topo_map.get('required'))
 validate_map_update = make_validator_update(fields_topo_map.get('required'))
 
 
-@restricted_json_view(
+@write(
     validators=[body_validator(TopoMapCreateSchema), validate_map_create],
     permission='moderator',
+    json=True,
 )
 def create_topo_map(request):
     return create_document(request, topo_map_schema, after_add=insert_associations)
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(TopoMapUpdateSchema),
         validate_id,
         validate_map_update,
     ],
     permission='moderator',
+    json=True,
 )
 def update_topo_map(request):
     return put_document(
@@ -56,17 +52,14 @@ def update_topo_map(request):
     )
 
 
-@view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_topo_maps(request):
     return collection_get(request, MAP_TYPE, topo_map_documents_config)
 
 
-@view(validators=[validate_id, validate_lang_param, validate_cook_param])
 def get_topo_map(request):
     return read_document(request, topo_map_documents_config, topo_map_schema)
 
 
-@view(validators=[validate_id, validate_lang])
 def get_topo_map_info(request):
     return document_info(request, topo_map_documents_config)
 

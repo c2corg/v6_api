@@ -58,7 +58,8 @@ def permission_check(permission, content_types=None):
 def refusal(request, user, permission, content_types):
     """Answer the 415 or the 403 of a route, or None."""
     # as Cornice: a request with another Content-Type than those of the view
-    # (json_view) is refused, before the permission check; none is accepted
+    # (`@write(json=True)`) is refused, before the permission check; none is
+    # accepted
     if content_types is not None:
         media_type = request.headers.get('Content-Type', '').split(';')[0].strip()
         if media_type and media_type not in content_types:

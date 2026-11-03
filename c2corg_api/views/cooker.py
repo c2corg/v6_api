@@ -1,7 +1,7 @@
 import logging
 
 from c2corg_api.views.markdown import cook
-from c2corg_api.views.resource import view
+from c2corg_api.views.resource import write
 
 log = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ def validate_markdowns(request, **kwargs):
         request.errors.add('body', '', 'Should be a JSON object')
 
 
-@view(validators=[validate_markdowns])
+@write(validators=[validate_markdowns], json=False)
 def cook_markdown(request):
     """Thi service is a stateless service that returns HTML values.
 

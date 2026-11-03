@@ -1,8 +1,8 @@
-"""The declarations of the view classes, as Cornice read them."""
-# The FastAPI routes (c2corg_api/web) serve the methods of the view classes:
-# `@view` keeps the arguments of a method (validators, permission, content
-# type) for the route to check them; `@resource` only documents the paths of
-# a class. The views still read their errors from `request.errors`.
+"""The checks of the write views, the errors of a request, its body."""
+# The FastAPI routes (c2corg_api/web) serve the view functions: `@write`
+# keeps the checks of a write view (validators, permission, content type)
+# for its route; the read routes declare their checks themselves. The views
+# still read their errors from `request.errors`.
 
 import re
 
@@ -15,24 +15,16 @@ class BaseView:
         self.context = context
 
 
-def resource(**kw):
-    """Declare a view class (collection_path, path): the routes are in web/."""
-
-    def wrapper(klass):
-        return klass
-
-    return wrapper
+JSON = ['application/json']
 
 
-def view(**kw):
-    """Keep the arguments of a view, read by web.documents.handler_arguments."""
+def write(validators=(), permission=None, json=False):
+    """Declare the checks of a write view, read by web.documents.handler_arguments."""
+    # permission: None, 'authenticated' or 'moderator'; json: the body must
+    # be JSON (a request with another Content-Type answers 415)
 
     def wrapper(func):
-        views = getattr(func, '__views__', None)
-        if views is None:
-            views = []
-            func.__views__ = views
-        views.append(kw)
+        func.checks = (list(validators), permission, JSON if json else None)
         return func
 
     return wrapper

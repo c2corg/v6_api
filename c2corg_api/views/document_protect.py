@@ -6,8 +6,8 @@ from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.document import Document, UpdateType
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
-from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.resource import write
 
 log = logging.getLogger(__name__)
 
@@ -25,10 +25,7 @@ def _get_document(document_id):
     return document
 
 
-@restricted_json_view(
-    permission='moderator',
-    validators=[body_validator(ProtectSchema)],
-)
+@write(validators=[body_validator(ProtectSchema)], permission='moderator', json=True)
 def protect_document(request):
     """Mark the given document as not editable.
 
@@ -58,10 +55,7 @@ def protect_document(request):
     return {}
 
 
-@restricted_json_view(
-    permission='moderator',
-    validators=[body_validator(ProtectSchema)],
-)
+@write(validators=[body_validator(ProtectSchema)], permission='moderator', json=True)
 def unprotect_document(request):
     """Mark the given document as editable.
 
