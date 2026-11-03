@@ -11,7 +11,7 @@ from c2corg_api.schemas.user_profile import (
     user_profile_schema,
 )
 from c2corg_api.views import restricted_json_view, restricted_view
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import DocumentRest, put_document
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import user_profile_documents_config
 from c2corg_api.views.resource import resource, view
@@ -23,6 +23,24 @@ from c2corg_api.views.validation import (
     validate_pagination,
     validate_preferred_lang_param,
 )
+
+
+@restricted_json_view(
+    validators=[body_validator(UserProfileUpdateSchema), validate_id],
+)
+def update_user_profile(request):
+    if not request.has_permission('moderator'):
+        # moderators can change the profile of every user
+        if request.authenticated_userid != request.validated['id']:
+            # but a normal user can only change its own profile
+            raise HTTPForbidden('No permission to change this user profile')
+
+    reset_title(request)
+
+    return put_document(request, UserProfile, internal_user_profile_schema)
+
+
+update_user_profile.view_name = 'UserProfileRest.put'
 
 
 @resource(collection_path='/profiles', path='/profiles/{id}')
@@ -59,35 +77,20 @@ class UserProfileRest(DocumentRest):
                 'name': requested_user.name,
             }
 
-    @restricted_json_view(
-        validators=[body_validator(UserProfileUpdateSchema), validate_id],
-    )
-    def put(self):
-        if not self.request.has_permission('moderator'):
-            # moderators can change the profile of every user
-            if self.request.authenticated_userid != self.request.validated['id']:
-                # but a normal user can only change its own profile
-                raise HTTPForbidden('No permission to change this user profile')
-
-        self._reset_title()
-
-        return self._put(UserProfile, internal_user_profile_schema)
-
-    def _reset_title(self):
-        """Set the title of a user profile to an empty string.
-
-        The title of user profile documents is left empty. Because the title
-        must be non-null it is set to an empty string though.
-        """
-        document = self.request.validated['document']
-        locales = document.get('locales')
-        if locales:
-            for locale in locales:
-                locale['title'] = ''
-
 
 @resource(path='/profiles/{id}/{lang}/info')
 class UserProfileInfoRest(DocumentInfoRest):
     @view(validators=[validate_id, validate_lang])
     def get(self):
         return self._get_document_info(user_profile_documents_config)
+
+
+def reset_title(request):
+    """Set the title of the user profile of a request to an empty string."""
+    # The title of user profile documents is left empty. Because the title
+    # must be non-null it is set to an empty string though.
+    document = request.validated['document']
+    locales = document.get('locales')
+    if locales:
+        for locale in locales:
+            locale['title'] = ''

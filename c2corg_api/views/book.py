@@ -5,6 +5,7 @@ from c2corg_api.models.common.fields_book import fields_book
 from c2corg_api.models.document import ArchiveDocumentLocale
 from c2corg_api.schemas.base import body_validator
 from c2corg_api.schemas.book import BookCreateSchema, BookUpdateSchema, book_schema
+from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
     DocumentRest,
     create_document,
@@ -35,32 +36,32 @@ validate_associations_update = functools.partial(
 )
 
 
-# the writes: functions of the validated request (web.documents)
-CREATE_VALIDATORS = [
-    body_validator(BookCreateSchema),
-    validate_book_create,
-    validate_associations_create,
-]
-UPDATE_VALIDATORS = [
-    body_validator(BookUpdateSchema),
-    validate_id,
-    validate_book_update,
-    validate_associations_update,
-]
-
-
+@restricted_json_view(
+    validators=[
+        body_validator(BookCreateSchema),
+        validate_book_create,
+        validate_associations_create,
+    ],
+)
 def create_book(request):
-    """Create a book; return its id."""
     return create_document(request, book_schema)
 
 
+create_book.view_name = 'BookRest.collection_post'
+
+
+@restricted_json_view(
+    validators=[
+        body_validator(BookUpdateSchema),
+        validate_id,
+        validate_book_update,
+        validate_associations_update,
+    ],
+)
 def update_book(request):
-    """Update a book."""
     return put_document(request, Book, book_schema)
 
 
-# named as the methods of the view class were, in the 403 answers
-create_book.view_name = 'BookRest.collection_post'
 update_book.view_name = 'BookRest.put'
 
 

@@ -12,8 +12,10 @@ from c2corg_api.schemas.topo_map import (
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
     DocumentRest,
+    create_document,
     make_validator_create,
     make_validator_update,
+    put_document,
 )
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import topo_map_documents_config
@@ -31,6 +33,34 @@ validate_map_create = make_validator_create(fields_topo_map.get('required'))
 validate_map_update = make_validator_update(fields_topo_map.get('required'))
 
 
+@restricted_json_view(
+    validators=[body_validator(TopoMapCreateSchema), validate_map_create],
+    permission='moderator',
+)
+def create_topo_map(request):
+    return create_document(request, topo_map_schema, after_add=insert_associations)
+
+
+create_topo_map.view_name = 'TopoMapRest.collection_post'
+
+
+@restricted_json_view(
+    validators=[
+        body_validator(TopoMapUpdateSchema),
+        validate_id,
+        validate_map_update,
+    ],
+    permission='moderator',
+)
+def update_topo_map(request):
+    return put_document(
+        request, TopoMap, topo_map_schema, after_update=update_associations
+    )
+
+
+update_topo_map.view_name = 'TopoMapRest.put'
+
+
 @resource(collection_path='/maps', path='/maps/{id}')
 class TopoMapRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
@@ -40,24 +70,6 @@ class TopoMapRest(DocumentRest):
     @view(validators=[validate_id, validate_lang_param, validate_cook_param])
     def get(self):
         return self._get(topo_map_documents_config, topo_map_schema)
-
-    @restricted_json_view(
-        validators=[body_validator(TopoMapCreateSchema), validate_map_create],
-        permission='moderator',
-    )
-    def collection_post(self):
-        return self._collection_post(topo_map_schema, after_add=insert_associations)
-
-    @restricted_json_view(
-        validators=[
-            body_validator(TopoMapUpdateSchema),
-            validate_id,
-            validate_map_update,
-        ],
-        permission='moderator',
-    )
-    def put(self):
-        return self._put(TopoMap, topo_map_schema, after_update=update_associations)
 
 
 @resource(path='/maps/{id}/{lang}/info')

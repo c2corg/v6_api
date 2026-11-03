@@ -45,8 +45,10 @@ from c2corg_api.views.document import (
     LIMIT_DEFAULT,
     NUM_RECENT_OUTINGS,
     DocumentRest,
+    create_document,
     make_validator_create,
     make_validator_update,
+    put_document,
 )
 from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.views.document_info import DocumentInfoRest
@@ -118,6 +120,51 @@ def validate_required_associations(request, **kwargs):
         )
 
 
+@restricted_json_view(
+    validators=[
+        body_validator(RouteCreateSchema),
+        validate_route_create,
+        validate_associations_create,
+        validate_required_associations,
+        functools.partial(validate_main_waypoint, True),
+    ],
+)
+def create_route(request):
+    linked_waypoints = request.validated.get('associations', {}).get('waypoints', [])
+    return create_document(
+        request,
+        route_schema,
+        before_add=functools.partial(set_default_geometry, linked_waypoints),
+        after_add=init_linked_attributes,
+    )
+
+
+create_route.view_name = 'RouteRest.collection_post'
+
+
+@restricted_json_view(
+    validators=[
+        body_validator(RouteUpdateSchema),
+        validate_id,
+        validate_route_update,
+        validate_associations_update,
+        validate_required_associations,
+        functools.partial(validate_main_waypoint, False),
+    ],
+)
+def update_route(request):
+    return put_document(
+        request,
+        Route,
+        route_schema,
+        before_update=update_default_geometry,
+        after_update=update_linked_attributes,
+    )
+
+
+update_route.view_name = 'RouteRest.put'
+
+
 @resource(collection_path='/routes', path='/routes/{id}')
 class RouteRest(DocumentRest):
     @view(validators=[validate_pagination, validate_preferred_lang_param])
@@ -133,43 +180,6 @@ class RouteRest(DocumentRest):
             adapt_schema=route_schema_adaptor,
             include_maps=True,
             set_custom_associations=RouteRest.set_recent_outings,
-        )
-
-    @restricted_json_view(
-        validators=[
-            body_validator(RouteCreateSchema),
-            validate_route_create,
-            validate_associations_create,
-            validate_required_associations,
-            functools.partial(validate_main_waypoint, True),
-        ],
-    )
-    def collection_post(self):
-        linked_waypoints = self.request.validated.get('associations', {}).get(
-            'waypoints', []
-        )
-        return self._collection_post(
-            route_schema,
-            before_add=functools.partial(set_default_geometry, linked_waypoints),
-            after_add=init_linked_attributes,
-        )
-
-    @restricted_json_view(
-        validators=[
-            body_validator(RouteUpdateSchema),
-            validate_id,
-            validate_route_update,
-            validate_associations_update,
-            validate_required_associations,
-            functools.partial(validate_main_waypoint, False),
-        ],
-    )
-    def put(self):
-        return self._put(
-            Route,
-            route_schema,
-            before_update=update_default_geometry,
-            after_update=update_linked_attributes,
         )
 
     @staticmethod

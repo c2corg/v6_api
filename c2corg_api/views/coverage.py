@@ -22,8 +22,10 @@ from c2corg_api.schemas.coverage import (
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
     DocumentRest,
+    create_document,
     make_validator_create,
     make_validator_update,
+    put_document,
 )
 from c2corg_api.views.document_schemas import coverage_documents_config
 from c2corg_api.views.resource import resource, view
@@ -48,6 +50,35 @@ validate_associations_update = functools.partial(
 )
 
 
+@restricted_json_view(
+    validators=[
+        body_validator(CoverageCreateSchema),
+        validate_coverage_create,
+        validate_associations_create,
+    ],
+)
+def create_coverage(request):
+    return create_document(request, coverage_schema, allow_anonymous=False)
+
+
+create_coverage.view_name = 'CoverageRest.collection_post'
+
+
+@restricted_json_view(
+    validators=[
+        body_validator(CoverageUpdateSchema),
+        validate_id,
+        validate_coverage_update,
+        validate_associations_update,
+    ],
+)
+def update_coverage(request):
+    return put_document(request, Coverage, coverage_schema)
+
+
+update_coverage.view_name = 'CoverageRest.put'
+
+
 @resource(collection_path='/coverages', path='/coverages/{id}')
 class CoverageRest(DocumentRest):
     def __init__(self, request, context=None):
@@ -62,27 +93,6 @@ class CoverageRest(DocumentRest):
         return self._get(
             coverage_documents_config, coverage_schema, include_areas=False
         )
-
-    @restricted_json_view(
-        validators=[
-            body_validator(CoverageCreateSchema),
-            validate_coverage_create,
-            validate_associations_create,
-        ],
-    )
-    def collection_post(self):
-        return self._collection_post(coverage_schema, allow_anonymous=False)
-
-    @restricted_json_view(
-        validators=[
-            body_validator(CoverageUpdateSchema),
-            validate_id,
-            validate_coverage_update,
-            validate_associations_update,
-        ],
-    )
-    def put(self):
-        return self._put(Coverage, coverage_schema)
 
 
 def validate_lon_lat(request, **kwargs):
