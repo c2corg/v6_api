@@ -53,10 +53,16 @@ class TestStopareas(StopareaContractTest):
 
     @contract(STOPAREA)
     def test_get_unknown(self):
-        # a 404 with a body of its own, not a Cornice error
+        # a 404 in the error envelope, as the other routes
         response = self.get('/stopareas/9999999', status=404)
         check_snapshot('stopareas_get_unknown', response)
-        assert response.json == {'error': 'Stoparea not found'}
+        assert response.json['errors'] == [
+            {
+                'location': 'body',
+                'name': 'Not Found',
+                'description': 'Stoparea not found',
+            }
+        ]
 
     @contract(STOPAREA_INFO)
     def test_info(self):
