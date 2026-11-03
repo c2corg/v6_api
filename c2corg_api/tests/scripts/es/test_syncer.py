@@ -1,7 +1,7 @@
 import pytest
-import transaction
 from elasticsearch.exceptions import NotFoundError
 
+from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.es_sync import ESDeletedDocument
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint, WaypointLocale
@@ -39,9 +39,9 @@ class TestSyncWorker(BaseTestCase):
         DocumentRest.create_new_version(waypoint, user_id)
         self.session.flush()
 
-        t = transaction.begin()
+        # the notification is sent when the session of the views commits
         notify_es_syncer(self.queue_config)
-        t.commit()
+        DBSession.commit()
 
         syncer = SyncWorker(
             self.queue_config.connection,
@@ -60,9 +60,9 @@ class TestSyncWorker(BaseTestCase):
         self.session.add(ESDeletedDocument(document_id=document_id, type=WAYPOINT_TYPE))
         self.session.flush()
 
-        t = transaction.begin()
+        # the notification is sent when the session of the views commits
         notify_es_syncer(self.queue_config)
-        t.commit()
+        DBSession.commit()
 
         next(syncer.consume(limit=1))
         with pytest.raises(NotFoundError):

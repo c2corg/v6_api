@@ -3,12 +3,11 @@ import logging
 import os
 import sys
 
-import transaction
 from sqlalchemy import engine_from_config
 from sqlalchemy.orm import sessionmaker
-from zope.sqlalchemy import register
 
 from c2corg_api.config import get_appsettings
+from c2corg_api.models import commit_or_rollback
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user import User
@@ -36,10 +35,9 @@ def main(argv=sys.argv):
     logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
     Session = sessionmaker()  # noqa
-    register(Session)
     session = Session(bind=engine)
 
-    with transaction.manager:
+    with commit_or_rollback(session):
         for i in range(1, NB_USERS_TO_CREATE + 1):
             username = BASE_USERNAME + str(i)
             password = username
