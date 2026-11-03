@@ -38,8 +38,6 @@ dependencies = [
     "requests==2.34.2",
     "Shapely==2.2.0",
     "SQLAlchemy==2.1.4",
-    "transaction==5.1",
-    "zope.sqlalchemy==4.1",
     "gunicorn==26.2.0",
     # the ASGI server, run by gunicorn: -k uvicorn_worker.UvicornWorker
     "uvicorn==0.54.0",

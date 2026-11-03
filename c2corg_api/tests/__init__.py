@@ -6,7 +6,6 @@ from random import randint
 
 import jwt
 import pytest
-import transaction
 from alembic.command import downgrade
 from alembic.config import Config
 from dotenv import load_dotenv
@@ -14,7 +13,7 @@ from sqlalchemy import engine_from_config
 
 from c2corg_api import caching as caching_common
 from c2corg_api.config import get_appsettings
-from c2corg_api.models import DBSession, sessionmaker
+from c2corg_api.models import DBSession, commit_or_rollback, sessionmaker
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.sso import SsoExternalId, SsoKey
 from c2corg_api.models.user import User
@@ -218,7 +217,7 @@ def setup_package():
     initializees.setup_es()
 
     # Add test data needed for all tests
-    with transaction.manager:
+    with commit_or_rollback(DBSession):
         _add_global_test_data(DBSession)
         fill_index(DBSession)
     DBSession.remove()

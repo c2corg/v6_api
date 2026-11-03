@@ -1,15 +1,12 @@
-import transaction  # NOQA
-
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from functools import cache
-from c2corg_api.config import asbool
-import smtplib
-
-from c2corg_api.models.common.attributes import default_langs
-
 import logging
 import os
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from functools import cache
+
+from c2corg_api.config import asbool
+from c2corg_api.models.common.attributes import default_langs
 
 log = logging.getLogger(__name__)
 

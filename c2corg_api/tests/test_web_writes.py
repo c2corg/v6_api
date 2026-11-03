@@ -57,11 +57,7 @@ class TestWrites(BaseTestRest):
     def setUp(self):
         super().setUp()
         # The sessions of the requests join the transaction of the test in a
-        # SAVEPOINT, so that a rollback really rolls the request back (by
-        # default, it keeps the changes the request flushed).
-        DBSession.remove()
-        self.session_factory_kw = dict(DBSession.session_factory.kw)
-        DBSession.configure(join_transaction_mode='create_savepoint')
+        # SAVEPOINT (conftest), so that a rollback really rolls the request back.
         self.fastapi_app = self.app.app.fastapi_app
 
         async def endpoint(
@@ -84,10 +80,7 @@ class TestWrites(BaseTestRest):
         self.limit = int(self.settings['rate_limiting.limit'])
 
     def tearDown(self):
-        # back to the configuration of the other tests
         DBSession.remove()
-        DBSession.session_factory.kw.clear()
-        DBSession.session_factory.kw.update(self.session_factory_kw)
         self.fastapi_app.router.routes[:] = [
             r for r in self.fastapi_app.router.routes if getattr(r, 'path', '') != PATH
         ]

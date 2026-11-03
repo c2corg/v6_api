@@ -10,12 +10,12 @@ import json
 import re
 from typing import Annotated
 
-import transaction
 from fastapi import Depends, Request
 from fastapi.responses import JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
 
 from c2corg_api.httpexceptions import HTTPError, HTTPNotModified, HTTPRedirection
+from c2corg_api.models import DBSession
 from c2corg_api.models.user import AccountNotValidated
 from c2corg_api.views.resource import Errors
 from c2corg_api.web.auth import parse_authorization
@@ -342,7 +342,7 @@ def _serve_write(
         # type, the permission and the validators
         error = rate_limit_error(adapted, adapted.registry.settings)
         if error is not None:
-            transaction.commit()
+            DBSession.commit()
             return _http_error(error)
         refused = _refused(request, user, view_class, method, permission, content_types)
         if refused is not None:
@@ -351,7 +351,7 @@ def _serve_write(
             for validator in (validate_origin, *validators):
                 validator(adapted)
             if adapted.errors:
-                transaction.commit()
+                DBSession.commit()
                 return error_response(adapted.errors, adapted.errors.status)
             result = _call_view(adapted, getattr(view_class(adapted), method))
         except HTTPRedirection as e:
@@ -370,8 +370,8 @@ def _serve_write(
         if adapted.errors:
             # as Cornice: the errors the view itself adds are the answer
             # (e.g. a failed login, 401), returned and so committed
-            transaction.commit()
+            DBSession.commit()
             return error_response(adapted.errors, adapted.errors.status)
         response = _render(adapted, result)
-        transaction.commit()
+        DBSession.commit()
         return response

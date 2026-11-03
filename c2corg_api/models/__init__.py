@@ -1,16 +1,28 @@
+from contextlib import contextmanager
+
 from sqlalchemy.orm import (
     declarative_base,
     scoped_session,
     sessionmaker,
 )
-from zope.sqlalchemy import register
 
 schema = 'guidebook'
 users_schema = 'users'
 sympa_schema = 'sympa'
 
 DBSession = scoped_session(sessionmaker())
-register(DBSession)
+
+
+@contextmanager
+def commit_or_rollback(session):
+    """Commit what the block does, or roll it back if it raises."""
+    # as `with transaction.manager:` did, for the scripts
+    try:
+        yield session
+    except BaseException:
+        session.rollback()
+        raise
+    session.commit()
 
 
 class BaseMixin:
