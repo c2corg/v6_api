@@ -4,7 +4,7 @@
 # is not allowed gets a 400, preflights answer with a JSON `null` body... The
 # contract tests (tests/contract/test_cors.py) pin this behaviour. As Cornice,
 # the origin of a request is checked by its first validator (validate_origin
-# of web.compat), after the token and the rate limiting: here, only the
+# of web.checks), after the token and the rate limiting: here, only the
 # preflights.
 
 import fnmatch

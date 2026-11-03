@@ -1,5 +1,5 @@
 from c2corg_api.views.validation import parse_int_safe
-from c2corg_api.web.compat import parse_if_none_match
+from c2corg_api.web.request import parse_if_none_match
 
 
 class TestIfNoneMatch:

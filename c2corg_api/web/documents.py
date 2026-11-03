@@ -1,7 +1,7 @@
 """The read routes of the documents: listing, document, info and version."""
-# The routes call the view classes of views/ through the adapter of
-# web.compat: the logic (caching, ETags, locales, associations, the listing
-# filters) and the checks stay the same while the routes move (#2365).
+# The routes call the functions of views/ through web.handlers: the logic
+# (caching, ETags, locales, associations, the listing filters) and the checks
+# stayed the same while the routes moved (#2365).
 
 from typing import Annotated
 
@@ -9,12 +9,8 @@ from fastapi import Depends, Path, Query, Request
 
 from c2corg_api.views.document import LIMIT_DEFAULT, LIMIT_MAX
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import (
-    permission_check,
-    serve_read,
-    serve_write,
-    typed_values,
-)
+from c2corg_api.web.checks import permission_check
+from c2corg_api.web.handlers import serve_read, serve_write, typed_values
 from c2corg_api.web.params import (
     DocumentId,
     Lang,
@@ -212,7 +208,7 @@ def include_handler_write(
 ):
     """Add a write route served by a handler of the validated request."""
     # the checks run in this order: rate limiting, content type, permission,
-    # validators (web.compat.serve_write)
+    # validators (web.handlers.serve_write)
 
     async def endpoint(request: Request, user: User):
         return await serve_write(

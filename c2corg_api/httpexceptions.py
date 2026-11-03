@@ -1,6 +1,6 @@
 """The HTTP errors and redirections the views raise or return."""
 # The classes, codes and titles of pyramid.httpexceptions, which the views
-# used: web.compat answers them (an error as {status, errors: [{location:
+# used: web.answers answers them (an error as {status, errors: [{location:
 # body, name: title, description: detail}]}, a redirection with its headers).
 
 

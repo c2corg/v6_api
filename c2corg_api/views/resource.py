@@ -61,7 +61,7 @@ def extract_body(request):
     # validators: a JSON body must be an object or an array
     content_type = request.content_type
     if content_type in ('application/x-www-form-urlencoded', 'multipart/form-data'):
-        # the form fields: the views have none (web.compat)
+        # the form fields: the views have none (web.request)
         return dict(request.POST)
     if content_type and not re.match('^application/(.*?)json$', content_type):
         return request.body

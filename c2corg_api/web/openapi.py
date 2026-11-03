@@ -183,7 +183,7 @@ _PATH_PARAMETER = re.compile(r'{(\w+)(?::(\w+))?}')
 def request_bodies(document, routes):
     """Describe the bodies of the write routes, and their path parameters."""
     # The write routes still read their body and their path parameters in
-    # the view classes (web.compat): their body comes from the schema of
+    # their view functions (web.request): their body comes from the schema of
     # their body validator, set as `body_schema` on the endpoint.
     with_body = [r for r in routes if getattr(r.endpoint, 'body_schema', None)]
     schemas = document.setdefault('components', {}).setdefault('schemas', {})

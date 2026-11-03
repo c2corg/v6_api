@@ -1,5 +1,5 @@
 """The actions of the users: associations, tags, follows, blocks, preferences."""
-# The routes call the functions of views/ through web.compat, with the
+# The routes call the functions of views/ through web.handlers, with the
 # checks their decorators declare (see web.documents.include_document_writes).
 
 from c2corg_api.views.association import add_association, remove_association

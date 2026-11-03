@@ -9,7 +9,7 @@ from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.resource import Errors
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_write
+from c2corg_api.web.handlers import serve_write
 
 PATH = '/test-write'
 
@@ -50,7 +50,7 @@ def _require_outcome(request, **kwargs):
 
 
 class TestWrites(BaseTestRest):
-    """The write path of web.compat: rate limiting, checks, view and transaction."""
+    """The write path of web.handlers: rate limiting, checks, view, transaction."""
 
     def setUp(self):
         super().setUp()

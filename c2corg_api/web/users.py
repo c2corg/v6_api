@@ -1,6 +1,6 @@
 """The routes of the users: account, preferences, follows, blocks, login, SSO..."""
-# The routes call the view classes of views/ through the adapter of
-# web.compat, as the document routes do (#2365).
+# The routes call the functions of views/ through web.handlers, as the
+# document routes do (#2365).
 
 from email.utils import formatdate
 from typing import Annotated
@@ -38,8 +38,9 @@ from c2corg_api.views.user_preferences import (
     read_preferences,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import permission_check, serve_read, typed_values
+from c2corg_api.web.checks import permission_check
 from c2corg_api.web.documents import handler_arguments, include_handler_write
+from c2corg_api.web.handlers import serve_read, typed_values
 from c2corg_api.web.params import Id, Lang
 
 User = Annotated[CurrentUser | None, Depends(current_user)]

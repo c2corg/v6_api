@@ -30,7 +30,7 @@ from c2corg_api.web import (
     users,
 )
 from c2corg_api.web.auth import TokenValidationMiddleware
-from c2corg_api.web.compat import Refused, refused_response
+from c2corg_api.web.checks import Refused, refused_response
 from c2corg_api.web.cors import CorsMiddleware
 from c2corg_api.web.errors import UnexpectedErrorMiddleware, error_response
 
