@@ -14,6 +14,8 @@ log = logging.getLogger(__name__)
 
 
 class APIDiscourseClient:
+    enabled = True
+
     def __init__(self, settings):
         self.settings = settings
         self.timeout = int(settings['url.timeout'])
@@ -176,13 +178,60 @@ class APIDiscourseClient:
         )
 
 
+class DisabledDiscourseClient:
+    """Stand-in for an API run without a forum (`discourse.enabled = false`).
+
+    What only needs the forum to be kept in sync (accounts, sessions,
+    suspensions) does nothing, so that logging in, registering or editing a
+    profile work without Discourse; what needs the forum itself (a Discourse
+    handshake, creating a topic) is refused by the views.
+    """
+
+    enabled = False
+
+    def get_userid(self, userid):
+        return None
+
+    def sync_sso(self, user):
+        return None
+
+    def logout(self, userid):
+        return None
+
+    def suspend(self, userid, duration, reason):
+        return None
+
+    def unsuspend(self, userid):
+        return None
+
+    def invite_user_to_topic(self, username, topic_id):
+        return None
+
+    def redirect(self, user, sso, signature):
+        raise HTTPBadRequest('The forum is disabled')
+
+    def redirect_without_nonce(self, user):
+        # no session to open in the forum: the UI only follows it when set
+        return None
+
+
+def discourse_enabled(settings):
+    """Is the forum used? On unless `discourse.enabled` says otherwise."""
+    value = str(settings.get('discourse.enabled', 'true')).strip().lower()
+    return value not in ('false', '0', 'no', 'off')
+
+
 c = None
 
 
 def get_discourse_client(settings):
     global c
     if c is None:
-        c = APIDiscourseClient(settings)
+        c = (
+            APIDiscourseClient(settings)
+            if discourse_enabled(settings)
+            else DisabledDiscourseClient()
+        )
     return c
 
 

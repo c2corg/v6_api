@@ -8,26 +8,30 @@ from typing import Annotated
 from fastapi import Depends, Path, Query, Request
 from fastapi.responses import JSONResponse, Response
 
-from c2corg_api.views.sso import SsoLoginRest, SsoSyncRest
+from c2corg_api.views.sso import sso_login, sso_sync
 from c2corg_api.views.user import (
-    UserChangeEmailNonceValidationRest,
-    UserDiscourseRedirectRest,
-    UserLoginRest,
-    UserLogoutRest,
-    UserNonceValidationRest,
-    UserRegistrationRest,
-    UserRenewRest,
-    UserRequestChangePasswordRest,
-    UserValidateNewPasswordRest,
+    discourse_redirect,
+    login_user,
+    logout_user,
+    register_user,
+    renew_login,
+    request_password_change,
+    validate_change_email,
+    validate_new_password,
+    validate_register_email,
 )
-from c2corg_api.views.user_account import UserAccountRest, UserPreferredLanguageRest
+from c2corg_api.views.user_account import (
+    UserAccountRest,
+    update_account,
+    update_preferred_language,
+)
 from c2corg_api.views.user_block import UserBlockedAllRest, UserBlockedRest
 from c2corg_api.views.user_follow import UserFollowingRest, UserFollowingUserRest
 from c2corg_api.views.user_mailinglists import UserMailinglistsRest
 from c2corg_api.views.user_preferences import UserFilterPreferencesRest
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.compat import permission_check, serve_view, typed_values
-from c2corg_api.web.documents import include_write
+from c2corg_api.web.documents import handler_arguments, include_handler_write
 from c2corg_api.web.params import Id, Lang
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
@@ -35,23 +39,23 @@ User = Annotated[CurrentUser | None, Depends(current_user)]
 JSON = ['application/json']
 
 
-# the writes: (path, view class), the post method of the view class, with
-# the checks of its Cornice decorator (see web.documents.include_write); the
-# tokens and the Discourse SSO are the same as with Pyramid
+# the writes: (path, function), POST, with the checks of the function's
+# decorator (see web.documents.include_document_writes); the tokens and the
+# Discourse SSO are the same as with Pyramid
 WRITES = [
-    ('/users/register', UserRegistrationRest),
-    ('/users/validate_register_email/{nonce}', UserNonceValidationRest),
-    ('/users/request_password_change', UserRequestChangePasswordRest),
-    ('/users/validate_new_password/{nonce}', UserValidateNewPasswordRest),
-    ('/users/validate_change_email/{nonce}', UserChangeEmailNonceValidationRest),
-    ('/users/login', UserLoginRest),
-    ('/users/renew', UserRenewRest),
-    ('/users/logout', UserLogoutRest),
-    ('/users/account', UserAccountRest),
-    ('/users/update_preferred_language', UserPreferredLanguageRest),
-    ('/users/discourse-redirect', UserDiscourseRedirectRest),
-    ('/sso_sync', SsoSyncRest),
-    ('/sso_login', SsoLoginRest),
+    ('/users/register', register_user),
+    ('/users/validate_register_email/{nonce}', validate_register_email),
+    ('/users/request_password_change', request_password_change),
+    ('/users/validate_new_password/{nonce}', validate_new_password),
+    ('/users/validate_change_email/{nonce}', validate_change_email),
+    ('/users/login', login_user),
+    ('/users/renew', renew_login),
+    ('/users/logout', logout_user),
+    ('/users/account', update_account),
+    ('/users/update_preferred_language', update_preferred_language),
+    ('/users/discourse-redirect', discourse_redirect),
+    ('/sso_sync', sso_sync),
+    ('/sso_login', sso_login),
 ]
 
 
@@ -75,8 +79,8 @@ def include(app):
             operation_id=f'user_{endpoint.__name__}',
             tags=['users'],
         )
-    for path, view_class in WRITES:
-        include_write(app, path, 'POST', view_class, 'post')
+    for path, function in WRITES:
+        include_handler_write(app, path, 'POST', function, *handler_arguments(function))
 
 
 def account(request: Request, user: User):
@@ -100,7 +104,7 @@ def account(request: Request, user: User):
 def _checks(view_class, permission, content_types=None):
     # the content type and the permission are checked before the parameters,
     # as Cornice and Pyramid did
-    check = permission_check(view_class, 'get', permission, content_types)
+    check = permission_check(f'{view_class.__name__}.get', permission, content_types)
     return Annotated[None, Depends(check)]
 
 

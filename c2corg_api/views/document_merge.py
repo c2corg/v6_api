@@ -21,7 +21,6 @@ from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import DocumentRest
 from c2corg_api.views.image import delete_all_files_for_image
-from c2corg_api.views.resource import BaseView, resource
 from c2corg_api.views.waypoint import update_linked_route_titles
 
 
@@ -108,73 +107,74 @@ def validate_documents(request, **kwargs):
         request.errors.add('body', 'types', 'merging user accounts is not supported')
 
 
-@resource(path='/documents/merge')
-class MergeDocumentRest(BaseView):
-    @restricted_json_view(
-        permission='moderator',
-        validators=[body_validator(MergeSchema), validate_documents],
+@restricted_json_view(
+    permission='moderator',
+    validators=[body_validator(MergeSchema), validate_documents],
+)
+def merge_documents(request):
+    """Merge a document into another document.
+
+    - Associations and tags of the source document are transferred to
+      the target document.
+    - The association log entries are rewritten to the target document.
+    - The time of the log entries is updated, so that the ES syncer will
+      pick up the new associations of the target document.
+    - The attribute `redirects_to` of the source document is set.
+    - A new version is created for the source document. This makes sure
+      that the ES syncer removes the document from ES index.
+    - Update the cache version of the source document.
+    - Update the cache version of the target document and its associations.
+    - Removes the feed entries of the source document.
+
+
+    Request:
+        `POST` `/documents/merge`
+
+    Request body:
+        {
+            'source_document_id': @document_id@,
+            'target_document_id': @document_id@
+        }
+    """
+    source_document_id = request.validated['source_document_id']
+    target_document_id = request.validated['target_document_id']
+    source_doc = DBSession.get(Document, source_document_id)
+
+    # transfer associations from source to target
+    transfer_associations(source_document_id, target_document_id)
+
+    # transfer tags from source to target
+    transfer_tags(source_document_id, target_document_id)
+
+    # if waypoint, update main waypoint of routes
+    if source_doc.type == WAYPOINT_TYPE:
+        _transfer_main_waypoint(source_document_id, target_document_id)
+
+    # set redirection and create a new version
+    source_doc.redirects_to = target_document_id
+    DocumentRest.update_version(
+        source_doc,
+        request.authenticated_userid,
+        f'merged with {target_document_id}',
+        [UpdateType.FIGURES],
+        [],
     )
-    def post(self):
-        """Merge a document into another document.
 
-        - Associations and tags of the source document are transferred to
-          the target document.
-        - The association log entries are rewritten to the target document.
-        - The time of the log entries is updated, so that the ES syncer will
-          pick up the new associations of the target document.
-        - The attribute `redirects_to` of the source document is set.
-        - A new version is created for the source document. This makes sure
-          that the ES syncer removes the document from ES index.
-        - Update the cache version of the source document.
-        - Update the cache version of the target document and its associations.
-        - Removes the feed entries of the source document.
+    # update the cache version for the source and target document
+    update_cache_version_direct(source_document_id)
+    update_cache_version_full(target_document_id, source_doc.type)
+
+    _remove_feed_entry(source_document_id)
+
+    if source_doc.type == IMAGE_TYPE:
+        delete_all_files_for_image(source_document_id, request)
+
+    notify_es_syncer(request.registry.queue_config)
+
+    return {}
 
 
-        Request:
-            `POST` `/documents/merge`
-
-        Request body:
-            {
-                'source_document_id': @document_id@,
-                'target_document_id': @document_id@
-            }
-        """
-        source_document_id = self.request.validated['source_document_id']
-        target_document_id = self.request.validated['target_document_id']
-        source_doc = DBSession.get(Document, source_document_id)
-
-        # transfer associations from source to target
-        transfer_associations(source_document_id, target_document_id)
-
-        # transfer tags from source to target
-        transfer_tags(source_document_id, target_document_id)
-
-        # if waypoint, update main waypoint of routes
-        if source_doc.type == WAYPOINT_TYPE:
-            _transfer_main_waypoint(source_document_id, target_document_id)
-
-        # set redirection and create a new version
-        source_doc.redirects_to = target_document_id
-        DocumentRest.update_version(
-            source_doc,
-            self.request.authenticated_userid,
-            f'merged with {target_document_id}',
-            [UpdateType.FIGURES],
-            [],
-        )
-
-        # update the cache version for the source and target document
-        update_cache_version_direct(source_document_id)
-        update_cache_version_full(target_document_id, source_doc.type)
-
-        _remove_feed_entry(source_document_id)
-
-        if source_doc.type == IMAGE_TYPE:
-            delete_all_files_for_image(source_document_id, self.request)
-
-        notify_es_syncer(self.request.registry.queue_config)
-
-        return {}
+merge_documents.view_name = 'MergeDocumentRest.post'
 
 
 def transfer_associations(source_document_id, target_document_id):

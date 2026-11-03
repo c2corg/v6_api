@@ -43,7 +43,7 @@ ruff format c2corg_api es_migration
 ruff check c2corg_api es_migration
 
 # Start the API server (with auto-reload)
-gunicorn --paste development.ini --reload --bind 0.0.0.0:6543
+C2C_API_CONFIG=development.ini uvicorn c2corg_api.asgi:app --reload --host 0.0.0.0 --port 6543
 
 # Or use make targets
 make test

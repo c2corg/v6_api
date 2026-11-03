@@ -40,10 +40,6 @@ load-env: $(TEMPLATE_FILES)
 
 production.ini: common.ini
 
-apache/app-c2corg_api.wsgi: production.ini
-
-apache/wsgi.conf: apache/app-c2corg_api.wsgi
-
 .PHONY: $(TEMPLATE_FILES)
 $(TEMPLATE_FILES): %: %.in
 	scripts/env_replace < $< > $@

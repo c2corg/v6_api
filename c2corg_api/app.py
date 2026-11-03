@@ -1,6 +1,6 @@
-"""The WSGI application of the API: the FastAPI application."""
-# The server is unchanged (gunicorn sync workers, PasteDeploy) until #2449:
-# the FastAPI application runs behind an ASGI-to-WSGI bridge.
+"""The FastAPI application of the API."""
+# Served by uvicorn (c2corg_api.asgi); the tests drive it through an
+# ASGI-to-WSGI bridge (Application).
 
 import re
 from contextlib import asynccontextmanager

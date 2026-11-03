@@ -7,32 +7,32 @@ from typing import Annotated
 
 from fastapi import Depends, Path, Query, Request
 
-from c2corg_api.views.cooker import CookerRest
-from c2corg_api.views.coverage import PolygonCoverage, WaypointCoverageRest
+from c2corg_api.views.cooker import cook_markdown
+from c2corg_api.views.coverage import WaypointCoverageRest, coverage_of_a_polygon
 from c2corg_api.views.document_tag import DocumentTaggedRest
-from c2corg_api.views.forum import ForumTopicRest
+from c2corg_api.views.forum import create_topic
 from c2corg_api.views.image import (
-    ImageListRest,
     ImageProxyRest,
+    create_images,
     validate_extension,
     validate_size,
 )
 from c2corg_api.views.validation import validate_id
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.compat import permission_check, serve_view, typed_values
-from c2corg_api.web.documents import include_write
+from c2corg_api.web.documents import handler_arguments, include_handler_write
 from c2corg_api.web.params import described, finite, natural
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 
 
-# the writes: (path, view class, method of the view class), with the checks of
-# their Cornice decorators (see web.documents.include_write)
+# the writes: (path, function), POST, with the checks of the function's
+# decorator (see web.documents.include_document_writes)
 WRITES = [
-    ('/cooker', CookerRest, 'post'),
-    ('/getpolygoncoverage', PolygonCoverage, 'post'),
-    ('/forum/topics', ForumTopicRest, 'collection_post'),
-    ('/images/list', ImageListRest, 'collection_post'),
+    ('/cooker', cook_markdown),
+    ('/getpolygoncoverage', coverage_of_a_polygon),
+    ('/forum/topics', create_topic),
+    ('/images/list', create_images),
 ]
 
 
@@ -52,8 +52,8 @@ def include(app):
             operation_id=endpoint.__name__,
             tags=[tag],
         )
-    for path, view_class, method in WRITES:
-        include_write(app, path, 'POST', view_class, method)
+    for path, function in WRITES:
+        include_handler_write(app, path, 'POST', function, *handler_arguments(function))
 
 
 def coverage_of_a_point(
@@ -99,7 +99,7 @@ def has_todo_tag(
         None,
         Depends(
             permission_check(
-                DocumentTaggedRest, 'get', 'authenticated', ['application/json']
+                'DocumentTaggedRest.get', 'authenticated', ['application/json']
             )
         ),
     ],

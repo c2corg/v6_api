@@ -8,6 +8,7 @@ from pydiscourse.exceptions import DiscourseClientError
 
 from c2corg_api.httpexceptions import (
     HTTPInternalServerError,
+    HTTPServiceUnavailable,
 )
 from c2corg_api.models import DBSession
 from c2corg_api.models.common.attributes import default_langs
@@ -25,7 +26,7 @@ from c2corg_api.security.roles import log_validated_user_i_know_what_i_do
 from c2corg_api.views import (
     json_view,
 )
-from c2corg_api.views.resource import BaseView, resource, view
+from c2corg_api.views.resource import view
 from c2corg_api.views.user import (
     token_to_response,
     validate_forum_username,
@@ -107,94 +108,98 @@ def sso_sync_validator(request, **kwargs):
     request.validated['sso_user'] = user
 
 
-@resource(path='/sso_sync')
-class SsoSyncRest(BaseView):
-    @json_view(
-        validators=[
-            body_validator(SsoSyncSchema),
-            sso_sync_validator,
-        ],
-    )
-    def post(self):
-        """Synchronize user details and return authentication url.
+@json_view(
+    validators=[
+        body_validator(SsoSyncSchema),
+        sso_sync_validator,
+    ],
+)
+def sso_sync(request):
+    """Synchronize user details and return authentication url.
 
-        Important: Email addresses need to be validated by external site.
-        """
-        request = self.request
-        sso_key = request.validated['sso_key']
-        sso_external_id = request.validated['sso_external_id']
-        user = request.validated['sso_user']
+    Important: Email addresses need to be validated by external site.
+    """
+    client = get_discourse_client(request.registry.settings)
+    if not client.enabled:
+        # the groups of the user are kept in the forum: nothing to sync without it
+        raise HTTPServiceUnavailable('The forum is disabled')
 
-        if user is None:
-            # create new user
-            user = User(
-                username=request.validated['username'],
-                name=request.validated['name'],
-                forum_username=request.validated['forum_username'],
-                email=request.validated['email'],
-                email_validated=True,  # MUST be validated by external site
-                lang=request.validated['lang'],
-                password=generate_token(),  # random password
-            )
-            # directly create the user profile, the document id of the profile
-            # is the user id
-            lang = user.lang
-            user.profile = UserProfile(
-                categories=['amateur'],
-                locales=[DocumentLocale(lang=lang, title='')],
-            )
-            DBSession.add(user)
-            DBSession.flush()
+    sso_key = request.validated['sso_key']
+    sso_external_id = request.validated['sso_external_id']
+    user = request.validated['sso_user']
 
-        if sso_external_id is None:
-            sso_external_id = SsoExternalId(
-                domain=sso_key.domain,
-                external_id=request.validated['external_id'],
-                user=user,
-            )
-            DBSession.add(sso_external_id)
+    if user is None:
+        # create new user
+        user = User(
+            username=request.validated['username'],
+            name=request.validated['name'],
+            forum_username=request.validated['forum_username'],
+            email=request.validated['email'],
+            email_validated=True,  # MUST be validated by external site
+            lang=request.validated['lang'],
+            password=generate_token(),  # random password
+        )
+        # directly create the user profile, the document id of the profile
+        # is the user id
+        lang = user.lang
+        user.profile = UserProfile(
+            categories=['amateur'],
+            locales=[DocumentLocale(lang=lang, title='')],
+        )
+        DBSession.add(user)
+        DBSession.flush()
 
-        sso_external_id.token = generate_token()
-        sso_external_id.expire = sso_expire_from_now()
+    if sso_external_id is None:
+        sso_external_id = SsoExternalId(
+            domain=sso_key.domain,
+            external_id=request.validated['external_id'],
+            user=user,
+        )
+        DBSession.add(sso_external_id)
 
-        client = get_discourse_client(request.registry.settings)
-        discourse_userid = call_discourse(get_discourse_userid, client, user.id)
-        if discourse_userid is None:
-            call_discourse(client.sync_sso, user)
-            discourse_userid = client.get_userid(user.id)  # From cache
+    sso_external_id.token = generate_token()
+    sso_external_id.expire = sso_expire_from_now()
 
-        # Groups are added to discourse, not removed
-        group_ids = []
-        discourse_groups = None
-        groups = request.validated['groups'] or ''
-        for group_name in groups.split(','):
-            if group_name == '':
-                continue
-            group_id = None
-            if discourse_groups is None:
-                discourse_groups = call_discourse(client.client.groups)
+    discourse_userid = call_discourse(get_discourse_userid, client, user.id)
+    if discourse_userid is None:
+        call_discourse(client.sync_sso, user)
+        discourse_userid = client.get_userid(user.id)  # From cache
 
-            group_id = None
-            for discourse_group in discourse_groups:
-                if discourse_group['name'] == group_name:
-                    group_id = discourse_group['id']
+    # Groups are added to discourse, not removed
+    group_ids = []
+    discourse_groups = None
+    groups = request.validated['groups'] or ''
+    for group_name in groups.split(','):
+        if group_name == '':
+            continue
+        group_id = None
+        if discourse_groups is None:
+            discourse_groups = call_discourse(client.client.groups)
 
-            if group_id is None:
-                # If group is not found, we ignore it as we want to return
-                # a valid token for user authentication
-                pass
-            else:
-                group_ids.append(group_id)
+        group_id = None
+        for discourse_group in discourse_groups:
+            if discourse_group['name'] == group_name:
+                group_id = discourse_group['id']
 
-        for group_id in group_ids:
-            call_discourse(client.client.add_user_to_group, group_id, discourse_userid)
+        if group_id is None:
+            # If group is not found, we ignore it as we want to return
+            # a valid token for user authentication
+            pass
+        else:
+            group_ids.append(group_id)
 
-        return {
-            'url': '{}/sso-login?no_redirect&{}'.format(
-                request.registry.settings['ui.url'],
-                urlencode({'token': sso_external_id.token}),
-            )
-        }
+    for group_id in group_ids:
+        call_discourse(client.client.add_user_to_group, group_id, discourse_userid)
+
+    return {
+        'url': '{}/sso-login?no_redirect&{}'.format(
+            request.registry.settings['ui.url'],
+            urlencode({'token': sso_external_id.token}),
+        )
+    }
+
+
+sso_sync.view_name = 'SsoSyncRest.post'
 
 
 def get_discourse_userid(client, userid):
@@ -251,21 +256,20 @@ def validate_token(request, **kwargs):
     request.validated['sso_user'] = sso_external_id.user
 
 
-@resource(path='/sso_login')
-class SsoLoginRest(BaseView):
-    @view(validators=[body_validator(SsoLoginSchema), validate_token])
-    def post(self):
-        user = self.request.validated['sso_user']
-        token = log_validated_user_i_know_what_i_do(user, self.request)
-        response = token_to_response(user, token, self.request)
-        if 'discourse' in self.request.json:
-            client = get_discourse_client(self.request.registry.settings)
-            try:
-                r = client.redirect_without_nonce(user)
-                response['redirect_internal'] = r
-            except Exception:
-                # Any error with discourse should not prevent login
-                log.warning(
-                    'Error logging into discourse for %d', user.id, exc_info=True
-                )
-        return response
+@view(validators=[body_validator(SsoLoginSchema), validate_token])
+def sso_login(request):
+    user = request.validated['sso_user']
+    token = log_validated_user_i_know_what_i_do(user, request)
+    response = token_to_response(user, token, request)
+    if 'discourse' in request.json:
+        client = get_discourse_client(request.registry.settings)
+        try:
+            r = client.redirect_without_nonce(user)
+            response['redirect_internal'] = r
+        except Exception:
+            # Any error with discourse should not prevent login
+            log.warning('Error logging into discourse for %d', user.id, exc_info=True)
+    return response
+
+
+sso_login.view_name = 'SsoLoginRest.post'

@@ -1,7 +1,7 @@
 import logging
 
 from c2corg_api.views.markdown import cook
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.resource import view
 
 log = logging.getLogger(__name__)
 
@@ -13,18 +13,16 @@ def validate_markdowns(request, **kwargs):
         request.errors.add('body', '', 'Should be a JSON object')
 
 
-@resource(path='/cooker')
-class CookerRest:
-    def __init__(self, request, **kwargs):
-        self.request = request
+@view(validators=[validate_markdowns])
+def cook_markdown(request):
+    """Thi service is a stateless service that returns HTML values.
 
-    @view(validators=[validate_markdowns])
-    def post(self):
-        """Thi service is a stateless service that returns HTML values.
+    * Input and output are dictionaries
+    * keys are keep unmodified
+    * values are parsed from markdown to HTML, only if key is not in
+      c2corg_api.views.markdown.NOT_MARKDOWN_PROPERTY
+    """
+    return cook(request.json)
 
-        * Input and output are dictionaries
-        * keys are keep unmodified
-        * values are parsed from markdown to HTML, only if key is not in
-          c2corg_api.views.markdown.NOT_MARKDOWN_PROPERTY
-        """
-        return cook(self.request.json)
+
+cook_markdown.view_name = 'CookerRest.post'

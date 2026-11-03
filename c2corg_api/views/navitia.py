@@ -8,7 +8,6 @@ import uuid
 
 import redis
 import requests
-import transaction
 from fastapi.responses import StreamingResponse
 from pyproj import Transformer
 from shapely.geometry import Point, shape
@@ -836,10 +835,7 @@ def _end_thread_db_session():
     (rolled back) rather than committed.
     """
     try:
-        # `DBSession` is registered with zope.sqlalchemy: the session joined
-        # this thread's transaction manager, so abort that transaction. This
-        # rolls back and closes the session.
-        transaction.abort()
+        DBSession.rollback()
     except Exception:
         log.exception('Error aborting background job transaction')
     finally:

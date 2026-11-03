@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 
 def main(global_config, **settings):
-    """Return the WSGI application of the API (see `c2corg_api.app`)."""
+    """Return the API behind a WSGI bridge, for the tests (see `c2corg_api.app`)."""
     # imported here: the FastAPI routes import the views, which need the
     # package initialized
     from c2corg_api.app import Application
@@ -38,11 +38,13 @@ def create_app(settings):
 
     configure_caches(settings)
     # imported here: the view modules need the package initialized
+    from c2corg_api.views.license import configure_license
     from c2corg_api.views.markdown import configure_image_url
     from c2corg_api.views.navitia import configure_jobs_redis
 
     configure_jobs_redis(settings)
     configure_image_url(settings)
+    configure_license(settings)
 
     # imported here: the FastAPI routes import the views, which need the
     # package initialized

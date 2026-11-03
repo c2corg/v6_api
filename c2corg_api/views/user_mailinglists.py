@@ -23,6 +23,51 @@ def validate_mailinglist_statuses(request, **kwargs):
     request.validated['mailinglists'] = mailinglists
 
 
+@restricted_json_view(validators=[validate_mailinglist_statuses])
+def update_mailinglists(request):
+    """Update mailinglist subscription statuses.
+
+    Request:
+        `POST` `/users/mailinglists`
+        {'avalanche': False, 'lawinen': True, 'valanghe': False}
+
+    """
+    user_id = request.authenticated_userid
+    user = DBSession.get(User, user_id)
+
+    subscribed_lists = (
+        DBSession.query(Mailinglist).filter(Mailinglist.user_id == user_id).all()
+    )
+    subscribed_lists = {list.listname: list for list in subscribed_lists}
+    subscribed_listnames = set(subscribed_lists.keys())
+
+    lists_to_add = []
+    removed_lists = False
+    data = request.validated['mailinglists']
+    for listname in data:
+        subscribe_status = data.get(listname, False)
+        if subscribe_status and listname not in subscribed_listnames:
+            # Add list
+            lists_to_add.append(
+                Mailinglist(
+                    listname=listname, email=user.email, user_id=user_id, user=user
+                )
+            )
+        elif not subscribe_status and listname in subscribed_listnames:
+            # Remove list
+            removed_lists = True
+            DBSession.delete(subscribed_lists[listname])
+
+    if lists_to_add:
+        DBSession.add_all(lists_to_add)
+    if lists_to_add or removed_lists:
+        DBSession.flush()
+    return {}
+
+
+update_mailinglists.view_name = 'UserMailinglistsRest.post'
+
+
 @resource(path='/users/mailinglists')
 class UserMailinglistsRest(BaseView):
     @restricted_view()
@@ -46,44 +91,3 @@ class UserMailinglistsRest(BaseView):
         subscribed_mailinglists = [list[0] for list in res]
 
         return {ml: ml in subscribed_mailinglists for ml in valid_mailinglists}
-
-    @restricted_json_view(validators=[validate_mailinglist_statuses])
-    def post(self):
-        """Update mailinglist subscription statuses.
-
-        Request:
-            `POST` `/users/mailinglists`
-            {'avalanche': False, 'lawinen': True, 'valanghe': False}
-
-        """
-        user_id = self.request.authenticated_userid
-        user = DBSession.get(User, user_id)
-
-        subscribed_lists = (
-            DBSession.query(Mailinglist).filter(Mailinglist.user_id == user_id).all()
-        )
-        subscribed_lists = {list.listname: list for list in subscribed_lists}
-        subscribed_listnames = set(subscribed_lists.keys())
-
-        lists_to_add = []
-        removed_lists = False
-        data = self.request.validated['mailinglists']
-        for listname in data:
-            subscribe_status = data.get(listname, False)
-            if subscribe_status and listname not in subscribed_listnames:
-                # Add list
-                lists_to_add.append(
-                    Mailinglist(
-                        listname=listname, email=user.email, user_id=user_id, user=user
-                    )
-                )
-            elif not subscribe_status and listname in subscribed_listnames:
-                # Remove list
-                removed_lists = True
-                DBSession.delete(subscribed_lists[listname])
-
-        if lists_to_add:
-            DBSession.add_all(lists_to_add)
-        if lists_to_add or removed_lists:
-            DBSession.flush()
-        return {}

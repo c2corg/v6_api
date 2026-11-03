@@ -11,9 +11,12 @@ from c2corg_api.schemas.topo_map import (
 )
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
-    DocumentRest,
+    collection_get,
+    create_document,
     make_validator_create,
     make_validator_update,
+    put_document,
+    read_document,
 )
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import topo_map_documents_config
@@ -31,33 +34,48 @@ validate_map_create = make_validator_create(fields_topo_map.get('required'))
 validate_map_update = make_validator_update(fields_topo_map.get('required'))
 
 
-@resource(collection_path='/maps', path='/maps/{id}')
-class TopoMapRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(MAP_TYPE, topo_map_documents_config)
+@restricted_json_view(
+    validators=[body_validator(TopoMapCreateSchema), validate_map_create],
+    permission='moderator',
+)
+def create_topo_map(request):
+    return create_document(request, topo_map_schema, after_add=insert_associations)
 
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        return self._get(topo_map_documents_config, topo_map_schema)
 
-    @restricted_json_view(
-        validators=[body_validator(TopoMapCreateSchema), validate_map_create],
-        permission='moderator',
+create_topo_map.view_name = 'TopoMapRest.collection_post'
+
+
+@restricted_json_view(
+    validators=[
+        body_validator(TopoMapUpdateSchema),
+        validate_id,
+        validate_map_update,
+    ],
+    permission='moderator',
+)
+def update_topo_map(request):
+    return put_document(
+        request, TopoMap, topo_map_schema, after_update=update_associations
     )
-    def collection_post(self):
-        return self._collection_post(topo_map_schema, after_add=insert_associations)
 
-    @restricted_json_view(
-        validators=[
-            body_validator(TopoMapUpdateSchema),
-            validate_id,
-            validate_map_update,
-        ],
-        permission='moderator',
-    )
-    def put(self):
-        return self._put(TopoMap, topo_map_schema, after_update=update_associations)
+
+update_topo_map.view_name = 'TopoMapRest.put'
+
+
+@view(validators=[validate_pagination, validate_preferred_lang_param])
+def list_topo_maps(request):
+    return collection_get(request, MAP_TYPE, topo_map_documents_config)
+
+
+list_topo_maps.view_name = 'TopoMapRest.collection_get'
+
+
+@view(validators=[validate_id, validate_lang_param, validate_cook_param])
+def get_topo_map(request):
+    return read_document(request, topo_map_documents_config, topo_map_schema)
+
+
+get_topo_map.view_name = 'TopoMapRest.get'
 
 
 @resource(path='/maps/{id}/{lang}/info')

@@ -60,7 +60,9 @@ def db_connection(test_database, db_engine):
 
     connection = db_engine.connect()
     trans = connection.begin()
-    DBSession.configure(bind=connection)
+    # the commits and rollbacks of DBSession act on a SAVEPOINT of this
+    # transaction, never on the transaction itself
+    DBSession.configure(bind=connection, join_transaction_mode='create_savepoint')
     yield connection
     if keep:
         trans.commit()

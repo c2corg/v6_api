@@ -45,8 +45,12 @@ from c2corg_api.views.document import (
     LIMIT_DEFAULT,
     NUM_RECENT_OUTINGS,
     DocumentRest,
+    collection_get,
+    create_document,
     make_validator_create,
     make_validator_update,
+    put_document,
+    read_document,
 )
 from c2corg_api.views.document_associations import get_first_column
 from c2corg_api.views.document_info import DocumentInfoRest
@@ -57,7 +61,7 @@ from c2corg_api.views.document_schemas import (
     route_schema_adaptor,
 )
 from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import BaseView, resource, view
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_cook_param,
@@ -118,86 +122,100 @@ def validate_required_associations(request, **kwargs):
         )
 
 
-@resource(collection_path='/routes', path='/routes/{id}')
-class RouteRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(ROUTE_TYPE, route_documents_config)
-
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        return self._get(
-            route_documents_config,
-            route_schema,
-            clazz_locale=RouteLocale,
-            adapt_schema=route_schema_adaptor,
-            include_maps=True,
-            set_custom_associations=RouteRest.set_recent_outings,
-        )
-
-    @restricted_json_view(
-        validators=[
-            body_validator(RouteCreateSchema),
-            validate_route_create,
-            validate_associations_create,
-            validate_required_associations,
-            functools.partial(validate_main_waypoint, True),
-        ],
+@restricted_json_view(
+    validators=[
+        body_validator(RouteCreateSchema),
+        validate_route_create,
+        validate_associations_create,
+        validate_required_associations,
+        functools.partial(validate_main_waypoint, True),
+    ],
+)
+def create_route(request):
+    linked_waypoints = request.validated.get('associations', {}).get('waypoints', [])
+    return create_document(
+        request,
+        route_schema,
+        before_add=functools.partial(set_default_geometry, linked_waypoints),
+        after_add=init_linked_attributes,
     )
-    def collection_post(self):
-        linked_waypoints = self.request.validated.get('associations', {}).get(
-            'waypoints', []
-        )
-        return self._collection_post(
-            route_schema,
-            before_add=functools.partial(set_default_geometry, linked_waypoints),
-            after_add=init_linked_attributes,
-        )
 
-    @restricted_json_view(
-        validators=[
-            body_validator(RouteUpdateSchema),
-            validate_id,
-            validate_route_update,
-            validate_associations_update,
-            validate_required_associations,
-            functools.partial(validate_main_waypoint, False),
-        ],
+
+create_route.view_name = 'RouteRest.collection_post'
+
+
+@restricted_json_view(
+    validators=[
+        body_validator(RouteUpdateSchema),
+        validate_id,
+        validate_route_update,
+        validate_associations_update,
+        validate_required_associations,
+        functools.partial(validate_main_waypoint, False),
+    ],
+)
+def update_route(request):
+    return put_document(
+        request,
+        Route,
+        route_schema,
+        before_update=update_default_geometry,
+        after_update=update_linked_attributes,
     )
-    def put(self):
-        return self._put(
-            Route,
-            route_schema,
-            before_update=update_default_geometry,
-            after_update=update_linked_attributes,
-        )
 
-    @staticmethod
-    def set_recent_outings(route, lang):
-        """Set last 10 outings on the given route."""
-        recent_outing_ids = get_first_column(
-            DBSession.query(Outing.document_id, Outing.date_end)
-            .filter(Outing.redirects_to.is_(None))
-            .join(Association, Outing.document_id == Association.child_document_id)
-            .filter(Association.parent_document_id == route.document_id)
-            .distinct()
-            .order_by(Outing.date_end.desc())
-            .limit(NUM_RECENT_OUTINGS)
-            .all()
-        )
 
-        total = (
-            DBSession.query(Outing.document_id)
-            .filter(Outing.redirects_to.is_(None))
-            .join(Association, Outing.document_id == Association.child_document_id)
-            .filter(Association.parent_document_id == route.document_id)
-            .distinct()
-            .count()
-        )
+update_route.view_name = 'RouteRest.put'
 
-        route.associations['recent_outings'] = get_documents_for_ids(
-            recent_outing_ids, lang, outing_documents_config, total
-        )
+
+@view(validators=[validate_pagination, validate_preferred_lang_param])
+def list_routes(request):
+    return collection_get(request, ROUTE_TYPE, route_documents_config)
+
+
+list_routes.view_name = 'RouteRest.collection_get'
+
+
+@view(validators=[validate_id, validate_lang_param, validate_cook_param])
+def get_route(request):
+    return read_document(
+        request,
+        route_documents_config,
+        route_schema,
+        clazz_locale=RouteLocale,
+        adapt_schema=route_schema_adaptor,
+        include_maps=True,
+        set_custom_associations=set_recent_outings,
+    )
+
+
+get_route.view_name = 'RouteRest.get'
+
+
+def set_recent_outings(route, lang):
+    """Set last 10 outings on the given route."""
+    recent_outing_ids = get_first_column(
+        DBSession.query(Outing.document_id, Outing.date_end)
+        .filter(Outing.redirects_to.is_(None))
+        .join(Association, Outing.document_id == Association.child_document_id)
+        .filter(Association.parent_document_id == route.document_id)
+        .distinct()
+        .order_by(Outing.date_end.desc())
+        .limit(NUM_RECENT_OUTINGS)
+        .all()
+    )
+
+    total = (
+        DBSession.query(Outing.document_id)
+        .filter(Outing.redirects_to.is_(None))
+        .join(Association, Outing.document_id == Association.child_document_id)
+        .filter(Association.parent_document_id == route.document_id)
+        .distinct()
+        .count()
+    )
+
+    route.associations['recent_outings'] = get_documents_for_ids(
+        recent_outing_ids, lang, outing_documents_config, total
+    )
 
 
 @resource(path='/routes/{id}/{lang}/{version_id}')
@@ -220,28 +238,28 @@ class RouteInfoRest(DocumentInfoRest):
         return self._get_document_info(route_documents_config)
 
 
-@resource(path='/routes/update_public_transportation_rating')
-class RoutePublicTransportationRatingRest(BaseView):
-    """
-    Update all route public transportation rating.
+# Update all route public transportation rating.
+#
+# Request:
+# `GET` `/update_public_transportation_rating?waypoint_extrapolation=...`
+#
+#
+# Parameters:
+# `waypoint_extrapolation=true` (optional)
+# extrapolate starting and ending points
+# allows to reset public_transportation_rating values
+# set to true by default
 
-    Request:
-        `GET` `/update_public_transportation_rating?waypoint_extrapolation=...`
+
+@restricted_view(permission='moderator')
+def update_public_transportation_ratings(request):
+    waypoint_extrapolation = request.params.get('waypoint_extrapolation') or True
+    update_all_pt_rating(waypoint_extrapolation)
 
 
-    Parameters:
-        `waypoint_extrapolation=true` (optional)
-        extrapolate starting and ending points
-        allows to reset public_transportation_rating values
-        set to true by default
-    """
-
-    @restricted_view(permission='moderator')
-    def get(self):
-        waypoint_extrapolation = (
-            self.request.params.get('waypoint_extrapolation') or True
-        )
-        update_all_pt_rating(waypoint_extrapolation)
+update_public_transportation_ratings.view_name = (
+    'RoutePublicTransportationRatingRest.get'
+)
 
 
 @resource(path='/reachableroutes')

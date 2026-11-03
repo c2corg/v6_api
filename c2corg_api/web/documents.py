@@ -11,6 +11,7 @@ from c2corg_api.views.document import LIMIT_DEFAULT, LIMIT_MAX
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.compat import (
     permission_check,
+    serve_read,
     serve_view,
     serve_write,
     typed_values,
@@ -31,19 +32,22 @@ User = Annotated[CurrentUser | None, Depends(current_user)]
 def include_document_type(
     app,
     prefix,
-    rest,
+    reads,
     version_rest=None,
     info_rest=None,
     listing_permission=None,
     doc_type=None,
 ):
     """Add the read routes of a document type, served by its view classes."""
+    # reads: the functions of the listing and of a document of the type
+    list_documents, get_one = reads
 
     def listing(
         request: Request,
         user: User,
         _: Annotated[
-            None, Depends(permission_check(rest, 'collection_get', listing_permission))
+            None,
+            Depends(permission_check(list_documents.view_name, listing_permission)),
         ],
         offset: Annotated[
             Offset | None, Query(description='The first document, from 0.')
@@ -84,11 +88,10 @@ def include_document_type(
     ):
         # `q`, `bbox`, `sort` and the search filters are read by the view
         validated = {'offset': offset, 'limit': limit, 'lang': lang}
-        return serve_view(
-            request, user, [typed_values(validated)], rest, 'collection_get'
-        )
+        return serve_read(request, user, [typed_values(validated)], list_documents)
 
     listing.described = True
+    listing.response_schema = 'Documents'
 
     def document(
         request: Request,
@@ -115,10 +118,11 @@ def include_document_type(
     ):
         # `e` is read by the view
         validated = {'id': id, 'lang': lang, 'cook': cook}
-        return serve_view(request, user, [typed_values(validated)], rest)
+        return serve_read(request, user, [typed_values(validated)], get_one)
 
     # described in the OpenAPI document (see web.openapi)
     document.described = True
+    document.response_schema = 'Document'
 
     # read by the route inventory of the contract tests (routes.txt)
     listing.permission = listing_permission
@@ -181,6 +185,7 @@ def include_document_type(
             return serve_view(request, user, [typed_values(validated)], version_rest)
 
         version.described = True
+        version.response_schema = 'Version'
         path = f'/{prefix}/{{id:int}}/{{lang}}/{{version_id:int}}'
         app.add_api_route(
             path,
@@ -192,41 +197,66 @@ def include_document_type(
         )
 
 
-def view_arguments(view_class, method):
-    """Return the validators, permission and content types of a view method."""
-    # as declared by the @view decorator of the Pyramid view, so that the
+def handler_arguments(function):
+    """Return the validators, permission and content types of a write function."""
+    # as declared by its @view decorator (views.resource.view), so that the
     # FastAPI route checks exactly what Pyramid checked
-    [arguments] = getattr(view_class, method).__views__
+    [arguments] = function.__views__
     content_type = arguments.get('content_type')
     if isinstance(content_type, str):
         content_type = [content_type]
     return arguments.get('validators', []), arguments.get('permission'), content_type
 
 
-def include_write(app, path, http_method, view_class, method):
-    """Add a write route served by a method of a Pyramid view class."""
-    validators, permission, content_types = view_arguments(view_class, method)
+def include_handler_write(
+    app, path, http_method, handler, validators, permission, content_types
+):
+    """Add a write route served by a handler of the validated request."""
+    # the checks run in this order: rate limiting, content type, permission,
+    # validators (web.compat.serve_write)
 
     async def endpoint(request: Request, user: User):
         return await serve_write(
-            request, user, validators, view_class, method, permission, content_types
+            request, user, validators, handler, permission, content_types
         )
 
     # read by the route inventory of the contract tests (routes.txt)
     endpoint.permission = permission
-    app.add_api_route(path, endpoint, methods=[http_method])
+    schema = _body_schema(validators)
+    if schema is not None:
+        # described in the OpenAPI document with its body (see web.openapi)
+        endpoint.described = True
+        endpoint.body_schema = schema
+    app.add_api_route(
+        path,
+        endpoint,
+        methods=[http_method],
+        operation_id=handler.view_name.replace('.', '_'),
+        tags=[path.strip('/').split('/')[0]],
+    )
 
 
-def include_document_writes(app, prefix, rest, create=True):
-    """Add the write routes of a document type: creation and update."""
-    if create:
-        include_write(app, f'/{prefix}', 'POST', rest, 'collection_post')
-    # a numeric id only, as the read routes
-    include_write(app, f'/{prefix}/{{id:int}}', 'PUT', rest, 'put')
+def _body_schema(validators):
+    """Return the schema of the body a route validates, or None."""
+    # set by schemas.base.body_validator
+    return next((v.schema for v in validators if hasattr(v, 'schema')), None)
+
+
+def include_document_writes(app, prefix, create, update):
+    """Add the write routes of a document type, served by its functions."""
+    # a numeric id only, as the read routes; no creation route if `create`
+    # is None
+    routes = [(f'/{prefix}', 'POST', create), (f'/{prefix}/{{id:int}}', 'PUT', update)]
+    for path, http_method, function in routes:
+        if function is not None:
+            include_handler_write(
+                app, path, http_method, function, *handler_arguments(function)
+            )
 
 
 def include(app):
     """Add the document routes moved to FastAPI."""
+    # the reads and writes, served by the functions of the views
     from c2corg_api.models.common.document_types import (
         AREA_TYPE,
         ARTICLE_TYPE,
@@ -240,58 +270,91 @@ def include(app):
         WAYPOINT_TYPE,
         XREPORT_TYPE,
     )
-    from c2corg_api.views.area import AreaInfoRest, AreaRest, AreaVersionRest
+    from c2corg_api.views import (
+        area,
+        article,
+        book,
+        coverage,
+        image,
+        outing,
+        route,
+        topo_map,
+        user_profile,
+        waypoint,
+        xreport,
+    )
+    from c2corg_api.views.area import AreaInfoRest, AreaVersionRest
     from c2corg_api.views.article import (
-        ArticleRest,
         ArticlesInfoRest,
         ArticlesVersionRest,
     )
-    from c2corg_api.views.book import BookRest, BooksInfoRest, BooksVersionRest
-    from c2corg_api.views.coverage import CoverageRest
-    from c2corg_api.views.image import ImageInfoRest, ImageRest, ImageVersionRest
-    from c2corg_api.views.outing import OutingInfoRest, OutingRest, OutingVersionRest
-    from c2corg_api.views.route import RouteInfoRest, RouteRest, RouteVersionRest
-    from c2corg_api.views.topo_map import TopoMapInfoRest, TopoMapRest
-    from c2corg_api.views.user_profile import UserProfileInfoRest, UserProfileRest
+    from c2corg_api.views.book import BooksInfoRest, BooksVersionRest
+    from c2corg_api.views.image import ImageInfoRest, ImageVersionRest
+    from c2corg_api.views.outing import OutingInfoRest, OutingVersionRest
+    from c2corg_api.views.route import RouteInfoRest, RouteVersionRest
+    from c2corg_api.views.topo_map import TopoMapInfoRest
+    from c2corg_api.views.user_profile import UserProfileInfoRest
     from c2corg_api.views.waypoint import (
         WaypointInfoRest,
-        WaypointRest,
         WaypointVersionRest,
     )
     from c2corg_api.views.xreport import (
         XreportInfoRest,
-        XreportRest,
         XreportVersionRest,
     )
 
     include_document_type(
-        app, 'books', BookRest, BooksVersionRest, BooksInfoRest, doc_type=BOOK_TYPE
+        app,
+        'books',
+        (book.list_books, book.get_book),
+        BooksVersionRest,
+        BooksInfoRest,
+        doc_type=BOOK_TYPE,
     )
     include_document_type(
         app,
         'articles',
-        ArticleRest,
+        (article.list_articles, article.get_article),
         ArticlesVersionRest,
         ArticlesInfoRest,
         doc_type=ARTICLE_TYPE,
     )
     include_document_type(
-        app, 'areas', AreaRest, AreaVersionRest, AreaInfoRest, doc_type=AREA_TYPE
+        app,
+        'areas',
+        (area.list_areas, area.get_area),
+        AreaVersionRest,
+        AreaInfoRest,
+        doc_type=AREA_TYPE,
     )
     # maps have no version route, coverages neither version nor info
     include_document_type(
-        app, 'maps', TopoMapRest, info_rest=TopoMapInfoRest, doc_type=MAP_TYPE
+        app,
+        'maps',
+        (topo_map.list_topo_maps, topo_map.get_topo_map),
+        info_rest=TopoMapInfoRest,
+        doc_type=MAP_TYPE,
     )
-    include_document_type(app, 'coverages', CoverageRest, doc_type=COVERAGE_TYPE)
+    include_document_type(
+        app,
+        'coverages',
+        (coverage.list_coverages, coverage.get_coverage_document),
+        doc_type=COVERAGE_TYPE,
+    )
     # the image proxy (/images/proxy/{id}) and /images/list stay on Pyramid
     include_document_type(
-        app, 'images', ImageRest, ImageVersionRest, ImageInfoRest, doc_type=IMAGE_TYPE
+        app,
+        'images',
+        (image.list_images, image.get_image),
+        ImageVersionRest,
+        ImageInfoRest,
+        doc_type=IMAGE_TYPE,
     )
     # the personal fields of an xreport are for its author and the moderators
     include_document_type(
         app,
         'xreports',
-        XreportRest,
+        (xreport.list_xreports, xreport.get_xreport),
         XreportVersionRest,
         XreportInfoRest,
         doc_type=XREPORT_TYPE,
@@ -299,7 +362,7 @@ def include(app):
     include_document_type(
         app,
         'outings',
-        OutingRest,
+        (outing.list_outings, outing.get_outing),
         OutingVersionRest,
         OutingInfoRest,
         doc_type=OUTING_TYPE,
@@ -307,14 +370,19 @@ def include(app):
     # /reachableroutes and /routes/update_public_transportation_rating stay on
     # Pyramid
     include_document_type(
-        app, 'routes', RouteRest, RouteVersionRest, RouteInfoRest, doc_type=ROUTE_TYPE
+        app,
+        'routes',
+        (route.list_routes, route.get_route),
+        RouteVersionRest,
+        RouteInfoRest,
+        doc_type=ROUTE_TYPE,
     )
     # /reachablewaypoints, /waypoints/{id}/stopareas, /waypoints/{id}/isReachable
     # and /waypoints_stopareas/... stay on Pyramid
     include_document_type(
         app,
         'waypoints',
-        WaypointRest,
+        (waypoint.list_waypoints, waypoint.get_waypoint),
         WaypointVersionRest,
         WaypointInfoRest,
         doc_type=WAYPOINT_TYPE,
@@ -324,34 +392,44 @@ def include(app):
     include_document_type(
         app,
         'profiles',
-        UserProfileRest,
+        (user_profile.list_user_profiles, user_profile.get_user_profile),
         info_rest=UserProfileInfoRest,
         listing_permission='authenticated',
         doc_type=USERPROFILE_TYPE,
     )
     # a GET that writes (the ratings of all the routes, for the moderators):
     # served as a write, so that it is committed
-    from c2corg_api.views.route import RoutePublicTransportationRatingRest
+    from c2corg_api.views.route import update_public_transportation_ratings
 
     for http_method in ('GET', 'HEAD'):
-        include_write(
+        include_handler_write(
             app,
             '/routes/update_public_transportation_rating',
             http_method,
-            RoutePublicTransportationRatingRest,
-            'get',
+            update_public_transportation_ratings,
+            *handler_arguments(update_public_transportation_ratings),
         )
-    # the writes moved to FastAPI
-    include_document_writes(app, 'books', BookRest)
-    include_document_writes(app, 'articles', ArticleRest)
-    include_document_writes(app, 'areas', AreaRest)
-    include_document_writes(app, 'maps', TopoMapRest)
-    include_document_writes(app, 'coverages', CoverageRest)
-    include_document_writes(app, 'xreports', XreportRest)
+    # the writes, served by the functions of the views
+    include_document_writes(app, 'books', book.create_book, book.update_book)
+    include_document_writes(
+        app, 'articles', article.create_article, article.update_article
+    )
+    include_document_writes(app, 'areas', area.create_area, area.update_area)
+    include_document_writes(
+        app, 'maps', topo_map.create_topo_map, topo_map.update_topo_map
+    )
+    include_document_writes(
+        app, 'coverages', coverage.create_coverage, coverage.update_coverage
+    )
+    include_document_writes(
+        app, 'xreports', xreport.create_xreport, xreport.update_xreport
+    )
     # the image proxy and /images/list (POST) stay on Pyramid
-    include_document_writes(app, 'images', ImageRest)
+    include_document_writes(app, 'images', image.create_image, image.update_image)
     # a profile is created with its user: no creation route
-    include_document_writes(app, 'profiles', UserProfileRest, create=False)
-    include_document_writes(app, 'outings', OutingRest)
-    include_document_writes(app, 'routes', RouteRest)
-    include_document_writes(app, 'waypoints', WaypointRest)
+    include_document_writes(app, 'profiles', None, user_profile.update_user_profile)
+    include_document_writes(app, 'outings', outing.create_outing, outing.update_outing)
+    include_document_writes(app, 'routes', route.create_route, route.update_route)
+    include_document_writes(
+        app, 'waypoints', waypoint.create_waypoint, waypoint.update_waypoint
+    )

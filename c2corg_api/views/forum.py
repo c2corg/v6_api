@@ -1,6 +1,9 @@
 import logging
 
-from c2corg_api.httpexceptions import HTTPInternalServerError
+from c2corg_api.httpexceptions import (
+    HTTPInternalServerError,
+    HTTPServiceUnavailable,
+)
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association, association_keys_for_types
 from c2corg_api.models.cache_version import update_cache_version_direct
@@ -12,7 +15,6 @@ from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, Str
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views import restricted_view
-from c2corg_api.views.resource import BaseView, resource
 
 log = logging.getLogger(__name__)
 
@@ -57,74 +59,77 @@ def validate_topic_create(request, **kwargs):
 
 
 # only collection_post: it creates the topic in Discourse
-@resource(collection_path='/forum/topics', path='/forum/topics/{id}')
-class ForumTopicRest(BaseView):
-    @restricted_view(
-        validators=[body_validator(TopicCreateSchema), validate_topic_create],
+@restricted_view(
+    validators=[body_validator(TopicCreateSchema), validate_topic_create],
+)
+def create_topic(request):
+    settings = request.registry.settings
+
+    client = get_discourse_client(settings)
+    if not client.enabled:
+        raise HTTPServiceUnavailable('The forum is disabled')
+
+    locale = request.validated['locale']
+    document = request.validated['document']
+    document_type = association_keys_for_types[document.type]
+
+    document_path = f'/{document_type}/{locale.document_id}/{locale.lang}'
+
+    content = (
+        f'<a href="https://www.camptocamp.org{document_path}">'
+        f'{locale.title or document_path}</a>'
     )
-    def collection_post(self):
-        settings = self.request.registry.settings
 
-        locale = self.request.validated['locale']
-        document = self.request.validated['document']
-        document_type = association_keys_for_types[document.type]
+    category = settings['discourse.category']
+    # category could be id or name
+    try:
+        category = int(category)
+    except ValueError:
+        pass  # a name: use it as it is
 
-        document_path = f'/{document_type}/{locale.document_id}/{locale.lang}'
+    try:
+        title = f'{locale.document_id}_{locale.lang}'
+        response = client.client.create_post(content, title=title, category_id=category)
+    except Exception as e:
+        log.error(f'Error with Discourse: {e!s}', exc_info=True)
+        raise HTTPInternalServerError('Error with Discourse') from e
 
-        content = (
-            f'<a href="https://www.camptocamp.org{document_path}">'
-            f'{locale.title or document_path}</a>'
-        )
+    if 'topic_id' in response:
+        topic_id = response['topic_id']
 
-        category = settings['discourse.category']
-        # category could be id or name
-        try:
-            category = int(category)
-        except ValueError:
-            pass  # a name: use it as it is
+        document_topic = DocumentTopic(topic_id=topic_id)
+        locale.document_topic = document_topic
+        update_cache_version_direct(locale.document_id)
+        DBSession.flush()
 
-        client = get_discourse_client(settings)
-        try:
-            title = f'{locale.document_id}_{locale.lang}'
-            response = client.client.create_post(
-                content, title=title, category_id=category
-            )
-        except Exception as e:
-            log.error(f'Error with Discourse: {e!s}', exc_info=True)
-            raise HTTPInternalServerError('Error with Discourse') from e
-
-        if 'topic_id' in response:
-            topic_id = response['topic_id']
-
-            document_topic = DocumentTopic(topic_id=topic_id)
-            locale.document_topic = document_topic
-            update_cache_version_direct(locale.document_id)
-            DBSession.flush()
-
-            if locale.type == document_types.OUTING_TYPE:
-                try:
-                    self.invite_participants(client, locale, topic_id)
-                except Exception:
-                    log.error(
-                        f'Inviting participants of outing {locale.document_id} failed',
-                        exc_info=True,
-                    )
-
-        return response
-
-    def invite_participants(self, client, locale, topic_id):
-        participants = (
-            DBSession.query(User.forum_username)
-            .join(Association, Association.parent_document_id == User.id)
-            .filter(Association.child_document_id == locale.document_id)
-            .group_by(User.forum_username)
-        )
-
-        for (forum_username,) in participants:
+        if locale.type == document_types.OUTING_TYPE:
             try:
-                client.invite_user_to_topic(forum_username, topic_id)
+                invite_participants(request, client, locale, topic_id)
             except Exception:
                 log.error(
-                    f'Inviting forum user {forum_username} in topic {topic_id} failed',
+                    f'Inviting participants of outing {locale.document_id} failed',
                     exc_info=True,
                 )
+
+    return response
+
+
+create_topic.view_name = 'ForumTopicRest.collection_post'
+
+
+def invite_participants(request, client, locale, topic_id):
+    participants = (
+        DBSession.query(User.forum_username)
+        .join(Association, Association.parent_document_id == User.id)
+        .filter(Association.child_document_id == locale.document_id)
+        .group_by(User.forum_username)
+    )
+
+    for (forum_username,) in participants:
+        try:
+            client.invite_user_to_topic(forum_username, topic_id)
+        except Exception:
+            log.error(
+                f'Inviting forum user {forum_username} in topic {topic_id} failed',
+                exc_info=True,
+            )

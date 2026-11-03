@@ -1,4 +1,4 @@
-TEMPLATE_FILES_IN = $(filter-out ./.build/% ./apache/% ./venv/% ./MANIFEST.in, $(shell find . -type f -name '*.in'))
+TEMPLATE_FILES_IN = $(filter-out ./.build/% ./venv/% ./MANIFEST.in, $(shell find . -type f -name '*.in'))
 TEMPLATE_FILES = $(TEMPLATE_FILES_IN:.in=)
 
 ENV_FILES = config/env.default config/env.dev
@@ -61,7 +61,7 @@ stop:
 		$(DOCKER_COMPOSE) stop
 
 serve:
-		gunicorn --paste development.ini --reload --bind 0.0.0.0:6543
+		C2C_API_CONFIG=development.ini uvicorn c2corg_api.asgi:app --reload --host 0.0.0.0 --port 6543
 
 .PHONY: format
 format:

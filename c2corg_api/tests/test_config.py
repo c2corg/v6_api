@@ -19,6 +19,39 @@ class TestGetAppsettings:
         settings = get_appsettings(TEST_INI, options={'unused': '1'})
         assert settings == get_appsettings(TEST_INI)
 
+    def test_use_config(self, tmp_path):
+        # the settings of the file a `use = config:` names, the file's own win
+        (tmp_path / 'common.ini').write_text(
+            '[app:main]\na = common\nb = common\n[other]\nc = other\n'
+        )
+        (tmp_path / 'app.ini').write_text(
+            '[app:main]\nuse = config:common.ini\nb = app\nd = %(here)s/x\n'
+        )
+        assert get_appsettings(str(tmp_path / 'app.ini')) == {
+            'a': 'common',
+            'b': 'app',
+            'd': f'{tmp_path}/x',
+        }
+
+    def test_options_as_variables(self, tmp_path):
+        (tmp_path / 'app.ini').write_text('[app:main]\na = %(name)s\n')
+        settings = get_appsettings(str(tmp_path / 'app.ini'), options={'name': 'x'})
+        assert settings == {'a': 'x'}
+
+    def test_without_app_section(self, tmp_path):
+        (tmp_path / 'app.ini').write_text('[other]\na = 1\n')
+        with pytest.raises(ValueError, match='no \\[app:main\\] section'):
+            get_appsettings(str(tmp_path / 'app.ini'))
+
+    def test_missing_file(self, tmp_path):
+        with pytest.raises(FileNotFoundError):
+            get_appsettings(str(tmp_path / 'missing.ini'))
+
+    def test_loop(self, tmp_path):
+        (tmp_path / 'app.ini').write_text('[app:main]\nuse = config:app.ini\n')
+        with pytest.raises(ValueError, match='loops back'):
+            get_appsettings(str(tmp_path / 'app.ini'))
+
 
 class TestParseVars:
     def test_assignments(self):

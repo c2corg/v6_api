@@ -32,9 +32,12 @@ from c2corg_api.search.notify_sync import run_on_successful_transaction
 from c2corg_api.views import restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
-    DocumentRest,
+    collection_get,
+    insert_document,
     make_validator_create,
     make_validator_update,
+    put_document,
+    read_document,
     validate_document,
 )
 from c2corg_api.views.document_info import DocumentInfoRest
@@ -130,9 +133,10 @@ def validate_list_associations_create(request, **kwargs):
         )
 
 
-def create_image(self, document_in):
-    document = self._create_document(document_in, image_schema)
-    publish_image_in_backend(self.request, document.filename)
+def insert_image(request, document_in):
+    """Insert an image document, and publish its file on the image backend."""
+    document = insert_document(request, document_in, image_schema)
+    publish_image_in_backend(request, document.filename)
 
     return document
 
@@ -209,87 +213,104 @@ def delete_all_files_for_image(document_id, request):
     run_on_successful_transaction(send_delete_request)
 
 
-@resource(collection_path='/images', path='/images/{id}')
-class ImageRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(IMAGE_TYPE, image_documents_config)
+@restricted_json_view(
+    validators=[
+        body_validator(ImageCreateSchema),
+        validate_image_create,
+        validate_associations_create,
+    ],
+)
+def create_image(request):
+    document_in = request.validated
+    document = insert_image(request, document_in)
+    return {'document_id': document.document_id}
 
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        return self._get(
-            image_documents_config, image_schema, set_custom_fields=set_creator
-        )
 
-    @restricted_json_view(
-        validators=[
-            body_validator(ImageCreateSchema),
-            validate_image_create,
-            validate_associations_create,
-        ],
+create_image.view_name = 'ImageRest.collection_post'
+
+
+@restricted_json_view(
+    validators=[
+        body_validator(ImageUpdateSchema),
+        validate_id,
+        validate_image_update,
+        validate_associations_update,
+    ],
+)
+def update_image(request):
+    if not request.has_permission('moderator'):
+        image_id = request.validated['id']
+        image = DBSession.get(Image, image_id)
+        if image is None:
+            raise HTTPNotFound(f'No image found for id {image_id}')
+        new_image_type = request.validated['document']['image_type']
+        if new_image_type == 'copyright':
+            if new_image_type != image.image_type:
+                raise HTTPForbidden('No permission to change to copyright type')
+        elif image.image_type == 'collaborative':
+            if new_image_type != image.image_type:
+                raise HTTPBadRequest(
+                    'Image type cannot be changed for collaborative images'
+                )
+        # personal images should only be modifiable by
+        # their creator and moderators
+        elif not has_been_created_by(image_id, request.authenticated_userid):
+            raise HTTPForbidden('No permission to change this image')
+    return put_document(
+        request,
+        Image,
+        image_schema,
+        before_update=functools.partial(before_image_update, request),
     )
-    def collection_post(self):
-        document_in = self.request.validated
-        document = create_image(self, document_in)
-        return {'document_id': document.document_id}
-
-    @restricted_json_view(
-        validators=[
-            body_validator(ImageUpdateSchema),
-            validate_id,
-            validate_image_update,
-            validate_associations_update,
-        ],
-    )
-    def put(self):
-        if not self.request.has_permission('moderator'):
-            image_id = self.request.validated['id']
-            image = DBSession.get(Image, image_id)
-            if image is None:
-                raise HTTPNotFound(f'No image found for id {image_id}')
-            new_image_type = self.request.validated['document']['image_type']
-            if new_image_type == 'copyright':
-                if new_image_type != image.image_type:
-                    raise HTTPForbidden('No permission to change to copyright type')
-            elif image.image_type == 'collaborative':
-                if new_image_type != image.image_type:
-                    raise HTTPBadRequest(
-                        'Image type cannot be changed for collaborative images'
-                    )
-            # personal images should only be modifiable by
-            # their creator and moderators
-            elif not has_been_created_by(image_id, self.request.authenticated_userid):
-                raise HTTPForbidden('No permission to change this image')
-        return self._put(
-            Image,
-            image_schema,
-            before_update=functools.partial(before_image_update, self.request),
-        )
 
 
 # only `collection_post`: it posts a list of images
-@resource(collection_path='/images/list', path='/images/list/{id}')
-class ImageListRest(DocumentRest):
-    @restricted_json_view(
-        validators=[
-            body_validator(ImageListCreateSchema),
-            validate_list_image_create,
-            validate_list_associations_create,
-        ],
+
+
+update_image.view_name = 'ImageRest.put'
+
+
+@view(validators=[validate_pagination, validate_preferred_lang_param])
+def list_images(request):
+    return collection_get(request, IMAGE_TYPE, image_documents_config)
+
+
+list_images.view_name = 'ImageRest.collection_get'
+
+
+@view(validators=[validate_id, validate_lang_param, validate_cook_param])
+def get_image(request):
+    return read_document(
+        request, image_documents_config, image_schema, set_custom_fields=set_creator
     )
-    def collection_post(self):
-        images_in = self.request.validated['images']
 
-        image_ids = []
-        images = []
-        for document_in in images_in:
-            document = create_image(self, document_in)
-            images.append(document)
-            image_ids.append({'document_id': document.document_id})
 
-        update_feed_images_upload(images, images_in, self.request.authenticated_userid)
+get_image.view_name = 'ImageRest.get'
 
-        return {'images': image_ids}
+
+@restricted_json_view(
+    validators=[
+        body_validator(ImageListCreateSchema),
+        validate_list_image_create,
+        validate_list_associations_create,
+    ],
+)
+def create_images(request):
+    images_in = request.validated['images']
+
+    image_ids = []
+    images = []
+    for document_in in images_in:
+        document = insert_image(request, document_in)
+        images.append(document)
+        image_ids.append({'document_id': document.document_id})
+
+    update_feed_images_upload(images, images_in, request.authenticated_userid)
+
+    return {'images': image_ids}
+
+
+create_images.view_name = 'ImageListRest.collection_post'
 
 
 @resource(path='/images/{id}/{lang}/info')

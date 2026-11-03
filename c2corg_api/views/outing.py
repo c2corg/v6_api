@@ -22,9 +22,12 @@ from c2corg_api.views import (
     set_default_geom_from_associations,
 )
 from c2corg_api.views.document import (
-    DocumentRest,
+    collection_get,
+    create_document,
     make_validator_create,
     make_validator_update,
+    put_document,
+    read_document,
 )
 from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.document_schemas import (
@@ -135,49 +138,67 @@ def validate_required_associations(request, **kwargs):
         request.errors.add('body', 'associations.routes', 'at least one route required')
 
 
-@resource(collection_path='/outings', path='/outings/{id}')
-class OutingRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(OUTING_TYPE, outing_documents_config)
-
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        return self._get(
-            outing_documents_config, outing_schema, adapt_schema=outing_schema_adaptor
-        )
-
-    @restricted_json_view(
-        validators=[
-            body_validator(OutingCreateSchema),
-            validate_outing_create,
-            validate_associations_create,
-            validate_required_associations,
-            validate_dates_on_creation,
-        ],
+@restricted_json_view(
+    validators=[
+        body_validator(OutingCreateSchema),
+        validate_outing_create,
+        validate_associations_create,
+        validate_required_associations,
+        validate_dates_on_creation,
+    ],
+)
+def create_outing(request):
+    set_default_geom = functools.partial(
+        set_default_geometry, request.validated['associations']['routes']
     )
-    def collection_post(self):
-        set_default_geom = functools.partial(
-            set_default_geometry, self.request.validated['associations']['routes']
-        )
-        return self._collection_post(outing_schema, before_add=set_default_geom)
+    return create_document(request, outing_schema, before_add=set_default_geom)
 
-    @restricted_json_view(
-        validators=[
-            body_validator(OutingUpdateSchema),
-            validate_id,
-            validate_outing_update,
-            validate_associations_update,
-            validate_required_associations,
-            validate_dates_on_update,
-        ],
+
+create_outing.view_name = 'OutingRest.collection_post'
+
+
+@restricted_json_view(
+    validators=[
+        body_validator(OutingUpdateSchema),
+        validate_id,
+        validate_outing_update,
+        validate_associations_update,
+        validate_required_associations,
+        validate_dates_on_update,
+    ],
+)
+def update_outing(request):
+    if not has_permission_for_outing(request, request.validated['id']):
+        # moderators can change every outing, but a normal user can only
+        # change an outing that they are associated to
+        raise HTTPForbidden('No permission to change this outing')
+    return put_document(
+        request, Outing, outing_schema, before_update=update_default_geometry
     )
-    def put(self):
-        if not has_permission_for_outing(self.request, self.request.validated['id']):
-            # moderators can change every outing, but a normal user can only
-            # change an outing that they are associated to
-            raise HTTPForbidden('No permission to change this outing')
-        return self._put(Outing, outing_schema, before_update=update_default_geometry)
+
+
+update_outing.view_name = 'OutingRest.put'
+
+
+@view(validators=[validate_pagination, validate_preferred_lang_param])
+def list_outings(request):
+    return collection_get(request, OUTING_TYPE, outing_documents_config)
+
+
+list_outings.view_name = 'OutingRest.collection_get'
+
+
+@view(validators=[validate_id, validate_lang_param, validate_cook_param])
+def get_outing(request):
+    return read_document(
+        request,
+        outing_documents_config,
+        outing_schema,
+        adapt_schema=outing_schema_adaptor,
+    )
+
+
+get_outing.view_name = 'OutingRest.get'
 
 
 @resource(path='/outings/{id}/{lang}/info')

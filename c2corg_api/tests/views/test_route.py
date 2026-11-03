@@ -169,10 +169,28 @@ class TestRouteRest(BaseDocumentTestRest):
         )
         assert 'type' in recent_outings['documents'][0]
 
+        # the licence of the route and of each associated document
+        lang = body['locales'][0]['lang']
+        assert body['license'] == {
+            'id': 'CC-BY-SA-3.0',
+            'url': 'https://creativecommons.org/licenses/by-sa/3.0/',
+            'attribution_url': (
+                f'http://localhost:6553/routes/history/{self.route.document_id}/{lang}'
+            ),
+        }
+        assert linked_waypoints[0]['license']['id'] == 'CC-BY-SA-3.0'
+        assert linked_waypoints[0]['license']['attribution_url'].startswith(
+            f'http://localhost:6553/waypoints/history/{self.waypoint.document_id}/'
+        )
+        assert linked_articles[0]['license']['id'] == 'CC-BY-SA-3.0'
+        assert recent_outings['documents'][0]['license']['id'] == 'CC-BY-NC-ND-3.0'
+
         assert 'maps' in body
         topo_map = body.get('maps')[0]
         assert topo_map.get('code') == '3232ET'
         assert topo_map.get('locales')[0].get('title') == 'Belley'
+        # no licence on the maps embedded in a document
+        assert 'license' not in topo_map
 
     def test_get_empty_geom_detail(self):
         # an empty geometry is answered like a missing one (#2526)
@@ -189,7 +207,14 @@ class TestRouteRest(BaseDocumentTestRest):
         assert body['geometry']['geom_detail'] is None
 
     def test_get_version(self):
-        self.get_version(self.route, self.route_version)
+        body = self.get_version(self.route, self.route_version)
+        assert body['document']['license'] == {
+            'id': 'CC-BY-SA-3.0',
+            'url': 'https://creativecommons.org/licenses/by-sa/3.0/',
+            'attribution_url': (
+                f'http://localhost:6553/routes/history/{self.route.document_id}/en'
+            ),
+        }
 
     def test_get_version_without_activity(self):
         """Tests that old route versions without activity include the fields

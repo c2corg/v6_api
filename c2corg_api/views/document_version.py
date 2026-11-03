@@ -10,6 +10,7 @@ from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user import User
 from c2corg_api.views import etag_cache, to_json_dict
+from c2corg_api.views.license import get_license
 from c2corg_api.views.resource import BaseView
 
 
@@ -80,6 +81,7 @@ class DocumentVersionRest(BaseView):
                 schema = adapt_schema(schema, archive_document)
 
             document = to_json_dict(archive_document, schema, cook_locale=True)
+            document['license'] = get_license(archive_document.type, document)
         # TODO if masked, return limited info as in DocumentInfoRest?
 
         previous_version_id, next_version_id = get_neighbour_version_ids(

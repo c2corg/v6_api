@@ -25,7 +25,7 @@ def resource(**kw):
 
 
 def view(**kw):
-    """Keep the arguments of a view method, read by web.documents.view_arguments."""
+    """Keep the arguments of a view, read by web.documents.handler_arguments."""
 
     def wrapper(func):
         views = getattr(func, '__views__', None)

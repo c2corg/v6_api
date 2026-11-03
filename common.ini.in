@@ -1,7 +1,6 @@
 # common configuration between production.ini and development.ini
 
 [app:main]
-use = egg:c2corg_api
 
 # size of the connection pool for the database. note that this number is
 # per application instance.
@@ -87,6 +86,7 @@ discourse.public_url = {discourse_public_url}
 discourse.api_key = {discourse_api_key}
 discourse.sso_secret = {discourse_sso_secret}
 discourse.allowed_sso_hosts = {discourse_allowed_sso_hosts}
+discourse.enabled = {discourse_enabled}
 discourse.category = {discourse_category}
 
 ui.url = {ui_url}

@@ -14,29 +14,27 @@ from c2corg_api.web.compat import serve_write
 PATH = '/test-write'
 
 
-class _WriteView:
-    """Renames the user, then answers as the request asks."""
+def _rename_user(request):
+    """Rename the user, then answer as the request asks."""
+    user = DBSession.get(User, request.authenticated_userid)
+    user.name = 'renamed'
+    DBSession.flush()
+    outcome = request.json.get('outcome')
+    if outcome == 'refused by the view':
+        # as some views (e.g. a failed login): an error, nothing raised
+        request.errors.add('body', 'outcome', 'refused by the view')
+        request.errors.status = 401
+        return None
+    if outcome == 'client address':
+        return {'client_addr': request.client_addr}
+    if outcome == 'http_error':
+        raise HTTPBadRequest('refused by the view')
+    if outcome == 'bug':
+        raise RuntimeError('boom')
+    return {'name': user.name}
 
-    def __init__(self, request):
-        self.request = request
 
-    def collection_post(self):
-        user = DBSession.get(User, self.request.authenticated_userid)
-        user.name = 'renamed'
-        DBSession.flush()
-        outcome = self.request.json.get('outcome')
-        if outcome == 'refused by the view':
-            # as some views (e.g. a failed login): an error, nothing raised
-            self.request.errors.add('body', 'outcome', 'refused by the view')
-            self.request.errors.status = 401
-            return None
-        if outcome == 'client address':
-            return {'client_addr': self.request.client_addr}
-        if outcome == 'http_error':
-            raise HTTPBadRequest('refused by the view')
-        if outcome == 'bug':
-            raise RuntimeError('boom')
-        return {'name': user.name}
+_rename_user.view_name = '_WriteView.collection_post'
 
 
 def _require_outcome(request, **kwargs):
@@ -57,11 +55,7 @@ class TestWrites(BaseTestRest):
     def setUp(self):
         super().setUp()
         # The sessions of the requests join the transaction of the test in a
-        # SAVEPOINT, so that a rollback really rolls the request back (by
-        # default, it keeps the changes the request flushed).
-        DBSession.remove()
-        self.session_factory_kw = dict(DBSession.session_factory.kw)
-        DBSession.configure(join_transaction_mode='create_savepoint')
+        # SAVEPOINT (conftest), so that a rollback really rolls the request back.
         self.fastapi_app = self.app.app.fastapi_app
 
         async def endpoint(
@@ -72,8 +66,7 @@ class TestWrites(BaseTestRest):
                 request,
                 user,
                 [_require_outcome],
-                _WriteView,
-                'collection_post',
+                _rename_user,
                 permission='authenticated',
                 content_types=['application/json'],
             )
@@ -84,10 +77,7 @@ class TestWrites(BaseTestRest):
         self.limit = int(self.settings['rate_limiting.limit'])
 
     def tearDown(self):
-        # back to the configuration of the other tests
         DBSession.remove()
-        DBSession.session_factory.kw.clear()
-        DBSession.session_factory.kw.update(self.session_factory_kw)
         self.fastapi_app.router.routes[:] = [
             r for r in self.fastapi_app.router.routes if getattr(r, 'path', '') != PATH
         ]

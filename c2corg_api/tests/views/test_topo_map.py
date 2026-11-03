@@ -65,6 +65,8 @@ class TestTopoMapRest(BaseDocumentTestRest):
         body = self.get(self.map1)
         self._assert_geometry(body)
         assert 'maps' not in body
+        # topo maps are not user content
+        assert body['license'] is None
 
     def test_get_cooked(self):
         self.get_cooked(self.map1)

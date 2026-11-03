@@ -29,17 +29,17 @@ class UpdatePreferredLangSchema(Schema):
     lang: OneOf(default_langs)
 
 
-@resource(path='/users/update_preferred_language')
-class UserPreferredLanguageRest(BaseView):
-    @restricted_json_view(
-        renderer='json', validators=[body_validator(UpdatePreferredLangSchema)]
-    )
-    def post(self):
-        request = self.request
-        userid = request.authenticated_userid
-        user = DBSession.get(User, userid)
-        user.lang = request.validated['lang']
-        return {}
+@restricted_json_view(
+    renderer='json', validators=[body_validator(UpdatePreferredLangSchema)]
+)
+def update_preferred_language(request):
+    userid = request.authenticated_userid
+    user = DBSession.get(User, userid)
+    user.lang = request.validated['lang']
+    return {}
+
+
+update_preferred_language.view_name = 'UserPreferredLanguageRest.post'
 
 
 class UpdateAccountSchema(Schema):
@@ -74,101 +74,103 @@ class UpdateAccountSchema(Schema):
     is_profile_public: Bool = DROP
 
 
+def get_user(request):
+    """Return the authenticated user."""
+    return DBSession.get(User, request.authenticated_userid)
+
+
+@restricted_json_view(
+    renderer='json',
+    validators=[body_validator(UpdateAccountSchema), validate_forum_username],
+)
+def update_account(request):
+    user = get_user(request)
+    validated = request.validated
+
+    result = {}
+
+    # Before all, check whether the user knows the current password
+    current_password = validated['currentpassword']
+    if not user.validate_password(current_password):
+        request.errors.add('body', 'currentpassword', 'Invalid password')
+        return
+
+    sync_sso = False
+
+    # update password if a new password is provided
+    if 'newpassword' in validated:
+        user.password = validated['newpassword']
+
+    # start email validation procedure if a new email is provided
+    email_link = None
+    if 'email' in validated and validated['email'] != user.email:
+        user.email_to_validate = validated['email']
+        user.update_validation_nonce(Purpose.change_email, VALIDATION_EXPIRE_DAYS)
+        email_service = get_email_service(request)
+        nonce = user.validation_nonce
+        settings = request.registry.settings
+        link = settings['mail.validate_change_email_url_template'].format('#', nonce)
+        email_link = link
+        result['email'] = validated['email']
+        result['sent_email'] = True
+        sync_sso = True
+
+    update_search_index = False
+    if 'name' in validated:
+        user.name = validated['name']
+        result['name'] = user.name
+        update_search_index = True
+        sync_sso = True
+
+    if 'forum_username' in validated:
+        user.forum_username = validated['forum_username']
+        result['forum_username'] = user.forum_username
+        update_search_index = True
+        sync_sso = True
+
+    if 'is_profile_public' in validated:
+        user.is_profile_public = validated['is_profile_public']
+
+    # Synchronize everything except the new email (still stored
+    # in the email_to_validate attribute while validation is pending).
+    if sync_sso:
+        try:
+            client = get_discourse_client(request.registry.settings)
+            client.sync_sso(user)
+        except Exception as e:
+            log.error('Error syncing with discourse', exc_info=True)
+            raise HTTPInternalServerError('Error with Discourse') from e
+
+    try:
+        DBSession.flush()
+    except Exception as e:
+        log.warning('Error persisting user', exc_info=True)
+        raise HTTPInternalServerError('Error persisting user') from e
+
+    if email_link:
+        email_service.send_change_email_confirmation(user, link)
+
+    if update_search_index:
+        # when user name changes, the search index has to be updated
+        notify_es_syncer(request.registry.queue_config)
+
+        # also update the cache version of the user profile
+        update_cache_version(user.profile)
+
+    return result
+
+
+update_account.view_name = 'UserAccountRest.post'
+
+
 @resource(path='/users/account')
 class UserAccountRest(BaseView):
-    def get_user(self):
-        userid = self.request.authenticated_userid
-        return DBSession.get(User, userid)
-
     @restricted_view(renderer='json', http_cache=0)
     def get(self):
-        user = self.get_user()
+        user = get_user(self.request)
         return {
             'email': user.email,
             'name': user.name,
             'forum_username': user.forum_username,
             'is_profile_public': user.is_profile_public,
         }
-
-    @restricted_json_view(
-        renderer='json',
-        validators=[body_validator(UpdateAccountSchema), validate_forum_username],
-    )
-    def post(self):
-        user = self.get_user()
-        request = self.request
-        validated = request.validated
-
-        result = {}
-
-        # Before all, check whether the user knows the current password
-        current_password = validated['currentpassword']
-        if not user.validate_password(current_password):
-            request.errors.add('body', 'currentpassword', 'Invalid password')
-            return
-
-        sync_sso = False
-
-        # update password if a new password is provided
-        if 'newpassword' in validated:
-            user.password = validated['newpassword']
-
-        # start email validation procedure if a new email is provided
-        email_link = None
-        if 'email' in validated and validated['email'] != user.email:
-            user.email_to_validate = validated['email']
-            user.update_validation_nonce(Purpose.change_email, VALIDATION_EXPIRE_DAYS)
-            email_service = get_email_service(self.request)
-            nonce = user.validation_nonce
-            settings = request.registry.settings
-            link = settings['mail.validate_change_email_url_template'].format(
-                '#', nonce
-            )
-            email_link = link
-            result['email'] = validated['email']
-            result['sent_email'] = True
-            sync_sso = True
-
-        update_search_index = False
-        if 'name' in validated:
-            user.name = validated['name']
-            result['name'] = user.name
-            update_search_index = True
-            sync_sso = True
-
-        if 'forum_username' in validated:
-            user.forum_username = validated['forum_username']
-            result['forum_username'] = user.forum_username
-            update_search_index = True
-            sync_sso = True
-
-        if 'is_profile_public' in validated:
-            user.is_profile_public = validated['is_profile_public']
-
-        # Synchronize everything except the new email (still stored
-        # in the email_to_validate attribute while validation is pending).
-        if sync_sso:
-            try:
-                client = get_discourse_client(request.registry.settings)
-                client.sync_sso(user)
-            except Exception as e:
-                log.error('Error syncing with discourse', exc_info=True)
-                raise HTTPInternalServerError('Error with Discourse') from e
-
-        try:
-            DBSession.flush()
-        except Exception as e:
-            log.warning('Error persisting user', exc_info=True)
-            raise HTTPInternalServerError('Error persisting user') from e
-
-        if email_link:
-            email_service.send_change_email_confirmation(user, link)
-
-        if update_search_index:
-            # when user name changes, the search index has to be updated
-            notify_es_syncer(self.request.registry.queue_config)
-
-            # also update the cache version of the user profile
-            update_cache_version(user.profile)
-
-        return result
