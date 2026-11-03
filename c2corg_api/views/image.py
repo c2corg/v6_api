@@ -282,28 +282,29 @@ class ImageRest(DocumentRest):
         )
 
 
-@resource(collection_path='/images/list', path='/images/list/{id}')
-class ImageListRest(DocumentRest):
-    @restricted_json_view(
-        validators=[
-            body_validator(ImageListCreateSchema),
-            validate_list_image_create,
-            validate_list_associations_create,
-        ],
-    )
-    def collection_post(self):
-        images_in = self.request.validated['images']
+@restricted_json_view(
+    validators=[
+        body_validator(ImageListCreateSchema),
+        validate_list_image_create,
+        validate_list_associations_create,
+    ],
+)
+def create_images(request):
+    images_in = request.validated['images']
 
-        image_ids = []
-        images = []
-        for document_in in images_in:
-            document = insert_image(self.request, document_in)
-            images.append(document)
-            image_ids.append({'document_id': document.document_id})
+    image_ids = []
+    images = []
+    for document_in in images_in:
+        document = insert_image(request, document_in)
+        images.append(document)
+        image_ids.append({'document_id': document.document_id})
 
-        update_feed_images_upload(images, images_in, self.request.authenticated_userid)
+    update_feed_images_upload(images, images_in, request.authenticated_userid)
 
-        return {'images': image_ids}
+    return {'images': image_ids}
+
+
+create_images.view_name = 'ImageListRest.collection_post'
 
 
 @resource(path='/images/{id}/{lang}/info')

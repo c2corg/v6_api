@@ -59,7 +59,7 @@ from c2corg_api.views.document_schemas import (
     route_schema_adaptor,
 )
 from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import BaseView, resource, view
+from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_cook_param,
@@ -230,28 +230,28 @@ class RouteInfoRest(DocumentInfoRest):
         return self._get_document_info(route_documents_config)
 
 
-@resource(path='/routes/update_public_transportation_rating')
-class RoutePublicTransportationRatingRest(BaseView):
-    """
-    Update all route public transportation rating.
+# Update all route public transportation rating.
+#
+# Request:
+# `GET` `/update_public_transportation_rating?waypoint_extrapolation=...`
+#
+#
+# Parameters:
+# `waypoint_extrapolation=true` (optional)
+# extrapolate starting and ending points
+# allows to reset public_transportation_rating values
+# set to true by default
 
-    Request:
-        `GET` `/update_public_transportation_rating?waypoint_extrapolation=...`
+
+@restricted_view(permission='moderator')
+def update_public_transportation_ratings(request):
+    waypoint_extrapolation = request.params.get('waypoint_extrapolation') or True
+    update_all_pt_rating(waypoint_extrapolation)
 
 
-    Parameters:
-        `waypoint_extrapolation=true` (optional)
-        extrapolate starting and ending points
-        allows to reset public_transportation_rating values
-        set to true by default
-    """
-
-    @restricted_view(permission='moderator')
-    def get(self):
-        waypoint_extrapolation = (
-            self.request.params.get('waypoint_extrapolation') or True
-        )
-        update_all_pt_rating(waypoint_extrapolation)
+update_public_transportation_ratings.view_name = (
+    'RoutePublicTransportationRatingRest.get'
+)
 
 
 @resource(path='/reachableroutes')

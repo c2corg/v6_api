@@ -9,34 +9,32 @@ from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.resource import Errors
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_write, view_method
+from c2corg_api.web.compat import serve_write
 
 PATH = '/test-write'
 
 
-class _WriteView:
-    """Renames the user, then answers as the request asks."""
+def _rename_user(request):
+    """Rename the user, then answer as the request asks."""
+    user = DBSession.get(User, request.authenticated_userid)
+    user.name = 'renamed'
+    DBSession.flush()
+    outcome = request.json.get('outcome')
+    if outcome == 'refused by the view':
+        # as some views (e.g. a failed login): an error, nothing raised
+        request.errors.add('body', 'outcome', 'refused by the view')
+        request.errors.status = 401
+        return None
+    if outcome == 'client address':
+        return {'client_addr': request.client_addr}
+    if outcome == 'http_error':
+        raise HTTPBadRequest('refused by the view')
+    if outcome == 'bug':
+        raise RuntimeError('boom')
+    return {'name': user.name}
 
-    def __init__(self, request):
-        self.request = request
 
-    def collection_post(self):
-        user = DBSession.get(User, self.request.authenticated_userid)
-        user.name = 'renamed'
-        DBSession.flush()
-        outcome = self.request.json.get('outcome')
-        if outcome == 'refused by the view':
-            # as some views (e.g. a failed login): an error, nothing raised
-            self.request.errors.add('body', 'outcome', 'refused by the view')
-            self.request.errors.status = 401
-            return None
-        if outcome == 'client address':
-            return {'client_addr': self.request.client_addr}
-        if outcome == 'http_error':
-            raise HTTPBadRequest('refused by the view')
-        if outcome == 'bug':
-            raise RuntimeError('boom')
-        return {'name': user.name}
+_rename_user.view_name = '_WriteView.collection_post'
 
 
 def _require_outcome(request, **kwargs):
@@ -68,7 +66,7 @@ class TestWrites(BaseTestRest):
                 request,
                 user,
                 [_require_outcome],
-                view_method(_WriteView, 'collection_post'),
+                _rename_user,
                 permission='authenticated',
                 content_types=['application/json'],
             )

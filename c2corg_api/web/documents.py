@@ -14,7 +14,6 @@ from c2corg_api.web.compat import (
     serve_view,
     serve_write,
     typed_values,
-    view_method,
 )
 from c2corg_api.web.params import (
     DocumentId,
@@ -196,11 +195,6 @@ def include_document_type(
         )
 
 
-def view_arguments(view_class, method):
-    """Return the validators, permission and content types of a view method."""
-    return handler_arguments(getattr(view_class, method))
-
-
 def handler_arguments(function):
     """Return the validators, permission and content types of a write function."""
     # as declared by its @view decorator (views.resource.view), so that the
@@ -210,20 +204,6 @@ def handler_arguments(function):
     if isinstance(content_type, str):
         content_type = [content_type]
     return arguments.get('validators', []), arguments.get('permission'), content_type
-
-
-def include_write(app, path, http_method, view_class, method):
-    """Add a write route served by a method of a Pyramid view class."""
-    validators, permission, content_types = view_arguments(view_class, method)
-    include_handler_write(
-        app,
-        path,
-        http_method,
-        view_method(view_class, method),
-        validators,
-        permission,
-        content_types,
-    )
 
 
 def include_handler_write(
@@ -378,15 +358,15 @@ def include(app):
     )
     # a GET that writes (the ratings of all the routes, for the moderators):
     # served as a write, so that it is committed
-    from c2corg_api.views.route import RoutePublicTransportationRatingRest
+    from c2corg_api.views.route import update_public_transportation_ratings
 
     for http_method in ('GET', 'HEAD'):
-        include_write(
+        include_handler_write(
             app,
             '/routes/update_public_transportation_rating',
             http_method,
-            RoutePublicTransportationRatingRest,
-            'get',
+            update_public_transportation_ratings,
+            *handler_arguments(update_public_transportation_ratings),
         )
     # the writes, served by the functions of the views
     from c2corg_api.views import (

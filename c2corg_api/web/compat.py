@@ -302,17 +302,6 @@ def _refused(request, user, view_name, permission, content_types):
     return None
 
 
-def view_method(view_class, method):
-    """Return a write handler calling a method of a Pyramid view class."""
-    # for the write routes not converted to functions yet (#2512)
-
-    def handler(request):
-        return getattr(view_class(request), method)()
-
-    handler.view_name = f'{view_class.__name__}.{method}'
-    return handler
-
-
 async def serve_write(
     request,
     user,
