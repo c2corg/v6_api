@@ -4,7 +4,6 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.stoparea import Stoparea
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
 from c2corg_api.views.document import make_validator_create, make_validator_update
-from c2corg_api.views.document_info import DocumentInfoRest
 from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import validate_id, validate_lang
 
@@ -16,29 +15,30 @@ validate_waypoint_stoparea_update = make_validator_update(
 )
 
 
-@resource(path='/waypoints_stopareas/{id}/{lang}/info')
-class WaypointStopareaInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        waypoint_stoparea_id = self.request.matchdict['id']
-        waypoint_stoparea = (
-            DBSession.query(WaypointStoparea)
-            .filter_by(waypoint_stoparea_id=waypoint_stoparea_id)
-            .first()
-        )
+@view(validators=[validate_id, validate_lang])
+def get_waypoint_stoparea_info(request):
+    waypoint_stoparea_id = request.matchdict['id']
+    waypoint_stoparea = (
+        DBSession.query(WaypointStoparea)
+        .filter_by(waypoint_stoparea_id=waypoint_stoparea_id)
+        .first()
+    )
 
-        if not waypoint_stoparea:
-            self.request.response.status = 404
-            return {'error': 'Waypoint Stoparea not found'}
+    if not waypoint_stoparea:
+        request.response.status = 404
+        return {'error': 'Waypoint Stoparea not found'}
 
-        return {
-            'waypoint_stoparea_id': waypoint_stoparea.waypoint_stoparea_id,
-            'attributes': {
-                'stoparea_id': waypoint_stoparea.stoparea_id,
-                'waypoint_id': waypoint_stoparea.waypoint_id,
-                'distance': waypoint_stoparea.distance,
-            },
-        }
+    return {
+        'waypoint_stoparea_id': waypoint_stoparea.waypoint_stoparea_id,
+        'attributes': {
+            'stoparea_id': waypoint_stoparea.stoparea_id,
+            'waypoint_id': waypoint_stoparea.waypoint_id,
+            'distance': waypoint_stoparea.distance,
+        },
+    }
+
+
+get_waypoint_stoparea_info.view_name = 'WaypointStopareaInfoRest.get'
 
 
 def validate_waypoint_id(request, *args, **kwargs):

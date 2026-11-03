@@ -10,61 +10,75 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.views import etag_cache, set_best_locale
 from c2corg_api.views.document_listings import add_load_for_profiles
 
+# The info of a document: its document_id and the title/title_prefix of
+# the requested locale.
+# This view is used by the UI to generate URL slugs.
+#
+# If the locale is not available in the requested lang, a locale in the
+# "best" lang is returned.
+# If the requested document is redirected, the document id and available
+# languages of the redirection document is returned.
 
-class DocumentInfoRest:
-    """Base class for the views returning basic document info.
 
-    Base class for all views that return a basic/info version for a
-    document, that only contains the document_id and title/title_prefix
-    of the requested locale.
-    This view is used by the UI to generate URL slugs.
+def document_info(request, document_config):
+    document_id = request.validated['id']
+    lang = request.validated['lang']
 
-    If the locale is not available in the requested lang, a locale in the
-    "best" lang is returned.
-    If the requested document is redirected, the document id and available
-    languages of the redirection document is returned.
-    """
+    def create_response():
+        return load_document_info(request, document_id, lang, document_config.clazz)
 
-    def __init__(self, request, **kwargs):
-        self.request = request
+    cache_key = get_cache_key(
+        document_id, lang, document_type=document_config.document_type
+    )
 
-    def _get_document_info(self, document_config):
-        document_id = self.request.validated['id']
-        lang = self.request.validated['lang']
+    if not cache_key:
+        raise HTTPNotFound(f'no version for document {document_id}')
+    else:
+        etag_cache(request, cache_key)
 
-        def create_response():
-            return self._load_document_info(document_id, lang, document_config.clazz)
+        return get_or_create(cache_document_info, cache_key, create_response)
 
-        cache_key = get_cache_key(
-            document_id, lang, document_type=document_config.document_type
+
+def load_document_info(request, document_id, lang, clazz):
+    is_route = clazz == Route
+    locales_type = (
+        with_polymorphic(DocumentLocale, RouteLocale) if is_route else DocumentLocale
+    )
+    locales_attr = clazz.locales
+    locales_type_eager = locales_attr.of_type(RouteLocale) if is_route else locales_attr
+    locales_load_only = [
+        DocumentLocale.lang,
+        DocumentLocale.title,
+        DocumentLocale.version,
+    ]
+    if is_route:
+        locales_load_only.append(RouteLocale.title_prefix)
+
+    document_query = (
+        DBSession.query(clazz)
+        .options(
+            load_only(
+                Document.document_id,
+                Document.version,
+                Document.redirects_to,
+                Document.protected,
+            )
         )
-
-        if not cache_key:
-            raise HTTPNotFound(f'no version for document {document_id}')
-        else:
-            etag_cache(self.request, cache_key)
-
-            return get_or_create(cache_document_info, cache_key, create_response)
-
-    def _load_document_info(self, document_id, lang, clazz):
-        is_route = clazz == Route
-        locales_type = (
-            with_polymorphic(DocumentLocale, RouteLocale)
-            if is_route
-            else DocumentLocale
+        .join(locales_type)
+        .filter(clazz.document_id == document_id)
+        .filter(DocumentLocale.lang == lang)
+        .options(
+            contains_eager(locales_type_eager, alias=locales_type).load_only(
+                *locales_load_only
+            )
         )
-        locales_attr = clazz.locales
-        locales_type_eager = (
-            locales_attr.of_type(RouteLocale) if is_route else locales_attr
-        )
-        locales_load_only = [
-            DocumentLocale.lang,
-            DocumentLocale.title,
-            DocumentLocale.version,
-        ]
-        if is_route:
-            locales_load_only.append(RouteLocale.title_prefix)
+    )
+    document_query = add_load_for_profiles(document_query, clazz)
+    document = document_query.first()
 
+    if not document:
+        # the requested locale might not be available, try to get the
+        # document with all locales and set the "best"
         document_query = (
             DBSession.query(clazz)
             .options(
@@ -75,59 +89,34 @@ class DocumentInfoRest:
                     Document.protected,
                 )
             )
-            .join(locales_type)
             .filter(clazz.document_id == document_id)
-            .filter(DocumentLocale.lang == lang)
-            .options(
-                contains_eager(locales_type_eager, alias=locales_type).load_only(
-                    *locales_load_only
-                )
-            )
+            .options(joinedload(locales_type_eager).load_only(*locales_load_only))
         )
         document_query = add_load_for_profiles(document_query, clazz)
         document = document_query.first()
 
         if not document:
-            # the requested locale might not be available, try to get the
-            # document with all locales and set the "best"
-            document_query = (
-                DBSession.query(clazz)
-                .options(
-                    load_only(
-                        Document.document_id,
-                        Document.version,
-                        Document.redirects_to,
-                        Document.protected,
-                    )
-                )
-                .filter(clazz.document_id == document_id)
-                .options(joinedload(locales_type_eager).load_only(*locales_load_only))
-            )
-            document_query = add_load_for_profiles(document_query, clazz)
-            document = document_query.first()
+            raise HTTPNotFound('document not found')
 
-            if not document:
-                raise HTTPNotFound('document not found')
+        set_best_locale([document], lang)
 
-            set_best_locale([document], lang)
-
-        if document.redirects_to:
-            return {
-                'redirects_to': document.redirects_to,
-                'available_langs': get_available_langs(document.redirects_to),
-            }
-
-        if len(document.locales) != 1:
-            raise RuntimeError(f'expected 1 locale, got {len(document.locales)}')
-        locale = document.locales[0]
-
+    if document.redirects_to:
         return {
-            'document_id': document.document_id,
-            'locales': [
-                {
-                    'lang': locale.lang,
-                    'title': locale.title if clazz != UserProfile else document.name,
-                    'title_prefix': locale.title_prefix if is_route else None,
-                }
-            ],
+            'redirects_to': document.redirects_to,
+            'available_langs': get_available_langs(document.redirects_to),
         }
+
+    if len(document.locales) != 1:
+        raise RuntimeError(f'expected 1 locale, got {len(document.locales)}')
+    locale = document.locales[0]
+
+    return {
+        'document_id': document.document_id,
+        'locales': [
+            {
+                'lang': locale.lang,
+                'title': locale.title if clazz != UserProfile else document.name,
+                'title_prefix': locale.title_prefix if is_route else None,
+            }
+        ],
+    }

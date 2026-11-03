@@ -40,9 +40,9 @@ from c2corg_api.views.document import (
     read_document,
     validate_document,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import image_documents_config
-from c2corg_api.views.document_version import DocumentVersionRest
+from c2corg_api.views.document_version import document_version
 from c2corg_api.views.resource import BaseView, resource, view
 from c2corg_api.views.validation import (
     validate_associations,
@@ -313,11 +313,12 @@ def create_images(request):
 create_images.view_name = 'ImageListRest.collection_post'
 
 
-@resource(path='/images/{id}/{lang}/info')
-class ImageInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(image_documents_config)
+@view(validators=[validate_id, validate_lang])
+def get_image_info(request):
+    return document_info(request, image_documents_config)
+
+
+get_image_info.view_name = 'ImageInfoRest.get'
 
 
 def validate_size(request, **kwargs):
@@ -368,10 +369,11 @@ def set_creator(image):
     set_creator_on_documents([image], 'creator')
 
 
-@resource(path='/images/{id}/{lang}/{version_id}')
-class ImageVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveImage, IMAGE_TYPE, ArchiveDocumentLocale, image_schema
-        )
+@view(validators=[validate_id, validate_lang, validate_version_id])
+def get_image_version(request):
+    return document_version(
+        request, ArchiveImage, IMAGE_TYPE, ArchiveDocumentLocale, image_schema
+    )
+
+
+get_image_version.view_name = 'ImageVersionRest.get'

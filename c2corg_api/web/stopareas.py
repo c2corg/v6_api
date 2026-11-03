@@ -11,12 +11,12 @@ from c2corg_api.views.route import ReachableRouteRest
 from c2corg_api.views.stoparea import StopareaInfoRest, StopareaRest
 from c2corg_api.views.waypoint import ReachableWaypointRest
 from c2corg_api.views.waypoint_stoparea import (
-    WaypointStopareaInfoRest,
     WaypointStopareasByWaypointRest,
     WaypointStopareasReachableRest,
+    get_waypoint_stoparea_info,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_view, typed_values
+from c2corg_api.web.compat import serve_read, serve_view, typed_values
 from c2corg_api.web.params import (
     DocumentId,
     Lang,
@@ -141,8 +141,9 @@ def waypoint_stoparea_info(
 ):
     """Return the link between a waypoint and a stop area."""
     validated = {'id': id, 'lang': lang}
-    view = WaypointStopareaInfoRest
-    return serve_view(request, user, [typed_values(validated)], view)
+    return serve_read(
+        request, user, [typed_values(validated)], get_waypoint_stoparea_info
+    )
 
 
 def reachable_routes(

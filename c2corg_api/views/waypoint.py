@@ -47,7 +47,7 @@ from c2corg_api.views.document import (
     read_document,
 )
 from c2corg_api.views.document_associations import get_first_column
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import (
     outing_documents_config,
@@ -55,7 +55,7 @@ from c2corg_api.views.document_schemas import (
     waypoint_documents_config,
     waypoint_schema_adaptor,
 )
-from c2corg_api.views.document_version import DocumentVersionRest
+from c2corg_api.views.document_version import document_version
 from c2corg_api.views.resource import resource, view
 from c2corg_api.views.route import set_route_title_prefix, update_pt_rating
 from c2corg_api.views.validation import (
@@ -439,24 +439,27 @@ def _get_select_children(waypoint):
     ).cte('select_all_waypoints')
 
 
-@resource(path='/waypoints/{id}/{lang}/{version_id}')
-class WaypointVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveWaypoint,
-            WAYPOINT_TYPE,
-            ArchiveWaypointLocale,
-            waypoint_schema,
-            waypoint_schema_adaptor,
-        )
+@view(validators=[validate_id, validate_lang, validate_version_id])
+def get_waypoint_version(request):
+    return document_version(
+        request,
+        ArchiveWaypoint,
+        WAYPOINT_TYPE,
+        ArchiveWaypointLocale,
+        waypoint_schema,
+        waypoint_schema_adaptor,
+    )
 
 
-@resource(path='/waypoints/{id}/{lang}/info')
-class WaypointInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(waypoint_documents_config)
+get_waypoint_version.view_name = 'WaypointVersionRest.get'
+
+
+@view(validators=[validate_id, validate_lang])
+def get_waypoint_info(request):
+    return document_info(request, waypoint_documents_config)
+
+
+get_waypoint_info.view_name = 'WaypointInfoRest.get'
 
 
 @resource(path='/reachablewaypoints')

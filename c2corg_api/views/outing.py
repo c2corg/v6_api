@@ -29,13 +29,13 @@ from c2corg_api.views.document import (
     put_document,
     read_document,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import (
     outing_documents_config,
     outing_schema_adaptor,
 )
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.document_version import document_version
+from c2corg_api.views.resource import view
 from c2corg_api.views.validation import (
     has_permission_for_outing,
     validate_associations,
@@ -201,11 +201,12 @@ def get_outing(request):
 get_outing.view_name = 'OutingRest.get'
 
 
-@resource(path='/outings/{id}/{lang}/info')
-class OutingInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(outing_documents_config)
+@view(validators=[validate_id, validate_lang])
+def get_outing_info(request):
+    return document_info(request, outing_documents_config)
+
+
+get_outing_info.view_name = 'OutingInfoRest.get'
 
 
 def set_default_geometry(linked_routes, outing, user_id):
@@ -255,14 +256,16 @@ def update_default_geometry(outing, outing_in):
     geometry_in.geom = get_mid_point(geometry_in.geom_detail)
 
 
-@resource(path='/outings/{id}/{lang}/{version_id}')
-class OutingVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveOuting,
-            OUTING_TYPE,
-            ArchiveOutingLocale,
-            outing_schema,
-            outing_schema_adaptor,
-        )
+@view(validators=[validate_id, validate_lang, validate_version_id])
+def get_outing_version(request):
+    return document_version(
+        request,
+        ArchiveOuting,
+        OUTING_TYPE,
+        ArchiveOutingLocale,
+        outing_schema,
+        outing_schema_adaptor,
+    )
+
+
+get_outing_version.view_name = 'OutingVersionRest.get'

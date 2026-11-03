@@ -27,10 +27,10 @@ from c2corg_api.views.document import (
     put_document,
     read_document,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import xreport_documents_config
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.document_version import document_version
+from c2corg_api.views.resource import view
 from c2corg_api.views.validation import (
     is_associated_user,
     validate_associations,
@@ -143,23 +143,26 @@ def _has_permission(request, xreport_id):
     return False
 
 
-@resource(path='/xreports/{id}/{lang}/{version_id}')
-class XreportVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveXreport,
-            XREPORT_TYPE,
-            ArchiveXreportLocale,
-            xreport_without_personal_schema,
-        )
+@view(validators=[validate_id, validate_lang, validate_version_id])
+def get_xreport_version(request):
+    return document_version(
+        request,
+        ArchiveXreport,
+        XREPORT_TYPE,
+        ArchiveXreportLocale,
+        xreport_without_personal_schema,
+    )
 
 
-@resource(path='/xreports/{id}/{lang}/info')
-class XreportInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(xreport_documents_config)
+get_xreport_version.view_name = 'XreportVersionRest.get'
+
+
+@view(validators=[validate_id, validate_lang])
+def get_xreport_info(request):
+    return document_info(request, xreport_documents_config)
+
+
+get_xreport_info.view_name = 'XreportInfoRest.get'
 
 
 def set_author(xreport):

@@ -53,14 +53,14 @@ from c2corg_api.views.document import (
     read_document,
 )
 from c2corg_api.views.document_associations import get_first_column
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import (
     outing_documents_config,
     route_documents_config,
     route_schema_adaptor,
 )
-from c2corg_api.views.document_version import DocumentVersionRest
+from c2corg_api.views.document_version import document_version
 from c2corg_api.views.resource import resource, view
 from c2corg_api.views.validation import (
     validate_associations,
@@ -218,24 +218,24 @@ def set_recent_outings(route, lang):
     )
 
 
-@resource(path='/routes/{id}/{lang}/{version_id}')
-class RouteVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveRoute,
-            ROUTE_TYPE,
-            ArchiveRouteLocale,
-            route_schema,
-            route_schema_adaptor,
-        )
+@view(validators=[validate_id, validate_lang, validate_version_id])
+def get_route_version(request):
+    return document_version(
+        request,
+        ArchiveRoute,
+        ROUTE_TYPE,
+        ArchiveRouteLocale,
+        route_schema,
+        route_schema_adaptor,
+    )
 
 
-@resource(path='/routes/{id}/{lang}/info')
-class RouteInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(route_documents_config)
+get_route_version.view_name = 'RouteVersionRest.get'
+
+
+@view(validators=[validate_id, validate_lang])
+def get_route_info(request):
+    return document_info(request, route_documents_config)
 
 
 # Update all route public transportation rating.
@@ -249,6 +249,9 @@ class RouteInfoRest(DocumentInfoRest):
 # extrapolate starting and ending points
 # allows to reset public_transportation_rating values
 # set to true by default
+
+
+get_route_info.view_name = 'RouteInfoRest.get'
 
 
 @restricted_view(permission='moderator')

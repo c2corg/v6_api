@@ -14,10 +14,10 @@ from c2corg_api.views.document import (
     put_document,
     read_document,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import book_documents_config
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.document_version import document_version
+from c2corg_api.views.resource import view
 from c2corg_api.views.validation import (
     validate_associations,
     validate_cook_param,
@@ -84,17 +84,19 @@ def get_book(request):
 get_book.view_name = 'BookRest.get'
 
 
-@resource(path='/books/{id}/{lang}/{version_id}')
-class BooksVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveBook, BOOK_TYPE, ArchiveDocumentLocale, book_schema
-        )
+@view(validators=[validate_id, validate_lang, validate_version_id])
+def get_book_version(request):
+    return document_version(
+        request, ArchiveBook, BOOK_TYPE, ArchiveDocumentLocale, book_schema
+    )
 
 
-@resource(path='/books/{id}/{lang}/info')
-class BooksInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(book_documents_config)
+get_book_version.view_name = 'BooksVersionRest.get'
+
+
+@view(validators=[validate_id, validate_lang])
+def get_book_info(request):
+    return document_info(request, book_documents_config)
+
+
+get_book_info.view_name = 'BooksInfoRest.get'

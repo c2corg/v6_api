@@ -12,7 +12,6 @@ from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.compat import (
     permission_check,
     serve_read,
-    serve_view,
     serve_write,
     typed_values,
 )
@@ -33,8 +32,8 @@ def include_document_type(
     app,
     prefix,
     reads,
-    version_rest=None,
-    info_rest=None,
+    get_version=None,
+    get_info=None,
     listing_permission=None,
     doc_type=None,
 ):
@@ -151,11 +150,11 @@ def include_document_type(
         tags=[prefix],
     )
 
-    if info_rest is not None:
+    if get_info is not None:
 
         def info(request: Request, user: User, id: DocumentId, lang: PathLang):
             validated = {'id': id, 'lang': lang}
-            return serve_view(request, user, [typed_values(validated)], info_rest)
+            return serve_read(request, user, [typed_values(validated)], get_info)
 
         info.described = True
         app.add_api_route(
@@ -170,7 +169,7 @@ def include_document_type(
             tags=[prefix],
         )
 
-    if version_rest is not None:
+    if get_version is not None:
 
         def version(
             request: Request,
@@ -182,7 +181,7 @@ def include_document_type(
             ],
         ):
             validated = {'id': id, 'lang': lang, 'version_id': version_id}
-            return serve_view(request, user, [typed_values(validated)], version_rest)
+            return serve_read(request, user, [typed_values(validated)], get_version)
 
         version.described = True
         version.response_schema = 'Version'
@@ -283,48 +282,29 @@ def include(app):
         waypoint,
         xreport,
     )
-    from c2corg_api.views.area import AreaInfoRest, AreaVersionRest
-    from c2corg_api.views.article import (
-        ArticlesInfoRest,
-        ArticlesVersionRest,
-    )
-    from c2corg_api.views.book import BooksInfoRest, BooksVersionRest
-    from c2corg_api.views.image import ImageInfoRest, ImageVersionRest
-    from c2corg_api.views.outing import OutingInfoRest, OutingVersionRest
-    from c2corg_api.views.route import RouteInfoRest, RouteVersionRest
-    from c2corg_api.views.topo_map import TopoMapInfoRest
-    from c2corg_api.views.user_profile import UserProfileInfoRest
-    from c2corg_api.views.waypoint import (
-        WaypointInfoRest,
-        WaypointVersionRest,
-    )
-    from c2corg_api.views.xreport import (
-        XreportInfoRest,
-        XreportVersionRest,
-    )
 
     include_document_type(
         app,
         'books',
         (book.list_books, book.get_book),
-        BooksVersionRest,
-        BooksInfoRest,
+        book.get_book_version,
+        book.get_book_info,
         doc_type=BOOK_TYPE,
     )
     include_document_type(
         app,
         'articles',
         (article.list_articles, article.get_article),
-        ArticlesVersionRest,
-        ArticlesInfoRest,
+        article.get_article_version,
+        article.get_article_info,
         doc_type=ARTICLE_TYPE,
     )
     include_document_type(
         app,
         'areas',
         (area.list_areas, area.get_area),
-        AreaVersionRest,
-        AreaInfoRest,
+        area.get_area_version,
+        area.get_area_info,
         doc_type=AREA_TYPE,
     )
     # maps have no version route, coverages neither version nor info
@@ -332,7 +312,7 @@ def include(app):
         app,
         'maps',
         (topo_map.list_topo_maps, topo_map.get_topo_map),
-        info_rest=TopoMapInfoRest,
+        get_info=topo_map.get_topo_map_info,
         doc_type=MAP_TYPE,
     )
     include_document_type(
@@ -346,8 +326,8 @@ def include(app):
         app,
         'images',
         (image.list_images, image.get_image),
-        ImageVersionRest,
-        ImageInfoRest,
+        image.get_image_version,
+        image.get_image_info,
         doc_type=IMAGE_TYPE,
     )
     # the personal fields of an xreport are for its author and the moderators
@@ -355,16 +335,16 @@ def include(app):
         app,
         'xreports',
         (xreport.list_xreports, xreport.get_xreport),
-        XreportVersionRest,
-        XreportInfoRest,
+        xreport.get_xreport_version,
+        xreport.get_xreport_info,
         doc_type=XREPORT_TYPE,
     )
     include_document_type(
         app,
         'outings',
         (outing.list_outings, outing.get_outing),
-        OutingVersionRest,
-        OutingInfoRest,
+        outing.get_outing_version,
+        outing.get_outing_info,
         doc_type=OUTING_TYPE,
     )
     # /reachableroutes and /routes/update_public_transportation_rating stay on
@@ -373,8 +353,8 @@ def include(app):
         app,
         'routes',
         (route.list_routes, route.get_route),
-        RouteVersionRest,
-        RouteInfoRest,
+        route.get_route_version,
+        route.get_route_info,
         doc_type=ROUTE_TYPE,
     )
     # /reachablewaypoints, /waypoints/{id}/stopareas, /waypoints/{id}/isReachable
@@ -383,8 +363,8 @@ def include(app):
         app,
         'waypoints',
         (waypoint.list_waypoints, waypoint.get_waypoint),
-        WaypointVersionRest,
-        WaypointInfoRest,
+        waypoint.get_waypoint_version,
+        waypoint.get_waypoint_info,
         doc_type=WAYPOINT_TYPE,
     )
     # the listing of the profiles is for the authenticated users, and a private
@@ -393,7 +373,7 @@ def include(app):
         app,
         'profiles',
         (user_profile.list_user_profiles, user_profile.get_user_profile),
-        info_rest=UserProfileInfoRest,
+        get_info=user_profile.get_user_profile_info,
         listing_permission='authenticated',
         doc_type=USERPROFILE_TYPE,
     )
