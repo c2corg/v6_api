@@ -221,12 +221,12 @@ class TestDocumentGet(DocumentContractTest):
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['books']))
     @pytest.mark.parametrize('book_id', ['abc', '-1'])
     def test_get_invalid_id(self, book_id):
-        response = self.get(f'/books/{book_id}', status=400)
+        response = self.get(f'/books/{book_id}', status=404)
         check_snapshot('books_get_invalid_id', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}/{{lang}}/{{version_id}}', ['books']))
     def test_get_invalid_version_id(self):
-        response = self.get(self.url('books', '/en/abc'), status=400)
+        response = self.get(self.url('books', '/en/abc'), status=404)
         check_snapshot('books_version_invalid_id', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['xreports']))

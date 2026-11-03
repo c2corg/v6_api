@@ -56,8 +56,12 @@ def include(app):
         ('/stopareas', stoparea_listing, 'stopareas'),
         ('/stopareas/{id:int}', stoparea, 'stopareas'),
         ('/stopareas/{id:int}/{lang}/info', stoparea_info, 'stopareas'),
-        ('/waypoints/{waypoint_id}/stopareas', waypoint_stopareas, 'waypoints'),
-        ('/waypoints/{waypoint_id}/isReachable', waypoint_is_reachable, 'waypoints'),
+        ('/waypoints/{waypoint_id:int}/stopareas', waypoint_stopareas, 'waypoints'),
+        (
+            '/waypoints/{waypoint_id:int}/isReachable',
+            waypoint_is_reachable,
+            'waypoints',
+        ),
         (
             '/waypoints_stopareas/{id:int}/{lang}/info',
             waypoint_stoparea_info,

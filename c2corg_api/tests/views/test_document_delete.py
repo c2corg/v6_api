@@ -529,7 +529,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
     def test_delete_non_existing_document(self):
-        self._delete(-9999999, 400)
+        self._delete(9999999, 404)
 
     def test_delete_main_waypoint(self):
         """Test that a main waypoint cannot be deleted."""
@@ -991,7 +991,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
     def test_delete_locale_non_existing_document(self):
-        self._delete_locale(-9999999, 'fr', 400)
+        self._delete_locale(9999999, 'fr', 404)
 
     def test_delete_locale_non_existing_locale(self):
         self._delete_locale(self.waypoint1.document_id, 'de', 400)

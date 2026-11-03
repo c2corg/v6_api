@@ -45,11 +45,14 @@ class TestApplication:
             ],
         }
 
-    def test_ids_that_are_not_numbers_reach_the_route(self):
-        # its validators answer them (invalid id), as on Pyramid
-        response = _client().get('/images/proxy/abc', status=400)
+    def test_ids_that_are_not_numbers_are_not_found(self):
+        response = _client().get('/images/proxy/abc', status=404)
         assert response.json['errors'] == [
-            {'location': 'querystring', 'name': 'id', 'description': 'invalid id'}
+            {
+                'location': 'body',
+                'name': 'Not Found',
+                'description': '/images/proxy/abc',
+            }
         ]
 
     def test_fixed_path_is_not_an_id(self):

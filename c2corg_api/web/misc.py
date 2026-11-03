@@ -47,7 +47,7 @@ def include(app):
     for path, endpoint, tag in (
         ('/getcoverage', coverage_of_a_point, 'coverages'),
         ('/images/proxy/{id:int}', image_proxy, 'images'),
-        ('/tags/has/{document_id}', has_todo_tag, 'tags'),
+        ('/tags/has/{document_id:int}', has_todo_tag, 'tags'),
     ):
         app.add_api_route(
             path,
