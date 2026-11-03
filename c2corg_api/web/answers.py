@@ -70,11 +70,9 @@ def redirection(e):
 
 
 def account_not_validated(e):
-    """Answer like the exception view of Pyramid for AccountNotValidated."""
+    """Answer AccountNotValidated: a 400 with its message."""
     # e.g. the password change of an account whose email is not validated
-    return error_response(
-        [{'location': 'body', 'name': 'Error', 'description': list(e.args)}]
-    )
+    return error_response([('body', 'Error', str(e))])
 
 
 def http_error(e):

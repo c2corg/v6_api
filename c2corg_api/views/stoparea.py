@@ -1,3 +1,4 @@
+from c2corg_api.httpexceptions import HTTPNotFound
 from c2corg_api.models import DBSession
 from c2corg_api.models.stoparea import Stoparea
 
@@ -44,8 +45,7 @@ def read_stoparea(request):
     stoparea = DBSession.query(Stoparea).filter_by(stoparea_id=stoparea_id).first()
 
     if not stoparea:
-        request.response.status = 404
-        return {'error': 'Stoparea not found'}
+        raise HTTPNotFound('Stoparea not found')
 
     return stoparea.to_dict()
 
@@ -55,8 +55,7 @@ def read_stoparea_info(request):
     stoparea = DBSession.query(Stoparea).filter_by(stoparea_id=stoparea_id).first()
 
     if not stoparea:
-        request.response.status = 404
-        return {'error': 'Stoparea not found'}
+        raise HTTPNotFound('Stoparea not found')
 
     return {
         'stoparea_id': stoparea.stoparea_id,
