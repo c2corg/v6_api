@@ -53,6 +53,15 @@ A [Dev Container](https://containers.dev/) configuration is provided in the `.de
 
 All ports are forwarded to your host machine automatically.
 
+### The forum
+
+There is no Discourse in the dev environment: `config/env.dev` sets
+`discourse_enabled="false"`, so the API makes no call to it. Logging in, registering and
+editing a profile work; creating the topic of a document (the comments) answers 503. To
+work on the forum features, run a Discourse and set `discourse_enabled="true"` (and its
+`discourse_url`, key and secret) in `config/env.local`. The tests do not depend on it:
+`test.ini` always enables the forum, and mocks it.
+
 ### Rebuilding the dev container
 
 If dependencies or the Dockerfile change, rebuild via the command palette:

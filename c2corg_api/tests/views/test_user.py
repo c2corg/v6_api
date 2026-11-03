@@ -19,6 +19,7 @@ from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.security.discourse_client import (
     APIDiscourseClient,
+    DisabledDiscourseClient,
     get_discourse_client,
     set_discourse_client,
 )
@@ -567,6 +568,13 @@ class TestUserRest(BaseUserTestRest):
         # Topoguide login allowed even if Discourse is down.
         body = self.login('moderator', status=200).json
         assert 'token' in body
+
+    def test_login_discourse_disabled(self):
+        """Log in, without a forum session to open, when the forum is disabled."""
+        self.set_discourse_client_mock(DisabledDiscourseClient())
+        body = self.login('moderator', discourse=True, status=200).json
+        assert 'token' in body
+        assert body.get('redirect_internal') is None
 
     def test_login_success_use_email(self):
         # login allowed if providing the email instead of login
