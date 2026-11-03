@@ -8,7 +8,9 @@ from a2wsgi import ASGIMiddleware
 from anyio import to_thread
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from fastapi.routing import APIRoute
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.routing import Match
 
 from c2corg_api.web import (
     document_actions,
@@ -104,14 +106,37 @@ def create_fastapi_app(settings, registry=None):
 
 
 async def _http_exception(request, exc):
-    """Answer an unknown route (404) or method (405) like Pyramid did."""
-    # Pyramid: the path as description of a 404; Cornice: no description
-    # for a 405
-    description = request.url.path if exc.status_code == 404 else None
+    """Answer an unknown route (404) or method (405)."""
+    # a 404 gives the path, as Pyramid did; a 405 the methods to use, also
+    # in its Allow header
+    headers = None
+    if exc.status_code == 404:
+        description = request.url.path
+    elif exc.status_code == 405:
+        allowed = _allowed_methods(request)
+        description = f'{request.method} is not allowed here: use {", ".join(allowed)}'
+        headers = {'Allow': ', '.join(allowed)}
+    else:
+        description = None
     return error_response(
         [('body', _REASONS.get(exc.status_code, exc.detail), description)],
         exc.status_code,
+        headers,
     )
+
+
+def _allowed_methods(request):
+    """Return the methods of all the routes of the path of a request."""
+    # Starlette's Allow header names the methods of the first route of the
+    # path only, while a path may have several (GET and POST /waypoints)
+    methods = set()
+    for route in request.app.router.routes:
+        if (
+            isinstance(route, APIRoute)
+            and route.matches(request.scope)[0] != Match.NONE
+        ):
+            methods |= route.methods
+    return sorted(methods - {'HEAD'})
 
 
 _REASONS = {404: 'Not Found', 405: 'Method Not Allowed'}
