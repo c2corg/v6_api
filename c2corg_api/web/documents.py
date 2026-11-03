@@ -89,6 +89,7 @@ def include_document_type(
         )
 
     listing.described = True
+    listing.response_schema = 'Documents'
 
     def document(
         request: Request,
@@ -119,6 +120,7 @@ def include_document_type(
 
     # described in the OpenAPI document (see web.openapi)
     document.described = True
+    document.response_schema = 'Document'
 
     # read by the route inventory of the contract tests (routes.txt)
     listing.permission = listing_permission
@@ -181,6 +183,7 @@ def include_document_type(
             return serve_view(request, user, [typed_values(validated)], version_rest)
 
         version.described = True
+        version.response_schema = 'Version'
         path = f'/{prefix}/{{id:int}}/{{lang}}/{{version_id:int}}'
         app.add_api_route(
             path,

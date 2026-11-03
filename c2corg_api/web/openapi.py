@@ -90,6 +90,93 @@ def error_responses(document):
     return document
 
 
+# The answers of the document reads, partly: the fields of a document depend
+# on its type (and the activities of a route or an outing), only the fields of
+# every document are described, the others are left open.
+_LICENSE = {
+    'title': 'License',
+    'type': ['object', 'null'],
+    'description': 'The licence of the document, `null` for a topo map.',
+    'required': ['id', 'url'],
+    'properties': {
+        'id': {
+            'type': 'string',
+            'description': 'An SPDX id (`CC-BY-SA-3.0`, `CC-BY-NC-ND-3.0`), or '
+            '`copyright` for an image with all rights reserved.',
+        },
+        'url': {'type': 'string', 'format': 'uri', 'description': 'The licence.'},
+        'attribution_url': {
+            'type': 'string',
+            'format': 'uri',
+            'description': 'The history page of the document, which lists its '
+            'contributors: the attribution the licence asks for.',
+        },
+    },
+}
+_DOCUMENT = {
+    'title': 'Document',
+    'type': 'object',
+    'description': 'A document: the other fields depend on its type.',
+    'properties': {
+        'document_id': {'type': 'integer'},
+        'version': {'type': 'integer'},
+        'type': {'type': 'string', 'description': 'The document type, e.g. `r`.'},
+        'available_langs': {'type': ['array', 'null'], 'items': {'type': 'string'}},
+        'license': {'$ref': '#/components/schemas/License'},
+    },
+    'additionalProperties': True,
+}
+_DOCUMENTS = {
+    'title': 'Documents',
+    'type': 'object',
+    'required': ['documents', 'total'],
+    'properties': {
+        'documents': {
+            'type': 'array',
+            'items': {'$ref': '#/components/schemas/Document'},
+        },
+        'total': {'type': 'integer'},
+    },
+}
+_VERSION = {
+    'title': 'Version',
+    'type': 'object',
+    'properties': {
+        'document': {
+            'description': 'The document of the version, `null` if masked.',
+            'anyOf': [{'$ref': '#/components/schemas/Document'}, {'type': 'null'}],
+        },
+        'version': {'type': 'object'},
+        'previous_version_id': {'type': ['integer', 'null']},
+        'next_version_id': {'type': ['integer', 'null']},
+    },
+}
+RESPONSES = {
+    'License': _LICENSE,
+    'Document': _DOCUMENT,
+    'Documents': _DOCUMENTS,
+    'Version': _VERSION,
+}
+
+
+def document_responses(document, routes):
+    """Describe the answers of the document reads."""
+    # the endpoint names its answer as `response_schema` (web.documents)
+    described = [r for r in routes if getattr(r.endpoint, 'response_schema', None)]
+    if described:
+        document.setdefault('components', {}).setdefault('schemas', {}).update(
+            RESPONSES
+        )
+    for route in described:
+        schema = {'$ref': f'#/components/schemas/{route.endpoint.response_schema}'}
+        for method in route.methods:
+            operation = document['paths'][route.path_format][method.lower()]
+            operation['responses']['200']['content'] = {
+                'application/json': {'schema': schema}
+            }
+    return document
+
+
 _PATH_PARAMETER = re.compile(r'{(\w+)(?::(\w+))?}')
 
 
@@ -154,13 +241,16 @@ def include(app, excluded=()):
     def openapi():
         if app.openapi_schema is None:
             routes = described_routes(app, excluded)
-            app.openapi_schema = request_bodies(
-                error_responses(
-                    get_openapi(
-                        title='camptocamp.org API',
-                        version=str(app.state.settings.get('cache_version') or '0'),
-                        routes=routes,
-                    )
+            app.openapi_schema = document_responses(
+                request_bodies(
+                    error_responses(
+                        get_openapi(
+                            title='camptocamp.org API',
+                            version=str(app.state.settings.get('cache_version') or '0'),
+                            routes=routes,
+                        )
+                    ),
+                    routes,
                 ),
                 routes,
             )

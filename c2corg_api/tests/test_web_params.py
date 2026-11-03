@@ -426,3 +426,44 @@ class TestWriteBodies:
         ]
         assert geometries
         assert all('GeoJSON' in prop['description'] for prop in geometries)
+
+
+class TestDocumentResponses:
+    def _document(self):
+        return _client({'api.openapi': 'true'}).get('/openapi.json').json
+
+    def _schema(self, document, path):
+        responses = document['paths'][path]['get']['responses']
+        return responses['200']['content']['application/json']['schema']
+
+    def test_answers_of_the_reads(self):
+        document = self._document()
+        for path, name in (
+            ('/routes', 'Documents'),
+            ('/routes/{id}', 'Document'),
+            ('/routes/{id}/{lang}/{version_id}', 'Version'),
+            ('/images', 'Documents'),
+            ('/maps/{id}', 'Document'),
+        ):
+            assert self._schema(document, path) == {
+                '$ref': f'#/components/schemas/{name}'
+            }, path
+
+    def test_license(self):
+        schemas = self._document()['components']['schemas']
+        assert schemas['Document']['properties']['license'] == {
+            '$ref': '#/components/schemas/License'
+        }
+        # the other fields of a document depend on its type
+        assert schemas['Document']['additionalProperties'] is True
+        assert set(schemas['License']['properties']) == {
+            'id',
+            'url',
+            'attribution_url',
+        }
+        assert schemas['License']['type'] == ['object', 'null']
+
+    def test_other_reads_left_open(self):
+        # the info of a document is not a document
+        document = self._document()
+        assert self._schema(document, '/routes/{id}/{lang}/info') == {}
