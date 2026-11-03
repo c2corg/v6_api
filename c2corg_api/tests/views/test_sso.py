@@ -5,7 +5,10 @@ from pydiscourse.exceptions import DiscourseClientError
 
 from c2corg_api.models.sso import SsoExternalId, SsoKey
 from c2corg_api.models.user import User
-from c2corg_api.security.discourse_client import set_discourse_client
+from c2corg_api.security.discourse_client import (
+    DisabledDiscourseClient,
+    set_discourse_client,
+)
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.sso import localized_now, sso_expire_from_now
 
@@ -44,6 +47,22 @@ class TestSsoSyncRest(BaseTestRest):
         errors = body.get('errors')
         assert 'sso_key' == errors[0].get('name')
         assert 'Required' == errors[0].get('description')
+
+    def test_forum_disabled(self):
+        """Refuse to sync when the API runs without a forum, and create nothing."""
+        set_discourse_client(DisabledDiscourseClient())
+        request_body = {
+            'sso_key': sso_key,
+            'external_id': '999',
+            'email': 'newuser@external.domain.net',
+            'username': 'newuser',
+            'name': 'New User',
+            'forum_username': 'NewUser',
+            'lang': 'fr',
+        }
+        body = self.app_post_json(self._url, request_body, status=503).json
+        assert 'The forum is disabled' == body['errors'][0]['description']
+        assert self.session.query(User).filter(User.username == 'newuser').count() == 0
 
     def test_bad_sso_key(self):
         request_body = {

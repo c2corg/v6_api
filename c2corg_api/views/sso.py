@@ -8,6 +8,7 @@ from pydiscourse.exceptions import DiscourseClientError
 
 from c2corg_api.httpexceptions import (
     HTTPInternalServerError,
+    HTTPServiceUnavailable,
 )
 from c2corg_api.models import DBSession
 from c2corg_api.models.common.attributes import default_langs
@@ -118,6 +119,11 @@ def sso_sync(request):
 
     Important: Email addresses need to be validated by external site.
     """
+    client = get_discourse_client(request.registry.settings)
+    if not client.enabled:
+        # the groups of the user are kept in the forum: nothing to sync without it
+        raise HTTPServiceUnavailable('The forum is disabled')
+
     sso_key = request.validated['sso_key']
     sso_external_id = request.validated['sso_external_id']
     user = request.validated['sso_user']
@@ -154,7 +160,6 @@ def sso_sync(request):
     sso_external_id.token = generate_token()
     sso_external_id.expire = sso_expire_from_now()
 
-    client = get_discourse_client(request.registry.settings)
     discourse_userid = call_discourse(get_discourse_userid, client, user.id)
     if discourse_userid is None:
         call_discourse(client.sync_sso, user)
