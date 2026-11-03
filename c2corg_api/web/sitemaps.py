@@ -23,9 +23,9 @@ def include(app):
     methods = ['GET', 'HEAD']
     for path, endpoint, summary in (
         ('/sitemaps', sitemap_index, 'The sitemaps of each document type.'),
-        ('/sitemaps/{doc_type}/{i}', sitemap, 'The documents of a sitemap.'),
+        ('/sitemaps/{doc_type}/{i:int}', sitemap, 'The documents of a sitemap.'),
         ('/sitemaps.xml', sitemap_index_xml, 'The sitemap index, in XML.'),
-        ('/sitemaps.xml/{doc_type}/{i}.xml', sitemap_xml, 'A sitemap, in XML.'),
+        ('/sitemaps.xml/{doc_type}/{i:int}.xml', sitemap_xml, 'A sitemap, in XML.'),
     ):
         app.add_api_route(
             path,

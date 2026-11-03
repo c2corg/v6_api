@@ -123,8 +123,8 @@ def include_document_type(
     listing.permission = listing_permission
 
     # Only numeric ids: the other paths (/images/list,
-    # /routes/update_public_transportation_rating...) are other routes, and an
-    # invalid id gets the same 400 from Pyramid.
+    # /routes/update_public_transportation_rating...) are other routes, and a
+    # path with an id that is not a number is not found (404).
     methods = ['GET', 'HEAD']
     app.add_api_route(
         f'/{prefix}',

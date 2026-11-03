@@ -17,39 +17,26 @@ class TestTypedParameterErrors:
     # the answers of the validators of views/validation.py, which the typed
     # parameters replace: before the database is read
     def test_invalid_id(self):
+        # the ids of the paths are numbers: a path with anything else is not
+        # found
         for path in ('/routes/abc', '/routes/-1', '/routes/1.5'):
-            response = _client().get(path, status=400)
-            assert response.json == {
-                'status': 'error',
-                'errors': [_error('id', 'invalid id')],
-            }, path
+            response = _client().get(path, status=404)
+            assert response.json['errors'][0]['name'] == 'Not Found', path
 
     def test_invalid_langs(self):
-        response = _client().get('/routes/abc', params={'l': 'xx'}, status=400)
-        assert response.json['errors'] == [
-            _error('id', 'invalid id'),
-            _error('lang', 'invalid lang'),
-        ]
+        response = _client().get('/routes/1', params={'l': 'xx'}, status=400)
+        assert response.json['errors'] == [_error('lang', 'invalid lang')]
         response = _client().get('/routes/1', params={'cook': 'xx'}, status=400)
         assert response.json['errors'] == [_error('cook', 'invalid lang')]
 
     def test_info_and_version(self):
         # the languages of the paths, and the version ids
-        for path, errors in (
-            ('/routes/abc/en/info', [_error('id', 'invalid id')]),
-            ('/routes/1/xx/info', [_error('lang', 'invalid lang')]),
-            (
-                '/routes/abc/xx/12',
-                [
-                    _error('id', 'invalid id'),
-                    _error('lang', 'invalid lang'),
-                ],
-            ),
-            ('/routes/1/en/abc', [_error('version_id', 'invalid version_id')]),
-            ('/routes/1/en/-2', [_error('version_id', 'invalid version_id')]),
-        ):
+        for path in ('/routes/1/xx/info', '/routes/1/xx/12'):
             response = _client().get(path, status=400)
-            assert response.json['errors'] == errors, path
+            assert response.json['errors'] == [_error('lang', 'invalid lang')], path
+        # ids and version ids that are not numbers: not found
+        for path in ('/routes/abc/en/info', '/routes/1/en/abc', '/routes/1/en/-2'):
+            _client().get(path, status=404)
 
     def test_listing(self):
         response = _client().get(
@@ -104,11 +91,9 @@ class TestTypedParameterErrors:
             _error('d', 'invalid d'),
             _error('offset', 'invalid offset'),
         ]
-        response = _client().get('/document/abc/history/xx', status=400)
-        assert response.json['errors'] == [
-            _error('id', 'invalid id'),
-            _error('lang', 'invalid lang'),
-        ]
+        response = _client().get('/document/1/history/xx', status=400)
+        assert response.json['errors'] == [_error('lang', 'invalid lang')]
+        _client().get('/document/abc/history/en', status=404)
 
     def test_search(self):
         response = _client().get(
@@ -120,13 +105,14 @@ class TestTypedParameterErrors:
         ]
 
     def test_sitemaps(self):
-        # the page first, then the document type, as their validators
-        for path in ('/sitemaps/zz/-1', '/sitemaps.xml/zz/-1.xml'):
+        for path in ('/sitemaps/zz/1', '/sitemaps.xml/zz/1.xml'):
             response = _client().get(path, status=400)
             assert response.json['errors'] == [
-                _error('i', 'invalid i'),
-                _error('doc_type', 'invalid doc_type'),
+                _error('doc_type', 'invalid doc_type')
             ], path
+        # a page that is not a number: not found
+        for path in ('/sitemaps/w/-1', '/sitemaps.xml/w/x.xml'):
+            _client().get(path, status=404)
 
     def test_stopareas(self):
         response = _client().get(
@@ -137,21 +123,18 @@ class TestTypedParameterErrors:
             _error('nb_items', 'invalid nb_items'),
         ]
         for path in ('/waypoints/x/stopareas', '/waypoints/x/isReachable'):
-            response = _client().get(path, status=400)
-            assert response.json['errors'] == [
-                _error('waypoint_id', 'invalid waypoint_id')
-            ], path
+            _client().get(path, status=404)
         response = _client().get('/reachableroutes', params={'offset': 'x'}, status=400)
         assert response.json['errors'] == [_error('offset', 'invalid offset')]
 
     def test_users(self):
         # the permission before the parameters, as Pyramid did
-        for path in ('/users/preferences?pl=xx', '/users/following-user/abc'):
+        for path in ('/users/preferences?pl=xx', '/users/following-user/1'):
             response = _client().get(path, status=403)
             assert response.json['errors'][0]['name'] == 'Forbidden', path
         # the content type before the permission, as Cornice did
         response = _client().get(
-            '/users/blocked/abc', headers={'Content-Type': 'text/plain'}, status=415
+            '/users/blocked/1', headers={'Content-Type': 'text/plain'}, status=415
         )
         assert response.json['errors'][0]['name'] == 'Content-Type'
 
@@ -173,10 +156,9 @@ class TestTypedParameterErrors:
         # still checked by the validators of the view: the extension depends
         # on the size
         response = _client().get(
-            '/images/proxy/abc', params={'size': 'XL', 'extension': 'gif'}, status=400
+            '/images/proxy/1', params={'size': 'XL', 'extension': 'gif'}, status=400
         )
         assert response.json['errors'] == [
-            _error('id', 'invalid id'),
             _error('size', 'invalid size'),
             _error('extension', 'invalid extension'),
         ]
@@ -364,7 +346,7 @@ class TestOpenApiErrors:
         assert '400' not in document['paths']['/health']['get']['responses']
 
     def test_envelope_matches_the_answers(self):
-        response = _client().get('/routes/abc', status=400)
+        response = _client().get('/routes/1', params={'l': 'xx'}, status=400)
         properties = (
             _client({'api.openapi': 'true'})
             .get('/openapi.json')
