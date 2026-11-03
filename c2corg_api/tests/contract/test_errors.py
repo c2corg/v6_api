@@ -74,7 +74,8 @@ class TestErrors(DocumentContractTest):
             ('GET', '/images/list'),
             # a fixed path, not a document id
             ('PUT', '/routes/update_public_transportation_rating'),
-            ('POST', '/routes/update_public_transportation_rating'),
+            # a write: GET is not allowed
+            ('GET', '/routes/update_public_transportation_rating'),
         ):
             response = self.request(method, path, status=405)
             assert response.json['errors'] == [

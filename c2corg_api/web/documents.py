@@ -368,18 +368,16 @@ def include(app):
         listing_permission='authenticated',
         doc_type=USERPROFILE_TYPE,
     )
-    # a GET that writes (the ratings of all the routes, for the moderators):
-    # served as a write, so that it is committed
+    # the ratings of all the routes, recomputed (for the moderators)
     from c2corg_api.views.route import update_public_transportation_ratings
 
-    for http_method in ('GET', 'HEAD'):
-        include_handler_write(
-            app,
-            '/routes/update_public_transportation_rating',
-            http_method,
-            update_public_transportation_ratings,
-            *handler_arguments(update_public_transportation_ratings),
-        )
+    include_handler_write(
+        app,
+        '/routes/update_public_transportation_rating',
+        'POST',
+        update_public_transportation_ratings,
+        *handler_arguments(update_public_transportation_ratings),
+    )
     # the writes, served by the functions of the views
     include_document_writes(app, 'books', book.create_book, book.update_book)
     include_document_writes(
