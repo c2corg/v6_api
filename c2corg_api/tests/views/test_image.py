@@ -241,6 +241,9 @@ class TestImageRest(BaseTestImage):
         docs = {doc['document_id']: doc for doc in body['documents']}
         image = docs[self.image.document_id]
         assert image['image_type'] == 'collaborative'
+        # the size of the original, for the UI to keep the thumbnail's space
+        assert image['height'] == 1500
+        assert 'width' in image
         assert image['license']['id'] == 'CC-BY-SA-3.0'
         image4 = docs[self.image4.document_id]
         assert image4['image_type'] == 'personal'

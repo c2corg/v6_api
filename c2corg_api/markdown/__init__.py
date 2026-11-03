@@ -219,6 +219,8 @@ def _get_cleaner():
                 'c2c:size',
                 'c2c:url-proxy',
                 _img_url_secret_attribute,
+                'c2c:width',
+                'c2c:height',
                 'c2c:svg-name',
                 'c2c:emoji-db',
             ],
@@ -272,14 +274,16 @@ def _get_markdown_parser():
     return _markdown_parser
 
 
-def parse_code(text, image_url_resolver=None):
+def parse_code(text, image_url_resolver=None, image_size_resolver=None):
     """Get markdown, and returns HTML.
 
     This function is thread-safe.
 
     `image_url_resolver` is an optional function
     `(document_id, size) -> url or None` giving the direct media URL of
-    embedded images (see `img.make_image_url_resolver`).
+    embedded images (see `img.make_image_url_resolver`), and
+    `image_size_resolver` an optional `document_id -> (width, height) or None`
+    giving the size of their original (see `img.make_image_size_resolver`).
     """
     # we need parsing to be thread safe because
     # L numbering, and Markdown() has internal global variables
@@ -295,6 +299,7 @@ def parse_code(text, image_url_resolver=None):
         # indefinitely, and performance decreases over time
         parser.reset()
         parser.c2c_image_url_resolver = image_url_resolver
+        parser.c2c_image_size_resolver = image_size_resolver
 
         try:
             text = parser.convert(text)
@@ -307,6 +312,7 @@ def parse_code(text, image_url_resolver=None):
             text = _PARSER_EXCEPTION_MESSAGE
         finally:
             parser.c2c_image_url_resolver = None
+            parser.c2c_image_size_resolver = None
 
     text = text.replace(_iframe_secret_tag, 'iframe')
     text = text.replace(_img_url_secret_attribute, 'c2c:url')
