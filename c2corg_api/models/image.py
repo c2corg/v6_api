@@ -129,14 +129,29 @@ def is_personal(image_id):
 
 def get_image_filenames(image_ids):
     """Map image ids to the filename of the image they show, in one query."""
+    return {
+        document_id: filename
+        for document_id, (filename, _width, _height) in get_shown_images(
+            image_ids
+        ).items()
+    }
+
+
+def get_shown_images(image_ids):
+    """Map image ids to the (filename, width, height) of the image shown."""
     # A merged image redirects to its target and its own files are deleted,
-    # so use the filename of the target. Merging an already redirected
-    # document is refused, there is at most one level of redirection.
-    # Unknown ids are left out.
+    # so use the target. Merging an already redirected document is refused,
+    # there is at most one level of redirection. Unknown ids are left out.
+    # width and height are the original's, None when unknown.
     documents = Document.__table__
     images = Image.__table__
     rows = (
-        DBSession.query(documents.c.document_id, images.c.filename)
+        DBSession.query(
+            documents.c.document_id,
+            images.c.filename,
+            images.c.width,
+            images.c.height,
+        )
         .select_from(documents)
         .join(
             images,
@@ -147,4 +162,7 @@ def get_image_filenames(image_ids):
         .filter(documents.c.type == IMAGE_TYPE)
         .all()
     )
-    return dict(rows)
+    return {
+        document_id: (filename, width, height)
+        for document_id, filename, width, height in rows
+    }

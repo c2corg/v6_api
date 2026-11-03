@@ -49,6 +49,29 @@ class TestCookerRest(BaseTestRest):
         assert f'c2c:url="{self.image_url}imageMI.jpg"' in html
         assert f'c2c:url-proxy="/images/proxy/{image.document_id}?size=MI"' in html
 
+    def test_image_size(self):
+        # the size of the original, for the UI to keep the thumbnail's space
+        image = self._add_image('image.jpg', width=2000)
+        html = self._cook(f'[img={image.document_id}/]')
+
+        assert 'c2c:width="2000"' in html
+        assert 'c2c:height="1500"' in html
+
+    def test_image_size_unknown(self):
+        image = self._add_image('image.jpg')
+        html = self._cook(f'[img={image.document_id}/]')
+
+        assert 'c2c:width' not in html
+        assert 'c2c:height' not in html
+
+    def test_image_size_redirected(self):
+        # a merged image shows the image it redirects to
+        image = self._add_image('image.jpg', width=2000)
+        merged = self._add_image('merged.jpg', width=10, redirects_to=image.document_id)
+        html = self._cook(f'[img={merged.document_id}/]')
+
+        assert 'c2c:width="2000"' in html
+
     def test_image_unknown(self):
         html = self._cook('[img=999999/]')
 

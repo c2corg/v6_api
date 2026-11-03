@@ -44,6 +44,20 @@ def make_image_url_resolver(base_url, filenames):
     return resolve
 
 
+def make_image_size_resolver(sizes):
+    """Return a `document_id -> (width, height) or None` for `parse_code()`."""
+
+    # sizes maps image document ids (int) to the (width, height) of the
+    # original image, either of them possibly None
+    def resolve(document_id):
+        width, height = sizes.get(int(document_id), (None, None))
+        if not width or not height:
+            return None
+        return width, height
+
+    return resolve
+
+
 class C2CImageExtension(Extension):
     def __init__(self, *args, **kwargs):
         """Take an optional `url_secret_attribute` keyword argument."""
@@ -123,6 +137,14 @@ class C2CImageBlock(BlockProcessor):
         img.set('c2c:role', 'embedded-image')
         img.set('c2c:document-id', img_id)
         img.set('c2c:size', img_size)
+
+        # the size of the original image, when known: the UI computes the
+        # thumbnail's from it, and keeps its space while it loads
+        resolve_size = getattr(self.parser.md, 'c2c_image_size_resolver', None)
+        original_size = resolve_size(img_id) if resolve_size else None
+        if original_size:
+            img.set('c2c:width', str(original_size[0]))
+            img.set('c2c:height', str(original_size[1]))
 
         fig = ElementTree.Element('figure')
 
