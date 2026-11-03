@@ -9,7 +9,7 @@ from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.resource import Errors
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_write
+from c2corg_api.web.compat import serve_write, view_method
 
 PATH = '/test-write'
 
@@ -68,8 +68,7 @@ class TestWrites(BaseTestRest):
                 request,
                 user,
                 [_require_outcome],
-                _WriteView,
-                'collection_post',
+                view_method(_WriteView, 'collection_post'),
                 permission='authenticated',
                 content_types=['application/json'],
             )

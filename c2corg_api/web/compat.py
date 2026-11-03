@@ -243,7 +243,8 @@ def serve_view(
     content_types=None,
 ):
     """Answer a request with a method of a Pyramid view class."""
-    refused = _refused(request, user, view_class, method, permission, content_types)
+    view_name = f'{view_class.__name__}.{method}'
+    refused = _refused(request, user, view_name, permission, content_types)
     if refused is not None:
         return refused
     adapted, error = validate_query(request, *validators, user=user)
@@ -274,14 +275,15 @@ def permission_check(view_class, method, permission, content_types=None):
     def check(
         request: Request, user: Annotated[CurrentUser | None, Depends(current_user)]
     ):
-        refused = _refused(request, user, view_class, method, permission, content_types)
+        view_name = f'{view_class.__name__}.{method}'
+        refused = _refused(request, user, view_name, permission, content_types)
         if refused is not None:
             raise Refused(refused)
 
     return check
 
 
-def _refused(request, user, view_class, method, permission, content_types):
+def _refused(request, user, view_name, permission, content_types):
     """Answer the 415 or the 403 of Pyramid, or None."""
     # as Cornice: a request with another Content-Type than those of the view
     # (json_view) is refused, before the permission check; none is accepted
@@ -293,22 +295,35 @@ def _refused(request, user, view_class, method, permission, content_types):
     # the permission is checked before the validators, as Pyramid does
     if permission and not ValidatedRequest(request, user).has_permission(permission):
         # the message of Pyramid without debug_authorization (production)
-        view_name = f'{view_class.__name__}.{method}__{request.method}'
-        description = f'Unauthorized: {view_name} failed permission check'
+        description = (
+            f'Unauthorized: {view_name}__{request.method} failed permission check'
+        )
         return error_response([('body', 'Forbidden', description)], 403)
     return None
+
+
+def view_method(view_class, method):
+    """Return a write handler calling a method of a Pyramid view class."""
+    # for the write routes not converted to functions yet (#2512)
+
+    def handler(request):
+        return getattr(view_class(request), method)()
+
+    handler.view_name = f'{view_class.__name__}.{method}'
+    return handler
 
 
 async def serve_write(
     request,
     user,
     validators,
-    view_class,
-    method,
+    handler,
     permission=None,
     content_types=None,
 ):
-    """Answer a write request with a method of a Pyramid view class."""
+    """Answer a write request with a handler of the validated request."""
+    # `handler(request)` returns the answer; its `view_name` names it in the
+    # 403 answers, as Pyramid named the view
     # The body is read here, then the view runs in a worker thread, as the
     # sync views do.
     body = await request.body()
@@ -318,16 +333,13 @@ async def serve_write(
         user,
         body,
         validators,
-        view_class,
-        method,
+        handler,
         permission,
         content_types,
     )
 
 
-def _serve_write(
-    request, user, body, validators, view_class, method, permission, content_types
-):
+def _serve_write(request, user, body, validators, handler, permission, content_types):
     # As Pyramid with pyramid_tm, one transaction for the request: what the
     # request raises is rolled back (the 415 and the 403, an HTTP error of a
     # validator or of the view, a bug), what it returns is committed (the
@@ -344,7 +356,7 @@ def _serve_write(
         if error is not None:
             DBSession.commit()
             return _http_error(error)
-        refused = _refused(request, user, view_class, method, permission, content_types)
+        refused = _refused(request, user, handler.view_name, permission, content_types)
         if refused is not None:
             return refused
         try:
@@ -353,7 +365,7 @@ def _serve_write(
             if adapted.errors:
                 DBSession.commit()
                 return error_response(adapted.errors, adapted.errors.status)
-            result = _call_view(adapted, getattr(view_class(adapted), method))
+            result = _call_view(adapted, lambda: handler(adapted))
         except HTTPRedirection as e:
             return _redirection(e)
         except HTTPError as e:

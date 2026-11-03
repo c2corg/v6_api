@@ -263,11 +263,9 @@ class DocumentRest(BaseView):
     def _collection_post(
         self, schema, before_add=None, after_add=None, allow_anonymous=False
     ):
-        document_in = self.request.validated
-        document = self._create_document(
-            document_in, schema, before_add, after_add, allow_anonymous
+        return create_document(
+            self.request, schema, before_add, after_add, allow_anonymous
         )
-        return {'document_id': document.document_id}
 
     def _create_document(
         self,
@@ -277,142 +275,19 @@ class DocumentRest(BaseView):
         after_add=None,
         allow_anonymous=False,
     ):
-        if (
-            allow_anonymous
-            and document_in.get('anonymous')
-            and self.request.registry.anonymous_user_id
-        ):
-            user_id = self.request.registry.anonymous_user_id
-        else:
-            user_id = self.request.authenticated_userid
-
-        document = schema.objectify(document_in)
-        document.document_id = None
-
-        if before_add:
-            before_add(document, user_id)
-
-        DBSession.add(document)
-        DBSession.flush()
-
-        # don't create a new version for coverages (no archive for this class)
-        if document.type != COVERAGE_TYPE:
-            DocumentRest.create_new_version(document, user_id)
-
-        if document.type != AREA_TYPE:
-            update_areas_for_document(document, reset=False)
-
-        if document.type != MAP_TYPE:
-            update_maps_for_document(document, reset=False)
-
-        if after_add:
-            after_add(document, user_id=user_id)
-
-        if document_in.get('associations', None):
-            check_association = association_permission_checker(
-                self.request, skip_outing_check=document.type == OUTING_TYPE
-            )
-
-            added_associations = create_associations(
-                document,
-                document_in['associations'],
-                user_id,
-                check_association=check_association,
-            )
-            update_cache_version_associations(
-                added_associations, [], document.document_id
-            )
-
-        update_feed_document_create(document, user_id)
-
-        notify_es_syncer(self.request.registry.queue_config)
-        return document
+        return insert_document(
+            self.request, document_in, schema, before_add, after_add, allow_anonymous
+        )
 
     def _put(
         self, clazz, schema, clazz_locale=None, before_update=None, after_update=None
     ):
-        id = self.request.validated['id']
-        document_in = schema.objectify(self.request.validated['document'])
-        self._check_document_id(id, document_in.document_id)
-
-        # get the current version of the document
-        document = self._get_document(clazz, id, clazz_locale=clazz_locale)
-
-        if document.redirects_to:
-            raise HTTPBadRequest('can not update merged document')
-        if document.protected and not self.request.has_permission('moderator'):
-            raise HTTPForbidden('No permission to change a protected document')
-
-        self._check_versions(document, document_in)
-
-        DocumentRest.update_document(
-            document, document_in, self.request, before_update, after_update
+        return put_document(
+            self.request, clazz, schema, clazz_locale, before_update, after_update
         )
 
-        return {}
-
     def _get_document(self, clazz, id, clazz_locale=None, lang=None):
-        """Get a document with one locale or with all locales.
-
-        Get a document with either a single locale (if `lang is given)
-        or with all locales.
-        If no document exists for the given id, a `HTTPNotFound` exception is
-        raised.
-        """
-        if not lang:
-            document_query = (
-                DBSession.query(clazz)
-                .filter(clazz.document_id == id)
-                .options(joinedload(clazz.geometry))
-            )
-            document_query = add_load_for_locales(document_query, clazz, clazz_locale)
-            document_query = add_load_for_profiles(document_query, clazz)
-            document = document_query.first()
-        else:
-            locales_type = (
-                with_polymorphic(DocumentLocale, clazz_locale)
-                if clazz_locale
-                else DocumentLocale
-            )
-            locales_attr = clazz.locales
-            locales_type_eager = (
-                locales_attr.of_type(clazz_locale) if clazz_locale else locales_attr
-            )
-
-            document_query = (
-                DBSession.query(clazz)
-                .join(locales_type)
-                .filter(clazz.document_id == id)
-                .filter(DocumentLocale.lang == lang)
-                .options(joinedload(clazz.geometry))
-                .options(contains_eager(locales_type_eager, alias=locales_type))
-            )
-            document_query = add_load_for_profiles(document_query, clazz)
-            document = document_query.first()
-
-            if not document:
-                # the requested locale might not be available, try to get the
-                # document without locales
-                document_query = (
-                    DBSession.query(clazz)
-                    .filter(clazz.document_id == id)
-                    .options(joinedload(clazz.geometry))
-                )
-                document_query = add_load_for_profiles(document_query, clazz)
-                document = document_query.first()
-
-                if document:
-                    # explicitly set `locales` to an empty list so that they
-                    # are no lazy loaded
-                    document.locales = []
-                    # also detach the document from the session, so that the
-                    # empty list is not persisted
-                    DBSession.expunge(document)
-
-        if not document:
-            raise HTTPNotFound('document not found')
-
-        return document
+        return get_document(clazz, id, clazz_locale, lang)
 
     @staticmethod
     def _get_document_for_cooking(clazz, document_id, lang, clazz_locale=None):
@@ -652,35 +527,10 @@ class DocumentRest(BaseView):
         return locale_archive
 
     def _check_document_id(self, id, document_id):
-        """Check that the URL id matches the document_id of the body.
-
-        Checks that the id given in the URL ("/waypoints/{id}") matches
-        the document_id given in the request body.
-        """
-        if id != document_id:
-            raise HTTPBadRequest(
-                'id in the url does not match document_id in request body'
-            )
+        check_document_id(id, document_id)
 
     def _check_versions(self, document, document_in):
-        """Check that the passed-in versions match the database.
-
-        Check that the passed-in document, geometry and all passed-in
-        locales have the same version as the current document, geometry and
-        locales in the database.
-        If not (that is the document has changed), a `HTTPConflict` exception
-        is raised.
-        """
-        if document.version != document_in.version:
-            raise HTTPConflict('version of document has changed')
-        for locale_in in document_in.locales:
-            locale = document.get_locale(locale_in.lang)
-            if locale:
-                if locale.version != locale_in.version:
-                    raise HTTPConflict(f"version of locale '{locale.lang}' has changed")
-        if document.geometry and document_in.geometry:
-            if document.geometry.version != document_in.geometry.version:
-                raise HTTPConflict('version of geometry has changed')
+        check_versions(document, document_in)
 
 
 def validate_document_for_type(
@@ -764,3 +614,197 @@ def make_validator_update(fields, type_field=None, valid_type_values=None):
                 )
 
     return f
+
+
+# The logic of the document writes, as functions of the request: the view
+# classes (DocumentRest) and the write routes converted to functions
+# (web.documents) both call them (#2512).
+
+
+def create_document(
+    request, schema, before_add=None, after_add=None, allow_anonymous=False
+):
+    """Create the document of a request; return its id."""
+    document = insert_document(
+        request, request.validated, schema, before_add, after_add, allow_anonymous
+    )
+    return {'document_id': document.document_id}
+
+
+def insert_document(
+    request,
+    document_in,
+    schema,
+    before_add=None,
+    after_add=None,
+    allow_anonymous=False,
+):
+    """Insert a document with its version, areas, maps and associations."""
+    if (
+        allow_anonymous
+        and document_in.get('anonymous')
+        and request.registry.anonymous_user_id
+    ):
+        user_id = request.registry.anonymous_user_id
+    else:
+        user_id = request.authenticated_userid
+
+    document = schema.objectify(document_in)
+    document.document_id = None
+
+    if before_add:
+        before_add(document, user_id)
+
+    DBSession.add(document)
+    DBSession.flush()
+
+    # don't create a new version for coverages (no archive for this class)
+    if document.type != COVERAGE_TYPE:
+        DocumentRest.create_new_version(document, user_id)
+
+    if document.type != AREA_TYPE:
+        update_areas_for_document(document, reset=False)
+
+    if document.type != MAP_TYPE:
+        update_maps_for_document(document, reset=False)
+
+    if after_add:
+        after_add(document, user_id=user_id)
+
+    if document_in.get('associations', None):
+        check_association = association_permission_checker(
+            request, skip_outing_check=document.type == OUTING_TYPE
+        )
+
+        added_associations = create_associations(
+            document,
+            document_in['associations'],
+            user_id,
+            check_association=check_association,
+        )
+        update_cache_version_associations(added_associations, [], document.document_id)
+
+    update_feed_document_create(document, user_id)
+
+    notify_es_syncer(request.registry.queue_config)
+    return document
+
+
+def put_document(
+    request, clazz, schema, clazz_locale=None, before_update=None, after_update=None
+):
+    """Update the document of a request, if its versions are current."""
+    id = request.validated['id']
+    document_in = schema.objectify(request.validated['document'])
+    check_document_id(id, document_in.document_id)
+
+    # get the current version of the document
+    document = get_document(clazz, id, clazz_locale=clazz_locale)
+
+    if document.redirects_to:
+        raise HTTPBadRequest('can not update merged document')
+    if document.protected and not request.has_permission('moderator'):
+        raise HTTPForbidden('No permission to change a protected document')
+
+    check_versions(document, document_in)
+
+    DocumentRest.update_document(
+        document, document_in, request, before_update, after_update
+    )
+
+    return {}
+
+
+def get_document(clazz, id, clazz_locale=None, lang=None):
+    """Get a document with one locale or with all locales.
+
+    Get a document with either a single locale (if `lang is given)
+    or with all locales.
+    If no document exists for the given id, a `HTTPNotFound` exception is
+    raised.
+    """
+    if not lang:
+        document_query = (
+            DBSession.query(clazz)
+            .filter(clazz.document_id == id)
+            .options(joinedload(clazz.geometry))
+        )
+        document_query = add_load_for_locales(document_query, clazz, clazz_locale)
+        document_query = add_load_for_profiles(document_query, clazz)
+        document = document_query.first()
+    else:
+        locales_type = (
+            with_polymorphic(DocumentLocale, clazz_locale)
+            if clazz_locale
+            else DocumentLocale
+        )
+        locales_attr = clazz.locales
+        locales_type_eager = (
+            locales_attr.of_type(clazz_locale) if clazz_locale else locales_attr
+        )
+
+        document_query = (
+            DBSession.query(clazz)
+            .join(locales_type)
+            .filter(clazz.document_id == id)
+            .filter(DocumentLocale.lang == lang)
+            .options(joinedload(clazz.geometry))
+            .options(contains_eager(locales_type_eager, alias=locales_type))
+        )
+        document_query = add_load_for_profiles(document_query, clazz)
+        document = document_query.first()
+
+        if not document:
+            # the requested locale might not be available, try to get the
+            # document without locales
+            document_query = (
+                DBSession.query(clazz)
+                .filter(clazz.document_id == id)
+                .options(joinedload(clazz.geometry))
+            )
+            document_query = add_load_for_profiles(document_query, clazz)
+            document = document_query.first()
+
+            if document:
+                # explicitly set `locales` to an empty list so that they
+                # are no lazy loaded
+                document.locales = []
+                # also detach the document from the session, so that the
+                # empty list is not persisted
+                DBSession.expunge(document)
+
+    if not document:
+        raise HTTPNotFound('document not found')
+
+    return document
+
+
+def check_document_id(id, document_id):
+    """Check that the URL id matches the document_id of the body.
+
+    Checks that the id given in the URL ("/waypoints/{id}") matches
+    the document_id given in the request body.
+    """
+    if id != document_id:
+        raise HTTPBadRequest('id in the url does not match document_id in request body')
+
+
+def check_versions(document, document_in):
+    """Check that the passed-in versions match the database.
+
+    Check that the passed-in document, geometry and all passed-in
+    locales have the same version as the current document, geometry and
+    locales in the database.
+    If not (that is the document has changed), a `HTTPConflict` exception
+    is raised.
+    """
+    if document.version != document_in.version:
+        raise HTTPConflict('version of document has changed')
+    for locale_in in document_in.locales:
+        locale = document.get_locale(locale_in.lang)
+        if locale:
+            if locale.version != locale_in.version:
+                raise HTTPConflict(f"version of locale '{locale.lang}' has changed")
+    if document.geometry and document_in.geometry:
+        if document.geometry.version != document_in.geometry.version:
+            raise HTTPConflict('version of geometry has changed')

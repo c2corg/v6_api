@@ -14,6 +14,7 @@ from c2corg_api.web.compat import (
     serve_view,
     serve_write,
     typed_values,
+    view_method,
 )
 from c2corg_api.web.params import (
     DocumentId,
@@ -209,10 +210,27 @@ def view_arguments(view_class, method):
 def include_write(app, path, http_method, view_class, method):
     """Add a write route served by a method of a Pyramid view class."""
     validators, permission, content_types = view_arguments(view_class, method)
+    include_handler_write(
+        app,
+        path,
+        http_method,
+        view_method(view_class, method),
+        validators,
+        permission,
+        content_types,
+    )
+
+
+def include_handler_write(
+    app, path, http_method, handler, validators, permission, content_types
+):
+    """Add a write route served by a handler of the validated request."""
+    # the checks run in this order: rate limiting, content type, permission,
+    # validators (web.compat.serve_write)
 
     async def endpoint(request: Request, user: User):
         return await serve_write(
-            request, user, validators, view_class, method, permission, content_types
+            request, user, validators, handler, permission, content_types
         )
 
     # read by the route inventory of the contract tests (routes.txt)
@@ -226,7 +244,7 @@ def include_write(app, path, http_method, view_class, method):
         path,
         endpoint,
         methods=[http_method],
-        operation_id=f'{view_class.__name__}_{method}',
+        operation_id=handler.view_name.replace('.', '_'),
         tags=[path.strip('/').split('/')[0]],
     )
 
@@ -235,6 +253,31 @@ def _body_schema(validators):
     """Return the schema of the body a route validates, or None."""
     # set by schemas.base.body_validator
     return next((v.schema for v in validators if hasattr(v, 'schema')), None)
+
+
+def include_book_writes(app):
+    """Add the write routes of the books, served by functions."""
+    from c2corg_api.views import book
+
+    json = ['application/json']
+    include_handler_write(
+        app,
+        '/books',
+        'POST',
+        book.create_book,
+        book.CREATE_VALIDATORS,
+        'authenticated',
+        json,
+    )
+    include_handler_write(
+        app,
+        '/books/{id:int}',
+        'PUT',
+        book.update_book,
+        book.UPDATE_VALIDATORS,
+        'authenticated',
+        json,
+    )
 
 
 def include_document_writes(app, prefix, rest, create=True):
@@ -362,7 +405,7 @@ def include(app):
             'get',
         )
     # the writes moved to FastAPI
-    include_document_writes(app, 'books', BookRest)
+    include_book_writes(app)
     include_document_writes(app, 'articles', ArticleRest)
     include_document_writes(app, 'areas', AreaRest)
     include_document_writes(app, 'maps', TopoMapRest)
