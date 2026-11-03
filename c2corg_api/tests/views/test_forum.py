@@ -12,6 +12,10 @@ from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.security.discourse_client import (
+    DisabledDiscourseClient,
+    set_discourse_client,
+)
 from c2corg_api.tests.views import BaseTestRest
 
 
@@ -99,6 +103,18 @@ class TestForumTopicRest(BaseTestRest):
         errors = json.get('errors')
         assert 'Topic already exists' == errors[0].get('description')
         assert 1 == errors[0].get('topic_id')
+
+    def test_post_forum_disabled(self):
+        """Refuse to create a topic when the API runs without a forum."""
+        set_discourse_client(DisabledDiscourseClient())
+        json = self.post_json_with_contributor(
+            '/forum/topics',
+            {'document_id': self.waypoint.document_id, 'lang': 'en'},
+            status=503,
+        )
+        assert 'The forum is disabled' == json['errors'][0]['description']
+        self.session.expire(self.locale_en)
+        assert self.locale_en.topic_id is None
 
     @patch(
         'pydiscourse.client.DiscourseClient.create_post', side_effect=ConnectionError()

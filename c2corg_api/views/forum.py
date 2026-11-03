@@ -1,6 +1,9 @@
 import logging
 
-from c2corg_api.httpexceptions import HTTPInternalServerError
+from c2corg_api.httpexceptions import (
+    HTTPInternalServerError,
+    HTTPServiceUnavailable,
+)
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association, association_keys_for_types
 from c2corg_api.models.cache_version import update_cache_version_direct
@@ -62,6 +65,10 @@ def validate_topic_create(request, **kwargs):
 def create_topic(request):
     settings = request.registry.settings
 
+    client = get_discourse_client(settings)
+    if not client.enabled:
+        raise HTTPServiceUnavailable('The forum is disabled')
+
     locale = request.validated['locale']
     document = request.validated['document']
     document_type = association_keys_for_types[document.type]
@@ -80,7 +87,6 @@ def create_topic(request):
     except ValueError:
         pass  # a name: use it as it is
 
-    client = get_discourse_client(settings)
     try:
         title = f'{locale.document_id}_{locale.lang}'
         response = client.client.create_post(content, title=title, category_id=category)

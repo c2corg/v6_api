@@ -72,3 +72,8 @@ class HTTPTooManyRequests(HTTPError):
 class HTTPInternalServerError(HTTPError):
     code = 500
     title = 'Internal Server Error'
+
+
+class HTTPServiceUnavailable(HTTPError):
+    code = 503
+    title = 'Service Unavailable'
