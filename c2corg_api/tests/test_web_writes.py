@@ -34,9 +34,6 @@ def _rename_user(request):
     return {'name': user.name}
 
 
-_rename_user.view_name = '_WriteView.collection_post'
-
-
 def _require_outcome(request, **kwargs):
     outcome = request.json.get('outcome')
     if outcome == 'invalid':
@@ -168,9 +165,7 @@ class TestWrites(BaseTestRest):
         response = self.app.post(PATH, '{}', headers=headers, status=415)
         assert response.json['errors'][0]['name'] == 'Content-Type'
         response = self.post({}, 403, user=None)
-        assert response.json['errors'][0]['description'] == (
-            'Unauthorized: _WriteView.collection_post__POST failed permission check'
-        )
+        assert response.json['errors'][0]['description'] == 'Authentication required'
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_rate_limit_is_checked_first_and_committed(self, _send_email):

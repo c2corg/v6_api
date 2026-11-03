@@ -94,9 +94,6 @@ def tag_document(request):
     return {}
 
 
-tag_document.view_name = 'DocumentTagRest.post'
-
-
 @restricted_json_view(
     validators=[body_validator(DocumentTagSchema), validate_document],
 )
@@ -136,9 +133,6 @@ def untag_document(request):
     return {}
 
 
-untag_document.view_name = 'DocumentUntagRest.post'
-
-
 @restricted_json_view(validators=[validate_document_id])
 def read_todo_tag(request):
     """
@@ -157,6 +151,3 @@ def read_todo_tag(request):
     tag_relation = get_tag_relation(user_id, document_id)
 
     return {'todo': tag_relation is not None}
-
-
-read_todo_tag.view_name = 'DocumentTaggedRest.get'

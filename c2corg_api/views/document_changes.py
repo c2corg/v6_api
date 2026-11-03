@@ -49,9 +49,6 @@ def read_document_changes(request):
     return load_feed(doc_ids, limit, user_id)
 
 
-read_document_changes.view_name = 'ChangesDocumentRest.get'
-
-
 def get_changes_of_feed(token_id, limit, user_id=None):
     query = (
         DBSession.query(DocumentVersion.history_metadata_id)

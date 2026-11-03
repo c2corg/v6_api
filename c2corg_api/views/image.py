@@ -226,9 +226,6 @@ def create_image(request):
     return {'document_id': document.document_id}
 
 
-create_image.view_name = 'ImageRest.collection_post'
-
-
 @restricted_json_view(
     validators=[
         body_validator(ImageUpdateSchema),
@@ -267,15 +264,9 @@ def update_image(request):
 # only `collection_post`: it posts a list of images
 
 
-update_image.view_name = 'ImageRest.put'
-
-
 @view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_images(request):
     return collection_get(request, IMAGE_TYPE, image_documents_config)
-
-
-list_images.view_name = 'ImageRest.collection_get'
 
 
 @view(validators=[validate_id, validate_lang_param, validate_cook_param])
@@ -283,9 +274,6 @@ def get_image(request):
     return read_document(
         request, image_documents_config, image_schema, set_custom_fields=set_creator
     )
-
-
-get_image.view_name = 'ImageRest.get'
 
 
 @restricted_json_view(
@@ -310,15 +298,9 @@ def create_images(request):
     return {'images': image_ids}
 
 
-create_images.view_name = 'ImageListRest.collection_post'
-
-
 @view(validators=[validate_id, validate_lang])
 def get_image_info(request):
     return document_info(request, image_documents_config)
-
-
-get_image_info.view_name = 'ImageInfoRest.get'
 
 
 def validate_size(request, **kwargs):
@@ -362,9 +344,6 @@ def redirect_to_image(request):
     return HTTPFound(location, headers={'Cache-Control': PROXY_CACHE_CONTROL})
 
 
-redirect_to_image.view_name = 'ImageProxyRest.get'
-
-
 def set_creator(image):
     """Set the creator (the user who created an image) on an image."""
     set_creator_on_documents([image], 'creator')
@@ -375,6 +354,3 @@ def get_image_version(request):
     return document_version(
         request, ArchiveImage, IMAGE_TYPE, ArchiveDocumentLocale, image_schema
     )
-
-
-get_image_version.view_name = 'ImageVersionRest.get'

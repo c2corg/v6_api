@@ -56,9 +56,6 @@ def create_area(request):
     return create_document(request, area_schema, after_add=insert_associations)
 
 
-create_area.view_name = 'AreaRest.collection_post'
-
-
 @restricted_json_view(
     validators=[
         body_validator(AreaUpdateSchema),
@@ -76,15 +73,9 @@ def update_area(request):
     return put_document(request, Area, area_schema, after_update=update_associations)
 
 
-update_area.view_name = 'AreaRest.put'
-
-
 @view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_areas(request):
     return collection_get(request, AREA_TYPE, area_documents_config)
-
-
-list_areas.view_name = 'AreaRest.collection_get'
 
 
 @view(validators=[validate_id, validate_lang_param, validate_cook_param])
@@ -94,15 +85,9 @@ def get_area(request):
     )
 
 
-get_area.view_name = 'AreaRest.get'
-
-
 @view(validators=[validate_id, validate_lang])
 def get_area_info(request):
     return document_info(request, area_documents_config)
-
-
-get_area_info.view_name = 'AreaInfoRest.get'
 
 
 def insert_associations(area, user_id):
@@ -129,6 +114,3 @@ def get_area_version(request):
     return document_version(
         request, ArchiveArea, AREA_TYPE, ArchiveDocumentLocale, area_schema
     )
-
-
-get_area_version.view_name = 'AreaVersionRest.get'

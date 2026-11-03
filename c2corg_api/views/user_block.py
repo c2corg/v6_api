@@ -56,9 +56,6 @@ def block_user(request):
     return {}
 
 
-block_user.view_name = 'UserBlockRest.post'
-
-
 @restricted_json_view(
     permission='moderator',
     validators=[body_validator(BlockSchema), validate_body_user_id],
@@ -92,9 +89,6 @@ def unblock_user(request):
     return {}
 
 
-unblock_user.view_name = 'UserUnblockRest.post'
-
-
 @restricted_json_view(permission='moderator', validators=[validate_id])
 def read_blocked_user(request):
     """Check if the given user is blocked.
@@ -110,9 +104,6 @@ def read_blocked_user(request):
     user = _get_user(request.validated['id'])
 
     return {'blocked': user.blocked}
-
-
-read_blocked_user.view_name = 'UserBlockedRest.get'
 
 
 @restricted_json_view(permission='moderator')
@@ -141,6 +132,3 @@ def read_blocked_users(request):
     ).get('documents')
 
     return {'blocked': blocked_users}
-
-
-read_blocked_users.view_name = 'UserBlockedAllRest.get'

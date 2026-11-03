@@ -42,9 +42,6 @@ def create_topo_map(request):
     return create_document(request, topo_map_schema, after_add=insert_associations)
 
 
-create_topo_map.view_name = 'TopoMapRest.collection_post'
-
-
 @restricted_json_view(
     validators=[
         body_validator(TopoMapUpdateSchema),
@@ -59,15 +56,9 @@ def update_topo_map(request):
     )
 
 
-update_topo_map.view_name = 'TopoMapRest.put'
-
-
 @view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_topo_maps(request):
     return collection_get(request, MAP_TYPE, topo_map_documents_config)
-
-
-list_topo_maps.view_name = 'TopoMapRest.collection_get'
 
 
 @view(validators=[validate_id, validate_lang_param, validate_cook_param])
@@ -75,15 +66,9 @@ def get_topo_map(request):
     return read_document(request, topo_map_documents_config, topo_map_schema)
 
 
-get_topo_map.view_name = 'TopoMapRest.get'
-
-
 @view(validators=[validate_id, validate_lang])
 def get_topo_map_info(request):
     return document_info(request, topo_map_documents_config)
-
-
-get_topo_map_info.view_name = 'TopoMapInfoRest.get'
 
 
 def insert_associations(topo_map, user_id):

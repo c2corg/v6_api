@@ -62,9 +62,6 @@ def create_coverage(request):
     return create_document(request, coverage_schema, allow_anonymous=False)
 
 
-create_coverage.view_name = 'CoverageRest.collection_post'
-
-
 @restricted_json_view(
     validators=[
         body_validator(CoverageUpdateSchema),
@@ -77,15 +74,9 @@ def update_coverage(request):
     return put_document(request, Coverage, coverage_schema)
 
 
-update_coverage.view_name = 'CoverageRest.put'
-
-
 @view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_coverages(request):
     return collection_get(request, COVERAGE_TYPE, coverage_documents_config)
-
-
-list_coverages.view_name = 'CoverageRest.collection_get'
 
 
 @view(validators=[validate_id, validate_lang_param, validate_cook_param])
@@ -93,9 +84,6 @@ def get_coverage_document(request):
     return read_document(
         request, coverage_documents_config, coverage_schema, include_areas=False
     )
-
-
-get_coverage_document.view_name = 'CoverageRest.get'
 
 
 def validate_lon_lat(request, **kwargs):
@@ -119,9 +107,6 @@ def find_coverage(request):
     return get_coverage(lon, lat)
 
 
-find_coverage.view_name = 'WaypointCoverageRest.get'
-
-
 def validate_geom_detail(request, **kwargs):
     """Check that geom_detail is a GeoJSON geometry, given as a string."""
     # an invalid JSON body raises here: the catch-all error view answers it
@@ -140,9 +125,6 @@ def coverage_of_a_polygon(request):
     (geom_detail has to be EPSG 4326 since isochrone is 4326).
     """
     return get_coverages(request.validated['polygon'])
-
-
-coverage_of_a_polygon.view_name = 'PolygonCoverage.post'
 
 
 def get_coverage(lon, lat):

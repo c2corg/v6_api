@@ -53,9 +53,6 @@ def list_stopareas(request):
     }
 
 
-list_stopareas.view_name = 'StopareaRest.collection_get'
-
-
 @view(validators=[validate_id, validate_lang_param])
 def read_stoparea(request):
     """Get a single stoparea."""
@@ -67,9 +64,6 @@ def read_stoparea(request):
         return {'error': 'Stoparea not found'}
 
     return stoparea.to_dict()
-
-
-read_stoparea.view_name = 'StopareaRest.get'
 
 
 @view(validators=[validate_id, validate_lang])
@@ -91,6 +85,3 @@ def read_stoparea_info(request):
             'geom': str(stoparea.geom),
         },
     }
-
-
-read_stoparea_info.view_name = 'StopareaInfoRest.get'

@@ -66,12 +66,7 @@ class TestTypedParameterErrors:
         # permission is checked before the parameters, as Pyramid did
         response = _client().get('/profiles', params={'limit': 'x'}, status=403)
         assert response.json['errors'] == [
-            _error(
-                'Forbidden',
-                'Unauthorized: UserProfileRest.collection_get__GET failed '
-                'permission check',
-                'body',
-            )
+            _error('Forbidden', 'Authentication required', 'body')
         ]
 
     def test_feeds(self):
@@ -159,6 +154,13 @@ class TestTypedParameterErrors:
             '/users/blocked/abc', headers={'Content-Type': 'text/plain'}, status=415
         )
         assert response.json['errors'][0]['name'] == 'Content-Type'
+
+    def test_permission_texts(self):
+        # the 403 answers say which permission the route requires
+        response = _client().get('/users/preferences', status=403)
+        assert response.json['errors'][0]['description'] == 'Authentication required'
+        response = _client().get('/users/blocked/1', status=403)
+        assert response.json['errors'][0]['description'] == 'Moderator role required'
 
     def test_coverage_of_a_point(self):
         response = _client().get('/getcoverage', params={'lon': 'nan'}, status=400)
@@ -397,7 +399,7 @@ class TestWriteBodies:
             }
         ]
         assert {'400', '403'} <= set(operation['responses'])
-        assert operation['operationId'] == 'BookRest_put'
+        assert operation['operationId'] == 'update_book'
 
     def test_every_write_with_a_body_schema(self):
         # the writes whose view validates its body with a schema

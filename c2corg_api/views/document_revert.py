@@ -154,9 +154,6 @@ def revert_document(request):
     return {}
 
 
-revert_document.view_name = 'DocumentRevertRest.post'
-
-
 def _get_models(request, document_id):
     (document_type,) = (
         DBSession.query(Document.type)

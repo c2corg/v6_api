@@ -58,9 +58,6 @@ def protect_document(request):
     return {}
 
 
-protect_document.view_name = 'DocumentProtectRest.post'
-
-
 @restricted_json_view(
     permission='moderator',
     validators=[body_validator(ProtectSchema)],
@@ -92,6 +89,3 @@ def unprotect_document(request):
     update_cache_version_direct(document_id)
 
     return {}
-
-
-unprotect_document.view_name = 'DocumentUnprotectRest.post'

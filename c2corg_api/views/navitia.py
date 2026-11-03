@@ -124,9 +124,6 @@ def read_journeys(request):
     )
 
 
-read_journeys.view_name = 'NavitiaRest.get'
-
-
 def validate_journey_reachable_params(request, **kwargs):
     """Validate the required parameters for the journey reachable doc route."""
     required_params = [
@@ -148,18 +145,10 @@ def start_journey_reachable_routes(request):
     return start_job_background(compute_journey_reachable_routes, request)
 
 
-start_journey_reachable_routes.view_name = 'StartNavitiaJourneyReachableRoutesRest.get'
-
-
 @view(validators=[validate_journey_reachable_params])
 def start_journey_reachable_waypoints(request):
     """Start a job finding the journey-reachable waypoints, return its id."""
     return start_job_background(compute_journey_reachable_waypoints, request)
-
-
-start_journey_reachable_waypoints.view_name = (
-    'StartNavitiaJourneyReachableWaypointsRest.get'
-)
 
 
 @view()
@@ -174,11 +163,6 @@ def read_journey_reachable_routes_result(request):
     return read_result_from_redis(r, job_id)
 
 
-read_journey_reachable_routes_result.view_name = (
-    'NavitiaJourneyReachableRoutesResultRest.get'
-)
-
-
 @view()
 def read_journey_reachable_waypoints_result(request):
     """Get the result of a reachable-waypoints job.
@@ -191,11 +175,6 @@ def read_journey_reachable_waypoints_result(request):
     return read_result_from_redis(r, job_id)
 
 
-read_journey_reachable_waypoints_result.view_name = (
-    'NavitiaJourneyReachableWaypointsResultRest.get'
-)
-
-
 @view()
 def read_journey_reachable_routes_progress(request):
     """Monitor progress of job id for journey reachable routes."""
@@ -204,22 +183,12 @@ def read_journey_reachable_routes_progress(request):
     return _event_stream(progress_stream(r, job_id))
 
 
-read_journey_reachable_routes_progress.view_name = (
-    'NavitiaJourneyReachableRoutesProgressRest.get'
-)
-
-
 @view()
 def read_journey_reachable_waypoints_progress(request):
     """Monitor progress of job id for journey reachable waypoints."""
     r = redis_client()
     job_id = request.matchdict.get('job_id')
     return _event_stream(progress_stream(r, job_id))
-
-
-read_journey_reachable_waypoints_progress.view_name = (
-    'NavitiaJourneyReachableWaypointsProgressRest.get'
-)
 
 
 def compute_journey_reachable_routes(job_id, request):
@@ -460,9 +429,6 @@ def read_isochrone_reachable_routes(request):
     return {'documents': routes, 'total': len(routes), 'isochron_geom': geojson}
 
 
-read_isochrone_reachable_routes.view_name = 'NavitiaIsochronesReachableRoutesRest.get'
-
-
 @view(validators=[validate_isochrone_reachable_params])
 def read_isochrone_reachable_waypoints(request):
     """Get the waypoints inside the isochron.
@@ -517,11 +483,6 @@ def read_isochrone_reachable_waypoints(request):
         'total': len(waypoints),
         'isochron_geom': geojson,
     }
-
-
-read_isochrone_reachable_waypoints.view_name = (
-    'NavitiaIsochronesReachableWaypointsRest.get'
-)
 
 
 def is_wp_journey_reachable(waypoint, journey_params):

@@ -58,9 +58,6 @@ def read_feed(request):
     return load_feed(changes, lang)
 
 
-read_feed.view_name = 'FeedRest.get'
-
-
 @restricted_view(validators=[validate_preferred_lang_param, validate_token_pagination])
 def read_personal_feed(request):
     """Get the personal homepage feed for the authenticated user.
@@ -78,9 +75,6 @@ def read_personal_feed(request):
         user_id, token_id, token_time, limit, ignore_admin_changes_filter
     )
     return load_feed(changes, lang)
-
-
-read_personal_feed.view_name = 'PersonalFeedRest.get'
 
 
 @view(
@@ -126,9 +120,6 @@ def read_profile_feed(request):
         return load_feed(changes, lang)
     else:
         raise HTTPForbidden('no permission to see the feed')
-
-
-read_profile_feed.view_name = 'ProfileFeedRest.get'
 
 
 def get_params(request, default_page_limit=DEFAULT_PAGE_LIMIT):

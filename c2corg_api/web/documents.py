@@ -42,7 +42,7 @@ def include_document_type(
         user: User,
         _: Annotated[
             None,
-            Depends(permission_check(list_documents.view_name, listing_permission)),
+            Depends(permission_check(listing_permission)),
         ],
         offset: Annotated[
             Offset | None, Query(description='The first document, from 0.')
@@ -226,7 +226,7 @@ def include_handler_write(
         path,
         endpoint,
         methods=[http_method],
-        operation_id=handler.view_name.replace('.', '_'),
+        operation_id=handler.__name__,
         tags=[path.strip('/').split('/')[0]],
     )
 

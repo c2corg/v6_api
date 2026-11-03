@@ -278,9 +278,6 @@ def register_user(request):
     return to_json_dict(user, user_schema)
 
 
-register_user.view_name = 'UserRegistrationRest.post'
-
-
 def validate_user_from_nonce(purpose, request, **kwargs):
     nonce = request.matchdict['nonce']
     if nonce is None:
@@ -348,9 +345,6 @@ def validate_new_password(request):
         return None
 
 
-validate_new_password.view_name = 'UserValidateNewPasswordRest.post'
-
-
 def validate_required_user_from_email(request, **kwargs):
     validate_required_json_string('email', request)
     if len(request.errors) != 0:
@@ -394,9 +388,6 @@ def request_password_change(request):
     return {}
 
 
-request_password_change.view_name = 'UserRequestChangePasswordRest.post'
-
-
 @json_view(validators=[partial(validate_user_from_nonce, Purpose.registration)])
 def validate_register_email(request):
     user = request.validated['user']
@@ -437,9 +428,6 @@ def validate_register_email(request):
         return None
 
 
-validate_register_email.view_name = 'UserNonceValidationRest.post'
-
-
 @json_view(validators=[partial(validate_user_from_nonce, Purpose.change_email)])
 def validate_change_email(request):
     user = request.validated['user']
@@ -462,9 +450,6 @@ def validate_change_email(request):
         raise HTTPInternalServerError('Error persisting user') from e
 
     # no login since user is supposed to be already logged in
-
-
-validate_change_email.view_name = 'UserChangeEmailNonceValidationRest.post'
 
 
 class LoginSchema(Schema):
@@ -551,9 +536,6 @@ def login_user(request):
         return None
 
 
-login_user.view_name = 'UserLoginRest.post'
-
-
 class DiscourseRedirectSchema(Schema):
     """Signed payload Discourse sent to the UI's `/auth-sso` page."""
 
@@ -582,9 +564,6 @@ def discourse_redirect(request):
     return {'redirect': client.redirect(user, sso, sig)}
 
 
-discourse_redirect.view_name = 'UserDiscourseRedirectRest.post'
-
-
 @restricted_view(renderer='json')
 def renew_login(request):
     userid = request.authenticated_userid
@@ -594,9 +573,6 @@ def renew_login(request):
         return token_to_response(user, token, request)
     else:
         raise HTTPInternalServerError('Error renewing token')
-
-
-renew_login.view_name = 'UserRenewRest.post'
 
 
 @restricted_json_view(renderer='json')
@@ -613,6 +589,3 @@ def logout_user(request):
             # Any error with discourse should not prevent logout
             log.warning('Error logging out of discourse for %d', userid, exc_info=True)
     return result
-
-
-logout_user.view_name = 'UserLogoutRest.post'

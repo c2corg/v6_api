@@ -64,9 +64,6 @@ def update_mailinglists(request):
     return {}
 
 
-update_mailinglists.view_name = 'UserMailinglistsRest.post'
-
-
 @restricted_view()
 def read_mailinglists(request):
     """Get the mailinglists subscriptions of the authenticated user.
@@ -88,6 +85,3 @@ def read_mailinglists(request):
     subscribed_mailinglists = [list[0] for list in res]
 
     return {ml: ml in subscribed_mailinglists for ml in valid_mailinglists}
-
-
-read_mailinglists.view_name = 'UserMailinglistsRest.get'

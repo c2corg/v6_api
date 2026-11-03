@@ -119,8 +119,7 @@ def include(app):
             path,
             _endpoint(function, required, optional, '{job_id}' in path),
             methods=['GET', 'HEAD'],
-            # the name of the view class it was
-            operation_id=function.view_name.split('.')[0],
+            operation_id=function.__name__,
             tags=['navitia'],
         )
 
@@ -129,7 +128,7 @@ def _endpoint(function, required, optional, job):
     def endpoint(request: Request, user: User, **parameters):
         return serve_read(request, user, [], function)
 
-    endpoint.__name__ = function.view_name.split('.')[0]
+    endpoint.__name__ = function.__name__
     endpoint.__signature__ = Signature(
         [
             Parameter('request', Parameter.POSITIONAL_OR_KEYWORD, annotation=Request),

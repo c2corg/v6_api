@@ -97,9 +97,6 @@ def mask_version(request):
     return {}
 
 
-mask_version.view_name = 'VersionMaskRest.post'
-
-
 @restricted_json_view(
     permission='moderator',
     validators=[body_validator(MaskSchema), validate_version],
@@ -124,6 +121,3 @@ def unmask_version(request):
     update_cache_version_direct(request.validated['document_id'])
 
     return {}
-
-
-unmask_version.view_name = 'VersionUnmaskRest.post'

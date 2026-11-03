@@ -101,11 +101,7 @@ def has_todo_tag(
     user: User,
     _: Annotated[
         None,
-        Depends(
-            permission_check(
-                'DocumentTaggedRest.get', 'authenticated', ['application/json']
-            )
-        ),
+        Depends(permission_check('authenticated', ['application/json'])),
     ],
     document_id: Annotated[
         natural('document_id'), Path(description='The document id.')

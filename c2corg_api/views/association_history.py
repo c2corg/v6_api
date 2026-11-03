@@ -86,9 +86,6 @@ def read_association_history(request):
     }
 
 
-read_association_history.view_name = 'HistoryAssociationRest.get'
-
-
 def serialize_document(document):
     result = {
         'document_id': document.document_id,

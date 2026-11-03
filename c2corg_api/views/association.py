@@ -118,9 +118,6 @@ def add_association(request):
     return {}
 
 
-add_association.view_name = 'AssociationRest.collection_post'
-
-
 @restricted_json_view(validators=[body_validator(AssociationSchema)])
 def remove_association(request):
     association_in = association_schema.objectify(request.validated)
@@ -167,9 +164,6 @@ def remove_association(request):
     )
 
     return {}
-
-
-remove_association.view_name = 'AssociationRest.collection_delete'
 
 
 def _load(request, association_in):
