@@ -218,7 +218,8 @@ class TestOpenApi:
         # maps have no version route
         assert '/maps/{id}/{lang}/{version_id}' not in document['paths']
         assert '/routes' in document['paths']
-        assert '/users/login' not in document['paths']
+        # the writes without a body schema are not described yet
+        assert '/users/logout' not in document['paths']
         assert all(':' not in path for path in document['paths'])
 
     def test_parameters(self):
@@ -230,7 +231,7 @@ class TestOpenApi:
         assert parameters['id']['schema']['type'] == 'integer'
         assert parameters['id']['schema']['minimum'] == 0
         # HEAD is not described: it answers as GET
-        assert set(document['paths']['/routes/{id}']) == {'get'}
+        assert set(document['paths']['/routes/{id}']) == {'get', 'put'}
         assert 'en' in parameters['l']['schema']['anyOf'][0]['enum']
         assert parameters['cook']['in'] == 'query'
 
@@ -371,3 +372,98 @@ class TestOpenApiErrors:
         assert set(response.json['errors'][0]) == set(
             properties['errors']['items']['properties']
         )
+
+
+class TestWriteBodies:
+    def _document(self):
+        return _client({'api.openapi': 'true'}).get('/openapi.json').json
+
+    def test_bodies_of_the_writes(self):
+        document = self._document()
+        operation = document['paths']['/books/{id}']['put']
+        body = operation['requestBody']['content']['application/json']['schema']
+        name = body['$ref'].split('/')[-1]
+        schema = document['components']['schemas'][name]
+        assert set(schema['properties']) == {'message', 'document'}
+        assert operation['requestBody']['required'] is True
+        # the path parameter of the route, the errors of the body and the
+        # permission
+        assert operation['parameters'] == [
+            {
+                'name': 'id',
+                'in': 'path',
+                'required': True,
+                'schema': {'type': 'integer', 'minimum': 0},
+            }
+        ]
+        assert {'400', '403'} <= set(operation['responses'])
+        assert operation['operationId'] == 'BookRest_put'
+
+    def test_every_write_with_a_body_schema(self):
+        # the writes whose view validates its body with a schema
+        # (schemas.base.body_validator)
+        from fastapi.routing import APIRoute
+
+        document = self._document()
+        app = create_fastapi_app({})
+        for route in app.router.routes:
+            if not isinstance(route, APIRoute):
+                continue
+            schema = getattr(route.endpoint, 'body_schema', None)
+            path = re.sub(r':\w+}', '}', route.path)
+            if schema is not None and path in document['paths']:
+                for method in route.methods:
+                    operation = document['paths'][path][method.lower()]
+                    assert 'requestBody' in operation, (path, method)
+
+    def test_geometries(self):
+        schemas = self._document()['components']['schemas']
+        geometries = [
+            prop
+            for schema in schemas.values()
+            for name, prop in schema.get('properties', {}).items()
+            if name in ('geom', 'geom_detail')
+        ]
+        assert geometries
+        assert all('GeoJSON' in prop['description'] for prop in geometries)
+
+
+class TestDocumentResponses:
+    def _document(self):
+        return _client({'api.openapi': 'true'}).get('/openapi.json').json
+
+    def _schema(self, document, path):
+        responses = document['paths'][path]['get']['responses']
+        return responses['200']['content']['application/json']['schema']
+
+    def test_answers_of_the_reads(self):
+        document = self._document()
+        for path, name in (
+            ('/routes', 'Documents'),
+            ('/routes/{id}', 'Document'),
+            ('/routes/{id}/{lang}/{version_id}', 'Version'),
+            ('/images', 'Documents'),
+            ('/maps/{id}', 'Document'),
+        ):
+            assert self._schema(document, path) == {
+                '$ref': f'#/components/schemas/{name}'
+            }, path
+
+    def test_license(self):
+        schemas = self._document()['components']['schemas']
+        assert schemas['Document']['properties']['license'] == {
+            '$ref': '#/components/schemas/License'
+        }
+        # the other fields of a document depend on its type
+        assert schemas['Document']['additionalProperties'] is True
+        assert set(schemas['License']['properties']) == {
+            'id',
+            'url',
+            'attribution_url',
+        }
+        assert schemas['License']['type'] == ['object', 'null']
+
+    def test_other_reads_left_open(self):
+        # the info of a document is not a document
+        document = self._document()
+        assert self._schema(document, '/routes/{id}/{lang}/info') == {}

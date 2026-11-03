@@ -89,6 +89,7 @@ def include_document_type(
         )
 
     listing.described = True
+    listing.response_schema = 'Documents'
 
     def document(
         request: Request,
@@ -119,6 +120,7 @@ def include_document_type(
 
     # described in the OpenAPI document (see web.openapi)
     document.described = True
+    document.response_schema = 'Document'
 
     # read by the route inventory of the contract tests (routes.txt)
     listing.permission = listing_permission
@@ -181,6 +183,7 @@ def include_document_type(
             return serve_view(request, user, [typed_values(validated)], version_rest)
 
         version.described = True
+        version.response_schema = 'Version'
         path = f'/{prefix}/{{id:int}}/{{lang}}/{{version_id:int}}'
         app.add_api_route(
             path,
@@ -214,7 +217,24 @@ def include_write(app, path, http_method, view_class, method):
 
     # read by the route inventory of the contract tests (routes.txt)
     endpoint.permission = permission
-    app.add_api_route(path, endpoint, methods=[http_method])
+    schema = _body_schema(validators)
+    if schema is not None:
+        # described in the OpenAPI document with its body (see web.openapi)
+        endpoint.described = True
+        endpoint.body_schema = schema
+    app.add_api_route(
+        path,
+        endpoint,
+        methods=[http_method],
+        operation_id=f'{view_class.__name__}_{method}',
+        tags=[path.strip('/').split('/')[0]],
+    )
+
+
+def _body_schema(validators):
+    """Return the schema of the body a route validates, or None."""
+    # set by schemas.base.body_validator
+    return next((v.schema for v in validators if hasattr(v, 'schema')), None)
 
 
 def include_document_writes(app, prefix, rest, create=True):
