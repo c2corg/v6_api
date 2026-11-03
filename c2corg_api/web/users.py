@@ -146,13 +146,9 @@ def following(
     request: Request,
     user: User,
     _: _checks('authenticated', JSON),
-    lang: Annotated[
-        Lang | None, Query(alias='pl', description='Checked, not used.')
-    ] = None,
 ):
     """Return the users the authenticated user follows."""
-    validated = {'lang': lang}
-    return serve_read(request, user, [typed_values(validated)], read_following)
+    return serve_read(request, user, [], read_following)
 
 
 def is_following_user(
