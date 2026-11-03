@@ -2,8 +2,7 @@
 # Served with
 #   gunicorn -k uvicorn_worker.UvicornWorker c2corg_api.asgi:app
 # The settings and the logging come from the .ini file named by
-# C2C_API_CONFIG, production.ini by default, as `--paste production.ini`
-# reads them for the WSGI application.
+# C2C_API_CONFIG, production.ini by default.
 
 import os
 

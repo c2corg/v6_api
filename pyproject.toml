@@ -44,8 +44,6 @@ dependencies = [
     # the ASGI server, run by gunicorn: -k uvicorn_worker.UvicornWorker
     "uvicorn==0.54.0",
     "uvicorn-worker==0.4.0",
-    # loads the application and the settings of the .ini files
-    "PasteDeploy==3.1.0",
     "python-dotenv==1.2.4",
     # Discourse API client
     "pydiscourse==1.7.0",
@@ -64,9 +62,6 @@ dev = [
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
 ]
-
-[project.entry-points."paste.app_factory"]
-main = "c2corg_api:main"
 
 [project.scripts]
 initialize_c2corg_api_db = "c2corg_api.scripts.initializedb:main"
