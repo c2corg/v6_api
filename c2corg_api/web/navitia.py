@@ -1,6 +1,6 @@
 """The Navitia routes: journeys, isochrones, and the jobs of the journey searches."""
-# The routes call the view classes of views/ through the adapter of
-# web.compat, as the document routes do (#2365). Their parameters are
+# The routes call the functions of views/ through web.handlers, as the
+# document routes do (#2365). Their parameters are
 # declared (#2512): the required ones are checked for their presence only, as
 # their validators did, and the views read them all in the query string.
 
@@ -21,7 +21,7 @@ from c2corg_api.views.navitia import (
     start_journey_reachable_waypoints,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_read
+from c2corg_api.web.handlers import serve_read
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 

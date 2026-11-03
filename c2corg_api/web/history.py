@@ -1,6 +1,6 @@
 """The histories: of a document, of the document changes, of the associations."""
-# The routes call the view classes of views/ through the adapter of
-# web.compat, as the document routes do (#2365). Their parameters are typed
+# The routes call the functions of views/ through web.handlers, as the
+# document routes do (#2365). Their parameters are typed
 # (#2512).
 
 from typing import Annotated
@@ -16,7 +16,7 @@ from c2corg_api.views.document_changes import read_document_changes
 from c2corg_api.views.document_history import read_document_history
 from c2corg_api.views.feed import MAX_PAGE_LIMIT
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_read, typed_values
+from c2corg_api.web.handlers import serve_read, typed_values
 from c2corg_api.web.params import (
     ChangesToken,
     DocumentId,

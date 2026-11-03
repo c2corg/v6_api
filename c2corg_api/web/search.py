@@ -26,8 +26,8 @@ from c2corg_api.views.user_profile import user_profile_documents_config
 from c2corg_api.views.waypoint import waypoint_documents_config
 from c2corg_api.views.xreport import xreport_documents_config
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import validate_query
 from c2corg_api.web.db import request_session
+from c2corg_api.web.handlers import validate_query
 from c2corg_api.web.params import Lang, Limit, Offset
 
 # the result keys and the document types, in the order of the answer

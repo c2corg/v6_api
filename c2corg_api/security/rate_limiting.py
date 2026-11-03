@@ -108,7 +108,7 @@ def _check_anonymous_rate_limit(request, settings, bucket):
 
 def rate_limit_error(request, settings):
     """Return the error answering a write request over its rate limit, or None."""
-    # web.compat calls it in the transaction of the request: the counters it
+    # web.handlers calls it in the transaction of the request: the counters it
     # updates are committed with the request, also when it answers an error.
     # Only write requests are considered for rate limiting.
     if request.method not in ['POST', 'PUT', 'DELETE']:

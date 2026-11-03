@@ -1,5 +1,5 @@
 """The actions on documents: merge, protect, revert, mask versions, delete."""
-# The routes call the functions of views/ through web.compat, with the
+# The routes call the functions of views/ through web.handlers, with the
 # checks their decorators declare (see web.documents.include_document_writes).
 
 from c2corg_api.views.document_delete import delete_document, delete_document_locale

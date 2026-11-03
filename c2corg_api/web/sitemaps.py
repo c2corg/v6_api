@@ -1,6 +1,6 @@
 """The sitemaps: as JSON for the UI, and as XML for the search engines."""
-# The routes call the view classes of views/ through the adapter of
-# web.compat, as the document routes do (#2365). Their parameters are typed
+# The routes call the functions of views/ through web.handlers, as the
+# document routes do (#2365). Their parameters are typed
 # (#2512).
 
 from typing import Annotated
@@ -10,7 +10,7 @@ from fastapi import Depends, Path, Request
 from c2corg_api.views.sitemap import list_sitemaps, read_sitemap
 from c2corg_api.views.sitemap_xml import list_sitemaps_xml, read_sitemap_xml
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_read, typed_values
+from c2corg_api.web.handlers import serve_read, typed_values
 from c2corg_api.web.params import DocType, natural
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
