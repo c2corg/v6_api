@@ -53,89 +53,91 @@ def validate_document(request, **kwargs):
         )
 
 
-@resource(path='/tags/add')
-class DocumentTagRest(BaseView):
-    @restricted_json_view(
-        validators=[body_validator(DocumentTagSchema), validate_document],
-    )
-    def post(self):
-        """Tag the given document as todo.
+@restricted_json_view(
+    validators=[body_validator(DocumentTagSchema), validate_document],
+)
+def tag_document(request):
+    """Tag the given document as todo.
 
-        Creates a tag relation, so that the authenticated user is marking the given
-        document as todo.
+    Creates a tag relation, so that the authenticated user is marking the given
+    document as todo.
 
 
-        Request:
-            `POST` `/tags/add`
+    Request:
+        `POST` `/tags/add`
 
-        Request body:
-            {'document_id': @document_id@}
-        """
-        document_id = self.request.validated['document_id']
-        document_type = ROUTE_TYPE
-        user_id = self.request.authenticated_userid
+    Request body:
+        {'document_id': @document_id@}
+    """
+    document_id = request.validated['document_id']
+    document_type = ROUTE_TYPE
+    user_id = request.authenticated_userid
 
-        if get_tag_relation(user_id, document_id):
-            raise HTTPBadRequest('This document is already tagged.')
+    if get_tag_relation(user_id, document_id):
+        raise HTTPBadRequest('This document is already tagged.')
 
-        DBSession.add(
-            DocumentTag(
-                user_id=user_id, document_id=document_id, document_type=document_type
-            )
+    DBSession.add(
+        DocumentTag(
+            user_id=user_id, document_id=document_id, document_type=document_type
         )
+    )
+    DBSession.add(
+        DocumentTagLog(
+            user_id=user_id,
+            document_id=document_id,
+            document_type=document_type,
+            is_creation=True,
+        )
+    )
+
+    notify_es_syncer(request.registry.queue_config)
+
+    return {}
+
+
+tag_document.view_name = 'DocumentTagRest.post'
+
+
+@restricted_json_view(
+    validators=[body_validator(DocumentTagSchema), validate_document],
+)
+def untag_document(request):
+    """Untag the given document.
+
+    Request:
+        `POST` `/tags/remove`
+
+    Request body:
+        {'document_id': @document_id@}
+
+    """
+    document_id = request.validated['document_id']
+    document_type = ROUTE_TYPE
+    user_id = request.authenticated_userid
+    tag_relation = get_tag_relation(user_id, document_id)
+
+    if tag_relation:
+        DBSession.delete(tag_relation)
         DBSession.add(
             DocumentTagLog(
                 user_id=user_id,
                 document_id=document_id,
                 document_type=document_type,
-                is_creation=True,
+                is_creation=False,
             )
         )
+    else:
+        log.warning(
+            f'tried to delete not existing tag relation ({user_id}, {document_id})'
+        )
+        raise HTTPBadRequest('This document has no such tag.')
 
-        notify_es_syncer(self.request.registry.queue_config)
+    notify_es_syncer(request.registry.queue_config)
 
-        return {}
+    return {}
 
 
-@resource(path='/tags/remove')
-class DocumentUntagRest(BaseView):
-    @restricted_json_view(
-        validators=[body_validator(DocumentTagSchema), validate_document],
-    )
-    def post(self):
-        """Untag the given document.
-
-        Request:
-            `POST` `/tags/remove`
-
-        Request body:
-            {'document_id': @document_id@}
-
-        """
-        document_id = self.request.validated['document_id']
-        document_type = ROUTE_TYPE
-        user_id = self.request.authenticated_userid
-        tag_relation = get_tag_relation(user_id, document_id)
-
-        if tag_relation:
-            DBSession.delete(tag_relation)
-            DBSession.add(
-                DocumentTagLog(
-                    user_id=user_id,
-                    document_id=document_id,
-                    document_type=document_type,
-                    is_creation=False,
-                )
-            )
-        else:
-            log.warning(
-                f'tried to delete not existing tag relation ({user_id}, {document_id})'
-            )
-            raise HTTPBadRequest('This document has no such tag.')
-
-        notify_es_syncer(self.request.registry.queue_config)
-
-        return {}
+untag_document.view_name = 'DocumentUntagRest.post'
 
 
 @resource(path='/tags/has/{document_id}')
