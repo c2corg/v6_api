@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.expression import and_
 
+from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user import Purpose, User
@@ -14,7 +15,9 @@ log = logging.getLogger(__name__)
 
 def purge_account(test_session=None):
     now = datetime.now(UTC)
-    session = sessionmaker()() if not test_session else test_session
+    # a plain session bound to the engine of DBSession (it is configured by the
+    # scheduler): `sessionmaker()()` alone has no bind and fails with SQLAlchemy 2
+    session = test_session or sessionmaker(bind=DBSession.get_bind())()
 
     def delete(cls, attr, ids):
         session.query(cls).filter(attr.in_(ids)).delete(synchronize_session=False)
