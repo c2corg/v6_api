@@ -38,7 +38,7 @@ A [Dev Container](https://containers.dev/) configuration is provided in the `.de
    - Install all Python dependencies
    - Generate the configuration files
    - Start the dev database (a lightweight anonymized extract of the production data, restored from the image `ghcr.io/c2corg/c2corg-dev-db`) and create the test database
-   - Create the Elasticsearch index and fill it from the database
+   - Start Elasticsearch with the index already built for that database (`ghcr.io/c2corg/c2corg-dev-es`), and rebuild it from the database if it was made by a different version of the indexing code
 
 4. You're ready to go! See [Running the API](#running-the-api), [Running tests](#running-tests), and [Linting](#linting) below.
 

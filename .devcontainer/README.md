@@ -37,12 +37,14 @@ documents, a few hundred accounts, the stop areas), restored at the first start 
 [`scripts/dev-database`](../scripts/dev-database/README.md) for what it contains and how it is built.
 
 - Accounts (password `c2c` for all): `moderator`, `user`, `blocked`, `unvalidated`.
-- The Elasticsearch index is created and filled from the database by the setup script (a few minutes the
-  first time); the data of both services lives in the Docker volumes `postgres_data` and `es_data`.
+- Elasticsearch comes from the image `ghcr.io/c2corg/c2corg-dev-es`, published with the database and
+  already indexed. The setup script keeps that index if it was built by the same indexing code as your
+  checkout (see `es_index_fingerprint`); otherwise it rebuilds it from the database (a few minutes). The
+  data of both services lives in the Docker volumes `postgres_data` and `es_data`.
 - To get a fresh database and index, rebuild the container after removing these two volumes (the
   names are prefixed by the Compose project): `docker volume rm <project>_postgres_data <project>_es_data`.
-- A newer image is used after removing the `postgres_data` volume and pulling it
-  (`docker compose pull postgresql`).
+- Newer images are used after removing the two volumes and pulling them
+  (`docker compose pull postgresql elasticsearch`).
 
 ## Common commands
 

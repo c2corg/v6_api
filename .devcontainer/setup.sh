@@ -94,12 +94,24 @@ echo "==> Initializing the Elasticsearch index..."
 # creates the index by itself when documents arrive, without the search mappings, and the search finds nothing.
 initialize_c2corg_api_es development.ini
 
-# Fill it from the database (a few minutes), unless it already contains documents. The first request often
-# times out on a cold Elasticsearch, hence the retries.
+# The Elasticsearch image already contains the index of the dev database. It is kept if it was built by
+# this version of the indexing code (the fingerprint stored with it is compared with the one of the code);
+# otherwise, or if it is empty, it is rebuilt from the database (a few minutes).
 ES_COUNT=$(curl -s "http://elasticsearch:9200/c2corg/_count" | sed -n 's/.*"count":\([0-9]*\).*/\1/p')
+REBUILD=1
 if [ "${ES_COUNT:-0}" -gt 0 ]; then
-  echo "  The index already contains ${ES_COUNT} documents"
-else
+  if es_index_fingerprint check development.ini; then
+    echo "  The index contains ${ES_COUNT} documents and is up to date"
+    REBUILD=
+  else
+    echo "  Rebuilding the index with the current indexing code"
+    curl -s -XDELETE "http://elasticsearch:9200/c2corg" > /dev/null
+    initialize_c2corg_api_es development.ini
+  fi
+fi
+
+if [ -n "$REBUILD" ]; then
+  # The first request often times out on a cold Elasticsearch, hence the retries.
   for attempt in 1 2 3; do
     fill_es_index development.ini && break
     if [ "$attempt" = 3 ]; then
@@ -109,6 +121,7 @@ else
     echo "  fill_es_index failed (attempt ${attempt}), retrying in 10s..."
     sleep 10
   done
+  es_index_fingerprint store development.ini
 fi
 
 echo ""

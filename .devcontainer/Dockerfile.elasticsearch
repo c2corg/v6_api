@@ -1,3 +1,0 @@
-FROM docker.io/elasticsearch:2.4.6
-
-RUN /usr/share/elasticsearch/bin/plugin install --batch analysis-icu
