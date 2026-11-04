@@ -2,6 +2,7 @@ import datetime
 from unittest.mock import patch
 
 from c2corg_api.models.user import User
+from c2corg_api.tests import errors_of, invalid_parameters
 from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_documents import POINT, DocumentContractTest
 
@@ -19,17 +20,17 @@ class TestErrors(DocumentContractTest):
     @contract(('POST', '/waypoints'))
     def test_invalid_body(self):
         body = dict(WAYPOINT, locales=[{'lang': 'en'}], waypoint_type='nothing')
-        response = self.post('/waypoints', body, user='contributor', status=400)
+        response = self.post('/waypoints', body, user='contributor', status=422)
         check_snapshot('error_invalid_body', response)
-        names = {error['name'] for error in response.json['errors']}
+        names = {error['name'] for error in errors_of(response.json)}
         assert names == {'locales.0.title', 'waypoint_type'}
-        assert {e['location'] for e in response.json['errors']} == {'body'}
+        assert {e['location'] for e in errors_of(response.json)} == {'body'}
 
     @contract(('GET', '/waypoints'))
     def test_invalid_querystring(self):
-        response = self.get('/waypoints', params={'offset': 'invalid'}, status=400)
+        response = self.get('/waypoints', params={'offset': 'invalid'}, status=422)
         check_snapshot('error_invalid_querystring', response)
-        assert response.json['errors'][0]['location'] == 'querystring'
+        assert invalid_parameters(response) == [('query', 'offset', 'invalid offset')]
 
     @contract(('GET', '/waypoints/{id}'))
     def test_invalid_id(self):
@@ -172,14 +173,15 @@ class TestErrors(DocumentContractTest):
 
     @contract(('GET', '/books/{id}'))
     def test_another_origin_with_an_invalid_lang(self):
-        # the origin is the first validator: its error comes with the others
+        # the origin is checked first: a request from another origin is
+        # refused (400), whatever its parameters (not a 422)
         response = self.app.get(
             '/books/1',
             params={'l': 'xx'},
             headers={'Origin': 'https://evil.example.org'},
             status=400,
         )
-        assert [e['name'] for e in response.json['errors']] == ['Origin', 'lang']
+        assert [e['name'] for e in response.json['errors']] == ['Origin']
 
     @contract(('POST', '/waypoints'))
     def test_rate_limited(self):

@@ -66,22 +66,22 @@ class TestNavitiaRestParams(BaseTestCase):
             # missing to
             self.app.get(
                 '/navitia/journeys?from=5.0;45.0&datetime=20260116T115100&datetime_represents=departure',
-                status=400,
+                status=422,
             )
             # missing from
             self.app.get(
                 '/navitia/journeys?to=5.0;45.0&datetime=20260116T115100&datetime_represents=departure',
-                status=400,
+                status=422,
             )
             # missing datetime
             self.app.get(
                 '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime_represents=departure',
-                status=400,
+                status=422,
             )
             # missing datetime_represents
             self.app.get(
                 '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=20260116T115100',
-                status=400,
+                status=422,
             )
 
     def test_journey_invalid_coordinate_format(self):
@@ -523,35 +523,35 @@ class TestNavitiaRestParams(BaseTestCase):
                 self.app.get(
                     base_url
                     + '/start?&datetime_represents=departure&from=5.677893899999996%3B45.1929973&walking_speed=1.12&max_walking_duration_to_pt=4464',  # noqa
-                    status=400,
+                    status=422,
                 )
 
                 # missing datetime represents
                 self.app.get(
                     base_url
                     + '/start?datetime=20260122T143500&from=5.677893899999996%3B45.1929973&walking_speed=1.12&max_walking_duration_to_pt=4464',  # noqa
-                    status=400,
+                    status=422,
                 )
 
                 # missing from
                 self.app.get(
                     base_url
                     + '/start?datetime=20260122T143500&datetime_represents=departure&walking_speed=1.12&max_walking_duration_to_pt=4464',  # noqa
-                    status=400,
+                    status=422,
                 )
 
                 # missing walking speed
                 self.app.get(
                     base_url
                     + '/start?datetime=20260122T143500&datetime_represents=departure&from=5.677893899999996%3B45.1929973&max_walking_duration_to_pt=4464',  # noqa
-                    status=400,
+                    status=422,
                 )
 
                 # missing max_walking_duration_to_pt
                 self.app.get(
                     base_url
                     + '/start?datetime=20260122T143500&datetime_represents=departure&from=5.677893899999996%3B45.1929973&walking_speed=1.12',  # noqa
-                    status=400,
+                    status=422,
                 )
 
     # /navitia/journeyreachableroutes/progress endpoint

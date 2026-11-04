@@ -1,6 +1,7 @@
 from c2corg_api.models.stoparea import Stoparea
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
+from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.views import BaseDocumentTestRest
 
 
@@ -154,7 +155,5 @@ class TestWaypointStopareaRest(BaseDocumentTestRest):
 
     def test_get_info_lang_not_found(self):
         """Test getting info with an invalid lang."""
-        response = self.app.get('/waypoints_stopareas/1/invalid/info', status=400)
-
-        # Updated to match actual JSON response format
-        assert response.json_body['errors'][0]['description'] == 'invalid lang'
+        response = self.app.get('/waypoints_stopareas/1/invalid/info', status=422)
+        assert invalid_parameters(response) == [('path', 'lang', 'invalid lang')]

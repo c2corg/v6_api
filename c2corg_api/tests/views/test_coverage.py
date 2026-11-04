@@ -1,5 +1,6 @@
 from c2corg_api.models.coverage import Coverage
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.views import BaseTestRest
 
 POLYGON = (
@@ -69,13 +70,13 @@ class TestCoverageLookup(BaseTestRest):
         assert response.json is None
 
     def test_missing_parameters(self):
-        response = self.app.get('/getcoverage', status=400)
-        names = [e['name'] for e in response.json['errors']]
+        response = self.app.get('/getcoverage', status=422)
+        names = [name for _, name, _ in invalid_parameters(response)]
         assert names == ['lon', 'lat']
 
     def test_invalid_parameters(self):
-        response = self.app.get('/getcoverage?lon=x&lat=nan', status=400)
-        names = [e['name'] for e in response.json['errors']]
+        response = self.app.get('/getcoverage?lon=x&lat=nan', status=422)
+        names = [name for _, name, _ in invalid_parameters(response)]
         assert names == ['lon', 'lat']
 
 

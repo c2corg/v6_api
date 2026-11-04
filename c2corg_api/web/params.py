@@ -9,6 +9,7 @@ import math
 from typing import Annotated, Any
 
 from fastapi import Path
+from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from pydantic import BeforeValidator, WithJsonSchema
 from pydantic_core import PydanticCustomError
@@ -182,28 +183,15 @@ ChangesToken = Annotated[
 DocumentId = Annotated[Id, Path(description='The document id.')]
 PathLang = Annotated[Lang, Path(description='The language of the locale.')]
 
-# the name of a parameter in the errors, when it is not the parameter itself
-_ERROR_NAMES = {'l': 'lang', 'pl': 'lang'}
-
 
 async def validation_error(request, exc: RequestValidationError):
-    """Answer invalid parameters as the validators did: 400, `querystring`."""
+    """Answer invalid parameters with FastAPI's 422 (#2546)."""
     from c2corg_api.web.cors import origin_allowed
 
-    errors = []
-    endpoint = request.scope.get('endpoint')
-    missing = getattr(endpoint, 'missing_message', 'invalid {name}')
-    # the origin is checked first, as Cornice did, and its error comes with
-    # those of the parameters
+    # the origin is checked first, as Cornice did: a request from an origin
+    # that is not allowed is refused (400, see web.cors), whatever its
+    # parameters
     origin = request.headers.get('Origin')
     if origin and not origin_allowed(origin):
-        errors.append(('header', 'Origin', f'{origin} not allowed'))
-    for error in exc.errors():
-        name = str(error['loc'][-1])
-        # a required parameter that is missing: `invalid <name>`, as
-        # check_get_for_integer_property answered, or the message of its route
-        message = error['msg']
-        if error['type'] == 'missing':
-            message = missing.format(name=name)
-        errors.append(('querystring', _ERROR_NAMES.get(name, name), message))
-    return error_response(errors)
+        return error_response([('header', 'Origin', f'{origin} not allowed')])
+    return await request_validation_exception_handler(request, exc)

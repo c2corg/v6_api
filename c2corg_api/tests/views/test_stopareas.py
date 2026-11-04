@@ -1,4 +1,5 @@
 from c2corg_api.models.stoparea import Stoparea
+from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.views import BaseDocumentTestRest
 
 
@@ -47,8 +48,8 @@ class TestStopareaRest(BaseDocumentTestRest):
         assert len(result['documents']) == 1
 
     def test_collection_get_invalid_page(self):
-        response = self.app.get('/stopareas?page_id=0&nb_items=x', status=400)
-        names = [e['name'] for e in response.json['errors']]
+        response = self.app.get('/stopareas?page_id=0&nb_items=x', status=422)
+        names = [name for _, name, _ in invalid_parameters(response)]
 
         assert names == ['page_id', 'nb_items']
 
@@ -110,7 +111,5 @@ class TestStopareaInfoRest(BaseDocumentTestRest):
 
     def test_get_info_stoparea_lang_not_found(self):
         """Test getting info for a stoparea that doesn't exist."""
-        response = self.app.get('/stopareas/1/invalid/info', status=400)
-        result = response.json
-
-        assert result['errors'][0]['description'] == 'invalid lang'
+        response = self.app.get('/stopareas/1/invalid/info', status=422)
+        assert invalid_parameters(response) == [('path', 'lang', 'invalid lang')]

@@ -75,14 +75,14 @@ def configure_cors_policy(settings):
 
 
 def invalid_json_body(request):
-    """Return why the JSON body of a request is invalid, or None."""
+    """Return the error of the invalid JSON body of a request, or None."""
     content_type = request.content_type or ''
     if not request.body or not re.match(r'^application/(.*?)json$', content_type):
         return None
     try:
         json.loads(request.body.decode(request.charset or 'utf-8'))
     except ValueError as e:
-        return str(e)
+        return e
     return None
 
 

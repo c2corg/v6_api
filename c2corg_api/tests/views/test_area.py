@@ -35,7 +35,7 @@ class TestAreaRest(BaseDocumentTestRest):
         assert 'geometry' not in doc
 
     def test_get_collection_paginated(self):
-        self.app.get('/areas?offset=invalid', status=400)
+        self.app.get('/areas?offset=invalid', status=422)
 
         self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
 

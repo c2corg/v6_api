@@ -214,7 +214,7 @@ class TestDocumentMergeRest(BaseTestRest):
         self.app_post_json(self._prefix, {}, headers=headers, status=403)
 
     def test_empty_body(self):
-        self._post({}, 400)
+        self._post({}, 422)
 
     def test_same_document(self):
         self._post(

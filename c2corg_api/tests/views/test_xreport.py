@@ -21,6 +21,7 @@ from c2corg_api.models.xreport import (
     Xreport,
     XreportLocale,
 )
+from c2corg_api.tests import errors_of
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
 from c2corg_api.views.document import create_new_version
@@ -40,7 +41,7 @@ class TestXreportRest(BaseDocumentTestRest):
         assert 'geometry' in doc
 
     def test_get_collection_paginated(self):
-        self.app.get('/xreports?offset=invalid', status=400)
+        self.app.get('/xreports?offset=invalid', status=422)
 
         self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
 
@@ -249,8 +250,8 @@ class TestXreportRest(BaseDocumentTestRest):
         self.get_info_404()
 
     def test_post_error(self):
-        body = self.post_error({}, user='moderator')
-        errors = body.get('errors')
+        body = self.post_error({}, user='moderator', status=422)
+        errors = errors_of(body)
         assert len(errors) == 1
         self.assertCorniceRequired(errors[0], 'event_activity')
 
@@ -301,7 +302,7 @@ class TestXreportRest(BaseDocumentTestRest):
             },
             'locales': [{'title': "Lac d'Annecy", 'lang': 'en'}],
         }
-        errors = self.post_wrong_geom_type(body)
+        errors = self.post_wrong_geom_type(body, status=422)
         assert (
             errors[0]['description']
             == "Invalid geometry type. Expected: ['POINT']. Got: LINESTRING."
@@ -324,8 +325,8 @@ class TestXreportRest(BaseDocumentTestRest):
                 'locales': [{'title': "Lac d'Annecy", 'lang': 'en'}],
             }
             body[key] = value
-            body = self.post_error(body, user='moderator')
-            errors = body.get('errors')
+            body = self.post_error(body, user='moderator', status=422)
+            errors = errors_of(body)
             assert len(errors) == 1
             self.assertCorniceNotInEnum(errors[0], key)
 

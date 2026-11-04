@@ -3,6 +3,7 @@ from unittest.mock import patch
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.search import elasticsearch_config, search_documents
+from c2corg_api.tests import errors_of
 from c2corg_api.tests.views.test_user import BaseUserTestRest, forum_username_tests
 
 
@@ -106,8 +107,9 @@ class TestUserAccountRest(BaseUserTestRest):
             if value is False:
                 self.post_json_with_contributor(url, body, status=200)
             else:
-                json = self.post_json_with_contributor(url, body, status=400)
-                assert json['errors'][0]['description'] == value
+                # the schema checks it: 422
+                json = self.post_json_with_contributor(url, body, status=422)
+                assert errors_of(json)[0]['description'] == value
 
     def test_update_account_forum_username_unique(self):
         url = '/users/account'
@@ -123,9 +125,9 @@ class TestUserAccountRest(BaseUserTestRest):
             'forum_username': 'Unique',
         }
         json = self.post_json_with_contributor(
-            url, data, status=400, username='contributor2'
+            url, data, status=422, username='contributor2'
         )
-        assert json['errors'][0]['description'] == 'Already used forum name'
+        assert errors_of(json)[0]['description'] == 'Already used forum name'
 
     def test_update_account_forum_username_discourse_up(self):
         self._update_account_field_discourse_up('forum_username', 'changed')
@@ -153,7 +155,7 @@ class TestUserAccountRest(BaseUserTestRest):
             'currentpassword': self.global_passwords['contributor'],
             'newpassword': 'alllowercase1',  # nosec - test fixture
         }
-        body = self.post_json_with_contributor('/users/account', data, status=400)
+        body = self.post_json_with_contributor('/users/account', data, status=422)
         self.assertErrorsContain(body, 'newpassword')
 
     def test_update_account_newpassword_success(self):

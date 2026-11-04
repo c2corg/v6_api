@@ -23,6 +23,7 @@ from c2corg_api.models.outing import (
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.tests import errors_of
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
 from c2corg_api.views.document import create_new_version
@@ -97,7 +98,7 @@ class TestOutingRest(BaseDocumentTestRest):
         assert response.json['total'] == 1
 
     def test_get_collection_paginated(self):
-        self.app.get('/outings?offset=invalid', status=400)
+        self.app.get('/outings?offset=invalid', status=422)
 
         self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
 
@@ -295,14 +296,14 @@ class TestOutingRest(BaseDocumentTestRest):
         self.get_info_404()
 
     def test_post_error(self):
-        body = self.post_error({})
-        errors = body.get('errors')
-        assert len(errors) == 5
+        # an invalid body: its errors alone, the rules of the API (the
+        # associations) need a valid body (see test_post_missing_route_user_id)
+        body = self.post_error({}, status=422)
+        errors = errors_of(body)
+        assert len(errors) == 3
         self.assertCorniceRequired(self.get_error(errors, 'activities'), 'activities')
         self.assertCorniceRequired(self.get_error(errors, 'date_end'), 'date_end')
         self.assertCorniceRequired(self.get_error(errors, 'date_start'), 'date_start')
-        self.assertError(errors, 'associations.users', 'at least one user required')
-        self.assertError(errors, 'associations.routes', 'at least one route required')
 
     def test_post_empty_activities_error(self):
         body = self.post_error(
@@ -314,10 +315,11 @@ class TestOutingRest(BaseDocumentTestRest):
                     'routes': [{'document_id': self.route.document_id}],
                     'users': [{'document_id': self.global_userids['contributor']}],
                 },
-            }
+            },
+            status=422,
         )
-        errors = body.get('errors')
-        assert len(errors) == 3
+        errors = errors_of(body)
+        assert len(errors) == 1
         error = self.get_error(errors, 'activities')
         assert error.get('description') == 'Shorter than minimum length 1'
 
@@ -342,11 +344,11 @@ class TestOutingRest(BaseDocumentTestRest):
                 'users': [{'document_id': self.global_userids['contributor']}],
             },
         }
-        body = self.post_error(body_post)
+        body = self.post_error(body_post, status=422)
         # the schema rejects the body, so the association checks also miss
         # their data and add their own errors
         self.assertError(
-            body.get('errors'),
+            errors_of(body),
             'activities.0',
             f'"cooking" is not one of {", ".join(activities)}',
         )
@@ -373,8 +375,8 @@ class TestOutingRest(BaseDocumentTestRest):
             },
         }
         body = self.post_missing_title(body_post)
-        errors = body.get('errors')
-        assert len(errors) == 3
+        errors = errors_of(body)
+        assert len(errors) == 1
 
     def test_post_date_start_is_tomorrow(self):
         later = (date.today() + timedelta(days=2)).strftime('%Y-%m-%d')

@@ -35,8 +35,8 @@ def _without_head(route):
     return route
 
 
-# the error envelope the API answers, as Cornice did (web.errors), until the
-# move to FastAPI's validation errors (#2546)
+# the error envelope the API answers, as Cornice did (web.errors): for the
+# refusals (403...) and the errors of the rules of the API (#2546)
 ERRORS = {
     'title': 'Errors',
     'type': 'object',
@@ -50,13 +50,11 @@ ERRORS = {
                 'properties': {
                     'location': {
                         'type': 'string',
-                        'description': '`querystring` (also for the path '
-                        'parameters), `body` or `header`.',
+                        'description': '`body` or `header`.',
                     },
                     'name': {
                         'type': 'string',
-                        'description': 'The parameter or field, e.g. `lang` or '
-                        '`locales.0.title`.',
+                        'description': 'The field, e.g. `locales.0.title`.',
                     },
                     'description': {'description': 'The message.'},
                 },
@@ -64,28 +62,28 @@ ERRORS = {
         },
     },
 }
-_INVALID = {
-    'description': 'Invalid parameters.',
+# a valid body that breaks a rule of the API (an association...)
+_REFUSED = {
+    'description': 'Not allowed by the rules of the API.',
     'content': {
         'application/json': {'schema': {'$ref': '#/components/schemas/Errors'}}
     },
 }
-# FastAPI's validation errors, which the API does not answer
-_FASTAPI_ERRORS = ('HTTPValidationError', 'ValidationError')
+# an invalid body, as FastAPI answers it
+_INVALID = {
+    'description': 'Validation Error',
+    'content': {
+        'application/json': {
+            'schema': {'$ref': '#/components/schemas/HTTPValidationError'}
+        }
+    },
+}
 
 
 def error_responses(document):
-    """Replace FastAPI's 422 answers with the 400 answers of the API."""
-    # FastAPI describes a 422 for every operation with parameters; the API
-    # answers their errors with a 400 and its envelope (web.params)
-    for operations in document.get('paths', {}).values():
-        for operation in operations.values():
-            responses = operation.get('responses', {})
-            if responses.pop('422', None) is not None:
-                responses['400'] = _INVALID
+    """Add the error envelope of the API to the schemas."""
+    # the invalid parameters are FastAPI's 422, as it describes them
     schemas = document.setdefault('components', {}).setdefault('schemas', {})
-    for name in _FASTAPI_ERRORS:
-        schemas.pop(name, None)
     schemas['Errors'] = ERRORS
     return document
 
@@ -209,7 +207,8 @@ def request_bodies(document, routes):
                 _path_parameters(route, operation)
             )
             responses = operation['responses']
-            responses['400'] = _INVALID
+            responses['422'] = _INVALID
+            responses['400'] = _REFUSED
             if route.endpoint.permission:
                 responses['403'] = {
                     'description': 'Not allowed: authentication or a role '

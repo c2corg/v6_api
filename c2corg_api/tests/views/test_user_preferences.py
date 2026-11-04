@@ -2,6 +2,7 @@ from c2corg_api.models.area import Area
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.feed import FilterArea
 from c2corg_api.models.user import User
+from c2corg_api.tests import errors_of
 from c2corg_api.tests.views import BaseTestRest
 
 
@@ -74,12 +75,12 @@ class TestUserFilterPreferencesRest(BaseTestRest):
 
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(
-            self._prefix, request_body, status=400, headers=headers
+            self._prefix, request_body, status=422, headers=headers
         )
 
         body = response.json
-        assert body.get('status') == 'error'
-        errors = body.get('errors')
+
+        errors = errors_of(body)
 
         assert self.get_error(errors, 'activities.1') is not None
         assert self.get_error(errors, 'langs.1') is not None

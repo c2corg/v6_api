@@ -36,6 +36,28 @@ alembic_scripts_folder = os.path.realpath(
 )
 
 
+def errors_of(body):
+    """Return the errors of an answer as {location, name, description}."""
+    # the envelope of the API (400...), or FastAPI's 422 (#2546): its field
+    # as a dotted path, as the envelope named it
+    if 'detail' in body:
+        return [
+            {
+                'location': error['loc'][0],
+                'name': '.'.join(str(part) for part in error['loc'][1:]),
+                'description': error['msg'],
+            }
+            for error in body['detail']
+        ]
+    return body['errors']
+
+
+def invalid_parameters(response):
+    """Return the (location, name, message) of the errors of a 422 answer."""
+    # FastAPI's validation errors: `loc` is the location and the name
+    return [(*error['loc'], error['msg']) for error in response.json['detail']]
+
+
 def get_engine():
     return engine_from_config(settings, 'sqlalchemy.')
 

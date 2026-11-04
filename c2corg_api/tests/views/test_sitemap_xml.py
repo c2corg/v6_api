@@ -55,16 +55,19 @@ class TestSitemapXml(BaseTestRest):
 
     def test_get_sitemap_invalid_doc_type(self):
         response = self.app.get(
-            self._prefix + '/z/0.xml', headers={'Cookie': 'a=b'}, status=400
+            self._prefix + '/z/0.xml', headers={'Cookie': 'a=b'}, status=422
         )
         # the errors only, as for the JSON routes: not the request headers
-        assert response.json['errors'] == [
-            {
-                'location': 'querystring',
-                'name': 'doc_type',
-                'description': 'invalid doc_type',
-            }
-        ]
+        assert response.json == {
+            'detail': [
+                {
+                    'type': 'c2corg',
+                    'loc': ['path', 'doc_type'],
+                    'msg': 'invalid doc_type',
+                    'input': 'z',
+                }
+            ]
+        }
 
     def test_get_sitemap_invalid_page(self):
         # a page that is not a number: not found

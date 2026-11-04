@@ -36,7 +36,7 @@ class TestInvalidJson(BaseTestRest):
     @pytest.mark.parametrize(('method', 'path'), _write_routes())
     def test_invalid_json_body(self, method, path):
         # a body that is not JSON is an error of the client, answered as
-        # Cornice does: a 400, not an unexpected error
+        # FastAPI does: a 422, not an unexpected error
         headers = self.add_authorization_header(username='moderator')
         headers['Content-Type'] = 'application/json'
         response = self.app.request(
@@ -45,8 +45,9 @@ class TestInvalidJson(BaseTestRest):
         assert response.status_int != 500, response.body
         if (method, path) in WITHOUT_BODY:
             return
-        assert response.status_int == 400, response.body
-        # first: the views of outings and routes run more validators after it
-        error = response.json['errors'][0]
-        assert error['location'] == 'body'
-        assert error['description'].startswith('Invalid JSON: ')
+        assert response.status_int == 422, response.body
+        # alone: the validators of the rules of the API need a valid body
+        [error] = response.json['detail']
+        assert error['type'] == 'json_invalid'
+        assert error['loc'] == ['body', 1]
+        assert error['msg'] == 'JSON decode error'

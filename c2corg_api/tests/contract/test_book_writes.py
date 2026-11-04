@@ -1,3 +1,4 @@
+from c2corg_api.tests import errors_of
 from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_writes import WriteContractTest, writable
 
@@ -34,9 +35,9 @@ class TestBookWrites(WriteContractTest):
     @contract(CREATE)
     def test_create_invalid(self):
         body = {'book_types': ['no such type'], 'locales': []}
-        response = self.post('/books', body, user='contributor', status=400)
+        response = self.post('/books', body, user='contributor', status=422)
         check_snapshot('books_create_invalid', response)
-        assert [e['name'] for e in response.json['errors']] == ['book_types.0']
+        assert [e['name'] for e in errors_of(response.json)] == ['book_types.0']
 
     @contract(CREATE)
     def test_create_refused(self):

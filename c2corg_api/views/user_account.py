@@ -9,6 +9,7 @@ from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.user import Purpose, User
 from c2corg_api.schemas.base import DROP, Schema, body_validator
 from c2corg_api.schemas.types import Bool, OneOf, Str, email_check, function_check
+from c2corg_api.schemas.user import FORUM_USERNAME_LENGTH, forum_username_check
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views.resource import write
@@ -18,7 +19,6 @@ from c2corg_api.views.user import (
     VALIDATION_EXPIRE_DAYS,
     is_password_strong_enough,
     is_unused_user_attribute,
-    validate_forum_username,
 )
 
 log = logging.getLogger(__name__)
@@ -51,12 +51,13 @@ class UpdateAccountSchema(Schema):
     ) = DROP
     name: Str(min_length=3) = DROP
     forum_username: Str(
-        max_length=25,
+        **FORUM_USERNAME_LENGTH,
         checks=[
+            forum_username_check,
             function_check(
                 partial(is_unused_user_attribute, 'forum_username', lowercase=True),
                 'Already used forum name',
-            )
+            ),
         ],
     ) = DROP
     # Verifies an *existing* credential, so it must accept whatever was
@@ -78,7 +79,7 @@ def get_user(request):
 
 
 @write(
-    validators=[body_validator(UpdateAccountSchema), validate_forum_username],
+    validators=[body_validator(UpdateAccountSchema)],
     permission='authenticated',
     json=True,
 )

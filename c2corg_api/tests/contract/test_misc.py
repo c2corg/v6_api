@@ -2,6 +2,7 @@ import json
 from unittest.mock import Mock, patch
 
 from c2corg_api.models.user import User
+from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.contract import ContractTest, check_snapshot, contract
 from c2corg_api.tests.contract.test_documents import POINT, DocumentContractTest
 from c2corg_api.tests.search.__init__ import reset_search_index
@@ -44,16 +45,12 @@ class TestSearchErrors(ContractTest):
     @contract(('GET', '/search'))
     def test_invalid_parameters(self):
         response = self.get(
-            '/search', params={'q': 'x', 'limit': 'many', 'pl': 'xx'}, status=400
+            '/search', params={'q': 'x', 'limit': 'many', 'pl': 'xx'}, status=422
         )
         check_snapshot('search_invalid_parameters', response)
-        assert response.json['errors'] == [
-            {
-                'location': 'querystring',
-                'name': 'limit',
-                'description': 'invalid limit',
-            },
-            {'location': 'querystring', 'name': 'lang', 'description': 'invalid lang'},
+        assert invalid_parameters(response) == [
+            ('query', 'limit', 'invalid limit'),
+            ('query', 'pl', 'invalid lang'),
         ]
 
 
@@ -84,9 +81,12 @@ class TestFeeds(DocumentContractTest):
     def test_feed_invalid_parameters(self):
         # an invalid pagination token, not a password
         params = {'token': 'abc', 'limit': 'x'}  # nosec B105
-        response = self.get('/feed', params=params, status=400)
+        response = self.get('/feed', params=params, status=422)
         check_snapshot('feed_invalid', response)
-        assert [e['name'] for e in response.json['errors']] == ['limit', 'token']
+        assert [name for _, name, _ in invalid_parameters(response)] == [
+            'limit',
+            'token',
+        ]
 
     @contract(('GET', '/personal-feed'))
     def test_personal_feed_needs_a_user(self):
@@ -117,9 +117,9 @@ class TestFeeds(DocumentContractTest):
 
     @contract(('GET', '/profile-feed'))
     def test_profile_feed_without_user(self):
-        response = self.get('/profile-feed', status=400)
+        response = self.get('/profile-feed', status=422)
         check_snapshot('profile_feed_without_user', response)
-        assert [e['name'] for e in response.json['errors']] == ['u']
+        assert [name for _, name, _ in invalid_parameters(response)] == ['u']
 
 
 class TestSitemaps(DocumentContractTest):
@@ -146,17 +146,17 @@ class TestSitemaps(DocumentContractTest):
 
     @contract(('GET', '/sitemaps/{doc_type}/{i}'))
     def test_invalid_page(self):
-        response = self.get('/sitemaps/z/1', status=400)
+        response = self.get('/sitemaps/z/1', status=422)
         check_snapshot('sitemaps_invalid', response)
-        assert [e['name'] for e in response.json['errors']] == ['doc_type']
+        assert [name for _, name, _ in invalid_parameters(response)] == ['doc_type']
         # a page that is not a number: not found
         self.get('/sitemaps/w/x', status=404)
 
     @contract(('GET', '/sitemaps.xml/{doc_type}/{i}.xml'))
     def test_invalid_page_xml(self):
-        response = self.get('/sitemaps.xml/z/1.xml', status=400)
+        response = self.get('/sitemaps.xml/z/1.xml', status=422)
         check_snapshot('sitemaps_xml_invalid', response)
-        assert [e['name'] for e in response.json['errors']] == ['doc_type']
+        assert [name for _, name, _ in invalid_parameters(response)] == ['doc_type']
         self.get('/sitemaps.xml/w/x.xml', status=404)
 
     @contract(

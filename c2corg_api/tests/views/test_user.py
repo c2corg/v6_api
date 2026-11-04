@@ -23,13 +23,14 @@ from c2corg_api.security.discourse_client import (
     get_discourse_client,
     set_discourse_client,
 )
+from c2corg_api.tests import errors_of
 from c2corg_api.tests.views import BaseTestRest
 
 forum_username_tests = {
     # min length
     'a': 'Shorter than minimum length 3',
     'a' * 3: False,
-    # max length (schema validation)
+    # max length
     'a' * 26: 'Longer than maximum length 25',
     'a' * 25: False,
     # valid characters
@@ -172,7 +173,7 @@ class TestUserRest(BaseUserTestRest):
             'email': 'some_user@camptocamp.org',
         }
         url = self._prefix + '/register'
-        self.app_post_json(url, request_body, status=400).json
+        self.app_post_json(url, request_body, status=422).json
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_register_forum_username_validity(self, _send_email):
@@ -190,8 +191,9 @@ class TestUserRest(BaseUserTestRest):
             if value is False:
                 self.app_post_json(url, request_body, status=200).json
             else:
-                json = self.app_post_json(url, request_body, status=400).json
-                assert json['errors'][0]['description'] == value
+                # the schema checks it: 422
+                json = self.app_post_json(url, request_body, status=422).json
+                assert errors_of(json)[0]['description'] == value
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_register_forum_username_unique(self, _send_email):
@@ -273,8 +275,8 @@ class TestUserRest(BaseUserTestRest):
             'email': 'some_useratcamptocamp.org',
         }
         url = self._prefix + '/register'
-        json = self.app_post_json(url, request_body, status=400).json
-        assert json['errors'][0]['description'] == 'Invalid email address'
+        json = self.app_post_json(url, request_body, status=422).json
+        assert errors_of(json)[0]['description'] == 'Invalid email address'
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_register_discourse_up(self, _send_email):
@@ -324,11 +326,15 @@ class TestUserRest(BaseUserTestRest):
         self.assertErrorsContain(body, 'email')
         self.assertErrorsContain(body, 'username')
 
-        # Require username, password and email attributes
-        body = self.app_post_json(url, {}, status=400).json
+        # Require username and email attributes (the schema: 422)
+        body = self.app_post_json(url, {}, status=422).json
         self.assertErrorsContain(body, 'email')
         self.assertErrorsContain(body, 'username')
-        self.assertErrorsContain(body, 'password')
+        # and the password (its validator, with a valid body: 400)
+        without_password = {**request_body, 'username': 'other', 'email': 'o@x.org'}
+        del without_password['password']
+        body = self.app_post_json(url, without_password, status=400).json
+        self.assertErrorsContain(body, 'password', 'Required')
 
         # Usage of utf8 password
         request_utf8 = {

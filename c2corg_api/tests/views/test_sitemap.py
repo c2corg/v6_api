@@ -1,5 +1,6 @@
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.views import BaseTestRest
 
 
@@ -51,9 +52,10 @@ class TestSitemapRest(BaseTestRest):
         )
 
     def test_get_sitemap_invalid_doc_type(self):
-        response = self.app.get(self._prefix + '/z/0', status=400)
-        errors = response.json['errors']
-        self.assertError(errors, 'doc_type', 'invalid doc_type')
+        response = self.app.get(self._prefix + '/z/0', status=422)
+        assert invalid_parameters(response) == [
+            ('path', 'doc_type', 'invalid doc_type')
+        ]
 
     def test_get_sitemap_invalid_page(self):
         # a page that is not a number: not found

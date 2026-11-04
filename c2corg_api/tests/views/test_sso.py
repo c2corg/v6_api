@@ -9,6 +9,7 @@ from c2corg_api.security.discourse_client import (
     DisabledDiscourseClient,
     set_discourse_client,
 )
+from c2corg_api.tests import errors_of
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.sso import localized_now, sso_expire_from_now
 
@@ -43,10 +44,10 @@ class TestSsoSyncRest(BaseTestRest):
 
     def test_no_sso_key(self):
         request_body = {'external_id': '999', 'email': 'newuser@external.domain.net'}
-        body = self.app_post_json(self._url, request_body, status=400).json
-        errors = body.get('errors')
+        body = self.app_post_json(self._url, request_body, status=422).json
+        errors = errors_of(body)
         assert 'sso_key' == errors[0].get('name')
-        assert 'Required' == errors[0].get('description')
+        assert errors[0].get('description') == 'Field required'
 
     def test_forum_disabled(self):
         """Refuse to sync when the API runs without a forum, and create nothing."""
@@ -77,10 +78,10 @@ class TestSsoSyncRest(BaseTestRest):
 
     def test_no_external_id(self):
         request_body = {'sso_key': sso_key}
-        body = self.app_post_json(self._url, request_body, status=400).json
-        errors = body.get('errors')
+        body = self.app_post_json(self._url, request_body, status=422).json
+        errors = errors_of(body)
         assert 'external_id' == errors[0].get('name')
-        assert 'Required' == errors[0].get('description')
+        assert errors[0].get('description') == 'Field required'
 
     def test_new_user_no_email(self):
         request_body = {
@@ -90,7 +91,7 @@ class TestSsoSyncRest(BaseTestRest):
         body = self.app_post_json(self._url, request_body, status=400).json
         errors = body.get('errors')
         assert 'email' == errors[0].get('name')
-        assert 'Required' == errors[0].get('description')
+        assert errors[0].get('description') == 'Required'
 
     def test_new_user_existing_username(self):
         request_body = {
@@ -344,10 +345,10 @@ class TestSsoLoginRest(BaseTestRest):
         self.session.flush()
 
     def test_no_token(self):
-        body = self.app_post_json(self._url, status=400).json
-        errors = body.get('errors')
+        body = self.app_post_json(self._url, status=422).json
+        errors = errors_of(body)
         assert 'token' == errors[0].get('name')
-        assert 'Required' == errors[0].get('description')
+        assert errors[0].get('description') == 'Field required'
 
     def test_invalid_token(self):
         body = self.app_post_json(self._url, {'token': 'bad_token'}, status=403).json
