@@ -1,16 +1,19 @@
 """Fingerprint of the code which builds the Elasticsearch index.
 
-An index built by `fill_es_index` is only valid for the version of the code which built it (mappings,
-analyzers, the way documents are serialized). The dev database publication stores this fingerprint in
-the Elasticsearch it ships, and the dev container setup compares it with the one of the checked out
-code: if they differ, the index is rebuilt.
+An index built by `fill_es_index` is only valid for the version of the code which
+built it (mappings, analyzers, the way documents are serialized). The dev database
+publication stores this fingerprint in the Elasticsearch it ships, and the dev
+container setup compares it with the one of the checked out code: if they differ,
+the index is rebuilt.
 
 Usage: es_index_fingerprint <print|store|check> <config_uri>
 
-  print   prints the fingerprint of the code (no Elasticsearch needed, the config is not read)
-  store   stores it in the Elasticsearch, next to the index (to run after fill_es_index)
-  check   exit status 0 if the stored fingerprint is the one of the code, 1 if it differs,
-          2 if there is none
+  print   prints the fingerprint of the code (no Elasticsearch needed, the config is
+          not read)
+  store   stores it in the Elasticsearch, next to the index (to run after
+          fill_es_index)
+  check   exit status 0 if the stored fingerprint is the one of the code, 1 if it
+          differs, 2 if there is none
 """
 
 import hashlib
@@ -25,8 +28,9 @@ import c2corg_api
 from c2corg_api.config import get_appsettings, parse_vars, setup_logging
 from c2corg_api.search import configure_es_from_config, elasticsearch_config
 
-# Files (relative to the c2corg_api package) which decide what the index contains: its mappings and
-# analyzers, the serialization of the documents, and the way the index is filled and kept in sync.
+# Files (relative to the c2corg_api package) which decide what the index contains: its
+# mappings and analyzers, the serialization of the documents, and the way the index is
+# filled and kept in sync.
 SOURCES = (
     'search/__init__.py',
     'search/mapping.py',

@@ -16,7 +16,8 @@
 # private: making it public is done in the package settings on GitHub, it cannot be done from here.
 #
 # Variables: IMAGE (default ghcr.io/c2corg/c2corg-dev-db), ES_IMAGE (default ghcr.io/c2corg/c2corg-dev-es),
-# DRY_RUN=1 to stop before the push.
+# DRY_RUN=1 to stop before the push, PUSH="es" (or "db") to push only one of the two images
+# (default "db es").
 
 set -euo pipefail
 
@@ -24,6 +25,7 @@ DUMP=${1:?usage: publish.sh <dump> <tag>}
 TAG=${2:?usage: publish.sh <dump> <tag>}
 IMAGE=${IMAGE:-ghcr.io/c2corg/c2corg-dev-db}
 ES_IMAGE=${ES_IMAGE:-ghcr.io/c2corg/c2corg-dev-es}
+PUSH=${PUSH:-db es}
 HERE=$(cd "$(dirname "$0")" && pwd)
 REPO=$(cd "$HERE/../.." && pwd)
 export MSYS_NO_PATHCONV=1 # Git Bash on Windows
@@ -143,12 +145,13 @@ if [ -n "${DRY_RUN:-}" ]; then
 fi
 
 echo
-echo "About to push $IMAGE:$TAG and $ES_IMAGE:$TAG, and their \`latest\` ($(du -h "$DUMP" | cut -f1) dump)."
+echo "About to push (${PUSH}): $IMAGE:$TAG and $ES_IMAGE:$TAG, and their \`latest\` ($(du -h "$DUMP" | cut -f1) dump)."
 echo "Once pushed, the package is private until it is made public in its settings on GitHub."
 read -r -p "Push? [y/N] " answer
 [ "$answer" = y ] || { echo "not pushed"; exit 0; }
 
-for image in "$IMAGE" "$ES_IMAGE"; do
+for kind in $PUSH; do
+  case "$kind" in db) image=$IMAGE ;; es) image=$ES_IMAGE ;; *) echo "PUSH: unknown image '$kind'" >&2; exit 1 ;; esac
   docker tag "$image:$TAG" "$image:latest"
   docker push "$image:$TAG"
   docker push "$image:latest"
