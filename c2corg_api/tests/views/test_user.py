@@ -493,7 +493,7 @@ class TestUserRest(BaseUserTestRest):
         self.app_post_json(url, request_body, status=200)
 
         # Then simulate a scheduled call to purge accounts
-        purge_account(self.session)
+        purge_account()
 
         # The user should still exist
         user = query.one()
@@ -503,7 +503,7 @@ class TestUserRest(BaseUserTestRest):
         self.session.commit()
 
         # The user should be removed
-        purge_account(self.session)
+        purge_account()
         assert 0 == query.count()
 
     # @mark.jobs
@@ -520,54 +520,16 @@ class TestUserRest(BaseUserTestRest):
         now = datetime.utcnow()
 
         # Token should still exist
-        purge_token(self.session)
+        purge_token()
         assert 1 == query.count()
 
         # Expire token
         token = query.one()
         token.expire = now
+        self.session.commit()
 
         # The token should be removed
-        purge_token(self.session)
-        assert 0 == query.count()
-
-    @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_purge_accounts_scheduler_session(self, _send_email):
-        """The scheduled job has no test session: it must bind its own."""
-        from datetime import UTC, datetime
-
-        from c2corg_api.jobs.purge_non_activated_accounts import purge_account
-
-        request_body = {
-            'username': 'test',
-            'forum_username': 'testf',
-            'name': 'Max Mustermann',
-            'password': 'Super$ecret1',
-            'email': 'some_user@camptocamp.org',
-        }
-        self.app_post_json('/users/register', request_body, status=200)
-
-        query = self.session.query(User).filter(User.username == 'test')
-        query.one().validation_nonce_expire = datetime(2020, 1, 1, tzinfo=UTC)
-        self.session.commit()
-
-        purge_account()
-
-        assert 0 == query.count()
-
-    def test_purge_tokens_scheduler_session(self):
-        """The scheduled job has no test session: it must bind its own."""
-        from datetime import UTC, datetime
-
-        from c2corg_api.jobs.purge_expired_tokens import purge_token
-
-        token_value = self.login('moderator', status=200).json['token']
-        query = self.session.query(Token).filter(Token.value == token_value)
-        query.one().expire = datetime(2020, 1, 1, tzinfo=UTC)
-        self.session.commit()
-
         purge_token()
-
         assert 0 == query.count()
 
     def login(

@@ -1,7 +1,7 @@
 import logging
 from datetime import UTC, datetime
 
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.token import Token
@@ -9,13 +9,13 @@ from c2corg_api.models.token import Token
 log = logging.getLogger(__name__)
 
 
-def purge_token(test_session=None):
+def purge_token():
     now = datetime.now(UTC)
-    # a plain session bound to the engine of DBSession (it is configured by the
-    # scheduler): `sessionmaker()()` alone has no bind and fails with SQLAlchemy 2
-    session = test_session or sessionmaker(bind=DBSession.get_bind())()
 
-    try:
+    # A plain session on the engine configured on DBSession by
+    # c2corg_api/scripts/jobs/scheduler.py: DBSession itself cannot be committed
+    # outside of the transaction manager, and `Session()` alone has no bind.
+    with Session(DBSession.get_bind()) as session:
         count = (
             session.query(Token)
             .filter(Token.expire <= now)
@@ -25,6 +25,3 @@ def purge_token(test_session=None):
         log.info('Deleting %d expired token', count)
         if count > 0:
             session.commit()
-    finally:
-        if not test_session:
-            session.close()
