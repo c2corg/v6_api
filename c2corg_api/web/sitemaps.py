@@ -1,16 +1,16 @@
 """The sitemaps: as JSON for the UI, and as XML for the search engines."""
-# The routes call the view classes of views/ through the adapter of
-# web.compat, as the document routes do (#2365). Their parameters are typed
+# The routes call the functions of views/ through web.handlers, as the
+# document routes do (#2365). Their parameters are typed
 # (#2512).
 
 from typing import Annotated
 
 from fastapi import Depends, Path, Request
 
-from c2corg_api.views.sitemap import SitemapRest
-from c2corg_api.views.sitemap_xml import SitemapXml
+from c2corg_api.views.sitemap import list_sitemaps, read_sitemap
+from c2corg_api.views.sitemap_xml import list_sitemaps_xml, read_sitemap_xml
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_view, typed_values
+from c2corg_api.web.handlers import serve_read, typed_values
 from c2corg_api.web.params import DocType, natural
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
@@ -23,9 +23,9 @@ def include(app):
     methods = ['GET', 'HEAD']
     for path, endpoint, summary in (
         ('/sitemaps', sitemap_index, 'The sitemaps of each document type.'),
-        ('/sitemaps/{doc_type}/{i}', sitemap, 'The documents of a sitemap.'),
+        ('/sitemaps/{doc_type}/{i:int}', sitemap, 'The documents of a sitemap.'),
         ('/sitemaps.xml', sitemap_index_xml, 'The sitemap index, in XML.'),
-        ('/sitemaps.xml/{doc_type}/{i}.xml', sitemap_xml, 'A sitemap, in XML.'),
+        ('/sitemaps.xml/{doc_type}/{i:int}.xml', sitemap_xml, 'A sitemap, in XML.'),
     ):
         app.add_api_route(
             path,
@@ -39,25 +39,25 @@ def include(app):
 
 def sitemap_index(request: Request, user: User):
     """Return the URLs of the sitemaps."""
-    return serve_view(request, user, [], SitemapRest, 'collection_get')
+    return serve_read(request, user, [], list_sitemaps)
 
 
 # `i` before `doc_type`: its error comes first, as its validator did
 def sitemap(request: Request, user: User, i: Page, doc_type: DocumentType):
     """Return the pages of a sitemap."""
     validated = {'i': i, 'doc_type': doc_type}
-    return serve_view(request, user, [typed_values(validated)], SitemapRest)
+    return serve_read(request, user, [typed_values(validated)], read_sitemap)
 
 
 def sitemap_index_xml(request: Request, user: User):
     """Return the sitemap index file."""
-    return serve_view(request, user, [], SitemapXml, 'collection_get')
+    return serve_read(request, user, [], list_sitemaps_xml)
 
 
 def sitemap_xml(request: Request, user: User, i: Page, doc_type: DocumentType):
     """Return a sitemap file."""
     validated = {'i': i, 'doc_type': doc_type}
-    return serve_view(request, user, [typed_values(validated)], SitemapXml)
+    return serve_read(request, user, [typed_values(validated)], read_sitemap_xml)
 
 
 for endpoint in (sitemap_index, sitemap, sitemap_index_xml, sitemap_xml):

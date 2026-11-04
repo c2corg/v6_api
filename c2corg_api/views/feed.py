@@ -11,125 +11,99 @@ from c2corg_api.models.feed import DocumentChange, FilterArea, FollowedUser
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.views import restricted_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import document_configs
-from c2corg_api.views.resource import BaseView, resource, view
-from c2corg_api.views.validation import (
-    validate_preferred_lang_param,
-    validate_token_pagination,
-    validate_user_id,
-)
 
 DEFAULT_PAGE_LIMIT = 10
 MAX_PAGE_LIMIT = 50
 
 
-@resource(path='/feed')
-class FeedRest(BaseView):
-    @view(validators=[validate_preferred_lang_param, validate_token_pagination])
-    def get(self):
-        """Get the public homepage feed.
+def read_feed(request):
+    """Get the public homepage feed.
 
-        Request:
-            `GET` `/feed[?pl=...][&limit=...][&token=...]`
+    Request:
+        `GET` `/feed[?pl=...][&limit=...][&token=...]`
 
-        Parameters:
-            `pl=...` (optional)
-            When set only the given locale will be included (if available).
-            Otherwise all locales will be returned.
+    Parameters:
+        `pl=...` (optional)
+        When set only the given locale will be included (if available).
+        Otherwise all locales will be returned.
 
-            `limit=...` (optional)
-            How many entries should be returned (default: 10).
-            The maximum is 50.
+        `limit=...` (optional)
+        How many entries should be returned (default: 10).
+        The maximum is 50.
 
-            `token=...` (optional)
-            The pagination token. When requesting a feed, the response includes
-            a `pagination_token`. This token is to be used to request the next
-            page.
+        `token=...` (optional)
+        The pagination token. When requesting a feed, the response includes
+        a `pagination_token`. This token is to be used to request the next
+        page.
 
-            For more information about "continuation token pagination", see:
-            http://www.servicedenuages.fr/pagination-continuation-token (fr)
+        For more information about "continuation token pagination", see:
+        http://www.servicedenuages.fr/pagination-continuation-token (fr)
 
-        """
-        lang, token_id, token_time, limit = get_params(self.request)
-        ignore_admin_changes_filter = get_ignore_admin_entries_filter(self.request)
-        changes = get_changes_of_feed(
-            token_id, token_time, limit, ignore_admin_changes_filter
+    """
+    lang, token_id, token_time, limit = get_params(request)
+    ignore_admin_changes_filter = get_ignore_admin_entries_filter(request)
+    changes = get_changes_of_feed(
+        token_id, token_time, limit, ignore_admin_changes_filter
+    )
+    return load_feed(changes, lang)
+
+
+def read_personal_feed(request):
+    """Get the personal homepage feed for the authenticated user.
+
+    Request:
+        `GET` `/personal-feed[?pl=...][&limit=...][&token=...]`
+
+    Parameters: See above for '/feed'.
+
+    """
+    user_id = request.authenticated_userid
+    lang, token_id, token_time, limit = get_params(request)
+    ignore_admin_changes_filter = get_ignore_admin_entries_filter(request)
+    changes = get_changes_of_personal_feed(
+        user_id, token_id, token_time, limit, ignore_admin_changes_filter
+    )
+    return load_feed(changes, lang)
+
+
+def read_profile_feed(request):
+    """Get the user profile feed for a user.
+
+    Request:
+        `GET` `/profile-feed?u={user_id}[&pl=...][&limit=...][&token=...]`
+
+    Parameters:
+        `u={user_id}` (required)
+        The id of the user whose profile feed is requested.
+
+        For the other parameters, see above for '/feed'.
+
+    """
+    lang, token_id, token_time, limit = get_params(request)
+
+    # load the requested user
+    requested_user_id = request.validated['u']
+    requested_user = (
+        DBSession.query(User)
+        .filter(User.id == requested_user_id)
+        .filter(User.email_validated)
+        .options(load_only(User.id, User.is_profile_public))
+        .first()
+    )
+
+    if not requested_user:
+        raise HTTPNotFound('user not found')
+    elif requested_user.is_profile_public or request.has_permission('authenticated'):
+        # only return the feed if authenticated or if the user marked
+        # the profile as public
+        changes = get_changes_of_profile_feed(
+            requested_user_id, token_id, token_time, limit
         )
         return load_feed(changes, lang)
-
-
-@resource(path='/personal-feed')
-class PersonalFeedRest(BaseView):
-    @restricted_view(
-        validators=[validate_preferred_lang_param, validate_token_pagination]
-    )
-    def get(self):
-        """Get the personal homepage feed for the authenticated user.
-
-        Request:
-            `GET` `/personal-feed[?pl=...][&limit=...][&token=...]`
-
-        Parameters: See above for '/feed'.
-
-        """
-        user_id = self.request.authenticated_userid
-        lang, token_id, token_time, limit = get_params(self.request)
-        ignore_admin_changes_filter = get_ignore_admin_entries_filter(self.request)
-        changes = get_changes_of_personal_feed(
-            user_id, token_id, token_time, limit, ignore_admin_changes_filter
-        )
-        return load_feed(changes, lang)
-
-
-@resource(path='/profile-feed')
-class ProfileFeedRest(BaseView):
-    @view(
-        validators=[
-            validate_preferred_lang_param,
-            validate_token_pagination,
-            validate_user_id,
-        ]
-    )
-    def get(self):
-        """Get the user profile feed for a user.
-
-        Request:
-            `GET` `/profile-feed?u={user_id}[&pl=...][&limit=...][&token=...]`
-
-        Parameters:
-            `u={user_id}` (required)
-            The id of the user whose profile feed is requested.
-
-            For the other parameters, see above for '/feed'.
-
-        """
-        lang, token_id, token_time, limit = get_params(self.request)
-
-        # load the requested user
-        requested_user_id = self.request.validated['u']
-        requested_user = (
-            DBSession.query(User)
-            .filter(User.id == requested_user_id)
-            .filter(User.email_validated)
-            .options(load_only(User.id, User.is_profile_public))
-            .first()
-        )
-
-        if not requested_user:
-            raise HTTPNotFound('user not found')
-        elif requested_user.is_profile_public or self.request.has_permission(
-            'authenticated'
-        ):
-            # only return the feed if authenticated or if the user marked
-            # the profile as public
-            changes = get_changes_of_profile_feed(
-                requested_user_id, token_id, token_time, limit
-            )
-            return load_feed(changes, lang)
-        else:
-            raise HTTPForbidden('no permission to see the feed')
+    else:
+        raise HTTPForbidden('no permission to see the feed')
 
 
 def get_params(request, default_page_limit=DEFAULT_PAGE_LIMIT):

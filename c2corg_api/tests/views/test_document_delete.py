@@ -50,7 +50,7 @@ from c2corg_api.models.xreport import (
     XreportLocale,
 )
 from c2corg_api.tests.views import BaseTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version, update_version
 
 
 class TestDocumentDeleteRest(BaseTestRest):
@@ -128,13 +128,13 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.add(self.waypoint4)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.waypoint1, user_id)
+        create_new_version(self.waypoint1, user_id)
         update_feed_document_create(self.waypoint1, user_id)
-        DocumentRest.create_new_version(self.waypoint2, user_id)
+        create_new_version(self.waypoint2, user_id)
         update_feed_document_create(self.waypoint2, user_id)
-        DocumentRest.create_new_version(self.waypoint3, user_id)
+        create_new_version(self.waypoint3, user_id)
         update_feed_document_create(self.waypoint3, user_id)
-        DocumentRest.create_new_version(self.waypoint4, user_id)
+        create_new_version(self.waypoint4, user_id)
         update_feed_document_create(self.waypoint4, user_id)
         self.session.flush()
 
@@ -219,11 +219,11 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.add(self.route3)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.route1, user_id)
+        create_new_version(self.route1, user_id)
         update_feed_document_create(self.route1, user_id)
-        DocumentRest.create_new_version(self.route2, user_id)
+        create_new_version(self.route2, user_id)
         update_feed_document_create(self.route2, user_id)
-        DocumentRest.create_new_version(self.route3, user_id)
+        create_new_version(self.route3, user_id)
         update_feed_document_create(self.route3, user_id)
 
         self._add_association(self.waypoint1, self.route3)
@@ -254,7 +254,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.add(self.outing1)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.outing1, user_id)
+        create_new_version(self.outing1, user_id)
         update_feed_document_create(self.outing1, user_id)
         self._add_association(self.route1, self.outing1)
         self.session.flush()
@@ -276,7 +276,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.add(self.outing1b)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.outing1b, user_id)
+        create_new_version(self.outing1b, user_id)
         self.session.flush()
 
         outing2_geometry = DocumentGeometry(
@@ -301,7 +301,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.add(self.outing2)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.outing2, user_id)
+        create_new_version(self.outing2, user_id)
         update_feed_document_create(self.outing2, user_id)
         self._add_association(self.route2, self.outing2)
         self._add_association(self.route3, self.outing2)
@@ -323,14 +323,14 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.add(self.article1)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.article1, user_id)
+        create_new_version(self.article1, user_id)
         update_feed_document_create(self.article1, user_id)
         self.session.flush()
 
         self.article1.locales[0].title = 'Some other article title'
         article1_lang = self.article1.locales[0].lang
         self.session.flush()
-        DocumentRest.update_version(
+        update_version(
             self.article1, user_id, 'new title', [UpdateType.LANG], [article1_lang]
         )
         self.session.flush()
@@ -354,7 +354,7 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # Make the article older than 24h old
         written_at = datetime.datetime(2016, 1, 1, 0, 0, 0)
-        DocumentRest.create_new_version(self.article2, user_id, written_at)
+        create_new_version(self.article2, user_id, written_at)
         update_feed_document_create(self.article2, user_id)
         self.session.flush()
 
@@ -373,7 +373,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.add(self.book1)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.book1, user_id)
+        create_new_version(self.book1, user_id)
         update_feed_document_create(self.book1, user_id)
         self._add_association(self.book1, self.route2)
         self._add_association(self.book1, self.route3)
@@ -400,7 +400,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.add(self.xreport1)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.xreport1, user_id)
+        create_new_version(self.xreport1, user_id)
         update_feed_document_create(self.xreport1, user_id)
         self._add_association(self.outing2, self.xreport1)
         self._add_association(self.route3, self.xreport1)
@@ -423,7 +423,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.session.add(self.image1)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.image1, user_id)
+        create_new_version(self.image1, user_id)
         self._add_association(self.outing1, self.image1)
         self._add_association(self.route3, self.image1)
         self._add_association(self.waypoint3, self.image1)
@@ -450,7 +450,7 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         self.image1.filename = 'image1.1.jpg'
         self.session.flush()
-        DocumentRest.update_version(
+        update_version(
             self.image1, user_id, 'changed filename', [UpdateType.FIGURES], []
         )
         self.session.flush()
@@ -529,7 +529,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
     def test_delete_non_existing_document(self):
-        self._delete(-9999999, 400)
+        self._delete(9999999, 404)
 
     def test_delete_main_waypoint(self):
         """Test that a main waypoint cannot be deleted."""
@@ -544,7 +544,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         """Test that a former main waypoint can be deleted."""
         self.route3.main_waypoint_id = self.waypoint3.document_id
         self.session.flush()
-        DocumentRest.update_version(
+        update_version(
             self.route3,
             self.global_userids['contributor'],
             'Update',
@@ -554,7 +554,7 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         self.route3.main_waypoint_id = self.waypoint1.document_id
         self.session.flush()
-        DocumentRest.update_version(
+        update_version(
             self.route3,
             self.global_userids['contributor'],
             'Update',
@@ -991,7 +991,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
     def test_delete_locale_non_existing_document(self):
-        self._delete_locale(-9999999, 'fr', 400)
+        self._delete_locale(9999999, 'fr', 404)
 
     def test_delete_locale_non_existing_locale(self):
         self._delete_locale(self.waypoint1.document_id, 'de', 400)
@@ -1087,7 +1087,7 @@ class TestDocumentDeleteRest(BaseTestRest):
             WaypointLocale(lang='de', title='Granier', description='...')
         )
         self.session.flush()
-        DocumentRest.update_version(
+        update_version(
             self.waypoint3,
             self.global_userids['contributor'],
             'add de',

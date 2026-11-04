@@ -94,7 +94,7 @@ class TestRegistrationWrites(UserContractTest):
             {
                 'location': 'body',
                 'name': 'Error',
-                'description': ['Account not validated yet'],
+                'description': 'Account not validated yet',
             }
         ]
 

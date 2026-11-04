@@ -146,15 +146,18 @@ class TestSitemaps(DocumentContractTest):
 
     @contract(('GET', '/sitemaps/{doc_type}/{i}'))
     def test_invalid_page(self):
-        response = self.get('/sitemaps/z/x', status=400)
+        response = self.get('/sitemaps/z/1', status=400)
         check_snapshot('sitemaps_invalid', response)
-        assert [e['name'] for e in response.json['errors']] == ['i', 'doc_type']
+        assert [e['name'] for e in response.json['errors']] == ['doc_type']
+        # a page that is not a number: not found
+        self.get('/sitemaps/w/x', status=404)
 
     @contract(('GET', '/sitemaps.xml/{doc_type}/{i}.xml'))
     def test_invalid_page_xml(self):
-        response = self.get('/sitemaps.xml/z/x.xml', status=400)
+        response = self.get('/sitemaps.xml/z/1.xml', status=400)
         check_snapshot('sitemaps_xml_invalid', response)
-        assert [e['name'] for e in response.json['errors']] == ['i', 'doc_type']
+        assert [e['name'] for e in response.json['errors']] == ['doc_type']
+        self.get('/sitemaps.xml/w/x.xml', status=404)
 
     @contract(
         ('GET', '/sitemaps/{doc_type}/{i}'), ('GET', '/sitemaps.xml/{doc_type}/{i}.xml')

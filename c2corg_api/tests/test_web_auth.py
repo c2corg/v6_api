@@ -20,7 +20,7 @@ def whoami(user: Annotated[CurrentUser | None, Depends(current_user)]):
 
 class TestAuthParity(BaseTestRest):
     def setUp(self):
-        fastapi_app = self.app.app.fastapi_app
+        fastapi_app = self.app.app
         if not any(
             getattr(r, 'path', None) == PROBE for r in fastapi_app.router.routes
         ):

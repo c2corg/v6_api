@@ -57,7 +57,7 @@ class TestStopareaRest(BaseDocumentTestRest):
         response = self.app.get('/stopareas/999999', status=404)
         result = response.json
 
-        assert result['error'] == 'Stoparea not found'
+        assert result['errors'][0]['description'] == 'Stoparea not found'
 
     def test_get_stoparea_found(self):
         """Test getting a stoparea that exists."""
@@ -95,7 +95,7 @@ class TestStopareaInfoRest(BaseDocumentTestRest):
         response = self.app.get('/stopareas/999999/fr/info', status=404)
         result = response.json
 
-        assert result['error'] == 'Stoparea not found'
+        assert result['errors'][0]['description'] == 'Stoparea not found'
 
     def test_get_info_stoparea_found(self):
         """Test getting info for a stoparea that exists."""

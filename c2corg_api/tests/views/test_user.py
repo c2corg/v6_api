@@ -494,7 +494,7 @@ class TestUserRest(BaseUserTestRest):
         self.app_post_json(url, request_body, status=200)
 
         # Then simulate a scheduled call to purge accounts
-        purge_account(self.session)
+        purge_account()
 
         # The user should still exist
         user = query.one()
@@ -504,7 +504,7 @@ class TestUserRest(BaseUserTestRest):
         self.session.commit()
 
         # The user should be removed
-        purge_account(self.session)
+        purge_account()
         assert 0 == query.count()
 
     # @mark.jobs
@@ -521,15 +521,16 @@ class TestUserRest(BaseUserTestRest):
         now = datetime.utcnow()
 
         # Token should still exist
-        purge_token(self.session)
+        purge_token()
         assert 1 == query.count()
 
         # Expire token
         token = query.one()
         token.expire = now
+        self.session.commit()
 
         # The token should be removed
-        purge_token(self.session)
+        purge_token()
         assert 0 == query.count()
 
     def login(

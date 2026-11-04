@@ -4,14 +4,11 @@ from c2corg_api import DBSession
 from c2corg_api.models.feed import FollowedUser
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
-from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import user_profile_documents_config
-from c2corg_api.views.resource import BaseView, resource
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     validate_body_user_id,
-    validate_id,
-    validate_preferred_lang_param,
 )
 
 log = logging.getLogger(__name__)
@@ -30,8 +27,10 @@ def get_follower_relation(followed_user_id, follower_user_id):
     )
 
 
-@restricted_json_view(
+@write(
     validators=[body_validator(FollowSchema), validate_body_user_id],
+    permission='authenticated',
+    json=True,
 )
 def follow_user(request):
     """Follow the given user.
@@ -60,11 +59,10 @@ def follow_user(request):
     return {}
 
 
-follow_user.view_name = 'UserFollowRest.post'
-
-
-@restricted_json_view(
+@write(
     validators=[body_validator(FollowSchema), validate_body_user_id],
+    permission='authenticated',
+    json=True,
 )
 def unfollow_user(request):
     """Unfollow the given user.
@@ -91,61 +89,52 @@ def unfollow_user(request):
     return {}
 
 
-unfollow_user.view_name = 'UserUnfollowRest.post'
+def read_following_user(request):
+    """Check if the authenticated user follows the given user.
+
+    Request:
+        `GET` `users/following-user/{user_id}`
+
+    Example response:
+
+        {'is_following': true}
+
+    """
+    followed_user_id = request.validated['id']
+    follower_user_id = request.authenticated_userid
+    follower_relation = get_follower_relation(followed_user_id, follower_user_id)
+
+    return {'is_following': follower_relation is not None}
 
 
-@resource(path='/users/following-user/{id}')
-class UserFollowingUserRest(BaseView):
-    @restricted_json_view(validators=[validate_id])
-    def get(self):
-        """Check if the authenticated user follows the given user.
+def read_following(request):
+    """Get the users that the authenticated user is following.
 
-        Request:
-            `GET` `users/following-user/{user_id}`
+    Request:
+        `GET` `/users/following`
 
-        Example response:
+    Example response:
 
-            {'is_following': true}
+        {
+            'following': [
+                {
+                    'document_id': 123,
+                    ...
+                }
+            ]
+        }
+    """
+    follower_user_id = request.authenticated_userid
 
-        """
-        followed_user_id = self.request.validated['id']
-        follower_user_id = self.request.authenticated_userid
-        follower_relation = get_follower_relation(followed_user_id, follower_user_id)
+    followed_user_ids = (
+        DBSession.query(FollowedUser.followed_user_id)
+        .filter(FollowedUser.follower_user_id == follower_user_id)
+        .all()
+    )
+    followed_user_ids = [user_id for (user_id,) in followed_user_ids]
 
-        return {'is_following': follower_relation is not None}
+    followed_users = get_documents_for_ids(
+        followed_user_ids, None, user_profile_documents_config
+    ).get('documents')
 
-
-@resource(path='/users/following')
-class UserFollowingRest(BaseView):
-    @restricted_json_view(validators=[validate_preferred_lang_param])
-    def get(self):
-        """Get the users that the authenticated user is following.
-
-        Request:
-            `GET` `/users/following`
-
-        Example response:
-
-            {
-                'following': [
-                    {
-                        'document_id': 123,
-                        ...
-                    }
-                ]
-            }
-        """
-        follower_user_id = self.request.authenticated_userid
-
-        followed_user_ids = (
-            DBSession.query(FollowedUser.followed_user_id)
-            .filter(FollowedUser.follower_user_id == follower_user_id)
-            .all()
-        )
-        followed_user_ids = [user_id for (user_id,) in followed_user_ids]
-
-        followed_users = get_documents_for_ids(
-            followed_user_ids, None, user_profile_documents_config
-        ).get('documents')
-
-        return {'following': followed_users}
+    return {'following': followed_users}

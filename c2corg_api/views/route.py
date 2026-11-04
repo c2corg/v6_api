@@ -36,15 +36,12 @@ from c2corg_api.search.advanced_search import (
 )
 from c2corg_api.views import (
     get_best_locale,
-    restricted_json_view,
-    restricted_view,
     set_default_geom_from_associations,
     to_json_dict,
 )
 from c2corg_api.views.document import (
     LIMIT_DEFAULT,
     NUM_RECENT_OUTINGS,
-    DocumentRest,
     collection_get,
     create_document,
     make_validator_create,
@@ -53,24 +50,18 @@ from c2corg_api.views.document import (
     read_document,
 )
 from c2corg_api.views.document_associations import get_first_column
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import (
     outing_documents_config,
     route_documents_config,
     route_schema_adaptor,
 )
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.document_version import document_version
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     validate_associations,
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-    validate_version_id,
 )
 
 validate_route_create = make_validator_create(fields_route, 'activities', activities)
@@ -122,7 +113,7 @@ def validate_required_associations(request, **kwargs):
         )
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(RouteCreateSchema),
         validate_route_create,
@@ -130,6 +121,8 @@ def validate_required_associations(request, **kwargs):
         validate_required_associations,
         functools.partial(validate_main_waypoint, True),
     ],
+    permission='authenticated',
+    json=True,
 )
 def create_route(request):
     linked_waypoints = request.validated.get('associations', {}).get('waypoints', [])
@@ -141,10 +134,7 @@ def create_route(request):
     )
 
 
-create_route.view_name = 'RouteRest.collection_post'
-
-
-@restricted_json_view(
+@write(
     validators=[
         body_validator(RouteUpdateSchema),
         validate_id,
@@ -153,6 +143,8 @@ create_route.view_name = 'RouteRest.collection_post'
         validate_required_associations,
         functools.partial(validate_main_waypoint, False),
     ],
+    permission='authenticated',
+    json=True,
 )
 def update_route(request):
     return put_document(
@@ -164,18 +156,10 @@ def update_route(request):
     )
 
 
-update_route.view_name = 'RouteRest.put'
-
-
-@view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_routes(request):
     return collection_get(request, ROUTE_TYPE, route_documents_config)
 
 
-list_routes.view_name = 'RouteRest.collection_get'
-
-
-@view(validators=[validate_id, validate_lang_param, validate_cook_param])
 def get_route(request):
     return read_document(
         request,
@@ -186,9 +170,6 @@ def get_route(request):
         include_maps=True,
         set_custom_associations=set_recent_outings,
     )
-
-
-get_route.view_name = 'RouteRest.get'
 
 
 def set_recent_outings(route, lang):
@@ -218,24 +199,19 @@ def set_recent_outings(route, lang):
     )
 
 
-@resource(path='/routes/{id}/{lang}/{version_id}')
-class RouteVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveRoute,
-            ROUTE_TYPE,
-            ArchiveRouteLocale,
-            route_schema,
-            route_schema_adaptor,
-        )
+def get_route_version(request):
+    return document_version(
+        request,
+        ArchiveRoute,
+        ROUTE_TYPE,
+        ArchiveRouteLocale,
+        route_schema,
+        route_schema_adaptor,
+    )
 
 
-@resource(path='/routes/{id}/{lang}/info')
-class RouteInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(route_documents_config)
+def get_route_info(request):
+    return document_info(request, route_documents_config)
 
 
 # Update all route public transportation rating.
@@ -251,76 +227,63 @@ class RouteInfoRest(DocumentInfoRest):
 # set to true by default
 
 
-@restricted_view(permission='moderator')
+@write(permission='moderator', json=False)
 def update_public_transportation_ratings(request):
     waypoint_extrapolation = request.params.get('waypoint_extrapolation') or True
     update_all_pt_rating(waypoint_extrapolation)
 
 
-update_public_transportation_ratings.view_name = (
-    'RoutePublicTransportationRatingRest.get'
-)
+def list_reachable_routes(request):
+    """Return the reachable routes and their total.
 
+    Returns a list of object {documents: Route[], total: Integer} ->
+    documents: routes reachable within offset and limit
+    total: number of documents returned by query,
+    without offset and limit.
+    """
+    validated = request.validated
 
-@resource(path='/reachableroutes')
-class ReachableRouteRest(DocumentRest):
-    def __init__(self, request, context=None):
-        self.request = request
+    meta_params = {
+        'offset': validated.get('offset', 0),
+        'limit': validated.get('limit', LIMIT_DEFAULT),
+        'lang': validated.get('lang'),
+    }
 
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def get(self):
-        """Return the reachable routes and their total.
+    query, count = build_reachable_route_query(request.GET, meta_params)
 
-        Returns a list of object {documents: Route[], total: Integer} ->
-        documents: routes reachable within offset and limit
-        total: number of documents returned by query,
-        without offset and limit.
-        """
-        validated = self.request.validated
+    # route, areas in results: the query is the page already
+    results = [] if query is None else query.all()
 
-        meta_params = {
-            'offset': validated.get('offset', 0),
-            'limit': validated.get('limit', LIMIT_DEFAULT),
-            'lang': validated.get('lang'),
-        }
+    areas_id = set()
+    for _route, areas in results:
+        if areas is None:
+            continue
+        for area in areas:
+            area_id = area.get('document_id')
+            if area_id is not None:
+                areas_id.add(area_id)
 
-        query, count = build_reachable_route_query(self.request.GET, meta_params)
+    areas_objects = DBSession.query(Area).filter(Area.document_id.in_(areas_id)).all()
 
-        # route, areas in results: the query is the page already
-        results = [] if query is None else query.all()
+    areas_map = {area.document_id: area for area in areas_objects}
 
-        areas_id = set()
-        for _route, areas in results:
-            if areas is None:
-                continue
-            for area in areas:
-                area_id = area.get('document_id')
-                if area_id is not None:
-                    areas_id.add(area_id)
+    routes = []
+    for route, areas in results:
+        json_areas = []
+        if areas is None:
+            areas = []
 
-        areas_objects = (
-            DBSession.query(Area).filter(Area.document_id.in_(areas_id)).all()
-        )
+        for area in areas:
+            area_obj = areas_map.get(area.get('document_id'))
+            if area_obj:
+                json_areas.append(to_json_dict(area_obj, area_listing_schema))
 
-        areas_map = {area.document_id: area for area in areas_objects}
+        # assign JSON areas to the route
+        route.areas = json_areas
+        wp_dict = to_json_dict(route, route_schema, True)
+        routes.append(wp_dict)
 
-        routes = []
-        for route, areas in results:
-            json_areas = []
-            if areas is None:
-                areas = []
-
-            for area in areas:
-                area_obj = areas_map.get(area.get('document_id'))
-                if area_obj:
-                    json_areas.append(to_json_dict(area_obj, area_listing_schema))
-
-            # assign JSON areas to the route
-            route.areas = json_areas
-            wp_dict = to_json_dict(route, route_schema, True)
-            routes.append(wp_dict)
-
-        return {'documents': routes, 'total': count}
+    return {'documents': routes, 'total': count}
 
 
 def set_default_geometry(linked_waypoints, route, user_id):

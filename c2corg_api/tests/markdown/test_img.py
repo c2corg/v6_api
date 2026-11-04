@@ -1,5 +1,9 @@
 from c2corg_api.markdown import parse_code
-from c2corg_api.markdown.img import get_image_url, make_image_url_resolver
+from c2corg_api.markdown.img import (
+    get_image_url,
+    make_image_size_resolver,
+    make_image_url_resolver,
+)
 
 BASE_URL = 'https://media.example.org/'
 
@@ -81,3 +85,53 @@ class TestImageTagUrl:
         )
         assert 1 == html.count('c2c:url=')
         assert 'evil.example' not in html
+
+
+class TestImageTagSize:
+    def setup_method(self):
+        self.url_resolver = make_image_url_resolver(BASE_URL, {1: 'one.jpg'})
+        self.size_resolver = make_image_size_resolver(
+            {1: (4000, 3000), 2: (None, 3000)}
+        )
+
+    def test_known_size(self):
+        html = parse_code('[img=1 big/]', self.url_resolver, self.size_resolver)
+        assert 'c2c:width="4000"' in html
+        assert 'c2c:height="3000"' in html
+        assert 'c2c:url="https://media.example.org/oneBI.jpg"' in html
+
+    def test_unknown_size(self):
+        # an unknown image, or one whose size is not in the database
+        for code in ('[img=2/]', '[img=3/]'):
+            html = parse_code(code, self.url_resolver, self.size_resolver)
+            assert 'c2c:width' not in html
+            assert 'c2c:height' not in html
+
+    def test_without_size_resolver(self):
+        html = parse_code('[img=1/]', self.url_resolver)
+        assert 'c2c:width' not in html
+
+    def test_size_resolver_not_kept_between_calls(self):
+        parse_code('[img=1/]', self.url_resolver, self.size_resolver)
+        html = parse_code('[img=1/]')
+        assert 'c2c:width' not in html
+
+    def test_size_attributes_allowed_on_images_only(self):
+        html = parse_code('<p c2c:width="5">x</p>', self.url_resolver)
+        assert 'c2c:width' not in html
+
+    def test_size_attributes_not_allowed_from_user_html(self):
+        # like c2c:url, only the [img=ID] parser gives them
+        html = parse_code(
+            '<img alt="x" c2c:width="5" c2c:height="9999">',
+            self.url_resolver,
+            self.size_resolver,
+        )
+        assert 'c2c:width' not in html
+        assert 'c2c:height' not in html
+
+        html = parse_code(
+            '[img=1/]\n\n<img c2c:width="5">', self.url_resolver, self.size_resolver
+        )
+        assert 1 == html.count('c2c:width=')
+        assert 'c2c:width="4000"' in html

@@ -53,10 +53,16 @@ class TestStopareas(StopareaContractTest):
 
     @contract(STOPAREA)
     def test_get_unknown(self):
-        # a 404 with a body of its own, not a Cornice error
+        # a 404 in the error envelope, as the other routes
         response = self.get('/stopareas/9999999', status=404)
         check_snapshot('stopareas_get_unknown', response)
-        assert response.json == {'error': 'Stoparea not found'}
+        assert response.json['errors'] == [
+            {
+                'location': 'body',
+                'name': 'Not Found',
+                'description': 'Stoparea not found',
+            }
+        ]
 
     @contract(STOPAREA_INFO)
     def test_info(self):
@@ -78,16 +84,9 @@ class TestWaypointStopareas(StopareaContractTest):
 
     @contract(WAYPOINT_STOPAREAS)
     def test_invalid_waypoint_id(self):
-        # as the other id validators
-        response = self.get('/waypoints/abc/stopareas', status=400)
+        # as the other ids: a path with an id that is not a number is not found
+        response = self.get('/waypoints/abc/stopareas', status=404)
         check_snapshot('waypoint_stopareas_invalid', response)
-        assert response.json['errors'] == [
-            {
-                'location': 'querystring',
-                'name': 'waypoint_id',
-                'description': 'invalid waypoint_id',
-            }
-        ]
 
     @contract(IS_REACHABLE)
     def test_is_reachable(self):

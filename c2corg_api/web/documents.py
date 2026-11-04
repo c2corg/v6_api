@@ -1,7 +1,7 @@
 """The read routes of the documents: listing, document, info and version."""
-# The routes call the view classes of views/ through the adapter of
-# web.compat: the logic (caching, ETags, locales, associations, the listing
-# filters) and the checks stay the same while the routes move (#2365).
+# The routes call the functions of views/ through web.handlers: the logic
+# (caching, ETags, locales, associations, the listing filters) and the checks
+# stayed the same while the routes moved (#2365).
 
 from typing import Annotated
 
@@ -9,13 +9,8 @@ from fastapi import Depends, Path, Query, Request
 
 from c2corg_api.views.document import LIMIT_DEFAULT, LIMIT_MAX
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import (
-    permission_check,
-    serve_read,
-    serve_view,
-    serve_write,
-    typed_values,
-)
+from c2corg_api.web.checks import permission_check
+from c2corg_api.web.handlers import serve_read, serve_write, typed_values
 from c2corg_api.web.params import (
     DocumentId,
     Lang,
@@ -33,8 +28,8 @@ def include_document_type(
     app,
     prefix,
     reads,
-    version_rest=None,
-    info_rest=None,
+    get_version=None,
+    get_info=None,
     listing_permission=None,
     doc_type=None,
 ):
@@ -47,7 +42,7 @@ def include_document_type(
         user: User,
         _: Annotated[
             None,
-            Depends(permission_check(list_documents.view_name, listing_permission)),
+            Depends(permission_check(listing_permission)),
         ],
         offset: Annotated[
             Offset | None, Query(description='The first document, from 0.')
@@ -128,8 +123,8 @@ def include_document_type(
     listing.permission = listing_permission
 
     # Only numeric ids: the other paths (/images/list,
-    # /routes/update_public_transportation_rating...) are other routes, and an
-    # invalid id gets the same 400 from Pyramid.
+    # /routes/update_public_transportation_rating...) are other routes, and a
+    # path with an id that is not a number is not found (404).
     methods = ['GET', 'HEAD']
     app.add_api_route(
         f'/{prefix}',
@@ -151,11 +146,11 @@ def include_document_type(
         tags=[prefix],
     )
 
-    if info_rest is not None:
+    if get_info is not None:
 
         def info(request: Request, user: User, id: DocumentId, lang: PathLang):
             validated = {'id': id, 'lang': lang}
-            return serve_view(request, user, [typed_values(validated)], info_rest)
+            return serve_read(request, user, [typed_values(validated)], get_info)
 
         info.described = True
         app.add_api_route(
@@ -170,7 +165,7 @@ def include_document_type(
             tags=[prefix],
         )
 
-    if version_rest is not None:
+    if get_version is not None:
 
         def version(
             request: Request,
@@ -182,7 +177,7 @@ def include_document_type(
             ],
         ):
             validated = {'id': id, 'lang': lang, 'version_id': version_id}
-            return serve_view(request, user, [typed_values(validated)], version_rest)
+            return serve_read(request, user, [typed_values(validated)], get_version)
 
         version.described = True
         version.response_schema = 'Version'
@@ -199,13 +194,8 @@ def include_document_type(
 
 def handler_arguments(function):
     """Return the validators, permission and content types of a write function."""
-    # as declared by its @view decorator (views.resource.view), so that the
-    # FastAPI route checks exactly what Pyramid checked
-    [arguments] = function.__views__
-    content_type = arguments.get('content_type')
-    if isinstance(content_type, str):
-        content_type = [content_type]
-    return arguments.get('validators', []), arguments.get('permission'), content_type
+    # as declared by its @write decorator (views.resource.write)
+    return function.checks
 
 
 def include_handler_write(
@@ -213,7 +203,7 @@ def include_handler_write(
 ):
     """Add a write route served by a handler of the validated request."""
     # the checks run in this order: rate limiting, content type, permission,
-    # validators (web.compat.serve_write)
+    # validators (web.handlers.serve_write)
 
     async def endpoint(request: Request, user: User):
         return await serve_write(
@@ -231,7 +221,7 @@ def include_handler_write(
         path,
         endpoint,
         methods=[http_method],
-        operation_id=handler.view_name.replace('.', '_'),
+        operation_id=handler.__name__,
         tags=[path.strip('/').split('/')[0]],
     )
 
@@ -283,48 +273,29 @@ def include(app):
         waypoint,
         xreport,
     )
-    from c2corg_api.views.area import AreaInfoRest, AreaVersionRest
-    from c2corg_api.views.article import (
-        ArticlesInfoRest,
-        ArticlesVersionRest,
-    )
-    from c2corg_api.views.book import BooksInfoRest, BooksVersionRest
-    from c2corg_api.views.image import ImageInfoRest, ImageVersionRest
-    from c2corg_api.views.outing import OutingInfoRest, OutingVersionRest
-    from c2corg_api.views.route import RouteInfoRest, RouteVersionRest
-    from c2corg_api.views.topo_map import TopoMapInfoRest
-    from c2corg_api.views.user_profile import UserProfileInfoRest
-    from c2corg_api.views.waypoint import (
-        WaypointInfoRest,
-        WaypointVersionRest,
-    )
-    from c2corg_api.views.xreport import (
-        XreportInfoRest,
-        XreportVersionRest,
-    )
 
     include_document_type(
         app,
         'books',
         (book.list_books, book.get_book),
-        BooksVersionRest,
-        BooksInfoRest,
+        book.get_book_version,
+        book.get_book_info,
         doc_type=BOOK_TYPE,
     )
     include_document_type(
         app,
         'articles',
         (article.list_articles, article.get_article),
-        ArticlesVersionRest,
-        ArticlesInfoRest,
+        article.get_article_version,
+        article.get_article_info,
         doc_type=ARTICLE_TYPE,
     )
     include_document_type(
         app,
         'areas',
         (area.list_areas, area.get_area),
-        AreaVersionRest,
-        AreaInfoRest,
+        area.get_area_version,
+        area.get_area_info,
         doc_type=AREA_TYPE,
     )
     # maps have no version route, coverages neither version nor info
@@ -332,7 +303,7 @@ def include(app):
         app,
         'maps',
         (topo_map.list_topo_maps, topo_map.get_topo_map),
-        info_rest=TopoMapInfoRest,
+        get_info=topo_map.get_topo_map_info,
         doc_type=MAP_TYPE,
     )
     include_document_type(
@@ -346,8 +317,8 @@ def include(app):
         app,
         'images',
         (image.list_images, image.get_image),
-        ImageVersionRest,
-        ImageInfoRest,
+        image.get_image_version,
+        image.get_image_info,
         doc_type=IMAGE_TYPE,
     )
     # the personal fields of an xreport are for its author and the moderators
@@ -355,16 +326,16 @@ def include(app):
         app,
         'xreports',
         (xreport.list_xreports, xreport.get_xreport),
-        XreportVersionRest,
-        XreportInfoRest,
+        xreport.get_xreport_version,
+        xreport.get_xreport_info,
         doc_type=XREPORT_TYPE,
     )
     include_document_type(
         app,
         'outings',
         (outing.list_outings, outing.get_outing),
-        OutingVersionRest,
-        OutingInfoRest,
+        outing.get_outing_version,
+        outing.get_outing_info,
         doc_type=OUTING_TYPE,
     )
     # /reachableroutes and /routes/update_public_transportation_rating stay on
@@ -373,8 +344,8 @@ def include(app):
         app,
         'routes',
         (route.list_routes, route.get_route),
-        RouteVersionRest,
-        RouteInfoRest,
+        route.get_route_version,
+        route.get_route_info,
         doc_type=ROUTE_TYPE,
     )
     # /reachablewaypoints, /waypoints/{id}/stopareas, /waypoints/{id}/isReachable
@@ -383,8 +354,8 @@ def include(app):
         app,
         'waypoints',
         (waypoint.list_waypoints, waypoint.get_waypoint),
-        WaypointVersionRest,
-        WaypointInfoRest,
+        waypoint.get_waypoint_version,
+        waypoint.get_waypoint_info,
         doc_type=WAYPOINT_TYPE,
     )
     # the listing of the profiles is for the authenticated users, and a private
@@ -393,22 +364,20 @@ def include(app):
         app,
         'profiles',
         (user_profile.list_user_profiles, user_profile.get_user_profile),
-        info_rest=UserProfileInfoRest,
+        get_info=user_profile.get_user_profile_info,
         listing_permission='authenticated',
         doc_type=USERPROFILE_TYPE,
     )
-    # a GET that writes (the ratings of all the routes, for the moderators):
-    # served as a write, so that it is committed
+    # the ratings of all the routes, recomputed (for the moderators)
     from c2corg_api.views.route import update_public_transportation_ratings
 
-    for http_method in ('GET', 'HEAD'):
-        include_handler_write(
-            app,
-            '/routes/update_public_transportation_rating',
-            http_method,
-            update_public_transportation_ratings,
-            *handler_arguments(update_public_transportation_ratings),
-        )
+    include_handler_write(
+        app,
+        '/routes/update_public_transportation_rating',
+        'POST',
+        update_public_transportation_ratings,
+        *handler_arguments(update_public_transportation_ratings),
+    )
     # the writes, served by the functions of the views
     include_document_writes(app, 'books', book.create_book, book.update_book)
     include_document_writes(

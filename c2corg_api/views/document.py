@@ -56,7 +56,6 @@ from c2corg_api.views.document_listings import (
     get_documents,
 )
 from c2corg_api.views.license import get_license
-from c2corg_api.views.resource import BaseView
 from c2corg_api.views.validation import (
     association_permission_checker,
     association_permission_removal_checker,
@@ -80,287 +79,238 @@ NUM_RECENT_OUTINGS = 10
 ES_MAX_RESULT_WINDOW = 10000
 
 
-class DocumentRest(BaseView):
-    def _collection_get(self, doc_type, documents_config):
-        return collection_get(self.request, doc_type, documents_config)
+def get_document_for_cooking(clazz, document_id, lang, clazz_locale=None):
+    """Get a document with a single locale for cooking.
 
-    def _get(self, document_config, schema, **kwargs):
-        return read_document(self.request, document_config, schema, **kwargs)
+    Get a document with a single locale
+    this locale may not be the one requested, if this one doesn't exists
+    in this case, the lang returned is given by lang_priority.
+    """
+    document_query = (
+        DBSession.query(clazz)
+        .filter(clazz.document_id == document_id)
+        .options(joinedload(clazz.geometry))
+    )
+    document_query = add_load_for_locales(document_query, clazz, clazz_locale)
+    document_query = add_load_for_profiles(document_query, clazz)
+    document = document_query.first()
 
-    def _get_in_lang(self, id, lang, clazz, schema, editing_view, **kwargs):
-        return document_in_lang(id, lang, clazz, schema, editing_view, **kwargs)
+    if not document:
+        raise HTTPNotFound('document not found')
 
-    def _collection_post(
-        self, schema, before_add=None, after_add=None, allow_anonymous=False
-    ):
-        return create_document(
-            self.request, schema, before_add, after_add, allow_anonymous
-        )
+    set_best_locale([document], lang)
 
-    def _create_document(
-        self,
-        document_in,
-        schema,
-        before_add=None,
-        after_add=None,
-        allow_anonymous=False,
-    ):
-        return insert_document(
-            self.request, document_in, schema, before_add, after_add, allow_anonymous
-        )
+    return document
 
-    def _put(
-        self, clazz, schema, clazz_locale=None, before_update=None, after_update=None
-    ):
-        return put_document(
-            self.request, clazz, schema, clazz_locale, before_update, after_update
-        )
 
-    def _get_document(self, clazz, id, clazz_locale=None, lang=None):
-        return get_document(clazz, id, clazz_locale, lang)
+def update_document(
+    document,
+    document_in,
+    request,
+    before_update=None,
+    after_update=None,
+    manage_versions=None,
+):
+    user_id = request.authenticated_userid
 
-    @staticmethod
-    def _get_document_for_cooking(clazz, document_id, lang, clazz_locale=None):
-        """Get a document with a single locale for cooking.
+    # remember the current version numbers of the document
+    old_versions = document.get_versions()
 
-        Get a document with a single locale
-        this locale may not be the one requested, if this one doesn't exists
-        in this case, the lang returned is given by lang_priority.
-        """
-        document_query = (
-            DBSession.query(clazz)
-            .filter(clazz.document_id == document_id)
-            .options(joinedload(clazz.geometry))
-        )
-        document_query = add_load_for_locales(document_query, clazz, clazz_locale)
-        document_query = add_load_for_profiles(document_query, clazz)
-        document = document_query.first()
+    if before_update:
+        before_update(document, document_in)
 
-        if not document:
-            raise HTTPNotFound('document not found')
+    # update the document with the input document
+    document.update(document_in)
 
-        set_best_locale([document], lang)
+    if manage_versions:
+        manage_versions(document, old_versions)
 
-        return document
+    try:
+        DBSession.flush()
+    except StaleDataError as e:
+        raise HTTPConflict('concurrent modification') from e
 
-    @staticmethod
-    def update_document(
-        document,
-        document_in,
-        request,
-        before_update=None,
-        after_update=None,
-        manage_versions=None,
-    ):
-        user_id = request.authenticated_userid
+    # when flushing the session, SQLAlchemy automatically updates the
+    # version numbers in case attributes have changed. by comparing with
+    # the old version numbers, we can check if only figures or only locales
+    # have changed.
+    (update_types, changed_langs) = document.get_update_type(old_versions)
 
-        # remember the current version numbers of the document
-        old_versions = document.get_versions()
-
-        if before_update:
-            before_update(document, document_in)
-
-        # update the document with the input document
-        document.update(document_in)
-
-        if manage_versions:
-            manage_versions(document, old_versions)
-
-        try:
-            DBSession.flush()
-        except StaleDataError as e:
-            raise HTTPConflict('concurrent modification') from e
-
-        # when flushing the session, SQLAlchemy automatically updates the
-        # version numbers in case attributes have changed. by comparing with
-        # the old version numbers, we can check if only figures or only locales
-        # have changed.
-        (update_types, changed_langs) = document.get_update_type(old_versions)
-
-        if update_types:
-            # A new version needs to be created and persisted, except for
-            # coverages: they have no history (see _create_document)
-            if document.type != COVERAGE_TYPE:
-                DocumentRest.update_version(
-                    document,
-                    user_id,
-                    request.validated['message'],
-                    update_types,
-                    changed_langs,
-                )
-
-            if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
-                update_areas_for_document(document, reset=True)
-
-            if document.type != MAP_TYPE and UpdateType.GEOM in update_types:
-                update_maps_for_document(document, reset=True)
-
-            if after_update:
-                after_update(document, update_types, user_id=user_id)
-
-            update_cache_version(document)
-
-        associations = request.validated.get('associations', None)
-        if associations:
-            check_association_add = association_permission_checker(request)
-            check_association_remove = association_permission_removal_checker(request)
-
-            added_associations, removed_associations = synchronize_associations(
+    if update_types:
+        # A new version needs to be created and persisted, except for
+        # coverages: they have no history (see _create_document)
+        if document.type != COVERAGE_TYPE:
+            update_version(
                 document,
-                associations,
                 user_id,
-                check_association_add=check_association_add,
-                check_association_remove=check_association_remove,
+                request.validated['message'],
+                update_types,
+                changed_langs,
             )
 
-        if update_types or associations:
-            # update search index
-            notify_es_syncer(request.registry.queue_config)
-            update_feed_document_update(document, user_id, update_types)
-        if associations and (removed_associations or added_associations):
-            update_cache_version_associations(added_associations, removed_associations)
+        if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
+            update_areas_for_document(document, reset=True)
 
-        return update_types
+        if document.type != MAP_TYPE and UpdateType.GEOM in update_types:
+            update_maps_for_document(document, reset=True)
 
-    @staticmethod
-    def create_new_version(document, user_id, written_at=None):
-        if not user_id:
-            raise ValueError('a new version needs a user id')
-        archive = document.to_archive()
-        archive_locales = document.get_archive_locales()
-        archive_geometry = document.get_archive_geometry()
+        if after_update:
+            after_update(document, update_types, user_id=user_id)
 
-        meta_data = HistoryMetaData(
-            comment='creation', user_id=user_id, written_at=written_at
+        update_cache_version(document)
+
+    associations = request.validated.get('associations', None)
+    if associations:
+        check_association_add = association_permission_checker(request)
+        check_association_remove = association_permission_removal_checker(request)
+
+        added_associations, removed_associations = synchronize_associations(
+            document,
+            associations,
+            user_id,
+            check_association_add=check_association_add,
+            check_association_remove=check_association_remove,
         )
-        versions = []
-        for locale in archive_locales:
-            version = DocumentVersion(
-                document_id=document.document_id,
-                lang=locale.lang,
-                document_archive=archive,
-                document_locales_archive=locale,
-                document_geometry_archive=archive_geometry,
-                history_metadata=meta_data,
+
+    if update_types or associations:
+        # update search index
+        notify_es_syncer(request.registry.queue_config)
+        update_feed_document_update(document, user_id, update_types)
+    if associations and (removed_associations or added_associations):
+        update_cache_version_associations(added_associations, removed_associations)
+
+    return update_types
+
+
+def create_new_version(document, user_id, written_at=None):
+    if not user_id:
+        raise ValueError('a new version needs a user id')
+    archive = document.to_archive()
+    archive_locales = document.get_archive_locales()
+    archive_geometry = document.get_archive_geometry()
+
+    meta_data = HistoryMetaData(
+        comment='creation', user_id=user_id, written_at=written_at
+    )
+    versions = []
+    for locale in archive_locales:
+        version = DocumentVersion(
+            document_id=document.document_id,
+            lang=locale.lang,
+            document_archive=archive,
+            document_locales_archive=locale,
+            document_geometry_archive=archive_geometry,
+            history_metadata=meta_data,
+        )
+        versions.append(version)
+
+    DBSession.add(archive)
+    DBSession.add_all(archive_locales)
+    DBSession.add(meta_data)
+    DBSession.add_all(versions)
+    DBSession.flush()
+
+
+def update_version(document, user_id, comment, update_types, changed_langs):
+    if not user_id:
+        raise ValueError('a new version needs a user id')
+    if not update_types:
+        raise ValueError('a new version needs update types')
+
+    # flush pending changes first: it updates the version numbers that
+    # the archives below copy. Callers that change the document without
+    # flushing (protect, merge) used to get this flush as a side effect
+    # of a query run by the permission checks.
+    DBSession.flush()
+
+    meta_data = HistoryMetaData(comment=comment, user_id=user_id)
+    archive = _get_document_archive(document, update_types)
+    geometry_archive = _get_geometry_archive(document, update_types)
+
+    langs = _get_langs_to_update(document, update_types, changed_langs)
+    locale_versions = []
+    for lang in langs:
+        locale = document.get_locale(lang)
+        locale_archive = _get_locale_archive(locale, changed_langs)
+
+        version = DocumentVersion(
+            document_id=document.document_id,
+            lang=locale.lang,
+            document_archive=archive,
+            document_geometry_archive=geometry_archive,
+            document_locales_archive=locale_archive,
+            history_metadata=meta_data,
+        )
+        locale_versions.append(version)
+
+    DBSession.add(archive)
+    DBSession.add(meta_data)
+    DBSession.add_all(locale_versions)
+    DBSession.flush()
+
+
+def _get_document_archive(document, update_types):
+    if UpdateType.FIGURES in update_types:
+        # the document has changed, create a new archive version
+        archive = document.to_archive()
+    else:
+        # the document has not changed, load the previous archive version
+        archive = (
+            DBSession.query(ArchiveDocument)
+            .filter(
+                ArchiveDocument.version == document.version,
+                ArchiveDocument.document_id == document.document_id,
             )
-            versions.append(version)
+            .one()
+        )
+    return archive
 
-        DBSession.add(archive)
-        DBSession.add_all(archive_locales)
-        DBSession.add(meta_data)
-        DBSession.add_all(versions)
-        DBSession.flush()
 
-    @staticmethod
-    def update_version(document, user_id, comment, update_types, changed_langs):
-        if not user_id:
-            raise ValueError('a new version needs a user id')
-        if not update_types:
-            raise ValueError('a new version needs update types')
-
-        # flush pending changes first: it updates the version numbers that
-        # the archives below copy. Callers that change the document without
-        # flushing (protect, merge) used to get this flush as a side effect
-        # of a query run by the permission checks.
-        DBSession.flush()
-
-        meta_data = HistoryMetaData(comment=comment, user_id=user_id)
-        archive = DocumentRest._get_document_archive(document, update_types)
-        geometry_archive = DocumentRest._get_geometry_archive(document, update_types)
-
-        langs = DocumentRest._get_langs_to_update(document, update_types, changed_langs)
-        locale_versions = []
-        for lang in langs:
-            locale = document.get_locale(lang)
-            locale_archive = DocumentRest._get_locale_archive(locale, changed_langs)
-
-            version = DocumentVersion(
-                document_id=document.document_id,
-                lang=locale.lang,
-                document_archive=archive,
-                document_geometry_archive=geometry_archive,
-                document_locales_archive=locale_archive,
-                history_metadata=meta_data,
+def _get_geometry_archive(document, update_types):
+    if not document.geometry:
+        return None
+    elif UpdateType.GEOM in update_types:
+        # the geometry has changed, create a new archive version
+        archive = document.geometry.to_archive()
+    else:
+        # the geometry has not changed, load the previous archive version
+        archive = (
+            DBSession.query(ArchiveDocumentGeometry)
+            .filter(
+                ArchiveDocumentGeometry.version == document.geometry.version,
+                ArchiveDocumentGeometry.document_id == document.document_id,
             )
-            locale_versions.append(version)
+            .one()
+        )
+    return archive
 
-        DBSession.add(archive)
-        DBSession.add(meta_data)
-        DBSession.add_all(locale_versions)
-        DBSession.flush()
 
-    @staticmethod
-    def _get_document_archive(document, update_types):
-        if UpdateType.FIGURES in update_types:
-            # the document has changed, create a new archive version
-            archive = document.to_archive()
-        else:
-            # the document has not changed, load the previous archive version
-            archive = (
-                DBSession.query(ArchiveDocument)
-                .filter(
-                    ArchiveDocument.version == document.version,
-                    ArchiveDocument.document_id == document.document_id,
-                )
-                .one()
+def _get_langs_to_update(document, update_types, changed_langs):
+    if UpdateType.GEOM not in update_types and UpdateType.FIGURES not in update_types:
+        # if the figures or geometry have no been changed, only update the
+        # locales that have been changed
+        return changed_langs
+    else:
+        # if the figures or geometry have been changed, update all locales
+        return [locale.lang for locale in document.locales]
+
+
+def _get_locale_archive(locale, changed_langs):
+    if locale.lang in changed_langs:
+        # create new archive version for this locale
+        locale_archive = locale.to_archive()
+    else:
+        # the locale has not changed, use the old archive version
+        locale_archive = (
+            DBSession.query(ArchiveDocumentLocale)
+            .filter(
+                ArchiveDocumentLocale.version == locale.version,
+                ArchiveDocumentLocale.document_id == locale.document_id,
+                ArchiveDocumentLocale.lang == locale.lang,
             )
-        return archive
-
-    @staticmethod
-    def _get_geometry_archive(document, update_types):
-        if not document.geometry:
-            return None
-        elif UpdateType.GEOM in update_types:
-            # the geometry has changed, create a new archive version
-            archive = document.geometry.to_archive()
-        else:
-            # the geometry has not changed, load the previous archive version
-            archive = (
-                DBSession.query(ArchiveDocumentGeometry)
-                .filter(
-                    ArchiveDocumentGeometry.version == document.geometry.version,
-                    ArchiveDocumentGeometry.document_id == document.document_id,
-                )
-                .one()
-            )
-        return archive
-
-    @staticmethod
-    def _get_langs_to_update(document, update_types, changed_langs):
-        if (
-            UpdateType.GEOM not in update_types
-            and UpdateType.FIGURES not in update_types
-        ):
-            # if the figures or geometry have no been changed, only update the
-            # locales that have been changed
-            return changed_langs
-        else:
-            # if the figures or geometry have been changed, update all locales
-            return [locale.lang for locale in document.locales]
-
-    @staticmethod
-    def _get_locale_archive(locale, changed_langs):
-        if locale.lang in changed_langs:
-            # create new archive version for this locale
-            locale_archive = locale.to_archive()
-        else:
-            # the locale has not changed, use the old archive version
-            locale_archive = (
-                DBSession.query(ArchiveDocumentLocale)
-                .filter(
-                    ArchiveDocumentLocale.version == locale.version,
-                    ArchiveDocumentLocale.document_id == locale.document_id,
-                    ArchiveDocumentLocale.lang == locale.lang,
-                )
-                .one()
-            )
-        return locale_archive
-
-    def _check_document_id(self, id, document_id):
-        check_document_id(id, document_id)
-
-    def _check_versions(self, document, document_in):
-        check_versions(document, document_in)
+            .one()
+        )
+    return locale_archive
 
 
 def validate_document_for_type(
@@ -446,9 +396,7 @@ def make_validator_update(fields, type_field=None, valid_type_values=None):
     return f
 
 
-# The logic of the document writes, as functions of the request: the view
-# classes (DocumentRest) and the write routes converted to functions
-# (web.documents) both call them (#2512).
+# The logic of the document writes, as functions of the request (#2512).
 
 
 def create_document(
@@ -490,7 +438,7 @@ def insert_document(
 
     # don't create a new version for coverages (no archive for this class)
     if document.type != COVERAGE_TYPE:
-        DocumentRest.create_new_version(document, user_id)
+        create_new_version(document, user_id)
 
     if document.type != AREA_TYPE:
         update_areas_for_document(document, reset=False)
@@ -538,9 +486,7 @@ def put_document(
 
     check_versions(document, document_in)
 
-    DocumentRest.update_document(
-        document, document_in, request, before_update, after_update
-    )
+    update_document(document, document_in, request, before_update, after_update)
 
     return {}
 
@@ -774,7 +720,7 @@ def document_in_lang(
 ):
     """Return a document in a language, with its associations, areas and maps."""
     if cook_locale:
-        document = DocumentRest._get_document_for_cooking(
+        document = get_document_for_cooking(
             clazz, id, clazz_locale=clazz_locale, lang=lang
         )
     else:

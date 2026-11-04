@@ -10,27 +10,23 @@ from c2corg_api.schemas.user_profile import (
     internal_user_profile_schema,
     user_profile_schema,
 )
-from c2corg_api.views import restricted_json_view, restricted_view
 from c2corg_api.views.document import (
     collection_get,
     put_document,
     read_document,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import user_profile_documents_config
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
 )
 
 
-@restricted_json_view(
+@write(
     validators=[body_validator(UserProfileUpdateSchema), validate_id],
+    permission='authenticated',
+    json=True,
 )
 def update_user_profile(request):
     if not request.has_permission('moderator'):
@@ -44,18 +40,10 @@ def update_user_profile(request):
     return put_document(request, UserProfile, internal_user_profile_schema)
 
 
-update_user_profile.view_name = 'UserProfileRest.put'
-
-
-@restricted_view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_user_profiles(request):
     return collection_get(request, USERPROFILE_TYPE, user_profile_documents_config)
 
 
-list_user_profiles.view_name = 'UserProfileRest.collection_get'
-
-
-@view(validators=[validate_id, validate_lang_param, validate_cook_param])
 def get_user_profile(request):
     # load the requested user
     requested_user_id = request.validated['id']
@@ -84,14 +72,8 @@ def get_user_profile(request):
         }
 
 
-get_user_profile.view_name = 'UserProfileRest.get'
-
-
-@resource(path='/profiles/{id}/{lang}/info')
-class UserProfileInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(user_profile_documents_config)
+def get_user_profile_info(request):
+    return document_info(request, user_profile_documents_config)
 
 
 def reset_title(request):

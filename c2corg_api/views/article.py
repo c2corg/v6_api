@@ -16,7 +16,6 @@ from c2corg_api.schemas.article import (
     article_schema,
 )
 from c2corg_api.schemas.base import body_validator
-from c2corg_api.views import restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
     collection_get,
@@ -26,19 +25,13 @@ from c2corg_api.views.document import (
     put_document,
     read_document,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import article_documents_config
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.document_version import document_version
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     validate_associations,
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-    validate_version_id,
 )
 
 validate_article_create = make_validator_create(fields_article.get('required'))
@@ -51,27 +44,28 @@ validate_associations_update = functools.partial(
 )
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(ArticleCreateSchema),
         validate_article_create,
         validate_associations_create,
     ],
+    permission='authenticated',
+    json=True,
 )
 def create_article(request):
     return create_document(request, article_schema)
 
 
-create_article.view_name = 'ArticleRest.collection_post'
-
-
-@restricted_json_view(
+@write(
     validators=[
         body_validator(ArticleUpdateSchema),
         validate_id,
         validate_article_update,
         validate_associations_update,
     ],
+    permission='authenticated',
+    json=True,
 )
 def update_article(request):
     if not request.has_permission('moderator'):
@@ -92,18 +86,10 @@ def update_article(request):
     return put_document(request, Article, article_schema)
 
 
-update_article.view_name = 'ArticleRest.put'
-
-
-@view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_articles(request):
     return collection_get(request, ARTICLE_TYPE, article_documents_config)
 
 
-list_articles.view_name = 'ArticleRest.collection_get'
-
-
-@view(validators=[validate_id, validate_lang_param, validate_cook_param])
 def get_article(request):
     return read_document(
         request,
@@ -114,23 +100,14 @@ def get_article(request):
     )
 
 
-get_article.view_name = 'ArticleRest.get'
+def get_article_version(request):
+    return document_version(
+        request, ArchiveArticle, ARTICLE_TYPE, ArchiveDocumentLocale, article_schema
+    )
 
 
-@resource(path='/articles/{id}/{lang}/{version_id}')
-class ArticlesVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveArticle, ARTICLE_TYPE, ArchiveDocumentLocale, article_schema
-        )
-
-
-@resource(path='/articles/{id}/{lang}/info')
-class ArticlesInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(article_documents_config)
+def get_article_info(request):
+    return document_info(request, article_documents_config)
 
 
 def set_author(article):

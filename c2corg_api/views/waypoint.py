@@ -34,11 +34,10 @@ from c2corg_api.search.advanced_search import (
     get_all_filtered_docs,
     get_filtered_docs_page,
 )
-from c2corg_api.views import restricted_json_view, to_json_dict
+from c2corg_api.views import to_json_dict
 from c2corg_api.views.document import (
     LIMIT_DEFAULT,
     NUM_RECENT_OUTINGS,
-    DocumentRest,
     collection_get,
     create_document,
     make_validator_create,
@@ -47,7 +46,7 @@ from c2corg_api.views.document import (
     read_document,
 )
 from c2corg_api.views.document_associations import get_first_column
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import (
     outing_documents_config,
@@ -55,18 +54,12 @@ from c2corg_api.views.document_schemas import (
     waypoint_documents_config,
     waypoint_schema_adaptor,
 )
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.document_version import document_version
+from c2corg_api.views.resource import write
 from c2corg_api.views.route import set_route_title_prefix, update_pt_rating
 from c2corg_api.views.validation import (
     validate_associations,
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-    validate_version_id,
 )
 
 log = logging.getLogger(__name__)
@@ -88,12 +81,14 @@ validate_associations_update = functools.partial(
 )
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(WaypointCreateSchema),
         validate_waypoint_create,
         validate_associations_create,
     ],
+    permission='authenticated',
+    json=True,
 )
 def create_waypoint(request):
     """
@@ -128,16 +123,15 @@ def create_waypoint(request):
     return create_document(request, waypoint_schema)
 
 
-create_waypoint.view_name = 'WaypointRest.collection_post'
-
-
-@restricted_json_view(
+@write(
     validators=[
         body_validator(WaypointUpdateSchema),
         validate_id,
         validate_waypoint_update,
         validate_associations_update,
     ],
+    permission='authenticated',
+    json=True,
 )
 def update_waypoint(request):
     """
@@ -189,10 +183,6 @@ def update_waypoint(request):
     )
 
 
-update_waypoint.view_name = 'WaypointRest.put'
-
-
-@view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_waypoints(request):
     """Get a list of documents, optionally matching search filters.
 
@@ -259,10 +249,6 @@ def list_waypoints(request):
     return collection_get(request, WAYPOINT_TYPE, waypoint_documents_config)
 
 
-list_waypoints.view_name = 'WaypointRest.collection_get'
-
-
-@view(validators=[validate_id, validate_lang_param, validate_cook_param])
 def get_waypoint(request):
     """
     Get a single document.
@@ -293,9 +279,6 @@ def get_waypoint(request):
         include_maps=True,
         set_custom_associations=set_custom_associations,
     )
-
-
-get_waypoint.view_name = 'WaypointRest.get'
 
 
 def set_custom_associations(waypoint, lang):
@@ -439,87 +422,72 @@ def _get_select_children(waypoint):
     ).cte('select_all_waypoints')
 
 
-@resource(path='/waypoints/{id}/{lang}/{version_id}')
-class WaypointVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveWaypoint,
-            WAYPOINT_TYPE,
-            ArchiveWaypointLocale,
-            waypoint_schema,
-            waypoint_schema_adaptor,
-        )
+def get_waypoint_version(request):
+    return document_version(
+        request,
+        ArchiveWaypoint,
+        WAYPOINT_TYPE,
+        ArchiveWaypointLocale,
+        waypoint_schema,
+        waypoint_schema_adaptor,
+    )
 
 
-@resource(path='/waypoints/{id}/{lang}/info')
-class WaypointInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(waypoint_documents_config)
+def get_waypoint_info(request):
+    return document_info(request, waypoint_documents_config)
 
 
-@resource(path='/reachablewaypoints')
-class ReachableWaypointRest(DocumentRest):
-    def __init__(self, request, context=None):
-        self.request = request
+def list_reachable_waypoints(request):
+    """Return the reachable waypoints and their total.
 
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def get(self):
-        """Return the reachable waypoints and their total.
+    Returns a list of object {documents: Waypoint[], total: Integer} ->
+    documents: waypoints reachable within offset and limit
+    total: number of documents returned by query,
+    without offset and limit.
+    """
+    validated = request.validated
 
-        Returns a list of object {documents: Waypoint[], total: Integer} ->
-        documents: waypoints reachable within offset and limit
-        total: number of documents returned by query,
-        without offset and limit.
-        """
-        validated = self.request.validated
+    meta_params = {
+        'offset': validated.get('offset', 0),
+        'limit': validated.get('limit', LIMIT_DEFAULT),
+        'lang': validated.get('lang'),
+    }
 
-        meta_params = {
-            'offset': validated.get('offset', 0),
-            'limit': validated.get('limit', LIMIT_DEFAULT),
-            'lang': validated.get('lang'),
-        }
+    query, count = build_reachable_waypoints_query(request.GET, meta_params, page=True)
 
-        query, count = build_reachable_waypoints_query(
-            self.request.GET, meta_params, page=True
-        )
+    # the query is the page already
+    results = [] if query is None else query.all()
 
-        # the query is the page already
-        results = [] if query is None else query.all()
+    areas_id = set()
+    for _wp, areas in results:
+        if areas is None:
+            continue
+        for area in areas:
+            area_id = area.get('document_id')
+            if area_id is not None:
+                areas_id.add(area_id)
 
-        areas_id = set()
-        for _wp, areas in results:
-            if areas is None:
-                continue
-            for area in areas:
-                area_id = area.get('document_id')
-                if area_id is not None:
-                    areas_id.add(area_id)
+    areas_objects = DBSession.query(Area).filter(Area.document_id.in_(areas_id)).all()
 
-        areas_objects = (
-            DBSession.query(Area).filter(Area.document_id.in_(areas_id)).all()
-        )
+    areas_map = {area.document_id: area for area in areas_objects}
 
-        areas_map = {area.document_id: area for area in areas_objects}
+    waypoints = []
+    for wp, areas in results:
+        json_areas = []
+        if areas is None:
+            areas = []
 
-        waypoints = []
-        for wp, areas in results:
-            json_areas = []
-            if areas is None:
-                areas = []
+        for area in areas:
+            area_obj = areas_map.get(area.get('document_id'))
+            if area_obj:
+                json_areas.append(to_json_dict(area_obj, area_listing_schema))
 
-            for area in areas:
-                area_obj = areas_map.get(area.get('document_id'))
-                if area_obj:
-                    json_areas.append(to_json_dict(area_obj, area_listing_schema))
+        # assign JSON areas to the waypoint
+        wp.areas = json_areas
+        wp_dict = to_json_dict(wp, waypoint_schema, True)
+        waypoints.append(wp_dict)
 
-            # assign JSON areas to the waypoint
-            wp.areas = json_areas
-            wp_dict = to_json_dict(wp, waypoint_schema, True)
-            waypoints.append(wp_dict)
-
-        return {'documents': waypoints, 'total': count}
+    return {'documents': waypoints, 'total': count}
 
 
 def update_linked_routes(waypoint, update_types, user_id):

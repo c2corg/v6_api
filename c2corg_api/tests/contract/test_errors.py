@@ -33,7 +33,7 @@ class TestErrors(DocumentContractTest):
 
     @contract(('GET', '/waypoints/{id}'))
     def test_invalid_id(self):
-        response = self.get('/waypoints/abc', status=400)
+        response = self.get('/waypoints/abc', status=404)
         check_snapshot('error_invalid_id', response)
 
     @contract(('GET', '/waypoints/{id}'))
@@ -68,51 +68,54 @@ class TestErrors(DocumentContractTest):
             'error_method_not_allowed',
             self.request('DELETE', '/waypoints', status=405),
         )
-        for method, path in (
-            ('PATCH', '/waypoints'),
-            ('DELETE', self.url('books')),
-            ('GET', '/images/list'),
+        # the description and the Allow header give the methods of the path,
+        # whatever route of the path has them
+        for method, path, allowed in (
+            ('DELETE', '/waypoints', 'GET, POST'),
+            ('PATCH', '/waypoints', 'GET, POST'),
+            ('DELETE', self.url('books'), 'GET, PUT'),
+            ('GET', '/images/list', 'POST'),
             # a fixed path, not a document id
-            ('PUT', '/routes/update_public_transportation_rating'),
-            ('POST', '/routes/update_public_transportation_rating'),
+            ('PUT', '/routes/update_public_transportation_rating', 'POST'),
+            # a write: GET is not allowed
+            ('GET', '/routes/update_public_transportation_rating', 'POST'),
         ):
             response = self.request(method, path, status=405)
+            assert response.headers['Allow'] == allowed
             assert response.json['errors'] == [
-                {'location': 'body', 'name': 'Method Not Allowed', 'description': None}
+                {
+                    'location': 'body',
+                    'name': 'Method Not Allowed',
+                    'description': f'{method} is not allowed here: use {allowed}',
+                }
             ]
 
     def test_invalid_ids(self):
-        # the ids of the paths are numbers: anything else is an invalid id,
-        # not an unknown route
-        for method, path, name in (
-            ('GET', '/books/abc', 'id'),
-            ('GET', '/books/abc/en/info', 'id'),
-            ('GET', '/books/abc/en/12', 'id'),
-            ('GET', self.url('books', '/en/abc'), 'version_id'),
-            ('GET', '/document/abc/history/en', 'id'),
-            ('GET', '/images/proxy/abc', 'id'),
-            ('GET', '/stopareas/abc', 'id'),
-            ('GET', '/stopareas/abc/en/info', 'id'),
-            ('GET', '/waypoints_stopareas/abc/en/info', 'id'),
-        ):
-            response = self.request(method, path, status=400)
-            assert response.json['errors'] == [
-                {
-                    'location': 'querystring',
-                    'name': name,
-                    'description': f'invalid {name}',
-                }
-            ], path
-        # the permission is checked first
+        # the ids of the paths are numbers: a path with anything else is not
+        # found, whatever the method and the permission of the route
         for method, path in (
+            ('GET', '/books/abc'),
+            ('GET', '/books/abc/en/info'),
+            ('GET', '/books/abc/en/12'),
+            ('GET', self.url('books', '/en/abc')),
+            ('GET', '/document/abc/history/en'),
+            ('GET', '/images/proxy/abc'),
+            ('GET', '/stopareas/abc'),
+            ('GET', '/stopareas/abc/en/info'),
+            ('GET', '/waypoints_stopareas/abc/en/info'),
+            ('GET', '/waypoints/abc/stopareas'),
+            ('GET', '/tags/has/abc'),
+            ('GET', '/sitemaps/w/abc'),
             ('PUT', '/books/abc'),
             ('DELETE', '/documents/delete/abc'),
             ('DELETE', '/documents/delete/abc/en'),
             ('GET', '/users/following-user/abc'),
             ('GET', '/users/blocked/abc'),
         ):
-            response = self.request(method, path, status=403)
-            assert response.json['errors'][0]['name'] == 'Forbidden', path
+            response = self.request(method, path, status=404)
+            assert response.json['errors'] == [
+                {'location': 'body', 'name': 'Not Found', 'description': path}
+            ], path
 
     @contract(('PUT', '/maps/{id}'))
     def test_forbidden(self):

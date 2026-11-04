@@ -9,7 +9,7 @@ from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.resource import Errors
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_write
+from c2corg_api.web.handlers import serve_write
 
 PATH = '/test-write'
 
@@ -34,9 +34,6 @@ def _rename_user(request):
     return {'name': user.name}
 
 
-_rename_user.view_name = '_WriteView.collection_post'
-
-
 def _require_outcome(request, **kwargs):
     outcome = request.json.get('outcome')
     if outcome == 'invalid':
@@ -50,13 +47,13 @@ def _require_outcome(request, **kwargs):
 
 
 class TestWrites(BaseTestRest):
-    """The write path of web.compat: rate limiting, checks, view and transaction."""
+    """The write path of web.handlers: rate limiting, checks, view, transaction."""
 
     def setUp(self):
         super().setUp()
         # The sessions of the requests join the transaction of the test in a
         # SAVEPOINT (conftest), so that a rollback really rolls the request back.
-        self.fastapi_app = self.app.app.fastapi_app
+        self.fastapi_app = self.app.app
 
         async def endpoint(
             request: Request,
@@ -168,9 +165,7 @@ class TestWrites(BaseTestRest):
         response = self.app.post(PATH, '{}', headers=headers, status=415)
         assert response.json['errors'][0]['name'] == 'Content-Type'
         response = self.post({}, 403, user=None)
-        assert response.json['errors'][0]['description'] == (
-            'Unauthorized: _WriteView.collection_post__POST failed permission check'
-        )
+        assert response.json['errors'][0]['description'] == 'Authentication required'
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_rate_limit_is_checked_first_and_committed(self, _send_email):

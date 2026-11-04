@@ -67,9 +67,8 @@ class TestSitemapXml(BaseTestRest):
         ]
 
     def test_get_sitemap_invalid_page(self):
-        response = self.app.get(self._prefix + '/a/-123.xml', status=400)
-        errors = response.json['errors']
-        self.assertError(errors, 'i', 'invalid i')
+        # a page that is not a number: not found
+        self.app.get(self._prefix + '/a/-123.xml', status=404)
 
     def test_get_waypoint_sitemap(self):
         response = self.app.get(self._prefix + '/w/0.xml', status=200)

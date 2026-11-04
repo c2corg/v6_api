@@ -157,7 +157,7 @@ class TestFeedRest(BaseFeedTestRest):
 
     def test_get_public_feed_ignoring_admin(self):
         """Test that feed entries of admin users can be ignored."""
-        self.app.app.registry.feed_admin_user_account_id = self.global_userids[
+        self.app.registry.feed_admin_user_account_id = self.global_userids[
             'contributor'
         ]
         response = self.app.get(self._prefix, status=200)
@@ -239,8 +239,7 @@ class TestPersonalFeedRest(BaseFeedTestRest):
             {
                 'location': 'body',
                 'name': 'Forbidden',
-                'description': 'Unauthorized: PersonalFeedRest.get__GET'
-                ' failed permission check',
+                'description': 'Authentication required',
             }
         ]
 
@@ -314,7 +313,7 @@ class TestPersonalFeedRest(BaseFeedTestRest):
 
     def test_get_feed_areas_filter_ignoring_admin_changes(self):
         """Test that feed entries of admin users can be ignored."""
-        self.app.app.registry.feed_admin_user_account_id = self.global_userids[
+        self.app.registry.feed_admin_user_account_id = self.global_userids[
             'contributor'
         ]
         # set an area filter for the user

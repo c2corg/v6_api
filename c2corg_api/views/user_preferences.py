@@ -10,13 +10,10 @@ from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.document import AssociatedDocument
 from c2corg_api.schemas.types import Bool, OneOf, Seq
 from c2corg_api.views import (
-    restricted_json_view,
-    restricted_view,
     set_best_locale,
     to_json_dict,
 )
-from c2corg_api.views.resource import BaseView, resource
-from c2corg_api.views.validation import validate_preferred_lang_param
+from c2corg_api.views.resource import write
 
 
 class FilterPreferencesSchema(Schema):
@@ -42,7 +39,11 @@ def get_user(request, with_area_locales=True):
     return DBSession.get(User, user_id, options=[area_joinedload])
 
 
-@restricted_json_view(validators=[body_validator(FilterPreferencesSchema)])
+@write(
+    validators=[body_validator(FilterPreferencesSchema)],
+    permission='authenticated',
+    json=True,
+)
 def update_preferences(request):
     user = get_user(request, with_area_locales=False)
 
@@ -68,36 +69,30 @@ def update_preferences(request):
     return {}
 
 
-update_preferences.view_name = 'UserFilterPreferencesRest.post'
+def read_preferences(request):
+    """Get the filter preferences of the authenticated user.
 
+    Request:
+        `GET` `/users/preferences[?pl=...]`
 
-@resource(path='/users/preferences')
-class UserFilterPreferencesRest(BaseView):
-    @restricted_view(validators=[validate_preferred_lang_param])
-    def get(self):
-        """Get the filter preferences of the authenticated user.
+    Parameters:
+        `pl=...` (optional)
+        When set only the given locale will be included (if available).
+        Otherwise the default locale of the user will be used.
+    """
+    user = get_user(request)
 
-        Request:
-            `GET` `/users/preferences[?pl=...]`
+    lang = request.validated.get('lang')
+    if not lang:
+        lang = user.lang
 
-        Parameters:
-            `pl=...` (optional)
-            When set only the given locale will be included (if available).
-            Otherwise the default locale of the user will be used.
-        """
-        user = get_user(self.request)
+    areas = user.feed_filter_areas
+    if lang is not None:
+        set_best_locale(areas, lang)
 
-        lang = self.request.validated.get('lang')
-        if not lang:
-            lang = user.lang
-
-        areas = user.feed_filter_areas
-        if lang is not None:
-            set_best_locale(areas, lang)
-
-        return {
-            'followed_only': user.feed_followed_only,
-            'activities': user.feed_filter_activities,
-            'langs': user.feed_filter_langs,
-            'areas': [to_json_dict(a, area_listing_schema) for a in areas],
-        }
+    return {
+        'followed_only': user.feed_followed_only,
+        'activities': user.feed_filter_activities,
+        'langs': user.feed_filter_langs,
+        'areas': [to_json_dict(a, area_listing_schema) for a in areas],
+    }

@@ -42,7 +42,7 @@ from c2corg_api.search import index_name
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version
 from c2corg_api.views.document_listings import get_documents
 from c2corg_api.views.waypoint import waypoint_documents_config
 
@@ -1113,7 +1113,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(waypoint)
         self.session.flush()
         user_id = self.global_userids['contributor']
-        DocumentRest.create_new_version(waypoint, user_id)
+        create_new_version(waypoint, user_id)
 
         # then add a geometry to the waypoint
         body_put = {
@@ -1591,7 +1591,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(self.waypoint)
         self.session.flush()
         user_id = self.global_userids['contributor']
-        DocumentRest.create_new_version(self.waypoint, user_id)
+        create_new_version(self.waypoint, user_id)
         self.waypoint_version = (
             self.session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.waypoint.document_id)
@@ -1672,9 +1672,9 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.session.add(self.waypoint6)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.waypoint4, user_id)
-        DocumentRest.create_new_version(self.waypoint5, user_id)
-        DocumentRest.create_new_version(self.waypoint6, user_id)
+        create_new_version(self.waypoint4, user_id)
+        create_new_version(self.waypoint5, user_id)
+        create_new_version(self.waypoint6, user_id)
 
         # add some associations
         route1_geometry = DocumentGeometry(
@@ -1784,7 +1784,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         )
         self.session.add(self.article2)
         self.session.flush()
-        DocumentRest.create_new_version(self.article2, user_id)
+        create_new_version(self.article2, user_id)
 
         self.outing1 = Outing(
             activities=['skitouring'],

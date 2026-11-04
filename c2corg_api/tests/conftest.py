@@ -74,23 +74,22 @@ def db_connection(test_database, db_engine):
 
 
 @pytest.fixture(scope='class')
-def wsgi_app(test_database):
-    """Build the API's WSGI application, once per test class."""
-    from c2corg_api import main
+def fastapi_app(test_database):
+    """Build the API's application, once per test class."""
+    from c2corg_api import create_app
     from c2corg_api.tests import settings
 
-    return main({}, **settings)
+    return create_app(settings)
 
 
 @pytest.fixture
-def client(wsgi_app):
+def client(fastapi_app):
     """Return the HTTP client the tests use to call the API."""
-    # A WebTest TestApp around the WSGI application. This is the single place
-    # to swap in another client (e.g. an adapter over FastAPI's TestClient
-    # with the same interface) when the server changes (#2449).
-    from webtest import TestApp
+    # FastAPI's TestClient, with the interface of WebTest (see client.py)
+    from c2corg_api.tests.client import Client
 
-    return TestApp(wsgi_app)
+    with Client(fastapi_app) as client:
+        yield client
 
 
 @pytest.fixture
@@ -109,7 +108,7 @@ def queue_config(client):
     """Return the ES sync queue configuration, with the queue emptied."""
     from c2corg_api.tests import reset_queue
 
-    config = client.app.registry.queue_config
+    config = client.registry.queue_config
     reset_queue(config)
     return config
 
@@ -120,7 +119,7 @@ def app_state(client):
     from c2corg_api.tests import reset_cache_key
 
     reset_cache_key()
-    client.app.registry.feed_admin_user_account_id = None
+    client.registry.feed_admin_user_account_id = None
 
 
 @pytest.fixture(autouse=True)

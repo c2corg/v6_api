@@ -1,7 +1,7 @@
 from c2corg_api.models.document import Document, DocumentGeometry
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests.views import BaseTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import create_new_version
 
 
 class BaseProtectTest(BaseTestRest):
@@ -20,7 +20,7 @@ class BaseProtectTest(BaseTestRest):
         self.session.add(self.waypoint)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.waypoint, contributor_id)
+        create_new_version(self.waypoint, contributor_id)
 
         self.waypoint2 = Waypoint(
             protected=True, waypoint_type='summit', elevation=2203
@@ -37,7 +37,7 @@ class BaseProtectTest(BaseTestRest):
         self.session.add(self.waypoint2)
         self.session.flush()
 
-        DocumentRest.create_new_version(self.waypoint2, contributor_id)
+        create_new_version(self.waypoint2, contributor_id)
 
         self.session.flush()
 

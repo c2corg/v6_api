@@ -1,22 +1,26 @@
 """The stop areas of public transports, and the documents they make reachable."""
-# The routes call the view classes of views/ through the adapter of
-# web.compat, as the document routes do (#2365). Their parameters are typed
+# The routes call the functions of views/ through web.handlers, as the
+# document routes do (#2365). Their parameters are typed
 # (#2512).
 
 from typing import Annotated
 
 from fastapi import Depends, Path, Query, Request
 
-from c2corg_api.views.route import ReachableRouteRest
-from c2corg_api.views.stoparea import StopareaInfoRest, StopareaRest
-from c2corg_api.views.waypoint import ReachableWaypointRest
+from c2corg_api.views.route import list_reachable_routes
+from c2corg_api.views.stoparea import (
+    list_stopareas,
+    read_stoparea,
+    read_stoparea_info,
+)
+from c2corg_api.views.waypoint import list_reachable_waypoints
 from c2corg_api.views.waypoint_stoparea import (
-    WaypointStopareaInfoRest,
-    WaypointStopareasByWaypointRest,
-    WaypointStopareasReachableRest,
+    get_waypoint_stoparea_info,
+    read_waypoint_reachability,
+    read_waypoint_stopareas,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import serve_view, typed_values
+from c2corg_api.web.handlers import serve_read, typed_values
 from c2corg_api.web.params import (
     DocumentId,
     Lang,
@@ -40,7 +44,6 @@ PreferredLang = Annotated[
         'else in the best other one.',
     ),
 ]
-UNUSED = 'Checked, not used.'
 WaypointId = Annotated[integer('waypoint_id'), Path(description='The waypoint id.')]
 
 
@@ -52,8 +55,12 @@ def include(app):
         ('/stopareas', stoparea_listing, 'stopareas'),
         ('/stopareas/{id:int}', stoparea, 'stopareas'),
         ('/stopareas/{id:int}/{lang}/info', stoparea_info, 'stopareas'),
-        ('/waypoints/{waypoint_id}/stopareas', waypoint_stopareas, 'waypoints'),
-        ('/waypoints/{waypoint_id}/isReachable', waypoint_is_reachable, 'waypoints'),
+        ('/waypoints/{waypoint_id:int}/stopareas', waypoint_stopareas, 'waypoints'),
+        (
+            '/waypoints/{waypoint_id:int}/isReachable',
+            waypoint_is_reachable,
+            'waypoints',
+        ),
         (
             '/waypoints_stopareas/{id:int}/{lang}/info',
             waypoint_stoparea_info,
@@ -74,11 +81,6 @@ def include(app):
 def stoparea_listing(
     request: Request,
     user: User,
-    # checked as the other listings do, but not used: the stop areas are paged
-    # with page_id and nb_items
-    offset: Annotated[Offset | None, Query(description=UNUSED)] = None,
-    limit: Annotated[Limit | None, Query(description=UNUSED)] = None,
-    lang: Annotated[Lang | None, Query(alias='pl', description=UNUSED)] = None,
     page_id: Annotated[
         positive('page_id') | None, Query(description='The page, from 1.')
     ] = None,
@@ -88,32 +90,25 @@ def stoparea_listing(
     ] = None,
 ):
     """Return a page of the stop areas."""
-    validated = {
-        'offset': offset,
-        'limit': limit,
-        'lang': lang,
-        'page_id': page_id,
-        'nb_items': nb_items,
-    }
-    view = StopareaRest
-    return serve_view(request, user, [typed_values(validated)], view, 'collection_get')
+    # the stop areas are paged with page_id and nb_items
+    validated = {'page_id': page_id, 'nb_items': nb_items}
+    return serve_read(request, user, [typed_values(validated)], list_stopareas)
 
 
 def stoparea(
     request: Request,
     user: User,
     id: DocumentId,
-    lang: Annotated[Lang | None, Query(alias='l', description=UNUSED)] = None,
 ):
     """Return a stop area."""
-    validated = {'id': id, 'lang': lang}
-    return serve_view(request, user, [typed_values(validated)], StopareaRest)
+    validated = {'id': id}
+    return serve_read(request, user, [typed_values(validated)], read_stoparea)
 
 
 def stoparea_info(request: Request, user: User, id: DocumentId, lang: PathLang):
     """Return the attributes of a stop area."""
     validated = {'id': id, 'lang': lang}
-    return serve_view(request, user, [typed_values(validated)], StopareaInfoRest)
+    return serve_read(request, user, [typed_values(validated)], read_stoparea_info)
 
 
 def _waypoint(waypoint_id):
@@ -126,14 +121,14 @@ def _waypoint(waypoint_id):
 
 def waypoint_stopareas(request: Request, user: User, waypoint_id: WaypointId):
     """Return the stop areas near a waypoint, with their distance."""
-    view = WaypointStopareasByWaypointRest
-    return serve_view(request, user, [_waypoint(waypoint_id)], view)
+    return serve_read(request, user, [_waypoint(waypoint_id)], read_waypoint_stopareas)
 
 
 def waypoint_is_reachable(request: Request, user: User, waypoint_id: WaypointId):
     """Return whether a waypoint has a stop area near it."""
-    view = WaypointStopareasReachableRest
-    return serve_view(request, user, [_waypoint(waypoint_id)], view)
+    return serve_read(
+        request, user, [_waypoint(waypoint_id)], read_waypoint_reachability
+    )
 
 
 def waypoint_stoparea_info(
@@ -141,8 +136,9 @@ def waypoint_stoparea_info(
 ):
     """Return the link between a waypoint and a stop area."""
     validated = {'id': id, 'lang': lang}
-    view = WaypointStopareaInfoRest
-    return serve_view(request, user, [typed_values(validated)], view)
+    return serve_read(
+        request, user, [typed_values(validated)], get_waypoint_stoparea_info
+    )
 
 
 def reachable_routes(
@@ -155,7 +151,7 @@ def reachable_routes(
     """Return the routes with an access waypoint near a stop area."""
     # the search filters of the routes are read by the view
     validated = {'offset': offset, 'limit': limit, 'lang': lang}
-    return serve_view(request, user, [typed_values(validated)], ReachableRouteRest)
+    return serve_read(request, user, [typed_values(validated)], list_reachable_routes)
 
 
 def reachable_waypoints(
@@ -168,7 +164,9 @@ def reachable_waypoints(
     """Return the access waypoints near a stop area."""
     # the search filters of the waypoints are read by the view
     validated = {'offset': offset, 'limit': limit, 'lang': lang}
-    return serve_view(request, user, [typed_values(validated)], ReachableWaypointRest)
+    return serve_read(
+        request, user, [typed_values(validated)], list_reachable_waypoints
+    )
 
 
 for endpoint in (

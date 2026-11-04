@@ -221,12 +221,12 @@ class TestDocumentGet(DocumentContractTest):
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['books']))
     @pytest.mark.parametrize('book_id', ['abc', '-1'])
     def test_get_invalid_id(self, book_id):
-        response = self.get(f'/books/{book_id}', status=400)
+        response = self.get(f'/books/{book_id}', status=404)
         check_snapshot('books_get_invalid_id', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}/{{lang}}/{{version_id}}', ['books']))
     def test_get_invalid_version_id(self):
-        response = self.get(self.url('books', '/en/abc'), status=400)
+        response = self.get(self.url('books', '/en/abc'), status=404)
         check_snapshot('books_version_invalid_id', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['xreports']))
@@ -321,23 +321,24 @@ class TestPathsLikeADocument(ContractTest):
         response = self.get('/images/list', status=405)
         check_snapshot('images_list_get', response)
 
-    @contract(('GET', '/routes/update_public_transportation_rating'))
+    @contract(('POST', '/routes/update_public_transportation_rating'))
     def test_update_public_transportation_rating_needs_a_moderator(self):
-        response = self.get(
+        response = self.post(
             '/routes/update_public_transportation_rating',
+            None,
             user='contributor',
             status=403,
         )
         check_snapshot('routes_update_public_transportation_rating_forbidden', response)
 
-    @contract(('GET', '/routes/update_public_transportation_rating'))
+    @contract(('POST', '/routes/update_public_transportation_rating'))
     def test_update_public_transportation_rating(self):
-        # a GET that writes: the ratings of the routes are updated
+        # the ratings of the routes are updated
         with patch(
             'c2corg_api.views.route.update_all_pt_rating'
         ) as update_all_pt_rating:
-            response = self.get(
-                '/routes/update_public_transportation_rating', user='moderator'
+            response = self.post(
+                '/routes/update_public_transportation_rating', None, user='moderator'
             )
         check_snapshot('routes_update_public_transportation_rating', response)
         update_all_pt_rating.assert_called_once_with(True)

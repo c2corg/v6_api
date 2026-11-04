@@ -8,13 +8,13 @@ import sys
 # goes unnoticed.
 SCRIPT = """
 import json
-from webtest import TestApp
-from c2corg_api import main
+from c2corg_api import create_app
 from c2corg_api.tests import settings
+from c2corg_api.tests.client import Client
 
 settings = dict(settings)
 settings['cors.allowed_origins'] = 'https://www.example.org'
-app = TestApp(main({}, **settings))
+app = Client(create_app(settings))
 print(json.dumps([
     app.get('/health', headers={'Origin': origin}, status='*').headers.get(
         'Access-Control-Allow-Origin'

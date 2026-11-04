@@ -2,8 +2,7 @@ from c2corg_api import DBSession
 from c2corg_api.models.common.attributes import mailinglists as valid_mailinglists
 from c2corg_api.models.mailinglist import Mailinglist
 from c2corg_api.models.user import User
-from c2corg_api.views import restricted_json_view, restricted_view
-from c2corg_api.views.resource import BaseView, resource
+from c2corg_api.views.resource import write
 
 
 def validate_mailinglist_statuses(request, **kwargs):
@@ -23,7 +22,9 @@ def validate_mailinglist_statuses(request, **kwargs):
     request.validated['mailinglists'] = mailinglists
 
 
-@restricted_json_view(validators=[validate_mailinglist_statuses])
+@write(
+    validators=[validate_mailinglist_statuses], permission='authenticated', json=True
+)
 def update_mailinglists(request):
     """Update mailinglist subscription statuses.
 
@@ -65,29 +66,23 @@ def update_mailinglists(request):
     return {}
 
 
-update_mailinglists.view_name = 'UserMailinglistsRest.post'
+def read_mailinglists(request):
+    """Get the mailinglists subscriptions of the authenticated user.
 
+    Request:
+        `GET` `/users/mailinglists`
 
-@resource(path='/users/mailinglists')
-class UserMailinglistsRest(BaseView):
-    @restricted_view()
-    def get(self):
-        """Get the mailinglists subscriptions of the authenticated user.
+    Example response:
 
-        Request:
-            `GET` `/users/mailinglists`
+        {'avalanche': False, 'lawinen': True, 'valanghe': False, ...}
 
-        Example response:
+    """
+    user_id = request.authenticated_userid
+    res = (
+        DBSession.query(Mailinglist.listname)
+        .filter(Mailinglist.user_id == user_id)
+        .all()
+    )
+    subscribed_mailinglists = [list[0] for list in res]
 
-            {'avalanche': False, 'lawinen': True, 'valanghe': False, ...}
-
-        """
-        user_id = self.request.authenticated_userid
-        res = (
-            DBSession.query(Mailinglist.listname)
-            .filter(Mailinglist.user_id == user_id)
-            .all()
-        )
-        subscribed_mailinglists = [list[0] for list in res]
-
-        return {ml: ml in subscribed_mailinglists for ml in valid_mailinglists}
+    return {ml: ml in subscribed_mailinglists for ml in valid_mailinglists}

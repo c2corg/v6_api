@@ -1,6 +1,6 @@
 """The routes of the users: account, preferences, follows, blocks, login, SSO..."""
-# The routes call the view classes of views/ through the adapter of
-# web.compat, as the document routes do (#2365).
+# The routes call the functions of views/ through web.handlers, as the
+# document routes do (#2365).
 
 from email.utils import formatdate
 from typing import Annotated
@@ -21,17 +21,26 @@ from c2corg_api.views.user import (
     validate_register_email,
 )
 from c2corg_api.views.user_account import (
-    UserAccountRest,
+    read_account,
     update_account,
     update_preferred_language,
 )
-from c2corg_api.views.user_block import UserBlockedAllRest, UserBlockedRest
-from c2corg_api.views.user_follow import UserFollowingRest, UserFollowingUserRest
-from c2corg_api.views.user_mailinglists import UserMailinglistsRest
-from c2corg_api.views.user_preferences import UserFilterPreferencesRest
+from c2corg_api.views.user_block import (
+    read_blocked_user,
+    read_blocked_users,
+)
+from c2corg_api.views.user_follow import (
+    read_following,
+    read_following_user,
+)
+from c2corg_api.views.user_mailinglists import read_mailinglists
+from c2corg_api.views.user_preferences import (
+    read_preferences,
+)
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import permission_check, serve_view, typed_values
+from c2corg_api.web.checks import permission_check
 from c2corg_api.web.documents import handler_arguments, include_handler_write
+from c2corg_api.web.handlers import serve_read, typed_values
 from c2corg_api.web.params import Id, Lang
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
@@ -85,9 +94,7 @@ def include(app):
 
 def account(request: Request, user: User):
     """Return the account of the authenticated user."""
-    response = serve_view(
-        request, user, [], UserAccountRest, permission='authenticated'
-    )
+    response = serve_read(request, user, [], read_account, permission='authenticated')
     if isinstance(response, Response):
         return response
     # http_cache=0 of the Pyramid view
@@ -101,10 +108,10 @@ def account(request: Request, user: User):
     return JSONResponse(response, headers=headers)
 
 
-def _checks(view_class, permission, content_types=None):
+def _checks(permission, content_types=None):
     # the content type and the permission are checked before the parameters,
     # as Cornice and Pyramid did
-    check = permission_check(f'{view_class.__name__}.get', permission, content_types)
+    check = permission_check(permission, content_types)
     return Annotated[None, Depends(check)]
 
 
@@ -122,54 +129,46 @@ UserId = Annotated[Id, Path(description='The user id.')]
 def preferences(
     request: Request,
     user: User,
-    _: _checks(UserFilterPreferencesRest, 'authenticated'),
+    _: _checks('authenticated'),
     lang: PreferredLang = None,
 ):
     """Return the feed filter preferences of the authenticated user."""
     validated = {'lang': lang}
-    view = UserFilterPreferencesRest
-    return serve_view(request, user, [typed_values(validated)], view)
+    return serve_read(request, user, [typed_values(validated)], read_preferences)
 
 
 def mailinglists(request: Request, user: User):
     """Return the mailing list subscriptions of the authenticated user."""
-    return serve_view(
-        request, user, [], UserMailinglistsRest, permission='authenticated'
-    )
+    return serve_read(request, user, [], read_mailinglists, permission='authenticated')
 
 
 def following(
     request: Request,
     user: User,
-    _: _checks(UserFollowingRest, 'authenticated', JSON),
-    lang: Annotated[
-        Lang | None, Query(alias='pl', description='Checked, not used.')
-    ] = None,
+    _: _checks('authenticated', JSON),
 ):
     """Return the users the authenticated user follows."""
-    validated = {'lang': lang}
-    return serve_view(request, user, [typed_values(validated)], UserFollowingRest)
+    return serve_read(request, user, [], read_following)
 
 
 def is_following_user(
     request: Request,
     user: User,
-    _: _checks(UserFollowingUserRest, 'authenticated', JSON),
+    _: _checks('authenticated', JSON),
     id: UserId,
 ):
     """Tell whether the authenticated user follows a user."""
     validated = {'id': id}
-    view = UserFollowingUserRest
-    return serve_view(request, user, [typed_values(validated)], view)
+    return serve_read(request, user, [typed_values(validated)], read_following_user)
 
 
 def blocked_users(request: Request, user: User):
     """Return the blocked users."""
-    return serve_view(
+    return serve_read(
         request,
         user,
         [],
-        UserBlockedAllRest,
+        read_blocked_users,
         permission='moderator',
         content_types=JSON,
     )
@@ -178,12 +177,12 @@ def blocked_users(request: Request, user: User):
 def is_blocked(
     request: Request,
     user: User,
-    _: _checks(UserBlockedRest, 'moderator', JSON),
+    _: _checks('moderator', JSON),
     id: UserId,
 ):
     """Tell whether a user is blocked."""
     validated = {'id': id}
-    return serve_view(request, user, [typed_values(validated)], UserBlockedRest)
+    return serve_read(request, user, [typed_values(validated)], read_blocked_user)
 
 
 # read by the route inventory of the contract tests (routes.txt)

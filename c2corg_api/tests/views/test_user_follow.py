@@ -136,13 +136,13 @@ class TestUserFollowingUserRest(BaseFollowTest):
     def test_following_invalid_user_id(self):
         headers = self.add_authorization_header(username='contributor')
         response = self.app.get(
-            self._prefix + '/invalid-user-id', status=400, headers=headers
+            self._prefix + '/invalid-user-id', status=404, headers=headers
         )
 
+        # an id that is not a number: not found
         body = response.json
         assert body.get('status') == 'error'
-        errors = body.get('errors')
-        assert self.get_error(errors, 'id') is not None
+        assert body['errors'][0]['name'] == 'Not Found'
 
     def test_following_wrong_user_id(self):
         headers = self.add_authorization_header(username='contributor')

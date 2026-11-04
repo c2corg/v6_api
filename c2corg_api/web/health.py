@@ -40,7 +40,7 @@ def health(request: Request, response: Response):
     # number of documents, Redis and its number of keys, the maintenance mode
     origin = request.headers.get('Origin')
     if origin and not origin_allowed(origin):
-        # as the other routes (see web.compat.validate_origin)
+        # as the other routes (see web.checks.validate_origin)
         return error_response([('header', 'Origin', f'{origin} not allowed')])
     status = {'version': request.app.state.settings.get('cache_version')}
     with request_session() as session:

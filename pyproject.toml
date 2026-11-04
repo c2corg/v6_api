@@ -8,12 +8,11 @@ version = "0.0"
 description = "c2corg_api"
 readme = "README.md"
 requires-python = "==3.15.*"
-keywords = ["web", "wsgi", "fastapi"]
+keywords = ["web", "asgi", "fastapi"]
 classifiers = [
     "Programming Language :: Python",
     "Framework :: FastAPI",
     "Topic :: Internet :: WWW/HTTP",
-    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
 ]
 dependencies = [
     "alembic==1.20.0",
@@ -47,14 +46,14 @@ dependencies = [
     "pydiscourse==1.7.0",
     "pydantic==2.14.1",
     "fastapi==0.143.0",
-    "a2wsgi==1.10.10",
 ]
 
 [dependency-groups]
 dev = [
     "ruff==0.17.1",
     "pre-commit==4.6.2",
-    "WebTest==3.0.7",
+    # the client of FastAPI's TestClient, for the tests
+    "httpx==0.28.1",
     "ipdb==0.13.13",
     "httmock==1.4.0",
     "pytest==9.1.1",

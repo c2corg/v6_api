@@ -17,7 +17,7 @@ from c2corg_api.schemas.association import AssociationSchema, association_schema
 from c2corg_api.schemas.base import body_validator
 from c2corg_api.scripts.es import sync
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.views import restricted_json_view
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     check_permission_for_association_removal,
     validate_association_permission,
@@ -80,8 +80,10 @@ def validate_association(request, **kwargs):
             )
 
 
-@restricted_json_view(
+@write(
     validators=[body_validator(AssociationSchema), validate_association],
+    permission='authenticated',
+    json=True,
 )
 def add_association(request):
     association = association_schema.objectify(request.validated)
@@ -118,10 +120,11 @@ def add_association(request):
     return {}
 
 
-add_association.view_name = 'AssociationRest.collection_post'
-
-
-@restricted_json_view(validators=[body_validator(AssociationSchema)])
+@write(
+    validators=[body_validator(AssociationSchema)],
+    permission='authenticated',
+    json=True,
+)
 def remove_association(request):
     association_in = association_schema.objectify(request.validated)
 
@@ -167,9 +170,6 @@ def remove_association(request):
     )
 
     return {}
-
-
-remove_association.view_name = 'AssociationRest.collection_delete'
 
 
 def _load(request, association_in):

@@ -12,7 +12,6 @@ from c2corg_api.models.common.fields_area import fields_area
 from c2corg_api.models.document import ArchiveDocumentLocale, UpdateType
 from c2corg_api.schemas.area import AreaCreateSchema, AreaUpdateSchema, area_schema
 from c2corg_api.schemas.base import body_validator
-from c2corg_api.views import restricted_json_view
 from c2corg_api.views.document import (
     collection_get,
     create_document,
@@ -21,19 +20,13 @@ from c2corg_api.views.document import (
     put_document,
     read_document,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import area_documents_config
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.document_version import document_version
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     validate_associations,
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-    validate_version_id,
 )
 
 validate_area_create = make_validator_create(fields_area.get('required'))
@@ -44,28 +37,28 @@ validate_associations_update = functools.partial(
 )
 
 
-@restricted_json_view(
+@write(
     validators=[
         body_validator(AreaCreateSchema),
         validate_area_create,
         validate_associations_create,
     ],
     permission='moderator',
+    json=True,
 )
 def create_area(request):
     return create_document(request, area_schema, after_add=insert_associations)
 
 
-create_area.view_name = 'AreaRest.collection_post'
-
-
-@restricted_json_view(
+@write(
     validators=[
         body_validator(AreaUpdateSchema),
         validate_id,
         validate_area_update,
         validate_associations_update,
     ],
+    permission='authenticated',
+    json=True,
 )
 def update_area(request):
     if not request.has_permission('moderator'):
@@ -76,32 +69,18 @@ def update_area(request):
     return put_document(request, Area, area_schema, after_update=update_associations)
 
 
-update_area.view_name = 'AreaRest.put'
-
-
-@view(validators=[validate_pagination, validate_preferred_lang_param])
 def list_areas(request):
     return collection_get(request, AREA_TYPE, area_documents_config)
 
 
-list_areas.view_name = 'AreaRest.collection_get'
-
-
-@view(validators=[validate_id, validate_lang_param, validate_cook_param])
 def get_area(request):
     return read_document(
         request, area_documents_config, area_schema, include_areas=False
     )
 
 
-get_area.view_name = 'AreaRest.get'
-
-
-@resource(path='/areas/{id}/{lang}/info')
-class AreaInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(area_documents_config)
+def get_area_info(request):
+    return document_info(request, area_documents_config)
 
 
 def insert_associations(area, user_id):
@@ -123,10 +102,7 @@ def update_associations(area, update_types, user_id):
         associate_area(area, reset=True)
 
 
-@resource(path='/areas/{id}/{lang}/{version_id}')
-class AreaVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveArea, AREA_TYPE, ArchiveDocumentLocale, area_schema
-        )
+def get_area_version(request):
+    return document_version(
+        request, ArchiveArea, AREA_TYPE, ArchiveDocumentLocale, area_schema
+    )

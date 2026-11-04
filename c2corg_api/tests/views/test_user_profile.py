@@ -36,8 +36,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
             {
                 'location': 'body',
                 'name': 'Forbidden',
-                'description': 'Unauthorized: UserProfileRest.collection_get__GET'
-                ' failed permission check',
+                'description': 'Authentication required',
             }
         ]
 
@@ -169,7 +168,7 @@ class TestUserProfileRest(BaseDocumentTestRest):
 
     def test_no_post(self):
         # can not create new profiles
-        self.app.post_json(self._prefix, {}, expect_errors=True, status=404)
+        self.app.post_json(self._prefix, {}, status=405)
 
     def test_put_wrong_user(self):
         """Test that a normal user can only edit its own profile."""

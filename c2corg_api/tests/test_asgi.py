@@ -9,11 +9,10 @@ from c2corg_api.tests import configfile
 # a new process, which imports it with the settings of the tests.
 SCRIPT = """
 import json
-from a2wsgi import ASGIMiddleware
-from webtest import TestApp
 from c2corg_api.asgi import app
+from c2corg_api.tests.client import Client
 
-client = TestApp(ASGIMiddleware(app))
+client = Client(app)
 print(json.dumps({
     'type': type(app).__name__,
     'middlewares': [m.cls.__name__ for m in app.user_middleware],

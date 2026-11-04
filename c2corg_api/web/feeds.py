@@ -1,6 +1,6 @@
 """The feeds: of the homepage, of the authenticated user, of a user profile."""
-# The routes call the view classes of views/ through the adapter of
-# web.compat, as the document routes do (#2365). Their parameters are typed
+# The routes call the functions of views/ through web.handlers, as the
+# document routes do (#2365). Their parameters are typed
 # (#2512).
 
 from typing import Annotated
@@ -10,12 +10,13 @@ from fastapi import Depends, Query, Request
 from c2corg_api.views.feed import (
     DEFAULT_PAGE_LIMIT,
     MAX_PAGE_LIMIT,
-    FeedRest,
-    PersonalFeedRest,
-    ProfileFeedRest,
+    read_feed,
+    read_personal_feed,
+    read_profile_feed,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
-from c2corg_api.web.compat import permission_check, serve_view, typed_values
+from c2corg_api.web.checks import permission_check
+from c2corg_api.web.handlers import serve_read, typed_values
 from c2corg_api.web.params import FeedToken, Lang, Limit, integer
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
@@ -78,22 +79,20 @@ def feed(
 ):
     """Return the public feed of the homepage."""
     validated = _validated(lang, limit, token)
-    return serve_view(request, user, [typed_values(validated)], FeedRest)
+    return serve_read(request, user, [typed_values(validated)], read_feed)
 
 
 def personal_feed(
     request: Request,
     user: User,
-    _: Annotated[
-        None, Depends(permission_check('PersonalFeedRest.get', 'authenticated'))
-    ],
+    _: Annotated[None, Depends(permission_check('authenticated'))],
     lang: PreferredLang = None,
     limit: PageLimit = None,
     token: Token = None,
 ):
     """Return the feed of the authenticated user."""
     validated = _validated(lang, limit, token)
-    return serve_view(request, user, [typed_values(validated)], PersonalFeedRest)
+    return serve_read(request, user, [typed_values(validated)], read_personal_feed)
 
 
 # read by the route inventory of the contract tests (routes.txt)
@@ -112,7 +111,7 @@ def profile_feed(
 ):
     """Return the feed of a user profile (if public, or for authenticated users)."""
     validated = _validated(lang, limit, token, u=u)
-    return serve_view(request, user, [typed_values(validated)], ProfileFeedRest)
+    return serve_read(request, user, [typed_values(validated)], read_profile_feed)
 
 
 for endpoint in (feed, personal_feed, profile_feed):

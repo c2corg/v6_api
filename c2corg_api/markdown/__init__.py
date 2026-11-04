@@ -38,6 +38,8 @@ _markdown_parser = None
 _cleaner = None
 _iframe_secret_tag = 'iframe_' + secrets.token_hex(32)
 _img_url_secret_attribute = 'c2c:url-' + secrets.token_hex(32)
+_img_width_secret_attribute = 'c2c:width-' + secrets.token_hex(32)
+_img_height_secret_attribute = 'c2c:height-' + secrets.token_hex(32)
 
 """
 _***_secret_tag is used as a private key to replace critical HTML node and
@@ -50,7 +52,8 @@ value of _iframe_secret_tag present into server memory.
 
 Same for the c2c:url attribute of embedded images, which clients may use as
 <img src>: only the [img=ID] parser can produce it, a c2c:url attribute written
-in raw HTML is removed by nh3.
+in raw HTML is removed by nh3. The same for c2c:width and c2c:height, the size
+of the original image, which clients use to keep the space of the image.
 """
 
 
@@ -219,6 +222,8 @@ def _get_cleaner():
                 'c2c:size',
                 'c2c:url-proxy',
                 _img_url_secret_attribute,
+                _img_width_secret_attribute,
+                _img_height_secret_attribute,
                 'c2c:svg-name',
                 'c2c:emoji-db',
             ],
@@ -254,7 +259,11 @@ def _get_markdown_parser():
     if not _markdown_parser:
         extensions = [
             C2CWikiLinkExtension(),
-            C2CImageExtension(url_secret_attribute=_img_url_secret_attribute),
+            C2CImageExtension(
+                url_secret_attribute=_img_url_secret_attribute,
+                width_secret_attribute=_img_width_secret_attribute,
+                height_secret_attribute=_img_height_secret_attribute,
+            ),
             Nl2BrExtension(),
             C2CTocExtension(marker='[toc]', baselevel=2, toc_depth='1-4'),
             C2CVideoExtension(iframe_secret_tag=_iframe_secret_tag),
@@ -272,14 +281,16 @@ def _get_markdown_parser():
     return _markdown_parser
 
 
-def parse_code(text, image_url_resolver=None):
+def parse_code(text, image_url_resolver=None, image_size_resolver=None):
     """Get markdown, and returns HTML.
 
     This function is thread-safe.
 
     `image_url_resolver` is an optional function
     `(document_id, size) -> url or None` giving the direct media URL of
-    embedded images (see `img.make_image_url_resolver`).
+    embedded images (see `img.make_image_url_resolver`), and
+    `image_size_resolver` an optional `document_id -> (width, height) or None`
+    giving the size of their original (see `img.make_image_size_resolver`).
     """
     # we need parsing to be thread safe because
     # L numbering, and Markdown() has internal global variables
@@ -295,6 +306,7 @@ def parse_code(text, image_url_resolver=None):
         # indefinitely, and performance decreases over time
         parser.reset()
         parser.c2c_image_url_resolver = image_url_resolver
+        parser.c2c_image_size_resolver = image_size_resolver
 
         try:
             text = parser.convert(text)
@@ -307,8 +319,11 @@ def parse_code(text, image_url_resolver=None):
             text = _PARSER_EXCEPTION_MESSAGE
         finally:
             parser.c2c_image_url_resolver = None
+            parser.c2c_image_size_resolver = None
 
     text = text.replace(_iframe_secret_tag, 'iframe')
     text = text.replace(_img_url_secret_attribute, 'c2c:url')
+    text = text.replace(_img_width_secret_attribute, 'c2c:width')
+    text = text.replace(_img_height_secret_attribute, 'c2c:height')
 
     return text
