@@ -23,7 +23,14 @@ returns nothing):
 
 ```sh
 initialize_c2corg_api_es development.ini    # creates the index and its mappings
-fill_es_index development.ini               # ~3 minutes, 65,000 documents, 30 MB
+fill_es_index development.ini               # ~3 minutes, 44,000 documents
+```
+
+Or use the Elasticsearch image whose index is already filled from the database image of the same tag
+(Elasticsearch 2.4 with the ICU plugin, as in production; index `c2corg`):
+
+```sh
+docker run -d -p 9200:9200 -e ES_HEAP_SIZE=512m ghcr.io/c2corg/c2corg-dev-es:2026-07-19
 ```
 
 Everything (PostgreSQL, Elasticsearch, Redis, the API) fits in about 1.5 GB of memory
@@ -98,6 +105,19 @@ It builds the image, restores it in a throwaway container and runs `60-verify.sq
 personal data is left), then asks for a confirmation before pushing the tag and `latest` to
 `ghcr.io/c2corg/c2corg-dev-db` (`IMAGE=` to change it, `DRY_RUN=1` to stop before the push). A package
 created by a push is private; making it public is done in its settings on GitHub.
+
+Then the Elasticsearch image, with the tag of the database image just pushed:
+
+```sh
+scripts/dev-database/publish-es.sh 2026-07-19
+```
+
+It starts the database image and an empty Elasticsearch, creates and fills the index with the API image
+(`API_IMAGE=`, default `ghcr.io/c2corg/v6_api:latest`), copies the index into the image
+(`Dockerfile.es`), then checks that the image starts with the documents and the search sub-fields, and
+asks for a confirmation before pushing the tag and `latest` to `ghcr.io/c2corg/c2corg-dev-es`. The labels
+of the image name the database image and the API image it was built with. The mapping comes from the
+code of the API: publish the Elasticsearch image again when the mapping changes.
 
 ## Licence and attribution
 
