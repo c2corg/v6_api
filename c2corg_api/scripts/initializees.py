@@ -1,25 +1,23 @@
+import json
 import os
 import sys
-
-from elasticsearch_dsl import Index
+from pathlib import Path
 
 from c2corg_api.config import (
     get_appsettings,
     parse_vars,
     setup_logging,
 )
-from c2corg_api.search import configure_es_from_config, elasticsearch_config
-from c2corg_api.search.mapping import analysis_settings
-from c2corg_api.search.mappings.area_mapping import SearchArea
-from c2corg_api.search.mappings.article_mapping import SearchArticle
-from c2corg_api.search.mappings.book_mapping import SearchBook
-from c2corg_api.search.mappings.image_mapping import SearchImage
-from c2corg_api.search.mappings.outing_mapping import SearchOuting
-from c2corg_api.search.mappings.route_mapping import SearchRoute
-from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
-from c2corg_api.search.mappings.user_mapping import SearchUser
-from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
-from c2corg_api.search.mappings.xreport_mapping import SearchXreport
+from c2corg_api.search import (
+    configure_es_from_config,
+    elasticsearch_config,
+    index_name,
+    search_documents,
+)
+
+# the settings (analyzers) and the mapping of each document type, applied to
+# the index of the document type
+ES_MAPPINGS_DIR = Path(__file__).resolve().parent.parent / 'search' / 'es_mappings'
 
 
 def usage(argv):
@@ -39,51 +37,49 @@ def main(argv=sys.argv):
     setup_es()
 
 
+def _load(name):
+    return json.loads((ES_MAPPINGS_DIR / f'{name}.json').read_text(encoding='utf-8'))
+
+
 def setup_es():
-    """Create the ElasticSearch index and configure the mapping."""
+    """Create the ElasticSearch indices (one per document type) and their mapping."""
     client = elasticsearch_config['client']
-    index_name = elasticsearch_config['index']
 
     info = client.info()
     print('ElasticSearch version: {}'.format(info['version']['number']))
 
-    if client.indices.exists(index_name):
+    existing = [
+        name
+        for name in map(index_name, search_documents)
+        if client.indices.exists(index=name)
+    ]
+    if existing:
         print(
-            f'Index "{index_name}" already exists. To re-create the index, manually '
-            'delete the index and run this script again.'
+            'Indices already exist: {}. To re-create them, manually delete them '
+            'and run this script again.'.format(', '.join(existing))
         )
-        print('To delete the index run:')
+        print('To delete an index run:')
         print(
-            "curl -XDELETE 'http://{}:{}/{}/'".format(
-                elasticsearch_config['host'], elasticsearch_config['port'], index_name
+            "curl -XDELETE 'http://{}:{}/{}'".format(
+                elasticsearch_config['host'], elasticsearch_config['port'], existing[0]
             )
         )
         sys.exit(0)
 
-    index = Index(index_name)
-    index.settings(analysis=analysis_settings)
-
-    index.doc_type(SearchArea)
-    index.doc_type(SearchBook)
-    index.doc_type(SearchImage)
-    index.doc_type(SearchOuting)
-    index.doc_type(SearchXreport)
-    index.doc_type(SearchRoute)
-    index.doc_type(SearchTopoMap)
-    index.doc_type(SearchUser)
-    index.doc_type(SearchWaypoint)
-    index.doc_type(SearchArticle)
-
-    index.create()
-
-    print(f'Index "{index_name}" created')
+    settings = _load('settings')
+    for doc_type in search_documents:
+        name = index_name(doc_type)
+        client.indices.create(index=name, settings=settings, mappings=_load(doc_type))
+        print(f'Index "{name}" created')
 
 
 def drop_index(silent=True):
-    """Remove the ElasticSearch index."""
-    index = Index(elasticsearch_config['index'])
+    """Remove the ElasticSearch indices."""
+    client = elasticsearch_config['client']
     try:
-        index.delete()
+        # one by one: ES refuses to delete indices with a wildcard
+        for doc_type in search_documents:
+            client.indices.delete(index=index_name(doc_type), ignore_unavailable=True)
     except Exception as exc:
         if not silent:
             raise exc

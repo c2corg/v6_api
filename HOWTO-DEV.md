@@ -145,11 +145,14 @@ initialize_c2corg_api_db development.ini
 docker compose exec -u postgres -T postgresql /v6_api/scripts/database/create_test_schema.sh
 ```
 
-- Initialize elastic search indexes
+- Create the elastic search indices (one per document type, with their mapping), then fill them with the documents of the database
 
 ```shell
+initialize_c2corg_api_es development.ini
 fill_es_index development.ini
 ```
+
+The indices are named `<elasticsearch_index>_<document type>` (e.g. `c2corg_w` for the waypoints). Their settings and mappings are the JSON files of `c2corg_api/search/es_mappings`. To re-create them, run `python -m c2corg_api.scripts.es.create_index development.ini` (it deletes the existing ones), then `fill_es_index` again. If Elasticsearch has authentication enabled, set `elasticsearch_scheme`, `elasticsearch_user` and `elasticsearch_passwd` in `config/env.local`.
 
 ## Running the API
 

@@ -18,6 +18,7 @@ from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import (
     configure_es_from_config,
     elasticsearch_config,
+    index_name,
     search_documents,
 )
 
@@ -49,7 +50,6 @@ def main(argv=sys.argv):
 
 def fill_index(session, batch_size=1000):
     client = elasticsearch_config['client']
-    index_name = elasticsearch_config['index']
 
     status = {'start_time': datetime.now(UTC), 'last_progress_update': None}
 
@@ -79,7 +79,7 @@ def fill_index(session, batch_size=1000):
             for doc in sync.get_documents(
                 session, doc_type, batch_size, ignore_redirects=True
             ):
-                batch.add(to_search_document(doc, index_name))
+                batch.add(to_search_document(doc, index_name(doc_type)))
 
                 count += 1
                 progress(count, total)

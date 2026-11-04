@@ -44,7 +44,10 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.elasticsearch
-    command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon -Des.script.inline=true
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ulimits:
       nofile:
         soft: 65536

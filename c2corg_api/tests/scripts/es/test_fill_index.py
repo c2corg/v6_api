@@ -11,6 +11,7 @@ from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.xreport import Xreport, XreportLocale
 from c2corg_api.scripts.es.fill_index import fill_index
+from c2corg_api.search import index_name
 from c2corg_api.search.mappings.article_mapping import SearchArticle
 from c2corg_api.search.mappings.book_mapping import SearchBook
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
@@ -184,57 +185,57 @@ class TestFillIndex(BaseTestCase):
         # fill the ElasticSearch index
         fill_index(self.session)
 
-        waypoint1 = SearchWaypoint.get(id=71171)
+        waypoint1 = SearchWaypoint.get(id=71171, index=index_name('w'))
         assert waypoint1 is not None
         assert waypoint1.title_en == 'Mont Granier'
         assert waypoint1.title_fr == 'Mont Granier'
         # self.assertEqual(waypoint1.summary_fr, 'Le Mont  Granier ')
-        assert waypoint1.doc_type == 'w'
+        assert waypoint1.c2corg_doc_type == 'w'
         assert waypoint1.quality == 2
         assert waypoint1.access_time == 3
         assert waypoint1.geom[0] == pytest.approx(5.71288994, abs=5e-8)
         assert waypoint1.geom[1] == pytest.approx(45.64476395, abs=5e-8)
 
-        waypoint2 = SearchWaypoint.get(id=71172)
+        waypoint2 = SearchWaypoint.get(id=71172, index=index_name('w'))
         assert waypoint2 is not None
         assert waypoint2.title_en == 'Mont Blanc'
         assert waypoint2.title_fr is None
-        assert waypoint2.doc_type == 'w'
+        assert waypoint2.c2corg_doc_type == 'w'
 
-        route = SearchRoute.get(id=71173)
+        route = SearchRoute.get(id=71173, index=index_name('r'))
         assert route is not None
         assert route.title_en == 'Mont Blanc : Face N'
         assert route.title_fr is None
-        assert route.doc_type == 'r'
+        assert route.c2corg_doc_type == 'r'
         assert route.durations == [0]
 
-        outing = SearchOuting.get(id=71175)
+        outing = SearchOuting.get(id=71175, index=index_name('o'))
         assert outing is not None
         assert outing.title_en == 'Mont Blanc : Face N !'
         assert outing.title_fr is None
-        assert outing.doc_type == 'o'
+        assert outing.c2corg_doc_type == 'o'
         assert outing.frequentation == 3
 
-        article = SearchArticle.get(id=71176)
+        article = SearchArticle.get(id=71176, index=index_name('c'))
         assert article is not None
         assert article.title_en == "Lac d'Annecy"
         assert article.title_fr == "Lac d'Annecy"
-        assert article.doc_type == 'c'
+        assert article.c2corg_doc_type == 'c'
 
-        book = SearchBook.get(id=71177)
+        book = SearchBook.get(id=71177, index=index_name('b'))
         assert book is not None
         assert book.title_en == 'Escalades au Thaurac'
         assert book.title_fr == 'Escalades au Thaurac'
-        assert book.doc_type == 'b'
+        assert book.c2corg_doc_type == 'b'
         assert book.book_types == ['biography']
 
-        xreport = SearchXreport.get(id=71178)
+        xreport = SearchXreport.get(id=71178, index=index_name('x'))
         assert xreport is not None
         assert xreport.title_en == 'Death in the mountains'
-        assert xreport.doc_type == 'x'
+        assert xreport.c2corg_doc_type == 'x'
 
         # merged document is ignored
-        assert SearchWaypoint.get(id=71174, ignore=404) is None
+        assert SearchWaypoint.get(id=71174, index=index_name('w'), ignore=404) is None
 
         # check that the sync. status was updated
         last_update, _ = es_sync.get_status(self.session)

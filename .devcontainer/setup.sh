@@ -90,6 +90,7 @@ until curl -s http://elasticsearch:9200 > /dev/null 2>&1; do
 done
 
 echo "==> Initializing Elasticsearch indexes..."
+initialize_c2corg_api_es development.ini || true
 fill_es_index development.ini || true
 
 echo ""

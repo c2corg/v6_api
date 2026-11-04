@@ -16,7 +16,7 @@ from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
 from c2corg_api.scripts.es.sync import sync_es
-from c2corg_api.search import elasticsearch_config, search_documents
+from c2corg_api.search import index_name, search_documents
 from c2corg_api.security.discourse_client import (
     APIDiscourseClient,
     DisabledDiscourseClient,
@@ -361,7 +361,7 @@ class TestUserRest(BaseUserTestRest):
         # check that the profile is not inserted in the search index
         sync_es(self.session)
         search_doc = search_documents[USERPROFILE_TYPE].get(
-            id=user_id, index=elasticsearch_config['index'], ignore=404
+            id=user_id, index=index_name(USERPROFILE_TYPE), ignore=404
         )
         assert search_doc is None
 
@@ -373,11 +373,11 @@ class TestUserRest(BaseUserTestRest):
         # check that the profile is inserted in the index after confirmation
         self.sync_es()
         search_doc = search_documents[USERPROFILE_TYPE].get(
-            id=user_id, index=elasticsearch_config['index']
+            id=user_id, index=index_name(USERPROFILE_TYPE)
         )
         assert search_doc is not None
 
-        assert search_doc['doc_type'] is not None
+        assert search_doc['c2corg_doc_type'] is not None
         assert search_doc['title_fr'] == 'Max Mustermann testf'
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')

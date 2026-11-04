@@ -28,7 +28,7 @@ from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.outing import Outing, OutingLocale
-from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import (
@@ -38,7 +38,7 @@ from c2corg_api.models.waypoint import (
     Waypoint,
     WaypointLocale,
 )
-from c2corg_api.search import elasticsearch_config
+from c2corg_api.search import index_name
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
@@ -878,9 +878,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         assert route_locale_en.title_prefix == 'Mont Granier!'
 
         # check that the route was updated in the search index
-        search_doc = SearchRoute.get(
-            id=route.document_id, index=elasticsearch_config['index']
-        )
+        search_doc = SearchRoute.get(id=route.document_id, index=index_name(ROUTE_TYPE))
         assert search_doc['title_en'] == 'Mont Granier! : Mont Blanc from the air'
 
         # check that the links for intersecting areas are updated

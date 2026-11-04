@@ -38,7 +38,7 @@ updates:
   # Held back on purpose; each one is listed with its reason in the stack
   # upgrade tracking issue (#2355). Remove the entry when the reason goes away.
   ignore:
-    # tied to the Elasticsearch 2.4 server (ES 8 migration: #2211)
+    # the client major version follows the Elasticsearch server's
     - dependency-name: "elasticsearch"
       update-types: ["version-update:semver-major"]
     - dependency-name: "elasticsearch-dsl"

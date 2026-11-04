@@ -18,8 +18,7 @@ class ElasticBatch(Batch):
             ...
             batch.add({
                 '_op_type': 'index',
-                '_index': index_name,
-                '_type': SearchDocument._doc_type.name,
+                '_index': index_name(doc_type),
                 '_id': document_id,
                 'title': 'Abc'
             })

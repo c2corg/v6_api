@@ -73,13 +73,9 @@ lint:
 		ruff format --check $(SRC_DIRS)
 		@echo "Wonderful, python style is Ok!"
 
-# Known vulnerabilities that cannot be fixed yet. Re-check each one when the
-# reason goes away:
-# - urllib3 1.26: elasticsearch 2.4.1 requires urllib3<2 (goes away with the
-#   Elasticsearch 8 migration). The API only talks to trusted hosts with it.
-AUDIT_IGNORE = \
-		PYSEC-2026-141 PYSEC-2026-1994 PYSEC-2026-1996 PYSEC-2026-1998 \
-		PYSEC-2026-1999 PYSEC-2026-4175 PYSEC-2026-4177
+# Known vulnerabilities that cannot be fixed yet, as `PYSEC-...` ids. Re-check each
+# one when the reason goes away.
+AUDIT_IGNORE =
 
 .PHONY: audit
 audit:
@@ -97,6 +93,7 @@ init-test-database:
 		$(DB_EXEC) /v6_api/scripts/database/create_test_schema.sh
 
 init-elastic:
+		initialize_c2corg_api_es development.ini
 		fill_es_index development.ini
 
 install:
