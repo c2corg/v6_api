@@ -99,15 +99,7 @@ personal data is left), then asks for a confirmation before pushing the tag and 
 `ghcr.io/c2corg/c2corg-dev-db` (`IMAGE=` to change it, `DRY_RUN=1` to stop before the push). A package
 created by a push is private; making it public is done in its settings on GitHub.
 
-## Licence and attribution
-
-The content comes from camptocamp.org, where the licence depends on the type of document (see
-`getDocumentLicense` in the user interface): CC BY-SA for the routes, waypoints, areas, books, collaborative
-articles and collaborative images; CC BY-NC-ND for the outings, the profiles, the reports and the personal
-articles and images; and the images under copyright are not free. The extract mixes all of them and is
-modified (sampled, pseudonymized, some texts replaced), so it is meant for the developers and **is not to be
-redistributed**: the image carries no licence label, and the package is kept private unless the licences are
-checked with the association.
+## Attribution
 
 The names of the users and the authors of the images are replaced by pseudonyms, but the identifiers of
 the documents are kept: every document can be traced back to its page on the site, where its history
