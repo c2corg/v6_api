@@ -4,11 +4,7 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.tests import errors_of
-from c2corg_api.tests.views.test_user import (
-    BaseUserTestRest,
-    forum_username_status,
-    forum_username_tests,
-)
+from c2corg_api.tests.views.test_user import BaseUserTestRest, forum_username_tests
 
 
 class TestUserAccountRest(BaseUserTestRest):
@@ -111,8 +107,8 @@ class TestUserAccountRest(BaseUserTestRest):
             if value is False:
                 self.post_json_with_contributor(url, body, status=200)
             else:
-                status = forum_username_status(value)
-                json = self.post_json_with_contributor(url, body, status=status)
+                # the schema checks it: 422
+                json = self.post_json_with_contributor(url, body, status=422)
                 assert errors_of(json)[0]['description'] == value
 
     def test_update_account_forum_username_unique(self):

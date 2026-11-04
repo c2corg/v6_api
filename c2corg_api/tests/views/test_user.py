@@ -30,7 +30,7 @@ forum_username_tests = {
     # min length
     'a': 'Shorter than minimum length 3',
     'a' * 3: False,
-    # max length (schema validation)
+    # max length
     'a' * 26: 'Longer than maximum length 25',
     'a' * 25: False,
     # valid characters
@@ -45,13 +45,6 @@ forum_username_tests = {
     # confusing suffix
     'test.jpg': 'Ended by confusing suffix',
 }
-
-
-def forum_username_status(message):
-    """The status of an invalid forum username: 422 for the schema (#2546)."""
-    # the max length is checked by the schema, the other rules by the
-    # validator of the forum usernames (400)
-    return 422 if message == 'Longer than maximum length 25' else 400
 
 
 class BaseUserTestRest(BaseTestRest):
@@ -198,8 +191,8 @@ class TestUserRest(BaseUserTestRest):
             if value is False:
                 self.app_post_json(url, request_body, status=200).json
             else:
-                status = forum_username_status(value)
-                json = self.app_post_json(url, request_body, status=status).json
+                # the schema checks it: 422
+                json = self.app_post_json(url, request_body, status=422).json
                 assert errors_of(json)[0]['description'] == value
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
