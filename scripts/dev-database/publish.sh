@@ -57,7 +57,7 @@ docker build -q -t "$IMAGE:$TAG" \
   "$(native_path "$CTX")" > /dev/null
 
 echo "=== checking that no personal data is left"
-docker run -d --name "$NAME" --memory 1g -e POSTGRES_PASSWORD=verify "$IMAGE:$TAG" > /dev/null
+docker run -d --name "$NAME" --memory 1g -e PGCTLTIMEOUT=600 -e POSTGRES_PASSWORD=verify "$IMAGE:$TAG" > /dev/null
 # the first server is the temporary one of the initialization (which ends with a message): wait for the final one
 server_ready() { # the logs are captured first: `grep -q` in a pipeline would kill it with a SIGPIPE
   local log
@@ -111,6 +111,8 @@ ENV
       sleep 3
     done
     [ -n "$ready" ] || { echo "Elasticsearch did not start" >&2; exit 1; }
+    # the shards must be recovered too, or a count made right after the start is partial
+    python -c "import urllib.request as u; u.urlopen(\"http://elasticsearch:9200/_cluster/health?wait_for_status=green&timeout=120s\", timeout=130)"
     '"$1"
 }
 

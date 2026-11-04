@@ -32,6 +32,9 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: test
+      # the restore ends with a checkpoint which can take more than the 60 s pg_ctl waits by default
+      # on a slow disk (the first start would then fail)
+      PGCTLTIMEOUT: 600
     volumes:
       - postgres_data:/var/lib/postgresql
       - ..:/v6_api
