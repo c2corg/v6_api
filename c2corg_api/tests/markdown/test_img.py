@@ -119,3 +119,19 @@ class TestImageTagSize:
     def test_size_attributes_allowed_on_images_only(self):
         html = parse_code('<p c2c:width="5">x</p>', self.url_resolver)
         assert 'c2c:width' not in html
+
+    def test_size_attributes_not_allowed_from_user_html(self):
+        # like c2c:url, only the [img=ID] parser gives them
+        html = parse_code(
+            '<img alt="x" c2c:width="5" c2c:height="9999">',
+            self.url_resolver,
+            self.size_resolver,
+        )
+        assert 'c2c:width' not in html
+        assert 'c2c:height' not in html
+
+        html = parse_code(
+            '[img=1/]\n\n<img c2c:width="5">', self.url_resolver, self.size_resolver
+        )
+        assert 1 == html.count('c2c:width=')
+        assert 'c2c:width="4000"' in html
