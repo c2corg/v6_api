@@ -2,6 +2,7 @@ import json
 import os
 from unittest.mock import Mock, patch
 
+from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_misc import POLYGON_4326
 from c2corg_api.tests.contract.test_stopareas import StopareaContractTest
@@ -89,10 +90,10 @@ class TestJourneys(NavitiaContractTest):
     @contract(JOURNEYS)
     def test_missing_parameters(self):
         response = self.get(
-            '/navitia/journeys', params={'from': '5.73;45.18'}, status=400
+            '/navitia/journeys', params={'from': '5.73;45.18'}, status=422
         )
         check_snapshot('navitia_journeys_missing', response)
-        assert [e['name'] for e in response.json['errors']] == [
+        assert [name for _, name, _ in invalid_parameters(response)] == [
             'to',
             'datetime',
             'datetime_represents',
@@ -152,7 +153,7 @@ class TestIsochrones(NavitiaContractTest):
     def test_errors(self):
         for kind in ('routes', 'waypoints'):
             url = f'/navitia/isochronesreachable{kind}'
-            response = self.get(url, params={'from': '5.73;45.18'}, status=400)
+            response = self.get(url, params={'from': '5.73;45.18'}, status=422)
             check_snapshot('navitia_isochrone_missing', response)
             with self.navitia(404, {'error': {'id': 'no_solution'}}):
                 response = self.get(url, params=ISOCHRONE_PARAMS, status=404)
@@ -191,10 +192,10 @@ class TestJobs(NavitiaContractTest):
             response = self.get(
                 f'/navitia/journeyreachable{kind}/start',
                 params={'from': '5.73;45.18'},
-                status=400,
+                status=422,
             )
             check_snapshot('navitia_job_start_missing', response)
-            assert len(response.json['errors']) == 4
+            assert len(response.json['detail']) == 4
 
     @contract(*RESULT)
     def test_result(self):

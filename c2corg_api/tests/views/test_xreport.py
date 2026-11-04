@@ -40,7 +40,7 @@ class TestXreportRest(BaseDocumentTestRest):
         assert 'geometry' in doc
 
     def test_get_collection_paginated(self):
-        self.app.get('/xreports?offset=invalid', status=400)
+        self.app.get('/xreports?offset=invalid', status=422)
 
         self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
 

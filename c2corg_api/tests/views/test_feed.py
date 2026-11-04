@@ -7,6 +7,7 @@ from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.user import User
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint, WaypointLocale
+from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.views import BaseTestRest
 
 
@@ -184,9 +185,9 @@ class TestFeedRest(BaseFeedTestRest):
         assert 'en' == outing_locales[0]['lang']
 
     def test_get_public_feed_pagination_invalid_format(self):
-        response = self.app.get(self._prefix + '?token=123,invalid-token', status=400)
+        response = self.app.get(self._prefix + '?token=123,invalid-token', status=422)
 
-        self.assertError(response.json['errors'], 'token', 'invalid format')
+        assert ('query', 'token', 'invalid format') in invalid_parameters(response)
 
     def test_get_public_feed_pagination(self):
         # first 2 changes
@@ -474,11 +475,11 @@ class TestPersonalFeedRest(BaseFeedTestRest):
 class TestProfileFeedRest(BaseFeedTestRest):
     def test_get_feed_invalid_user_id(self):
         headers = self.add_authorization_header(username='contributor')
-        self.app.get('/profile-feed?u=invalid-user-id', status=400, headers=headers)
+        self.app.get('/profile-feed?u=invalid-user-id', status=422, headers=headers)
 
     def test_get_feed_missing_user_id(self):
         headers = self.add_authorization_header(username='contributor')
-        self.app.get('/profile-feed', status=400, headers=headers)
+        self.app.get('/profile-feed', status=422, headers=headers)
 
     def test_get_feed_non_existing_user(self):
         headers = self.add_authorization_header(username='contributor')

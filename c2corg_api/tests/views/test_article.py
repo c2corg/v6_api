@@ -38,7 +38,7 @@ class TestArticleRest(BaseDocumentTestRest):
         assert licenses[self.article4.document_id] == 'CC-BY-NC-ND-3.0'
 
     def test_get_collection_paginated(self):
-        self.app.get('/articles?offset=invalid', status=400)
+        self.app.get('/articles?offset=invalid', status=422)
 
         self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
 

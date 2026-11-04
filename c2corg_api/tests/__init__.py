@@ -36,6 +36,12 @@ alembic_scripts_folder = os.path.realpath(
 )
 
 
+def invalid_parameters(response):
+    """Return the (location, name, message) of the errors of a 422 answer."""
+    # FastAPI's validation errors: `loc` is the location and the name
+    return [(*error['loc'], error['msg']) for error in response.json['detail']]
+
+
 def get_engine():
     return engine_from_config(settings, 'sqlalchemy.')
 

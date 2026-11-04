@@ -3,6 +3,7 @@ from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.stoparea import Stoparea
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
+from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_documents import POINT, DocumentContractTest
 from c2corg_api.tests.search.__init__ import reset_search_index
@@ -156,6 +157,9 @@ class TestReachable(StopareaContractTest):
     @contract(REACHABLE_ROUTES, REACHABLE_WAYPOINTS)
     def test_invalid_parameters(self):
         for path in ('/reachableroutes', '/reachablewaypoints'):
-            response = self.get(path, params={'limit': 'x', 'pl': 'xx'}, status=400)
+            response = self.get(path, params={'limit': 'x', 'pl': 'xx'}, status=422)
             check_snapshot('reachable_invalid', response)
-            assert [e['name'] for e in response.json['errors']] == ['limit', 'lang']
+            assert [name for _, name, _ in invalid_parameters(response)] == [
+                'limit',
+                'pl',
+            ]

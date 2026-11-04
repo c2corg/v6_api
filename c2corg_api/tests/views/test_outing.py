@@ -97,7 +97,7 @@ class TestOutingRest(BaseDocumentTestRest):
         assert response.json['total'] == 1
 
     def test_get_collection_paginated(self):
-        self.app.get('/outings?offset=invalid', status=400)
+        self.app.get('/outings?offset=invalid', status=422)
 
         self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
 

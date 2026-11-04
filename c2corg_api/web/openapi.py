@@ -35,8 +35,9 @@ def _without_head(route):
     return route
 
 
-# the error envelope the API answers, as Cornice did (web.errors), until the
-# move to FastAPI's validation errors (#2546)
+# the error envelope the API answers, as Cornice did (web.errors): for the
+# refusals (403...) and the invalid bodies, until they are validated by
+# FastAPI too (#2546)
 ERRORS = {
     'title': 'Errors',
     'type': 'object',
@@ -50,13 +51,11 @@ ERRORS = {
                 'properties': {
                     'location': {
                         'type': 'string',
-                        'description': '`querystring` (also for the path '
-                        'parameters), `body` or `header`.',
+                        'description': '`body` or `header`.',
                     },
                     'name': {
                         'type': 'string',
-                        'description': 'The parameter or field, e.g. `lang` or '
-                        '`locales.0.title`.',
+                        'description': 'The field, e.g. `locales.0.title`.',
                     },
                     'description': {'description': 'The message.'},
                 },
@@ -65,27 +64,17 @@ ERRORS = {
     },
 }
 _INVALID = {
-    'description': 'Invalid parameters.',
+    'description': 'Invalid body.',
     'content': {
         'application/json': {'schema': {'$ref': '#/components/schemas/Errors'}}
     },
 }
-# FastAPI's validation errors, which the API does not answer
-_FASTAPI_ERRORS = ('HTTPValidationError', 'ValidationError')
 
 
 def error_responses(document):
-    """Replace FastAPI's 422 answers with the 400 answers of the API."""
-    # FastAPI describes a 422 for every operation with parameters; the API
-    # answers their errors with a 400 and its envelope (web.params)
-    for operations in document.get('paths', {}).values():
-        for operation in operations.values():
-            responses = operation.get('responses', {})
-            if responses.pop('422', None) is not None:
-                responses['400'] = _INVALID
+    """Add the error envelope of the API to the schemas."""
+    # the invalid parameters are FastAPI's 422, as it describes them
     schemas = document.setdefault('components', {}).setdefault('schemas', {})
-    for name in _FASTAPI_ERRORS:
-        schemas.pop(name, None)
     schemas['Errors'] = ERRORS
     return document
 

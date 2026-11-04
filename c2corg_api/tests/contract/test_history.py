@@ -1,3 +1,4 @@
+from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_documents import DocumentContractTest
 
@@ -27,9 +28,9 @@ class TestDocumentHistory(DocumentContractTest):
 
     @contract(HISTORY)
     def test_invalid_lang(self):
-        response = self.get(f'/document/{self.ids["waypoints"]}/history/xx', status=400)
+        response = self.get(f'/document/{self.ids["waypoints"]}/history/xx', status=422)
         check_snapshot('history_invalid_lang', response)
-        assert [e['name'] for e in response.json['errors']] == ['lang']
+        assert [name for _, name, _ in invalid_parameters(response)] == ['lang']
 
 
 class TestDocumentChanges(DocumentContractTest):
@@ -48,9 +49,9 @@ class TestDocumentChanges(DocumentContractTest):
     def test_invalid_parameters(self):
         # an invalid pagination token, not a password
         params = {'token': 'abc', 'u': 'x'}  # nosec B105
-        response = self.get('/documents/changes', params=params, status=400)
+        response = self.get('/documents/changes', params=params, status=422)
         check_snapshot('documents_changes_invalid', response)
-        assert [e['name'] for e in response.json['errors']] == ['token', 'u']
+        assert [name for _, name, _ in invalid_parameters(response)] == ['token', 'u']
 
 
 class TestAssociationsHistory(DocumentContractTest):
@@ -64,6 +65,6 @@ class TestAssociationsHistory(DocumentContractTest):
 
     @contract(ASSOCIATIONS_HISTORY)
     def test_invalid_parameters(self):
-        response = self.get('/associations-history', params={'d': 'abc'}, status=400)
+        response = self.get('/associations-history', params={'d': 'abc'}, status=422)
         check_snapshot('associations_history_invalid', response)
-        assert [e['name'] for e in response.json['errors']] == ['d']
+        assert [name for _, name, _ in invalid_parameters(response)] == ['d']

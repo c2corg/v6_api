@@ -50,7 +50,7 @@ class TestRouteRest(BaseDocumentTestRest):
         assert 'height_diff_access' not in doc
 
     def test_get_collection_paginated(self):
-        self.app.get('/routes?offset=invalid', status=400)
+        self.app.get('/routes?offset=invalid', status=422)
 
         self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
 

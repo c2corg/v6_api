@@ -12,9 +12,14 @@ def _error(name, description, location='querystring'):
     return {'location': location, 'name': name, 'description': description}
 
 
+def _invalid(response):
+    """Return the (location, parameter, message) of FastAPI's 422 answer."""
+    return [(*error['loc'], error['msg']) for error in response.json['detail']]
+
+
 class TestTypedParameterErrors:
-    # the answers of the validators of views/validation.py, which the typed
-    # parameters replace: before the database is read
+    # FastAPI's 422 (#2546), before the database is read: the parameters by
+    # their names in the query string or the path
     def test_invalid_id(self):
         # the ids of the paths are numbers: a path with anything else is not
         # found
@@ -23,28 +28,28 @@ class TestTypedParameterErrors:
             assert response.json['errors'][0]['name'] == 'Not Found', path
 
     def test_invalid_langs(self):
-        response = _client().get('/routes/1', params={'l': 'xx'}, status=400)
-        assert response.json['errors'] == [_error('lang', 'invalid lang')]
-        response = _client().get('/routes/1', params={'cook': 'xx'}, status=400)
-        assert response.json['errors'] == [_error('cook', 'invalid lang')]
+        response = _client().get('/routes/1', params={'l': 'xx'}, status=422)
+        assert _invalid(response) == [('query', 'l', 'invalid lang')]
+        response = _client().get('/routes/1', params={'cook': 'xx'}, status=422)
+        assert _invalid(response) == [('query', 'cook', 'invalid lang')]
 
     def test_info_and_version(self):
         # the languages of the paths, and the version ids
         for path in ('/routes/1/xx/info', '/routes/1/xx/12'):
-            response = _client().get(path, status=400)
-            assert response.json['errors'] == [_error('lang', 'invalid lang')], path
+            response = _client().get(path, status=422)
+            assert _invalid(response) == [('path', 'lang', 'invalid lang')], path
         # ids and version ids that are not numbers: not found
         for path in ('/routes/abc/en/info', '/routes/1/en/abc', '/routes/1/en/-2'):
             _client().get(path, status=404)
 
     def test_listing(self):
         response = _client().get(
-            '/routes', params={'offset': 'x', 'limit': '1.5', 'pl': 'xx'}, status=400
+            '/routes', params={'offset': 'x', 'limit': '1.5', 'pl': 'xx'}, status=422
         )
-        assert response.json['errors'] == [
-            _error('offset', 'invalid offset'),
-            _error('limit', 'invalid limit'),
-            _error('lang', 'invalid lang'),
+        assert _invalid(response) == [
+            ('query', 'offset', 'invalid offset'),
+            ('query', 'limit', 'invalid limit'),
+            ('query', 'pl', 'invalid lang'),
         ]
 
     def test_permission_first(self):
@@ -58,17 +63,17 @@ class TestTypedParameterErrors:
     def test_feeds(self):
         # an invalid pagination token, not a secret
         params = {'pl': 'xx', 'limit': 'x', 'token': '12'}  # nosec B105
-        response = _client().get('/feed', params=params, status=400)
-        assert response.json['errors'] == [
-            _error('lang', 'invalid lang'),
-            _error('limit', 'invalid limit'),
-            _error('token', 'invalid format'),
+        response = _client().get('/feed', params=params, status=422)
+        assert _invalid(response) == [
+            ('query', 'pl', 'invalid lang'),
+            ('query', 'limit', 'invalid limit'),
+            ('query', 'token', 'invalid format'),
         ]
         # the user of a profile feed is required, and its error comes last
-        response = _client().get('/profile-feed', params={'pl': 'xx'}, status=400)
-        assert response.json['errors'] == [
-            _error('lang', 'invalid lang'),
-            _error('u', 'invalid u'),
+        response = _client().get('/profile-feed', params={'pl': 'xx'}, status=422)
+        assert _invalid(response) == [
+            ('query', 'pl', 'invalid lang'),
+            ('query', 'u', 'Field required'),
         ]
         # the personal feed is for the authenticated users: before the
         # parameters
@@ -78,53 +83,53 @@ class TestTypedParameterErrors:
     def test_histories(self):
         # an invalid pagination token, not a secret
         params = {'token': '1,2', 'u': 'x'}  # nosec B105
-        response = _client().get('/documents/changes', params=params, status=400)
-        assert response.json['errors'] == [
-            _error('token', 'invalid format'),
-            _error('u', 'invalid u'),
+        response = _client().get('/documents/changes', params=params, status=422)
+        assert _invalid(response) == [
+            ('query', 'token', 'invalid format'),
+            ('query', 'u', 'invalid u'),
         ]
         response = _client().get(
-            '/associations-history', params={'d': 'x', 'offset': 'y'}, status=400
+            '/associations-history', params={'d': 'x', 'offset': 'y'}, status=422
         )
-        assert response.json['errors'] == [
-            _error('d', 'invalid d'),
-            _error('offset', 'invalid offset'),
+        assert _invalid(response) == [
+            ('query', 'd', 'invalid d'),
+            ('query', 'offset', 'invalid offset'),
         ]
-        response = _client().get('/document/1/history/xx', status=400)
-        assert response.json['errors'] == [_error('lang', 'invalid lang')]
+        response = _client().get('/document/1/history/xx', status=422)
+        assert _invalid(response) == [('path', 'lang', 'invalid lang')]
         _client().get('/document/abc/history/en', status=404)
 
     def test_search(self):
         response = _client().get(
-            '/search', params={'q': 'x', 'limit': 'many', 'pl': 'xx'}, status=400
+            '/search', params={'q': 'x', 'limit': 'many', 'pl': 'xx'}, status=422
         )
-        assert response.json['errors'] == [
-            _error('limit', 'invalid limit'),
-            _error('lang', 'invalid lang'),
+        assert _invalid(response) == [
+            ('query', 'limit', 'invalid limit'),
+            ('query', 'pl', 'invalid lang'),
         ]
 
     def test_sitemaps(self):
         for path in ('/sitemaps/zz/1', '/sitemaps.xml/zz/1.xml'):
-            response = _client().get(path, status=400)
-            assert response.json['errors'] == [
-                _error('doc_type', 'invalid doc_type')
-            ], path
+            response = _client().get(path, status=422)
+            assert _invalid(response) == [('path', 'doc_type', 'invalid doc_type')], (
+                path
+            )
         # a page that is not a number: not found
         for path in ('/sitemaps/w/-1', '/sitemaps.xml/w/x.xml'):
             _client().get(path, status=404)
 
     def test_stopareas(self):
         response = _client().get(
-            '/stopareas', params={'page_id': '0', 'nb_items': 'x'}, status=400
+            '/stopareas', params={'page_id': '0', 'nb_items': 'x'}, status=422
         )
-        assert response.json['errors'] == [
-            _error('page_id', 'invalid page_id'),
-            _error('nb_items', 'invalid nb_items'),
+        assert _invalid(response) == [
+            ('query', 'page_id', 'invalid page_id'),
+            ('query', 'nb_items', 'invalid nb_items'),
         ]
         for path in ('/waypoints/x/stopareas', '/waypoints/x/isReachable'):
             _client().get(path, status=404)
-        response = _client().get('/reachableroutes', params={'offset': 'x'}, status=400)
-        assert response.json['errors'] == [_error('offset', 'invalid offset')]
+        response = _client().get('/reachableroutes', params={'offset': 'x'}, status=422)
+        assert _invalid(response) == [('query', 'offset', 'invalid offset')]
 
     def test_users(self):
         # the permission before the parameters, as Pyramid did
@@ -145,10 +150,10 @@ class TestTypedParameterErrors:
         assert response.json['errors'][0]['description'] == 'Moderator role required'
 
     def test_coverage_of_a_point(self):
-        response = _client().get('/getcoverage', params={'lon': 'nan'}, status=400)
-        assert response.json['errors'] == [
-            _error('lon', 'invalid lon'),
-            _error('lat', 'invalid lat'),
+        response = _client().get('/getcoverage', params={'lon': 'nan'}, status=422)
+        assert _invalid(response) == [
+            ('query', 'lon', 'invalid lon'),
+            ('query', 'lat', 'Field required'),
         ]
 
     def test_image_proxy(self):
@@ -165,14 +170,16 @@ class TestTypedParameterErrors:
     def test_navitia(self):
         # the required parameters are only checked for their presence
         response = _client().get(
-            '/navitia/journeys', params={'to': '', 'datetime': 'x'}, status=400
+            '/navitia/journeys', params={'to': '', 'datetime': 'x'}, status=422
         )
-        assert response.json['errors'] == [
-            _error('from', 'Parameter from required'),
-            _error('datetime_represents', 'Parameter datetime_represents required'),
+        assert _invalid(response) == [
+            ('query', 'from', 'Field required'),
+            ('query', 'datetime_represents', 'Field required'),
         ]
 
     def test_origin_first(self):
+        # a request from an origin that is not allowed is refused, whatever
+        # its parameters: the 400 of web.cors
         response = _client().get(
             '/routes/1',
             params={'l': 'xx'},
@@ -181,8 +188,21 @@ class TestTypedParameterErrors:
         )
         assert response.json['errors'] == [
             _error('Origin', 'https://elsewhere.example not allowed', 'header'),
-            _error('lang', 'invalid lang'),
         ]
+
+    def test_answer(self):
+        # FastAPI's answer, as is: the error type, and the value given
+        response = _client().get('/routes/1', params={'l': 'xx'}, status=422)
+        assert response.json == {
+            'detail': [
+                {
+                    'type': 'c2corg',
+                    'loc': ['query', 'l'],
+                    'msg': 'invalid lang',
+                    'input': 'xx',
+                }
+            ]
+        }
 
 
 class TestOpenApi:
@@ -327,33 +347,29 @@ class TestEveryReadDescribed:
 
 
 class TestOpenApiErrors:
-    def test_400_not_422(self):
-        # the API answers invalid parameters with a 400 and its envelope,
-        # not FastAPI's 422 (until #2546)
+    def test_422(self):
+        # the invalid parameters are FastAPI's 422, as FastAPI describes it
         document = _client({'api.openapi': 'true'}).get('/openapi.json').json
-        for path, operations in document['paths'].items():
-            for method, operation in operations.items():
-                assert '422' not in operation['responses'], (path, method)
         responses = document['paths']['/routes/{id}']['get']['responses']
-        assert responses['400']['content']['application/json']['schema'] == {
-            '$ref': '#/components/schemas/Errors'
+        assert responses['422']['content']['application/json']['schema'] == {
+            '$ref': '#/components/schemas/HTTPValidationError'
         }
+        assert '400' not in responses
         schemas = document['components']['schemas']
-        assert 'HTTPValidationError' not in schemas
+        assert set(schemas['ValidationError']['required']) >= {'loc', 'msg', 'type'}
+        # the envelope of the refusals and of the invalid bodies
         assert schemas['Errors']['properties']['status']['enum'] == ['error']
         # a route without parameters can not be invalid
-        assert '400' not in document['paths']['/health']['get']['responses']
+        assert '422' not in document['paths']['/health']['get']['responses']
 
-    def test_envelope_matches_the_answers(self):
-        response = _client().get('/routes/1', params={'l': 'xx'}, status=400)
-        properties = (
-            _client({'api.openapi': 'true'})
-            .get('/openapi.json')
-            .json['components']['schemas']['Errors']['properties']
-        )
-        assert set(response.json) == set(properties)
-        assert set(response.json['errors'][0]) == set(
-            properties['errors']['items']['properties']
+    def test_422_matches_the_answers(self):
+        response = _client().get('/routes/1', params={'l': 'xx'}, status=422)
+        schemas = (
+            _client({'api.openapi': 'true'}).get('/openapi.json').json['components']
+        )['schemas']
+        assert set(response.json) == set(schemas['HTTPValidationError']['properties'])
+        assert set(response.json['detail'][0]) <= set(
+            schemas['ValidationError']['properties']
         )
 
 

@@ -76,7 +76,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.get_collection_lang()
 
     def test_get_collection_paginated(self):
-        self.app.get('/waypoints?offset=invalid', status=400)
+        self.app.get('/waypoints?offset=invalid', status=422)
 
         self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 5)
 

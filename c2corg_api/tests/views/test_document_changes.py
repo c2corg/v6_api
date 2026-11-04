@@ -6,6 +6,7 @@ from c2corg_api.models.outing import Outing
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.tests.views.test_feed import get_document_ids
 from c2corg_api.views.document import create_new_version
@@ -179,9 +180,9 @@ class TestChangesDocumentRest(BaseTestRest):
         assert 0 == len(feed)
 
     def test_get_changes_pagination_invalid_format(self):
-        response = self.app.get(self._prefix + '?token=invalid-token', status=400)
-        self.assertError(response.json['errors'], 'token', 'invalid format')
+        response = self.app.get(self._prefix + '?token=invalid-token', status=422)
+        assert ('query', 'token', 'invalid format') in invalid_parameters(response)
 
     def test_get_changes_userid_invalid_format(self):
-        response = self.app.get(self._prefix + '?u=invalid-user_id', status=400)
-        self.assertError(response.json['errors'], 'u', 'invalid u')
+        response = self.app.get(self._prefix + '?u=invalid-user_id', status=422)
+        assert ('query', 'u', 'invalid u') in invalid_parameters(response)
