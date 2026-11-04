@@ -89,13 +89,33 @@ until curl -s http://elasticsearch:9200 > /dev/null 2>&1; do
   sleep 5
 done
 
-echo "==> Initializing Elasticsearch indexes..."
-fill_es_index development.ini || true
+echo "==> Initializing the Elasticsearch index..."
+# Create the index with its mappings first (it does nothing if the index exists): without it Elasticsearch
+# creates the index by itself when documents arrive, without the search mappings, and the search finds nothing.
+initialize_c2corg_api_es development.ini
+
+# Fill it from the database (a few minutes), unless it already contains documents. The first request often
+# times out on a cold Elasticsearch, hence the retries.
+ES_COUNT=$(curl -s "http://elasticsearch:9200/c2corg/_count" | sed -n 's/.*"count":\([0-9]*\).*/\1/p')
+if [ "${ES_COUNT:-0}" -gt 0 ]; then
+  echo "  The index already contains ${ES_COUNT} documents"
+else
+  for attempt in 1 2 3; do
+    fill_es_index development.ini && break
+    if [ "$attempt" = 3 ]; then
+      echo "  fill_es_index failed 3 times: run it again by hand (fill_es_index development.ini)" >&2
+      exit 1
+    fi
+    echo "  fill_es_index failed (attempt ${attempt}), retrying in 10s..."
+    sleep 10
+  done
+fi
 
 echo ""
 echo "============================================="
 echo "  Dev container setup complete!"
 echo ""
+echo "  Log in with the account moderator, user... (password: c2c)"
 echo "  Run the API:   C2C_API_CONFIG=development.ini uvicorn c2corg_api.asgi:app --reload --host 0.0.0.0 --port 6543"
 echo "  Run tests:     pytest"
 echo "  Run linter:    ruff check c2corg_api es_migration"

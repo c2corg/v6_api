@@ -37,8 +37,8 @@ A [Dev Container](https://containers.dev/) configuration is provided in the `.de
 3. Wait for the container to build and the `postCreateCommand` setup script to finish. On the first run this takes a few minutes — it will:
    - Install all Python dependencies
    - Generate the configuration files
-   - Create and initialize both the dev and test databases
-   - Populate the Elasticsearch indexes
+   - Start the dev database (a lightweight anonymized extract of the production data, restored from the image `ghcr.io/c2corg/c2corg-dev-db`) and create the test database
+   - Create the Elasticsearch index and fill it from the database
 
 4. You're ready to go! See [Running the API](#running-the-api), [Running tests](#running-tests), and [Linting](#linting) below.
 

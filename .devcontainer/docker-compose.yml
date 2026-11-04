@@ -25,12 +25,15 @@ services:
       PYTHONPATH: /workspace
 
   postgresql:
-    image: postgis/postgis:16-3.4
+    # PostgreSQL 18 + PostGIS with a lightweight anonymized database (scripts/dev-database): it is restored
+    # at the first start, a minute or so. The volume is mounted on /var/lib/postgresql (the layout of the
+    # PostgreSQL 18 images), not on /var/lib/postgresql/data.
+    image: ghcr.io/c2corg/c2corg-dev-db:latest
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: test
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
       - ..:/v6_api
       - ../docker/conf/postgresql.conf:/etc/postgresql.conf
     command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
@@ -41,10 +44,15 @@ services:
       retries: 5
 
   elasticsearch:
+    # An empty Elasticsearch: setup.sh creates the index and fills it from the database
     build:
-      context: ..
-      dockerfile: docker/Dockerfile.elasticsearch
-    command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon -Des.script.inline=true
+      context: .
+      dockerfile: Dockerfile.elasticsearch
+    command: -Des.index.number_of_replicas=0 -Des.script.inline=true
+    environment:
+      ES_HEAP_SIZE: 512m
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
     ulimits:
       nofile:
         soft: 65536
@@ -60,3 +68,4 @@ services:
 
 volumes:
   postgres_data:
+  es_data:
