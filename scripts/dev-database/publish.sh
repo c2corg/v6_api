@@ -9,15 +9,16 @@
 # Needs `docker login ghcr.io` with a token which can write packages. A package created by a push is
 # private: making it public is done in the package settings on GitHub, it cannot be done from here.
 #
-# Variables: IMAGE (default ghcr.io/c2corg/c2corg-dev-db), LICENSE (SPDX id put in the image labels,
-# check it against the terms of use of the site), DRY_RUN=1 to stop before the push.
+# The image carries no licence label on purpose: the content keeps the licence of each document on the site
+# (BY-SA, BY-NC-ND, copyright...), see the README.
+#
+# Variables: IMAGE (default ghcr.io/c2corg/c2corg-dev-db), DRY_RUN=1 to stop before the push.
 
 set -euo pipefail
 
 DUMP=${1:?usage: publish.sh <dump> <tag>}
 TAG=${2:?usage: publish.sh <dump> <tag>}
 IMAGE=${IMAGE:-ghcr.io/c2corg/c2corg-dev-db}
-LICENSE=${LICENSE:-CC-BY-SA-3.0}
 HERE=$(cd "$(dirname "$0")" && pwd)
 export MSYS_NO_PATHCONV=1 # Git Bash on Windows
 
@@ -34,8 +35,7 @@ cp "$HERE/Dockerfile" "$HERE/restore-dev.sh" "$CTX/"
 echo "=== building $IMAGE:$TAG"
 docker build -q -t "$IMAGE:$TAG" \
   --label "org.opencontainers.image.source=https://github.com/c2corg/v6_api" \
-  --label "org.opencontainers.image.description=Lightweight anonymized database of camptocamp.org for development" \
-  --label "org.opencontainers.image.licenses=$LICENSE" \
+  --label "org.opencontainers.image.description=Lightweight anonymized database of camptocamp.org, for development. The content keeps the licence of each document on the site: not for redistribution" \
   "$(if command -v cygpath > /dev/null; then cygpath -m "$CTX"; else echo "$CTX"; fi)" > /dev/null
 
 echo "=== checking that no personal data is left"

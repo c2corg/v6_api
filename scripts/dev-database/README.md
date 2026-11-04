@@ -101,8 +101,14 @@ created by a push is private; making it public is done in its settings on GitHub
 
 ## Licence and attribution
 
-The content comes from camptocamp.org and remains subject to the licence stated in the terms of use of
-the site (`LICENSE` sets the SPDX identifier put in the image labels: check it before publishing).
+The content comes from camptocamp.org, where the licence depends on the type of document (see
+`getDocumentLicense` in the user interface): CC BY-SA for the routes, waypoints, areas, books, collaborative
+articles and collaborative images; CC BY-NC-ND for the outings, the profiles, the reports and the personal
+articles and images; and the images under copyright are not free. The extract mixes all of them and is
+modified (sampled, pseudonymized, some texts replaced), so it is meant for the developers and **is not to be
+redistributed**: the image carries no licence label, and the package is kept private unless the licences are
+checked with the association.
+
 The names of the users and the authors of the images are replaced by pseudonyms, but the identifiers of
 the documents are kept: every document can be traced back to its page on the site, where its history
 and its authors are listed. Image files are not part of the dump, only their rows.
