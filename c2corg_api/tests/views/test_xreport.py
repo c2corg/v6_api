@@ -436,7 +436,7 @@ class TestXreportRest(BaseDocumentTestRest):
         assert 'autonomy' in body
 
     def test_post_anonymous(self):
-        self.app.app.registry.anonymous_user_id = self.global_userids['moderator']
+        self.app.registry.anonymous_user_id = self.global_userids['moderator']
         body_post = {
             'document_id': 111,
             'version': 1,

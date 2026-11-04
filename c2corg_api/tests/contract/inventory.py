@@ -18,7 +18,7 @@ PUBLIC = 'public'
 def route_inventory(app):
     """Return the routes as sorted (path, method, permission) tuples."""
     rows = set()
-    for route in app.fastapi_app.router.routes:
+    for route in app.router.routes:
         for method in getattr(route, 'methods', None) or ():
             if method not in IMPLICIT_METHODS:
                 # a FastAPI route checks its permission itself, and tells
@@ -40,10 +40,10 @@ def format_inventory(rows):
 def main():
     """Write the inventory of the test application to `routes.txt`."""
     # usage: python -m c2corg_api.tests.contract.inventory
-    from c2corg_api import main as make_app
+    from c2corg_api import create_app
     from c2corg_api.tests import settings
 
-    app = make_app({}, **settings)
+    app = create_app(settings)
     with open(INVENTORY_FILE, 'w') as f:
         f.write(format_inventory(route_inventory(app)))
     sys.stdout.write(f'{INVENTORY_FILE} written\n')

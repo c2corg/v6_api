@@ -1,12 +1,11 @@
 import re
 
-from webtest import TestApp
-
-from c2corg_api.app import Application, create_fastapi_app
+from c2corg_api.app import create_fastapi_app
+from c2corg_api.tests.client import Client
 
 
 def _client(settings=None):
-    return TestApp(Application(create_fastapi_app(settings or {})))
+    return Client(create_fastapi_app(settings or {}))
 
 
 def _error(name, description, location='querystring'):

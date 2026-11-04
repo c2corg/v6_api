@@ -1,22 +1,22 @@
 import asyncio
 
 from anyio import to_thread
-from webtest import TestApp
 
-from c2corg_api.app import Application, Registry, create_fastapi_app, threads
+from c2corg_api.app import Registry, create_fastapi_app, threads
+from c2corg_api.tests.client import Client
 
 
 def _client():
-    return TestApp(Application(create_fastapi_app({})))
+    return Client(create_fastapi_app({}))
 
 
 class TestApplication:
     def test_registry(self):
         registry = Registry({'a': '1'}, queue_config='queues')
-        app = Application(create_fastapi_app({'a': '1'}, registry))
-        assert app.registry is registry
-        assert app.registry.settings == {'a': '1'}
-        assert app.registry.queue_config == 'queues'
+        app = create_fastapi_app({'a': '1'}, registry)
+        assert app.state.registry is registry
+        assert app.state.registry.settings == {'a': '1'}
+        assert app.state.registry.queue_config == 'queues'
 
     def test_no_generated_docs(self):
         client = _client()
@@ -75,7 +75,7 @@ class TestUnexpectedError:
         def boom():
             raise RuntimeError('boom')
 
-        client = TestApp(Application(fastapi_app))
+        client = Client(fastapi_app)
         response = client.get('/boom', status=500)
         assert response.json == {
             'status': 'error',
