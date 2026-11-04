@@ -25,7 +25,7 @@ silently returns nothing):
 
 ```sh
 initialize_c2corg_api_es development.ini    # creates the index and its mappings
-fill_es_index development.ini               # ~3 minutes, 65,000 documents, 30 MB
+fill_es_index development.ini               # about 5 minutes, 44,000 documents
 ```
 
 `es_index_fingerprint check development.ini` tells whether an index was built by the indexing code of

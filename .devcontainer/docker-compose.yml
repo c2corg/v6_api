@@ -10,6 +10,40 @@ services:
       postgresql:
         condition: service_healthy
       elasticsearch:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    # Navitia settings, read with os.getenv() by the API (the server does not load .env, only the tests do)
+    env_file: ../.env
+    environment:
+      # Point services to their container hostnames
+      PGHOST: postgresql
+      PGUSER: postgres
+      PGPASSWORD: test
+      # alembic_migration has no __init__.py, so the editable install does not expose it:
+      # without this, initialize_c2corg_api_db only works when run from /workspace
+      PYTHONPATH: /workspace
+
+  postgresql:
+    # PostgreSQL 18 + PostGIS with a lightweight anonymized database (scripts/dev-database): it is restored
+    # at the first start, a minute or so. The volume is mounted on /var/lib/postgresql (the layout of the
+    # PostgreSQL 18 images), not on /var/lib/postgresql/data.
+    image: ghcr.io/c2corg/c2corg-dev-db:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ..:/v6_api
+      - ../docker/conf/postgresql.conf:/etc/postgresql.conf
+    command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
     # Elasticsearch 2.4 with the index of the dev database (built with it by scripts/dev-database/publish.sh,
     # same tag). The data is in /esdata, a volume which starts from the content of the image.
     image: ghcr.io/c2corg/c2corg-dev-es:latest

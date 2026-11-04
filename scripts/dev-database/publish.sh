@@ -6,7 +6,7 @@
 #
 # 1. builds the database image locally, 2. starts it and runs 60-verify.sql (no personal data left),
 # 3. fills an Elasticsearch from that database with the indexing code of this checkout (a few minutes,
-#    about 1 GB of memory more) and builds the Elasticsearch image from it, 4. checks it,
+#    about 1.5 GB of memory more) and builds the Elasticsearch image from it, 4. checks it,
 # 5. asks for confirmation, 6. pushes <tag> and `latest` of both images.
 #
 # Run it from a checkout of the version of the API the images are meant for: the index is built by its
@@ -92,6 +92,8 @@ start_es() { # $1 = image, $2... = options of the server
     -e ES_HEAP_SIZE=768m "$image" "$@" > /dev/null
 }
 # runs a command of the API image on the build network, with a development.ini pointing at the two servers
+# (the single quotes are meant: the commands are expanded by the shell of the container)
+# shellcheck disable=SC2016
 in_api() {
   docker run --rm --network "$NET" -v "$(native_path "$REPO"):/src:ro" "$API_BUILD" sh -ec '
     cat > /tmp/env.build <<ENV
@@ -115,14 +117,18 @@ ENV
 start_es "$ES_BASE" -Des.path.data=/esdata -Des.index.number_of_replicas=0 -Des.script.inline=true
 # small batches and retries: a request to a cold Elasticsearch on a loaded machine can exceed the 10 s timeout
 # of the client (filling is idempotent, the documents are indexed by id)
+# shellcheck disable=SC2016
 in_api 'initialize_c2corg_api_es development.ini
   for attempt in 1 2 3; do
     fill_es_index development.ini && break
     [ "$attempt" = 3 ] && exit 1
     echo "fill_es_index failed (attempt $attempt), retrying"
   done
-  es_index_fingerprint store development.ini'
-docker stop "$ES_NAME" > /dev/null
+  es_index_fingerprint store development.ini
+  # flush to the disk: the data is copied out of a stopped server
+  python -c "import urllib.request as u; u.urlopen(u.Request(\"http://elasticsearch:9200/_flush\", method=\"POST\"))"'
+# a clean shutdown of Elasticsearch takes more than the 10 s of the default
+docker stop -t 60 "$ES_NAME" > /dev/null
 docker cp "$ES_NAME:/esdata" "$(native_path "$ES_DIR/esdata")"
 docker build -q -t "$ES_IMAGE:$TAG" \
   --label "org.opencontainers.image.source=https://github.com/c2corg/v6_api" \

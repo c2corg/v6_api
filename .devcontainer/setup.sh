@@ -96,7 +96,7 @@ initialize_c2corg_api_es development.ini
 
 # The Elasticsearch image already contains the index of the dev database. It is kept if it was built by
 # this version of the indexing code (the fingerprint stored with it is compared with the one of the code);
-# otherwise, or if it is empty, it is rebuilt from the database (a few minutes).
+# otherwise, or if it is empty, it is rebuilt from the database (about 5 minutes).
 ES_COUNT=$(curl -s "http://elasticsearch:9200/c2corg/_count" | sed -n 's/.*"count":\([0-9]*\).*/\1/p')
 REBUILD=1
 if [ "${ES_COUNT:-0}" -gt 0 ]; then

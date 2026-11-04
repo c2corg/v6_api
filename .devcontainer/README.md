@@ -39,7 +39,7 @@ documents, a few hundred accounts, the stop areas), restored at the first start 
 - Accounts (password `c2c` for all): `moderator`, `user`, `blocked`, `unvalidated`.
 - Elasticsearch comes from the image `ghcr.io/c2corg/c2corg-dev-es`, published with the database and
   already indexed. The setup script keeps that index if it was built by the same indexing code as your
-  checkout (see `es_index_fingerprint`); otherwise it rebuilds it from the database (a few minutes). The
+  checkout (see `es_index_fingerprint`); otherwise it rebuilds it from the database (about 5 minutes). The
   data of both services lives in the Docker volumes `postgres_data` and `es_data`.
 - To get a fresh database and index, rebuild the container after removing these two volumes (the
   names are prefixed by the Compose project): `docker volume rm <project>_postgres_data <project>_es_data`.
