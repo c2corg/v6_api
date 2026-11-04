@@ -19,6 +19,11 @@ def error_response(errors, status_code=400, headers=None):
     )
 
 
+def validation_response(detail):
+    """Return FastAPI's answer to an invalid request: 422, {detail: [...]}."""
+    return JSONResponse({'detail': detail}, status_code=422)
+
+
 def _error(error):
     if isinstance(error, dict):
         return dict(error)

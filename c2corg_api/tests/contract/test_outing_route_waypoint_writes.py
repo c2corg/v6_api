@@ -1,9 +1,10 @@
+from c2corg_api.tests import errors_of
 from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_writes import WriteContractTest, writable
 
 
 def error_names(response):
-    return sorted(e['name'] for e in response.json['errors'])
+    return sorted(e['name'] for e in errors_of(response.json))
 
 
 class OutingRouteWaypointTest(WriteContractTest):
@@ -76,6 +77,6 @@ class TestWaypointWrites(OutingRouteWaypointTest):
     def test_create_invalid(self):
         document = self.creation('waypoints')
         document['waypoint_type'] = 'no such type'
-        response = self.post('/waypoints', document, user='contributor', status=400)
+        response = self.post('/waypoints', document, user='contributor', status=422)
         check_snapshot('waypoints_create_invalid', response)
         assert error_names(response) == ['waypoint_type']

@@ -36,8 +36,7 @@ def _without_head(route):
 
 
 # the error envelope the API answers, as Cornice did (web.errors): for the
-# refusals (403...) and the invalid bodies, until they are validated by
-# FastAPI too (#2546)
+# refusals (403...) and the errors of the rules of the API (#2546)
 ERRORS = {
     'title': 'Errors',
     'type': 'object',
@@ -63,10 +62,20 @@ ERRORS = {
         },
     },
 }
-_INVALID = {
-    'description': 'Invalid body.',
+# a valid body that breaks a rule of the API (an association...)
+_REFUSED = {
+    'description': 'Not allowed by the rules of the API.',
     'content': {
         'application/json': {'schema': {'$ref': '#/components/schemas/Errors'}}
+    },
+}
+# an invalid body, as FastAPI answers it
+_INVALID = {
+    'description': 'Validation Error',
+    'content': {
+        'application/json': {
+            'schema': {'$ref': '#/components/schemas/HTTPValidationError'}
+        }
     },
 }
 
@@ -198,7 +207,8 @@ def request_bodies(document, routes):
                 _path_parameters(route, operation)
             )
             responses = operation['responses']
-            responses['400'] = _INVALID
+            responses['422'] = _INVALID
+            responses['400'] = _REFUSED
             if route.endpoint.permission:
                 responses['403'] = {
                     'description': 'Not allowed: authentication or a role '

@@ -16,6 +16,7 @@ from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.image import Image
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint
+from c2corg_api.tests import errors_of
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
 from c2corg_api.views.document import create_new_version
@@ -180,9 +181,9 @@ class TestBookRest(BaseDocumentTestRest):
             'locales': [{'lang': 'en', 'title': 'Book'}],
         }
         headers = self.add_authorization_header(username='contributor')
-        response = self.app_post_json(self._prefix, body, headers=headers, status=400)
+        response = self.app_post_json(self._prefix, body, headers=headers, status=422)
         self.assertError(
-            response.json['errors'],
+            errors_of(response.json),
             'activities.1',
             f'"not-an-activity" is not one of {", ".join(activities)}',
         )

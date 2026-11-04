@@ -26,6 +26,7 @@ from c2corg_api.models.route import (
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.tests import errors_of
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
 from c2corg_api.views.document import create_new_version
@@ -276,19 +277,26 @@ class TestRouteRest(BaseDocumentTestRest):
         self.get_info_404()
 
     def test_post_error(self):
-        body = self.post_error({})
-        errors = body.get('errors')
-        assert len(errors) == 2
-        self.assertError(errors, 'activities', 'Required')
-        self.assertError(
-            errors, 'associations.waypoints', 'at least one waypoint required'
-        )
+        # an invalid body: its errors alone, the rules of the API need a
+        # valid body
+        body = self.post_error({}, status=422)
+        errors = errors_of(body)
+        assert len(errors) == 1
+        self.assertError(errors, 'activities', 'Field required')
 
     def test_post_empty_activities_and_associations_error(self):
-        body = self.post_error({'activities': []})
-        errors = body.get('errors')
-        assert len(errors) == 2
+        body = self.post_error({'activities': []}, status=422)
+        errors = errors_of(body)
+        assert len(errors) == 1
         self.assertError(errors, 'activities', 'Shorter than minimum length 1')
+
+    def test_post_without_waypoint(self):
+        # a valid body: the rules of the API, in its envelope (400)
+        body = self.post_error(
+            {'activities': ['hiking'], 'locales': [{'lang': 'en', 'title': 'x'}]}
+        )
+        errors = errors_of(body)
+        assert len(errors) == 1
         self.assertError(
             errors, 'associations.waypoints', 'at least one waypoint required'
         )
@@ -341,11 +349,11 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        body = self.post_error(body_post)
+        body = self.post_error(body_post, status=422)
         # the schema rejects the body, so the association checks also miss
         # their data and add their own errors
         self.assertError(
-            body.get('errors'),
+            errors_of(body),
             'activities.0',
             f'"cooking" is not one of {", ".join(activities)}',
         )
@@ -515,7 +523,7 @@ class TestRouteRest(BaseDocumentTestRest):
             ],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        errors = self.post_wrong_geom_type(body)
+        errors = self.post_wrong_geom_type(body, status=422)
         assert (
             errors[0]['description'] == 'Invalid geometry type. Expected: '
             "['LINESTRING', 'MULTILINESTRING']. Got: POINT."
@@ -546,7 +554,7 @@ class TestRouteRest(BaseDocumentTestRest):
             ],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        errors = self.post_wrong_geom_type(body)
+        errors = self.post_wrong_geom_type(body, status=422)
         assert (
             errors[0]['description'] == 'Invalid geometry: {"type": '
             '"LineString", "coordinates": '
@@ -564,7 +572,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        errors = self.post_wrong_geom_type(body)
+        errors = self.post_wrong_geom_type(body, status=422)
         assert (
             errors[0]['description']
             == 'Invalid geometry: {"type": "Point", "coordinates": [NaN, NaN]}'

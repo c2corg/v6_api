@@ -61,6 +61,8 @@ class ValidatedRequest:
         self.matchdict = dict(path_params or request.path_params)
         self.validated = {}
         self.errors = Errors()
+        # the validation errors of the body, answered as FastAPI does (422)
+        self.invalid = []
         self.response = _Response()
         # as WebOb's request.if_none_match: weak ETags count
         self.if_none_match = parse_if_none_match(request.headers.get('If-None-Match'))

@@ -155,9 +155,9 @@ class TestWrites(BaseTestRest):
     def test_invalid_json_body(self):
         headers = self.add_authorization_header(username='contributor')
         headers['Content-Type'] = 'application/json'
-        response = self.app.post(PATH, '{not json', headers=headers, status=400)
-        [error] = response.json['errors']
-        assert error['description'].startswith('Invalid JSON: ')
+        response = self.app.post(PATH, '{not json', headers=headers, status=422)
+        [error] = response.json['detail']
+        assert error['type'] == 'json_invalid'
 
     def test_content_type_and_permission(self):
         headers = self.add_authorization_header(username='contributor')

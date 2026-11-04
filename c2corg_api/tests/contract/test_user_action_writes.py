@@ -65,7 +65,7 @@ class TestPreferencesAndMailinglistsWrites(UserContractTest):
     @contract(('POST', '/users/preferences'))
     def test_invalid_preferences(self):
         body = {'followed_only': 'maybe', 'activities': ['flying'], 'langs': ['xx']}
-        response = self.post('/users/preferences', body, user='contributor', status=400)
+        response = self.post('/users/preferences', body, user='contributor', status=422)
         check_snapshot('users_preferences_invalid', response)
 
     @contract(('POST', '/users/mailinglists'))

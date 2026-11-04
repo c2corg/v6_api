@@ -1,3 +1,4 @@
+from c2corg_api.tests import errors_of
 from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_writes import WriteContractTest, writable
 
@@ -68,6 +69,6 @@ class TestCoverageWrites(WriteContractTest):
     @contract(('POST', '/coverages'))
     def test_create_invalid(self):
         body = {'coverage_type': 'no-such-coverage', 'locales': []}
-        response = self.post('/coverages', body, user='contributor', status=400)
+        response = self.post('/coverages', body, user='contributor', status=422)
         check_snapshot('coverages_create_invalid', response)
-        assert [e['name'] for e in response.json['errors']] == ['coverage_type']
+        assert [e['name'] for e in errors_of(response.json)] == ['coverage_type']

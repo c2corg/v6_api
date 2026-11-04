@@ -22,7 +22,7 @@ class TestImageListWrites(DocumentContractTest):
             '/images/list',
             {'images': [{'filename': 1}]},
             user='contributor',
-            status=400,
+            status=422,
         )
         check_snapshot('images_list_invalid', response)
 

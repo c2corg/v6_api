@@ -40,6 +40,7 @@ from c2corg_api.models.waypoint import (
 )
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.route_mapping import SearchRoute
+from c2corg_api.tests import errors_of
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest
 from c2corg_api.views.document import create_new_version
@@ -411,8 +412,8 @@ class TestWaypointRest(BaseDocumentTestRest):
         assert set(body['available_langs']) == set(['en', 'fr'])
 
     def test_post_error(self):
-        body = self.post_error({})
-        errors = body.get('errors')
+        body = self.post_error({}, status=422)
+        errors = errors_of(body)
         assert len(errors) == 1
         self.assertCorniceRequired(errors[0], 'waypoint_type')
 
@@ -494,8 +495,8 @@ class TestWaypointRest(BaseDocumentTestRest):
             'elevation': 3779,
             'locales': [{'lang': 'en', 'title': 'Mont Pourri'}],
         }
-        body = self.post_error(body_post)
-        errors = body.get('errors')
+        body = self.post_error(body_post, status=422)
+        errors = errors_of(body)
         assert len(errors) == 1
         assert errors[0].get('description').startswith('"swimming-pool" is not one of')
         assert errors[0].get('name') == 'waypoint_type'
@@ -715,7 +716,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'waypoint_children': [{'document_id': self.waypoint2.document_id}]
             },
         }
-        errors = self.post_wrong_geom_type(body)
+        errors = self.post_wrong_geom_type(body, status=422)
         assert (
             errors[0]['description']
             == "Invalid geometry type. Expected: ['POINT']. Got: LINESTRING."

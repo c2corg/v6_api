@@ -48,9 +48,15 @@ class Example(Schema):
     point: Geometry(['POINT']) = None
 
 
+def _messages(errors):
+    # the errors as FastAPI answers them: the field, in the body, and its text
+    assert all(error['loc'][0] == 'body' for error in errors)
+    return {'.'.join(map(str, error['loc'][1:])): error['msg'] for error in errors}
+
+
 def _check(body):
     validated, errors = validate(Example, {'required': 'r', **body})
-    return validated, dict(errors)
+    return validated, _messages(errors)
 
 
 def _value(body, name):
@@ -67,9 +73,10 @@ def _error(body, name):
 
 class TestMissingValues:
     def test_required(self):
-        assert dict(validate(Example, {})[1]) == {'required': 'Required'}
+        # a missing field, or an empty one (left out): pydantic's text
+        assert _messages(validate(Example, {})[1]) == {'required': 'Field required'}
         for value in (None, '', 0, False, []):
-            assert _error({'required': value}, 'required') == 'Required'
+            assert _error({'required': value}, 'required') == 'Field required'
 
     def test_defaults(self):
         validated, _ = _check({})
@@ -111,7 +118,7 @@ class TestConversions:
             items: Seq(OneOf(['a', 'b'])) = None
 
         _, errors = validate(Choices, {'items': ['a', 'c']})
-        assert dict(errors) == {'items.1': '"c" is not one of a, b'}
+        assert _messages(errors) == {'items.1': '"c" is not one of a, b'}
 
     def test_sequence_and_mapping(self):
         assert _error({'items': 'abc'}, 'items') == '"abc" is not iterable'
@@ -119,7 +126,7 @@ class TestConversions:
         assert _error({'mapping': 'x'}, 'mapping') == (
             '"x" is not a mapping type: Does not implement dict-like functionality.'
         )
-        assert _error({'mapping': {}}, 'mapping.document_id') == 'Required'
+        assert _error({'mapping': {}}, 'mapping.document_id') == 'Field required'
 
     def test_boolean(self):
         for value in ('false', 'FALSE', '0', 0, False):

@@ -14,12 +14,12 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
 from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config, search_documents
-from c2corg_api.tests import BaseTestCase
+from c2corg_api.tests import BaseTestCase, errors_of
 
 
 class BaseTestRest(BaseTestCase):
     def assertErrorsContain(self, body, key, value=None):  # noqa
-        for error in body['errors']:
+        for error in errors_of(body):
             if error.get('name') == key:
                 if value is not None:
                     assert error.get('description') == value
@@ -58,7 +58,8 @@ class BaseTestRest(BaseTestCase):
         assert error.get('name') == key
 
     def assertCorniceRequired(self, error, key):  # noqa
-        assert error.get('description') == 'Required'
+        # a missing field: FastAPI's text in a 422, the API's in its envelope
+        assert error.get('description') in ('Field required', 'Required')
         assert error.get('name') == key
 
     def assertError(self, errors, name, description):  # noqa
@@ -404,20 +405,22 @@ class BaseDocumentTestRest(BaseTestRest):
         self.app.get(self._prefix + '/9999999', headers=headers, status=404)
         self.app.get(self._prefix + '/9999999?l=es', headers=headers, status=404)
 
-    def post_error(self, request_body, user='contributor'):
+    def post_error(self, request_body, user='contributor', status=400):
         response = self.app_post_json(
             self._prefix, request_body, expect_errors=True, status=403
         )
 
         headers = self.add_authorization_header(username=user)
         response = self.app_post_json(
-            self._prefix, request_body, headers=headers, expect_errors=True, status=400
+            self._prefix,
+            request_body,
+            headers=headers,
+            expect_errors=True,
+            status=status,
         )
 
         body = response.json
-        assert body.get('status') == 'error'
-        errors = body.get('errors')
-        assert len(errors) > 0
+        assert len(errors_of(body)) > 0
         return body
 
     def post_missing_title(self, request_body, user='contributor', prefix=''):
@@ -427,12 +430,11 @@ class BaseDocumentTestRest(BaseTestRest):
 
         headers = self.add_authorization_header(username=user)
         response = self.app_post_json(
-            self._prefix, request_body, headers=headers, expect_errors=True, status=400
+            self._prefix, request_body, headers=headers, expect_errors=True, status=422
         )
 
         body = response.json
-        assert body.get('status') == 'error'
-        errors = body.get('errors')
+        errors = errors_of(body)
         self.assertCorniceRequired(errors[0], prefix + 'locales.0.title')
         return body
 
@@ -470,20 +472,21 @@ class BaseDocumentTestRest(BaseTestRest):
         self.assertCorniceRequired(errors[0], 'geometry.geom')
         return body
 
-    def post_wrong_geom_type(self, request_body):
+    def post_wrong_geom_type(self, request_body, status=400):
         response = self.app_post_json(
             self._prefix, request_body, expect_errors=True, status=403
         )
 
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(
-            self._prefix, request_body, headers=headers, expect_errors=True, status=400
+            self._prefix,
+            request_body,
+            headers=headers,
+            expect_errors=True,
+            status=status,
         )
 
-        body = response.json
-        assert body.get('status') == 'error'
-        errors = body.get('errors')
-        return errors
+        return errors_of(response.json)
 
     def post_missing_locales(self, request_body):
         response = self.app_post_json(
@@ -707,12 +710,10 @@ class BaseDocumentTestRest(BaseTestRest):
 
         headers = self.add_authorization_header(username=user)
         response = self.app_put_json(
-            self._prefix + '/' + str(id), request_body, headers=headers, status=400
+            self._prefix + '/' + str(id), request_body, headers=headers, status=422
         )
 
-        body = response.json
-        assert body['status'] == 'error'
-        assert body['errors'][0]['description'] == 'Required'
+        assert errors_of(response.json)[0]['description'] == 'Field required'
 
     def put_missing_field(self, request_body, document, field, user='contributor'):
         response = self.app_put_json(

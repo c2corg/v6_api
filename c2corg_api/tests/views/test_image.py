@@ -23,6 +23,7 @@ from c2corg_api.models.image import IMAGE_TYPE, ArchiveImage, Image
 from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.tests import errors_of
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest, BaseTestRest
 from c2corg_api.views.document import create_new_version
@@ -366,8 +367,8 @@ class TestImageRest(BaseTestImage):
         assert 'articles' in associations
 
     def test_post_error(self):
-        body = self.post_error({})
-        errors = body.get('errors')
+        body = self.post_error({}, status=422)
+        errors = errors_of(body)
         assert len(errors) == 1
         self.assertCorniceRequired(errors[0], 'filename')
 
@@ -414,8 +415,8 @@ class TestImageRest(BaseTestImage):
     def test_post_missing_filename(self):
         body_post = self._post_success_document()
         del body_post['filename']
-        body = self.post_error(body_post)
-        errors = body.get('errors')
+        body = self.post_error(body_post, status=422)
+        errors = errors_of(body)
         self.assertCorniceRequired(errors[0], 'filename')
 
     @pytest.mark.parametrize('value', ['NaN', 'inf', float('nan')])
@@ -1157,7 +1158,7 @@ class TestImageListRest(BaseTestImage):
 
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(
-            '/images/list', request_body, headers=headers, status=400
+            '/images/list', request_body, headers=headers, status=422
         )
 
         body = response.json

@@ -61,7 +61,7 @@ class TestAccountWrites(UserContractTest):
             '/users/update_preferred_language',
             {'lang': 'xx'},
             user='contributor',
-            status=400,
+            status=422,
         )
         check_snapshot('users_update_preferred_language_invalid', response)
 
@@ -69,7 +69,7 @@ class TestAccountWrites(UserContractTest):
 class TestRegistrationWrites(UserContractTest):
     @contract(('POST', '/users/register'))
     def test_invalid_registration(self):
-        response = self.post('/users/register', {'username': 'x'}, status=400)
+        response = self.post('/users/register', {'username': 'x'}, status=422)
         check_snapshot('users_register_invalid', response)
 
     @contract(('POST', '/users/request_password_change'))
