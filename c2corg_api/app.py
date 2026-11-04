@@ -1,10 +1,9 @@
 """The FastAPI application of the API."""
-# Served by uvicorn (c2corg_api.asgi); the tests drive it through an
-# ASGI-to-WSGI bridge (Application).
+# Served by uvicorn (c2corg_api.asgi); the tests drive it through FastAPI's
+# TestClient (c2corg_api.tests.client).
 
 from contextlib import asynccontextmanager
 
-from a2wsgi import ASGIMiddleware
 from anyio import to_thread
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -140,19 +139,3 @@ def _allowed_methods(request):
 
 
 _REASONS = {404: 'Not Found', 405: 'Method Not Allowed'}
-
-
-class Application:
-    """The WSGI application: the FastAPI application behind a bridge."""
-
-    def __init__(self, fastapi_app):
-        self.fastapi_app = fastapi_app
-        self._wsgi = ASGIMiddleware(fastapi_app)
-
-    @property
-    def registry(self):
-        """The settings and configuration (queue_config...)."""
-        return self.fastapi_app.state.registry
-
-    def __call__(self, environ, start_response):
-        return self._wsgi(environ, start_response)

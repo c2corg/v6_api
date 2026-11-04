@@ -12,7 +12,7 @@ from c2corg_api.tests.views import BaseTestRest
 class TestCookerRest(BaseTestRest):
     def setUp(self):
         super().setUp()
-        self.image_url = self.app.app.registry.settings['image_url']
+        self.image_url = self.app.registry.settings['image_url']
 
     def test_get(self):
         markdowns = {'lang': 'fr', 'description': '**strong emphasis** and *emphasis*'}

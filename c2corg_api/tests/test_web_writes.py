@@ -53,7 +53,7 @@ class TestWrites(BaseTestRest):
         super().setUp()
         # The sessions of the requests join the transaction of the test in a
         # SAVEPOINT (conftest), so that a rollback really rolls the request back.
-        self.fastapi_app = self.app.app.fastapi_app
+        self.fastapi_app = self.app.app
 
         async def endpoint(
             request: Request,

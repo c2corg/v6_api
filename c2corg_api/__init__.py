@@ -15,15 +15,6 @@ from c2corg_api.views import configure_cors_policy
 log = logging.getLogger(__name__)
 
 
-def main(global_config, **settings):
-    """Return the API behind a WSGI bridge, for the tests (see `c2corg_api.app`)."""
-    # imported here: the FastAPI routes import the views, which need the
-    # package initialized
-    from c2corg_api.app import Application
-
-    return Application(create_app(settings))
-
-
 def create_app(settings):
     """Return the FastAPI application of the API, configured by `settings`."""
     # Configure SQLAlchemy

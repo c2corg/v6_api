@@ -1,11 +1,10 @@
 import logging
 import re
 
-from a2wsgi import ASGIMiddleware
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
-from webtest import TestApp
 
+from c2corg_api.tests.client import Client
 from c2corg_api.web.access_log import AccessLogMiddleware
 
 
@@ -21,7 +20,7 @@ def _client():
         raise RuntimeError('fails')
 
     app.add_middleware(AccessLogMiddleware)
-    return TestApp(ASGIMiddleware(app))
+    return Client(app)
 
 
 def _records(caplog):
