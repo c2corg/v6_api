@@ -1,0 +1,38 @@
+name: Publish the Elasticsearch image of the dev database
+
+# Started by hand, with the tag of a published dev database image
+# (ghcr.io/c2corg/c2corg-dev-db): fills its index with the API image of
+# master and pushes ghcr.io/c2corg/c2corg-dev-es with the same tag and
+# `latest` (scripts/dev-database/publish-es.sh). Run it again when the
+# mapping of the index changes.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag of the dev database image (e.g. 2026-07-19)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # needed to push the image to ghcr.io
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Login to the GitHub container registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build, check and push the image
+        env:
+          TAG: ${{ inputs.tag }}
+          YES: 1
+        run: scripts/dev-database/publish-es.sh "$TAG"

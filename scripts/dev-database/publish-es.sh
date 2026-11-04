@@ -16,7 +16,7 @@
 # Variables: IMAGE (default ghcr.io/c2corg/c2corg-dev-es), DB_IMAGE (default ghcr.io/c2corg/c2corg-dev-db),
 # API_IMAGE (default ghcr.io/c2corg/v6_api:latest), LICENSE (SPDX id put in the image labels),
 # MIN_DOCS (the check fails below this number of indexed documents, default 10000), DRY_RUN=1 to stop
-# before the push, KEEP=1 to keep the containers and the network when the build ends (to inspect a failure).
+# before the push, YES=1 to push without asking (the publish-dev-es workflow), KEEP=1 to keep the containers and the network when the build ends (to inspect a failure).
 
 set -euo pipefail
 
@@ -132,8 +132,10 @@ fi
 echo
 echo "About to push $IMAGE:$TAG and $IMAGE:latest ($COUNT documents)."
 echo "Once pushed, the package is private until it is made public in its settings on GitHub."
-read -r -p "Push? [y/N] " answer
-[ "$answer" = y ] || { echo "not pushed"; exit 0; }
+if [ -z "${YES:-}" ]; then
+  read -r -p "Push? [y/N] " answer
+  [ "$answer" = y ] || { echo "not pushed"; exit 0; }
+fi
 
 docker tag "$IMAGE:$TAG" "$IMAGE:latest"
 docker push "$IMAGE:$TAG"

@@ -106,7 +106,9 @@ personal data is left), then asks for a confirmation before pushing the tag and 
 `ghcr.io/c2corg/c2corg-dev-db` (`IMAGE=` to change it, `DRY_RUN=1` to stop before the push). A package
 created by a push is private; making it public is done in its settings on GitHub.
 
-Then the Elasticsearch image, with the tag of the database image just pushed:
+Then the Elasticsearch image, with the tag of the database image just pushed: start the
+`Publish the Elasticsearch image of the dev database` workflow (Actions tab, `Run workflow`) with that tag,
+or run, with Docker:
 
 ```sh
 scripts/dev-database/publish-es.sh 2026-07-19
@@ -115,9 +117,10 @@ scripts/dev-database/publish-es.sh 2026-07-19
 It starts the database image and an empty Elasticsearch, creates and fills the index with the API image
 (`API_IMAGE=`, default `ghcr.io/c2corg/v6_api:latest`), copies the index into the image
 (`Dockerfile.es`), then checks that the image starts with the documents and the search sub-fields, and
-asks for a confirmation before pushing the tag and `latest` to `ghcr.io/c2corg/c2corg-dev-es`. The labels
-of the image name the database image and the API image it was built with. The mapping comes from the
-code of the API: publish the Elasticsearch image again when the mapping changes.
+asks for a confirmation (`YES=1` to skip it, as the workflow does) before pushing the tag and `latest` to
+`ghcr.io/c2corg/c2corg-dev-es`. The labels of the image name the database image and the API image it was
+built with. The mapping comes from the code of the API: publish the Elasticsearch image again when the
+mapping changes.
 
 ## Licence and attribution
 
