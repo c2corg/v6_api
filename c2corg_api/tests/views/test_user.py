@@ -665,7 +665,7 @@ class TestUserRest(BaseUserTestRest):
     def test_login_with_a_stored_password_not_a_bcrypt_hash(self):
         # #592: "Invalid salt" answered a 500
         contributor = self.session.get(User, self.global_userids['contributor'])
-        contributor._password = 'not a bcrypt hash'
+        contributor._password = 'not a bcrypt hash'  # nosec B105
         self.session.flush()
 
         body = self.login('contributor', status=401).json
