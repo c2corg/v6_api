@@ -875,15 +875,14 @@ class TestUserRest(BaseUserTestRest):
         stored = self.session.query(Token).filter(Token.value == hash_token(token))
         assert stored.one().userid == self.global_userids['contributor']
 
-    def test_a_token_stored_before_the_migration(self):
-        # a row holding the token itself, as before migration a7c3e1f05b2d
+    def test_a_token_stored_as_is_is_refused(self):
+        # since migration a7c3e1f05b2d, a row holds the hash of a token: a row
+        # holding the token itself (a copy of the table) gives no session
         token = self.login('contributor').json['token']
         stored = self.session.query(Token).filter(Token.value == hash_token(token))
         stored.one().value = token
         self.session.flush()
 
-        self.get_json_with_token('/users/account', token, status=200)
-        self.post_json_with_token('/users/logout', token)
         self.get_json_with_token('/users/account', token, status=401)
 
     def _login_remember(self, remember, status=200):
