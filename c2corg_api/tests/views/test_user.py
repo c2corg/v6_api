@@ -7,6 +7,7 @@ import time
 from unittest.mock import MagicMock, Mock, patch
 from urllib.parse import quote, urlencode, urlparse
 
+import jwt
 import pytest
 
 from c2corg_api.httpexceptions import HTTPBadRequest
@@ -22,6 +23,12 @@ from c2corg_api.security.discourse_client import (
     DisabledDiscourseClient,
     get_discourse_client,
     set_discourse_client,
+)
+from c2corg_api.security.roles import (
+    add_token,
+    create_claims,
+    hash_token,
+    log_validated_user_i_know_what_i_do,
 )
 from c2corg_api.tests import errors_of
 from c2corg_api.tests.views import BaseTestRest
@@ -522,7 +529,7 @@ class TestUserRest(BaseUserTestRest):
         body = self.login('moderator', status=200).json
         token_value = body['token']
 
-        query = self.session.query(Token).filter(Token.value == token_value)
+        query = self.session.query(Token).filter(Token.value == hash_token(token_value))
 
         now = datetime.utcnow()
 
@@ -538,6 +545,56 @@ class TestUserRest(BaseUserTestRest):
         # The token should be removed
         purge_token()
         assert 0 == query.count()
+
+    def test_purge_tokens_logs_out_from_the_forum(self):
+        from c2corg_api.jobs import purge_expired_tokens
+
+        contributor = self.global_userids['contributor']
+        moderator = self.global_userids['moderator']
+        past = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=1)
+        # the contributor: every token expired (the global one too)
+        self.login('contributor')
+        self.session.query(Token).filter(Token.userid == contributor).update(
+            {'expire': past}
+        )
+        # the moderator: one token expired, the global one still valid
+        moderator_token = self.login('moderator').json['token']
+        self.session.query(Token).filter(
+            Token.value == hash_token(moderator_token)
+        ).update({'expire': past})
+        self.session.commit()
+
+        client = Mock()
+        with (
+            patch.object(
+                purge_expired_tokens, 'get_discourse_client', return_value=client
+            ),
+            patch.object(purge_expired_tokens.time, 'sleep'),
+        ):
+            purge_expired_tokens.purge_token(self.settings)
+
+        client.logout.assert_called_once_with(contributor)
+        assert (
+            self.session.query(Token).filter(Token.userid == contributor).count() == 0
+        )
+        assert self.session.query(Token).filter(Token.userid == moderator).count() == 1
+
+    def test_logout_from_forum(self):
+        from c2corg_api.jobs import purge_expired_tokens
+
+        client = Mock()
+        client.logout.side_effect = [Exception('not on the forum'), None]
+        with (
+            patch.object(
+                purge_expired_tokens, 'get_discourse_client', return_value=client
+            ),
+            patch.object(purge_expired_tokens.time, 'sleep') as sleep,
+        ):
+            purge_expired_tokens.logout_from_forum(self.settings, [3, 4])
+
+        # a failure does not stop the others
+        assert [c.args for c in client.logout.call_args_list] == [(3,), (4,)]
+        sleep.assert_called_once_with(purge_expired_tokens.FORUM_LOGOUT_INTERVAL)
 
     def login(
         self,
@@ -686,6 +743,31 @@ class TestUserRest(BaseUserTestRest):
             status=400,
         )
 
+    def test_discourse_redirect_without_return_sso_url(self):
+        self.set_discourse_not_mocked()
+        self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
+        payload = base64.b64encode(b'nonce=cb68251e').decode('ascii')
+        sig = hmac.new(
+            self.discourse_client.sso_key.encode('utf-8'),
+            payload.encode('utf-8'),
+            digestmod=hashlib.sha256,
+        ).hexdigest()
+
+        self.post_json_with_token(
+            '/users/discourse-redirect',
+            self.global_tokens['moderator'],
+            {'sso': quote(payload), 'sig': sig},
+            status=400,
+        )
+
+    def test_log_in_a_user_whose_email_is_not_validated(self):
+        contributor = self.session.get(User, self.global_userids['contributor'])
+        contributor.email_validated = False
+        self.session.flush()
+
+        with pytest.raises(ValueError):
+            log_validated_user_i_know_what_i_do(contributor, None)
+
     def test_discourse_redirect_unauthenticated(self):
         self.app_post_json(
             '/users/discourse-redirect', {'sso': 'x', 'sig': 'y'}, status=403
@@ -758,21 +840,13 @@ class TestUserRest(BaseUserTestRest):
         self.assertBodyEqual(body, 'name', 'Contributor')
 
     def test_renew_token_different_success(self):
-        # Tokens created in the same second are identical
         token1 = self.login('contributor').json['token']
-
-        import time
-
-        print('Waiting for more than 1s to get a different token')
-        time.sleep(1.01)
-
         token2 = self.post_json_with_token('/users/renew', token1)['token']
         assert token1 != token2
 
         body = self.get_json_with_token('/users/account', token2, status=200)
         self.assertBodyEqual(body, 'name', 'Contributor')
 
-        self.post_json_with_token('/users/logout', token1)
         self.post_json_with_token('/users/logout', token2)
 
     def test_logout_invalidates_the_token(self):
@@ -786,25 +860,139 @@ class TestUserRest(BaseUserTestRest):
         self.post_json_with_token('/users/logout', token, status=401)
 
     def test_logout_keeps_the_other_sessions(self):
-        # the global token was made at the start of the run, so it differs
+        # two logins, most likely in the same second
         token = self.login('contributor').json['token']
-        assert token != self.global_tokens['contributor']
+        other_token = self.login('contributor').json['token']
+        assert token != other_token
 
         self.post_json_with_token('/users/logout', token)
 
-        self.get_json_with_token(
-            '/users/account', self.global_tokens['contributor'], status=200
-        )
+        self.get_json_with_token('/users/account', other_token, status=200)
 
-    def test_renew_keeps_the_old_token(self):
-        # Current behaviour: renewing does not revoke the old token.
-        # The auth rework of #2365 revokes it; this test changes with it.
-        old_token = self.global_tokens['contributor']
+    def test_only_the_hash_of_the_token_is_stored(self):
+        token = self.login('contributor').json['token']
+        assert self.session.query(Token).filter(Token.value == token).count() == 0
+        stored = self.session.query(Token).filter(Token.value == hash_token(token))
+        assert stored.one().userid == self.global_userids['contributor']
+
+    def test_a_token_stored_before_the_migration(self):
+        # a row holding the token itself, as before migration a7c3e1f05b2d
+        token = self.login('contributor').json['token']
+        stored = self.session.query(Token).filter(Token.value == hash_token(token))
+        stored.one().value = token
+        self.session.flush()
+
+        self.get_json_with_token('/users/account', token, status=200)
+        self.post_json_with_token('/users/logout', token)
+        self.get_json_with_token('/users/account', token, status=401)
+
+    def _login_remember(self, remember, status=200):
+        body = {
+            'username': 'contributor',
+            'password': self.global_passwords['contributor'],
+            'remember': remember,
+        }
+        return self.app_post_json('/users/login', body, status=status).json
+
+    def _lifetime(self, token):
+        claims = jwt.decode(
+            token, self.settings['jwt.private_key'], algorithms=['HS256']
+        )
+        return claims['exp'] - claims['iat']
+
+    def test_login_not_remembered(self):
+        body = self._login_remember(False)
+        self.assertExpireAlmostEqual(body['expire'], 1, 5)
+        assert self._lifetime(body['token']) == 24 * 3600
+        self.get_json_with_token('/users/account', body['token'], status=200)
+
+    def test_login_remembered(self):
+        body = self._login_remember(True)
+        self.assertExpireAlmostEqual(body['expire'], 14, 5)
+        assert self._lifetime(body['token']) == 14 * 24 * 3600
+
+    def test_login_remember_as_a_string(self):
+        # as every Bool: only 'false' and '0' are false
+        body = self._login_remember('false')
+        self.assertExpireAlmostEqual(body['expire'], 1, 5)
+        body = self._login_remember('yes')
+        self.assertExpireAlmostEqual(body['expire'], 14, 5)
+
+    def test_renew_keeps_the_lifetime(self):
+        for remember, days in ((False, 1), (True, 14)):
+            token = self._login_remember(remember)['token']
+            body = self.post_json_with_token('/users/renew', token)
+            self.assertExpireAlmostEqual(body['expire'], days, 5)
+            assert self._lifetime(body['token']) == days * 24 * 3600
+
+    def test_renew_of_a_token_without_iat(self):
+        # a token issued before the lifetimes (no `iat`): remembered
+        user = self.session.get(User, self.global_userids['contributor'])
+        exp = datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=3)
+        claims = create_claims(user, datetime.datetime.now(datetime.UTC), exp)
+        del claims['iat']
+        token = jwt.encode(claims, self.settings['jwt.private_key'], algorithm='HS256')
+        add_token(token, exp, user.id)
+
+        body = self.post_json_with_token('/users/renew', token)
+        self.assertExpireAlmostEqual(body['expire'], 14, 5)
+
+    def test_token_check(self):
+        body = self.login('contributor').json
+        token = body['token']
+
+        checked = self.get_json_with_token('/users/token', token)
+        assert checked == {
+            'user': self.global_userids['contributor'],
+            'expire': body['expire'],
+        }
+
+        self.post_json_with_token('/users/logout', token)
+        self.get_json_with_token('/users/token', token, status=401)
+
+    def test_token_check_of_a_blocked_user(self):
+        user = self.session.get(User, self.global_userids['contributor'])
+        user.blocked = True
+        self.session.flush()
+
+        body = self.get_json_with_token(
+            '/users/token', self.global_tokens['contributor'], status=403
+        )
+        self.assertErrorsContain(body, 'Forbidden', 'account blocked')
+
+    def test_token_check_without_a_token(self):
+        self.app.get('/users/token', status=403)
+
+    def test_token_claims(self):
+        before = int(time.time())
+        token = self.login('contributor').json['token']
+        claims = jwt.decode(
+            token, self.settings['jwt.private_key'], algorithms=['HS256']
+        )
+        assert set(claims) == {'sub', 'username', 'iat', 'exp', 'jti'}
+        assert claims['sub'] == str(self.global_userids['contributor'])
+        assert before <= claims['iat'] <= int(time.time())
+        assert claims['exp'] - claims['iat'] == 14 * 24 * 3600
+        assert len(claims['jti']) >= 16
+
+    def test_renew_revokes_the_old_token(self):
+        old_token = self.login('contributor').json['token']
         new_token = self.post_json_with_token('/users/renew', old_token)['token']
         assert new_token != old_token
 
         self.get_json_with_token('/users/account', new_token, status=200)
-        self.get_json_with_token('/users/account', old_token, status=200)
+        body = self.get_json_with_token('/users/account', old_token, status=401)
+        self.assertErrorsContain(body, 'Unauthorized', 'Invalid token')
+        # a revoked token cannot be renewed again
+        self.post_json_with_token('/users/renew', old_token, status=401)
+
+    def test_renew_keeps_the_other_sessions(self):
+        token = self.login('contributor').json['token']
+        other_token = self.login('contributor').json['token']
+
+        self.post_json_with_token('/users/renew', token)
+
+        self.get_json_with_token('/users/account', other_token, status=200)
 
     def test_renew_of_an_unknown_token(self):
         body = self.post_json_with_token('/users/renew', 'not-a-token', status=401)

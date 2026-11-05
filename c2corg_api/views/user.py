@@ -23,10 +23,10 @@ from c2corg_api.schemas.user import (
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import (
-    extract_token,
     log_validated_user_i_know_what_i_do,
     remove_token,
     renew_token,
+    token_expire,
     try_login,
 )
 from c2corg_api.views import (
@@ -446,10 +446,11 @@ class LoginSchema(Schema):
     username: Str()
     password: Str()
     accept_tos: Bool = False
+    # "remember me": a token of 14 days, renewable; else of a day
+    remember: Bool = True
 
 
 def token_to_response(user, token, request):
-    assert token is not None
     roles = ['moderator'] if user.moderator else []
     return {
         'token': token.value,
@@ -480,7 +481,8 @@ def login_user(request):
     if user is None and is_valid_email(username):
         user = DBSession.query(User).filter(User.email == username).first()
 
-    token = try_login(user, password, request) if user else None
+    remember = request.validated['remember']
+    token = try_login(user, password, request, remember) if user else None
     if token:
         # Check if the user has validated Terms of Service, if not,
         # return a 403 with an explicit message that can be caught
@@ -574,7 +576,7 @@ def renew_login(request):
 def logout_user(request):
     userid = request.authenticated_userid
     result = {'user': userid}
-    remove_token(extract_token(request))
+    remove_token(request.authorization.token)
     if 'discourse' in request.json:
         try:
             settings = request.registry.settings
@@ -584,3 +586,12 @@ def logout_user(request):
             # Any error with discourse should not prevent logout
             log.warning('Error logging out of discourse for %d', userid, exc_info=True)
     return result
+
+
+def read_token(request):
+    """Return the user and the expiry of the token of the request."""
+    # For the other services sharing the tokens (c2c_tracking): the signature
+    # of a token is not enough, it may have been revoked (logout, renewal) or
+    # its user blocked. The token was checked before this view (401, 403).
+    expire = token_expire(request.authorization.token)
+    return {'user': request.authenticated_userid, 'expire': int(expire.timestamp())}

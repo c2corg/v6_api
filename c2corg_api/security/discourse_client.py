@@ -86,17 +86,22 @@ class APIDiscourseClient:
 
     # Below this: SSO provider
     def decode_payload(self, payload):
+        """Return the parameters of an SSO payload, or raise a ValueError."""
+        # binascii.Error and UnicodeDecodeError are ValueErrors too
         decoded = b64decode(payload.encode('utf-8')).decode('utf-8')
-        assert 'nonce' in decoded
-        assert len(payload) > 0
-        return decoded
+        params = parse_qs(decoded)
+        if not params.get('nonce'):
+            raise ValueError('no nonce in the SSO payload')
+        return params
 
     def check_signature(self, payload, signature):
         key = self.sso_key.encode('utf-8')
         h = hmac.new(key, payload.encode('utf-8'), digestmod=hashlib.sha256)
-        this_signature = h.hexdigest()
-
-        if this_signature != signature:
+        # a constant-time comparison, of bytes: compare_digest refuses a str
+        # that is not ASCII
+        if not hmac.compare_digest(
+            h.hexdigest().encode('ascii'), str(signature).encode('utf-8')
+        ):
             log.error('Signature mismatch')
             raise HTTPBadRequest('discourse login failed')
 
@@ -104,7 +109,8 @@ class APIDiscourseClient:
         url = f'{self.discourse_base_url}/session/sso'
         try:
             r = requests.get(url, allow_redirects=False, timeout=self.timeout)
-            assert r.status_code == 302
+            if r.status_code != 302:
+                raise ValueError(f'unexpected status {r.status_code}')
         except Exception as e:
             log.error('Could not request nonce', exc_info=True)
             raise Exception('Could not request nonce') from e
@@ -116,12 +122,9 @@ class APIDiscourseClient:
         sig = params['sig'][0]
 
         self.check_signature(sso, sig)
-        payload = self.decode_payload(sso)
-        return parse_qs(payload)['nonce'][0]
+        return self.decode_payload(sso)['nonce'][0]
 
     def create_response_payload(self, user, nonce, return_sso_url):
-        assert nonce is not None, 'No nonce passed'
-
         params = {
             'nonce': nonce,
             'email': user.email,
@@ -140,9 +143,9 @@ class APIDiscourseClient:
     def get_nonce_from_sso(self, sso, sig):
         payload = urllib.parse.unquote(sso)
         try:
-            decoded = self.decode_payload(payload)
-        except Exception as e:
-            log.error('Failed to decode payload', e)
+            qs = self.decode_payload(payload)
+        except ValueError as e:
+            log.error('Failed to decode payload: %s', e)
             raise HTTPBadRequest('discourse login failed') from e
 
         self.check_signature(payload, sig)
@@ -155,8 +158,8 @@ class APIDiscourseClient:
         # itself were ever compromised, an attacker could otherwise sign a
         # payload pointing anywhere; only forward users to hosts we
         # explicitly expect, over https.
-        qs = parse_qs(decoded)
-        return_sso_url = qs['return_sso_url'][0]
+        # a missing return_sso_url is not https, so refused below
+        return_sso_url = qs.get('return_sso_url', [''])[0]
         parsed_return_url = urlparse(return_sso_url)
         if (
             parsed_return_url.scheme != 'https'

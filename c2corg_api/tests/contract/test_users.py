@@ -58,6 +58,8 @@ class TestRegisterAndLogin(UserContractTest):
 
         renewed = self.post('/users/renew', {}, headers=dict(auth))
         check_snapshot('users_renew', renewed)
+        # the renewal revoked the token of the login
+        auth = {'Authorization': f'JWT token="{renewed.json["token"]}"'}
         logout = self.post('/users/logout', {}, headers=dict(auth))
         check_snapshot('users_logout', logout)
 
@@ -268,6 +270,15 @@ class TestUserReads(UserContractTest):
         assert response.headers['Pragma'] == 'no-cache'
         assert 'Expires' in response.headers
         assert 'Last-Modified' in response.headers
+
+    @contract(('GET', '/users/token'))
+    def test_token(self):
+        response = self.get('/users/token', user='contributor')
+        assert response.json['user'] == self.global_userids['contributor']
+        assert isinstance(response.json['expire'], int)
+        assert response.headers['Cache-Control'] == (
+            'max-age=0, must-revalidate, no-cache, no-store'
+        )
 
     @contract(('GET', '/users/blocked/{id}'))
     def test_blocked_of_unknown_user(self):

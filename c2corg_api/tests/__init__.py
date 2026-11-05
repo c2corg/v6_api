@@ -21,7 +21,7 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.scripts import initializedb, initializees
 from c2corg_api.scripts.es.fill_index import fill_index
 from c2corg_api.search import configure_es_from_config
-from c2corg_api.security.roles import add_or_retrieve_token, create_claims
+from c2corg_api.security.roles import add_token, create_claims
 
 load_dotenv()
 
@@ -210,13 +210,13 @@ def _add_global_test_data(session):
 
     key = settings['jwt.private_key']
     algorithm = 'HS256'
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.UTC)
     exp = now + datetime.timedelta(weeks=10)
 
     for user in users:
-        claims = create_claims(user, exp)
+        claims = create_claims(user, now, exp)
         token = jwt.encode(claims, key=key, algorithm=algorithm)
-        add_or_retrieve_token(token, exp, user.id)
+        add_token(token, exp, user.id)
         global_userids[user.username] = user.id
         global_tokens[user.username] = token
 

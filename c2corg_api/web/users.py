@@ -13,6 +13,7 @@ from c2corg_api.views.user import (
     discourse_redirect,
     login_user,
     logout_user,
+    read_token,
     register_user,
     renew_login,
     request_password_change,
@@ -74,6 +75,7 @@ def include(app):
     # a numeric id only, as the document routes (see web.documents)
     for path, endpoint in (
         ('/users/account', account),
+        ('/users/token', token),
         ('/users/preferences', preferences),
         ('/users/mailinglists', mailinglists),
         ('/users/following', following),
@@ -94,7 +96,20 @@ def include(app):
 
 def account(request: Request, user: User):
     """Return the account of the authenticated user."""
-    response = serve_read(request, user, [], read_account, permission='authenticated')
+    return _not_cached(
+        serve_read(request, user, [], read_account, permission='authenticated')
+    )
+
+
+def token(request: Request, user: User):
+    """Return the user and the expiry of the token of the request."""
+    return _not_cached(
+        serve_read(request, user, [], read_token, permission='authenticated')
+    )
+
+
+def _not_cached(response):
+    """Answer a read that no cache may keep."""
     if isinstance(response, Response):
         return response
     # http_cache=0 of the Pyramid view
@@ -186,12 +201,20 @@ def is_blocked(
 
 
 # read by the route inventory of the contract tests (routes.txt)
-for _endpoint in (account, preferences, mailinglists, following, is_following_user):
+for _endpoint in (
+    account,
+    token,
+    preferences,
+    mailinglists,
+    following,
+    is_following_user,
+):
     _endpoint.permission = 'authenticated'
 for _endpoint in (blocked_users, is_blocked):
     _endpoint.permission = 'moderator'
 for _endpoint in (
     account,
+    token,
     preferences,
     mailinglists,
     following,
