@@ -937,6 +937,32 @@ class TestUserRest(BaseUserTestRest):
         body = self.post_json_with_token('/users/renew', token)
         self.assertExpireAlmostEqual(body['expire'], 14, 5)
 
+    def test_token_check(self):
+        body = self.login('contributor').json
+        token = body['token']
+
+        checked = self.get_json_with_token('/users/token', token)
+        assert checked == {
+            'user': self.global_userids['contributor'],
+            'expire': body['expire'],
+        }
+
+        self.post_json_with_token('/users/logout', token)
+        self.get_json_with_token('/users/token', token, status=401)
+
+    def test_token_check_of_a_blocked_user(self):
+        user = self.session.get(User, self.global_userids['contributor'])
+        user.blocked = True
+        self.session.flush()
+
+        body = self.get_json_with_token(
+            '/users/token', self.global_tokens['contributor'], status=403
+        )
+        self.assertErrorsContain(body, 'Forbidden', 'account blocked')
+
+    def test_token_check_without_a_token(self):
+        self.app.get('/users/token', status=403)
+
     def test_token_claims(self):
         before = int(time.time())
         token = self.login('contributor').json['token']

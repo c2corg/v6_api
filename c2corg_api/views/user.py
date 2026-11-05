@@ -26,6 +26,7 @@ from c2corg_api.security.roles import (
     log_validated_user_i_know_what_i_do,
     remove_token,
     renew_token,
+    token_expire,
     try_login,
 )
 from c2corg_api.views import (
@@ -585,3 +586,12 @@ def logout_user(request):
             # Any error with discourse should not prevent logout
             log.warning('Error logging out of discourse for %d', userid, exc_info=True)
     return result
+
+
+def read_token(request):
+    """Return the user and the expiry of the token of the request."""
+    # For the other services sharing the tokens (c2c_tracking): the signature
+    # of a token is not enough, it may have been revoked (logout, renewal) or
+    # its user blocked. The token was checked before this view (401, 403).
+    expire = token_expire(request.authorization.token)
+    return {'user': request.authenticated_userid, 'expire': int(expire.timestamp())}

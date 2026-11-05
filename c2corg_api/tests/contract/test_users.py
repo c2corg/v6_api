@@ -271,6 +271,15 @@ class TestUserReads(UserContractTest):
         assert 'Expires' in response.headers
         assert 'Last-Modified' in response.headers
 
+    @contract(('GET', '/users/token'))
+    def test_token(self):
+        response = self.get('/users/token', user='contributor')
+        assert response.json['user'] == self.global_userids['contributor']
+        assert isinstance(response.json['expire'], int)
+        assert response.headers['Cache-Control'] == (
+            'max-age=0, must-revalidate, no-cache, no-store'
+        )
+
     @contract(('GET', '/users/blocked/{id}'))
     def test_blocked_of_unknown_user(self):
         response = self.get('/users/blocked/9999999', user='moderator', status=400)

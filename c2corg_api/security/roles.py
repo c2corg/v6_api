@@ -44,18 +44,30 @@ def _stored(token):
 
 
 def is_valid_token(token):
+    """Is the token stored and not expired? Raise a 403 for a blocked user."""
+    # one query for the token and its user: it runs on every request with a token
     now = datetime.datetime.now(datetime.UTC)
-    token = DBSession.query(Token).filter(_stored(token), Token.expire > now).first()
-
-    if not token:
+    row = (
+        DBSession.query(User.blocked)
+        .join(Token, Token.userid == User.id)
+        .filter(_stored(token), Token.expire > now)
+        .first()
+    )
+    if row is None:
         return False
-    else:
-        user_is_blocked = (
-            DBSession.query(User.blocked).filter(User.id == token.userid).scalar()
-        )
-        if user_is_blocked:
-            raise HTTPForbidden('account blocked')
+    if row.blocked:
+        raise HTTPForbidden('account blocked')
     return True
+
+
+def token_expire(token):
+    """Return when a valid token expires."""
+    now = datetime.datetime.now(datetime.UTC)
+    return (
+        DBSession.query(Token.expire)
+        .filter(_stored(token), Token.expire > now)
+        .scalar()
+    )
 
 
 def add_token(value, expire, userid):
