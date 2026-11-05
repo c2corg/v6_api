@@ -164,6 +164,27 @@ class TestSsoProvider:
         with pytest.raises(HTTPBadRequest):
             self.client.redirect(MagicMock(), payload, sig)
 
+    @pytest.mark.parametrize(
+        'make_sig',
+        [
+            lambda sig: sig[:-1] + ('0' if sig[-1] != '0' else '1'),
+            lambda sig: sig.upper(),
+            lambda sig: sig[:-1],
+            lambda sig: '',
+            lambda sig: 'é' * len(sig),
+        ],
+    )
+    def test_check_signature_refuses(self, make_sig):
+        """Answer a 400 for a wrong signature, also a non-ASCII one."""
+        payload, sig = _signed({'nonce': 'n'})
+        with pytest.raises(HTTPBadRequest):
+            self.client.check_signature(payload, make_sig(sig))
+
+    def test_check_signature(self):
+        """Accept the signature of the payload."""
+        payload, sig = _signed({'nonce': 'n'})
+        self.client.check_signature(payload, sig)
+
     @patch('c2corg_api.security.discourse_client.requests.get')
     def test_request_nonce_refuses_another_status(self, get):
         """Raise when the forum does not answer with a redirect."""

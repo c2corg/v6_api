@@ -97,9 +97,11 @@ class APIDiscourseClient:
     def check_signature(self, payload, signature):
         key = self.sso_key.encode('utf-8')
         h = hmac.new(key, payload.encode('utf-8'), digestmod=hashlib.sha256)
-        this_signature = h.hexdigest()
-
-        if this_signature != signature:
+        # a constant-time comparison, of bytes: compare_digest refuses a str
+        # that is not ASCII
+        if not hmac.compare_digest(
+            h.hexdigest().encode('ascii'), str(signature).encode('utf-8')
+        ):
             log.error('Signature mismatch')
             raise HTTPBadRequest('discourse login failed')
 
