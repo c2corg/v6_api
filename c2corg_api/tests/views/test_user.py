@@ -25,6 +25,8 @@ from c2corg_api.security.discourse_client import (
     set_discourse_client,
 )
 from c2corg_api.security.roles import (
+    add_token,
+    create_claims,
     hash_token,
     log_validated_user_i_know_what_i_do,
 )
@@ -833,6 +835,57 @@ class TestUserRest(BaseUserTestRest):
         self.get_json_with_token('/users/account', token, status=200)
         self.post_json_with_token('/users/logout', token)
         self.get_json_with_token('/users/account', token, status=401)
+
+    def _login_remember(self, remember, status=200):
+        body = {
+            'username': 'contributor',
+            'password': self.global_passwords['contributor'],
+            'remember': remember,
+        }
+        return self.app_post_json('/users/login', body, status=status).json
+
+    def _lifetime(self, token):
+        claims = jwt.decode(
+            token, self.settings['jwt.private_key'], algorithms=['HS256']
+        )
+        return claims['exp'] - claims['iat']
+
+    def test_login_not_remembered(self):
+        body = self._login_remember(False)
+        self.assertExpireAlmostEqual(body['expire'], 1, 5)
+        assert self._lifetime(body['token']) == 24 * 3600
+        self.get_json_with_token('/users/account', body['token'], status=200)
+
+    def test_login_remembered(self):
+        body = self._login_remember(True)
+        self.assertExpireAlmostEqual(body['expire'], 14, 5)
+        assert self._lifetime(body['token']) == 14 * 24 * 3600
+
+    def test_login_remember_as_a_string(self):
+        # as every Bool: only 'false' and '0' are false
+        body = self._login_remember('false')
+        self.assertExpireAlmostEqual(body['expire'], 1, 5)
+        body = self._login_remember('yes')
+        self.assertExpireAlmostEqual(body['expire'], 14, 5)
+
+    def test_renew_keeps_the_lifetime(self):
+        for remember, days in ((False, 1), (True, 14)):
+            token = self._login_remember(remember)['token']
+            body = self.post_json_with_token('/users/renew', token)
+            self.assertExpireAlmostEqual(body['expire'], days, 5)
+            assert self._lifetime(body['token']) == days * 24 * 3600
+
+    def test_renew_of_a_token_without_iat(self):
+        # a token issued before the lifetimes (no `iat`): remembered
+        user = self.session.get(User, self.global_userids['contributor'])
+        exp = datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=3)
+        claims = create_claims(user, datetime.datetime.now(datetime.UTC), exp)
+        del claims['iat']
+        token = jwt.encode(claims, self.settings['jwt.private_key'], algorithm='HS256')
+        add_token(token, exp, user.id)
+
+        body = self.post_json_with_token('/users/renew', token)
+        self.assertExpireAlmostEqual(body['expire'], 14, 5)
 
     def test_token_claims(self):
         before = int(time.time())

@@ -445,6 +445,8 @@ class LoginSchema(Schema):
     username: Str()
     password: Str()
     accept_tos: Bool = False
+    # "remember me": a token of 14 days, renewable; else of a day
+    remember: Bool = True
 
 
 def token_to_response(user, token, request):
@@ -478,7 +480,8 @@ def login_user(request):
     if user is None and is_valid_email(username):
         user = DBSession.query(User).filter(User.email == username).first()
 
-    token = try_login(user, password, request) if user else None
+    remember = request.validated['remember']
+    token = try_login(user, password, request, remember) if user else None
     if token:
         # Check if the user has validated Terms of Service, if not,
         # return a 403 with an explicit message that can be caught

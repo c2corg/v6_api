@@ -16,6 +16,9 @@ log = logging.getLogger(__name__)
 
 # The number of days after which a token is expired
 CONST_EXPIRE_AFTER_DAYS = 14
+# the lifetime of a token: "remember me" on the login, or not
+REMEMBERED_LIFETIME = datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
+SESSION_LIFETIME = datetime.timedelta(days=1)
 
 
 class IssuedToken(NamedTuple):
@@ -84,14 +87,14 @@ def create_claims(user, now, exp):
     }
 
 
-def try_login(user, password, request):
+def try_login(user, password, request, remember=True):
     if user.email_validated and user.validate_password(password):
-        return log_validated_user_i_know_what_i_do(user, request)
+        return log_validated_user_i_know_what_i_do(user, request, remember)
     else:
         return None
 
 
-def log_validated_user_i_know_what_i_do(user, request):
+def log_validated_user_i_know_what_i_do(user, request, remember=True):
     """Thi method may only be called for validated users.
 
     See the try_login function for a safe version.
@@ -103,13 +106,14 @@ def log_validated_user_i_know_what_i_do(user, request):
     if user.blocked:
         raise HTTPForbidden('account blocked')
 
-    return _new_token(user, request)
+    lifetime = REMEMBERED_LIFETIME if remember else SESSION_LIFETIME
+    return _new_token(user, request, lifetime)
 
 
-def _new_token(user, request):
+def _new_token(user, request, lifetime):
     """Issue and store a new token of the user."""
     now = datetime.datetime.now(datetime.UTC)
-    exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
+    exp = now + lifetime
     token = _encode(create_claims(user, now, exp), request)
     return add_token(token, exp, user.id)
 
@@ -126,8 +130,27 @@ def renew_token(user, request):
     old_token = request.authorization.token
 
     if is_valid_token(old_token):
+        lifetime = _lifetime(old_token, request)
         # revoked, in the transaction that stores the new one
         remove_token(old_token)
-        return _new_token(user, request)
+        return _new_token(user, request, lifetime)
 
     return None
+
+
+def _lifetime(token, request):
+    """Return the lifetime of a valid token: remembered or not."""
+    # the token was checked (signature, database); `exp` is not checked again
+    # here, the row of the database says it is not expired
+    claims = pyjwt.decode(
+        token,
+        key=request.registry.settings['jwt.private_key'],
+        algorithms=['HS256'],
+        options={'verify_exp': False, 'verify_iat': False},
+    )
+    if 'iat' not in claims:
+        # issued before the lifetimes, all remembered
+        return REMEMBERED_LIFETIME
+    issued_for = datetime.timedelta(seconds=claims['exp'] - claims['iat'])
+    # one of the two lifetimes, never another one
+    return SESSION_LIFETIME if issued_for <= SESSION_LIFETIME else REMEMBERED_LIFETIME
