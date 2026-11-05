@@ -201,12 +201,20 @@ def is_blocked(
 
 
 # read by the route inventory of the contract tests (routes.txt)
-for _endpoint in (account, preferences, mailinglists, following, is_following_user):
+for _endpoint in (
+    account,
+    token,
+    preferences,
+    mailinglists,
+    following,
+    is_following_user,
+):
     _endpoint.permission = 'authenticated'
 for _endpoint in (blocked_users, is_blocked):
     _endpoint.permission = 'moderator'
 for _endpoint in (
     account,
+    token,
     preferences,
     mailinglists,
     following,
