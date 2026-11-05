@@ -9,6 +9,7 @@ from c2corg_api.security.discourse_client import (
     DisabledDiscourseClient,
     set_discourse_client,
 )
+from c2corg_api.security.roles import hash_token
 from c2corg_api.tests import errors_of
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.sso import localized_now, sso_expire_from_now
@@ -29,7 +30,7 @@ class TestSsoSyncRest(BaseTestRest):
         self.session.add(
             SsoKey(
                 domain=sso_domain,
-                key=sso_key,
+                key=hash_token(sso_key),
             )
         )
         self.contributor_external_id = SsoExternalId(
@@ -75,6 +76,29 @@ class TestSsoSyncRest(BaseTestRest):
         errors = body.get('errors')
         assert 'sso_key' == errors[0].get('name')
         assert 'Invalid' == errors[0].get('description')
+
+    def test_the_hash_is_not_a_key(self):
+        request_body = {'sso_key': hash_token(sso_key), 'external_id': '1'}
+        self.app_post_json(self._url, request_body, status=403)
+
+    @patch(
+        'c2corg_api.security.discourse_client.DiscourseClient',
+        return_value=Mock(
+            by_external_id=Mock(return_value={'id': 1, 'username': 'contributor'})
+        ),
+    )
+    def test_key_stored_as_is(self, discourse_mock):
+        # TODO(#2365): refused once migration b3d5f8a1c9e2 ran
+        self.session.add(SsoKey(domain='raw.domain.net', key='raw_key'))
+        self.session.add(
+            SsoExternalId(
+                domain='raw.domain.net', external_id='1', user=self.contributor
+            )
+        )
+        self.session.flush()
+
+        body = {'sso_key': 'raw_key', 'external_id': '1'}
+        self.app_post_json(self._url, body, status=200)
 
     def test_no_external_id(self):
         request_body = {'sso_key': sso_key}
@@ -168,7 +192,7 @@ class TestSsoSyncRest(BaseTestRest):
         assert 'New User' == sso_user.name
         assert 'NewUser' == sso_user.forum_username
 
-        assert sso_external_id.token == self.token_from_url(body.get('url'))
+        assert sso_external_id.token == hash_token(self.token_from_url(body.get('url')))
 
         client = discourse_mock.return_value
         client.by_external_id.assert_called_with(sso_external_id.user.id)
@@ -208,7 +232,7 @@ class TestSsoSyncRest(BaseTestRest):
         assert sso_external_id is not None
         assert 'contributor' == sso_external_id.user.username
 
-        assert sso_external_id.token == self.token_from_url(body.get('url'))
+        assert sso_external_id.token == hash_token(self.token_from_url(body.get('url')))
 
     @patch(
         'c2corg_api.security.discourse_client.DiscourseClient',
@@ -229,8 +253,8 @@ class TestSsoSyncRest(BaseTestRest):
         body = self.app_post_json(self._url, request_body, status=200).json
 
         self.session.expire(self.contributor_external_id)
-        assert self.contributor_external_id.token == self.token_from_url(
-            body.get('url')
+        assert self.contributor_external_id.token == hash_token(
+            self.token_from_url(body.get('url'))
         )
 
         client = discourse_mock.return_value
@@ -330,7 +354,7 @@ class TestSsoLoginRest(BaseTestRest):
         self.session.add(
             SsoKey(
                 domain=sso_domain,
-                key=sso_key,
+                key=hash_token(sso_key),
             )
         )
 
@@ -339,7 +363,7 @@ class TestSsoLoginRest(BaseTestRest):
             external_id='1',
             user=self.contributor,
         )
-        self.sso_external_id.token = 'good_token'
+        self.sso_external_id.token = hash_token('good_token')
         self.session.add(self.sso_external_id)
 
         self.session.flush()
@@ -366,6 +390,20 @@ class TestSsoLoginRest(BaseTestRest):
         errors = body.get('errors')
         assert 'token' == errors[0].get('name')
         assert 'Invalid' == errors[0].get('description')
+
+    def test_token_stored_as_is(self):
+        # TODO(#2365): refused once migration b3d5f8a1c9e2 ran
+        self.sso_external_id.token = 'raw_token'
+        self.sso_external_id.expire = sso_expire_from_now()
+        self.session.flush()
+
+        self.app_post_json(self._url, {'token': 'raw_token'}, status=200)
+
+    def test_the_hash_is_not_a_token(self):
+        self.sso_external_id.expire = sso_expire_from_now()
+        self.session.flush()
+
+        self.app_post_json(self._url, {'token': hash_token('good_token')}, status=403)
 
     def test_success(self):
         self.sso_external_id.expire = sso_expire_from_now()
