@@ -23,8 +23,14 @@ def upgrade():
     # c2corg_api.security.roles.hash_token computes it: the sessions stay
     # open. Hashed here, not in SQL: sha256() needs PostgreSQL 11, and
     # production runs 9.6.
+    # Only the tokens themselves: a JWT has dots, a hex hash has none. The
+    # new code may already have stored hashes (deployed first, see #2592).
     conn = op.get_bind()
-    tokens = conn.execute(sa.text('SELECT value FROM users.token')).scalars().all()
+    tokens = (
+        conn.execute(sa.text("SELECT value FROM users.token WHERE value LIKE '%.%'"))
+        .scalars()
+        .all()
+    )
     if tokens:
         conn.execute(
             sa.text('UPDATE users.token SET value = :hash WHERE value = :token'),

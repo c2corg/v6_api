@@ -824,6 +824,17 @@ class TestUserRest(BaseUserTestRest):
         stored = self.session.query(Token).filter(Token.value == hash_token(token))
         assert stored.one().userid == self.global_userids['contributor']
 
+    def test_a_token_stored_before_the_migration(self):
+        # a row holding the token itself, as before migration a7c3e1f05b2d
+        token = self.login('contributor').json['token']
+        stored = self.session.query(Token).filter(Token.value == hash_token(token))
+        stored.one().value = token
+        self.session.flush()
+
+        self.get_json_with_token('/users/account', token, status=200)
+        self.post_json_with_token('/users/logout', token)
+        self.get_json_with_token('/users/account', token, status=401)
+
     def test_token_claims(self):
         before = int(time.time())
         token = self.login('contributor').json['token']

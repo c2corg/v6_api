@@ -31,13 +31,18 @@ def hash_token(token):
     return hashlib.sha256(token.encode('utf-8')).hexdigest()
 
 
+def _stored(token):
+    """Return the condition matching the stored row of a token."""
+    # TODO(#2365): match the hash only, in the release after the migration
+    # a7c3e1f05b2d. Until it has run, and while API servers of the previous
+    # version still store tokens during the rolling upgrade, a row may hold
+    # the token itself.
+    return Token.value.in_([hash_token(token), token])
+
+
 def is_valid_token(token):
     now = datetime.datetime.now(datetime.UTC)
-    token = (
-        DBSession.query(Token)
-        .filter(Token.value == hash_token(token), Token.expire > now)
-        .first()
-    )
+    token = DBSession.query(Token).filter(_stored(token), Token.expire > now).first()
 
     if not token:
         return False
@@ -60,7 +65,7 @@ def add_token(value, expire, userid):
 
 def remove_token(token):
     now = datetime.datetime.now(datetime.UTC)
-    condition = and_(Token.value == hash_token(token), Token.expire > now)
+    condition = and_(_stored(token), Token.expire > now)
     result = DBSession.execute(Token.__table__.delete().where(condition))
     if result.rowcount == 0:
         log.debug('Failed to remove a token')
