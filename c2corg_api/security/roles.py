@@ -1,6 +1,8 @@
 import datetime
+import hashlib
 import logging
 import secrets
+from typing import NamedTuple
 
 import jwt as pyjwt
 from sqlalchemy import and_
@@ -16,10 +18,25 @@ log = logging.getLogger(__name__)
 CONST_EXPIRE_AFTER_DAYS = 14
 
 
+class IssuedToken(NamedTuple):
+    """A new token, to answer: the database only keeps its hash."""
+
+    value: str
+    expire: datetime.datetime
+
+
+def hash_token(token):
+    """Return the hash of a token, as the database stores it."""
+    # a plain SHA-256 is enough: a token is long and random, not a password
+    return hashlib.sha256(token.encode('utf-8')).hexdigest()
+
+
 def is_valid_token(token):
     now = datetime.datetime.now(datetime.UTC)
     token = (
-        DBSession.query(Token).filter(Token.value == token, Token.expire > now).first()
+        DBSession.query(Token)
+        .filter(Token.value == hash_token(token), Token.expire > now)
+        .first()
     )
 
     if not token:
@@ -34,20 +51,19 @@ def is_valid_token(token):
 
 
 def add_token(value, expire, userid):
-    """Store a new token."""
+    """Store the hash of a new token and return the token."""
     # every token is unique (its `jti` claim), so it is never stored yet
-    token = Token(value=value, expire=expire, userid=userid)
-    DBSession.add(token)
+    DBSession.add(Token(value=hash_token(value), expire=expire, userid=userid))
     DBSession.flush()
-    return token
+    return IssuedToken(value, expire)
 
 
 def remove_token(token):
     now = datetime.datetime.now(datetime.UTC)
-    condition = and_(Token.value == token, Token.expire > now)
+    condition = and_(Token.value == hash_token(token), Token.expire > now)
     result = DBSession.execute(Token.__table__.delete().where(condition))
     if result.rowcount == 0:
-        log.debug(f'Failed to remove token {token}')
+        log.debug('Failed to remove a token')
     DBSession.flush()
 
 

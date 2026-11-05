@@ -24,7 +24,10 @@ from c2corg_api.security.discourse_client import (
     get_discourse_client,
     set_discourse_client,
 )
-from c2corg_api.security.roles import log_validated_user_i_know_what_i_do
+from c2corg_api.security.roles import (
+    hash_token,
+    log_validated_user_i_know_what_i_do,
+)
 from c2corg_api.tests import errors_of
 from c2corg_api.tests.views import BaseTestRest
 
@@ -524,7 +527,7 @@ class TestUserRest(BaseUserTestRest):
         body = self.login('moderator', status=200).json
         token_value = body['token']
 
-        query = self.session.query(Token).filter(Token.value == token_value)
+        query = self.session.query(Token).filter(Token.value == hash_token(token_value))
 
         now = datetime.utcnow()
 
@@ -814,6 +817,12 @@ class TestUserRest(BaseUserTestRest):
         self.post_json_with_token('/users/logout', token)
 
         self.get_json_with_token('/users/account', other_token, status=200)
+
+    def test_only_the_hash_of_the_token_is_stored(self):
+        token = self.login('contributor').json['token']
+        assert self.session.query(Token).filter(Token.value == token).count() == 0
+        stored = self.session.query(Token).filter(Token.value == hash_token(token))
+        assert stored.one().userid == self.global_userids['contributor']
 
     def test_token_claims(self):
         before = int(time.time())

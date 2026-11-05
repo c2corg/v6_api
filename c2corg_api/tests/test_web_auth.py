@@ -9,7 +9,7 @@ from fastapi import Depends
 
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
-from c2corg_api.security.roles import create_claims
+from c2corg_api.security.roles import create_claims, hash_token
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.web.auth import (
     Authorization,
@@ -36,7 +36,7 @@ class TestAuthParity(BaseTestRest):
         self.moderator = self.global_userids['moderator']
 
     def _add_token(self, value, user_id, expire):
-        self.session.add(Token(value=value, userid=user_id, expire=expire))
+        self.session.add(Token(value=hash_token(value), userid=user_id, expire=expire))
         self.session.flush()
 
     def headers_cases(self):
