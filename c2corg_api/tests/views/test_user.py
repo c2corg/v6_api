@@ -546,6 +546,56 @@ class TestUserRest(BaseUserTestRest):
         purge_token()
         assert 0 == query.count()
 
+    def test_purge_tokens_logs_out_from_the_forum(self):
+        from c2corg_api.jobs import purge_expired_tokens
+
+        contributor = self.global_userids['contributor']
+        moderator = self.global_userids['moderator']
+        past = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=1)
+        # the contributor: every token expired (the global one too)
+        self.login('contributor')
+        self.session.query(Token).filter(Token.userid == contributor).update(
+            {'expire': past}
+        )
+        # the moderator: one token expired, the global one still valid
+        moderator_token = self.login('moderator').json['token']
+        self.session.query(Token).filter(
+            Token.value == hash_token(moderator_token)
+        ).update({'expire': past})
+        self.session.commit()
+
+        client = Mock()
+        with (
+            patch.object(
+                purge_expired_tokens, 'get_discourse_client', return_value=client
+            ),
+            patch.object(purge_expired_tokens.time, 'sleep'),
+        ):
+            purge_expired_tokens.purge_token(self.settings)
+
+        client.logout.assert_called_once_with(contributor)
+        assert (
+            self.session.query(Token).filter(Token.userid == contributor).count() == 0
+        )
+        assert self.session.query(Token).filter(Token.userid == moderator).count() == 1
+
+    def test_logout_from_forum(self):
+        from c2corg_api.jobs import purge_expired_tokens
+
+        client = Mock()
+        client.logout.side_effect = [Exception('not on the forum'), None]
+        with (
+            patch.object(
+                purge_expired_tokens, 'get_discourse_client', return_value=client
+            ),
+            patch.object(purge_expired_tokens.time, 'sleep') as sleep,
+        ):
+            purge_expired_tokens.logout_from_forum(self.settings, [3, 4])
+
+        # a failure does not stop the others
+        assert [c.args for c in client.logout.call_args_list] == [(3,), (4,)]
+        sleep.assert_called_once_with(purge_expired_tokens.FORUM_LOGOUT_INTERVAL)
+
     def login(
         self,
         username,
