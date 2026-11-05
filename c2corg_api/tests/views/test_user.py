@@ -662,6 +662,15 @@ class TestUserRest(BaseUserTestRest):
         body = self.login('contributor', password='abc', status=200).json
         assert 'token' in body
 
+    def test_login_with_a_stored_password_not_a_bcrypt_hash(self):
+        # #592: "Invalid salt" answered a 500
+        contributor = self.session.get(User, self.global_userids['contributor'])
+        contributor._password = 'not a bcrypt hash'
+        self.session.flush()
+
+        body = self.login('contributor', status=401).json
+        assert body['status'] == 'error'
+
     def test_login_blocked_account(self):
         contributor = self.session.get(User, self.global_userids['contributor'])
         contributor.blocked = True
