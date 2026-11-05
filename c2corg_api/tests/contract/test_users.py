@@ -58,6 +58,8 @@ class TestRegisterAndLogin(UserContractTest):
 
         renewed = self.post('/users/renew', {}, headers=dict(auth))
         check_snapshot('users_renew', renewed)
+        # the renewal revoked the token of the login
+        auth = {'Authorization': f'JWT token="{renewed.json["token"]}"'}
         logout = self.post('/users/logout', {}, headers=dict(auth))
         check_snapshot('users_logout', logout)
 

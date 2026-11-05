@@ -795,7 +795,6 @@ class TestUserRest(BaseUserTestRest):
         body = self.get_json_with_token('/users/account', token2, status=200)
         self.assertBodyEqual(body, 'name', 'Contributor')
 
-        self.post_json_with_token('/users/logout', token1)
         self.post_json_with_token('/users/logout', token2)
 
     def test_logout_invalidates_the_token(self):
@@ -847,15 +846,24 @@ class TestUserRest(BaseUserTestRest):
         assert claims['exp'] - claims['iat'] == 14 * 24 * 3600
         assert len(claims['jti']) >= 16
 
-    def test_renew_keeps_the_old_token(self):
-        # Current behaviour: renewing does not revoke the old token.
-        # The auth rework of #2365 revokes it; this test changes with it.
-        old_token = self.global_tokens['contributor']
+    def test_renew_revokes_the_old_token(self):
+        old_token = self.login('contributor').json['token']
         new_token = self.post_json_with_token('/users/renew', old_token)['token']
         assert new_token != old_token
 
         self.get_json_with_token('/users/account', new_token, status=200)
-        self.get_json_with_token('/users/account', old_token, status=200)
+        body = self.get_json_with_token('/users/account', old_token, status=401)
+        self.assertErrorsContain(body, 'Unauthorized', 'Invalid token')
+        # a revoked token cannot be renewed again
+        self.post_json_with_token('/users/renew', old_token, status=401)
+
+    def test_renew_keeps_the_other_sessions(self):
+        token = self.login('contributor').json['token']
+        other_token = self.login('contributor').json['token']
+
+        self.post_json_with_token('/users/renew', token)
+
+        self.get_json_with_token('/users/account', other_token, status=200)
 
     def test_renew_of_an_unknown_token(self):
         body = self.post_json_with_token('/users/renew', 'not-a-token', status=401)

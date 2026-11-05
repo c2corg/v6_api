@@ -122,9 +122,12 @@ def _encode(claims, request):
 
 
 def renew_token(user, request):
+    """Replace the token of the request with a new one, or return None."""
     old_token = request.authorization.token
 
     if is_valid_token(old_token):
+        # revoked, in the transaction that stores the new one
+        remove_token(old_token)
         return _new_token(user, request)
 
     return None
