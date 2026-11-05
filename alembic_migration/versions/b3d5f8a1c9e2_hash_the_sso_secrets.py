@@ -23,22 +23,23 @@ HASHED = '^[0-9a-f]{64}$'
 
 
 def _hash(conn, table, column):
+    # SQLAlchemy constructs, not SQL strings: the names are quoted by it
+    secret = sa.column(column)
+    stored = sa.table(table, secret, schema='users')
     rows = (
         conn.execute(
-            sa.text(
-                f'SELECT {column} FROM users.{table} '
-                f'WHERE {column} IS NOT NULL AND {column} !~ :hashed'
-            ),
-            {'hashed': HASHED},
+            sa.select(secret)
+            .select_from(stored)
+            .where(secret.is_not(None), secret.op('!~')(HASHED))
         )
         .scalars()
         .all()
     )
     if rows:
         conn.execute(
-            sa.text(
-                f'UPDATE users.{table} SET {column} = :hash WHERE {column} = :value'
-            ),
+            stored.update()
+            .where(secret == sa.bindparam('value'))
+            .values({column: sa.bindparam('hash')}),
             [
                 {
                     'value': value,

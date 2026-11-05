@@ -393,11 +393,12 @@ class TestSsoLoginRest(BaseTestRest):
 
     def test_token_stored_as_is(self):
         # TODO(#2365): refused once migration b3d5f8a1c9e2 ran
-        self.sso_external_id.token = 'raw_token'
+        # a test value, not a credential
+        self.sso_external_id.token = 'raw_token'  # nosec B105
         self.sso_external_id.expire = sso_expire_from_now()
         self.session.flush()
 
-        self.app_post_json(self._url, {'token': 'raw_token'}, status=200)
+        self.app_post_json(self._url, {'token': 'raw_token'}, status=200)  # nosec B105
 
     def test_the_hash_is_not_a_token(self):
         self.sso_external_id.expire = sso_expire_from_now()
