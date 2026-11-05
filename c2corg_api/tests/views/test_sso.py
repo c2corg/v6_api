@@ -375,6 +375,9 @@ class TestSsoLoginRest(BaseTestRest):
             self._url, {'discourse': True, 'token': 'good_token'}, status=200
         ).json
         assert 'token' in body
+        # the API accepts the token of the SSO login
+        self.get_json_with_token('/users/account', body['token'], status=200)
+        assert body['id'] == self.contributor.id
 
     @patch(
         'c2corg_api.views.sso.get_discourse_client',
