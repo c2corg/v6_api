@@ -36,11 +36,7 @@ def hash_token(token):
 
 def _stored(token):
     """Return the condition matching the stored row of a token."""
-    # TODO(#2365): match the hash only, in the release after the migration
-    # a7c3e1f05b2d. Until it has run, and while API servers of the previous
-    # version still store tokens during the rolling upgrade, a row may hold
-    # the token itself.
-    return Token.value.in_([hash_token(token), token])
+    return Token.value == hash_token(token)
 
 
 def is_valid_token(token):
