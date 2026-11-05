@@ -974,15 +974,24 @@ class TestUserRest(BaseUserTestRest):
         assert claims['exp'] - claims['iat'] == 14 * 24 * 3600
         assert len(claims['jti']) >= 16
 
-    def test_renew_revokes_the_old_token(self):
+    def test_renew_revokes_the_old_token_after_a_minute(self):
         old_token = self.login('contributor').json['token']
         new_token = self.post_json_with_token('/users/renew', old_token)['token']
         assert new_token != old_token
-
         self.get_json_with_token('/users/account', new_token, status=200)
+
+        # the requests sent with it meanwhile (page loading, other tabs) pass
+        self.get_json_with_token('/users/account', old_token, status=200)
+        row = self.session.query(Token).filter(Token.value == hash_token(old_token))
+        expire = row.one().expire
+        now = datetime.datetime.now(datetime.UTC)
+        assert expire <= now + datetime.timedelta(minutes=1)
+
+        # then it is refused, and cannot be renewed
+        row.one().expire = now - datetime.timedelta(seconds=1)
+        self.session.flush()
         body = self.get_json_with_token('/users/account', old_token, status=401)
         self.assertErrorsContain(body, 'Unauthorized', 'Invalid token')
-        # a revoked token cannot be renewed again
         self.post_json_with_token('/users/renew', old_token, status=401)
 
     def test_renew_keeps_the_other_sessions(self):

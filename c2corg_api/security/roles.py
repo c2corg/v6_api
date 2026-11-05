@@ -5,7 +5,7 @@ import secrets
 from typing import NamedTuple
 
 import jwt as pyjwt
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 
 from c2corg_api.httpexceptions import HTTPForbidden
 from c2corg_api.models import DBSession
@@ -19,6 +19,8 @@ CONST_EXPIRE_AFTER_DAYS = 14
 # the lifetime of a token: "remember me" on the login, or not
 REMEMBERED_LIFETIME = datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
 SESSION_LIFETIME = datetime.timedelta(days=1)
+# how long a renewed token stays valid, for the requests already sent with it
+RENEWAL_GRACE = datetime.timedelta(minutes=1)
 
 
 class IssuedToken(NamedTuple):
@@ -139,11 +141,24 @@ def renew_token(user, request):
 
     if is_valid_token(old_token):
         lifetime = _lifetime(old_token, request)
-        # revoked, in the transaction that stores the new one
-        remove_token(old_token)
+        _expire_soon(old_token)
         return _new_token(user, request, lifetime)
 
     return None
+
+
+def _expire_soon(token):
+    """Revoke a renewed token at the end of the grace period."""
+    # Not at once: the requests sent with it before the client stored the new
+    # one (the page loading, the other tabs) would be refused. It expires in a
+    # minute, or at its own expiry if sooner.
+    now = datetime.datetime.now(datetime.UTC)
+    DBSession.execute(
+        Token.__table__.update()
+        .where(_stored(token))
+        .values(expire=func.least(Token.expire, now + RENEWAL_GRACE))
+    )
+    DBSession.flush()
 
 
 def _lifetime(token, request):
