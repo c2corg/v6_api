@@ -5,12 +5,13 @@
 #   database and not expired (401 'Invalid token'), of a user who is not
 #   blocked (403 'account blocked'), whatever the route;
 # - current_user(), as the former JWT policy of Pyramid: the user of a valid
-#   `JWT` token (`JWT token="<token>"` or `JWT <token>`, its `sub` claim an
-#   integer as a string), None for an anonymous one.
-# The token rework of the review comes at the end of the step.
+#   `JWT` token (its `sub` claim an integer as a string), None for an
+#   anonymous one.
+# Both, and the views (request.authorization), read the token with
+# parse_authorization().
 
-import re
 from dataclasses import dataclass
+from typing import NamedTuple
 
 import jwt
 from fastapi import Request
@@ -26,24 +27,24 @@ from c2corg_api.web.errors import error_response
 AUTH_TYPE = 'JWT'
 ALGORITHM = 'HS256'
 
-# the token of the Authorization params: token="<value>"
-_TOKEN_RE = re.compile(r'token="([^"]+)"')
+
+class Authorization(NamedTuple):
+    """The scheme and token of an Authorization header."""
+
+    scheme: str
+    token: str
 
 
 def parse_authorization(value):
-    """Split an Authorization header into (type, params), like WebOb."""
+    """Return the Authorization of a header value, or None without one."""
+    # `<scheme> token="<token>"` or `<scheme> <token>`; the token may be empty.
     if not value:
         return None
-    auth_type, _, params = value.partition(' ')
-    return auth_type, params
-
-
-def extract_token(params):
-    """Return the token of 'token="XXX"' or 'XXX', like roles.extract_token."""
+    scheme, _, params = value.partition(' ')
     if 'token="' in params:
-        parts = params.split('"')
-        return parts[1] if len(parts) >= 2 else None
-    return params
+        # what follows the first quote, up to the next one if any
+        params = params.split('"')[1]
+    return Authorization(scheme, params)
 
 
 def _check_token(token):
@@ -63,9 +64,8 @@ class TokenValidationMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         authorization = parse_authorization(request.headers.get('Authorization'))
         if authorization is not None:
-            token = extract_token(authorization[1])
             # the database lookup runs in a worker thread, like the views
-            error = await run_in_threadpool(_check_token, token)
+            error = await run_in_threadpool(_check_token, authorization.token)
             if error is not None:
                 return error
         return await call_next(request)
@@ -80,15 +80,15 @@ class CurrentUser:
 def _claims(request):
     """Return the claims of the request's token ({} if none or invalid)."""
     authorization = parse_authorization(request.headers.get('Authorization'))
-    if authorization is None or authorization[0] != AUTH_TYPE:
-        return {}
-    match = _TOKEN_RE.search(authorization[1])
-    token = match.group(1) if match else authorization[1]
-    if not token:
+    if (
+        authorization is None
+        or authorization.scheme != AUTH_TYPE
+        or not authorization.token
+    ):
         return {}
     key = request.app.state.settings['jwt.private_key']
     try:
-        return jwt.decode(token, key, algorithms=[ALGORITHM])
+        return jwt.decode(authorization.token, key, algorithms=[ALGORITHM])
     except jwt.InvalidTokenError:
         return {}
 

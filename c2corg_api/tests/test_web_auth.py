@@ -9,7 +9,12 @@ from fastapi import Depends
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
 from c2corg_api.tests.views import BaseTestRest
-from c2corg_api.web.auth import CurrentUser, current_user
+from c2corg_api.web.auth import (
+    Authorization,
+    CurrentUser,
+    current_user,
+    parse_authorization,
+)
 
 PROBE = '/test/whoami'
 
@@ -102,3 +107,25 @@ class TestAuthParity(BaseTestRest):
             headers['Authorization'] = header
         response = self.app.get(PROBE, headers=headers, status='*')
         assert response.headers['Access-Control-Allow-Origin'] == headers['Origin']
+
+
+@pytest.mark.parametrize(
+    ('header', 'expected'),
+    [
+        (None, None),
+        ('', None),
+        ('JWT token="a.b.c"', ('JWT', 'a.b.c')),
+        ('JWT a.b.c', ('JWT', 'a.b.c')),
+        ('Bearer a.b.c', ('Bearer', 'a.b.c')),
+        ('JWT', ('JWT', '')),
+        ('JWT token=""', ('JWT', '')),
+        # an unterminated quote: the token is what follows it
+        ('JWT token="a.b.c', ('JWT', 'a.b.c')),
+        ('garbage', ('garbage', '')),
+    ],
+)
+def test_parse_authorization(header, expected):
+    authorization = parse_authorization(header)
+    assert authorization == expected
+    if expected is not None:
+        assert isinstance(authorization, Authorization)

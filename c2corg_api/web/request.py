@@ -68,7 +68,7 @@ class ValidatedRequest:
         self.if_none_match = parse_if_none_match(request.headers.get('If-None-Match'))
         self.registry = request.app.state.registry
         self._user = user
-        # as WebOb's request.authorization: (type, params), or None
+        # the scheme and token of the Authorization header, or None
         self.authorization = parse_authorization(request.headers.get('Authorization'))
         # the body of a write, read by the validators (extract_body) and the views
         # as WebOb gives it: the media type without its parameters, and the

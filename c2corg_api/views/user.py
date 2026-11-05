@@ -23,7 +23,6 @@ from c2corg_api.schemas.user import (
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import (
-    extract_token,
     log_validated_user_i_know_what_i_do,
     remove_token,
     renew_token,
@@ -574,7 +573,7 @@ def renew_login(request):
 def logout_user(request):
     userid = request.authenticated_userid
     result = {'user': userid}
-    remove_token(extract_token(request))
+    remove_token(request.authorization.token)
     if 'discourse' in request.json:
         try:
             settings = request.registry.settings

@@ -15,15 +15,6 @@ log = logging.getLogger(__name__)
 CONST_EXPIRE_AFTER_DAYS = 14
 
 
-def extract_token(request):
-    # Extract token from 'JWT token="XXX"' or 'JWT XXX'
-    params = request.authorization[1]
-    if 'token="' in params:
-        splitted = params.split('"')
-        return splitted[1] if len(splitted) >= 2 else None
-    return params
-
-
 def is_valid_token(token):
     now = datetime.datetime.now(datetime.UTC)
     token = (
@@ -104,7 +95,7 @@ def _encode(claims, request):
 
 
 def renew_token(user, request):
-    old_token = extract_token(request)
+    old_token = request.authorization.token
 
     if is_valid_token(old_token):
         now = datetime.datetime.now(datetime.UTC)
