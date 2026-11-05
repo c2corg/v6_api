@@ -23,6 +23,7 @@ from c2corg_api.security.discourse_client import (
     get_discourse_client,
     set_discourse_client,
 )
+from c2corg_api.security.roles import log_validated_user_i_know_what_i_do
 from c2corg_api.tests import errors_of
 from c2corg_api.tests.views import BaseTestRest
 
@@ -685,6 +686,31 @@ class TestUserRest(BaseUserTestRest):
             {'sso': sso, 'sig': 'not-the-right-signature'},
             status=400,
         )
+
+    def test_discourse_redirect_without_return_sso_url(self):
+        self.set_discourse_not_mocked()
+        self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
+        payload = base64.b64encode(b'nonce=cb68251e').decode('ascii')
+        sig = hmac.new(
+            self.discourse_client.sso_key.encode('utf-8'),
+            payload.encode('utf-8'),
+            digestmod=hashlib.sha256,
+        ).hexdigest()
+
+        self.post_json_with_token(
+            '/users/discourse-redirect',
+            self.global_tokens['moderator'],
+            {'sso': quote(payload), 'sig': sig},
+            status=400,
+        )
+
+    def test_log_in_a_user_whose_email_is_not_validated(self):
+        contributor = self.session.get(User, self.global_userids['contributor'])
+        contributor.email_validated = False
+        self.session.flush()
+
+        with pytest.raises(ValueError):
+            log_validated_user_i_know_what_i_do(contributor, None)
 
     def test_discourse_redirect_unauthenticated(self):
         self.app_post_json(

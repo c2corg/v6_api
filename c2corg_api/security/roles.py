@@ -75,7 +75,9 @@ def log_validated_user_i_know_what_i_do(user, request):
 
     See the try_login function for a safe version.
     """
-    assert user.email_validated
+    # an explicit check, not an assert: `python -O` would drop it
+    if not user.email_validated:
+        raise ValueError('the email of the user is not validated')
 
     if user.blocked:
         raise HTTPForbidden('account blocked')

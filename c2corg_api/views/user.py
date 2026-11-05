@@ -448,7 +448,6 @@ class LoginSchema(Schema):
 
 
 def token_to_response(user, token, request):
-    assert token is not None
     roles = ['moderator'] if user.moderator else []
     return {
         'token': token.value,
