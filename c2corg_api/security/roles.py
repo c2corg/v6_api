@@ -1,5 +1,6 @@
 import datetime
 import logging
+import secrets
 
 import jwt as pyjwt
 from sqlalchemy import and_
@@ -32,17 +33,12 @@ def is_valid_token(token):
     return True
 
 
-def add_or_retrieve_token(value, expire, userid):
-    token = (
-        DBSession.query(Token)
-        .filter(Token.value == value, Token.userid == userid)
-        .first()
-    )
-    if not token:
-        token = Token(value=value, expire=expire, userid=userid)
-        DBSession.add(token)
-        DBSession.flush()
-
+def add_token(value, expire, userid):
+    """Store a new token."""
+    # every token is unique (its `jti` claim), so it is never stored yet
+    token = Token(value=value, expire=expire, userid=userid)
+    DBSession.add(token)
+    DBSession.flush()
     return token
 
 
@@ -55,11 +51,15 @@ def remove_token(token):
     DBSession.flush()
 
 
-def create_claims(user, exp):
+def create_claims(user, now, exp):
+    """Return the claims of a new token of the user, issued now."""
+    # jti: a random id, so that two tokens issued in the same second differ
     return {
         'sub': str(user.id),
         'username': user.username,
+        'iat': int(now.timestamp()),
         'exp': int(exp.timestamp()),
+        'jti': secrets.token_urlsafe(16),
     }
 
 
@@ -82,11 +82,15 @@ def log_validated_user_i_know_what_i_do(user, request):
     if user.blocked:
         raise HTTPForbidden('account blocked')
 
+    return _new_token(user, request)
+
+
+def _new_token(user, request):
+    """Issue and store a new token of the user."""
     now = datetime.datetime.now(datetime.UTC)
     exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
-    claims = create_claims(user, exp)
-    token = _encode(claims, request)
-    return add_or_retrieve_token(token, exp, user.id)
+    token = _encode(create_claims(user, now, exp), request)
+    return add_token(token, exp, user.id)
 
 
 def _encode(claims, request):
@@ -100,10 +104,6 @@ def renew_token(user, request):
     old_token = request.authorization.token
 
     if is_valid_token(old_token):
-        now = datetime.datetime.now(datetime.UTC)
-        exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
-        claims = create_claims(user, exp)
-        token_value = _encode(claims, request)
-        return add_or_retrieve_token(token_value, exp, user.id)
+        return _new_token(user, request)
 
     return None

@@ -10,6 +10,7 @@
 # Both, and the views (request.authorization), read the token with
 # parse_authorization().
 
+import datetime
 from dataclasses import dataclass
 from typing import NamedTuple
 
@@ -26,6 +27,9 @@ from c2corg_api.web.errors import error_response
 
 AUTH_TYPE = 'JWT'
 ALGORITHM = 'HS256'
+# PyJWT refuses a token issued in the future (`iat`): accept the clock of
+# another API server being a little behind the one that issued it.
+CLOCK_LEEWAY = datetime.timedelta(minutes=1)
 
 
 class Authorization(NamedTuple):
@@ -88,7 +92,9 @@ def _claims(request):
         return {}
     key = request.app.state.settings['jwt.private_key']
     try:
-        return jwt.decode(authorization.token, key, algorithms=[ALGORITHM])
+        return jwt.decode(
+            authorization.token, key, algorithms=[ALGORITHM], leeway=CLOCK_LEEWAY
+        )
     except jwt.InvalidTokenError:
         return {}
 

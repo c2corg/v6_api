@@ -3,11 +3,13 @@
 import datetime
 from typing import Annotated
 
+import jwt
 import pytest
 from fastapi import Depends
 
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
+from c2corg_api.security.roles import create_claims
 from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.web.auth import (
     Authorization,
@@ -99,6 +101,30 @@ class TestAuthParity(BaseTestRest):
         view_user, _, fastapi = self.answers(header)
         assert view_user.status_int == fastapi.status_int == 403
         assert fastapi.json['errors'] == view_user.json['errors']
+
+    @pytest.mark.parametrize(
+        ('issued_in', 'authenticated'),
+        [
+            (datetime.timedelta(seconds=-10), True),
+            # another API server may be a little ahead of this one
+            (datetime.timedelta(seconds=30), True),
+            (datetime.timedelta(minutes=5), False),
+        ],
+    )
+    def test_issued_at(self, issued_in, authenticated):
+        user = self.session.get(User, self.contributor)
+        now = datetime.datetime.now(datetime.UTC) + issued_in
+        exp = now + datetime.timedelta(days=1)
+        token = jwt.encode(
+            create_claims(user, now, exp),
+            self.settings['jwt.private_key'],
+            algorithm='HS256',
+        )
+        self._add_token(token, self.contributor, exp)
+
+        response = self.app.get(PROBE, headers={'Authorization': f'JWT {token}'})
+        expected = [self.contributor, False] if authenticated else None
+        assert response.json['user'] == expected
 
     @pytest.mark.parametrize('header', [None, 'JWT token="not-a-token"'])
     def test_errors_keep_cors_headers(self, header):

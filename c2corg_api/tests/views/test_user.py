@@ -7,6 +7,7 @@ import time
 from unittest.mock import MagicMock, Mock, patch
 from urllib.parse import quote, urlencode, urlparse
 
+import jwt
 import pytest
 
 from c2corg_api.httpexceptions import HTTPBadRequest
@@ -784,14 +785,7 @@ class TestUserRest(BaseUserTestRest):
         self.assertBodyEqual(body, 'name', 'Contributor')
 
     def test_renew_token_different_success(self):
-        # Tokens created in the same second are identical
         token1 = self.login('contributor').json['token']
-
-        import time
-
-        print('Waiting for more than 1s to get a different token')
-        time.sleep(1.01)
-
         token2 = self.post_json_with_token('/users/renew', token1)['token']
         assert token1 != token2
 
@@ -812,15 +806,26 @@ class TestUserRest(BaseUserTestRest):
         self.post_json_with_token('/users/logout', token, status=401)
 
     def test_logout_keeps_the_other_sessions(self):
-        # the global token was made at the start of the run, so it differs
+        # two logins, most likely in the same second
         token = self.login('contributor').json['token']
-        assert token != self.global_tokens['contributor']
+        other_token = self.login('contributor').json['token']
+        assert token != other_token
 
         self.post_json_with_token('/users/logout', token)
 
-        self.get_json_with_token(
-            '/users/account', self.global_tokens['contributor'], status=200
+        self.get_json_with_token('/users/account', other_token, status=200)
+
+    def test_token_claims(self):
+        before = int(time.time())
+        token = self.login('contributor').json['token']
+        claims = jwt.decode(
+            token, self.settings['jwt.private_key'], algorithms=['HS256']
         )
+        assert set(claims) == {'sub', 'username', 'iat', 'exp', 'jti'}
+        assert claims['sub'] == str(self.global_userids['contributor'])
+        assert before <= claims['iat'] <= int(time.time())
+        assert claims['exp'] - claims['iat'] == 14 * 24 * 3600
+        assert len(claims['jti']) >= 16
 
     def test_renew_keeps_the_old_token(self):
         # Current behaviour: renewing does not revoke the old token.
