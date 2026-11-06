@@ -117,6 +117,105 @@ def get_error(errors, name):
     pytest.fail(f'no error for {name}')
 
 
+def get_locale(locales, lang):
+    """Return the locale of the given language in a JSON list of locales."""
+    return next(filter(lambda locale: locale['lang'] == lang, locales), None)
+
+
+def assert_errors_contain(body, key, value=None):
+    """Check that an answer has an error about `key` (with this description)."""
+    for error in errors_of(body):
+        if error.get('name') == key:
+            if value is not None:
+                assert error.get('description') == value
+            return
+    pytest.fail(str(body) + ' does not contain ' + key)
+
+
+def assert_body_equal(body, key, expected):
+    """Check a value of a JSON body."""
+    assert body.get(key) == expected
+
+
+def assert_error(errors, name, description):
+    """Check that the errors include this one."""
+    for error in errors:
+        if description == error.get('description') and name == error.get('name'):
+            return
+    pytest.fail(f'no error ({name}, {description}) in {errors}')
+
+
+def assert_coordinates_equal(coord1, coord2):
+    """Check two coordinates, to the nearest 5e-8."""
+    assert len(coord1) == len(coord2), 'not the same dimension'
+    for i in range(0, len(coord1)):
+        assert coord1[i] == pytest.approx(coord2[i], abs=5e-8), (
+            f'{coord1[i]} does not almost equal {coord2[i]}'
+        )
+
+
+def get_json_with_token(client, url, token, status=200):
+    """GET a URL with the given token; return the JSON body."""
+    headers = auth_headers(token=token)
+    return client.get(url, headers=headers, status=status).json
+
+
+def get_json_with_contributor(client, url, status=200):
+    """GET a URL as the contributor; return the JSON body."""
+    headers = auth_headers(username='contributor')
+    return client.get(url, headers=headers, status=status).json
+
+
+def get_json_with_moderator(client, url, status):
+    """GET a URL as the moderator; return the JSON body."""
+    headers = auth_headers(username='moderator')
+    return client.get(url, headers=headers, status=status).json
+
+
+def post_json_with_token(client, url, token, body={}, status=200):
+    """POST a JSON body with the given token; return the JSON answer."""
+    headers = auth_headers(token=token)
+    return send_json(client, 'post', url, body, headers=headers, status=status).json
+
+
+def post_json_with_contributor(
+    client, url, body={}, status=200, username='contributor', headers={}
+):
+    """POST a JSON body as a user (the contributor); return the JSON answer."""
+    headers = auth_headers(username=username, headers=headers)
+    return send_json(client, 'post', url, body, headers=headers, status=status).json
+
+
+def assert_notified_es(queue_config):
+    """Check that a sync. notification was sent for ES, and take it."""
+    queue = queue_config.queue(queue_config.connection)
+    assert queue.get() is not None, 'no sync. notification sent for ES'
+
+
+def assert_not_notified_es(queue_config):
+    """Check that no sync. notification was sent for ES."""
+    queue = queue_config.queue(queue_config.connection)
+    assert queue.get() is None, 'unexpected sync. notification sent for ES'
+
+
+def sync_es_queue(session, queue_config):
+    """Check the sync. notification for ES, then sync. the index."""
+    from c2corg_api.scripts.es.sync import sync_es
+
+    assert_notified_es(queue_config)
+    sync_es(session)
+
+
+def get_feed_change(session, document_id, change_type=None):
+    """Return the feed entry of a document (of the given type of change)."""
+    from c2corg_api.models.feed import DocumentChange
+
+    q = session.query(DocumentChange).filter(DocumentChange.document_id == document_id)
+    if change_type:
+        q = q.filter(DocumentChange.change_type == change_type)
+    return q.first()
+
+
 def invalid_parameters(response):
     """Return the (location, name, message) of the errors of a 422 answer."""
     # FastAPI's validation errors: `loc` is the location and the name
@@ -353,11 +452,7 @@ def teardown_package():
 
 class AssertionsMixin:
     def assertCoodinateEquals(self, coord1, coord2):  # noqa
-        assert len(coord1) == len(coord2), 'not the same dimension'
-        for i in range(0, len(coord1)):
-            assert coord1[i] == pytest.approx(coord2[i], abs=5e-8), (
-                f'{coord1[i]} does not almost equal {coord2[i]}'
-            )
+        assert_coordinates_equal(coord1, coord2)
 
 
 class BaseTestCase(AssertionsMixin):

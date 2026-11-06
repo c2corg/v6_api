@@ -23,6 +23,7 @@ from c2corg_api.tests import (
     assert_required,
     auth_headers,
     errors_of,
+    get_locale,
     send_json,
 )
 
@@ -40,11 +41,6 @@ class DocType:
 
 def _user_headers(user):
     return {} if not user else auth_headers(username=user)
-
-
-def get_locale(locales, lang):
-    """Return the locale of the given language in a JSON list of locales."""
-    return next(filter(lambda locale: locale['lang'] == lang, locales), None)
 
 
 def assert_results_equal(actual, expected, total):

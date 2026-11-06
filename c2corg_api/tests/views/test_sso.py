@@ -188,9 +188,9 @@ class TestSsoSyncRest(BaseTestRest):
 
         assert sso_external_id.token == hash_token(self.token_from_url(body.get('url')))
 
-        client = discourse_mock.return_value
-        client.by_external_id.assert_called_with(sso_external_id.user.id)
-        client.sync_sso.assert_called_once_with(
+        discourse = discourse_mock.return_value
+        discourse.by_external_id.assert_called_with(sso_external_id.user.id)
+        discourse.sync_sso.assert_called_once_with(
             sso_secret=self.settings.get('discourse.sso_secret'),
             name='New User',
             username='NewUser',
@@ -251,8 +251,8 @@ class TestSsoSyncRest(BaseTestRest):
             self.token_from_url(body.get('url'))
         )
 
-        client = discourse_mock.return_value
-        client.by_external_id.assert_called_once_with(self.contributor.id)
+        discourse = discourse_mock.return_value
+        discourse.by_external_id.assert_called_once_with(self.contributor.id)
 
     @patch(
         'c2corg_api.security.discourse_client.DiscourseClient',
@@ -332,8 +332,8 @@ class TestSsoSyncRest(BaseTestRest):
         request_body = {'sso_key': sso_key, 'external_id': '1', 'groups': 'group_1'}
         self.app_post_json(self._url, request_body, status=200).json
 
-        client = discourse_mock.return_value
-        client.add_user_to_group.assert_called_once_with(222, 1)
+        discourse = discourse_mock.return_value
+        discourse.add_user_to_group.assert_called_once_with(222, 1)
 
 
 class TestSsoLoginRest(BaseTestRest):

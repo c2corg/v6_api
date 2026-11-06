@@ -564,16 +564,16 @@ class TestUserRest(BaseUserTestRest):
         ).update({'expire': past})
         self.session.commit()
 
-        client = Mock()
+        forum = Mock()
         with (
             patch.object(
-                purge_expired_tokens, 'get_discourse_client', return_value=client
+                purge_expired_tokens, 'get_discourse_client', return_value=forum
             ),
             patch.object(purge_expired_tokens.time, 'sleep'),
         ):
             purge_expired_tokens.purge_token(self.settings)
 
-        client.logout.assert_called_once_with(contributor)
+        forum.logout.assert_called_once_with(contributor)
         assert (
             self.session.query(Token).filter(Token.userid == contributor).count() == 0
         )
@@ -582,18 +582,18 @@ class TestUserRest(BaseUserTestRest):
     def test_logout_from_forum(self):
         from c2corg_api.jobs import purge_expired_tokens
 
-        client = Mock()
-        client.logout.side_effect = [Exception('not on the forum'), None]
+        forum = Mock()
+        forum.logout.side_effect = [Exception('not on the forum'), None]
         with (
             patch.object(
-                purge_expired_tokens, 'get_discourse_client', return_value=client
+                purge_expired_tokens, 'get_discourse_client', return_value=forum
             ),
             patch.object(purge_expired_tokens.time, 'sleep') as sleep,
         ):
             purge_expired_tokens.logout_from_forum(self.settings, [3, 4])
 
         # a failure does not stop the others
-        assert [c.args for c in client.logout.call_args_list] == [(3,), (4,)]
+        assert [c.args for c in forum.logout.call_args_list] == [(3,), (4,)]
         sleep.assert_called_once_with(purge_expired_tokens.FORUM_LOGOUT_INTERVAL)
 
     def login(

@@ -135,14 +135,14 @@ class TestDocumentChange(BaseTestCase):
         self.session.add(user)
         self.session.flush()
 
-        user_ids = [user.id]
+        participant_ids = [user.id]
         change = DocumentChange(
             user=self.user1,
             change_type='created',
             document=self.waypoint,
             document_type=WAYPOINT_TYPE,
             area_ids=[],
-            user_ids=user_ids,
+            user_ids=participant_ids,
         )
         self.session.add(change)
         self.session.flush()

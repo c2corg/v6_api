@@ -1,79 +1,70 @@
-import pytest
-
-from c2corg_api.models.feed import DocumentChange
-from c2corg_api.scripts.es.sync import sync_es
-from c2corg_api.tests import BaseTestCase, auth_headers, errors_of, get_error
+from c2corg_api.tests import (
+    BaseTestCase,
+    assert_body_equal,
+    assert_error,
+    assert_errors_contain,
+    assert_not_notified_es,
+    assert_notified_es,
+    auth_headers,
+    get_error,
+    get_feed_change,
+    get_json_with_contributor,
+    get_json_with_moderator,
+    get_json_with_token,
+    get_locale,
+    post_json_with_contributor,
+    post_json_with_token,
+    sync_es_queue,
+)
 
 
 class BaseTestRest(BaseTestCase):
+    # the functions of c2corg_api.tests, for the tests not converted yet (#2610)
     def assertErrorsContain(self, body, key, value=None):  # noqa
-        for error in errors_of(body):
-            if error.get('name') == key:
-                if value is not None:
-                    assert error.get('description') == value
-                return
-        pytest.fail(str(body) + ' does not contain ' + key)
+        assert_errors_contain(body, key, value)
 
     def assertBodyEqual(self, body, key, expected):  # noqa
-        assert body.get(key) == expected
+        assert_body_equal(body, key, expected)
 
     def add_authorization_header(self, username=None, token=None, headers=None):
         return auth_headers(username, token, headers)
 
     def get_json_with_token(self, url, token, status=200):
-        headers = self.add_authorization_header(token=token)
-        return self.app.get(url, headers=headers, status=status).json
+        return get_json_with_token(self.app, url, token, status)
 
     def get_json_with_contributor(self, url, status=200):
-        headers = self.add_authorization_header(username='contributor')
-        return self.app.get(url, headers=headers, status=status).json
+        return get_json_with_contributor(self.app, url, status)
 
     def get_json_with_moderator(self, url, status):
-        headers = self.add_authorization_header(username='moderator')
-        return self.app.get(url, headers=headers, status=status).json
+        return get_json_with_moderator(self.app, url, status)
 
     def assertError(self, errors, name, description):  # noqa
-        for error in errors:
-            if description == error.get('description') and name == error.get('name'):
-                return
-        pytest.fail(f'no error ({name}, {description}) in {errors}')
+        assert_error(errors, name, description)
 
     def get_error(self, errors, name):
         return get_error(errors, name)
 
     def post_json_with_token(self, url, token, body={}, status=200):
-        headers = self.add_authorization_header(token=token)
-        r = self.app_post_json(url, body, headers=headers, status=status)
-        return r.json
+        return post_json_with_token(self.app, url, token, body, status)
 
     def post_json_with_contributor(
         self, url, body={}, status=200, username='contributor', headers={}
     ):
-        headers = self.add_authorization_header(username=username, headers=headers)
-        r = self.app_post_json(url, body, headers=headers, status=status)
-        return r.json
-
-    def assertNotifiedEs(self):  # noqa
-        queue = self.queue_config.queue(self.queue_config.connection)
-        assert queue.get() is not None, 'no sync. notification sent for ES'
-
-    def assertNotNotifiedEs(self):  # noqa
-        queue = self.queue_config.queue(self.queue_config.connection)
-        assert queue.get() is None, 'unexpected sync. notification sent for ES'
-
-    def sync_es(self):
-        self.assertNotifiedEs()
-        sync_es(self.session)
-
-    def get_locale(self, lang, locales):
-        return next(filter(lambda locale: locale['lang'] == lang, locales), None)
-
-    def get_feed_change(self, document_id, change_type=None):
-        q = self.session.query(DocumentChange).filter(
-            DocumentChange.document_id == document_id
+        return post_json_with_contributor(
+            self.app, url, body, status, username, headers
         )
 
-        if change_type:
-            q = q.filter(DocumentChange.change_type == change_type)
+    def assertNotifiedEs(self):  # noqa
+        assert_notified_es(self.queue_config)
 
-        return q.first()
+    def assertNotNotifiedEs(self):  # noqa
+        assert_not_notified_es(self.queue_config)
+
+    def sync_es(self):
+        sync_es_queue(self.session, self.queue_config)
+
+    def get_locale(self, lang, locales):
+        return get_locale(locales, lang)
+
+    def get_feed_change(self, document_id, change_type=None):
+        return get_feed_change(self.session, document_id, change_type)
