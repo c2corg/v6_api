@@ -38,10 +38,10 @@ from c2corg_api.views.document import create_new_version
 
 @dataclass
 class Docs:
-    """The documents of the tests, built by `docs`."""
+    """The users to merge and their documents, built by `docs`."""
 
-    contributor: object
-    contributor2: object
+    contributor: User
+    contributor2: User
     map1: TopoMap
     waypoint1: Waypoint
     route1: Route

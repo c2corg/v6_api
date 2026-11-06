@@ -27,14 +27,15 @@ def whoami(user: Annotated[CurrentUser | None, Depends(current_user)]):
 
 @dataclass
 class Users:
-    """The documents of the tests, built by `users`."""
+    """The ids of the users of the tests."""
 
-    contributor: object
-    moderator: object
+    contributor: int
+    moderator: int
 
 
 @pytest.fixture
 def users(client, user_ids) -> Users:
+    """Add the probe route (once) and return the ids of the users."""
     fastapi_app = client.app
     if not any(getattr(r, 'path', None) == PROBE for r in fastapi_app.router.routes):
         fastapi_app.add_api_route(PROBE, whoami, methods=['GET'])
