@@ -28,22 +28,23 @@ class TestXreportWrites:
         )
 
 
+def image_type(documents, image_type, user='contributor', status=200):
+    def change(document):
+        document['image_type'] = image_type
+
+    return documents.update('images', change, user=user, status=status)
+
+
 @pytest.mark.usefixtures('documents')
 class TestImageWrites:
-    def image_type(self, documents, image_type, user='contributor', status=200):
-        def change(document):
-            document['image_type'] = image_type
-
-        return documents.update('images', change, user=user, status=status)
-
     @contract(('PUT', '/images/{id}'))
     def test_type_of_a_collaborative_image(self, documents):
-        response = self.image_type(documents, 'personal', status=400)
+        response = image_type(documents, 'personal', status=400)
         check_snapshot('images_update_type', response)
         assert response.json['errors'][0]['description'] == (
             'Image type cannot be changed for collaborative images'
         )
-        response = self.image_type(documents, 'copyright', status=403)
+        response = image_type(documents, 'copyright', status=403)
         check_snapshot('images_update_copyright', response)
         assert response.json['errors'][0]['description'] == (
             'No permission to change to copyright type'

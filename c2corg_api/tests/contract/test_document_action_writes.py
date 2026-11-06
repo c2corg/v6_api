@@ -12,23 +12,24 @@ MODERATOR_ACTIONS = [
 ]
 
 
+def request_body(documents, path):
+    waypoint = documents.ids['waypoints']
+    if path == '/documents/merge':
+        return {'source_document_id': waypoint, 'target_document_id': waypoint}
+    if path in ('/documents/protect', '/documents/unprotect'):
+        return {'document_id': waypoint}
+    version = documents.history('waypoints')[0]
+    return {'document_id': waypoint, 'lang': 'en', 'version_id': version}
+
+
 @pytest.mark.usefixtures('documents')
 class TestDocumentActionWrites:
-    def body(self, documents, path):
-        waypoint = documents.ids['waypoints']
-        if path == '/documents/merge':
-            return {'source_document_id': waypoint, 'target_document_id': waypoint}
-        if path in ('/documents/protect', '/documents/unprotect'):
-            return {'document_id': waypoint}
-        version = documents.history('waypoints')[0]
-        return {'document_id': waypoint, 'lang': 'en', 'version_id': version}
-
     @contract(*[('POST', path) for path, _ in MODERATOR_ACTIONS])
     def test_reserved_to_the_moderators(self, browser, documents):
         for path, _ in MODERATOR_ACTIONS:
             response = browser.post(
                 path,
-                self.body(documents, path),
+                request_body(documents, path),
                 user='contributor',
                 status=403,
             )
@@ -37,7 +38,7 @@ class TestDocumentActionWrites:
     @contract(*[('POST', path) for path, _ in MODERATOR_ACTIONS])
     def test_unknown_document(self, browser, documents):
         for path, name in MODERATOR_ACTIONS:
-            body = self.body(documents, path)
+            body = request_body(documents, path)
             for key in ('document_id', 'source_document_id'):
                 if key in body:
                     body[key] = 9999999
@@ -48,7 +49,7 @@ class TestDocumentActionWrites:
     def test_merge_into_itself(self, browser, documents):
         response = browser.post(
             '/documents/merge',
-            self.body(documents, '/documents/merge'),
+            request_body(documents, '/documents/merge'),
             user='moderator',
             status=400,
         )

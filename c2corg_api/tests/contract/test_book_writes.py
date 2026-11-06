@@ -14,18 +14,19 @@ BOOK = {
 }
 
 
+def drain_es_notifications(queue_config):
+    queue = queue_config.queue(queue_config.connection)
+    while queue.get() is not None:
+        pass
+
+
 @pytest.mark.usefixtures('documents')
 class TestBookWrites:
     """The answers of the book writes besides a creation and an update."""
 
-    def drain_es_notifications(self, queue_config):
-        queue = queue_config.queue(queue_config.connection)
-        while queue.get() is not None:
-            pass
-
     @contract(CREATE)
     def test_create_is_committed_and_synced(self, queue_config, browser):
-        self.drain_es_notifications(queue_config)
+        drain_es_notifications(queue_config)
         response = browser.post('/books', BOOK, user='contributor')
         check_snapshot('books_create_committed', response)
         book_id = response.json['document_id']
