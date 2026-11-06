@@ -29,6 +29,23 @@ that provides a fully configured development environment with all services
 
 All ports are forwarded to your host machine for convenience.
 
+## The data
+
+The development database is a lightweight anonymized extract of the production data (about 45,000
+documents, a few hundred accounts, the stop areas), restored at the first start from the image
+`ghcr.io/c2corg/c2corg-dev-db` (PostgreSQL 18 + PostGIS). See
+[`scripts/dev-database`](../scripts/dev-database/README.md) for what it contains and how it is built.
+
+- Accounts (password `c2c` for all): `moderator`, `user`, `blocked`, `unvalidated`.
+- Elasticsearch comes from the image `ghcr.io/c2corg/c2corg-dev-es`, published with the database and
+  already indexed. The setup script keeps that index if it was built by the same indexing code as your
+  checkout (see `es_index_fingerprint`); otherwise it rebuilds it from the database (about 5 minutes). The
+  data of both services lives in the Docker volumes `postgres_data` and `es_data`.
+- To get a fresh database and index, rebuild the container after removing these two volumes (the
+  names are prefixed by the Compose project): `docker volume rm <project>_postgres_data <project>_es_data`.
+- Newer images are used after removing the two volumes and pulling them
+  (`docker compose pull postgresql elasticsearch`).
+
 ## Common commands
 
 ```bash
@@ -59,7 +76,8 @@ If dependencies change, rebuild the container:
 
 ## Troubleshooting
 
-- **Database errors**: The setup script creates both databases automatically. If you need to re-run:
+- **Database errors**: The development database comes with the image and the setup script creates the
+  test database. If you need to re-run:
 
   ```bash
   PGPASSWORD=test PGUSER=postgres PGHOST=postgresql \
@@ -68,6 +86,9 @@ If dependencies change, rebuild the container:
 
 - **Elasticsearch not ready**: The setup script waits for ES, but if tests
   fail with connection errors, check: `curl http://elasticsearch:9200`
+
+- **The search finds nothing**: the index was created without its mappings or is empty. Delete it and
+  run the setup again: `curl -XDELETE http://elasticsearch:9200/c2corg && bash .devcontainer/setup.sh`
 
 - **Config out of date**: Re-generate config files:
 
