@@ -123,6 +123,7 @@ def test_version_concurrent_edit(session):
         session.merge(waypoint1)
 
 
+@pytest.mark.usefixtures('db_connection')
 def test_geometry_update_optimization_4326():
     lat = 46.0
     geom1 = 'SRID=4326;POINT(' + str(lat) + ' 6.0)'
@@ -156,6 +157,7 @@ def test_geometry_update_optimization_4326():
     assert waypoint_db.geometry.geom != geom1
 
 
+@pytest.mark.usefixtures('db_connection')
 def test_geometry_update_optimization_3857():
     geom1 = 'SRID=3857;POINT(445278.0 1.0)'
     waypoint_db = Waypoint(
@@ -184,6 +186,7 @@ def test_geometry_update_optimization_3857():
     assert waypoint_db.geometry.geom != geom1
 
 
+@pytest.mark.usefixtures('db_connection')
 def test_geometry_update_skip_optimization():
     geom1 = 'SRID=3857;POINT(445278.0 334111.0)'
     waypoint_db = Waypoint(
@@ -200,6 +203,7 @@ def test_geometry_update_skip_optimization():
     assert waypoint_db.geometry.geom == geom1
 
 
+@pytest.mark.usefixtures('db_connection')
 def test_update():
     waypoint_db = Waypoint(
         document_id=1,

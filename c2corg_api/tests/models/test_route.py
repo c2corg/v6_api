@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from c2corg_api.ext.wkb import geojson_from_wkbelement, wkbelement_from_geojson
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route, RouteLocale
@@ -37,6 +39,7 @@ def test_to_archive():
     assert locale_archive.gear == locale.gear
 
 
+@pytest.mark.usefixtures('db_connection')
 def test_geometry_update():
     """Check that geometries are only compared in 2D when updating a
     document.
