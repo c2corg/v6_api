@@ -50,13 +50,13 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff==0.17.1",
-    "pre-commit==4.6.2",
+    "ruff==0.17.3",
+    "pre-commit==4.7.0",
     # the client of FastAPI's TestClient, for the tests
     "httpx==0.28.1",
     "ipdb==0.13.13",
     "httmock==1.4.0",
-    "pytest==9.1.1",
+    "pytest==9.2.0",
     "pytest-cov==7.1.0",
     "pytest-xdist==3.8.0",
 ]
