@@ -21,8 +21,8 @@ from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.tests import (
     assert_required,
+    auth_headers,
     errors_of,
-    global_tokens,
     send_json,
 )
 
@@ -36,16 +36,6 @@ class DocType:
     model: type
     model_archive: type | None = None
     model_archive_locale: type | None = None
-
-
-def auth_headers(username=None, token=None, headers=None):
-    """Return the headers with the token of the given user (or token)."""
-    if not headers:
-        headers = {}
-    if not token:
-        token = global_tokens[username]
-    headers['Authorization'] = 'JWT token="' + token + '"'
-    return headers
 
 
 def _user_headers(user):

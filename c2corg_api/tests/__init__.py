@@ -14,7 +14,7 @@ from sqlalchemy.engine import make_url
 
 from c2corg_api import caching as caching_common
 from c2corg_api.config import get_appsettings
-from c2corg_api.models import DBSession, commit_or_rollback, sessionmaker
+from c2corg_api.models import DBSession, commit_or_rollback
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.sso import SsoExternalId, SsoKey
 from c2corg_api.models.user import User
@@ -97,6 +97,24 @@ def send_json(client, method, *args, status=200, **kwargs):
         errors = res.body if res.status_code == 400 else ''
         pytest.fail(f'Bad response: {res.status} (not {status}) : {errors}')
     return res
+
+
+def auth_headers(username=None, token=None, headers=None):
+    """Return the headers with the token of the given user (or token)."""
+    if not headers:
+        headers = {}
+    if not token:
+        token = global_tokens[username]
+    headers['Authorization'] = 'JWT token="' + token + '"'
+    return headers
+
+
+def get_error(errors, name):
+    """Return the error about the given name; fail without one."""
+    for error in errors:
+        if name == error.get('name'):
+            return error
+    pytest.fail(f'no error for {name}')
 
 
 def invalid_parameters(response):
@@ -357,9 +375,9 @@ class BaseTestCase(AssertionsMixin):
         self,
         client,
         db_connection,
+        session,
         email_service,
         queue_config,
-        app_state,
     ):
         """Expose the pytest fixtures to the tests and run setUp/tearDown."""
         # The fixtures are defined in conftest.py.
@@ -371,7 +389,7 @@ class BaseTestCase(AssertionsMixin):
         self.connection = db_connection
         # the session used in the test code, bound to the test's connection
         # (the views use DBSession, bound to the same connection)
-        self.session = sessionmaker()(bind=db_connection)
+        self.session = session
         self.email_service = email_service
         self.queue_config = queue_config
         # pytest does not call setUp/tearDown on plain classes: the
@@ -379,7 +397,6 @@ class BaseTestCase(AssertionsMixin):
         self.setUp()
         yield
         self.tearDown()
-        self.session.close()
 
     def setUp(self):
         """Prepare the test; subclasses override it."""

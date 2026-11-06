@@ -2,7 +2,7 @@ import pytest
 
 from c2corg_api.models.feed import DocumentChange
 from c2corg_api.scripts.es.sync import sync_es
-from c2corg_api.tests import BaseTestCase, errors_of
+from c2corg_api.tests import BaseTestCase, auth_headers, errors_of, get_error
 
 
 class BaseTestRest(BaseTestCase):
@@ -18,12 +18,7 @@ class BaseTestRest(BaseTestCase):
         assert body.get(key) == expected
 
     def add_authorization_header(self, username=None, token=None, headers=None):
-        if not headers:
-            headers = {}
-        if not token:
-            token = self.global_tokens[username]
-        headers['Authorization'] = 'JWT token="' + token + '"'
-        return headers
+        return auth_headers(username, token, headers)
 
     def get_json_with_token(self, url, token, status=200):
         headers = self.add_authorization_header(token=token)
@@ -44,10 +39,7 @@ class BaseTestRest(BaseTestCase):
         pytest.fail(f'no error ({name}, {description}) in {errors}')
 
     def get_error(self, errors, name):
-        for error in errors:
-            if name == error.get('name'):
-                return error
-        pytest.fail(f'no error for {name}')
+        return get_error(errors, name)
 
     def post_json_with_token(self, url, token, body={}, status=200):
         headers = self.add_authorization_header(token=token)
