@@ -9,98 +9,105 @@ from c2corg_api.schemas.waypoint import waypoint_schema
 from c2corg_api.tests import assert_coordinates_equal
 
 
-class TestUtils:
-    def test_restrict_schema(self):
-        fields = fields_waypoint.get('summit').get('fields')
-        schema = waypoint_schema.restrict(fields)
+def test_restrict_schema():
+    fields = fields_waypoint.get('summit').get('fields')
+    schema = waypoint_schema.restrict(fields)
 
-        assert {'document_id', 'version', 'elevation'} <= set(schema.fields)
-        assert 'climbing_outdoor_types' not in schema.fields
+    assert {'document_id', 'version', 'elevation'} <= set(schema.fields)
+    assert 'climbing_outdoor_types' not in schema.fields
 
-        geometry_fields = schema.children['geometry'].fields
-        assert {'version', 'geom'} <= set(geometry_fields)
+    geometry_fields = schema.children['geometry'].fields
+    assert {'version', 'geom'} <= set(geometry_fields)
 
-        locale_fields = schema.children['locales'].fields
-        assert {'version', 'lang', 'title'} <= set(locale_fields)
-        assert 'access_period' not in locale_fields
+    locale_fields = schema.children['locales'].fields
+    assert {'version', 'lang', 'title'} <= set(locale_fields)
+    assert 'access_period' not in locale_fields
 
-    def test_wkb_to_shape_point(self):
-        wkb = wkbelement_from_geojson(
-            json.loads('{"type": "Point", "coordinates": [1.0, 2.0, 3.0, 4.0]}'), 3857
-        )
-        point = wkb_to_shape(wkb)
-        assert not point.has_z
-        assert point.x == pytest.approx(1.0, abs=5e-8)
-        assert point.y == pytest.approx(2.0, abs=5e-8)
 
-    def test_wkb_to_shape_linestring(self):
-        wkb = wkbelement_from_geojson(
-            json.loads(
-                '{"type": "LineString", "coordinates": '
-                + '[[635956, 5723604, 1200], [635966, 5723644, 1210]]}'
-            ),
-            3857,
-        )
-        line = wkb_to_shape(wkb)
-        assert not line.has_z
+def test_wkb_to_shape_point():
+    wkb = wkbelement_from_geojson(
+        json.loads('{"type": "Point", "coordinates": [1.0, 2.0, 3.0, 4.0]}'), 3857
+    )
+    point = wkb_to_shape(wkb)
+    assert not point.has_z
+    assert point.x == pytest.approx(1.0, abs=5e-8)
+    assert point.y == pytest.approx(2.0, abs=5e-8)
 
-        assert len(line.coords) == 2
-        assert len(line.coords[0]) == 2
-        assert_coordinates_equal(line.coords[0], [635956.0, 5723604.0])
-        assert_coordinates_equal(line.coords[1], [635966.0, 5723644.0])
 
-    def test_wkb_to_shape_multilinestring(self):
-        wkb = wkbelement_from_geojson(
-            json.loads(
-                '{"type": "MultiLineString", "coordinates": '
-                + '[[[635956, 5723604, 1200], [635966, 5723644, 1210]]]}'
-            ),
-            3857,
-        )
-        line = wkb_to_shape(wkb)
-        assert not line.has_z
+def test_wkb_to_shape_linestring():
+    wkb = wkbelement_from_geojson(
+        json.loads(
+            '{"type": "LineString", "coordinates": '
+            + '[[635956, 5723604, 1200], [635966, 5723644, 1210]]}'
+        ),
+        3857,
+    )
+    line = wkb_to_shape(wkb)
+    assert not line.has_z
 
-        assert len(line.geoms) == 1
-        assert len(line.geoms[0].coords) == 2
-        assert len(line.geoms[0].coords[0]) == 2
-        assert_coordinates_equal(line.geoms[0].coords[0], [635956.0, 5723604.0])
-        assert_coordinates_equal(line.geoms[0].coords[1], [635966.0, 5723644.0])
+    assert len(line.coords) == 2
+    assert len(line.coords[0]) == 2
+    assert_coordinates_equal(line.coords[0], [635956.0, 5723604.0])
+    assert_coordinates_equal(line.coords[1], [635966.0, 5723644.0])
 
-    def test_wkb_to_shape_polygon(self):
-        wkb = wkbelement_from_geojson(
-            json.loads(
-                '{"type": "Polygon", "coordinates": '
-                + '[[[100.0, 0.0, 1200], [101.0, 0.0, 1200], [101.0, 1.0, 1200], '
-                '[100.0, 1.0, 1200], [100.0, 0.0, 1200]]]}'
-            ),
-            3857,
-        )
-        polygon = wkb_to_shape(wkb)
-        assert not polygon.has_z
 
-        assert len(polygon.exterior.coords) == 5
-        assert len(polygon.exterior.coords[0]) == 2
+def test_wkb_to_shape_multilinestring():
+    wkb = wkbelement_from_geojson(
+        json.loads(
+            '{"type": "MultiLineString", "coordinates": '
+            + '[[[635956, 5723604, 1200], [635966, 5723644, 1210]]]}'
+        ),
+        3857,
+    )
+    line = wkb_to_shape(wkb)
+    assert not line.has_z
 
-    def test_wkb_to_shape_multipolygon(self):
-        wkb = wkbelement_from_geojson(
-            json.loads(
-                '{"type": "MultiPolygon", "coordinates": '
-                + '[[[[100.0, 0.0, 1200], [101.0, 0.0, 1200], [101.0, 1.0, 1200], '
-                '[100.0, 1.0, 1200], [100.0, 0.0, 1200]]]]}'
-            ),
-            3857,
-        )
-        multi_polygon = wkb_to_shape(wkb)
-        assert not multi_polygon.has_z
+    assert len(line.geoms) == 1
+    assert len(line.geoms[0].coords) == 2
+    assert len(line.geoms[0].coords[0]) == 2
+    assert_coordinates_equal(line.geoms[0].coords[0], [635956.0, 5723604.0])
+    assert_coordinates_equal(line.geoms[0].coords[1], [635966.0, 5723644.0])
 
-        assert len(multi_polygon.geoms[0].exterior.coords) == 5
-        assert len(multi_polygon.geoms[0].exterior.coords[0]) == 2
 
-    def get_child_node(self, node, name):
-        return next((child for child in node.children if child.name == name), None)
+def test_wkb_to_shape_polygon():
+    wkb = wkbelement_from_geojson(
+        json.loads(
+            '{"type": "Polygon", "coordinates": '
+            + '[[[100.0, 0.0, 1200], [101.0, 0.0, 1200], [101.0, 1.0, 1200], '
+            '[100.0, 1.0, 1200], [100.0, 0.0, 1200]]]}'
+        ),
+        3857,
+    )
+    polygon = wkb_to_shape(wkb)
+    assert not polygon.has_z
 
-    def assertHasField(self, node, name):  # noqa
-        assert self.get_child_node(node, name) is not None
+    assert len(polygon.exterior.coords) == 5
+    assert len(polygon.exterior.coords[0]) == 2
 
-    def assertHasNotField(self, node, name):  # noqa
-        assert self.get_child_node(node, name) is None
+
+def test_wkb_to_shape_multipolygon():
+    wkb = wkbelement_from_geojson(
+        json.loads(
+            '{"type": "MultiPolygon", "coordinates": '
+            + '[[[[100.0, 0.0, 1200], [101.0, 0.0, 1200], [101.0, 1.0, 1200], '
+            '[100.0, 1.0, 1200], [100.0, 0.0, 1200]]]]}'
+        ),
+        3857,
+    )
+    multi_polygon = wkb_to_shape(wkb)
+    assert not multi_polygon.has_z
+
+    assert len(multi_polygon.geoms[0].exterior.coords) == 5
+    assert len(multi_polygon.geoms[0].exterior.coords[0]) == 2
+
+
+def get_child_node(node, name):
+    return next((child for child in node.children if child.name == name), None)
+
+
+def assertHasField(node, name):  # noqa
+    assert get_child_node(node, name) is not None
+
+
+def assertHasNotField(node, name):  # noqa
+    assert get_child_node(node, name) is None
