@@ -105,9 +105,9 @@ def get_child_node(node, name):
     return next((child for child in node.children if child.name == name), None)
 
 
-def assertHasField(node, name):  # noqa
+def assert_has_field(node, name):
     assert get_child_node(node, name) is not None
 
 
-def assertHasNotField(node, name):  # noqa
+def assert_has_not_field(node, name):
     assert get_child_node(node, name) is None

@@ -34,7 +34,7 @@ def test_build_query():
         .fields([])
         .extra(from_=0, size=10)
     )
-    assertQueryEqual(query, expected_query)
+    assert_query_equal(query, expected_query)
 
 
 def test_build_query_bbox():
@@ -63,7 +63,7 @@ def test_build_query_bbox():
         .fields([])
         .extra(from_=0, size=10)
     )
-    assertQueryEqual(query, expected_query)
+    assert_query_equal(query, expected_query)
 
 
 def test_build_query_limit_offset():
@@ -76,7 +76,7 @@ def test_build_query_limit_offset():
         .fields([])
         .extra(from_=40, size=20)
     )
-    assertQueryEqual(query, expected_query)
+    assert_query_equal(query, expected_query)
 
 
 def test_build_query_sort_outing():
@@ -90,10 +90,10 @@ def test_build_query_sort_outing():
         .sort({'date_end': {'order': 'desc'}}, {'id': {'order': 'desc'}})
         .extra(from_=40, size=20)
     )
-    assertQueryEqual(query, expected_query)
+    assert_query_equal(query, expected_query)
 
 
-def assertQueryEqual(query1, query2):  # noqa
+def assert_query_equal(query1, query2):
     q1 = query1.to_dict()
     q2 = query2.to_dict()
 
@@ -112,12 +112,12 @@ def assertQueryEqual(query1, query2):  # noqa
         if 'filter' in bool1 or 'filter' in bool2:
             filters1 = bool1['filter']
             filters2 = bool2['filter']
-            assertFiltersEqual(filters1, filters2)
+            assert_filters_equal(filters1, filters2)
     else:
         assert q1['query'] == q2['query']
 
 
-def assertFiltersEqual(filters1, filters2):  # noqa
+def assert_filters_equal(filters1, filters2):
     assert len(filters1) == len(filters2)
 
     normal_filters1 = set(str(f) for f in filters1 if 'geo_bounding_box' not in f)
@@ -128,7 +128,7 @@ def assertFiltersEqual(filters1, filters2):  # noqa
     bbox_filters2 = [f for f in filters2 if 'geo_bounding_box' in f]
 
     if bbox_filters1 or bbox_filters2:
-        assertBboxFilterEqual(bbox_filters1[0], bbox_filters2[0])
+        assert_bbox_filter_equal(bbox_filters1[0], bbox_filters2[0])
 
 
 def test_create_filter_range():
@@ -367,7 +367,7 @@ def test_create_bbox_filter():
     assert create_bbox_filter('650000,4500000,650000,5700000') is None
     assert create_bbox_filter('500000,5700000,650000,5700000') is None
     assert create_bbox_filter('650000,5700000,650000,5700000') is None
-    assertBboxFilterEqual(
+    assert_bbox_filter_equal(
         create_bbox_filter('699398,5785365,699498,5785465').to_dict(),
         GeoBoundingBox(
             geom={
@@ -381,7 +381,7 @@ def test_create_bbox_filter():
     )
 
 
-def assertBboxFilterEqual(f1, f2):  # noqa
+def assert_bbox_filter_equal(f1, f2):
     assert 'geo_bounding_box' in f1
     assert 'geo_bounding_box' in f2
 
