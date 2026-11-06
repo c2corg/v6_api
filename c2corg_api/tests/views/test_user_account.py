@@ -19,6 +19,32 @@ from c2corg_api.tests.views import scenarios
 from c2corg_api.tests.views.test_user import PREFIX, forum_username_tests
 
 
+def _update_account_field_discourse_up(discourse, client, passwords, field, value):
+    url = '/users/account'
+    currentpassword = passwords['contributor']
+
+    data = {'currentpassword': currentpassword}
+    data[field] = value
+    post_json_with_contributor(client, url, data, status=200)
+
+    assert 1 == int(discourse.client.sso_sync.called_count)
+
+
+def _update_account_field_discourse_down(
+    discourse, client, settings, passwords, field, value
+):
+    discourse.down()
+
+    url = '/users/account'
+    currentpassword = passwords['contributor']
+
+    data = {'currentpassword': currentpassword}
+    data[field] = value
+    post_json_with_contributor(client, url, data, status=500)
+
+    assert 1 == int(discourse.client.sso_sync.called_count)
+
+
 @pytest.mark.usefixtures('discourse')
 class TestUserAccountRest:
     def test_read_account_info(self, client):
@@ -37,38 +63,12 @@ class TestUserAccountRest:
         body = get_json_with_contributor(client, '/users/account', status=403)
         assert_errors_contain(body, 'Forbidden', 'account blocked')
 
-    def _update_account_field_discourse_up(
-        self, discourse, client, passwords, field, value
-    ):
-        url = '/users/account'
-        currentpassword = passwords['contributor']
-
-        data = {'currentpassword': currentpassword}
-        data[field] = value
-        post_json_with_contributor(client, url, data, status=200)
-
-        assert 1 == int(discourse.client.sso_sync.called_count)
-
-    def _update_account_field_discourse_down(
-        self, discourse, client, settings, passwords, field, value
-    ):
-        discourse.down()
-
-        url = '/users/account'
-        currentpassword = passwords['contributor']
-
-        data = {'currentpassword': currentpassword}
-        data[field] = value
-        post_json_with_contributor(client, url, data, status=500)
-
-        assert 1 == int(discourse.client.sso_sync.called_count)
-
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_update_account_email_discourse_up(
         self, _send_email, client, session, user_ids, passwords, discourse
     ):
         new_email = 'superemail@localhost.localhost'
-        self._update_account_field_discourse_up(
+        _update_account_field_discourse_up(
             discourse, client, passwords, 'email', new_email
         )
 
@@ -93,14 +93,14 @@ class TestUserAccountRest:
         self, client, settings, passwords, discourse
     ):
         new_email = 'superemail@localhost.localhost'
-        self._update_account_field_discourse_down(
+        _update_account_field_discourse_down(
             discourse, client, settings, passwords, 'email', new_email
         )
 
     def test_update_account_name_discourse_up(
         self, client, session, user_ids, passwords, queue_config, discourse
     ):
-        self._update_account_field_discourse_up(
+        _update_account_field_discourse_up(
             discourse, client, passwords, 'name', 'changed'
         )
 
@@ -124,7 +124,7 @@ class TestUserAccountRest:
     def test_update_account_name_discourse_down(
         self, client, settings, passwords, discourse
     ):
-        self._update_account_field_discourse_down(
+        _update_account_field_discourse_down(
             discourse, client, settings, passwords, 'name', 'changed'
         )
 
@@ -165,7 +165,7 @@ class TestUserAccountRest:
     def test_update_account_forum_username_discourse_up(
         self, client, session, user_ids, passwords, discourse
     ):
-        self._update_account_field_discourse_up(
+        _update_account_field_discourse_up(
             discourse, client, passwords, 'forum_username', 'changed'
         )
 
@@ -176,7 +176,7 @@ class TestUserAccountRest:
     def test_update_account_forum_username_discourse_down(
         self, client, settings, passwords, discourse
     ):
-        self._update_account_field_discourse_down(
+        _update_account_field_discourse_down(
             discourse, client, settings, passwords, 'forum_username', 'changed'
         )
 

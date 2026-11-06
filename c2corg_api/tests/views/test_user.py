@@ -61,6 +61,76 @@ forum_username_tests = {
 PREFIX = '/users'
 
 
+def login(
+    client,
+    settings,
+    passwords,
+    username,
+    password=None,
+    status=200,
+    sso=None,
+    sig=None,
+    discourse=None,
+    accept_tos=None,
+):
+    if not password:
+        password = passwords[username]
+
+    request_body = {'username': username, 'password': password}
+
+    if sso:
+        request_body['sso'] = sso
+    if sig:
+        request_body['sig'] = sig
+    if discourse:
+        request_body['discourse'] = discourse
+    if accept_tos:
+        request_body['accept_tos'] = accept_tos
+
+    url = '/users/login'
+    response = send_json(client, 'post', url, request_body, status=status)
+    return response
+
+
+def _build_signed_sso_payload(discourse, return_sso_url):
+    payload = urlencode(
+        {
+            'nonce': 'cb68251eefb5211e58c00ff1395f0c0b',
+            'return_sso_url': return_sso_url,
+        }
+    )
+    b64_payload = base64.b64encode(payload.encode('utf-8')).decode('ascii')
+    sig = hmac.new(
+        discourse.client.sso_key.encode('utf-8'),
+        b64_payload.encode('utf-8'),
+        digestmod=hashlib.sha256,
+    ).hexdigest()
+    return quote(b64_payload), sig
+
+
+def assert_expire_almost_equal(expire, days, seconds_delta):
+    now = int(round(time.time()))
+    expected = days * 24 * 3600 + now  # 14 days from now
+    if abs(expected - expire) > seconds_delta:
+        raise AssertionError(
+            f'{expected!r} == {expire!r} within {seconds_delta!r} seconds'
+        )
+
+
+def _login_remember(client, passwords, remember, status=200):
+    body = {
+        'username': 'contributor',
+        'password': passwords['contributor'],
+        'remember': remember,
+    }
+    return send_json(client, 'post', '/users/login', body, status=status).json
+
+
+def _lifetime(settings, token):
+    claims = jwt.decode(token, settings['jwt.private_key'], algorithms=['HS256'])
+    return claims['exp'] - claims['iat']
+
+
 @pytest.mark.usefixtures('discourse')
 class TestUserRest:
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
@@ -484,7 +554,7 @@ class TestUserRest:
 
         from c2corg_api.jobs.purge_expired_tokens import purge_token
 
-        body = self.login(client, settings, passwords, 'moderator', status=200).json
+        body = login(client, settings, passwords, 'moderator', status=200).json
         token_value = body['token']
 
         query = session.query(Token).filter(Token.value == hash_token(token_value))
@@ -513,14 +583,12 @@ class TestUserRest:
         moderator = user_ids['moderator']
         past = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=1)
         # the contributor: every token expired (the global one too)
-        self.login(client, settings, passwords, 'contributor')
+        login(client, settings, passwords, 'contributor')
         session.query(Token).filter(Token.userid == contributor).update(
             {'expire': past}
         )
         # the moderator: one token expired, the global one still valid
-        moderator_token = self.login(client, settings, passwords, 'moderator').json[
-            'token'
-        ]
+        moderator_token = login(client, settings, passwords, 'moderator').json['token']
         session.query(Token).filter(Token.value == hash_token(moderator_token)).update(
             {'expire': past}
         )
@@ -556,50 +624,19 @@ class TestUserRest:
         assert [c.args for c in forum.logout.call_args_list] == [(3,), (4,)]
         sleep.assert_called_once_with(purge_expired_tokens.FORUM_LOGOUT_INTERVAL)
 
-    def login(
-        self,
-        client,
-        settings,
-        passwords,
-        username,
-        password=None,
-        status=200,
-        sso=None,
-        sig=None,
-        discourse=None,
-        accept_tos=None,
-    ):
-        if not password:
-            password = passwords[username]
-
-        request_body = {'username': username, 'password': password}
-
-        if sso:
-            request_body['sso'] = sso
-        if sig:
-            request_body['sig'] = sig
-        if discourse:
-            request_body['discourse'] = discourse
-        if accept_tos:
-            request_body['accept_tos'] = accept_tos
-
-        url = '/users/login'
-        response = send_json(client, 'post', url, request_body, status=status)
-        return response
-
     def test_login_success_discourse_up(self, client, settings, passwords):
-        body = self.login(client, settings, passwords, 'moderator', status=200).json
+        body = login(client, settings, passwords, 'moderator', status=200).json
         assert 'token' in body
 
     def test_login_success_discourse_down(self, client, settings, passwords):
         # Topoguide login allowed even if Discourse is down.
-        body = self.login(client, settings, passwords, 'moderator', status=200).json
+        body = login(client, settings, passwords, 'moderator', status=200).json
         assert 'token' in body
 
     def test_login_discourse_disabled(self, client, settings, passwords, discourse):
         """Log in, without a forum session to open, when the forum is disabled."""
         discourse.use(DisabledDiscourseClient())
-        body = self.login(
+        body = login(
             client, settings, passwords, 'moderator', discourse=True, status=200
         ).json
         assert 'token' in body
@@ -607,7 +644,7 @@ class TestUserRest:
 
     def test_login_success_use_email(self, client, settings, passwords):
         # login allowed if providing the email instead of login
-        body = self.login(
+        body = login(
             client,
             settings,
             passwords,
@@ -631,7 +668,7 @@ class TestUserRest:
         contributor.password = 'abc'  # nosec
         session.flush()
 
-        body = self.login(
+        body = login(
             client, settings, passwords, 'contributor', password='abc', status=200
         ).json
         assert 'token' in body
@@ -644,7 +681,7 @@ class TestUserRest:
         contributor._password = 'not a bcrypt hash'  # nosec B105
         session.flush()
 
-        body = self.login(client, settings, passwords, 'contributor', status=401).json
+        body = login(client, settings, passwords, 'contributor', status=401).json
         assert body['status'] == 'error'
 
     def test_login_blocked_account(
@@ -654,7 +691,7 @@ class TestUserRest:
         contributor.blocked = True
         session.flush()
 
-        body = self.login(client, settings, passwords, 'contributor', status=403).json
+        body = login(client, settings, passwords, 'contributor', status=403).json
         assert_errors_contain(body, 'Forbidden', 'account blocked')
 
     def test_login_discourse_success(
@@ -668,13 +705,13 @@ class TestUserRest:
         return_sso_url = 'https://forum-test.example.org/session/sso_login'
         discourse.client.allowed_sso_hosts = {'forum-test.example.org'}
 
-        sso, sig = self._build_signed_sso_payload(discourse, return_sso_url)
+        sso, sig = _build_signed_sso_payload(discourse, return_sso_url)
 
         moderator = session.query(User).filter(User.username == 'moderator').one()
         redirect1 = discourse.client.redirect(moderator, sso, sig)
         assert redirect1.startswith(return_sso_url + '?')
 
-        body = self.login(
+        body = login(
             client, settings, passwords, 'moderator', sso=sso, sig=sig, discourse=True
         ).json
         assert 'token' in body
@@ -691,7 +728,7 @@ class TestUserRest:
         # the allowlist - must be rejected even though the signature is
         # valid, otherwise a leaked sso_secret could redirect an
         # authenticated user's browser anywhere.
-        sso, sig = self._build_signed_sso_payload(
+        sso, sig = _build_signed_sso_payload(
             discourse, 'https://not-allowed.example.org/session/sso_login'
         )
 
@@ -705,7 +742,7 @@ class TestUserRest:
         return_sso_url = 'https://forum-test.example.org/session/sso_login'
         discourse.client.allowed_sso_hosts = {'forum-test.example.org'}
 
-        sso, sig = self._build_signed_sso_payload(discourse, return_sso_url)
+        sso, sig = _build_signed_sso_payload(discourse, return_sso_url)
 
         moderator = session.query(User).filter(User.username == 'moderator').one()
         expected = discourse.client.redirect(moderator, sso, sig)
@@ -724,7 +761,7 @@ class TestUserRest:
         discourse.client.sso_key = 'test_only_shared_secret_not_a_real_credential'
         discourse.client.allowed_sso_hosts = {'forum-test.example.org'}
 
-        sso, _ = self._build_signed_sso_payload(
+        sso, _ = _build_signed_sso_payload(
             discourse, 'https://forum-test.example.org/session/sso_login'
         )
 
@@ -771,23 +808,8 @@ class TestUserRest:
             status=403,
         )
 
-    def _build_signed_sso_payload(self, discourse, return_sso_url):
-        payload = urlencode(
-            {
-                'nonce': 'cb68251eefb5211e58c00ff1395f0c0b',
-                'return_sso_url': return_sso_url,
-            }
-        )
-        b64_payload = base64.b64encode(payload.encode('utf-8')).decode('ascii')
-        sig = hmac.new(
-            discourse.client.sso_key.encode('utf-8'),
-            b64_payload.encode('utf-8'),
-            digestmod=hashlib.sha256,
-        ).hexdigest()
-        return quote(b64_payload), sig
-
     def test_login_failure(self, client, settings, passwords):
-        body = self.login(
+        body = login(
             client,
             settings,
             passwords,
@@ -798,7 +820,7 @@ class TestUserRest:
         assert body['status'] == 'error'
 
     def test_login_no_tos_failure(self, client, settings, passwords):
-        body = self.login(
+        body = login(
             client,
             settings,
             passwords,
@@ -811,7 +833,7 @@ class TestUserRest:
     def test_login_no_tos_success(self, client, session, settings, passwords):
         # A user which did not previously accepted ToS can login
         # if he accepts them. It is stored in the db.
-        body = self.login(
+        body = login(
             client,
             settings,
             passwords,
@@ -826,19 +848,11 @@ class TestUserRest:
             datetime.datetime.now(datetime.UTC) - user.tos_validated
         ).total_seconds() < 5
 
-    def assertExpireAlmostEqual(self, expire, days, seconds_delta):  # noqa
-        now = int(round(time.time()))
-        expected = days * 24 * 3600 + now  # 14 days from now
-        if abs(expected - expire) > seconds_delta:
-            raise AssertionError(
-                f'{expected!r} == {expire!r} within {seconds_delta!r} seconds'
-            )
-
     def test_login_logout_success(self, client, settings, passwords):
-        body = self.login(client, settings, passwords, 'moderator').json
+        body = login(client, settings, passwords, 'moderator').json
         token = body['token']
         expire = body['expire']
-        self.assertExpireAlmostEqual(expire, 14, 5)
+        assert_expire_almost_equal(expire, 14, 5)
 
         body = post_json_with_token(client, '/users/logout', token)
 
@@ -847,14 +861,14 @@ class TestUserRest:
 
         body = post_json_with_token(client, '/users/renew', token)
         expire = body['expire']
-        self.assertExpireAlmostEqual(expire, 14, 5)
+        assert_expire_almost_equal(expire, 14, 5)
 
         token2 = body['token']
         body = get_json_with_token(client, '/users/account', token2, status=200)
         assert_body_equal(body, 'name', 'Contributor')
 
     def test_renew_token_different_success(self, client, settings, passwords):
-        token1 = self.login(client, settings, passwords, 'contributor').json['token']
+        token1 = login(client, settings, passwords, 'contributor').json['token']
         token2 = post_json_with_token(client, '/users/renew', token1)['token']
         assert token1 != token2
 
@@ -864,7 +878,7 @@ class TestUserRest:
         post_json_with_token(client, '/users/logout', token2)
 
     def test_logout_invalidates_the_token(self, client, settings, passwords):
-        token = self.login(client, settings, passwords, 'contributor').json['token']
+        token = login(client, settings, passwords, 'contributor').json['token']
         get_json_with_token(client, '/users/account', token, status=200)
 
         post_json_with_token(client, '/users/logout', token)
@@ -875,10 +889,8 @@ class TestUserRest:
 
     def test_logout_keeps_the_other_sessions(self, client, settings, passwords):
         # two logins, most likely in the same second
-        token = self.login(client, settings, passwords, 'contributor').json['token']
-        other_token = self.login(client, settings, passwords, 'contributor').json[
-            'token'
-        ]
+        token = login(client, settings, passwords, 'contributor').json['token']
+        other_token = login(client, settings, passwords, 'contributor').json['token']
         assert token != other_token
 
         post_json_with_token(client, '/users/logout', token)
@@ -888,7 +900,7 @@ class TestUserRest:
     def test_only_the_hash_of_the_token_is_stored(
         self, client, session, settings, user_ids, passwords
     ):
-        token = self.login(client, settings, passwords, 'contributor').json['token']
+        token = login(client, settings, passwords, 'contributor').json['token']
         assert session.query(Token).filter(Token.value == token).count() == 0
         stored = session.query(Token).filter(Token.value == hash_token(token))
         assert stored.one().userid == user_ids['contributor']
@@ -898,49 +910,37 @@ class TestUserRest:
     ):
         # since migration a7c3e1f05b2d, a row holds the hash of a token: a row
         # holding the token itself (a copy of the table) gives no session
-        token = self.login(client, settings, passwords, 'contributor').json['token']
+        token = login(client, settings, passwords, 'contributor').json['token']
         stored = session.query(Token).filter(Token.value == hash_token(token))
         stored.one().value = token
         session.flush()
 
         get_json_with_token(client, '/users/account', token, status=401)
 
-    def _login_remember(self, client, passwords, remember, status=200):
-        body = {
-            'username': 'contributor',
-            'password': passwords['contributor'],
-            'remember': remember,
-        }
-        return send_json(client, 'post', '/users/login', body, status=status).json
-
-    def _lifetime(self, settings, token):
-        claims = jwt.decode(token, settings['jwt.private_key'], algorithms=['HS256'])
-        return claims['exp'] - claims['iat']
-
     def test_login_not_remembered(self, client, settings, passwords):
-        body = self._login_remember(client, passwords, False)
-        self.assertExpireAlmostEqual(body['expire'], 1, 5)
-        assert self._lifetime(settings, body['token']) == 24 * 3600
+        body = _login_remember(client, passwords, False)
+        assert_expire_almost_equal(body['expire'], 1, 5)
+        assert _lifetime(settings, body['token']) == 24 * 3600
         get_json_with_token(client, '/users/account', body['token'], status=200)
 
     def test_login_remembered(self, client, settings, passwords):
-        body = self._login_remember(client, passwords, True)
-        self.assertExpireAlmostEqual(body['expire'], 14, 5)
-        assert self._lifetime(settings, body['token']) == 14 * 24 * 3600
+        body = _login_remember(client, passwords, True)
+        assert_expire_almost_equal(body['expire'], 14, 5)
+        assert _lifetime(settings, body['token']) == 14 * 24 * 3600
 
     def test_login_remember_as_a_string(self, client, passwords):
         # as every Bool: only 'false' and '0' are false
-        body = self._login_remember(client, passwords, 'false')
-        self.assertExpireAlmostEqual(body['expire'], 1, 5)
-        body = self._login_remember(client, passwords, 'yes')
-        self.assertExpireAlmostEqual(body['expire'], 14, 5)
+        body = _login_remember(client, passwords, 'false')
+        assert_expire_almost_equal(body['expire'], 1, 5)
+        body = _login_remember(client, passwords, 'yes')
+        assert_expire_almost_equal(body['expire'], 14, 5)
 
     def test_renew_keeps_the_lifetime(self, client, settings, passwords):
         for remember, days in ((False, 1), (True, 14)):
-            token = self._login_remember(client, passwords, remember)['token']
+            token = _login_remember(client, passwords, remember)['token']
             body = post_json_with_token(client, '/users/renew', token)
-            self.assertExpireAlmostEqual(body['expire'], days, 5)
-            assert self._lifetime(settings, body['token']) == days * 24 * 3600
+            assert_expire_almost_equal(body['expire'], days, 5)
+            assert _lifetime(settings, body['token']) == days * 24 * 3600
 
     def test_renew_of_a_token_without_iat(self, client, session, settings, user_ids):
         # a token issued before the lifetimes (no `iat`): remembered
@@ -952,10 +952,10 @@ class TestUserRest:
         add_token(token, exp, user.id)
 
         body = post_json_with_token(client, '/users/renew', token)
-        self.assertExpireAlmostEqual(body['expire'], 14, 5)
+        assert_expire_almost_equal(body['expire'], 14, 5)
 
     def test_token_check(self, client, settings, user_ids, passwords):
-        body = self.login(client, settings, passwords, 'contributor').json
+        body = login(client, settings, passwords, 'contributor').json
         token = body['token']
 
         checked = get_json_with_token(client, '/users/token', token)
@@ -982,7 +982,7 @@ class TestUserRest:
 
     def test_token_claims(self, client, settings, user_ids, passwords):
         before = int(time.time())
-        token = self.login(client, settings, passwords, 'contributor').json['token']
+        token = login(client, settings, passwords, 'contributor').json['token']
         claims = jwt.decode(token, settings['jwt.private_key'], algorithms=['HS256'])
         assert set(claims) == {'sub', 'username', 'iat', 'exp', 'jti'}
         assert claims['sub'] == str(user_ids['contributor'])
@@ -993,7 +993,7 @@ class TestUserRest:
     def test_renew_revokes_the_old_token_after_a_minute(
         self, client, session, settings, passwords
     ):
-        old_token = self.login(client, settings, passwords, 'contributor').json['token']
+        old_token = login(client, settings, passwords, 'contributor').json['token']
         new_token = post_json_with_token(client, '/users/renew', old_token)['token']
         assert new_token != old_token
         get_json_with_token(client, '/users/account', new_token, status=200)
@@ -1013,10 +1013,8 @@ class TestUserRest:
         post_json_with_token(client, '/users/renew', old_token, status=401)
 
     def test_renew_keeps_the_other_sessions(self, client, settings, passwords):
-        token = self.login(client, settings, passwords, 'contributor').json['token']
-        other_token = self.login(client, settings, passwords, 'contributor').json[
-            'token'
-        ]
+        token = login(client, settings, passwords, 'contributor').json['token']
+        other_token = login(client, settings, passwords, 'contributor').json['token']
 
         post_json_with_token(client, '/users/renew', token)
 
