@@ -159,28 +159,3 @@ class Browser:
     def create(self, prefix, body, user='contributor'):
         """Create a document through the API and return its id."""
         return self.post(f'/{prefix}', body, user=user).json['document_id']
-
-
-@pytest.mark.usefixtures('client')
-class ContractTest:
-    """Base class of the contract tests, until they use the browser fixture."""
-
-    def request(
-        self, client, settings, method, url, body=None, user=None, status=200, **kwargs
-    ):
-        return Browser(client, settings).request(
-            method, url, body, user=user, status=status, **kwargs
-        )
-
-    def get(self, client, settings, url, user=None, status=200, **kwargs):
-        return Browser(client, settings).get(url, user=user, status=status, **kwargs)
-
-    def post(self, client, settings, url, body, user=None, status=200, **kwargs):
-        return Browser(client, settings).post(
-            url, body, user=user, status=status, **kwargs
-        )
-
-    def put(self, client, settings, url, body, user=None, status=200, **kwargs):
-        return Browser(client, settings).put(
-            url, body, user=user, status=status, **kwargs
-        )

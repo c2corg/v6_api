@@ -32,7 +32,7 @@ JOURNEY_PARAMS = {
     'datetime_represents': 'departure',
 }
 ISOCHRONE_PARAMS = {
-    # in the coverage of DocumentContractTest, which the isochrone needs
+    # in the coverage of the documents fixture, which the isochrone needs
     'from': '5.71;45.655',
     'datetime': '20260116T115100',
     'datetime_represents': 'departure',

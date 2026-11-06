@@ -9,7 +9,7 @@ from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_documents import POINT
 from c2corg_api.tests.search.__init__ import reset_search_index
 
-# the coverage polygon of DocumentContractTest, in EPSG:4326
+# the coverage polygon of the documents fixture, in EPSG:4326
 POLYGON_4326 = json.dumps(
     {
         'type': 'Polygon',
